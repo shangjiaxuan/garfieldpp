@@ -31,8 +31,8 @@
 // 26.03.96 Added constants for standard conditions of temperature
 //          and pressure; also added Gas threshold.
 
-#ifndef HEP_PHYSICAL_CONSTANTS_H
-#define HEP_PHYSICAL_CONSTANTS_H
+#ifndef HEED_HEP_PHYSICAL_CONSTANTS_H
+#define HEED_HEP_PHYSICAL_CONSTANTS_H
 
 #include "wcpplib/clhep_units/WSystemOfUnits.h"
 
@@ -120,4 +120,4 @@ static constexpr double universe_mean_density = 1.e-25 * g / cm3;
 
 }
 
-#endif /* HEP_PHYSICAL_CONSTANTS_H */
+#endif /* HEED_HEP_PHYSICAL_CONSTANTS_H */

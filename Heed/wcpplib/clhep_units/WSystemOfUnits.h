@@ -38,8 +38,8 @@
 // 05.08.98   angstrom, picobarn, microsecond, picosecond, petaelectronvolt
 // 01.03.01   parsec
 
-#ifndef HEP_SYSTEM_OF_UNITS_H
-#define HEP_SYSTEM_OF_UNITS_H
+#ifndef HEED_HEP_SYSTEM_OF_UNITS_H
+#define HEED_HEP_SYSTEM_OF_UNITS_H
 
 namespace Heed {
 
@@ -293,4 +293,4 @@ static constexpr double perMillion = 0.000001;
 
 }
 
-#endif /* HEP_SYSTEM_OF_UNITS_H */
+#endif /* HEED_HEP_SYSTEM_OF_UNITS_H */
