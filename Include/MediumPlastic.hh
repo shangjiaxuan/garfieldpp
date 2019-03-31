@@ -17,8 +17,8 @@ class MediumPlastic : public Medium {
   // Destructor
   virtual ~MediumPlastic() {}
 
-  void EnableDrift() {}
-  void EnableIonisation() {}
+  void EnableDrift(const bool /*on*/) override {}
+  void EnablePrimaryIonisation(const bool /*on*/) override {}
 };
 }
 

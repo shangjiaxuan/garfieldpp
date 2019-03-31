@@ -11,7 +11,7 @@ using namespace Garfield;
 
 int main(int argc, char * argv[]) {
 
-  // TApplication app("app", &argc, argv);
+  TApplication app("app", &argc, argv);
  
   const double pressure = 3 * AtmosphericPressure;
   const double temperature = 293.15;

@@ -5,8 +5,11 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6 FATAL_ERROR)
 PROJECT(GarfieldExamples)
 
 #### GasFile               #############################
-add_executable(gasfile GasFile/gasfile.C)
-target_link_libraries(gasfile Garfield ${ROOT_LIBRARIES} ${ROOT_COMPONENT_LIBRARIES} )
+add_executable(generate GasFile/generate.C)
+target_link_libraries(generate Garfield ${ROOT_LIBRARIES} ${ROOT_COMPONENT_LIBRARIES} )
+
+add_executable(read GasFile/read.C)
+target_link_libraries(read Garfield ${ROOT_LIBRARIES} ${ROOT_COMPONENT_LIBRARIES} )
 
 #### Heed                   ############################
 add_executable(edep Heed/edep.C)
@@ -74,7 +77,7 @@ endforeach()
 endif(Geant4_FOUND)
 #### Install                ############################
 if(Geant4_FOUND)
-INSTALL(TARGETS gasfile edep srim exampleGeant4Interface DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+INSTALL(TARGETS generate read edep srim exampleGeant4Interface DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 else()
-INSTALL(TARGETS gasfile edep srim DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+INSTALL(TARGETS generate read edep srim DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
 endif(Geant4_FOUND)
