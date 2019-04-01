@@ -22,10 +22,16 @@ class DriftLineRKF {
   /// Destructor
   ~DriftLineRKF() {}
 
+  /// Set the sensor.
   void SetSensor(Sensor* s);
 
+  /// Switch on drift line plotting.
   void EnablePlotting(ViewDrift* view);
+  /// Switch off drift line plotting.
   void DisablePlotting();
+
+  /// Switch on/off calculation of induced currents (default: enabled).
+  void EnableSignalCalculation(const bool on = true) { m_doSignal = on; }
 
   /// Set the accuracy of the Runge Kutta Fehlberg drift line integration.
   void SetIntegrationAccuracy(const double a);
@@ -44,18 +50,31 @@ class DriftLineRKF {
   /// Set multiplication factor for the signal induced by ions.
   void SetIonSignalScalingFactor(const double scale) { m_scaleI = scale; }
 
+  /// Do not randomize the avalanche size.
+  void SetGainFluctuationsFixed(const double mean = -1.);
+  /// Sample the avalanche size from a Polya distribution with 
+  /// shape parameter theta.
+  void SetGainFluctuationsPolya(const double theta, const double mean = -1.);
+
+  /// Simulate the drift line of an electron with a given starting point.
   bool DriftElectron(const double x0, const double y0, const double z0,
                      const double t0);
+  /// Simulate the drift line of a hole with a given starting point.
   bool DriftHole(const double x0, const double y0, const double z0,
                  const double t0);
+  /// Simulate the drift line of an ion with a given starting point.
   bool DriftIon(const double x0, const double y0, const double z0,
                 const double t0);
 
   void GetEndPoint(double& x, double& y, double& z, double& t, int& st) const;
+  /// Get the number of points of the most recent drift line.
   unsigned int GetNumberOfDriftLinePoints() const { return m_path.size(); }
+  /// Get the coordinates and time of a point along the most recent drift line.
   void GetDriftLinePoint(const unsigned int i, double& x, double& y, double& z,
                          double& t) const;
 
+  /// Compute the sigma of the arrival time distribution for the current 
+  /// drift line by integrating the longitudinal diffusion coefficient.
   double GetArrivalTimeSpread(const double eps = 1.e-4);
   /// Compute the multiplication factor for the current drift line.
   double GetGain(const double eps = 1.e-4);
@@ -63,40 +82,63 @@ class DriftLineRKF {
   double GetLoss(const double eps = 1.e-4);
   double GetDriftTime() const { return m_path.empty() ? 0. : m_path.back().t; }
 
+  void GetAvalancheSize(double& ne, double& ni) const { ne = m_nE; ni = m_nI; }
+
   void EnableDebugging() { m_debug = true; }
   void DisableDebugging() { m_debug = false; }
 
   void EnableVerbose(const bool on = true) { m_verbose = on; }
 
  private:
-  enum class Particle { Electron = 0, Ion, Hole };
-
   std::string m_className = "DriftLineRKF";
 
+  // Pointer to sensor.
   Sensor* m_sensor = nullptr;
 
-  Particle m_particleType;
+  enum class Particle { Electron = 0, Ion, Hole };
+  // Type of particle (of the most current drift line).
+  Particle m_particle = Particle::Electron;
+
+  // Maximum allowed step size.
   double m_maxStepSize = 0.;
+  // Precision of the stepping algorithm.
   double m_accuracy = 1.e-8;
+  // Flag to reject bends > 90 degrees or not.
   bool m_rejectKinks = true;
+  // Flag to apply a cut on the maximum allowed step size or not.
   bool m_useStepSizeLimit = false;
 
+  // Pointer to the drift viewer.
   ViewDrift* m_view = nullptr;
 
   struct DriftPoint {
-    // Position
-    std::array<double, 3> x;
-    // Time
-    double t;
-    // Integrated Townsend coefficient
-    double alphaint;
+    std::array<double, 3> x; ///< Position 
+    double t;                ///< Time
   };
+  // Current drift line.
   std::vector<DriftPoint> m_path;
+  // Status flag of the current drift line.
   int m_status = 0;
 
+  // Flag whether to calculate induced signals or not.
+  bool m_doSignal = true;
+
+  // Scaling factor for electron signals.
   double m_scaleE = 1.;
+  // Scaling factor for hole signals.
   double m_scaleH = 1.;
+  // Scaling factor for ion signals.
   double m_scaleI = 1.;
+
+  enum class GainFluctuations { None = 0, Polya };
+  // Model to be used for randomizing the avalanche size.
+  GainFluctuations m_gainFluctuations = GainFluctuations::None; 
+  // Polya shape parameter.
+  double m_theta = 0.;
+  // Mean avalanche size (only used if < 1).
+  double m_gain = -1.;
+
+  double m_nE = 0., m_nI = 0.;
 
   bool m_debug = false;
   bool m_verbose = false;
@@ -105,6 +147,9 @@ class DriftLineRKF {
   bool DriftLine(const double x0, const double y0, const double z0,
                  const double t0, const Particle particle,
                  std::vector<DriftPoint>& path, int& status);
+  bool Avalanche(const Particle particle, const std::vector<DriftPoint>& path,
+                 std::vector<double>& ne, std::vector<double>& ni);
+
   // Compute electric and magnetic field at a given position.
   int GetField(const std::array<double, 3>& x,
                double& ex, double& ey, double& ez,
@@ -151,7 +196,9 @@ class DriftLineRKF {
                       const Particle particle, const double tol);
 
   // Calculate the signal for the current drift line.
-  void ComputeSignal(const double q, const double scale) const;
+  void ComputeSignal(const Particle particle, const double scale,
+                     const std::vector<DriftPoint>& path,
+                     const std::vector<double>& ne) const;
 };
 }
 
