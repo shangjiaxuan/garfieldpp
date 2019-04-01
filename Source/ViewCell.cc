@@ -334,7 +334,7 @@ void ViewCell::PlotWire(const double x, const double y, const double d,
 
   TEllipse circle;
   circle.SetDrawOption("same");
-  circle.DrawEllipse(x, y, 0.5 * d, 0.5 * d, 0, 0, 360);
+  circle.DrawEllipse(x, y, 0.5 * d, 0.5 * d, 0, 360, 0);
 }
 
 void ViewCell::PlotTube(const double x0, const double y0, const double r,
@@ -343,7 +343,7 @@ void ViewCell::PlotTube(const double x0, const double y0, const double r,
     TEllipse circle;
     circle.SetDrawOption("same");
     circle.SetFillStyle(0);
-    circle.DrawEllipse(x0, y0, r, r, 0, 0, 360);
+    circle.DrawEllipse(x0, y0, r, r, 0, 360, 0);
     return;
   }
 
