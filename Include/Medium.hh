@@ -63,10 +63,10 @@ class Medium {
 
   /// Switch electron/ion/hole on/off.
   virtual void EnableDrift(const bool on = true) { m_driftable = on; }
-  /// Make the medium ionisable.
-  virtual void EnablePrimaryIonisation() { m_ionisable = true; }
-  /// Make the medium non-ionisable.
-  void DisablePrimaryIonisation() { m_ionisable = false; }
+  /// Make the medium ionisable or non-ionisable.
+  virtual void EnablePrimaryIonisation(const bool on = true) { 
+    m_ionisable = on; 
+  }
 
   /// Is charge carrier transport enabled in this medium?
   bool IsDriftable() const { return m_driftable; }
