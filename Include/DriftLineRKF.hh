@@ -34,7 +34,7 @@ class DriftLineRKF {
   void EnableSignalCalculation(const bool on = true) { m_doSignal = on; }
 
   /// Set the accuracy of the Runge Kutta Fehlberg drift line integration.
-  void SetIntegrationAccuracy(const double a);
+  void SetIntegrationAccuracy(const double eps);
   /// Set the maximum step size that is allowed. By default, there is no limit. 
   void SetMaximumStepSize(const double ms);
   /// Do not apply an upper limit to the step size that is allowed.
@@ -51,7 +51,7 @@ class DriftLineRKF {
   void SetIonSignalScalingFactor(const double scale) { m_scaleI = scale; }
 
   /// Do not randomize the avalanche size.
-  void SetGainFluctuationsFixed(const double mean = -1.);
+  void SetGainFluctuationsFixed(const double gain = -1.);
   /// Sample the avalanche size from a Polya distribution with 
   /// shape parameter theta.
   void SetGainFluctuationsPolya(const double theta, const double mean = -1.);

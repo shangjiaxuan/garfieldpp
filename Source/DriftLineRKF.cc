@@ -54,9 +54,9 @@ void DriftLineRKF::SetSensor(Sensor* s) {
   m_sensor = s;
 }
 
-void DriftLineRKF::SetIntegrationAccuracy(const double a) {
-  if (a > 0.) {
-    m_accuracy = a;
+void DriftLineRKF::SetIntegrationAccuracy(const double eps) {
+  if (eps > 0.) {
+    m_accuracy = eps;
   } else {
     std::cerr << m_className << "::SetIntegrationAccuracy:\n"
               << "    Accuracy must be greater than zero.\n";
@@ -83,17 +83,17 @@ void DriftLineRKF::EnablePlotting(ViewDrift* view) {
 
 void DriftLineRKF::DisablePlotting() { m_view = nullptr; }
 
-void DriftLineRKF::SetGainFluctuationsFixed(const double mean) {
+void DriftLineRKF::SetGainFluctuationsFixed(const double gain) {
 
-  if (mean > 1.) {
+  if (gain > 1.) {
     std::cout << m_className << "::SetGainFluctuationsFixed: "
-              << "Avalanche size set to " << mean << ".\n";
+              << "Avalanche size set to " << gain << ".\n";
   } else {
     std::cout << m_className << "::SetGainFluctuationsFixed:\n    "
               << "Avalanche size will be given by "
               << "the integrated Townsend coefficient.\n";
   }
-  m_gain = mean; 
+  m_gain = gain; 
   m_gainFluctuations = GainFluctuations::None;
 }
 

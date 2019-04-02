@@ -27,7 +27,181 @@ is the method of choice.
 Microscopic tracking of electrons is dealt with by the class 
 \texttt{AvalancheMicroscopic}.  
 \section{Runge-Kutta-Fehlberg Integration}
-This method is implemented in the class \texttt{DriftLineRKF}.
+This method, implemented in the class \texttt{DriftLineRKF}, 
+calculates a drift line by iterating over the following steps.
+\begin{enumerate}
+  \item
+  Given a starting point $\mathbf{x}_{0}$, the velocity at the starting point, 
+  and a time step $\Delta{t}$, 
+  compute two estimates of the step to the next point on the drift line, 
+  \begin{itemize}
+    \item
+      $\boldsymbol{\Delta{v}}_{\text{I}} = \sum\limits_{k=0}^{2}C_{\text{I}, k}\mathbf{v}_{d}\left(\mathbf{x}_{k}\right)$, accurate to second order,
+    \item
+      $\boldsymbol{\Delta{v}}_{\text{II}} = \sum\limits_{k=0}^{3}C_{\text{I}, k}\mathbf{v}_{d}\left(\mathbf{x}_{k}\right)$, accurate to third order.
+  \end{itemize}
+  These two estimates are based on the drift velocity at the starting point 
+  and the velocity at only three new locations
+  \begin{equation*} 
+  \mathbf{x}_{k} = \mathbf{x}_{0} + \Delta{t}\sum\limits_{i = 0}^{k - 1}\beta_{k,i}\mathbf{v}_{d}\left(\mathbf{x}_{i}\right).
+  \end{equation*}
+  \item
+  The time step is updated by comparing the second and third order estimates 
+  with the requested accuracy
+  \begin{equation*}
+    \Delta{t}' = \sqrt{\frac{\varepsilon\Delta{t}}{\left|
+      \boldsymbol{\Delta{v}}_{\text{I}} - \boldsymbol{\Delta{v}}_{\text{II}}\right|}}.
+  \end{equation*}
+  \item
+  The step is repeated if
+  \begin{itemize}
+    \item
+    the time step shrinks by more than a factor five,
+    \item
+    the step size exceeds the maximum step length allowed (if such a limit is set),
+  \end{itemize}
+  \item
+  The position is updated with the second order estimate.
+  \item
+  The velocity is updated according to the end-point velocity of the step, 
+  which is one of the three velocity vectors that were computed under 1.
+\end{enumerate}
+The initial time step is estimated using 
+$\Delta{t} = \varepsilon / \left|\mathbf{v}_{d}\left(\mathbf{x}_{0}\right)\right|$.
+The parameter $\varepsilon$ used in this initial estimate and in step 2 of the above 
+algorithm, can be set using
+\begin{lstlisting}
+void SetIntegrationAccuracy(const double eps);
+\end{lstlisting} 
+
+When traversing a large area with a very smooth field, the step size becomes large. 
+If this is not desired, for instance because there is a fine structure behind the 
+smooth area, then one should limit the step size using
+\begin{lstlisting}
+void SetMaximumStepSize(const double ms);
+\end{lstlisting}
+The maximum step size is recommended to be of order $1/10 - 1/20$ 
+of the distance to be traversed. The default behaviour (no limit on the step size) 
+can be reinstated using
+\begin{lstlisting}
+void UnsetMaximumStepSize();
+\end{lstlisting}
+
+By default, the drift line calculation is aborted if the drift line makes a bend 
+sharper than 90$^{\circ}$. Such bends rarely occur in smooth fields, 
+the most common case is a drift line that tries to cross a saddle point. 
+This check can be switched on or off using
+\begin{lstlisting}
+void EnableRejectKinks(const bool on = true);
+\end{lstlisting} 
+
+During the evaluation of the velocities $\mathbf{v}_{d}\left(\mathbf{x}_{k}\right)$
+for the next step, checks are made to ensure that none of the probe points 
+$\mathbf{x}_{k}$ are outside the active area and that no wire was crossed.
+If a wire has been crossed during the step, another algorithm for stepping towards 
+a wire takes over. To be precise, the stepping towards the wire starts when 
+the particle crosses a disk of radius $n$ times the wire radius. The factor $n$ 
+(``trap radius'') can be set in \texttt{ComponentAnalyticField} when defining the wire. 
+If one of the points along the step is outside the active area,
+the drift line is terminated by doing a last linear step towards the boundary.
+
+Drift line calculations are started using 
+\begin{lstlisting}
+bool DriftElectron(const double x0, const double y0, const double z0, const double t0);
+bool DriftHole(const double x0, const double y0, const double z0, const double t0);
+bool DriftIon(const double x0, const double y0, const double z0, const double t0);
+\end{lstlisting}
+\begin{description}
+  \item[x0, y0, z0, t0] initial position and time
+\end{description}
+
+After calculating a drift line, the multiplication and loss factors 
+\begin{equation*}
+  \exp\left(\int\alpha\text{d}s\right), \exp\left(-\int\eta\text{d}s\right)
+\end{equation*}
+along the drift line can be obtained using 
+\begin{lstlisting}
+void GetGain(const double eps = 1.e-4);
+void GetLoss(const double eps = 1.e-4);
+\end{lstlisting}
+\begin{description}
+  \item[eps] parameter determining the accuracy of the integration.
+\end{description}
+Both functions use an adaptive Simpson-style integration.
+
+Similarly, the function
+\begin{lstlisting}
+void GetArrivalTimeSpread(const double eps = 1.e-4);
+\end{lstlisting}
+returns the $\sigma$ of the arrival time distribution calculated by 
+integrating the longitudinal diffusion coefficient along the drift line. 
+
+The points along the most recent drift line are accessible through the functions
+\begin{lstlisting}
+unsigned int GetNumberOfDriftLinePoints() const;
+void GetDriftLinePoint(const unsigned int i, double& x, double& y, double& z, 
+                       double& t) const;
+\end{lstlisting}
+\begin{description}
+  \item[i] index of the point.
+  \item[x, y, z, t] coordinates and time of the point. 
+\end{description}
+If one is simply interested in the end point and status flag of the 
+current drift line, the function
+\begin{lstlisting}
+void GetEndPoint(double& x, double& y, double& z, double& t, int& st) const;
+\end{lstlisting}
+can be used. A list of the status codes 
+is given in Table~\ref{Tab:DriftLineStatusCodes}.
+
+By default, the induced current is calculated for each drift line.
+This can be activated or deactivated using
+\begin{lstlisting}
+void EnableSignalCalculation(const bool on = true);
+\end{lstlisting}
+
+For electron drift lines, multiplication is taken into account in the signal 
+calculation. For this purpose, after calculating a drift line
+the number of electrons and ions at each point of the line is calculated 
+by integrating the Townsend and attachment coefficient along the line. 
+For a given starting point, 
+the number of electrons at the end of the drift line is thus given by 
+\begin{equation*}
+  n_{e} = \exp\left(\int\left(\alpha - \eta\right)\text{d}s\right).
+\end{equation*}
+The multiplication factor can be set explicitly using
+\begin{lstlisting}
+void SetGainFluctuationsFixed(const double gain = -1.);
+\end{lstlisting}
+\begin{description}
+  \item[gain] multiplication factor to be used. 
+  If the provided value is $< 1$, the multiplication factor 
+  obtained by integrating $\alpha - \eta$ along the 
+  drift line is used instead (as is the default).
+\end{description} 
+
+In order to take fluctuations of the avalanche size into account in 
+the signal calculation, the number of electrons in the avalanche 
+can be sampled from a P\'olya distribution \cite{Alkhazov1970}
+\begin{equation*}
+ \overline{n}P_{n} = \frac{\left(\theta + 1\right)^{\theta + 1}}{\Gamma\left(\theta + 1\right)}\left(\frac{n}{\overline{n}}\right)\text{e}^{-\left(\theta + 1\right)n/\overline{n}},
+\end{equation*}
+where $P_{n}$ is the probability that the avalanche comprises $n$ electrons, 
+$\overline{n}$ is the mean avalanche size, and $\theta$ is a parameter 
+controlling the shape of the distribution. For $\theta = 0$ one obtains an 
+exponential distribution, while with increasing $\theta$ the distribution becomes 
+more and more ``rounded''. The simulation of gain fluctuations can be enabled using 
+the function 
+\begin{lstlisting}
+void SetGainFluctuationsPolya(const double theta, const double mean = -1.);
+\end{lstlisting}
+\begin{description}
+  \item[theta] shape parameter $\theta$ of the P\'olya distribution.
+  \item[mean] mean avalanche size $\overline{n}$. 
+  If the provided value is $< 1$, the multiplication factor 
+  obtained by integrating $\alpha - \eta$ along the 
+  drift line is used instead (as is the default).
+\end{description}
 
 \section{Monte Carlo Integration}
 In the class \texttt{AvalancheMC}, Eq.~\eqref{Eqn:FirstOrderEquationOfMotion}
@@ -58,8 +232,8 @@ void SetDistanceSteps(const double d = 0.001);
 void SetCollisionSteps(const int n = 100);
 \end{lstlisting} 
 In the first case the integration is done 
-using fixed time steps (default: 20 ps), 
-in the second case using fixed distance steps (default: 10 \(\mu\)m). 
+using fixed time steps (default: 20\,ps), 
+in the second case using fixed distance steps (default: 10\,\textmu{m}). 
 Calling the third function instructs the class to 
 do the integration with exponentially distributed time steps 
 with a mean equal to the specified multiple of the ``collision time'' 
@@ -175,9 +349,21 @@ void EnableAvalancheSizeLimit(const int size);
 an upper limit to the number of electrons in an avalanche can be imposed.
 
 \section{Microscopic Tracking}\label{Sec:MicroscopicTracking}
-Microscopic tracking is (at present) only possible for electrons. 
-It is implemented in the class \texttt{AvalancheMicroscopic}. 
-A calculation is started by means of
+In the microscopic tracking approach -- implemented at present only for electrons --
+a particle is followed from collision to collision. As input, it requires 
+a table of the collision rates $\tau^{-1}_{i}\left(\epsilon\right)$ for each 
+scattering process $i$ as function of the electron energy $\epsilon$. 
+For gases, these data are provided by the class \texttt{MediumMagboltz}.
+Between collisions, an electron is traced on a classical vacuum trajectory 
+according to the local electric (and optionally magnetic) field. The duration 
+$\Delta{t}$ of a free-flight step is sampled using the ``null-collision'' method 
+\cite{Skullerud1968}. 
+After the step, the scattering process to take place is sampled based on the 
+relative collision rates at the new energy $\epsilon'$, the energy and direction 
+of the electron are updated according to the type of collision.
+
+In Garfield++, the microscopic tracking method is implemented in the class 
+\texttt{AvalancheMicroscopic}. A calculation is started by means of
 \begin{lstlisting}
 void AvalancheElectron(const double x0, const double y0, const double z0,
                        const double t0, const double e0,
@@ -234,6 +420,7 @@ produced along its drift path
      -3 & calculation abandoned (error, should not happen) \\
      -5 & particle not inside a drift medium  \\
      -7 & attachment                          \\
+     -8 & sharp kink (only for RKF)           \\
     -16 & energy below transport cut          \\
     -17 & outside the time window             \\
     \bottomrule
@@ -356,7 +543,7 @@ void userHandle(double x, double y, double z, double t,
 
   // Check if the collision is an excitation.
   if (type != 4) return;
-  // Do something (e.~g. fill a histogram, simulate the emission of a VUV photon) 
+  // Do something (e. g. fill a histogram, simulate the emission of a VUV photon) 
   ...
 } 
 
@@ -383,6 +570,7 @@ After attaching a \texttt{ViewDrift} object to a transport class, e.~g. using
 \begin{lstlisting}
 void AvalancheMicroscopic::EnablePlotting(ViewDrift* view);
 void AvalancheMC::EnablePlotting(ViewDrift* view);
+void DriftLineRKF::EnablePlotting(ViewDrift* view);
 void Track::EnablePlotting(ViewDrift* view);
 \end{lstlisting}
 \texttt{ViewDrift} stores the trajectories which are calculated by the 
