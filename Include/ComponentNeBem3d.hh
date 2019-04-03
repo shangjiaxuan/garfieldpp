@@ -23,7 +23,7 @@ class ComponentNeBem3d : public ComponentBase {
                 std::vector<double>& xv, std::vector<double>& yv,
                 std::vector<double>& zv);
 
-  unsigned int GetNumberOfElements() const { return m_elements.size(); }
+  unsigned int GetNumberOfPrimitives() const { return m_primitives.size(); }
 
   void Reset() override;
   void UpdatePeriodicity() override;
@@ -37,24 +37,25 @@ class ComponentNeBem3d : public ComponentBase {
   std::vector<Panel> m_panels;
 
   // Array of boundary elements (version for nebem 3d)
-  struct Element {
-    // Geometric type
-    int geoType;
-    // Center point
-    double cX, cY;
-    // Half length
-    double len;
-    // Rotation angle
-    double phi;
-    // Charge density
-    double solution;
-    // Boundary condition type and value - have to come from the solids
-    //  unsigned int bcType;
-    //  double bcValue;
-    // Ratio of relative dielectric permittivities
-    double lambda;
+  struct Primitive {
+    /// Perpendicular vector
+    double a, b, c;
+    /// X-coordinates of vertices
+    std::vector<double> xv;
+    /// Y-coordinates of vertices
+    std::vector<double> yv;
+    /// Z-coordinates of vertices
+    std::vector<double> zv;
+    /// Interface type.
+    Solid::BoundaryCondition interface;
+    /// Dielectric constants
+    double eps1, eps2;
+    /// Potential
+    double v;
+    /// Charge
+    double q;
   };
-  std::vector<Element> m_elements;
+  std::vector<Primitive> m_primitives;
 
   /// Isolate the parts of polygon 1 that are not hidden by 2 and vice versa.
   bool EliminateOverlaps(const Panel& panel1, const Panel& panel2,

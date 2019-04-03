@@ -461,6 +461,7 @@ bool ComponentNeBem3d::GetVoltageRange(double& vmin, double& vmax) {
 bool ComponentNeBem3d::Initialise() {
   // Reset the panel list.
   m_panels.clear();
+  m_primitives.clear();
 
   if (!m_geometry) {
     std::cerr << m_className << "::Initialise: Geometry not set.\n";
@@ -505,24 +506,23 @@ bool ComponentNeBem3d::Initialise() {
   const double epsang = 1.e-6;  // BEMEPA
   const double epsxyz = 1.e-6;  // BEMEPD
   // CALL EPSSET('SET',EPSXYZ,EPSXYZ,EPSXYZ)
-  const unsigned int nRef = m_panels.size();
 
-  std::vector<Panel> oldPanels;
-  oldPanels.swap(m_panels);
-  const unsigned int nOld = oldPanels.size();
+  std::vector<Panel> panelsIn;
+  panelsIn.swap(m_panels);
+  const unsigned int nIn = panelsIn.size();
   // Keep track of which panels have been processed.
-  std::vector<bool> mark(nOld, false);
+  std::vector<bool> mark(nIn, false);
   // Pick up panels which coincide potentially.
-  for (unsigned int i = 0; i < nOld; ++i) {
+  for (unsigned int i = 0; i < nIn; ++i) {
     // Skip panels already done.
     if (mark[i]) continue;
     // Fetch panel parameters.
-    const double a1 = oldPanels[i].a;
-    const double b1 = oldPanels[i].b;
-    const double c1 = oldPanels[i].c;
-    const auto& xp1 = oldPanels[i].xv;
-    const auto& yp1 = oldPanels[i].yv;
-    const auto& zp1 = oldPanels[i].zv;
+    const double a1 = panelsIn[i].a;
+    const double b1 = panelsIn[i].b;
+    const double c1 = panelsIn[i].c;
+    const auto& xp1 = panelsIn[i].xv;
+    const auto& yp1 = panelsIn[i].yv;
+    const auto& zp1 = panelsIn[i].zv;
     const unsigned int np1 = xp1.size();
     // Establish its norm and offset.
     const double d1 = a1 * xp1[0] + b1 * yp1[0] + c1 * zp1[0];
@@ -571,7 +571,7 @@ bool ComponentNeBem3d::Initialise() {
     std::vector<Panel> newPanels;
     std::vector<int> vol1;
     std::vector<int> vol2;
-    Panel panel1 = oldPanels[i];
+    Panel panel1 = panelsIn[i];
     panel1.xv = xp;
     panel1.yv = yp;
     panel1.zv = zp;
@@ -579,14 +579,14 @@ bool ComponentNeBem3d::Initialise() {
     vol2.push_back(-1);
     newPanels.push_back(std::move(panel1));
     // Pick up all matching planes.
-    for (unsigned int j = i + 1; j < nRef; ++j) {
+    for (unsigned int j = i + 1; j < nIn; ++j) {
       if (mark[j]) continue;
-      const double a2 = oldPanels[j].a;
-      const double b2 = oldPanels[j].b;
-      const double c2 = oldPanels[j].c;
-      const auto& xp2 = oldPanels[j].xv;
-      const auto& yp2 = oldPanels[j].yv;
-      const auto& zp2 = oldPanels[j].zv;
+      const double a2 = panelsIn[j].a;
+      const double b2 = panelsIn[j].b;
+      const double c2 = panelsIn[j].c;
+      const auto& xp2 = panelsIn[j].xv;
+      const auto& yp2 = panelsIn[j].yv;
+      const auto& zp2 = panelsIn[j].zv;
       const unsigned int np2 = xp2.size();
       // See whether this matches the first.
       const double d2 = a2 * xp2[0] + b2 * yp2[0] + c2 * zp2[0];
@@ -611,7 +611,7 @@ bool ComponentNeBem3d::Initialise() {
       }
       zm /= np2;
       // Store it.
-      Panel panel2 = oldPanels[j];
+      Panel panel2 = panelsIn[j];
       panel2.xv = xp;
       panel2.yv = yp;
       panel2.zv = zp;
@@ -710,10 +710,19 @@ bool ComponentNeBem3d::Initialise() {
           yp[k] = rot[0][1] * up[k] + rot[1][1] * vp[k] + rot[2][1] * wp[k];
           zp[k] = rot[0][2] * up[k] + rot[1][2] * vp[k] + rot[2][2] * wp[k];
         }
-        panel.xv = xp;
-        panel.yv = yp;
-        panel.zv = zp;
-        m_panels.push_back(std::move(panel));
+        Primitive primitive;
+        primitive.a = panel.a;
+        primitive.b = panel.b;
+        primitive.c = panel.c;
+        primitive.xv = xp;
+        primitive.yv = yp;
+        primitive.zv = zp;
+        primitive.interface = bc[vol1[j]];
+        primitive.eps1 = eps[vol1[j]];
+        primitive.eps2 = eps[vol2[j]];
+        primitive.v = volt[vol1[j]];
+        primitive.q = 0.;
+        m_primitives.push_back(std::move(primitive));
       }
     }
   }
@@ -2004,7 +2013,7 @@ bool ComponentNeBem3d::GetPanel(const unsigned int i, double& a, double& b,
 
 void ComponentNeBem3d::Reset() {
   m_panels.clear();
-  m_elements.clear();
+  m_primitives.clear();
   m_ready = false;
 }
 
