@@ -249,13 +249,8 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
   }
 
   if (m_particleBank.empty()) return false;
-
   std::vector<Heed::gparticle*>::const_iterator end = m_particleBank.end();
-  if (m_bankIterator == end) {
-    std::cerr << m_className << "::GetCluster:\n"
-              << "    There are no more clusters on this track.\n";
-    return false;
-  }
+  if (m_bankIterator == end) return false;
 
   // Look for the next cluster (i. e. virtual photon) in the list.
   Heed::HeedPhoton* virtualPhoton = nullptr;
@@ -276,7 +271,7 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
     zcls = virtualPhoton->position().z * 0.1 + m_cZ;
     tcls = virtualPhoton->time();
     // Skip clusters outside the drift area or outside the active medium.
-    if (!IsInside(xcls, ycls, zcls)) continue;
+//    if (!IsInside(xcls, ycls, zcls)) continue;
     // Add the first ion (at the position of the cluster).
     m_conductionIons.emplace_back(
         Heed::HeedCondElectron(Heed::point(virtualPhoton->position()), tcls));
@@ -285,7 +280,7 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
   }
 
   // Stop if we did not find a virtual photon.
-  if (m_bankIterator == end || !virtualPhoton) return false;
+  if (!virtualPhoton) return false;
   // Plot the cluster, if requested.
   if (m_usePlotting) PlotCluster(xcls, ycls, zcls);
 
@@ -306,7 +301,7 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
         const double x = delta->position().x * 0.1 + m_cX;
         const double y = delta->position().y * 0.1 + m_cY;
         const double z = delta->position().z * 0.1 + m_cZ;
-        if (!IsInside(x, y, z)) continue;
+//        if (!IsInside(x, y, z)) continue;
         if (m_doDeltaTransport) {
           // Transport the delta electron.
           delta->fly(newSecondaries);
@@ -342,7 +337,7 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
       const double x = photon->position().x * 0.1 + m_cX;
       const double y = photon->position().y * 0.1 + m_cY;
       const double z = photon->position().z * 0.1 + m_cZ;
-      if (!IsInside(x, y, z)) continue;
+//      if (!IsInside(x, y, z)) continue;
       // Transport the photon.
       if (m_usePhotonReabsorption) photon->fly(newSecondaries);
     }
