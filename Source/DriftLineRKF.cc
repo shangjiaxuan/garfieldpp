@@ -126,23 +126,8 @@ bool DriftLineRKF::DriftElectron(const double x0, const double y0,
   }
   std::vector<double> ne(m_path.size(), 1.);
   std::vector<double> ni(m_path.size(), 0.);
-  Avalanche(Particle::Electron, m_path, ne, ni);
-  const double q0 = ne.back();
   double scale = 1.;
-  if (q0 > 1.) {
-    double q1 = m_gain > 1. ? m_gain : q0;
-    if (m_gainFluctuations == GainFluctuations::Polya) {
-      for (unsigned int i = 0; i < 100; ++i) {
-        q1 *= RndmPolya(m_theta);
-        if (q1 >= 1.) break;
-        q1 = m_gain > 1. ? m_gain : q0;
-      }
-      q1 = std::max(q1, 1.);
-    }
-    scale = (q1 + 1.) / (q0 + 1.); 
-  }
-  m_nE = scale * q0;
-  m_nI = scale * std::accumulate(ni.begin(), ni.end(), 0.);
+  Avalanche(Particle::Electron, m_path, ne, ni, scale);
   if (m_doSignal) {
     ComputeSignal(Particle::Electron, scale * m_scaleE, m_path, ne);
   }
@@ -510,19 +495,6 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     // Update the velocity.
     v0 = v3;
   }
-  if (m_verbose) {
-    // If requested, print step history.
-    std::cout << m_className << "::DriftLine:\n"
-              << "    Drift line status: " << flag << "\n"
-              << "   Step          time         time step     "
-              << "       x               y                 z\n";
-    const unsigned int nPoints = path.size();
-    for (unsigned int i = 0; i < nPoints; ++i) {
-      const double dt = i > 0 ? path[i].t - path[i - 1].t : 0.; 
-      std::printf("%8d %15.7f %15.7f %15.7f %15.7f %15.7f\n", 
-                  i, path[i].t, dt, path[i].x[0], path[i].x[1], path[i].x[2]);
-    }
-  }
   if (m_view) {
     for (const auto& p : path) {
       m_view->AddDriftLinePoint(iLine, p.x[0], p.x[1], p.x[2]);
@@ -535,7 +507,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
 bool DriftLineRKF::Avalanche(const Particle particle,
                              const std::vector<DriftPoint>& path,
                              std::vector<double>& ne,
-                             std::vector<double>& ni) {
+                             std::vector<double>& ni, double& scale) {
 
   // SIGETR
   const unsigned int nPoints = path.size();
@@ -590,7 +562,7 @@ bool DriftLineRKF::Avalanche(const Particle particle,
     alpsum *= 0.5;
     etasum *= 0.5;
     if (alpsum > 1.e-6 && !start) {
-      if (m_debug || m_verbose) {
+      if (m_debug) {
         std::cout << m_className << "::Avalanche: Avalanche starts at step " 
                   << i << ".\n";
       }
@@ -619,6 +591,29 @@ bool DriftLineRKF::Avalanche(const Particle particle,
               << "would lead to exponential overflow.\n    "
               << "Avalanche truncated.\n";
   }
+  const double qe = ne.back();
+  const double qi = std::accumulate(ni.begin(), ni.end(), 0.);
+  scale = 1.;
+  if (qi > 1.) {
+    double q1 = m_gain > 1. ? m_gain : qi;
+    if (m_gainFluctuations == GainFluctuations::Polya) {
+      for (unsigned int i = 0; i < 100; ++i) {
+        q1 *= RndmPolya(m_theta);
+        if (q1 >= 1.) break;
+        q1 = m_gain > 1. ? m_gain : qi;
+      }
+      q1 = std::max(q1, 1.);
+    }
+    scale = (q1 + 1.) / (qi + 1.); 
+  }
+  if (m_debug) {
+    std::cout << m_className << "::Avalanche:\n    "
+              << "Final number of electrons: " << qe << "\n    "
+              << "Number of ions:            " << qi << "\n    "
+              << "Charge scaling factor:     " << scale << "\n";
+  }
+  m_nE = scale * qe;
+  m_nI = scale * qi;
   return true;
 }
 
@@ -1110,6 +1105,33 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
   return true;
 }
 
+void DriftLineRKF::PrintDriftLine() const {
+
+  std::cout << m_className << "::PrintDriftLine:\n";
+  if (m_path.empty()) {
+    std::cout << "    No drift line present.\n";
+    return;
+  }
+  if (m_particle == Particle::Electron) {
+    std::cout << "    Particle: electron\n";
+  } else if (m_particle == Particle::Ion) {
+    std::cout << "    Particle: ion\n";
+  } else if (m_particle == Particle::Hole) {
+    std::cout << "    Particle: hole\n";
+  } else {
+    std::cout << "    Particle: unknown\n";
+  }
+  std::cout << "    Status: " << m_status << "\n"
+            << "  Step       time [ns]        "
+            << "x [cm]          y [cm]          z [cm]\n";
+  const unsigned int nPoints = m_path.size();
+  for (unsigned int i = 0; i < nPoints; ++i) {
+    std::printf("%6d %15.7f %15.7f %15.7f %15.7f\n", 
+                i, m_path[i].t, m_path[i].x[0], m_path[i].x[1], m_path[i].x[2]);
+  }
+ 
+}
+
 void DriftLineRKF::GetEndPoint(double& x, double& y, double& z, double& t,
                                int& stat) const {
   if (m_path.empty()) {
@@ -1496,7 +1518,6 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
   if (nPoints < 2) return;
   const double q = particle == Particle::Electron ? -1 * scale : scale;
   const bool aval = ne.size() == path.size();
-
   for (unsigned int i = 1; i < nPoints; ++i) {
     const double t0 = path[i - 1].t;
     const double t1 = path[i].t;

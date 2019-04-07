@@ -66,6 +66,9 @@ class DriftLineRKF {
   bool DriftIon(const double x0, const double y0, const double z0,
                 const double t0);
 
+  /// Print the trajectory of the most recent drift line.
+  void PrintDriftLine() const;
+  /// Get the end point and status flag of the most recent drift line.
   void GetEndPoint(double& x, double& y, double& z, double& t, int& st) const;
   /// Get the number of points of the most recent drift line.
   unsigned int GetNumberOfDriftLinePoints() const { return m_path.size(); }
@@ -86,8 +89,6 @@ class DriftLineRKF {
 
   void EnableDebugging() { m_debug = true; }
   void DisableDebugging() { m_debug = false; }
-
-  void EnableVerbose(const bool on = true) { m_verbose = on; }
 
  private:
   std::string m_className = "DriftLineRKF";
@@ -141,14 +142,14 @@ class DriftLineRKF {
   double m_nE = 0., m_nI = 0.;
 
   bool m_debug = false;
-  bool m_verbose = false;
 
   // Calculate a drift line starting at a given position.
   bool DriftLine(const double x0, const double y0, const double z0,
                  const double t0, const Particle particle,
                  std::vector<DriftPoint>& path, int& status);
   bool Avalanche(const Particle particle, const std::vector<DriftPoint>& path,
-                 std::vector<double>& ne, std::vector<double>& ni);
+                 std::vector<double>& ne, std::vector<double>& ni, 
+                 double& scale);
 
   // Compute electric and magnetic field at a given position.
   int GetField(const std::array<double, 3>& x,
