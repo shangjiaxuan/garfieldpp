@@ -375,8 +375,8 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
   const int nA = m_bAngles.size();
   if (m_debug) {
     std::cout << m_className << "::LoadGasFile:\n    " << nE
-              << " electric fields, " << nB
-              << " magnetic fields, " << nA << " angles.\n";
+              << " electric field(s), " << nB
+              << " magnetic field(s), " << nA << " angle(s).\n";
   }
 
   // Decode the GASOK bits.
@@ -670,19 +670,19 @@ bool MediumGas::ReadHeader(std::ifstream& gasfile, int& version,
         }
       } else if (strcmp(token, "E") == 0) {
         token = strtok(NULL, " :,%");
-        const int nE = efields.size();
-        if (strcmp(token, "fields") == 0) {
+        if (strncmp(token, "fields", 6) == 0) {
+          const int nE = efields.size();
           for (int i = 0; i < nE; ++i) gasfile >> efields[i];
         }
       } else if (strcmp(token, "E-B") == 0) {
         token = strtok(NULL, " :,%");
-        const int nA = angles.size();
-        if (strcmp(token, "angles") == 0) {
+        if (strncmp(token, "angles", 6) == 0) {
+          const int nA = angles.size();
           for (int i = 0; i < nA; ++i) gasfile >> angles[i];
         }
       } else if (strcmp(token, "B") == 0) {
         token = strtok(NULL, " :,%");
-        if (strcmp(token, "fields") == 0) {
+        if (strncmp(token, "fields", 6) == 0) {
           double bstore = 0.;
           const int nB = bfields.size();
           for (int i = 0; i < nB; i++) {
