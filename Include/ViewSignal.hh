@@ -43,6 +43,16 @@ class ViewSignal {
                     : 'i' ? m_hSignalIons.get() : m_hSignal.get();
   }
 
+  /// Set the x-axis limits explicitly.
+  void SetRangeX(const double xmin, const double xmax);
+  /// Remove the user-defined x-axis limits.
+  void UnsetRangeX() { m_userRangeX = false; }
+
+  /// Set the y-axis limits explicitly.
+  void SetRangeY(const double ymin, const double ymax);
+  /// Remove the user-defined y-axis limits.
+  void UnsetRangeY() { m_userRangeY = false; }
+
   /// Enable/disable debugging output.
   void EnableDebugging(const bool on = true) { m_debug = on; }
 
@@ -58,6 +68,14 @@ class ViewSignal {
   // Canvas
   TCanvas* m_canvas = nullptr;
   bool m_hasExternalCanvas = false;
+
+  // Axis range.
+  double m_xmin = 0.;
+  double m_xmax = 0.;
+  bool m_userRangeX = false;
+  double m_ymin = 0.;
+  double m_ymax = 0.;
+  bool m_userRangeY = false;
 
   // Histograms
   std::unique_ptr<TH1D> m_hSignal;

@@ -2,6 +2,7 @@
 
 #include <TAxis.h>
 
+#include "GarfieldConstants.hh"
 #include "Plotting.hh"
 #include "Sensor.hh"
 #include "ViewSignal.hh"
@@ -30,6 +31,28 @@ void ViewSignal::SetCanvas(TCanvas* c) {
   }
   m_canvas = c;
   m_hasExternalCanvas = true;
+}
+
+void ViewSignal::SetRangeX(const double xmin, const double xmax) {
+
+  if (fabs(xmax - xmin) < Small) {
+    std::cerr << m_className << "::SetRangeX: Invalid range.\n";
+    return;
+  }
+  m_xmin = std::min(xmin, xmax);
+  m_xmax = std::max(xmin, xmax);
+  m_userRangeX = true;
+}
+
+void ViewSignal::SetRangeY(const double ymin, const double ymax) {
+
+  if (fabs(ymax - ymin) < Small) {
+    std::cerr << m_className << "::SetRangeY: Invalid range.\n";
+    return;
+  }
+  m_ymin = std::min(ymin, ymax);
+  m_ymax = std::max(ymin, ymax);
+  m_userRangeY = true;
 }
 
 void ViewSignal::PlotSignal(const std::string& label, const bool total,
@@ -64,6 +87,8 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       m_hSignal->SetBinContent(i + 1, sig);
     }
     m_hSignal->Draw("");
+    if (m_userRangeX) m_hSignal->SetAxisRange(m_xmin, m_xmax, "X");
+    if (m_userRangeY) m_hSignal->SetAxisRange(m_ymin, m_ymax, "Y");
 
     // Get and plot threshold crossings.
     const auto nCrossings = m_sensor->GetNumberOfThresholdCrossings();
@@ -95,6 +120,10 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       m_hSignalElectrons->SetBinContent(i + 1, sig);
     }
     m_hSignalElectrons->Draw("same");
+    if (!total) {
+      if (m_userRangeX) m_hSignalElectrons->SetAxisRange(m_xmin, m_xmax, "X");
+      if (m_userRangeY) m_hSignalElectrons->SetAxisRange(m_ymin, m_ymax, "Y");
+    }
     m_canvas->Update();
   }
   if (ion) {
@@ -108,6 +137,10 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       m_hSignalIons->SetBinContent(i + 1, sig);
     }
     m_hSignalIons->Draw("same");
+    if (!(total || electron)) {
+      if (m_userRangeX) m_hSignalIons->SetAxisRange(m_xmin, m_xmax, "X");
+      if (m_userRangeY) m_hSignalIons->SetAxisRange(m_ymin, m_ymax, "Y");
+    }
     m_canvas->Update();
   }
 }
