@@ -14,6 +14,8 @@ class ComponentVoxel : public ComponentBase {
   /// Destructor
   ~ComponentVoxel() {}
 
+  void Clear() override { Reset(); }
+
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, double& v, Medium*& m,
                      int& status) override;
@@ -25,6 +27,9 @@ class ComponentVoxel : public ComponentBase {
                       const std::string& label) override;
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
+  void WeightingField(const double x, const double y, const double z,
+                      const double t, double& wx, double& wy, double& wz,
+                      const std::string& label) override;
 
   void MagneticField(const double x, const double y, const double z, double& bx,
                      double& by, double& bz, int& status) override;
@@ -75,6 +80,16 @@ class ComponentVoxel : public ComponentBase {
                          const bool withPotential, const bool withRegion,
                          const double scaleX = 1., const double scaleE = 1.,
                          const double scaleP = 1.);
+  /// Import (prompt) weighting field from file.
+  bool LoadWeightingField(const std::string& filename, const std::string& format,
+                          const bool withPotential, 
+                          const double scaleX = 1., const double scaleE = 1.,
+                          const double scaleP = 1.);
+  /// Import delayed weighting field from file.
+  bool LoadWeightingField(const std::string& filename, const std::string& format,
+                          const double time, const bool withPotential, 
+                          const double scaleX = 1., const double scaleE = 1.,
+                          const double scaleP = 1.);
   /// Import magnetic field values from a file.
   bool LoadMagneticField(const std::string& filename, const std::string& format,
                          const double scaleX = 1., const double scaleB = 1.);
@@ -101,12 +116,19 @@ class ComponentVoxel : public ComponentBase {
     double fx, fy, fz;  //< Field
     double v;           //< Potential
   };
+
+  /// Region indices.
+  std::vector<std::vector<std::vector<int> > > m_regions;
   /// Electric field values and potentials at each mesh element.
   std::vector<std::vector<std::vector<Element> > > m_efields;
   /// Magnetic field values at each mesh element.
   std::vector<std::vector<std::vector<Element> > > m_bfields;
-  /// Region indices.
-  std::vector<std::vector<std::vector<int> > > m_regions;
+  /// Prompt weighting field values and potentials at each mesh element.
+  std::vector<std::vector<std::vector<Element> > > m_wfields;
+  /// Delayed weighting field values and potentials at each mesh element.
+  std::vector<std::vector<std::vector<std::vector<Element> > > > m_wdfields;
+  std::vector<double> m_wdtimes;
+
   // Dimensions of the mesh
   unsigned int m_nX = 0, m_nY = 0, m_nZ = 0;
   double m_xMin = 0., m_yMin = 0., m_zMin = 0.;
@@ -119,6 +141,7 @@ class ComponentVoxel : public ComponentBase {
   bool m_hasPotential = false;
   bool m_hasEfield = false;
   bool m_hasBfield = false;
+  bool m_hasWfield = false;
 
   // Offset for weighting field
   double m_wField_xOffset = 0.;
@@ -132,7 +155,7 @@ class ComponentVoxel : public ComponentBase {
   bool LoadData(const std::string& filename, std::string format,
                 const bool withPotential, const bool withRegion,
                 const double scaleX, const double scaleF, const double scaleP,
-                const char field);
+                std::vector<std::vector<std::vector<Element> > >& field);
 
   void Reset() override;
   void UpdatePeriodicity() override;
@@ -145,6 +168,9 @@ class ComponentVoxel : public ComponentBase {
   double Reduce(const double xin, const double xmin, const double xmax,
                 const bool simplePeriodic, const bool mirrorPeriodic,
                 bool& isMirrored) const;
+  /// Set the dimensions of a table according to the mesh.
+  void Initialise(std::vector<std::vector<std::vector<Element> > >& fields);
+  void InitialiseRegions();
 };
 }
 #endif

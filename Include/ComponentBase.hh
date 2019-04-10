@@ -62,6 +62,16 @@ class ComponentBase {
                               const std::string& label);
   virtual double WeightingPotential(const double x, const double y,
                                     const double z, const std::string& label);
+  /** Calculate the delayed weighting field at a given point and time 
+    * and for a given electrode.
+    * \param x,y,z coordinates [cm].
+    * \param t time [ns].
+    * \param wx,wy,wz components of the weighting field [1/cm].
+    * \param label name of the electrode
+    */
+  virtual void WeightingField(const double x, const double y, const double z,
+                              const double t, double& wx, double& wy, double& wz,
+                              const std::string& label);
 
   /** Calculate the magnetic field at a given point.
     *

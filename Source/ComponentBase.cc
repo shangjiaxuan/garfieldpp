@@ -35,6 +35,16 @@ void ComponentBase::WeightingField(const double /*x*/, const double /*y*/,
   wx = wy = wz = 0.;
 }
 
+void ComponentBase::WeightingField(const double /*x*/, const double /*y*/,
+                                   const double /*z*/, const double /*t*/,
+                                   double& wx, double& wy, double& wz,
+                                   const std::string& /*label*/) {
+  if (m_debug) {
+    std::cerr << m_className << "::WeightingField: Function not implemented.\n";
+  }
+  wx = wy = wz = 0.;
+}
+
 double ComponentBase::WeightingPotential(const double /*x*/, const double /*y*/,
                                          const double /*z*/,
                                          const std::string& /*label*/) {

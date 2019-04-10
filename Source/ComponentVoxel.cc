@@ -7,6 +7,7 @@
 
 #include "ComponentVoxel.hh"
 #include "Utilities.hh"
+#include "GarfieldConstants.hh"
 
 namespace Garfield {
 
@@ -55,27 +56,71 @@ void ComponentVoxel::ElectricField(const double x, const double y,
 void ComponentVoxel::WeightingField(const double x, const double y,
                                     const double z, double& wx, double& wy,
                                     double& wz, const std::string& /*label*/) {
-  int status = 0;
-  Medium* med = nullptr;
-  double v = 0.;
-  const double x1 = x - m_wField_xOffset;
-  const double y1 = y - m_wField_yOffset;
-  const double z1 = z - m_wField_zOffset;
-  ElectricField(x1, y1, z1, wx, wy, wz, v, med, status);
+
+  wx = wy = wz = 0.;
+  if (!m_hasWfield) return;
+  const double xx = x - m_wField_xOffset;
+  const double yy = y - m_wField_yOffset;
+  const double zz = z - m_wField_zOffset;
+  double wp = 0.;
+  int region = 0;
+  GetField(xx, yy, zz, m_wfields, wx, wy, wz, wp, region);
 }
 
 double ComponentVoxel::WeightingPotential(const double x, const double y,
                                           const double z,
                                           const std::string& /*label*/) {
-  int status = 0;
-  Medium* med = nullptr;
-  double v = 0.;
-  const double x1 = x - m_wField_xOffset;
-  const double y1 = y - m_wField_yOffset;
-  const double z1 = z - m_wField_zOffset;
+  if (!m_hasWfield) return 0.;
+  const double xx = x - m_wField_xOffset;
+  const double yy = y - m_wField_yOffset;
+  const double zz = z - m_wField_zOffset;
   double wx = 0., wy = 0., wz = 0.;
-  ElectricField(x1, y1, z1, wx, wy, wz, v, med, status);
-  return v;
+  double wp = 0.;
+  int region = 0;
+  if (!GetField(xx, yy, zz, m_wfields, wx, wy, wz, wp, region)) return 0.;
+  return wp;
+}
+
+void ComponentVoxel::WeightingField(const double x, const double y,
+                                    const double z, const double t,
+                                    double& wx, double& wy,
+                                    double& wz, const std::string& /*label*/) {
+
+  wx = wy = wz = 0.;
+  if (m_wdtimes.empty()) return;
+  // Assume no weighting field for times outside the range of available maps.
+  if (t < m_wdtimes.front() || t > m_wdtimes.back()) return;
+
+  const double xx = x - m_wField_xOffset;
+  const double yy = y - m_wField_yOffset;
+  const double zz = z - m_wField_zOffset;
+
+  const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
+  const auto it0 = std::prev(it1);
+ 
+  const double dt = t - *it0; 
+  double wp = 0.;
+  int region = 0;
+  const unsigned int i0 = it0 - m_wdtimes.cbegin();
+  double wx0 = 0., wy0 = 0., wz0 = 0.;
+  if (!GetField(xx, yy, zz, m_wdfields[i0], wx0, wy0, wz0, wp, region)) {
+    return;
+  } 
+  if (dt < Small || it1 == m_wdtimes.cend()) {
+    wx = wx0;
+    wy = wy0;
+    wz = wz0;
+    return; 
+  }
+  const unsigned int i1 = it1 - m_wdtimes.cbegin();
+  double wx1 = 0., wy1 = 0., wz1 = 0.;
+  if (!GetField(xx, yy, zz, m_wdfields[i1], wx1, wy1, wz1, wp, region)) {
+    return;
+  } 
+  const double f = dt / (*it1 - *it0);
+  wx = wx0 + f * (wx1 - wx0);
+  wy = wy0 + f * (wy1 - wy0);
+  wz = wz0 + f * (wz1 - wz0);
 }
 
 void ComponentVoxel::SetWeightingFieldOffset(const double x, const double y,
@@ -155,10 +200,9 @@ void ComponentVoxel::SetMesh(const unsigned int nx, const unsigned int ny,
   m_hasMesh = true;
 }
 
-bool ComponentVoxel::LoadElectricField(const std::string& filename,
-                                       const std::string& format,
-                                       const bool withPotential,
-                                       const bool withRegion,
+bool ComponentVoxel::LoadElectricField(const std::string& fname,
+                                       const std::string& fmt,
+                                       const bool withP, const bool withR,
                                        const double scaleX, const double scaleE,
                                        const double scaleP) {
   m_ready = false;
@@ -171,35 +215,81 @@ bool ComponentVoxel::LoadElectricField(const std::string& filename,
   }
 
   // Set up the grid.
-  m_efields.resize(m_nX);
-  m_regions.resize(m_nX);
-  for (unsigned int i = 0; i < m_nX; ++i) {
-    m_efields[i].resize(m_nY);
-    m_regions[i].resize(m_nY);
-    for (unsigned int j = 0; j < m_nY; ++j) {
-      m_efields[i][j].resize(m_nZ);
-      m_regions[i][j].resize(m_nZ);
-      for (unsigned int k = 0; k < m_nZ; ++k) {
-        m_efields[i][j][k].fx = 0.;
-        m_efields[i][j][k].fy = 0.;
-        m_efields[i][j][k].fz = 0.;
-        m_efields[i][j][k].v = 0.;
-        m_regions[i][j][k] = 0;
-      }
-    }
-  }
+  Initialise(m_efields);
+  InitialiseRegions();
 
   m_pMin = m_pMax = 0.;
-  if (withPotential) {
+  if (withP) {
     m_pMin = 1.;
     m_pMax = -1.;
   }
-  return LoadData(filename, format, withPotential, withRegion, scaleX, scaleE,
-                  scaleP, 'e');
+  if (!LoadData(fname, fmt, withP, withR, scaleX, scaleE, scaleP, m_efields)) {
+    return false;
+  }
+  m_hasEfield = true;
+  m_ready = true;
+  if (withP) m_hasPotential = true;
+  return true;
 }
 
-bool ComponentVoxel::LoadMagneticField(const std::string& filename,
-                                       const std::string& format,
+bool ComponentVoxel::LoadWeightingField(const std::string& fname, 
+                                        const std::string& fmt,
+                                        const bool withP, 
+                                        const double scaleX, 
+                                        const double scaleE,
+                                        const double scaleP) {
+  m_hasWfield = false;
+  if (!m_hasMesh) {
+    std::cerr << m_className << "::LoadWeightingField:\n"
+              << "    Mesh is not set. Call SetMesh first.\n";
+    return false;
+  }
+
+  // Set up the grid.
+  Initialise(m_wfields);
+  if (m_regions.empty()) InitialiseRegions();
+
+  // Read the file.
+  if (!LoadData(fname, fmt, withP, false, scaleX, scaleE, scaleP, m_wfields)) {
+    return false;
+  }
+  m_hasWfield = true;
+  return true;
+}
+bool ComponentVoxel::LoadWeightingField(const std::string& fname, 
+                                        const std::string& fmt,
+                                        const double t, const bool withP, 
+                                        const double scaleX, const double scaleE,
+                                        const double scaleP) {
+
+  if (!m_hasMesh) {
+    std::cerr << m_className << "::LoadWeightingField:\n"
+              << "    Mesh is not set. Call SetMesh first.\n";
+    return false;
+  }
+
+  std::vector<std::vector<std::vector<Element> > > wfield;
+  Initialise(wfield);
+  if (m_regions.empty()) InitialiseRegions();
+ 
+  // Read the file.
+  if (!LoadData(fname, fmt, withP, false, scaleX, scaleE, scaleP, wfield)) {
+    return false;
+  }
+  if (m_wdtimes.empty() || t > m_wdtimes.back()) {
+    m_wdtimes.push_back(t);
+    m_wdfields.push_back(std::move(wfield));
+  } else {
+    const auto it = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
+    const auto n = std::distance(m_wdtimes.cbegin(), it);
+    m_wdtimes.insert(it, t); 
+    m_wdfields.insert(m_wdfields.cbegin() + n, std::move(wfield));
+  }
+  return true;
+}
+
+bool ComponentVoxel::LoadMagneticField(const std::string& fname,
+                                       const std::string& fmt,
                                        const double scaleX,
                                        const double scaleB) {
   m_hasBfield = false;
@@ -210,27 +300,22 @@ bool ComponentVoxel::LoadMagneticField(const std::string& filename,
   }
 
   // Set up the grid.
-  m_bfields.resize(m_nX);
-  for (unsigned int i = 0; i < m_nX; ++i) {
-    m_bfields[i].resize(m_nY);
-    for (unsigned int j = 0; j < m_nY; ++j) {
-      m_bfields[i][j].resize(m_nZ);
-      for (unsigned int k = 0; k < m_nZ; ++k) {
-        m_bfields[i][j][k].fx = 0.;
-        m_bfields[i][j][k].fy = 0.;
-        m_bfields[i][j][k].fz = 0.;
-        m_bfields[i][j][k].v = 0.;
-      }
-    }
-  }
+  Initialise(m_bfields);
+  InitialiseRegions();
 
-  return LoadData(filename, format, false, false, scaleX, scaleB, 1., 'b');
+  // Read the file.
+  if (!LoadData(fname, fmt, false, false, scaleX, scaleB, 1., m_bfields)) {
+    return false;
+  }
+  m_hasBfield = true;
+  return true;
 }
 
 bool ComponentVoxel::LoadData(const std::string& filename, std::string format,
-                              const bool withPotential, const bool withRegion,
-                              const double scaleX, const double scaleF,
-                              const double scaleP, const char field) {
+    const bool withPotential, const bool withRegion,
+    const double scaleX, const double scaleF, const double scaleP,
+    std::vector<std::vector<std::vector<Element> > >& fields) {
+
   if (!m_hasMesh) {
     std::cerr << m_className << "::LoadData: Mesh has not been set.\n";
     return false;
@@ -449,31 +534,19 @@ bool ComponentVoxel::LoadData(const std::string& filename, std::string format,
     if (fmt == 1 || fmt == 3) {
       // Two-dimensional field-map
       for (unsigned int kk = 0; kk < m_nZ; ++kk) {
-        if (field == 'e') {
-          m_efields[i][j][kk].fx = fx;
-          m_efields[i][j][kk].fy = fy;
-          m_efields[i][j][kk].fz = fz;
-          m_efields[i][j][kk].v = v;
-          m_regions[i][j][kk] = region;
-        } else if (field == 'b') {
-          m_bfields[i][j][kk].fx = fx;
-          m_bfields[i][j][kk].fy = fy;
-          m_bfields[i][j][kk].fz = fz;
-        }
+        fields[i][j][kk].fx = fx;
+        fields[i][j][kk].fy = fy;
+        fields[i][j][kk].fz = fz;
+        fields[i][j][kk].v = v;
+        if (withRegion) m_regions[i][j][kk] = region;
         isSet[i][j][kk] = true;
       }
     } else {
-      if (field == 'e') {
-        m_efields[i][j][k].fx = fx;
-        m_efields[i][j][k].fy = fy;
-        m_efields[i][j][k].fz = fz;
-        m_efields[i][j][k].v = v;
-        m_regions[i][j][k] = region;
-      } else if (field == 'b') {
-        m_bfields[i][j][k].fx = fx;
-        m_bfields[i][j][k].fy = fy;
-        m_bfields[i][j][k].fz = fz;
-      }
+      fields[i][j][k].fx = fx;
+      fields[i][j][k].fy = fy;
+      fields[i][j][k].fz = fz;
+      fields[i][j][k].v = v;
+      if (withRegion) m_regions[i][j][k] = region;
       isSet[i][j][k] = true;
     }
     ++nValues;
@@ -486,13 +559,6 @@ bool ComponentVoxel::LoadData(const std::string& filename, std::string format,
   if (nExpected != nValues) {
     std::cerr << m_className << "::LoadData:\n"
               << "   Expected " << nExpected << " values.\n";
-  }
-  if (field == 'e') {
-    m_hasEfield = true;
-    m_ready = true;
-    if (withPotential) m_hasPotential = true;
-  } else if (field == 'b') {
-    m_hasBfield = true;
   }
   return true;
 }
@@ -776,9 +842,14 @@ bool ComponentVoxel::GetElement(const unsigned int i, const unsigned int j,
 }
 
 void ComponentVoxel::Reset() {
+  m_regions.clear();
   m_efields.clear();
   m_bfields.clear();
-  m_regions.clear();
+  m_wfields.clear();
+
+  m_wdfields.clear();
+  m_wdtimes.clear();
+
   m_nX = m_nY = m_nZ = 0;
   m_xMin = m_yMin = m_zMin = 0.;
   m_xMax = m_yMax = m_zMax = 0.;
@@ -789,7 +860,12 @@ void ComponentVoxel::Reset() {
   m_hasPotential = false;
   m_hasEfield = false;
   m_hasBfield = false;
+  m_hasWfield = false;
   m_ready = false;
+  
+  m_wField_xOffset = 0.;
+  m_wField_yOffset = 0.;
+  m_wField_zOffset = 0.;
 }
 
 void ComponentVoxel::UpdatePeriodicity() {
@@ -842,5 +918,34 @@ double ComponentVoxel::Reduce(const double xin, const double xmin,
     x = xNew;
   }
   return x;
+}
+
+void ComponentVoxel::Initialise(
+    std::vector<std::vector<std::vector<Element> > >& fields) {
+
+  fields.resize(m_nX);
+  for (unsigned int i = 0; i < m_nX; ++i) {
+    fields[i].resize(m_nY);
+    for (unsigned int j = 0; j < m_nY; ++j) {
+      fields[i][j].resize(m_nZ);
+      for (unsigned int k = 0; k < m_nZ; ++k) {
+        fields[i][j][k].fx = 0.;
+        fields[i][j][k].fy = 0.;
+        fields[i][j][k].fz = 0.;
+        fields[i][j][k].v = 0.;
+      }
+    }
+  }
+}
+
+void ComponentVoxel::InitialiseRegions() {
+  if (!m_hasMesh) return; 
+  m_regions.resize(m_nX);
+  for (unsigned int i = 0; i < m_nX; ++i) {
+    m_regions[i].resize(m_nY);
+    for (unsigned int j = 0; j < m_nY; ++j) {
+      m_regions[i][j].assign(m_nZ, 0);
+    }
+  }
 }
 }
