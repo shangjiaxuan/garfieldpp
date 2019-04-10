@@ -27,9 +27,9 @@ class ComponentVoxel : public ComponentBase {
                       const std::string& label) override;
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
-  void WeightingField(const double x, const double y, const double z,
-                      const double t, double& wx, double& wy, double& wz,
-                      const std::string& label) override;
+  void DelayedWeightingField(const double x, const double y, const double z,
+                             const double t, double& wx, double& wy, double& wz,
+                             const std::string& label) override;
 
   void MagneticField(const double x, const double y, const double z, double& bx,
                      double& by, double& bz, int& status) override;

@@ -81,10 +81,10 @@ double ComponentVoxel::WeightingPotential(const double x, const double y,
   return wp;
 }
 
-void ComponentVoxel::WeightingField(const double x, const double y,
-                                    const double z, const double t,
-                                    double& wx, double& wy,
-                                    double& wz, const std::string& /*label*/) {
+void ComponentVoxel::DelayedWeightingField(const double x, const double y,
+                                           const double z, const double t,
+                                           double& wx, double& wy, double& wz,
+                                           const std::string& /*label*/) {
 
   wx = wy = wz = 0.;
   if (m_wdtimes.empty()) return;

@@ -54,9 +54,8 @@ class ComponentFieldMap : public ComponentBase {
   void SetMedium(const unsigned int imat, Medium* medium);
   /// Return the Medium associated to a field map material.
   Medium* GetMedium(const unsigned int i) const;
+  using ComponentBase::GetMedium;
 
-  Medium* GetMedium(const double x, const double y,
-                    const double z) override = 0;
   unsigned int GetNumberOfMedia() const { return m_nMaterials; }
 
   /// Return the number of mesh elements.
@@ -64,21 +63,6 @@ class ComponentFieldMap : public ComponentBase {
   /// Return the volume and aspect ratio of a mesh element.
   bool GetElement(const unsigned int i, double& vol, double& dmin,
                   double& dmax);
-
-  virtual void ElectricField(const double x, const double y, const double z,
-                             double& ex, double& ey, double& ez, Medium*& m,
-                             int& status) override = 0;
-  virtual void ElectricField(const double x, const double y, const double z,
-                             double& ex, double& ey, double& ez, double& v,
-                             Medium*& m, int& status) override = 0;
-
-  virtual void WeightingField(const double x, const double y, const double z,
-                              double& wx, double& wy, double& wz,
-                              const std::string& label) override = 0;
-
-  virtual double WeightingPotential(const double x, const double y,
-                                    const double z,
-                                    const std::string& label) override = 0;
 
   // Options
   void EnableCheckMapIndices() {
@@ -171,7 +155,6 @@ class ComponentFieldMap : public ComponentBase {
   void Reset() override{};
 
   // Periodicities
-  // virtual void UpdatePeriodicity() = 0;
   void UpdatePeriodicity2d();
   void UpdatePeriodicityCommon();
 
