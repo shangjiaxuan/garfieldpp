@@ -6,18 +6,18 @@ PROJECT(GarfieldExamples)
 
 #### GasFile               #############################
 add_executable(generate GasFile/generate.C)
-target_link_libraries(generate Garfield ${ROOT_LIBRARIES} ${ROOT_COMPONENT_LIBRARIES} )
+target_link_libraries(generate Garfield)
 
 add_executable(read GasFile/read.C)
-target_link_libraries(read Garfield ${ROOT_LIBRARIES} ${ROOT_COMPONENT_LIBRARIES} )
+target_link_libraries(read Garfield)
 
 #### Heed                   ############################
 add_executable(edep Heed/edep.C)
-target_link_libraries(edep Garfield ${ROOT_LIBRARIES} ${ROOT_COMPONENT_LIBRARIES} )
+target_link_libraries(edep Garfield)
 
 #### SRIM                   ############################
 add_executable(srim Srim/srim.C)
-target_link_libraries(srim Garfield ${ROOT_LIBRARIES} ${ROOT_COMPONENT_LIBRARIES} )
+target_link_libraries(srim Garfield)
 
 #### Geat4GarfieldInterface ############################
 option(G4ANALYSIS_USE "use ROOT" ON)
@@ -50,7 +50,7 @@ file(GLOB headers ${garfield_SOURCE_DIR}/Include/*.hh)
 # Add the executable, and link it to the Geant4 libraries
 #
 add_executable(exampleGeant4Interface ${G4_DIR}/exampleGarfield.cc ${sources} ${headers})
-target_link_libraries(exampleGeant4Interface ${Geant4_LIBRARIES} Garfield ${ROOT_COMPONENT_LIBRARIES} ${ROOT_LIBRARIES})
+target_link_libraries(exampleGeant4Interface ${Geant4_LIBRARIES} Garfield)
 
 #----------------------------------------------------------------------------
 # Copy all scripts to the build directory, i.e. the directory in which we
@@ -72,12 +72,12 @@ foreach(_script ${EXAMPLEGARFIELD_SCRIPTS})
     ${PROJECT_BINARY_DIR}/../bin/${_script}
     COPYONLY
     )
-  INSTALL(FILES ${G4_DIR}/${_script} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+  INSTALL(FILES ${G4_DIR}/${_script} DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/)
 endforeach()
 endif(Geant4_FOUND)
 #### Install                ############################
 if(Geant4_FOUND)
-INSTALL(TARGETS generate read edep srim exampleGeant4Interface DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+  INSTALL(TARGETS generate read edep srim exampleGeant4Interface DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/)
 else()
-INSTALL(TARGETS generate read edep srim DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/)
+  INSTALL(TARGETS generate read edep srim DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/)
 endif(Geant4_FOUND)
