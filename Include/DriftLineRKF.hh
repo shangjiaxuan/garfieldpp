@@ -71,7 +71,7 @@ class DriftLineRKF {
   /// Get the end point and status flag of the most recent drift line.
   void GetEndPoint(double& x, double& y, double& z, double& t, int& st) const;
   /// Get the number of points of the most recent drift line.
-  unsigned int GetNumberOfDriftLinePoints() const { return m_path.size(); }
+  unsigned int GetNumberOfDriftLinePoints() const { return m_x.size(); }
   /// Get the coordinates and time of a point along the most recent drift line.
   void GetDriftLinePoint(const unsigned int i, double& x, double& y, double& z,
                          double& t) const;
@@ -83,7 +83,7 @@ class DriftLineRKF {
   double GetGain(const double eps = 1.e-4);
   /// Compute the attachment loss factor for the current drift line.
   double GetLoss(const double eps = 1.e-4);
-  double GetDriftTime() const { return m_path.empty() ? 0. : m_path.back().t; }
+  double GetDriftTime() const { return m_t.empty() ? 0. : m_t.back(); }
 
   void GetAvalancheSize(double& ne, double& ni) const { ne = m_nE; ni = m_nI; }
 
@@ -112,12 +112,10 @@ class DriftLineRKF {
   // Pointer to the drift viewer.
   ViewDrift* m_view = nullptr;
 
-  struct DriftPoint {
-    std::array<double, 3> x; ///< Position 
-    double t;                ///< Time
-  };
-  // Current drift line.
-  std::vector<DriftPoint> m_path;
+  // Points along the current drift line.
+  std::vector<std::array<double, 3> > m_x;
+  // Times corresponding to the points along the current drift line.
+  std::vector<double> m_t;
   // Status flag of the current drift line.
   int m_status = 0;
 
@@ -146,8 +144,10 @@ class DriftLineRKF {
   // Calculate a drift line starting at a given position.
   bool DriftLine(const double x0, const double y0, const double z0,
                  const double t0, const Particle particle,
-                 std::vector<DriftPoint>& path, int& status);
-  bool Avalanche(const Particle particle, const std::vector<DriftPoint>& path,
+                 std::vector<double>& ts, 
+                 std::vector<std::array<double, 3> >& xs, int& status);
+  bool Avalanche(const Particle particle, 
+                 const std::vector<std::array<double, 3> >& xs,
                  std::vector<double>& ne, std::vector<double>& ni, 
                  double& scale);
 
@@ -173,16 +173,20 @@ class DriftLineRKF {
   bool GetEta(const double ex, const double ey, const double ez,
               const double bx, const double by, const double bz,
               Medium* medium, const Particle particle, double& eta) const;
-  // Add a point to a drift line.
-  void AddPoint(const std::array<double, 3>& x, const double t,
-                std::vector<DriftPoint>& path);
+
   // Terminate a drift line at the edge of a boundary.
   bool Terminate(const std::array<double, 3>& xx0,
                  const std::array<double, 3>& xx1,
-                 const Particle particle, std::vector<DriftPoint>& path);
+                 const Particle particle, 
+                 std::vector<double>& ts, 
+                 std::vector<std::array<double, 3> >& xs);
+
   // Drift a particle to a wire
   bool DriftToWire(const double xw, const double yw, const double rw,
-                   const Particle particle, std::vector<DriftPoint>& path);
+                   const Particle particle, 
+                   std::vector<double>& ts,
+                   std::vector<std::array<double, 3> >& xs);
+
   // Integrate the longitudinal diffusion over a step.
   double IntegrateDiffusion(const std::array<double, 3>& xi,
                             const std::array<double, 3>& xe,
@@ -198,7 +202,8 @@ class DriftLineRKF {
 
   // Calculate the signal for the current drift line.
   void ComputeSignal(const Particle particle, const double scale,
-                     const std::vector<DriftPoint>& path,
+                     const std::vector<double>& ts,
+                     const std::vector<std::array<double, 3> >& xs,
                      const std::vector<double>& ne) const;
 };
 }
