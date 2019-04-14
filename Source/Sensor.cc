@@ -27,9 +27,9 @@ void Sensor::ElectricField(const double x, const double y, const double z,
   ex = ey = ez = v = 0.;
   status = -10;
   medium = nullptr;
-  double fx, fy, fz, p;
+  double fx = 0., fy = 0., fz = 0., p = 0.;
   Medium* med = nullptr;
-  int stat;
+  int stat = 0;
   // Add up electric field contributions from all components.
   for (auto component : m_components) {
     component->ElectricField(x, y, z, fx, fy, fz, p, med, stat);
@@ -52,9 +52,9 @@ void Sensor::ElectricField(const double x, const double y, const double z,
   ex = ey = ez = 0.;
   status = -10;
   medium = nullptr;
-  double fx, fy, fz;
+  double fx = 0., fy = 0., fz = 0.;
   Medium* med = nullptr;
-  int stat;
+  int stat = 0;
   // Add up electric field contributions from all components.
   for (auto component : m_components) {
     component->ElectricField(x, y, z, fx, fy, fz, med, stat);
@@ -73,7 +73,7 @@ void Sensor::ElectricField(const double x, const double y, const double z,
 void Sensor::MagneticField(const double x, const double y, const double z,
                            double& bx, double& by, double& bz, int& status) {
   bx = by = bz = 0.;
-  double fx, fy, fz;
+  double fx = 0., fy = 0., fz = 0.;
   // Add up contributions.
   for (auto component : m_components) {
     component->MagneticField(x, y, z, fx, fy, fz, status);
@@ -142,10 +142,10 @@ bool Sensor::SetArea() {
     return false;
   }
 
-  std::cout << m_className << "::SetArea:\n";
-  std::cout << "    " << m_xMinUser << " < x [cm] < " << m_xMaxUser << "\n";
-  std::cout << "    " << m_yMinUser << " < y [cm] < " << m_yMaxUser << "\n";
-  std::cout << "    " << m_zMinUser << " < z [cm] < " << m_zMaxUser << "\n";
+  std::cout << m_className << "::SetArea:\n"
+            << "    " << m_xMinUser << " < x [cm] < " << m_xMaxUser << "\n"
+            << "    " << m_yMinUser << " < y [cm] < " << m_yMaxUser << "\n"
+            << "    " << m_zMinUser << " < z [cm] < " << m_zMaxUser << "\n";
   if (std::isinf(m_xMinUser) || std::isinf(m_xMaxUser)) {
     std::cerr << m_className << "::SetArea: Warning. Infinite x-range.\n";
   }
@@ -167,25 +167,13 @@ bool Sensor::SetArea(const double xmin, const double ymin, const double zmin,
     return false;
   }
 
-  m_xMinUser = xmin;
-  m_yMinUser = ymin;
-  m_zMinUser = zmin;
-  m_xMaxUser = xmax;
-  m_yMaxUser = ymax;
-  m_zMaxUser = zmax;
+  m_xMinUser = std::min(xmin, xmax);
+  m_yMinUser = std::min(ymin, ymax);
+  m_zMinUser = std::min(zmin, zmax);
+  m_xMaxUser = std::max(xmax, xmin);
+  m_yMaxUser = std::max(ymax, ymin);
+  m_zMaxUser = std::max(zmax, zmin);
 
-  if (xmin > xmax) {
-    m_xMinUser = xmax;
-    m_xMaxUser = xmin;
-  }
-  if (ymin > ymax) {
-    m_yMinUser = ymax;
-    m_yMaxUser = ymin;
-  }
-  if (zmin > zmax) {
-    m_zMinUser = zmax;
-    m_zMaxUser = zmin;
-  }
   m_hasUserArea = true;
   return true;
 }
@@ -283,9 +271,9 @@ void Sensor::AddElectrode(ComponentBase* comp, const std::string& label) {
   Electrode electrode;
   electrode.comp = comp;
   electrode.label = label;
-  electrode.signal.resize(m_nTimeBins);
-  electrode.electronsignal.resize(m_nTimeBins);
-  electrode.ionsignal.resize(m_nTimeBins);
+  electrode.signal.assign(m_nTimeBins, 0.);
+  electrode.electronsignal.assign(m_nTimeBins, 0.);
+  electrode.ionsignal.assign(m_nTimeBins, 0.);
   m_electrodes.push_back(std::move(electrode));
   std::cout << m_className << "::AddElectrode:\n"
             << "    Added readout electrode \"" << label << "\".\n"
@@ -418,6 +406,79 @@ void Sensor::AddSignal(const double q, const double t, const double dt,
         electrode.electronsignal[bin] += cur * dt;
       } else {
         electrode.ionsignal[bin] += cur * dt;
+      }
+    }
+  }
+}
+
+void Sensor::AddSignal(const double q, const std::vector<double>& ts,
+                       const std::vector<std::array<double, 3> >& xs,
+                       const std::vector<std::array<double, 3> >& vs,
+                       const std::vector<double>& ns, const int navg) {
+
+  // Don't do anything if there are no points on the signal.
+  if (ts.size() < 2) return;
+  if (ts.size() != xs.size() || ts.size() != vs.size()) {
+    std::cerr << m_className << "::AddSignal: Mismatch in vector size.\n";
+    return;
+  } 
+  const bool aval = ns.size() == ts.size();
+  const unsigned int nPoints = ts.size();
+  if (m_debug) {
+    std::cout << m_className << "::AddSignal: Adding a " << nPoints 
+              << "-vector (charge " << q << ").\n";
+  }
+  if (m_nEvents <= 0) m_nEvents = 1;
+  // Interpolation order.
+  constexpr unsigned int k = 1;
+  for (auto& electrode : m_electrodes) {
+    const std::string label = electrode.label;
+    std::vector<double> signal(nPoints, 0.);
+    for (unsigned int i = 0; i < nPoints; ++i) {
+      // Calculate the weighting field at this point.
+      const auto& x = xs[i];
+      double wx = 0., wy = 0., wz = 0.;
+      electrode.comp->WeightingField(x[0], x[1], x[2], wx, wy, wz, label);
+      // Calculate the induced current at this point.
+      const auto& v = vs[i];
+      signal[i] = -q * (v[0] * wx + v[1] * wy + v[2] * wz);
+      if (aval) signal[i] *= ns[i];
+    }
+    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+      const double t0 = m_tStart + i * m_tStep; 
+      const double t1 = t0 + m_tStep;
+      if (ts.front() > t1) continue;
+      if (ts.back() < t0) break;
+      // Integration over this bin.
+      double sum = 0.;
+      if (navg <= 0) {
+        for (unsigned int j = 0; j < nPoints - 1; ++j) {
+          if (ts[j] > t1) break;
+          if (ts[j + 1] <= t0) continue;
+          sum += signal[j] * (std::min(ts[j + 1], t1) - std::max(ts[j], t0));
+        }
+      } else {
+        const double h = 0.5 * (t1 - t0) / navg;
+        for (int j = -navg; j <= navg; ++j) {
+          const int jj = j + navg;
+          const double t = t0 + jj * h;
+          if (t < ts.front() || t > ts.back()) continue;
+          if (j == -navg || j == navg) {
+            sum += Numerics::Divdif(signal, ts, nPoints, t, k);
+          } else if (jj == 2 * (jj /2)) {
+            sum += 2 * Numerics::Divdif(signal, ts, nPoints, t, k);
+          } else {
+            sum += 4 * Numerics::Divdif(signal, ts, nPoints, t, k);
+          }
+        }
+        sum *= h / 3.;
+      }
+      // Add the result to the signal.
+      electrode.signal[i] += sum;
+      if (q < 0.) {
+        electrode.electronsignal[i] += sum;
+      } else {
+        electrode.ionsignal[i] += sum;
       }
     }
   }
@@ -585,38 +646,39 @@ bool Sensor::ConvoluteSignal() {
   double cnvMin = 0.;
   double cnvMax = 1.e10;
 
-  std::vector<double> cnvTab(2 * m_nTimeBins, 0.);
-  int iOffset = m_nTimeBins;
+  std::vector<double> cnvTab(2 * m_nTimeBins - 1, 0.);
+  const unsigned int offset = m_nTimeBins - 1;
   // Evaluate the transfer function.
   for (unsigned int i = 0; i < m_nTimeBins; ++i) {
     // Negative time part.
-    double t = -i * m_tStep;
+    double t = (-int(i) + 0.5) * m_tStep;
     if (t < cnvMin || t > cnvMax) {
-      cnvTab[iOffset - i] = 0.;
+      cnvTab[offset - i] = 0.;
     } else if (m_fTransfer) {
-      cnvTab[iOffset - i] = m_fTransfer(t);
+      cnvTab[offset - i] = m_fTransfer(t);
     } else {
-      cnvTab[iOffset - i] = InterpolateTransferFunctionTable(t);
+      cnvTab[offset - i] = InterpolateTransferFunctionTable(t);
     }
-    if (i < 1) continue;
+    if (i == 0) continue;
     // Positive time part.
-    t = i * m_tStep;
+    t = (i + 0.5) * m_tStep;
     if (t < cnvMin || t > cnvMax) {
-      cnvTab[iOffset + i] = 0.;
+      cnvTab[offset + i] = 0.;
     } else if (m_fTransfer) {
-      cnvTab[iOffset + i] = m_fTransfer(t);
+      cnvTab[offset + i] = m_fTransfer(t);
     } else {
-      cnvTab[iOffset + i] = InterpolateTransferFunctionTable(t);
+      cnvTab[offset + i] = InterpolateTransferFunctionTable(t);
     }
   }
 
   std::vector<double> tmpSignal(m_nTimeBins, 0.);
   // Loop over all electrodes.
   for (auto& electrode : m_electrodes) {
+    // Do the convolution.
     for (unsigned int j = 0; j < m_nTimeBins; ++j) {
       tmpSignal[j] = 0.;
       for (unsigned int k = 0; k < m_nTimeBins; ++k) {
-        tmpSignal[j] += m_tStep * cnvTab[iOffset + j - k] * electrode.signal[k];
+        tmpSignal[j] += m_tStep * cnvTab[offset + j - k] * electrode.signal[k];
       }
     }
     electrode.signal.swap(tmpSignal);

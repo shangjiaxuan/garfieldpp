@@ -99,8 +99,9 @@ During the evaluation of the velocities $\mathbf{v}_{d}\left(\mathbf{x}_{k}\righ
 for the next step, checks are made to ensure that none of the probe points 
 $\mathbf{x}_{k}$ are outside the active area and that no wire was crossed.
 If a wire has been crossed during the step, another algorithm for stepping towards 
-a wire takes over. To be precise, the stepping towards the wire starts when 
-the particle crosses a disk of radius $n$ times the wire radius. The factor $n$ 
+a wire takes over. The stepping towards the wire also starts when 
+the distance between the particle position and a wire is less than
+$n$ times the wire radius. The factor $n$ 
 (``trap radius'') can be set in \texttt{ComponentAnalyticField} when defining the wire. 
 If one of the points along the step is outside the active area,
 the drift line is terminated by doing a last linear step towards the boundary.

@@ -158,7 +158,7 @@ class DriftLineRKF {
                Medium*& medium) const;
   // Calculate transport parameters for the respective particle type.
   bool GetVelocity(const std::array<double, 3>& x, const Particle particle,
-                   std::array<double, 3>& v, int& status);
+                   std::array<double, 3>& v, int& status) const;
   bool GetVelocity(const double ex, const double ey, const double ez,
                    const double bx, const double by, const double bz,
                    Medium* medium, const Particle particle,

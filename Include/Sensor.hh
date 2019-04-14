@@ -76,6 +76,10 @@ class Sensor {
   void AddSignal(const double q, const double t, const double dt,
                  const double x, const double y, const double z,
                  const double vx, const double vy, const double vz);
+  void AddSignal(const double q, const std::vector<double>& ts,
+                 const std::vector<std::array<double, 3> >& xs,
+                 const std::vector<std::array<double, 3> >& vs,
+                 const std::vector<double>& ns, const int navg);
   void AddInducedCharge(const double q, const double x0, const double y0,
                         const double z0, const double x1, const double y1,
                         const double z1);

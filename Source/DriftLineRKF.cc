@@ -420,9 +420,9 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     } else if (m_rejectKinks && xs.size() > 1) {
       const unsigned int np = xs.size();
       const auto& x = xs[np - 1];
-      const auto& xprev = xs[np - 2];
-      if (phi1[0] * (x[0] - xprev[0]) + phi1[1] * (x[1] - xprev[1]) +
-          phi1[2] * (x[2] - xprev[2]) < 0.) {
+      const auto& xp = xs[np - 2];
+      if (phi1[0] * (x[0] - xp[0]) + phi1[1] * (x[1] - xp[1]) +
+          phi1[2] * (x[2] - xp[2]) < 0.) {
         std::cerr << m_className << "::DriftLine: Bending angle > 90 degree.\n";
         flag = StatusSharpKink;
         break;
@@ -681,8 +681,7 @@ double DriftLineRKF::GetArrivalTimeSpread(const double eps) {
   const double tol = eps * crude; 
   double sum = 0.;
   for (unsigned int i = 0; i < nPoints - 1; ++i) {
-    const unsigned int j = i + 1;
-    sum += IntegrateDiffusion(m_x[i], m_x[j], particle, tol);
+    sum += IntegrateDiffusion(m_x[i], m_x[i + 1], particle, tol);
   }
   return sqrt(sum);
 }
@@ -736,8 +735,7 @@ double DriftLineRKF::GetGain(const double eps) {
   const double tol = eps * crude;
   double sum = 0.;
   for (unsigned int i = 0; i < nPoints - 1; ++i) {
-    const unsigned int j = i + 1;
-    sum += IntegrateAlpha(m_x[i], m_x[j], particle, tol);
+    sum += IntegrateAlpha(m_x[i], m_x[i + 1], particle, tol);
   }
   return exp(sum);
 }
@@ -789,8 +787,7 @@ double DriftLineRKF::GetLoss(const double eps) {
   const double tol = eps * crude;
   double sum = 0.;
   for (unsigned int i = 0; i < nPoints - 1; ++i) {
-    const unsigned int j = i + 1;
-    sum += IntegrateEta(m_x[i], m_x[j], particle, tol);
+    sum += IntegrateEta(m_x[i], m_x[i + 1], particle, tol);
   }
   return exp(-sum);
 }
@@ -807,7 +804,7 @@ int DriftLineRKF::GetField(const std::array<double, 3>& x,
 
 bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
                                const Particle particle,
-                               std::array<double, 3>& v, int& status) {
+                               std::array<double, 3>& v, int& status) const {
   v.fill(0.);
   double ex = 0., ey = 0., ez = 0.;
   double bx = 0., by = 0., bz = 0.;
@@ -1519,23 +1516,18 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
   const unsigned int nPoints = ts.size();
   if (nPoints < 2) return;
   const double q = particle == Particle::Electron ? -1 * scale : scale;
-  const bool aval = ne.size() == ts.size();
-  for (unsigned int i = 1; i < nPoints; ++i) {
-    const double t0 = ts[i - 1];
-    const double t1 = ts[i];
-    const double dt = t1 - t0;
-    if (fabs(dt) < Small) continue;
-    const auto& x0 = xs[i - 1];
-    const auto& x1 = xs[i];
-    Vec dx = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
-    // Calculate the average velocity.
-    const double u = 1. / dt;
-    const Vec v = {dx[0] * u, dx[1] * u, dx[2] * u};
-    // Weight the signal by the avalanche size at this step.
-    const double g = aval ? q * ne[i - 1] : q;
-    Vec x = {x0[0] + 0.5 * dx[0], x0[1] + 0.5 * dx[1], x0[2] + 0.5 * dx[2]};
-    m_sensor->AddSignal(g, t0, dt, x[0], x[1], x[2], v[0], v[1], v[2]);
+  // Get the drift velocity at each point.
+  std::vector<std::array<double, 3> > vs;
+  for (const auto& x : xs) {
+    int stat = 0;
+    Vec v;
+    if (!GetVelocity(x, particle, v, stat)) {
+      std::cerr << m_className << "::ComputeSignal:\n"
+                << "    Cannot retrieve velocity at " << PrintVec(x) << "\n";
+    }
+    vs.push_back(std::move(v));
   }
+  m_sensor->AddSignal(q, ts, xs, vs, ne, 2);
 }
 
 }
