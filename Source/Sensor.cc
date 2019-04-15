@@ -771,88 +771,61 @@ bool Sensor::ComputeThresholdCrossings(const double thr,
   for (unsigned int i = 0; i < m_nTimeBins; ++i) signal[i] *= scale;
 
   // Establish the range.
-  double vMin = signal[0];
-  double vMax = signal[0];
-  for (unsigned int i = 0; i < m_nTimeBins; ++i) {
-    if (signal[i] < vMin) vMin = signal[i];
-    if (signal[i] > vMax) vMax = signal[i];
-  }
+  const double vMin = *std::min_element(std::begin(signal), std::end(signal));
+  const double vMax = *std::max_element(std::begin(signal), std::end(signal));
   if (m_debug) std::cout << m_className << "::ComputeThresholdCrossings:\n";
   if (thr < vMin && thr > vMax) {
     if (m_debug) {
-      std::cout << "  Threshold outside the range [" << vMin << ", " << vMax
-                << "]\n";
+      std::cout << "    Threshold outside the range [" << vMin << ", " 
+                << vMax << "]\n";
     }
     return true;
   }
 
-  // Check for rising edges.
-  bool rise = true;
-  bool fall = false;
-
-  while (rise || fall) {
+  // Check both rising and falling edges.
+  constexpr std::array<int, 2> directions = {1, -1};
+  for (const auto dir : directions) {
+    const bool up = dir > 0;
     if (m_debug) {
-      if (rise) {
+      if (up) {
         std::cout << "  Hunting for rising edges.\n";
-      } else if (fall) {
+      } else {
         std::cout << "  Hunting for falling edges.\n";
       }
     }
     // Initialise the vectors.
-    std::vector<double> times;
-    std::vector<double> values;
-    times.push_back(m_tStart);
-    values.push_back(signal[0]);
-    int nValues = 1;
+    std::vector<double> ts = {m_tStart + 0.5 * m_tStep};
+    std::vector<double> vs = {signal[0]};
     // Scan the signal.
     for (unsigned int i = 1; i < m_nTimeBins; ++i) {
       // Compute the vector element.
-      const double tNew = m_tStart + i * m_tStep;
+      const double tNew = m_tStart + (i + 0.5) * m_tStep;
       const double vNew = signal[i];
       // If still increasing or decreasing, add to the vector.
-      if ((rise && vNew > values.back()) || (fall && vNew < values.back())) {
-        times.push_back(tNew);
-        values.push_back(vNew);
-        ++nValues;
-        // Otherwise see whether we crossed the threshold level.
-      } else if ((values[0] - thr) * (thr - values.back()) >= 0. &&
-                 nValues > 1 && ((rise && values.back() > values[0]) ||
-                                 (fall && values.back() < values[0]))) {
+      if ((up && vNew > vs.back()) || (!up && vNew < vs.back())) {
+        ts.push_back(tNew);
+        vs.push_back(vNew);
+        continue;
+      }
+      // Otherwise see whether we crossed the threshold level.
+      if ((vs[0] - thr) * (thr - vs.back()) >= 0. && ts.size() > 1 && 
+          ((up && vs.back() > vs[0]) || (!up && vs.back() < vs[0]))) {
         // Compute the crossing time.
-        double tcr = Numerics::Divdif(times, values, nValues, thr, iOrder);
-        ThresholdCrossing newCrossing;
-        newCrossing.time = tcr;
-        newCrossing.rise = rise;
-        m_thresholdCrossings.push_back(std::move(newCrossing));
-        times.clear();
-        values.clear();
-        times.emplace_back(tNew);
-        values.emplace_back(vNew);
-        nValues = 1;
+        double tcr = Numerics::Divdif(ts, vs, ts.size(), thr, iOrder);
+        m_thresholdCrossings.emplace_back(std::make_pair(tcr, up));
+        ts = {tNew};
+        vs = {vNew};
       } else {
         // No crossing, simply reset the vector.
-        times.clear();
-        values.clear();
-        times.emplace_back(tNew);
-        values.emplace_back(vNew);
-        nValues = 1;
+        ts = {tNew};
+        vs = {vNew};
       }
     }
     // Check the final vector.
-    if ((values[0] - thr) * (thr - values.back()) >= 0. && nValues > 1 &&
-        ((rise && values.back() > values[0]) ||
-         (fall && values.back() < values[0]))) {
-      double tcr = Numerics::Divdif(times, values, nValues, thr, iOrder);
-      ThresholdCrossing newCrossing;
-      newCrossing.time = tcr;
-      newCrossing.rise = rise;
-      m_thresholdCrossings.push_back(std::move(newCrossing));
-    }
-    if (rise) {
-      rise = false;
-      fall = true;
-    } else if (fall) {
-      rise = fall = false;
+    if ((vs[0] - thr) * (thr - vs.back()) >= 0. && ts.size() > 1 &&
+        ((up && vs.back() > vs[0]) || (!up && vs.back() < vs[0]))) {
+      const double tcr = Numerics::Divdif(ts, vs, ts.size(), thr, iOrder);
+      m_thresholdCrossings.emplace_back(std::make_pair(tcr, up));
     }
   }
   n = m_thresholdCrossings.size();
@@ -860,9 +833,9 @@ bool Sensor::ComputeThresholdCrossings(const double thr,
   if (m_debug) {
     std::cout << "  Found " << n << " crossings.\n";
     if (n > 0) std::cout << "      Time  [ns]    Direction\n";
-    for (int i = 0; i < n; ++i) {
-      std::cout << "      " << m_thresholdCrossings[i].time << "      ";
-      if (m_thresholdCrossings[i].rise) {
+    for (const auto& crossing : m_thresholdCrossings) {
+      std::cout << "      " << crossing.first << "      ";
+      if (crossing.second) {
         std::cout << "rising\n";
       } else {
         std::cout << "falling\n";
@@ -883,8 +856,8 @@ bool Sensor::GetThresholdCrossing(const unsigned int i, double& time,
     return false;
   }
 
-  time = m_thresholdCrossings[i].time;
-  rise = m_thresholdCrossings[i].rise;
+  time = m_thresholdCrossings[i].first;
+  rise = m_thresholdCrossings[i].second;
   return true;
 }
 

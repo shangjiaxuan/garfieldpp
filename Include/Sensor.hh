@@ -189,11 +189,7 @@ class Sensor {
   bool m_hasNoiseFunction = false;
   double (*m_fNoise)(double t) = nullptr;
 
-  struct ThresholdCrossing {
-    double time;
-    bool rise;
-  };
-  std::vector<ThresholdCrossing> m_thresholdCrossings;
+  std::vector<std::pair<double, bool> > m_thresholdCrossings;
   double m_thresholdLevel = 0.;
 
   // User bounding box
