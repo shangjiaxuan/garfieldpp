@@ -7,11 +7,10 @@
 #include <TApplication.h>
 #include <TH1D.h>
 
-#include "MediumSilicon.hh"
-#include "SolidBox.hh"
-#include "GeometrySimple.hh"
-
-#include "ComponentAnalyticField.hh"
+#include "Garfield/MediumSilicon.hh"
+#include "Garfield/SolidBox.hh"
+#include "Garfield/GeometrySimple.hh"
+#include "Garfield/ComponentAnalyticField.hh"
 
 using namespace Garfield;
 

@@ -4,14 +4,14 @@
 #include <TROOT.h>
 #include <TApplication.h>
 
-#include "ComponentAnalyticField.hh"
-#include "MediumMagboltz.hh"
-#include "SolidBox.hh"
-#include "GeometrySimple.hh"
-#include "Sensor.hh"
-#include "ViewField.hh"
-#include "ViewCell.hh"
-#include "Plotting.hh"
+#include "Garfield/ComponentAnalyticField.hh"
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/SolidBox.hh"
+#include "Garfield/GeometrySimple.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/ViewField.hh"
+#include "Garfield/ViewCell.hh"
+#include "Garfield/Plotting.hh"
 
 using namespace Garfield;
 

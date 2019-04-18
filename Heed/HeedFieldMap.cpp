@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "Sensor.hh"
+#include "Garfield/Sensor.hh"
 
 #include "wcpplib/clhep_units/WSystemOfUnits.h"
 

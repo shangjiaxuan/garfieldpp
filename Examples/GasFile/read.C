@@ -5,10 +5,10 @@
 #include <TROOT.h>
 #include <TApplication.h>
 
-#include "MediumMagboltz.hh"
-#include "MediumSilicon.hh"
-#include "FundamentalConstants.hh"
-#include "ViewMedium.hh"
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/MediumSilicon.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/ViewMedium.hh"
 
 using namespace Garfield;
 

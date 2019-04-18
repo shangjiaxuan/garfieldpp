@@ -4,12 +4,12 @@
 #include <TROOT.h>
 #include <TApplication.h>
 
-#include "MediumSilicon.hh"
-#include "ComponentVoxel.hh"
-#include "Sensor.hh"
+#include "Garfield/MediumSilicon.hh"
+#include "Garfield/ComponentVoxel.hh"
+#include "Garfield/Sensor.hh"
 
-#include "ViewField.hh"
-#include "Plotting.hh"
+#include "Garfield/ViewField.hh"
+#include "Garfield/Plotting.hh"
 
 using namespace Garfield;
 

@@ -17,15 +17,15 @@
 #include <TApplication.h>
 #include <TH1F.h>
 
-#include "TrackHeed.hh"
-#include "MediumMagboltz.hh"
-#include "SolidTube.hh"
-#include "GeometrySimple.hh"
-#include "ComponentConstant.hh"
-#include "Sensor.hh"
-#include "FundamentalConstants.hh"
-#include "Random.hh"
-#include "Plotting.hh"
+#include "Garfield/TrackHeed.hh"
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/SolidTube.hh"
+#include "Garfield/GeometrySimple.hh"
+#include "Garfield/ComponentConstant.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/Random.hh"
+#include "Garfield/Plotting.hh"
 
 using namespace Garfield;
 

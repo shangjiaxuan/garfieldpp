@@ -426,7 +426,7 @@ $(OBJDIR)/Heed/PhotoAbsCSLib.o: \
 $(OBJDIR)/Heed/HeedFieldMap.o: \
 	$(HEEDDIR)/HeedFieldMap.cpp \
 	$(HEEDDIR)/HeedFieldMap.h \
-	$(INCDIR)/Sensor.hh
+	$(INCDIR)/Garfield/Sensor.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 
