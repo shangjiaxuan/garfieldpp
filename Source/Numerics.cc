@@ -1,5 +1,6 @@
 #include <cmath>
 #include <iostream>
+#include <algorithm>
 
 #include "Numerics.hh"
 
@@ -633,55 +634,38 @@ double GaussKronrod15(double (*f)(const double), const double a,
   return resK * halfLength;
 }
 
+/// C++ version of DIVDIF (CERN program library E105) which performs
+/// tabular interpolation using symmetrically placed argument points.
 double Divdif(const std::vector<double>& f, const std::vector<double>& a,
-              int nn, double x, int mm) {
-  // C++ version of DIVDIF (CERN program library E105) which performs
-  // tabular interpolation using symmetrically placed argument points.
+              const int nn, const double x, const int mm) {
 
   double t[20], d[20];
 
-  const int mmax = 10;
-
   // Check the arguments.
   if (nn < 2) {
-    std::cerr << "Divdif:\n";
-    std::cerr << "    Array length < 2.\n";
+    std::cerr << "Divdif: Array length < 2.\n";
     return 0.;
   }
   if (mm < 1) {
-    std::cerr << "Divdif:\n";
-    std::cerr << "    Interpolation order < 1.\n";
+    std::cerr << "Divdif: Interpolation order < 1.\n";
     return 0.;
   }
 
-  // Deal with the case that X is located at A(1) or A(N).
-  if (fabs(x - a[0]) < 1.e-6 * (fabs(a[0]) + fabs(a[nn - 1]))) {
-    return f[0];
-  }
-  if (fabs(x - a[nn - 1]) < 1.e-6 * (fabs(a[0]) + fabs(a[nn - 1]))) {
-    return f[nn - 1];
-  }
+  // Deal with the case that X is located at first or last point.
+  const double tol = 1.e-6 * (fabs(a[0]) + fabs(a[nn - 1]));
+  if (fabs(x - a[0]) < tol) return f[0];
+  if (fabs(x - a[nn - 1]) < tol) return f[nn - 1];
 
   // Find subscript IX of X in array A.
-  int n = nn;
-  int m;
-  if (mm <= mmax && mm <= n - 1) {
-    m = mm;
-  } else {
-    if (mmax <= n - 1) {
-      m = mmax;
-    } else {
-      m = n - 1;
-    }
-  }
-  int mplus = m + 1;
+  constexpr int mmax = 10;
+  const int m = std::min({mm, mmax, nn - 1});
+  const int mplus = m + 1;
   int ix = 0;
-  int iy = n + 1;
-  int mid;
-  if (a[0] > a[n - 1]) {
+  int iy = nn + 1;
+  if (a[0] > a[nn - 1]) {
     // Search decreasing arguments.
     do {
-      mid = (ix + iy) / 2;
+      const int mid = (ix + iy) / 2;
       if (x > a[mid - 1]) {
         iy = mid;
       } else {
@@ -691,7 +675,7 @@ double Divdif(const std::vector<double>& f, const std::vector<double>& a,
   } else {
     // Search increasing arguments.
     do {
-      mid = (ix + iy) / 2;
+      const int mid = (ix + iy) / 2;
       if (x < a[mid - 1]) {
         iy = mid;
       } else {
@@ -706,7 +690,7 @@ double Divdif(const std::vector<double>& f, const std::vector<double>& a,
   int l = 0;
   do {
     const int isub = ix + l;
-    if ((1 > isub) || (isub > n)) {
+    if ((1 > isub) || (isub > nn)) {
       // Skip point.
       npts = mplus;
     } else {
@@ -717,13 +701,11 @@ double Divdif(const std::vector<double>& f, const std::vector<double>& a,
     }
     if (ip < npts) {
       l = -l;
-      if (l >= 0) {
-        l++;
-      }
+      if (l >= 0) ++l;
     }
   } while (ip < npts);
 
-  bool extra = npts != mplus;
+  const bool extra = npts != mplus;
   // Replace d by the leading diagonal of a divided-difference table,
   // supplemented by an extra line if EXTRA is True.
   for (l = 1; l <= m; l++) {
@@ -734,7 +716,7 @@ double Divdif(const std::vector<double>& f, const std::vector<double>& a,
     int i = mplus;
     for (int j = l; j <= m; j++) {
       const int isub = i - l;
-      d[i - 1] = (d[i - 1] - d[i - 1 - 1]) / (t[i - 1] - t[isub - 1]);
+      d[i - 1] = (d[i - 1] - d[i - 2]) / (t[i - 1] - t[isub - 1]);
       i--;
     }
   }
@@ -752,16 +734,16 @@ double Divdif(const std::vector<double>& f, const std::vector<double>& a,
   return sum;
 }
 
+/// Interpolation of order 1 and 2 in an irregular rectangular 
+/// three-dimensional grid.
 bool Boxin3(const std::vector<std::vector<std::vector<double> > >& value,
             const std::vector<double>& xAxis, const std::vector<double>& yAxis,
             const std::vector<double>& zAxis, const int nx, const int ny,
             const int nz, const double xx, const double yy, const double zz,
             double& f, const int iOrder) {
-  // std::cout << nx << ", " << ny << ", " << nz << "\n";
   //-----------------------------------------------------------------------
   //   BOXIN3 - interpolation of order 1 and 2 in an irregular rectangular
   //            3-dimensional grid.
-  //   (Last changed on 13/ 2/00.)
   //-----------------------------------------------------------------------
 
   int iX0 = 0, iX1 = 0;
@@ -1207,15 +1189,10 @@ bool Boxin3(const std::vector<std::vector<std::vector<double> > >& value,
   for (int i = iX0; i <= iX1; ++i) {
     for (int j = iY0; j <= iY1; ++j) {
       for (int k = iZ0; k <= iZ1; ++k) {
-        // std::cout << "i = " << i << ", j = " << j << ", k = " << k << "\n";
-        // std::cout << "value: " << value[i][j][k] << "\n";
-        // std::cout << "fX = " << fX[i - iX0] << ", fY = " << fY[j - iY0] << ",
-        // fZ = " << fZ[k - iZ0] << "\n";
         f += value[i][j][k] * fX[i - iX0] * fY[j - iY0] * fZ[k - iZ0];
       }
     }
   }
-  // std::cout << f << std::endl;
   return true;
 }
 }

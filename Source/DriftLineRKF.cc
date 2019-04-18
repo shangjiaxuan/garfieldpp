@@ -600,15 +600,16 @@ bool DriftLineRKF::Avalanche(const Particle particle,
   const double qi = std::accumulate(ni.begin(), ni.end(), 0.);
   scale = 1.;
   if (qi > 1.) {
-    double q1 = m_gain > 1. ? m_gain : qi;
+    const double gain = m_gain > 1. ? m_gain : GetGain();
+    double q1 = gain;
     if (m_gainFluctuations == GainFluctuations::Polya) {
       for (unsigned int i = 0; i < 100; ++i) {
-        q1 *= RndmPolya(m_theta);
+        q1 = gain * RndmPolya(m_theta);
         if (q1 >= 1.) break;
-        q1 = m_gain > 1. ? m_gain : qi;
       }
       q1 = std::max(q1, 1.);
     }
+    q1 *= GetLoss();
     scale = (q1 + 1.) / (qi + 1.); 
   }
   if (m_debug) {
