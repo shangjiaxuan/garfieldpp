@@ -8,13 +8,13 @@
 #include <TH1F.h>
 #include <TGraph.h>
 
-#include "MediumSilicon.hh"
-#include "SolidBox.hh"
-#include "GeometrySimple.hh"
-#include "ComponentConstant.hh"
-#include "Sensor.hh"
-#include "TrackHeed.hh"
-#include "FundamentalConstants.hh"
+#include "Garfield/MediumSilicon.hh"
+#include "Garfield/SolidBox.hh"
+#include "Garfield/GeometrySimple.hh"
+#include "Garfield/ComponentConstant.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/TrackHeed.hh"
+#include "Garfield/FundamentalConstants.hh"
 
 using namespace Garfield;
 

@@ -4,8 +4,8 @@
 #include <TROOT.h>
 #include <TApplication.h>
 
-#include "MediumMagboltz.hh"
-#include "FundamentalConstants.hh"
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/FundamentalConstants.hh"
 
 using namespace Garfield;
 

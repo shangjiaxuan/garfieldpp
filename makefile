@@ -1,6 +1,6 @@
 OBJDIR = $(GARFIELD_HOME)/Object
 SRCDIR = $(GARFIELD_HOME)/Source
-INCDIR = $(GARFIELD_HOME)/Include
+INCDIR = $(GARFIELD_HOME)/Include/Garfield
 LIBDIR = $(GARFIELD_HOME)/Library
 HEEDDIR = $(GARFIELD_HOME)/Heed
 
@@ -10,7 +10,6 @@ SOURCES = $(wildcard $(SRCDIR)/*.cc)
 
 OBJECTS = $(subst $(SRCDIR),$(OBJDIR),$(SOURCES:.cc=.o))
 OBJECTS += $(OBJDIR)/magboltz.o 
-#OBJECTS += $(OBJDIR)/GarfieldDict.o
 
 TARGETS = $(OBJECTS)
 TARGETS += heed
