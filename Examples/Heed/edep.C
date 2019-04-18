@@ -5,14 +5,14 @@
 #include <TApplication.h>
 #include <TH1F.h>
 
-#include "MediumMagboltz.hh"
-#include "SolidBox.hh"
-#include "GeometrySimple.hh"
-#include "ComponentConstant.hh"
-#include "Sensor.hh"
-#include "TrackHeed.hh"
-#include "Plotting.hh"
-#include "Random.hh"
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/SolidBox.hh"
+#include "Garfield/GeometrySimple.hh"
+#include "Garfield/ComponentConstant.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/TrackHeed.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/Random.hh"
 
 using namespace Garfield;
 

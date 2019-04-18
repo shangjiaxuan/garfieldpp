@@ -3,7 +3,7 @@
 
 #ifdef GARFIELD_HEED_INTERFACE
 
-#include "Random.hh"
+#include "Garfield/Random.hh"
 
 namespace Heed {
 

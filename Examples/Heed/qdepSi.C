@@ -9,13 +9,13 @@
 #include <TH1F.h>
 #include <TAxis.h>
 
-#include "MediumSilicon.hh"
-#include "SolidBox.hh"
-#include "GeometrySimple.hh"
-#include "ComponentConstant.hh"
-#include "Sensor.hh"
-#include "TrackHeed.hh"
-#include "Plotting.hh"
+#include "Garfield/MediumSilicon.hh"
+#include "Garfield/SolidBox.hh"
+#include "Garfield/GeometrySimple.hh"
+#include "Garfield/ComponentConstant.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/TrackHeed.hh"
+#include "Garfield/Plotting.hh"
 
 using namespace Garfield;
 

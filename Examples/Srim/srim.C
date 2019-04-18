@@ -4,13 +4,13 @@
 #include <TH1F.h>
 #include <TCanvas.h>
 
-#include "SolidBox.hh"
-#include "GeometrySimple.hh"
-#include "MediumMagboltz.hh"
-#include "ComponentConstant.hh"
-#include "Sensor.hh"
-#include "TrackSrim.hh"
-#include "Random.hh"
+#include "Garfield/SolidBox.hh"
+#include "Garfield/GeometrySimple.hh"
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/ComponentConstant.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/TrackSrim.hh"
+#include "Garfield/Random.hh"
 
 using namespace Garfield;
 

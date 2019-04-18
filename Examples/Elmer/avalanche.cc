@@ -15,16 +15,16 @@
 #include <TApplication.h>
 #include <TFile.h>
 
-#include "MediumMagboltz.hh"
-#include "ComponentElmer.hh"
-#include "Sensor.hh"
-#include "ViewField.hh"
-#include "Plotting.hh"
-#include "ViewFEMesh.hh"
-#include "ViewSignal.hh"
-#include "GarfieldConstants.hh"
-#include "Random.hh"
-#include "AvalancheMicroscopic.hh"
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/ComponentElmer.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/ViewField.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/ViewFEMesh.hh"
+#include "Garfield/ViewSignal.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Random.hh"
+#include "Garfield/AvalancheMicroscopic.hh"
 
 using namespace Garfield;
 

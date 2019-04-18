@@ -1,7 +1,7 @@
 #ifndef RNORM_H
 #define RNORM_H
 
-#include "Random.hh"
+#include "Garfield/Random.hh"
 
 // Generation of two random numbers distributed by normal distribution.
 // It is generator-independent. The two flat numbers are its parameters.

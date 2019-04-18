@@ -35,16 +35,16 @@
 #include <vector>
 #include <iostream>
 
-#include "Sensor.hh"
-#include "AvalancheMC.hh"
-#include "AvalancheMicroscopic.hh"
-#include "ComponentAnalyticField.hh"
-#include "TrackHeed.hh"
-#include "TrackSimple.hh"
-#include "MediumMagboltz.hh"
-#include "GeometryRoot.hh"
-#include "GeometrySimple.hh"
-#include "SolidTube.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/AvalancheMC.hh"
+#include "Garfield/AvalancheMicroscopic.hh"
+#include "Garfield/ComponentAnalyticField.hh"
+#include "Garfield/TrackHeed.hh"
+#include "Garfield/TrackSimple.hh"
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/GeometryRoot.hh"
+#include "Garfield/GeometrySimple.hh"
+#include "Garfield/SolidTube.hh"
 
 typedef std::pair<double, double> EnergyRange_MeV;
 typedef std::map< const std::string, EnergyRange_MeV> MapParticlesEnergy;
