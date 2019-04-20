@@ -108,14 +108,14 @@ SET_SOURCE_FILES_PROPERTIES( ${heed_sources} PROPERTIES COMPILE_FLAGS "-DNOT_INC
 
 ## create dictionary  ##################################
 IF(ROOT_VERSION VERSION_LESS 6.02)
-    LIST( APPEND ROOT_DICT_INCLUDE_DIRS Include Heed)
+    LIST( APPEND ROOT_DICT_INCLUDE_DIRS Include/Garfield Heed)
     SET( ROOT_DICT_CINT_DEFINITIONS "-DHANDLE_DICT_EXCEPTIONS=IGNORED_FOR_CINT" )
-    PREPARE_ROOT_DICT_HEADERS( Include )
+    PREPARE_ROOT_DICT_HEADERS( Include/Garfield )
     GEN_ROOT_DICT_SOURCES( GarfieldDict.cxx )
     LIST( APPEND garfield_sources ${ROOT_DICT_OUTPUT_SOURCES} )
 ELSE()
-    file (GLOB garfield_header "Include/*.hh")
-    ROOT_GENERATE_DICTIONARY( GarfieldDict ${garfield_header} LINKDEF Include/LinkDef.h OPTIONS "-I${PROJECT_SOURCE_DIR}/Heed")
+    file (GLOB garfield_header "Include/Garfield/*.hh")
+    ROOT_GENERATE_DICTIONARY( GarfieldDict ${garfield_header} LINKDEF Include/Garfield/LinkDef.h OPTIONS "-I${PROJECT_SOURCE_DIR}/Heed")
     LIST( APPEND garfield_sources GarfieldDict.cxx )
 ENDIF()
 
@@ -134,7 +134,7 @@ MESSAGE( STATUS "###########################################################" )
 ## SET output path for libraries 
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib/)
 ## SET include directories 
-INCLUDE_DIRECTORIES( Include Heed )
+INCLUDE_DIRECTORIES( Include Include/Garfield Heed )
 ## build the library
 ADD_LIBRARY( ${PROJECT_NAME} SHARED
     ${garfield_sources} 
@@ -194,4 +194,4 @@ ENDIF()
 # install the Heed database
 INSTALL(DIRECTORY Heed/heed++/database DESTINATION  Heed/heed++)
 # install headers
-INSTALL(DIRECTORY Include/ DESTINATION include/Garfield REGEX LinkDef EXCLUDE)
+INSTALL(DIRECTORY Include/Garfield DESTINATION include/Garfield REGEX LinkDef EXCLUDE)

@@ -4,6 +4,21 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6 FATAL_ERROR)
 ########################################################
 PROJECT(GarfieldExamples)
 
+#### AnalyticField         #############################
+add_executable(gallery AnalyticField/gallery.C)
+target_link_libraries(gallery Garfield)
+
+#### Voxel                 #############################
+add_executable(plotfield Voxel/plotfield.C)
+target_link_libraries(plotfield Garfield)
+
+add_executable(savefield Voxel/savefield.C)
+target_link_libraries(savefield Garfield)
+
+#### GEM                   #############################
+add_executable(gem Gem/gem.C)
+target_link_libraries(gem Garfield)
+
 #### GasFile               #############################
 add_executable(generate GasFile/generate.C)
 target_link_libraries(generate Garfield)
