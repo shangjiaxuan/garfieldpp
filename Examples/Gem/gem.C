@@ -32,8 +32,6 @@ int main(int argc, char * argv[]) {
 
   // Dimensions of the GEM [cm]
   const double pitch = 0.014;
-  const double kapton = 50.e-4;
-  const double metal = 5.e-4;
 
   const bool plotField = true;
   if (plotField) {
