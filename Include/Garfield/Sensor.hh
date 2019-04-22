@@ -148,9 +148,12 @@ class Sensor {
   /// Switch debugging messages on/off.
   void EnableDebugging(const bool on = true) { m_debug = on; }
 
+  /// Determine whether a line between two points has crossed a wire,
+  /// calls ComponentBase::IsWireCrossed.
   bool IsWireCrossed(const double x0, const double y0, const double z0,
                      const double x1, const double y1, const double z1,
-                     double& xc, double& yc, double& zc);
+                     double& xc, double& yc, double& zc, 
+                     const bool centre, double& rc);
   bool IsInTrapRadius(const double q0, const double x0, const double y0,
                       const double z0, double& xw, double& yw, double& rw);
 

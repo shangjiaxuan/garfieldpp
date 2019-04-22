@@ -100,11 +100,16 @@ class ComponentBase {
   /** Determine whether the line between two points crosses a wire.
     * \param x0,y0,z0 first point [cm].
     * \param x1,y1,z1 second point [cm]
-    * \param xc,yc,zc point [cm] where the line crosses the wire.
+    * \param xc,yc,zc point [cm] where the line crosses the wire or the 
+             coordinates of the wire centre.
+    * \param flag whether to return the coordinates of the line-wire crossing
+             point or of the wire centre.
+    * \param rc radius [cm] of the wire.
     */
   virtual bool IsWireCrossed(const double x0, const double y0, const double z0,
                              const double x1, const double y1, const double z1,
-                             double& xc, double& yc, double& zc);
+                             double& xc, double& yc, double& zc, 
+                             const bool centre, double& rc);
   /** Determine whether a particle is inside the trap radius of a wire.
     * \param q0 charge of the particle [in elementary charges].
     * \param x0,y0,z0 position [cm] of the particle.

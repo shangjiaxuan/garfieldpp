@@ -276,13 +276,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     if (!GetVelocity(x1, particle, v1, stat)) {
       flag = StatusCalculationAbandoned;
       break;
-    } else if (stat > 0) {
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: Inside wire, halve step.\n";
-      }
-      h *= 0.5;
-      continue;
-    } else if (stat != 0) {
+    } else if (stat < 0) {
       if (m_debug) {
         std::cout << m_className << "::DriftLine: Point 1 outside.\n";
       }
@@ -300,13 +294,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     if (!GetVelocity(x2, particle, v2, stat)) {
       flag = StatusCalculationAbandoned;
       break;
-    } else if (stat > 0) {
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: Inside wire, halve step.\n";
-      }
-      h *= 0.5;
-      continue;
-    } else if (stat != 0) {
+    } else if (stat < 0) {
       if (m_debug) {
         std::cout << m_className << "::DriftLine: Point 2 outside.\n";
       }
@@ -324,13 +312,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     if (!GetVelocity(x3, particle, v3, stat)) {
       flag = StatusCalculationAbandoned;
       break;
-    } else if (stat > 0) {
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: Inside wire, halve step.\n";
-      }
-      h *= 0.5;
-      continue;
-    } else if (stat != 0) {
+    } else if (stat < 0) {
       if (m_debug) {
         std::cout << m_className << "::DriftLine: Point 3 outside.\n";
       }
@@ -340,27 +322,29 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
       break;
     }
     // Check if we crossed a wire.
-    double xw = 0., yw = 0., zw = 0.;
+    double xw = 0., yw = 0., zw = 0., rw = 0.;
     if (m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
-                                x1[0], x1[1], x1[2], xw, yw, zw) ||
+                                x1[0], x1[1], x1[2], xw, yw, zw, true, rw) ||
         m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
-                                x2[0], x2[1], x2[2], xw, yw, zw) ||
+                                x2[0], x2[1], x2[2], xw, yw, zw, true, rw) ||
         m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
-                                x3[0], x3[1], x3[2], xw, yw, zw)) {
+                                x3[0], x3[1], x3[2], xw, yw, zw, true, rw)) {
       if (m_debug) {
-        std::cout << m_className << "::DriftLine: Crossed wire, halve step.\n";
+        std::cout << m_className << "::DriftLine: Crossed wire.\n";
       }
-      if (h < Small) {
+      if (DriftToWire(xw, yw, rw, particle, ts, xs)) {
+        flag = StatusLeftDriftMedium;
+      } else if (h > Small) {
+        h *= 0.5;
+        continue;
+      } else {
         std::cerr << m_className << "::DriftLine: Step size too small. Stop.\n";
         flag = StatusCalculationAbandoned;
-        break;
       }
-      h *= 0.5;
-      continue;
+      break;
     }
     // Check if we are inside the trap radius of a wire.
     if (particle != Particle::Ion) {
-      double rw = 0.;
       if (m_sensor->IsInTrapRadius(charge, x1[0], x1[1], x1[2], xw, yw, rw)) {
         if (DriftToWire(xw, yw, rw, particle, ts, xs)) {
           flag = StatusLeftDriftMedium;

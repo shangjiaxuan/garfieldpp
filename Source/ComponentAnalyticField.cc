@@ -50,7 +50,8 @@ bool ComponentAnalyticField::GetBoundingBox(double& x0, double& y0, double& z0,
 bool ComponentAnalyticField::IsWireCrossed(const double x0, const double y0,
                                            const double z0, const double x1,
                                            const double y1, const double z1,
-                                           double& xc, double& yc, double& zc) {
+                                           double& xc, double& yc, double& zc,
+                                           const bool centre, double& rc) {
   xc = x0;
   yc = y0;
   zc = z0;
@@ -110,14 +111,20 @@ bool ComponentAnalyticField::IsWireCrossed(const double x0, const double y0,
     const double r2 = 0.25 * wire.d * wire.d;
     if (dMin2 < r2) {
       // Wire has been crossed.
-      // Find the point of intersection.
-      const double p = -xIn0 * invd2;
-      const double q = (dw02 - r2) * invd2;
-      const double s = sqrt(p * p - q);
-      const double t = std::min(-p + s, -p - s);
-      xc = x0 + t * dx;
-      yc = y0 + t * dy;
-      zc = z0 + t * (z1 - z0);
+      if (centre) {
+        xc = xw;
+        yc = yw;
+      } else {
+        // Find the point of intersection.
+        const double p = -xIn0 * invd2;
+        const double q = (dw02 - r2) * invd2;
+        const double s = sqrt(p * p - q);
+        const double t = std::min(-p + s, -p - s);
+        xc = x0 + t * dx;
+        yc = y0 + t * dy;
+        zc = z0 + t * (z1 - z0);
+      }
+      rc = 0.5 * wire.d;
       return true;
     }
   }

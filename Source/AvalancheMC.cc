@@ -345,8 +345,9 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
     }
     // Check if the particle has crossed a wire.
     std::array<double, 3> xc = x0;
+    double rc = 0.;
     if (m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], x1[0], x1[1], x1[2], 
-                                xc[0], xc[1], xc[2])) {
+                                xc[0], xc[1], xc[2], false, rc)) {
       if (m_debug) {
         std::cout << m_className + "::DriftLine: Hit a wire at " 
                   << PrintVec(xc) + ".\n";
