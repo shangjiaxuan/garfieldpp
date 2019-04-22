@@ -838,7 +838,9 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
 
         // Check if the electron/hole has crossed a wire.
         double xc = x, yc = y, zc = z;
-        if (m_sensor->IsWireCrossed(x, y, z, x1, y1, z1, xc, yc, zc)) {
+        double rc = 0.;
+        if (m_sensor->IsWireCrossed(x, y, z, x1, y1, z1, 
+                                    xc, yc, zc, false, rc)) {
           // If switched on, calculated the induced signal over this step.
           if (m_useSignal) {
             const double dx = xc - x;
@@ -1054,7 +1056,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
                 ++m_nElectrons;
                 ++m_nIons;
                 // Make sure we haven't jumped across a wire.
-                if (m_sensor->IsWireCrossed(x, y, z, xp, yp, zp, xc, yc, zc)) {
+                if (m_sensor->IsWireCrossed(x, y, z, xp, yp, zp, xc, yc, zc, 
+                                            false, rc)) {
                   continue;
                 }
                 if (!aval) continue;

@@ -85,13 +85,12 @@ bool ComponentBase::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   return m_geometry->GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax);
 }
 
-bool ComponentBase::IsWireCrossed(const double x0, const double y0,
-                                  const double z0, const double /*x1*/,
+bool ComponentBase::IsWireCrossed(const double /*x0*/, const double /*y0*/,
+                                  const double /*z0*/, const double /*x1*/,
                                   const double /*y1*/, const double /*z1*/,
-                                  double& xc, double& yc, double& zc) {
-  xc = x0;
-  yc = y0;
-  zc = z0;
+                                  double& /*xc*/, double& /*yc*/, 
+                                  double& /*zc*/, const bool /*centre*/,
+                                  double& /*rc*/) {
   return false;
 }
 

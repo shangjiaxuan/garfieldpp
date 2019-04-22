@@ -228,9 +228,11 @@ bool Sensor::IsInArea(const double x, const double y, const double z) {
 
 bool Sensor::IsWireCrossed(const double x0, const double y0, const double z0,
                            const double x1, const double y1, const double z1,
-                           double& xc, double& yc, double& zc) {
+                           double& xc, double& yc, double& zc, 
+                           const bool centre, double& rc) {
   for (auto component : m_components) {
-    if (component->IsWireCrossed(x0, y0, z0, x1, y1, z1, xc, yc, zc)) {
+    if (component->IsWireCrossed(x0, y0, z0, x1, y1, z1, 
+                                 xc, yc, zc, centre, rc)) {
       return true;
     }
   }
