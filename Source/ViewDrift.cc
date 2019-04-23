@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <TAxis.h>
+#include <TAxis3D.h>
 #include <TH1F.h>
 
 #include "Plotting.hh"
@@ -254,7 +255,9 @@ void ViewDrift::Plot(const bool twod, const bool axis) {
 }
 
 void ViewDrift::Plot2d(const bool axis) {
-  std::cout << m_className << "::Plot: Plotting in 2D.\n";
+  if (m_debug) {
+    std::cout << m_className << "::Plot: Plotting in 2D.\n";
+  }
   if (!m_canvas) {
     m_canvas = new TCanvas();
     if (m_hasExternalCanvas) m_hasExternalCanvas = false;
@@ -311,7 +314,9 @@ void ViewDrift::Plot2d(const bool axis) {
 }
 
 void ViewDrift::Plot3d(const bool axis) {
-  std::cout << m_className << "::Plot: Plotting in 3D.\n";
+  if (m_debug) {
+    std::cout << m_className << "::Plot: Plotting in 3D.\n";
+  }
   if (!m_canvas) {
     m_canvas = new TCanvas();
     if (m_hasExternalCanvas) m_hasExternalCanvas = false;
@@ -396,5 +401,14 @@ void ViewDrift::Plot3d(const bool axis) {
     m_attPlot.reset(nullptr);
   }
   m_canvas->Update();
+  if (axis) {
+    TAxis3D* ax3d = TAxis3D::GetPadAxis();
+    ax3d->SetLabelColor(kBlack);
+    ax3d->SetAxisColor(kBlack);
+    ax3d->SetXTitle("x");
+    ax3d->SetYTitle("y");
+    ax3d->SetZTitle("z");
+    m_canvas->Update();
+  }
 }
 }
