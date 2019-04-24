@@ -855,6 +855,22 @@ void Medium::GetFieldGrid(std::vector<double>& efields,
   angles = m_bAngles;
 }
 
+bool Medium::SetEntry(const unsigned int i, const unsigned int j,
+                      const unsigned int k, const std::string& fcn,
+                      std::vector<std::vector<std::vector<double> > >& tab,
+                      const double val) {
+
+  if (i >= m_eFields.size() || j >= m_bFields.size() || k >= m_bAngles.size()) {
+    PrintOutOfRange(m_className, fcn, i, j, k);
+    return false;
+  }
+  if (tab.empty()) {
+    Init(m_eFields.size(), m_bFields.size(), m_bAngles.size(), tab, val);
+  }
+  tab[k][j][i] = val;
+  return true;
+}
+
 bool Medium::GetEntry(const unsigned int i, const unsigned int j, 
                       const unsigned int k, const std::string& fcn, 
                       const std::vector<std::vector<std::vector<double> > >& tab,
