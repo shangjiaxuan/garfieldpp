@@ -1,12 +1,12 @@
 #include <cmath>
 #include <iostream>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "GeometrySimple.hh"
-#include "Plotting.hh"
-#include "Solid.hh"
-#include "ViewGeometry.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/GeometrySimple.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/Solid.hh"
+#include "Garfield/ViewGeometry.hh"
 
 namespace Garfield {
 

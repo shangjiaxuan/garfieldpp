@@ -4,8 +4,8 @@
 #include <iomanip>
 #include <iostream>
 
-#include "FundamentalConstants.hh"
-#include "OpticalData.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/OpticalData.hh"
 
 namespace {
 

@@ -13,12 +13,12 @@
 #include <TCanvas.h>
 #include <TApplication.h>
 
-#include "MediumMagboltz.hh"
-#include "ComponentElmer.hh"
-#include "Sensor.hh"
-#include "ViewField.hh"
-#include "Plotting.hh"
-#include "ViewFEMesh.hh"
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/ComponentElmer.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/ViewField.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/ViewFEMesh.hh"
 
 using namespace Garfield;
 

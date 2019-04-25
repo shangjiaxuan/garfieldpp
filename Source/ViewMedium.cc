@@ -5,10 +5,10 @@
 #include <TAxis.h>
 #include <TLatex.h>
 
-#include "GarfieldConstants.hh"
-#include "Medium.hh"
-#include "Plotting.hh"
-#include "ViewMedium.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Medium.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/ViewMedium.hh"
 
 namespace {
 

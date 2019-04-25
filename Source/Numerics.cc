@@ -2,7 +2,7 @@
 #include <iostream>
 #include <algorithm>
 
-#include "Numerics.hh"
+#include "Garfield/Numerics.hh"
 
 namespace Garfield {
 

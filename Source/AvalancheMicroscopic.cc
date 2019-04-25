@@ -4,9 +4,9 @@
 #include <iostream>
 #include <string>
 
-#include "AvalancheMicroscopic.hh"
-#include "FundamentalConstants.hh"
-#include "Random.hh"
+#include "Garfield/AvalancheMicroscopic.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/Random.hh"
 
 namespace {
 

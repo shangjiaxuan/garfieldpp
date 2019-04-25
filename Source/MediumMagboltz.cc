@@ -9,12 +9,12 @@
 
 #include <TMath.h>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "MagboltzInterface.hh"
-#include "MediumMagboltz.hh"
-#include "OpticalData.hh"
-#include "Random.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/MagboltzInterface.hh"
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/OpticalData.hh"
+#include "Garfield/Random.hh"
 
 namespace {
 

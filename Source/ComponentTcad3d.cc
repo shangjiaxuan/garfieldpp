@@ -5,9 +5,9 @@
 #include <sstream>
 #include <string>
 
-#include "ComponentTcad3d.hh"
-#include "GarfieldConstants.hh"
-#include "Utilities.hh"
+#include "Garfield/ComponentTcad3d.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Utilities.hh"
 
 namespace Garfield {
 

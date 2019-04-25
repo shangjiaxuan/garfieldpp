@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "ComponentConstant.hh"
-#include "GarfieldConstants.hh"
+#include "Garfield/ComponentConstant.hh"
+#include "Garfield/GarfieldConstants.hh"
 
 namespace Garfield {
 

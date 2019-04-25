@@ -7,10 +7,10 @@
 #include <numeric>
 #include <vector>
 
-#include "ComponentNeBem3d.hh"
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Random.hh"
+#include "Garfield/ComponentNeBem3d.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Random.hh"
 
 namespace {
 

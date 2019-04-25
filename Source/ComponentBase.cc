@@ -1,4 +1,4 @@
-#include "ComponentBase.hh"
+#include "Garfield/ComponentBase.hh"
 #include <iostream>
 
 namespace Garfield {

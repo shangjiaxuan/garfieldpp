@@ -3,11 +3,11 @@
 #include <cmath>
 #include <iostream>
 
-#include "ComponentCST.hh"
-#include "ComponentFieldMap.hh"
-#include "Plotting.hh"
-#include "Random.hh"
-#include "ViewFEMesh.hh"
+#include "Garfield/ComponentCST.hh"
+#include "Garfield/ComponentFieldMap.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/Random.hh"
+#include "Garfield/ViewFEMesh.hh"
 
 namespace Garfield {
 

@@ -1,4 +1,4 @@
-#include "ComponentUserMapBase.hh"
+#include "Garfield/ComponentUserMapBase.hh"
 
 namespace Garfield {
 

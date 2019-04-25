@@ -46,11 +46,11 @@ ENDIF(BUILD_WITH_VERSION_NUMBER)
 ## Add root libs ##
 IF(DEFINED ROOT_INCLUDE_DIRS)
     # ROOT 6
-    INCLUDE_DIRECTORIES ( ${PROJECT_SOURCE_DIR} ${ROOT_INCLUDE_DIRS} )
+    INCLUDE_DIRECTORIES ( ${ROOT_INCLUDE_DIRS} )
     SET(ROOT_COMPONENT_LIBRARIES ROOT::Geom ROOT::Gdml ROOT::Graf3d) 
 ELSE()
     # ROOT 5
-    INCLUDE_DIRECTORIES ( ${PROJECT_SOURCE_DIR} ${ROOT_INCLUDE_DIR} )
+    INCLUDE_DIRECTORIES ( ${ROOT_INCLUDE_DIR} )
     # COMPONENT mechanism in the FIND_PACKAGE is not supported 
     SET(ROOT_COMPONENT_LIBRARIES "-lGeom -lGdml")
 ENDIF(DEFINED ROOT_INCLUDE_DIRS)
@@ -113,9 +113,17 @@ IF(ROOT_VERSION VERSION_LESS 6.02)
     PREPARE_ROOT_DICT_HEADERS( Include/Garfield )
     GEN_ROOT_DICT_SOURCES( GarfieldDict.cxx )
     LIST( APPEND garfield_sources ${ROOT_DICT_OUTPUT_SOURCES} )
+ELSEIF(ROOT_VERSION VERSION_LESS 6.17)
+    file (GLOB garfield_header RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/Include Include/Garfield/*.hh)
+    ROOT_GENERATE_DICTIONARY(GarfieldDict ${garfield_header}
+                             LINKDEF Include/Garfield/LinkDef.h
+                             OPTIONS -I${PROJECT_SOURCE_DIR}/Include -I${PROJECT_SOURCE_DIR}/Heed)
+    LIST( APPEND garfield_sources GarfieldDict.cxx )
 ELSE()
-    file (GLOB garfield_header "Include/Garfield/*.hh")
-    ROOT_GENERATE_DICTIONARY( GarfieldDict ${garfield_header} LINKDEF Include/Garfield/LinkDef.h OPTIONS "-I${PROJECT_SOURCE_DIR}/Heed")
+    file (GLOB garfield_header  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/Include Include/Garfield/*.hh)
+    include_directories(Include Heed)
+    ROOT_GENERATE_DICTIONARY(GarfieldDict ${garfield_header}
+                             LINKDEF Include/Garfield/LinkDef.h )
     LIST( APPEND garfield_sources GarfieldDict.cxx )
 ENDIF()
 
@@ -134,7 +142,7 @@ MESSAGE( STATUS "###########################################################" )
 ## SET output path for libraries 
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib/)
 ## SET include directories 
-INCLUDE_DIRECTORIES( Include Include/Garfield Heed )
+INCLUDE_DIRECTORIES( Include Heed )
 ## build the library
 ADD_LIBRARY( ${PROJECT_NAME} SHARED
     ${garfield_sources} 
@@ -194,4 +202,4 @@ ENDIF()
 # install the Heed database
 INSTALL(DIRECTORY Heed/heed++/database DESTINATION  Heed/heed++)
 # install headers
-INSTALL(DIRECTORY Include/Garfield DESTINATION include/Garfield REGEX LinkDef EXCLUDE)
+INSTALL(DIRECTORY Include/ DESTINATION include REGEX LinkDef EXCLUDE)

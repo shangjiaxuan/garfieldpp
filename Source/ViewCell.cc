@@ -8,9 +8,9 @@
 #include <TMarker.h>
 #include <TPolyLine.h>
 
-#include "ComponentAnalyticField.hh"
-#include "Plotting.hh"
-#include "ViewCell.hh"
+#include "Garfield/ComponentAnalyticField.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/ViewCell.hh"
 
 namespace Garfield {
 

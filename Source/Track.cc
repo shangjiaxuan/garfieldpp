@@ -1,10 +1,10 @@
 #include <iostream>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Sensor.hh"
-#include "Track.hh"
-#include "ViewDrift.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/Track.hh"
+#include "Garfield/ViewDrift.hh"
 
 namespace Garfield {
 

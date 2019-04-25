@@ -4,10 +4,10 @@
 #include <string>
 #include <numeric>
 
-#include "AvalancheMC.hh"
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Random.hh"
+#include "Garfield/AvalancheMC.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Random.hh"
 
 namespace {
 

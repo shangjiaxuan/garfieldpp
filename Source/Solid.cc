@@ -1,9 +1,9 @@
 #include <cmath>
 #include <iostream>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Solid.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Solid.hh"
 
 namespace Garfield {
 

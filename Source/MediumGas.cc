@@ -9,11 +9,11 @@
 #include <sstream>
 #include <numeric>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "MediumGas.hh"
-#include "OpticalData.hh"
-#include "Utilities.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/MediumGas.hh"
+#include "Garfield/OpticalData.hh"
+#include "Garfield/Utilities.hh"
 
 namespace {
 

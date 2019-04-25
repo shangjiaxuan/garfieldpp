@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "ComponentAnsys123.hh"
+#include "Garfield/ComponentAnsys123.hh"
 
 namespace Garfield {
 

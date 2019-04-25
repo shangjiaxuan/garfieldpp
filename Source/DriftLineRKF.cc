@@ -3,10 +3,10 @@
 #include <cmath>
 #include <numeric>
 
-#include "DriftLineRKF.hh"
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Random.hh"
+#include "Garfield/DriftLineRKF.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Random.hh"
 
 namespace {
 
