@@ -7,7 +7,7 @@
 #include <map>
 #include <sstream>
 
-#include "ComponentComsol.hh"
+#include "Garfield/ComponentComsol.hh"
 
 namespace Garfield {
 

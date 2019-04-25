@@ -2,10 +2,10 @@
 
 #include <TAxis.h>
 
-#include "GarfieldConstants.hh"
-#include "Plotting.hh"
-#include "Sensor.hh"
-#include "ViewSignal.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/ViewSignal.hh"
 
 namespace Garfield {
 

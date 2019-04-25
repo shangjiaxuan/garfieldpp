@@ -6,12 +6,12 @@
 #include <TH1.h>
 #include <TLegend.h>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Numerics.hh"
-#include "Random.hh"
-#include "Sensor.hh"
-#include "TrackSrim.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Numerics.hh"
+#include "Garfield/Random.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/TrackSrim.hh"
 
 namespace {
 

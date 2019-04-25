@@ -5,9 +5,9 @@
 #include <sstream>
 #include <string>
 
-#include "ComponentVoxel.hh"
-#include "Utilities.hh"
-#include "GarfieldConstants.hh"
+#include "Garfield/ComponentVoxel.hh"
+#include "Garfield/Utilities.hh"
+#include "Garfield/GarfieldConstants.hh"
 
 namespace Garfield {
 

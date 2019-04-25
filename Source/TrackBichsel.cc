@@ -5,12 +5,12 @@
 #include <iostream>
 #include <sstream>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Random.hh"
-#include "Sensor.hh"
-#include "TrackBichsel.hh"
-#include "Utilities.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Random.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/TrackBichsel.hh"
+#include "Garfield/Utilities.hh"
 
 namespace Garfield {
 

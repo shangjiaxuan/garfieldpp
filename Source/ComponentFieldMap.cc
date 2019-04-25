@@ -6,8 +6,8 @@
 #include <math.h>
 #include <string>
 
-#include "ComponentFieldMap.hh"
-#include "FundamentalConstants.hh"
+#include "Garfield/ComponentFieldMap.hh"
+#include "Garfield/FundamentalConstants.hh"
 
 namespace Garfield {
 

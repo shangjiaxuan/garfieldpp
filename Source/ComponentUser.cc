@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "ComponentUser.hh"
+#include "Garfield/ComponentUser.hh"
 
 namespace Garfield {
 

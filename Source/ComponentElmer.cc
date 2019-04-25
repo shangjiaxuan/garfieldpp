@@ -5,7 +5,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "ComponentElmer.hh"
+#include "Garfield/ComponentElmer.hh"
 
 namespace {
 

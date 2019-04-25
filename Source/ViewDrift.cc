@@ -4,8 +4,8 @@
 #include <TAxis3D.h>
 #include <TH1F.h>
 
-#include "Plotting.hh"
-#include "ViewDrift.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/ViewDrift.hh"
 
 namespace Garfield {
 

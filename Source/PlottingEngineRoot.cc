@@ -4,7 +4,7 @@
 #include <TAxis.h>
 #include <TCanvas.h>
 
-#include "PlottingEngineRoot.hh"
+#include "Garfield/PlottingEngineRoot.hh"
 
 namespace Garfield {
 

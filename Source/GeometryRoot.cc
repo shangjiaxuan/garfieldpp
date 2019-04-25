@@ -5,7 +5,7 @@
 #include <TGeoNode.h>
 #include <TList.h>
 
-#include "GeometryRoot.hh"
+#include "Garfield/GeometryRoot.hh"
 
 namespace Garfield {
 

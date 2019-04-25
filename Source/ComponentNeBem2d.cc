@@ -4,10 +4,10 @@
 #include <iostream>
 #include <numeric>
 
-#include "ComponentNeBem2d.hh"
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Random.hh"
+#include "Garfield/ComponentNeBem2d.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Random.hh"
 
 namespace Garfield {
 

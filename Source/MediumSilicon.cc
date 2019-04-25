@@ -4,11 +4,11 @@
 #include <iostream>
 #include <sstream>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "MediumSilicon.hh"
-#include "Random.hh"
-#include "Utilities.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/MediumSilicon.hh"
+#include "Garfield/Random.hh"
+#include "Garfield/Utilities.hh"
 
 namespace Garfield {
 

@@ -3,9 +3,9 @@
 #include <iomanip>
 #include <iostream>
 
-#include "ComponentAnalyticField.hh"
-#include "GarfieldConstants.hh"
-#include "Numerics.hh"
+#include "Garfield/ComponentAnalyticField.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Numerics.hh"
 
 namespace Garfield {
 

@@ -3,11 +3,11 @@
 #include <fstream>
 #include <iostream>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Numerics.hh"
-#include "Plotting.hh"
-#include "Sensor.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Numerics.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/Sensor.hh"
 
 namespace Garfield {
 

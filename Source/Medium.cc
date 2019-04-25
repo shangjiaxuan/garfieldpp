@@ -3,11 +3,11 @@
 #include <iostream>
 #include <utility>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Medium.hh"
-#include "Numerics.hh"
-#include "Random.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Medium.hh"
+#include "Garfield/Numerics.hh"
+#include "Garfield/Random.hh"
 
 namespace {
 

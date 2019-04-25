@@ -5,8 +5,8 @@
 #include <sstream>
 #include <string>
 
-#include "ComponentNeBem3dMap.hh"
-#include "Utilities.hh"
+#include "Garfield/ComponentNeBem3dMap.hh"
+#include "Garfield/Utilities.hh"
 
 namespace Garfield {
 

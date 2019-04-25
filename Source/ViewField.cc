@@ -7,11 +7,11 @@
 #include <TAxis.h>
 #include <TROOT.h>
 
-#include "ComponentBase.hh"
-#include "Plotting.hh"
-#include "Random.hh"
-#include "Sensor.hh"
-#include "ViewField.hh"
+#include "Garfield/ComponentBase.hh"
+#include "Garfield/Plotting.hh"
+#include "Garfield/Random.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/ViewField.hh"
 
 namespace {
 

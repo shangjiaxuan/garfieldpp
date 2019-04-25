@@ -18,13 +18,13 @@
 #include "HeedChamber.hh"
 #include "HeedFieldMap.h"
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "Random.hh"
-#include "Sensor.hh"
-#include "ViewDrift.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Random.hh"
+#include "Garfield/Sensor.hh"
+#include "Garfield/ViewDrift.hh"
 
-#include "TrackHeed.hh"
+#include "Garfield/TrackHeed.hh"
 
 namespace {
 

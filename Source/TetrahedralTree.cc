@@ -1,4 +1,4 @@
-#include "TetrahedralTree.hh"
+#include "Garfield/TetrahedralTree.hh"
 #include <iostream>
 
 namespace Garfield {

@@ -1,8 +1,8 @@
 #include <cmath>
 #include <iostream>
 
-#include "FundamentalConstants.hh"
-#include "SolidTube.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/SolidTube.hh"
 
 namespace Garfield {
 

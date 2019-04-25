@@ -3,7 +3,7 @@
 
 #include <TMath.h>
 
-#include "Random.hh"
+#include "Garfield/Random.hh"
 
 namespace {
 

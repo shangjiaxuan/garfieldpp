@@ -10,7 +10,7 @@
 #include <sstream>
 #include <vector>
 
-#include "ComponentCST.hh"
+#include "Garfield/ComponentCST.hh"
 #include "TMath.h"
 
 namespace Garfield {

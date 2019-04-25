@@ -5,10 +5,10 @@
 #include <sstream>
 #include <vector>
 
-#include "FundamentalConstants.hh"
-#include "GarfieldConstants.hh"
-#include "MediumCdTe.hh"
-#include "Random.hh"
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
+#include "Garfield/MediumCdTe.hh"
+#include "Garfield/Random.hh"
 
 namespace Garfield {
 
