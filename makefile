@@ -1,10 +1,10 @@
 OBJDIR = $(GARFIELD_HOME)/Object
 SRCDIR = $(GARFIELD_HOME)/Source
-INCDIR = $(GARFIELD_HOME)/Include/Garfield
+INCDIR = $(GARFIELD_HOME)/Include
 LIBDIR = $(GARFIELD_HOME)/Library
 HEEDDIR = $(GARFIELD_HOME)/Heed
 
-HEADERS = $(wildcard $(INCDIR)/*.hh)
+HEADERS = $(wildcard $(INCDIR)/Garfield/*.hh)
 
 SOURCES = $(wildcard $(SRCDIR)/*.cc)
 
@@ -77,211 +77,211 @@ clean:
 
 $(OBJDIR)/AvalancheMicroscopic.o: \
 	$(SRCDIR)/AvalancheMicroscopic.cc \
-	$(INCDIR)/AvalancheMicroscopic.hh \
-	$(INCDIR)/FundamentalConstants.hh $(INCDIR)/GarfieldConstants.hh \
-	$(INCDIR)/Random.hh \
-	$(INCDIR)/Sensor.hh $(INCDIR)/Medium.hh $(INCDIR)/ViewDrift.hh
+	$(INCDIR)/Garfield/AvalancheMicroscopic.hh \
+	$(INCDIR)/Garfield/FundamentalConstants.hh $(INCDIR)/Garfield/GarfieldConstants.hh \
+	$(INCDIR)/Garfield/Random.hh \
+	$(INCDIR)/Garfield/Sensor.hh $(INCDIR)/Garfield/Medium.hh $(INCDIR)/Garfield/ViewDrift.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/AvalancheMC.o: \
-	$(SRCDIR)/AvalancheMC.cc $(INCDIR)/AvalancheMC.hh \
-	$(INCDIR)/FundamentalConstants.hh $(INCDIR)/GarfieldConstants.hh \
-	$(INCDIR)/Random.hh \
-	$(INCDIR)/Sensor.hh $(INCDIR)/Medium.hh $(INCDIR)/ViewDrift.hh
+	$(SRCDIR)/AvalancheMC.cc $(INCDIR)/Garfield/AvalancheMC.hh \
+	$(INCDIR)/Garfield/FundamentalConstants.hh $(INCDIR)/Garfield/GarfieldConstants.hh \
+	$(INCDIR)/Garfield/Random.hh \
+	$(INCDIR)/Garfield/Sensor.hh $(INCDIR)/Garfield/Medium.hh $(INCDIR)/Garfield/ViewDrift.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@      
 $(OBJDIR)/DriftLineRKF.o: \
-	$(SRCDIR)/DriftLineRKF.cc $(INCDIR)/DriftLineRKF.hh \
-	$(INCDIR)/FundamentalConstants.hh \
-	$(INCDIR)/Sensor.hh $(INCDIR)/Medium.hh $(INCDIR)/ViewDrift.hh
+	$(SRCDIR)/DriftLineRKF.cc $(INCDIR)/Garfield/DriftLineRKF.hh \
+	$(INCDIR)/Garfield/FundamentalConstants.hh \
+	$(INCDIR)/Garfield/Sensor.hh $(INCDIR)/Garfield/Medium.hh $(INCDIR)/Garfield/ViewDrift.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
  
 $(OBJDIR)/Track.o: \
-	$(SRCDIR)/Track.cc $(INCDIR)/Track.hh \
-	$(INCDIR)/ViewDrift.hh
+	$(SRCDIR)/Track.cc $(INCDIR)/Garfield/Track.hh \
+	$(INCDIR)/Garfield/ViewDrift.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@        
 $(OBJDIR)/TrackBichsel.o: \
-	$(SRCDIR)/TrackBichsel.cc $(INCDIR)/TrackBichsel.hh \
-	$(INCDIR)/Track.hh $(SRCDIR)/Track.cc
+	$(SRCDIR)/TrackBichsel.cc $(INCDIR)/Garfield/TrackBichsel.hh \
+	$(INCDIR)/Garfield/Track.hh $(SRCDIR)/Track.cc
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@       
 $(OBJDIR)/TrackPAI.o: \
-	$(SRCDIR)/TrackPAI.cc $(INCDIR)/TrackPAI.hh \
-	$(INCDIR)/Track.hh $(SRCDIR)/Track.cc
+	$(SRCDIR)/TrackPAI.cc $(INCDIR)/Garfield/TrackPAI.hh \
+	$(INCDIR)/Garfield/Track.hh $(SRCDIR)/Track.cc
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/TrackSimple.o: \
-	$(SRCDIR)/TrackSimple.cc $(INCDIR)/TrackSimple.hh \
-	$(INCDIR)/Track.hh $(SRCDIR)/Track.cc
+	$(SRCDIR)/TrackSimple.cc $(INCDIR)/Garfield/TrackSimple.hh \
+	$(INCDIR)/Garfield/Track.hh $(SRCDIR)/Track.cc
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@        
 $(OBJDIR)/TrackHeed.o: \
-	$(SRCDIR)/TrackHeed.cc $(INCDIR)/TrackHeed.hh \
-	$(INCDIR)/Track.hh $(SRCDIR)/Track.cc \
+	$(SRCDIR)/TrackHeed.cc $(INCDIR)/Garfield/TrackHeed.hh \
+	$(INCDIR)/Garfield/Track.hh $(SRCDIR)/Track.cc \
 	$(HEEDDIR)/HeedChamber.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/TrackElectron.o: \
-	$(SRCDIR)/TrackElectron.cc $(INCDIR)/TrackElectron.hh \
-	$(INCDIR)/Track.hh $(SRCDIR)/Track.cc
+	$(SRCDIR)/TrackElectron.cc $(INCDIR)/Garfield/TrackElectron.hh \
+	$(INCDIR)/Garfield/Track.hh $(SRCDIR)/Track.cc
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/TrackSrim.o: \
-	$(SRCDIR)/TrackSrim.cc $(INCDIR)/TrackSrim.hh \
-	$(INCDIR)/Track.hh $(SRCDIR)/Track.cc 
+	$(SRCDIR)/TrackSrim.cc $(INCDIR)/Garfield/TrackSrim.hh \
+	$(INCDIR)/Garfield/Track.hh $(SRCDIR)/Track.cc 
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/ComponentBase.o: \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh \
-	$(INCDIR)/Medium.hh
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh \
+	$(INCDIR)/Garfield/Medium.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ComponentConstant.o: \
-	$(SRCDIR)/ComponentConstant.cc $(INCDIR)/ComponentConstant.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentConstant.cc $(INCDIR)/Garfield/ComponentConstant.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ComponentUser.o: \
-	$(SRCDIR)/ComponentUser.cc $(INCDIR)/ComponentUser.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentUser.cc $(INCDIR)/Garfield/ComponentUser.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@       
 $(OBJDIR)/ComponentAnalyticField.o: \
 	$(SRCDIR)/ComponentAnalyticField.cc \
-	$(INCDIR)/ComponentAnalyticField.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(INCDIR)/Garfield/ComponentAnalyticField.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ComponentNeBem2d.o: \
-	$(SRCDIR)/ComponentNeBem2d.cc $(INCDIR)/ComponentNeBem2d.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentNeBem2d.cc $(INCDIR)/Garfield/ComponentNeBem2d.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@        
 $(OBJDIR)/ComponentNeBem3d.o: \
-	$(SRCDIR)/ComponentNeBem3d.cc $(INCDIR)/ComponentNeBem3d.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentNeBem3d.cc $(INCDIR)/Garfield/ComponentNeBem3d.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@        
 $(OBJDIR)/ComponentNeBem3dMap.o: \
-	$(SRCDIR)/ComponentNeBem3dMap.cc $(INCDIR)/ComponentNeBem3dMap.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentNeBem3dMap.cc $(INCDIR)/Garfield/ComponentNeBem3dMap.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@        
 $(OBJDIR)/ComponentFieldMap.o: \
-	$(SRCDIR)/ComponentFieldMap.cc $(INCDIR)/ComponentFieldMap.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentFieldMap.cc $(INCDIR)/Garfield/ComponentFieldMap.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ComponentAnsys121.o: \
-	$(SRCDIR)/ComponentAnsys121.cc $(INCDIR)/ComponentAnsys121.hh \
-	$(SRCDIR)/ComponentFieldMap.cc $(INCDIR)/ComponentFieldMap.hh 
+	$(SRCDIR)/ComponentAnsys121.cc $(INCDIR)/Garfield/ComponentAnsys121.hh \
+	$(SRCDIR)/ComponentFieldMap.cc $(INCDIR)/Garfield/ComponentFieldMap.hh 
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ComponentAnsys123.o: \
-	$(SRCDIR)/ComponentAnsys123.cc $(INCDIR)/ComponentAnsys123.hh \
-	$(SRCDIR)/ComponentFieldMap.cc $(INCDIR)/ComponentFieldMap.hh 
+	$(SRCDIR)/ComponentAnsys123.cc $(INCDIR)/Garfield/ComponentAnsys123.hh \
+	$(SRCDIR)/ComponentFieldMap.cc $(INCDIR)/Garfield/ComponentFieldMap.hh 
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ComponentCST.o: \
-	$(SRCDIR)/ComponentCST.cc $(INCDIR)/ComponentCST.hh \
-	$(SRCDIR)/ComponentFieldMap.cc $(INCDIR)/ComponentFieldMap.hh 
+	$(SRCDIR)/ComponentCST.cc $(INCDIR)/Garfield/ComponentCST.hh \
+	$(SRCDIR)/ComponentFieldMap.cc $(INCDIR)/Garfield/ComponentFieldMap.hh 
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ComponentElmer.o: \
-	$(SRCDIR)/ComponentElmer.cc $(INCDIR)/ComponentElmer.hh \
-	$(SRCDIR)/ComponentFieldMap.cc $(INCDIR)/ComponentFieldMap.hh 
+	$(SRCDIR)/ComponentElmer.cc $(INCDIR)/Garfield/ComponentElmer.hh \
+	$(SRCDIR)/ComponentFieldMap.cc $(INCDIR)/Garfield/ComponentFieldMap.hh 
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ComponentComsol.o: \
-	$(SRCDIR)/ComponentComsol.cc $(INCDIR)/ComponentComsol.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentComsol.cc $(INCDIR)/Garfield/ComponentComsol.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ComponentTcad2d.o: \
-	$(SRCDIR)/ComponentTcad2d.cc $(INCDIR)/ComponentTcad2d.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentTcad2d.cc $(INCDIR)/Garfield/ComponentTcad2d.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@   
 $(OBJDIR)/ComponentTcad3d.o: \
-	$(SRCDIR)/ComponentTcad3d.cc $(INCDIR)/ComponentTcad3d.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentTcad3d.cc $(INCDIR)/Garfield/ComponentTcad3d.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@   
 $(OBJDIR)/ComponentVoxel.o: \
-	$(SRCDIR)/ComponentVoxel.cc $(INCDIR)/ComponentVoxel.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentVoxel.cc $(INCDIR)/Garfield/ComponentVoxel.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@   
 $(OBJDIR)/ComponentUserMapBase.o: \
-	$(SRCDIR)/ComponentUserMapBase.cc $(INCDIR)/ComponentUserMapBase.hh \
-	$(SRCDIR)/ComponentBase.cc $(INCDIR)/ComponentBase.hh
+	$(SRCDIR)/ComponentUserMapBase.cc $(INCDIR)/Garfield/ComponentUserMapBase.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@    
 	
 $(OBJDIR)/GeometrySimple.o: \
-	$(SRCDIR)/GeometrySimple.cc $(INCDIR)/GeometrySimple.hh
+	$(SRCDIR)/GeometrySimple.cc $(INCDIR)/Garfield/GeometrySimple.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@   
 $(OBJDIR)/GeometryRoot.o: \
-	$(SRCDIR)/GeometryRoot.cc $(INCDIR)/GeometryRoot.hh
+	$(SRCDIR)/GeometryRoot.cc $(INCDIR)/Garfield/GeometryRoot.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@    
 
 $(OBJDIR)/ViewFEMesh.o: \
-	$(SRCDIR)/ViewFEMesh.cc $(INCDIR)/ViewFEMesh.hh \
-	$(SRCDIR)/ViewDrift.cc $(INCDIR)/ViewDrift.hh \
-	$(INCDIR)/ComponentFieldMap.hh
+	$(SRCDIR)/ViewFEMesh.cc $(INCDIR)/Garfield/ViewFEMesh.hh \
+	$(SRCDIR)/ViewDrift.cc $(INCDIR)/Garfield/ViewDrift.hh \
+	$(INCDIR)/Garfield/ComponentFieldMap.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewField.o: \
-	$(SRCDIR)/ViewField.cc $(INCDIR)/ViewField.hh \
-	$(INCDIR)/Sensor.hh
+	$(SRCDIR)/ViewField.cc $(INCDIR)/Garfield/ViewField.hh \
+	$(INCDIR)/Garfield/Sensor.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewDrift.o: \
-	$(SRCDIR)/ViewDrift.cc $(INCDIR)/ViewDrift.hh
+	$(SRCDIR)/ViewDrift.cc $(INCDIR)/Garfield/ViewDrift.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewMedium.o: \
-	$(SRCDIR)/ViewMedium.cc $(INCDIR)/ViewMedium.hh \
-	$(INCDIR)/Medium.hh
+	$(SRCDIR)/ViewMedium.cc $(INCDIR)/Garfield/ViewMedium.hh \
+	$(INCDIR)/Garfield/Medium.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewSignal.o: \
-	$(SRCDIR)/ViewSignal.cc $(INCDIR)/ViewSignal.hh \
-	$(INCDIR)/Sensor.hh
+	$(SRCDIR)/ViewSignal.cc $(INCDIR)/Garfield/ViewSignal.hh \
+	$(INCDIR)/Garfield/Sensor.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewCell.o: \
-	$(SRCDIR)/ViewCell.cc $(INCDIR)/ViewCell.hh \
-	$(INCDIR)/ComponentAnalyticField.hh
+	$(SRCDIR)/ViewCell.cc $(INCDIR)/Garfield/ViewCell.hh \
+	$(INCDIR)/Garfield/ComponentAnalyticField.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewGeometry.o: \
-	$(SRCDIR)/ViewGeometry.cc $(INCDIR)/ViewGeometry.hh \
-	$(INCDIR)/GeometrySimple.hh
+	$(SRCDIR)/ViewGeometry.cc $(INCDIR)/Garfield/ViewGeometry.hh \
+	$(INCDIR)/Garfield/GeometrySimple.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/Medium.o: \
-	$(SRCDIR)/Medium.cc $(INCDIR)/Medium.hh \
-	$(INCDIR)/FundamentalConstants.hh \
-	$(INCDIR)/Numerics.hh
+	$(SRCDIR)/Medium.cc $(INCDIR)/Garfield/Medium.hh \
+	$(INCDIR)/Garfield/FundamentalConstants.hh \
+	$(INCDIR)/Garfield/Numerics.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/MediumGas.o: \
-	$(SRCDIR)/MediumGas.cc $(INCDIR)/MediumGas.hh \
-	$(SRCDIR)/Medium.cc $(INCDIR)/Medium.hh
+	$(SRCDIR)/MediumGas.cc $(INCDIR)/Garfield/MediumGas.hh \
+	$(SRCDIR)/Medium.cc $(INCDIR)/Garfield/Medium.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/MediumMagboltz.o: \
-	$(SRCDIR)/MediumMagboltz.cc $(INCDIR)/MediumMagboltz.hh \
-	$(SRCDIR)/Medium.cc $(INCDIR)/Medium.hh $(SRCDIR)/OpticalData.cc \
-	$(SRCDIR)/MediumGas.cc $(INCDIR)/MediumGas.hh \
-	$(INCDIR)/FundamentalConstants.hh $(INCDIR)/Random.hh
+	$(SRCDIR)/MediumMagboltz.cc $(INCDIR)/Garfield/MediumMagboltz.hh \
+	$(SRCDIR)/Medium.cc $(INCDIR)/Garfield/Medium.hh $(SRCDIR)/OpticalData.cc \
+	$(SRCDIR)/MediumGas.cc $(INCDIR)/Garfield/MediumGas.hh \
+	$(INCDIR)/Garfield/FundamentalConstants.hh $(INCDIR)/Garfield/Random.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/magboltz.o: \
@@ -289,76 +289,76 @@ $(OBJDIR)/magboltz.o: \
 	@echo $@
 	@$(FC) $(FFLAGS) $< -o $@
 $(OBJDIR)/MediumSilicon.o: \
-	$(SRCDIR)/MediumSilicon.cc $(INCDIR)/MediumSilicon.hh \
-	$(SRCDIR)/Medium.cc $(INCDIR)/Medium.hh \
-	$(INCDIR)/FundamentalConstants.hh
+	$(SRCDIR)/MediumSilicon.cc $(INCDIR)/Garfield/MediumSilicon.hh \
+	$(SRCDIR)/Medium.cc $(INCDIR)/Garfield/Medium.hh \
+	$(INCDIR)/Garfield/FundamentalConstants.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/MediumCdTe.o: \
-	$(SRCDIR)/MediumCdTe.cc $(INCDIR)/MediumCdTe.hh \
-	$(SRCDIR)/Medium.cc $(INCDIR)/Medium.hh \
-	$(INCDIR)/FundamentalConstants.hh
+	$(SRCDIR)/MediumCdTe.cc $(INCDIR)/Garfield/MediumCdTe.hh \
+	$(SRCDIR)/Medium.cc $(INCDIR)/Garfield/Medium.hh \
+	$(INCDIR)/Garfield/FundamentalConstants.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/MediumGaAs.o: \
-	$(SRCDIR)/MediumGaAs.cc $(INCDIR)/MediumGaAs.hh \
-	$(SRCDIR)/Medium.cc $(INCDIR)/Medium.hh \
-	$(INCDIR)/FundamentalConstants.hh
+	$(SRCDIR)/MediumGaAs.cc $(INCDIR)/Garfield/MediumGaAs.hh \
+	$(SRCDIR)/Medium.cc $(INCDIR)/Garfield/Medium.hh \
+	$(INCDIR)/Garfield/FundamentalConstants.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/OpticalData.o: \
-	$(SRCDIR)/OpticalData.cc $(INCDIR)/OpticalData.hh \
-	$(INCDIR)/FundamentalConstants.hh
+	$(SRCDIR)/OpticalData.cc $(INCDIR)/Garfield/OpticalData.hh \
+	$(INCDIR)/Garfield/FundamentalConstants.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/Solid.o: \
-	$(SRCDIR)/Solid.cc $(INCDIR)/Solid.hh
+	$(SRCDIR)/Solid.cc $(INCDIR)/Garfield/Solid.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/SolidBox.o: \
-	$(SRCDIR)/SolidBox.cc $(INCDIR)/SolidBox.hh
+	$(SRCDIR)/SolidBox.cc $(INCDIR)/Garfield/SolidBox.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/SolidTube.o: \
-	$(SRCDIR)/SolidTube.cc $(INCDIR)/SolidTube.hh
+	$(SRCDIR)/SolidTube.cc $(INCDIR)/Garfield/SolidTube.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/SolidSphere.o: \
-	$(SRCDIR)/SolidSphere.cc $(INCDIR)/SolidSphere.hh
+	$(SRCDIR)/SolidSphere.cc $(INCDIR)/Garfield/SolidSphere.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/Random.o: \
-	$(SRCDIR)/Random.cc $(INCDIR)/Random.hh
+	$(SRCDIR)/Random.cc $(INCDIR)/Garfield/Random.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@  
 $(OBJDIR)/RandomEngineGSL.o: \
-	$(SRCDIR)/RandomEngineGSL.cc $(INCDIR)/RandomEngineGSL.hh
+	$(SRCDIR)/RandomEngineGSL.cc $(INCDIR)/Garfield/RandomEngineGSL.hh
 	$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/RandomEngineRoot.o: \
-	$(SRCDIR)/RandomEngineRoot.cc $(INCDIR)/RandomEngineRoot.hh
+	$(SRCDIR)/RandomEngineRoot.cc $(INCDIR)/Garfield/RandomEngineRoot.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/PlottingEngineRoot.o: \
-	$(SRCDIR)/PlottingEngineRoot.cc $(INCDIR)/PlottingEngineRoot.hh
+	$(SRCDIR)/PlottingEngineRoot.cc $(INCDIR)/Garfield/PlottingEngineRoot.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@        
 
 $(OBJDIR)/Numerics.o: \
-	$(SRCDIR)/Numerics.cc $(INCDIR)/Numerics.hh
+	$(SRCDIR)/Numerics.cc $(INCDIR)/Garfield/Numerics.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@  
 
 $(OBJDIR)/Sensor.o: \
-	$(SRCDIR)/Sensor.cc $(INCDIR)/Sensor.hh \
-	$(INCDIR)/ComponentBase.hh $(INCDIR)/FundamentalConstants.hh
+	$(SRCDIR)/Sensor.cc $(INCDIR)/Garfield/Sensor.hh \
+	$(INCDIR)/Garfield/ComponentBase.hh $(INCDIR)/Garfield/FundamentalConstants.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/TetrahedralTree.o: \
-	$(SRCDIR)/TetrahedralTree.cc $(INCDIR)/TetrahedralTree.hh
+	$(SRCDIR)/TetrahedralTree.cc $(INCDIR)/Garfield/TetrahedralTree.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 
@@ -367,6 +367,6 @@ $(OBJDIR)/GarfieldDict.o: \
 	@echo $@
 	@$(CXX) $(CFLAGS) -DDICT_SKIP_HEED $< -o $@
 
-$(SRCDIR)/GarfieldDict.C: $(HEADERS) $(INCDIR)/LinkDef.h
+$(SRCDIR)/GarfieldDict.C: $(HEADERS) $(INCDIR)/Garfield/LinkDef.h
 	@echo Creating dictionary...
 	@rootcint -f $@ -c $(CFLAGS) -p $^ 
