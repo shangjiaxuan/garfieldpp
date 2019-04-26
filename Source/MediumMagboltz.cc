@@ -3389,9 +3389,11 @@ void MediumMagboltz::RunMagboltz(
   dt = sqrt(0.2 * 0.5 * (Magboltz::diflab_.difxx + Magboltz::diflab_.difyy) /
             vz) *
        1.e-4;
-  dterr = Magboltz::diferl_.dfter;
+  dterr = 0.5 * sqrt(Magboltz::diferl_.dfter * Magboltz::diferl_.dfter +
+                     vzerr * vzerr);
   dl = sqrt(0.2 * Magboltz::diflab_.difzz / vz) * 1.e-4;
-  dlerr = Magboltz::diferl_.dfler;
+  dlerr = 0.5 * sqrt(Magboltz::diferl_.dfler * Magboltz::diferl_.dfler +
+                     vzerr * vzerr);
   // Diffusion tensor.
   difftens[0] = 0.2e-4 * Magboltz::diflab_.difzz / vz;
   difftens[1] = 0.2e-4 * Magboltz::diflab_.difxx / vz;
