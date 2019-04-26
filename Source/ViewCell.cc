@@ -283,6 +283,7 @@ bool ViewCell::Plot(const bool use3d) {
         TGeoVolume* tube = m_geo->MakeTube("Tube", m_geo->GetMedium("Metal"),
                                            0.98 * rt, 1.02 * rt, dz);
         tube->SetLineColor(kGreen + 2);
+        tube->SetTransparency(75);
         m_geo->GetTopVolume()->AddNode(tube, 1,
                                        new TGeoTranslation(0., 0., 0.));
       } else {
@@ -292,6 +293,7 @@ bool ViewCell::Plot(const bool use3d) {
         pgon->DefineSection(0, -dz, 0.98 * rt, 1.02 * rt);
         pgon->DefineSection(1, +dz, 0.98 * rt, 1.02 * rt);
         tube->SetLineColor(kGreen + 2);
+        tube->SetTransparency(75);
         m_geo->GetTopVolume()->AddNode(tube, 1,
                                        new TGeoTranslation(0., 0., 0.));
       }
