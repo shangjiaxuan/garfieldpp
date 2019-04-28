@@ -161,8 +161,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
                              std::vector<Vec>& xs, int& flag) {
 
   // -----------------------------------------------------------------------
-  //    DLCALC - Subroutine doing the actual drift line calculations. It
-  //             communicates with the outside through sequence DRIFTLINE.
+  //    DLCALC - Subroutine doing the actual drift line calculations. 
   //             The calculations are based on a Runge-Kutta-Fehlberg method
   //             which has the advantage of controlling the stepsize and the
   //             error while needing only relatively few calls to EFIELD.
@@ -436,7 +435,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     hprev = h;
     const double dphi = fabs(phi1[0] - phi2[0]) + fabs(phi1[1] - phi2[1]) +
                         fabs(phi1[2] - phi2[2]);
-    if (dphi > 1.e-10) {
+    if (dphi > 0) {
       h = sqrt(h * m_accuracy / dphi);
       if (m_debug) {
         std::cout << m_className << "::DriftLine: Adapting H to " << h << ".\n";
@@ -600,7 +599,11 @@ bool DriftLineRKF::Avalanche(const Particle particle,
     std::cout << m_className << "::Avalanche:\n    "
               << "Final number of electrons: " << qe << "\n    "
               << "Number of ions:            " << qi << "\n    "
-              << "Charge scaling factor:     " << scale << "\n";
+              << "Charge scaling factor:     " << scale << "\n    "
+              << "Avalanche development:\n Step      Electrons     Ions\n";
+    for (unsigned int i = 0; i < nPoints; ++i) {
+      std::printf("%6d %15.7f %15.7f\n", i, scale * ne[i], scale * ni[i]);
+    }
   }
   m_nE = scale * qe;
   m_nI = scale * qi;
@@ -1003,8 +1006,10 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
     const double xinp0 = (x1[0] - x0[0]) * (xw - x0[0]) + 
                          (x1[1] - x0[1]) * (yw - x0[1]);
     if (xinp0 < 0.) {
-      std::cerr << m_className << "::DriftToWire:\n"
-                << "    Particle moves away from the wire. Quit.\n";
+      if (m_debug) {
+        std::cerr << m_className << "::DriftToWire:\n"
+                  << "    Particle moves away from the wire. Quit.\n";
+      }
       return false;
     }
     // Check if the end point is inside the wire or the wire was crossed.

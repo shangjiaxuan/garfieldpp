@@ -460,7 +460,9 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
           sum += signal[j] * (std::min(ts[j + 1], t1) - std::max(ts[j], t0));
         }
       } else {
-        const double h = 0.5 * (t1 - t0) / navg;
+        const double tmin = std::max(ts.front(), t0);
+        const double tmax = std::min(ts.back(), t1);
+        const double h = 0.5 * (tmax - tmin) / navg;
         for (int j = -navg; j <= navg; ++j) {
           const int jj = j + navg;
           const double t = t0 + jj * h;
