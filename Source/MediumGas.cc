@@ -1941,53 +1941,54 @@ bool MediumGas::WriteGasFile(const std::string& filename) {
         }
         PrintArray(val, outfile, cnt, 8);
       }
+      if (cnt % 8 != 0) outfile << "\n";
+      cnt = 0;
     }
-    if (cnt % 8 != 0) outfile << "\n";
-    cnt = 0;
   }
 
-  // Extrapolation methods
-  int extrapH[13], extrapL[13];
-  int interp[13];
-
-  extrapL[0] = extrapL[1] = extrapL[2] = m_extrVel.first;
-  extrapH[0] = extrapH[1] = extrapH[2] = m_extrVel.second;
-  interp[0] = interp[1] = interp[2] = m_intpVel;
-  extrapL[3] = extrapL[8] = extrapL[10] = m_extrDif.first;
-  extrapH[3] = extrapH[8] = extrapH[10] = m_extrDif.second;
-  interp[3] = interp[8] = interp[10] = m_intpDif;
-  extrapL[4] = m_extrAlp.first;
-  extrapH[4] = m_extrAlp.second;
-  interp[4] = m_intpAlp;
-  extrapL[5] = m_extrAtt.first;
-  extrapH[5] = m_extrAtt.second;
-  interp[5] = m_intpAtt;
-  extrapL[6] = m_extrMob.first;
-  extrapH[6] = m_extrMob.second;
-  interp[6] = m_intpMob;
-  // Lorentz angle
-  extrapL[7] = m_extrLor.first;
-  extrapH[7] = m_extrLor.second;
-  interp[7] = m_intpLor;
-  extrapL[9] = m_extrDis.first;
-  extrapH[9] = m_extrDis.second;
-  interp[9] = m_intpDis;
-  extrapL[11] = m_extrExc.first;
-  extrapH[11] = m_extrExc.second;
-  interp[11] = m_intpExc;
-  extrapL[12] = m_extrIon.first;
-  extrapH[12] = m_extrIon.second;
-  interp[12] = m_intpIon;
-
-  outfile << " H Extr: ";
-  for (int i = 0; i < 13; i++) outfile << FmtInt(extrapH[i], 5);
-  outfile << "\n";
-  outfile << " L Extr: ";
-  for (int i = 0; i < 13; i++) outfile << FmtInt(extrapL[i], 5);
-  outfile << "\n";
+  if (!m_tab2d) {
+    // Extrapolation methods
+    int extrapH[13], extrapL[13];
+    extrapL[0] = extrapL[1] = extrapL[2] = m_extrVel.first;
+    extrapH[0] = extrapH[1] = extrapH[2] = m_extrVel.second;
+    extrapL[3] = extrapL[8] = extrapL[10] = m_extrDif.first;
+    extrapH[3] = extrapH[8] = extrapH[10] = m_extrDif.second;
+    extrapL[4] = m_extrAlp.first;
+    extrapH[4] = m_extrAlp.second;
+    extrapL[5] = m_extrAtt.first;
+    extrapH[5] = m_extrAtt.second;
+    extrapL[6] = m_extrMob.first;
+    extrapH[6] = m_extrMob.second;
+    // Lorentz angle
+    extrapL[7] = m_extrLor.first;
+    extrapH[7] = m_extrLor.second;
+    extrapL[9] = m_extrDis.first;
+    extrapH[9] = m_extrDis.second;
+    extrapL[11] = m_extrExc.first;
+    extrapH[11] = m_extrExc.second;
+    extrapL[12] = m_extrIon.first;
+    extrapH[12] = m_extrIon.second;
+    outfile << " H Extr: ";
+    for (int i = 0; i < 13; i++) outfile << FmtInt(extrapH[i], 5);
+    outfile << "\n";
+    outfile << " L Extr: ";
+    for (int i = 0; i < 13; i++) outfile << FmtInt(extrapL[i], 5);
+    outfile << "\n";
+  }
   // Increment the threshold indices for compatibility with Fortran.
   outfile << " Thresholds: " << FmtInt(m_eThrAlp + 1, 10)
           << FmtInt(m_eThrAtt + 1, 10) << FmtInt(m_iThrDis + 1, 10) << "\n";
+  // Interpolation methods.
+  int interp[13];
+  interp[0] = interp[1] = interp[2] = m_intpVel;
+  interp[3] = interp[8] = interp[10] = m_intpDif;
+  interp[4] = m_intpAlp;
+  interp[5] = m_intpAtt;
+  interp[6] = m_intpMob;
+  interp[7] = m_intpLor;
+  interp[9] = m_intpDis;
+  interp[11] = m_intpExc;
+  interp[12] = m_intpIon;
   outfile << " Interp: ";
   for (int i = 0; i < 13; i++) outfile << FmtInt(interp[i], 5);
   outfile << "\n";
