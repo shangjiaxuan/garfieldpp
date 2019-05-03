@@ -37,9 +37,9 @@ const int MediumMagboltz::DxcTypeCollNonIon = -1;
 
 MediumMagboltz::MediumMagboltz()
     : MediumGas(),
-      m_eFinal(40.),
-      m_eStep(m_eFinal / Magboltz::nEnergySteps),
-      m_eHigh(1.e4),
+      m_eMax(40.),
+      m_eStep(m_eMax / Magboltz::nEnergySteps),
+      m_eHigh(400.),
       m_eHighLog(log(m_eHigh)),
       m_lnStep(1.),
       m_eFinalGamma(20.),
@@ -59,7 +59,7 @@ MediumMagboltz::MediumMagboltz()
   // Select the scattering model.
   Magboltz::inpt_.nAniso = 2;
   // Max. energy [eV]
-  Magboltz::inpt_.efinal = m_eFinal;
+  Magboltz::inpt_.efinal = m_eMax;
   // Energy step size [eV]
   Magboltz::inpt_.estep = m_eStep;
   // Temperature and pressure
@@ -93,13 +93,13 @@ bool MediumMagboltz::SetMaxElectronEnergy(const double e) {
     std::cerr << m_className << "::SetMaxElectronEnergy: Invalid energy.\n";
     return false;
   }
-  m_eFinal = e;
+  m_eMax = e;
 
   // Determine the energy interval size.
-  m_eStep = std::min(m_eFinal, m_eHigh) / Magboltz::nEnergySteps;
+  m_eStep = std::min(m_eMax, m_eHigh) / Magboltz::nEnergySteps;
 
   // Set max. energy and step size also in Magboltz common block.
-  Magboltz::inpt_.efinal = m_eFinal;
+  Magboltz::inpt_.efinal = std::min(m_eMax, m_eHigh);
   Magboltz::inpt_.estep = m_eStep;
 
   // Force recalculation of the scattering rates table.
@@ -481,7 +481,7 @@ double MediumMagboltz::GetElectronCollisionRate(const double e,
     std::cerr << m_className << "::GetElectronCollisionRate: Invalid energy.\n";
     return m_cfTot[0];
   }
-  if (e > m_eFinal && m_useAutoAdjust) {
+  if (e > m_eMax && m_useAutoAdjust) {
     std::cerr << m_className << "::GetElectronCollisionRate:\n    Rate at " << e
               << " eV is not included in the current table.\n    "
               << "Increasing energy range to " << 1.05 * e << " eV.\n";
@@ -569,7 +569,7 @@ bool MediumMagboltz::GetElectronCollision(
     return false;
   }
   // Check if the electron energy is within the currently set range.
-  if (e > m_eFinal && m_useAutoAdjust) {
+  if (e > m_eMax && m_useAutoAdjust) {
     std::cerr << m_className << "::GetElectronCollision:\n    Provided energy ("
               << e << " eV) exceeds current energy range.\n"
               << "    Increasing energy range to " << 1.05 * e << " eV.\n";
@@ -647,6 +647,7 @@ bool MediumMagboltz::GetElectronCollision(
     // Sample the secondary electron energy according to
     // the Opal-Beaty-Peterson parameterisation.
     double esec = 0.;
+    if (e < loss) loss = e - 0.0001;
     if (m_useOpalBeaty) {
       // Get the splitting parameter.
       const double w = m_wOpalBeaty[level];
@@ -674,6 +675,30 @@ bool MediumMagboltz::GetElectronCollision(
     secondaries.emplace_back(std::make_pair(IonProdTypeElectron, esec));
     // Add the ion.
     secondaries.emplace_back(std::make_pair(IonProdTypeIon, 0.));
+    bool fluorescence = false;
+    if (m_yFluorescence[level] > Small) {
+      if (RndmUniform() < m_yFluorescence[level]) fluorescence = true;
+    } 
+    // Add Auger and photo electrons (if any).
+    if (fluorescence) {
+      if (m_nAuger2[level] > 0) {
+        const double eav = m_eAuger2[level] / m_nAuger2[level];
+        for (unsigned int i = 0; i < m_nAuger2[level]; ++i) {
+          secondaries.emplace_back(std::make_pair(IonProdTypeElectron, eav));
+        }
+      }
+      if (m_nFluorescence[level] > 0) {
+        const double eav = m_eFluorescence[level] / m_nFluorescence[level];
+        for (unsigned int i = 0; i < m_nFluorescence[level]; ++i) {
+          secondaries.emplace_back(std::make_pair(IonProdTypeElectron, eav));
+        }
+      }
+    } else if (m_nAuger1[level] > 0) {
+      const double eav = m_eAuger1[level] / m_nAuger1[level];
+      for (unsigned int i = 0; i < m_nAuger1[level]; ++i) {
+        secondaries.emplace_back(std::make_pair(IonProdTypeElectron, eav));
+      }
+    } 
   } else if (type == ElectronCollisionTypeExcitation) {
     // if (m_gas[igas] == "CH4" && loss * m_rgas[igas] < 13.35 && e > 12.65) {
     //   if (RndmUniform() < 0.5) {
@@ -719,8 +744,7 @@ bool MediumMagboltz::GetElectronCollision(
     }
   }
 
-  // Make sure the energy loss is smaller than the energy.
-  if (e < loss) loss = e - 0.0001;
+  if (e < loss) loss = 0.;
 
   // Determine the scattering angle.
   double ctheta0 = 1. - 2. * RndmUniform();
@@ -1257,6 +1281,15 @@ bool MediumMagboltz::Mixer(const bool verbose) {
   m_wOpalBeaty.fill(1.);
   m_energyLoss.fill(0.);
   m_csType.fill(0);
+
+  m_yFluorescence.fill(0.);
+  m_nAuger1.fill(0);
+  m_eAuger1.fill(0.);
+  m_nAuger2.fill(0);
+  m_eAuger2.fill(0.);
+  m_nFluorescence.fill(0);
+  m_eFluorescence.fill(0.);
+
   m_scatModel.fill(0);
 
   m_rPenning.fill(0.);
@@ -1325,10 +1358,10 @@ bool MediumMagboltz::Mixer(const bool verbose) {
   if (m_debug || verbose) {
     std::cout << m_className << "::Mixer:\n    " << Magboltz::nEnergySteps
               << " linear energy steps between 0 and "
-              << std::min(m_eFinal, m_eHigh) << " eV.\n";
-    if (m_eFinal > m_eHigh) {
+              << std::min(m_eMax, m_eHigh) << " eV.\n";
+    if (m_eMax > m_eHigh) {
       std::cout << "    " << nEnergyStepsLog << " logarithmic steps between "
-                << m_eHigh << " and " << m_eFinal << " eV\n";
+                << m_eHigh << " and " << m_eMax << " eV\n";
     }
   }
   m_nTerms = 0;
@@ -1341,7 +1374,7 @@ bool MediumMagboltz::Mixer(const bool verbose) {
 
   // Loop over the gases in the mixture.
   for (unsigned int iGas = 0; iGas < m_nComponents; ++iGas) {
-    Magboltz::inpt_.efinal = std::min(m_eFinal, m_eHigh);
+    Magboltz::inpt_.efinal = std::min(m_eMax, m_eHigh);
     Magboltz::inpt_.estep = m_eStep;
     Magboltz::mix2_.eg[iemax] = (iemax + 0.5) * m_eStep;
     Magboltz::mix2_.eroot[iemax] = sqrt((iemax + 0.5) * m_eStep);
@@ -1429,13 +1462,20 @@ bool MediumMagboltz::Mixer(const bool verbose) {
     // Ionisation
     if (nIon > 1) {
       for (int j = 0; j < nIon; ++j) {
-        if (m_eFinal < eIon[j]) continue;
+        if (m_eMax < eIon[j]) continue;
         withIon = true;
         ++m_nTerms;
         ++np;
         m_scatModel[np] = kEl[2];
         m_energyLoss[np] = eIon[j] / r;
         m_wOpalBeaty[np] = eoby[j];
+        m_yFluorescence[np] = wklm[j];
+        m_nAuger1[np] = nc0[j];
+        m_eAuger1[np] = ec0[j];
+        m_nFluorescence[np] = ng1[j];
+        m_eFluorescence[np] = eg1[j];
+        m_nAuger2[np] = ng2[j];
+        m_eAuger2[np] = eg2[j];
         m_description[np] = GetDescription(2 + j, scrpt);
         m_csType[np] = nCsTypes * iGas + ElectronCollisionTypeIonisation;
         if (m_useCsOutput) outfile << "# " << m_description[np] << "\n";
@@ -1444,7 +1484,7 @@ bool MediumMagboltz::Mixer(const bool verbose) {
       m_parGreenSawada[iGas][4] = 2 * eIon[0];
       m_ionPot[iGas] = eIon[0];
     } else {
-      if (m_eFinal >= e[2]) {
+      if (m_eMax >= e[2]) {
         withIon = true;
         ++m_nTerms;
         ++np;
@@ -1518,7 +1558,7 @@ bool MediumMagboltz::Mixer(const bool verbose) {
       if (withIon) {
         if (nIon > 1) {
           for (int j = 0; j < nIon; ++j) {
-            if (m_eFinal < eIon[j]) continue;
+            if (m_eMax < eIon[j]) continue;
             ++np;
             m_cf[iE][np] = qIon[iE][j] * van;
             SetScatteringParameters(m_scatModel[np], pEqIon[iE][j],
@@ -1572,10 +1612,10 @@ bool MediumMagboltz::Mixer(const bool verbose) {
       }
       if (m_useCsOutput) outfile << "\n";
     }
-    if (m_eFinal <= m_eHigh) continue;
+    if (m_eMax <= m_eHigh) continue;
     // Fill the high-energy part (logarithmic binning).
     // Calculate the growth factor.
-    const double rLog = pow(m_eFinal / m_eHigh, 1. / nEnergyStepsLog);
+    const double rLog = pow(m_eMax / m_eHigh, 1. / nEnergyStepsLog);
     m_lnStep = log(rLog);
     // Set the upper limit of the first bin.
     double emax = m_eHigh * rLog;
@@ -1601,7 +1641,7 @@ bool MediumMagboltz::Mixer(const bool verbose) {
       if (withIon) {
         if (nIon > 1) {
           for (int j = 0; j < nIon; ++j) {
-            if (m_eFinal < eIon[j]) continue;
+            if (m_eMax < eIon[j]) continue;
             ++np;
             m_cfLog[iE][np] = qIon[iemax][j] * van;
             SetScatteringParameters(m_scatModel[np], pEqIon[iemax][j],
@@ -1696,8 +1736,8 @@ bool MediumMagboltz::Mixer(const bool verbose) {
     }
   }
 
-  if (m_eFinal > m_eHigh) {
-    const double rLog = pow(m_eFinal / m_eHigh, 1. / nEnergyStepsLog);
+  if (m_eMax > m_eHigh) {
+    const double rLog = pow(m_eMax / m_eHigh, 1. / nEnergyStepsLog);
     for (int iE = 0; iE < nEnergyStepsLog; ++iE) {
       // Calculate the total collision frequency.
       for (unsigned int k = 0; k < m_nTerms; ++k) {
@@ -1726,7 +1766,7 @@ bool MediumMagboltz::Mixer(const bool verbose) {
   for (unsigned int j = 0; j < Magboltz::nEnergySteps; ++j) {
     if (m_cfTot[j] > m_cfNull) m_cfNull = m_cfTot[j];
   }
-  if (m_eFinal > m_eHigh) {
+  if (m_eMax > m_eHigh) {
     for (int j = 0; j < nEnergyStepsLog; ++j) {
       const double r = exp(m_cfTotLog[j]);
       if (r > m_cfNull) m_cfNull = r;
@@ -1740,7 +1780,7 @@ bool MediumMagboltz::Mixer(const bool verbose) {
   if (m_debug || verbose) {
     std::cout << m_className << "::Mixer:\n"
               << "    Energy [eV]    Collision Rate [ns-1]\n";
-    const double emax = std::min(m_eHigh, m_eFinal);
+    const double emax = std::min(m_eHigh, m_eMax);
     for (int i = 0; i < 8; ++i) {
       const double en = (2 * i + 1) * emax / 16;
       const double cf = m_cfTot[(i + 1) * Magboltz::nEnergySteps / 16];

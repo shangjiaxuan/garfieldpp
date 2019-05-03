@@ -22,7 +22,7 @@ class MediumMagboltz : public MediumGas {
   /// in the table of scattering rates.
   bool SetMaxElectronEnergy(const double e);
   /// Get the highest electron energy in the table of scattering rates.
-  double GetMaxElectronEnergy() const { return m_eFinal; }
+  double GetMaxElectronEnergy() const { return m_eMax; }
 
   /// Set the highest photon energy to be included
   /// in the table of scattering rates.
@@ -166,7 +166,7 @@ class MediumMagboltz : public MediumGas {
                         const bool verbose = true);
 
  private:
-  static constexpr int nEnergyStepsLog = 200;
+  static constexpr int nEnergyStepsLog = 1000;
   static constexpr int nEnergyStepsGamma = 5000;
   static constexpr int nCsTypes = 7;
   static constexpr int nCsTypesGamma = 4;
@@ -175,32 +175,49 @@ class MediumMagboltz : public MediumGas {
   static const int DxcTypeCollIon;
   static const int DxcTypeCollNonIon;
 
-  // Simulate thermal motion of the gas or not (when running Magboltz).
+  /// Simulate thermal motion of the gas or not (when running Magboltz).
   bool m_useGasMotion = false;
 
-  // Energy spacing of collision rate tables
-  double m_eFinal, m_eStep;
+  /// Max. electron energy in the collision rate tables.
+  double m_eMax;
+  /// Energy spacing in the linear part of of collision rate tables.
+  double m_eStep;
   double m_eHigh, m_eHighLog;
   double m_lnStep;
   bool m_useAutoAdjust = true;
 
-  // Flag enabling/disabling output of cross-section table to file
+  /// Flag enabling/disabling output of cross-section table to file
   bool m_useCsOutput = false;
-  // Number of different cross-section types in the current gas mixture
+  /// Number of different cross-section types in the current gas mixture
   unsigned int m_nTerms = 0;
-  // Recoil energy parameter
+  /// Recoil energy parameter
   std::array<double, m_nMaxGases> m_rgas;
-  // Opal-Beaty-Peterson splitting parameter [eV]
+  /// Opal-Beaty-Peterson splitting parameter [eV]
   std::array<double, Magboltz::nMaxLevels> m_wOpalBeaty;
   /// Green-Sawada splitting parameters [eV]
   /// (&Gamma;s, &Gamma;b, Ts, Ta, Tb).
   std::array<std::array<double, 5>, m_nMaxGases> m_parGreenSawada;
   std::array<bool, m_nMaxGases> m_hasGreenSawada;
+  /// Sample secondary electron energies using Opal-Beaty parameterisation
+  bool m_useOpalBeaty = true;
+  /// Sample secondary electron energies using Green-Sawada parameterisation
+  bool m_useGreenSawada = false;
 
-  // Energy loss
+  /// Energy loss
   std::array<double, Magboltz::nMaxLevels> m_energyLoss;
-  // Cross-section type
+  /// Cross-section type
   std::array<int, Magboltz::nMaxLevels> m_csType;
+
+  /// Fluorescence yield
+  std::array<double, Magboltz::nMaxLevels> m_yFluorescence;
+  /// Number of Auger electrons produced in a collision
+  std::array<unsigned int, Magboltz::nMaxLevels> m_nAuger1;
+  std::array<unsigned int, Magboltz::nMaxLevels> m_nAuger2;
+  /// Energy imparted to Auger electrons
+  std::array<double, Magboltz::nMaxLevels> m_eAuger1;
+  std::array<double, Magboltz::nMaxLevels> m_eAuger2;
+  std::array<unsigned int, Magboltz::nMaxLevels> m_nFluorescence;
+  std::array<double, Magboltz::nMaxLevels> m_eFluorescence;
 
   // Parameters for calculation of scattering angles
   bool m_useAnisotropic = true;
@@ -210,42 +227,42 @@ class MediumMagboltz : public MediumGas {
   std::vector<std::vector<double> > m_scatCutLog;
   std::array<int, Magboltz::nMaxLevels> m_scatModel;
 
-  // Level description
+  /// Level description
   std::vector<std::string> m_description;
 
   // Total collision frequency
   std::vector<double> m_cfTot;
   std::vector<double> m_cfTotLog;
-  // Null-collision frequency
+  /// Null-collision frequency
   double m_cfNull = 0.;
   // Collision frequencies
   std::vector<std::vector<double> > m_cf;
   std::vector<std::vector<double> > m_cfLog;
 
-  // Collision counters
-  // 0: elastic
-  // 1: ionisation
-  // 2: attachment
-  // 3: inelastic
-  // 4: excitation
-  // 5: super-elastic
+  /// Collision counters
+  /// 0: elastic
+  /// 1: ionisation
+  /// 2: attachment
+  /// 3: inelastic
+  /// 4: excitation
+  /// 5: super-elastic
   std::array<unsigned int, nCsTypes> m_nCollisions;
-  // Number of collisions for each cross-section term
+  /// Number of collisions for each cross-section term
   std::vector<unsigned int> m_nCollisionsDetailed;
 
   // Penning transfer
-  // Penning transfer probability (by level)
+  /// Penning transfer probability (by level)
   std::array<double, Magboltz::nMaxLevels> m_rPenning;
-  // Mean distance of Penning ionisation (by level)
+  /// Mean distance of Penning ionisation (by level)
   std::array<double, Magboltz::nMaxLevels> m_lambdaPenning;
-  // Number of Penning ionisations
+  /// Number of Penning ionisations
   unsigned int m_nPenning = 0;
 
   // Deexcitation
-  // Flag enabling/disabling detailed simulation of de-excitation process
+  /// Flag enabling/disabling detailed simulation of de-excitation process
   bool m_useDeexcitation = false;
-  // Flag enabling/disable radiation trapping
-  // (absorption of photons discrete excitation lines)
+  /// Flag enabling/disable radiation trapping
+  /// (absorption of photons discrete excitation lines)
   bool m_useRadTrap = true;
 
   struct Deexcitation {
@@ -293,16 +310,13 @@ class MediumMagboltz : public MediumGas {
   };
   std::vector<dxcProd> m_dxcProducts;
 
-  // Ionisation potentials
+  /// Ionisation potentials of each component
   std::array<double, m_nMaxGases> m_ionPot;
-  // Minimum ionisation potential
+  /// Minimum ionisation potential
   double m_minIonPot = -1.;
 
   // Scaling factor for excitation cross-sections
   std::array<double, m_nMaxGases> m_scaleExc;
-  // Flag selecting secondary electron energy distribution model
-  bool m_useOpalBeaty = true;
-  bool m_useGreenSawada = false;
 
   // Energy spacing of photon collision rates table
   double m_eFinalGamma, m_eStepGamma;
