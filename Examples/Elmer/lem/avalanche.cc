@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
 
   // Set up the object for FE mesh visualization.
   ViewFEMesh* vFE = new ViewFEMesh();
-  vFE->SetArea(-axis_x, -axis_z, 0., axis_x, axis_z, 0.);
+  vFE->SetArea(-axis_x, -axis_z, -axis_y, axis_x, axis_z, axis_y);
   vFE->SetCanvas(cGeom);
   vFE->SetComponent(elm);
   vFE->SetPlane(0, -1, 0, 0, 0, 0);
