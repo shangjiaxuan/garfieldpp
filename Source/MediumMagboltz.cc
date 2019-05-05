@@ -744,7 +744,7 @@ bool MediumMagboltz::GetElectronCollision(
     }
   }
 
-  if (e < loss) loss = 0.;
+  if (e < loss) loss = e - 0.0001;
 
   // Determine the scattering angle.
   double ctheta0 = 1. - 2. * RndmUniform();
