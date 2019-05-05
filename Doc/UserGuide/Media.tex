@@ -55,8 +55,8 @@ bool IonDissociation(const double ex, const double ey, const double ez,
 \end{lstlisting}
 It returns the dissociation coefficient (in cm\(^{-1}\)). 
 
-The components of the drift velocity are stored in a coordinate system 
-which is aligned with the electric and magnetic field vectors.
+The components of the drift velocity are stored in a right-handed 
+coordinate system that is aligned with the electric and magnetic field vectors.
 More precisely, the axes are along
 \begin{itemize}
   \item
@@ -64,6 +64,7 @@ More precisely, the axes are along
   \item
   the component of the magnetic field \(\mathbf{B}\) transverse to 
   \(\mathbf{E}\), 
+  \(\mathbf{B}_{t} = \left(\mathbf{E} \times \mathbf{B}\right) \times \textbf{E}\),
   \item
   \(\mathbf{E} \times \mathbf{B}\).
 \end{itemize}
@@ -138,6 +139,34 @@ evenly spaced (\texttt{false}), or logarithmically spaced (\texttt{true})
 Electric fields have to be supplied in V\,/\,cm, magnetic fields in Tesla, 
 and angles in rad.
 
+The electron drift velocity components at a specific point in the table 
+can be set and retrieved using
+\begin{lstlisting}
+bool SetElectronVelocityE(const unsigned int ie, const unsigned int ib,
+                          const unsigned int ia, const double v);
+bool SetElectronVelocityB(const unsigned int ie, const unsigned int ib,
+                          const unsigned int ia, const double v);
+bool SetElectronVelocityExB(const unsigned int ie, const unsigned int ib,
+                            const unsigned int ia, const double v);
+bool GetElectronVelocityE(const unsigned int ie, const unsigned int ib,
+                          const unsigned int ia, double& v);
+bool GetElectronVelocityB(const unsigned int ie, const unsigned int ib,
+                          const unsigned int ia, double& v);
+bool GetElectronVelocityExB(const unsigned int ie, const unsigned int ib,
+                            const unsigned int ia, double& v);
+\end{lstlisting}
+\begin{description}
+  \item[ie] index in the list of electric fields,
+  \item[ib] index in the list of magnetic fields,
+  \item[ia] index in the list of angles,
+  \item[v] velocity
+\end{description}
+Analogous functions are available for the other transport parameters.
+For the Townsend coefficient $\alpha$ and the attachment coefficient
+$\eta$, the logarithms $\ln\alpha, \ln\eta$ and not the actual values 
+are stored in the tables. 
+The same is true for the ion dissociation coefficient. 
+ 
 The gas tables are interpolated using Newton polynomials. 
 The order of the interpolation polynomials can be set by means of
 \begin{lstlisting}
@@ -189,7 +218,6 @@ drift velocities of electrons and holes in silicon are plotted as a
 function of the electric field.
 \begin{lstlisting}
 MediumSilicon si;
-
 ViewMedium view;
 view.SetMedium(&si);
 view.PlotElectronVelocity('e');
@@ -358,7 +386,7 @@ cross-section terms (if available).
 \subsection{Ion Transport}
 
 The \texttt{\$GARFIELD\_HOME/Data} directory includes a few files 
-(e.~g. \texttt{IonMobility\_Ar+\_Ar.txt} for Ar\(^{+}\) ions in argon) 
+(\textit{e.~g.} \texttt{IonMobility\_Ar+\_Ar.txt} for Ar\(^{+}\) ions in argon) 
 which contain ion mobility data in form of 
 a table of reduced electric fields \(E/N\) 
 (in Td\footnote{1\,Td = 10\(^{-17}\) V\,cm\(^{2}\)}) vs. 
@@ -487,16 +515,19 @@ is called prior to \texttt{Initialise}, a table of the cross-sections
 (as retrieved from Magboltz) is written to a file \texttt{cs.txt} 
 in the current working directory. 
 
-By default, the scattering rates table extends from 0 to 40\,eV. 
-The max. energy to be included in the scattering rates table 
-can be set using
+By default, the table of scattering rates extends from 0 to 40\,eV. 
+The max. energy to be included in the table can be set using
 \begin{lstlisting}
 SetMaxElectronEnergy(const double e);
 \end{lstlisting}
 \begin{description}
 \item[e]
-  max. electron energy (in eV)
+  max. electron energy (in eV).
 \end{description}
+Up to an upper limit of 400\,eV, equidistant energy steps are used.
+If the max. energy exceeds this value, logarithmically spaced 
+energy steps are used for the high-energy part ($>400$\,eV) 
+of the cross-section table.
 
 The parameters of the cross-section terms in the present gas mixture 
 can be retrieved via

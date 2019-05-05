@@ -1,6 +1,7 @@
 #ifndef G_VIEW_FE_MESH
 #define G_VIEW_FE_MESH
 
+#include <memory>
 #include <string>
 #ifndef __CINT__
 #include <map>
@@ -13,7 +14,6 @@
 #include <TMatrixD.h>
 #include <TPolyLine.h>
 #include <TPolyLine3D.h>
-#include <TString.h>
 
 #include "ComponentCST.hh"
 #include "ComponentFieldMap.hh"
@@ -48,6 +48,9 @@ class ViewFEMesh {
   /// Set the projection plane.
   void SetPlane(double fx, double fy, double fz, double x0, double y0,
                 double z0);
+  /// Set the projection plane specifying hint for in-plane x axis.
+  void SetPlane(double fx, double fy, double fz, double x0, double y0,
+                double z0, double hx, double hy, double hz);
 
   // Axes
   void SetXaxis(TGaxis* ax);
@@ -62,6 +65,10 @@ class ViewFEMesh {
 
   /// Element fill switch; 2D only, set false for wireframe mesh
   void SetFillMesh(const bool f) { m_fillMesh = f; }
+
+  /// Display intersection of projection plane with viewing area
+  void SetDrawViewRegion(bool do_draw) { m_drawViewRegion = do_draw; }
+  bool GetDrawViewRegion(void) const { return m_drawViewRegion; }
 
   /// Associate a color with each element material map ID;
   /// Uses ROOT color numberings
@@ -102,14 +109,22 @@ class ViewFEMesh {
   TCanvas* m_canvas = nullptr;
   bool m_hasExternalCanvas = false;
 
-  // Viewing plane
-  double project[3][3];
-  double plane[4];
+  // Viewing plane (plane normal is stored in m_proj[2])
+  double m_proj[3][3];
+  double m_dist;
 
   // Box dimensions
   bool m_hasUserArea = false;
   double m_xMin = -1., m_yMin = -1., m_zMin = -1.;
   double m_xMax = 1., m_yMax = 1., m_zMax = 1.;
+
+  // Intersection of viewing plane with plotted area in planar coordinates
+  bool m_drawViewRegion = false;
+  std::vector<TPolyLine> m_viewRegionLines;
+
+  // Viewing plane dimensions
+  double m_xPlaneMin = -1., m_xPlaneMax = 1.;
+  double m_yPlaneMin = -1., m_yPlaneMax = 1.;
 
   // The field map object
   ComponentFieldMap* m_component = nullptr;
@@ -121,7 +136,7 @@ class ViewFEMesh {
   // Axes
   TGaxis* m_xaxis = nullptr;
   TGaxis* m_yaxis = nullptr;
-  TH2D* m_axes = nullptr;
+  std::unique_ptr<TH2D> m_axes;
   bool m_drawAxes = false;
 
   // The mesh, stored as a vector of TPolyLine(3D) objects
@@ -141,13 +156,16 @@ class ViewFEMesh {
   void DrawCST(ComponentCST* componentCST);
 
   /// Return true if the specified point is in the view region.
-  bool InView(const double x, const double y) const {
-    return (x >= m_xMin && x <= m_xMax && y >= m_yMin && y <= m_yMax);
-  }
+  bool InView(const double x, const double y) const;
 
   bool LinesCrossed(double x1, double y1, double x2, double y2, double u1,
-                    double v1, double u2, double v2, double& xc, double& yc);
-  bool OnLine(double x1, double y1, double x2, double y2, double u, double v);
+                    double v1, double u2, double v2, double& xc,
+                    double& yc) const;
+  std::string CreateAxisTitle(const double* norm) const;
+  bool IntersectPlaneArea(void);
+  bool PlaneVector(double& x, double& y, double& z) const;
+  bool OnLine(double x1, double y1, double x2, double y2, double u,
+              double v) const;
   void RemoveCrossings(std::vector<double>& x, std::vector<double>& y);
   bool PlaneCut(double x1, double y1, double z1, double x2, double y2,
                 double z2, TMatrixD& xMat);
@@ -156,10 +174,10 @@ class ViewFEMesh {
   void ClipToView(std::vector<double>& px, std::vector<double>& py,
                   std::vector<double>& cx, std::vector<double>& cy);
   bool IsInPolygon(double x, double y, std::vector<double>& px,
-                   std::vector<double>& py, bool& edge);
+                   std::vector<double>& py, bool& edge) const;
 
   // Plot method to be called by Plot() for CST cubic elements
   // available are "xy", "yz" and "xz"
 };
-}
+}  // namespace Garfield
 #endif

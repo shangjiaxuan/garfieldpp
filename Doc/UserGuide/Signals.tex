@@ -40,6 +40,7 @@ void Sensor::SetTimeWindow(const double tmin, const double tstep,
   \begin{lstlisting}
 void AvalancheMicroscopic::EnableSignalCalculation();
 void AvalancheMC::EnableSignalCalculation();
+void DriftLineRKF::EnableSignalCalculation();
   \end{lstlisting}
   The \texttt{Sensor} then records and accumulates the signals of all 
   avalanches and drift lines which are simulated.
@@ -128,7 +129,7 @@ As an example, consider the following transfer function
 \begin{lstlisting}
 double transfer(double t) {
 
-  const double tau = 25.;
+  constexpr double tau = 25.;
   return (t / tau) * exp(1 - t / tau);
 
 }
