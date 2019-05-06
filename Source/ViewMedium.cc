@@ -367,41 +367,55 @@ void ViewMedium::AddFunction(const bool keep, const Property type,
   }
   if (m_functions.empty()) return;
   TLatex label;
-  if (keep && m_functions.size() > 1) {
-    m_functions[0].GetYaxis()->SetTitleOffset(0);
-    m_functions[0].Draw("");
+  const unsigned int nFunctions = m_functions.size();
+  if (keep && nFunctions > 1) {
+    // Determine the y range.
     double ymin = m_functions[0].GetMinimum();
     double ymax = m_functions[0].GetMaximum();
-    double xLabel = 1.3 * xmin;
-    double yLabel = 0.9 * ymax;
-    label.SetText(xLabel, yLabel, m_labels[0].first.c_str());
-    xLabel += label.GetXsize(); 
-    label.SetTextColor(m_labels[0].second);
-    label.DrawLatex(xLabel, yLabel, m_labels[0].first.c_str());
-    const unsigned int nFunctions = m_functions.size();
     for (unsigned int i = 1; i < nFunctions; ++i) {
-      // See if the function has non-zero values.
       const double fmin = m_functions[i].GetMinimum();
       const double fmax = m_functions[i].GetMaximum();
       constexpr double tol = 1.e-10;
       if (fabs(fmin) < tol && fabs(fmax) < tol) continue;
       ymin = std::min(ymin, fmin);
       ymax = std::max(ymax, fmax);
-      m_functions[i].Draw("lsame");
+    }
+    if (m_autoRangeY) {
+      const double dy = ymax - ymin;
+      for (unsigned int i = 0; i < nFunctions; ++i) {
+        m_functions[i].SetMinimum(std::max(0., ymin - 0.1 * dy));
+        m_functions[i].SetMaximum(ymax + 0.1 * dy);
+      }
+    }
+    m_functions[0].Draw("");
+    m_functions[0].GetYaxis()->SetTitleOffset(0);
+    m_functions[0].GetYaxis()->SetNoExponent(false);
+    m_functions[0].DrawCopy("");
+    double xLabel = 1.3 * xmin;
+    double yLabel = 0.9 * ymax;
+    label.SetText(xLabel, yLabel, m_labels[0].first.c_str());
+    xLabel += label.GetXsize(); 
+    label.SetTextColor(m_labels[0].second);
+    label.DrawLatex(xLabel, yLabel, m_labels[0].first.c_str());
+    for (unsigned int i = 1; i < nFunctions; ++i) {
+      // See if the function has non-zero values.
+      const double fmin = m_functions[i].GetMinimum();
+      const double fmax = m_functions[i].GetMaximum();
+      constexpr double tol = 1.e-10;
+      if (fabs(fmin) < tol && fabs(fmax) < tol) continue;
+      m_functions[i].DrawCopy("lsame");
       yLabel -= 1.5 * label.GetYsize();
       label.SetTextColor(m_labels[i].second);
       label.DrawLatex(xLabel, yLabel, m_labels[i].first.c_str());
     }
-    if (m_autoRangeY) {
-      const double dy = ymax - ymin;
-      m_functions[0].SetMinimum(std::max(0., ymin - 0.1 * dy));
-      m_functions[0].SetMaximum(ymax + 0.1 * dy);
-    }
   } else {
-    m_functions.back().GetYaxis()->SetTitleOffset(0);
     m_functions.back().Draw("");
+    m_functions.back().GetYaxis()->SetTitleOffset(0);
+    m_functions.back().DrawCopy("");
   }
-  for (auto& graph : m_graphs) graph->Draw("p");
+  for (auto& graph : m_graphs) {
+    graph->DrawGraph(graph->GetN(), graph->GetX(), graph->GetY(), "p");
+  }
   if (logx) {
     m_canvas->SetLogx(1);
   } else {
