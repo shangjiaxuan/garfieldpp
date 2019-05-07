@@ -226,7 +226,6 @@ void ViewMedium::AddFunction(const bool keep, const Property type,
     fcn.SetMaximum(m_yMax);
   }
   fcn.GetXaxis()->SetTitle(xlabel.c_str());
-  fcn.GetXaxis()->SetTitleOffset(1.2);
   fcn.GetYaxis()->SetTitle(ylabel.c_str());
   fcn.SetTitle(title.c_str());
   fcn.SetParameter(0, type);
@@ -387,10 +386,9 @@ void ViewMedium::AddFunction(const bool keep, const Property type,
         m_functions[i].SetMaximum(ymax + 0.1 * dy);
       }
     }
-    m_functions[0].Draw("");
-    m_functions[0].GetYaxis()->SetTitleOffset(0);
-    m_functions[0].GetYaxis()->SetNoExponent(false);
-    m_functions[0].DrawCopy("");
+    m_functions[0].Draw();
+    m_canvas->Clear();
+    m_functions[0].DrawCopy()->GetYaxis()->SetTitleOffset(0);
     double xLabel = 1.3 * xmin;
     double yLabel = 0.9 * ymax;
     label.SetText(xLabel, yLabel, m_labels[0].first.c_str());
@@ -409,9 +407,7 @@ void ViewMedium::AddFunction(const bool keep, const Property type,
       label.DrawLatex(xLabel, yLabel, m_labels[i].first.c_str());
     }
   } else {
-    m_functions.back().Draw("");
-    m_functions.back().GetYaxis()->SetTitleOffset(0);
-    m_functions.back().DrawCopy("");
+    m_functions.back().DrawCopy()->GetYaxis()->SetTitleOffset(0);
   }
   for (auto& graph : m_graphs) {
     graph->DrawGraph(graph->GetN(), graph->GetX(), graph->GetY(), "p");
@@ -629,15 +625,15 @@ std::string ViewMedium::GetLabelY(const Property prop) const {
     case HoleTransverseDiffusion:
     case IonLongitudinalDiffusion: 
     case IonTransverseDiffusion:
-      return "diffusion coefficient [#sqrt{cm}]";
+      return "diffusion coefficient [#kern[-0.1]{#sqrt{cm}}#kern[0.1]{]}";
       break;
     case ElectronTownsend:
     case HoleTownsend:
-      return "#alpha [1/cm]";
+      return "#it{#alpha} [1/cm]";
       break;
     case ElectronAttachment:
     case HoleAttachment:
-      return "#eta [1/cm]";
+      return "#it{#eta} [1/cm]";
       break;
     case ElectronLorentzAngle:
       return "Angle between #bf{v} and #bf{E} [rad]";
@@ -658,7 +654,7 @@ std::string ViewMedium::GetLegend(const Property prop) const {
       break;
     case ElectronVelocityB:
     case HoleVelocityB:
-      label += "velocity #parallel #bf{B}";
+      label += "velocity #parallel #bf{B}_{t}";
       break;
     case ElectronVelocityExB:
     case HoleVelocityExB:

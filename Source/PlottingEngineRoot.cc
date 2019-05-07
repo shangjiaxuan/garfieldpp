@@ -57,7 +57,8 @@ void PlottingEngineRoot::SetDefaultStyle() {
   m_garfieldStyle.SetTitleFillColor(0);
   m_garfieldStyle.SetTitleFont(font, "xyz");
   m_garfieldStyle.SetTitleFont(font, "t");
-  m_garfieldStyle.SetTitleOffset(1.2, "xyz");
+  m_garfieldStyle.SetTitleOffset(1.2, "x");
+  m_garfieldStyle.SetTitleOffset(0, "y");
   m_garfieldStyle.SetTitleSize(tsize, "xyz");
   m_garfieldStyle.SetTitleSize(tsize, "t");
 
