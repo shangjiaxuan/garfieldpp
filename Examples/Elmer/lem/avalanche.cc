@@ -138,6 +138,7 @@ int main(int argc, char* argv[]) {
 
   // Plot the geometry, field and drift lines.
   TCanvas* cGeom = new TCanvas("geom", "Geometry/Avalanche/Fields");
+  cGeom->SetLeftMargin(0.14);
   const bool plotContours = false;
   if (plotContours) {
     ViewField* vf = new ViewField();

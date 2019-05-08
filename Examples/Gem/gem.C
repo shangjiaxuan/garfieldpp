@@ -40,7 +40,8 @@ int main(int argc, char * argv[]) {
     fieldView->SetPlane(0., -1., 0., 0., 0., 0.);
     fieldView->SetArea(-pitch / 2., -0.02, pitch / 2., 0.02);
     fieldView->SetVoltageRange(-160., 160.);
-    TCanvas* cf = new TCanvas();
+    TCanvas* cf = new TCanvas("cf", "", 600, 600);
+    cf->SetLeftMargin(0.16);
     fieldView->SetCanvas(cf);
     fieldView->PlotContour();
   }

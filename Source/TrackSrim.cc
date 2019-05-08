@@ -5,6 +5,7 @@
 #include <TGraph.h>
 #include <TH1.h>
 #include <TLegend.h>
+#include <TLatex.h>
 
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -14,50 +15,6 @@
 #include "Garfield/TrackSrim.hh"
 
 namespace {
-
-void frame(TCanvas* c, double xmin, double ymin, double xmax, double ymax,
-           const std::string& xtitle, const std::string& ytitle) {
-  c->Range(340.8701, -0.1167765, 1233.468, 4.061288);
-  c->SetFillColor(0);
-  c->SetBorderMode(0);
-  c->SetBorderSize(2);
-  c->SetGridx();
-  c->SetGridy();
-  c->SetTickx();
-  c->SetTicky();
-  c->SetRightMargin(0.018);
-  c->SetLeftMargin(0.098);
-  c->SetTopMargin(0.015);
-  c->SetBottomMargin(0.09);
-  c->SetFrameLineWidth(2);
-  c->SetFrameBorderMode(0);
-  c->SetFrameBorderSize(12);
-  c->SetFrameLineWidth(2);
-  c->SetFrameBorderMode(0);
-  c->SetFrameBorderSize(12);
-  TH1* hframe = new TH1F("hframe", "", 10, xmin, xmax);
-  hframe->SetMinimum(ymin);
-  hframe->SetMaximum(ymax);
-  hframe->SetDirectory(0);
-  hframe->SetStats(0);
-  hframe->GetXaxis()->SetTitle(xtitle.c_str());
-  hframe->GetXaxis()->SetLabelFont(22);
-  hframe->GetXaxis()->SetLabelOffset(0.007);
-  hframe->GetXaxis()->SetLabelSize(0.038);
-  hframe->GetXaxis()->SetTitleSize(0.044);
-  hframe->GetXaxis()->SetTickLength(0.035);
-  hframe->GetXaxis()->SetTitleOffset(0.9);
-  hframe->GetXaxis()->SetTitleFont(22);
-  hframe->GetYaxis()->SetTitle(ytitle.c_str());
-  hframe->GetYaxis()->SetLabelFont(22);
-  hframe->GetYaxis()->SetLabelOffset(0.01);
-  hframe->GetYaxis()->SetLabelSize(0.038);
-  hframe->GetYaxis()->SetTitleSize(0.044);
-  hframe->GetYaxis()->SetTickLength(0.035);
-  hframe->GetYaxis()->SetTitleOffset(0.9);
-  hframe->GetYaxis()->SetTitleFont(22);
-  hframe->Draw(" ");
-}
 
 double StepVavilov(const double rkappa) {
   double xlmin = -3.7;
@@ -344,146 +301,124 @@ void TrackSrim::Print() {
 }
 
 void TrackSrim::PlotEnergyLoss() {
-  // Make a graph for the 3 curves to plot
-  double xmin = 0., xmax = 0.;
-  double ymin = 0., ymax = 0.;
-  const unsigned int nPoints = m_ekin.size();
-  TGraph* grem = new TGraph(nPoints);
-  TGraph* grhd = new TGraph(nPoints);
-  TGraph* grtot = new TGraph(nPoints);
-  for (unsigned int i = 0; i < nPoints; ++i) {
-    const double eplot = m_ekin[i];
-    if (eplot < xmin) xmin = eplot;
-    if (eplot > xmax) xmax = eplot;
-    const double emplot = m_emloss[i] * m_density;
-    const double hdplot = m_hdloss[i] * m_density;
-    const double totplot = emplot + hdplot;
-    if (totplot < ymin) ymin = totplot;
-    if (totplot > ymax) ymax = totplot;
-    grem->SetPoint(i, eplot, emplot);
-    grhd->SetPoint(i, eplot, hdplot);
-    grtot->SetPoint(i, eplot, totplot);
-  }
 
+  const unsigned int nPoints = m_ekin.size();
+  std::vector<double> yE;
+  std::vector<double> yH;
+  std::vector<double> yT;
+  for (unsigned int i = 0; i < nPoints; ++i) {
+    const double em = m_emloss[i] * m_density;
+    const double hd = m_hdloss[i] * m_density;
+    yE.push_back(em);
+    yH.push_back(hd);
+    yT.push_back(em + hd);
+  }
+  const double xmin = *std::min_element(std::begin(m_ekin), std::end(m_ekin));
+  const double xmax = *std::max_element(std::begin(m_ekin), std::end(m_ekin));
+  const double ymax = *std::max_element(std::begin(yT), std::end(yT));  
   // Prepare a plot frame
   TCanvas* celoss = new TCanvas();
   celoss->SetLogx();
-  frame(celoss, xmin, 0.0, xmax, ymax * 1.05, "Ion energy [MeV]",
-        "Energy loss [MeV/cm]");
-  TLegend* legend = new TLegend(0.65, 0.75, 0.94, 0.95);
-  legend->SetShadowColor(0);
-  legend->SetTextFont(22);
-  legend->SetTextSize(0.044);
-  legend->SetFillColor(kWhite);
-  legend->SetBorderSize(1);
+  celoss->SetGridx();
+  celoss->SetGridy();
+  celoss->DrawFrame(xmin, 0., xmax, 1.05 * ymax, ";Ion energy [MeV];Energy loss [MeV/cm]");
 
-  grem->SetLineColor(kBlue);
-  grem->SetLineStyle(kSolid);
-  grem->SetLineWidth(2.0);
-  grem->SetMarkerStyle(21);
-  grem->SetMarkerColor(kBlack);
-  grem->Draw("SAME");
-  legend->AddEntry(grem, "EM energy loss", "l");
+  // Make a graph for the 3 curves to plot
+  TGraph gr(nPoints);
+  gr.SetLineStyle(kSolid);
+  gr.SetLineWidth(2);
+  gr.SetMarkerStyle(21);
+  gr.SetLineColor(kBlue);
+  gr.SetMarkerColor(kBlue);
+  gr.DrawGraph(nPoints, m_ekin.data(), yE.data(), "plsame");
 
-  grhd->SetLineColor(kGreen + 2);
-  grhd->SetLineStyle(kSolid);
-  grhd->SetLineWidth(2.0);
-  grhd->SetMarkerStyle(21);
-  grhd->SetMarkerColor(kBlack);
-  grhd->Draw("SAME");
-  legend->AddEntry(grhd, "HD energy loss", "l");
+  gr.SetLineColor(kGreen + 2);
+  gr.SetMarkerColor(kGreen + 2);
+  gr.DrawGraph(nPoints, m_ekin.data(), yH.data(), "plsame");
 
-  grtot->SetLineColor(kOrange);
-  grtot->SetLineStyle(kSolid);
-  grtot->SetLineWidth(2.0);
-  grtot->SetMarkerStyle(21);
-  grtot->SetMarkerColor(kBlack);
-  grtot->Draw("SAME");
-  legend->AddEntry(grtot, "Total energy loss", "l");
+  gr.SetLineColor(kOrange);
+  gr.SetMarkerColor(kOrange);
+  gr.DrawGraph(nPoints, m_ekin.data(), yT.data(), "plsame");
 
-  legend->Draw();
+  TLatex label;
+  double xLabel = 0.4 * xmax;
+  double yLabel = 0.9 * ymax;
+  label.SetTextColor(kBlue);
+  label.SetText(xLabel, yLabel, "EM energy loss");
+  label.DrawLatex(xLabel, yLabel, "EM energy loss");
+  yLabel -= 1.5 * label.GetYsize();
+  label.SetTextColor(kGreen + 2);
+  label.DrawLatex(xLabel, yLabel, "HD energy loss");
+  yLabel -= 1.5 * label.GetYsize();
+  label.SetTextColor(kOrange);
+  label.DrawLatex(xLabel, yLabel, "Total energy loss");
+  celoss->Update();
 }
 
 void TrackSrim::PlotRange() {
-  // Make a graph
-  double xmin = 0., xmax = 0.;
-  double ymin = 0., ymax = 0.;
-  const unsigned int nPoints = m_ekin.size();
-  TGraph* grrange = new TGraph(nPoints);
-  for (unsigned int i = 0; i < nPoints; ++i) {
-    const double eplot = m_ekin[i];
-    if (eplot < xmin) xmin = eplot;
-    if (eplot > xmax) xmax = eplot;
-    const double rangeplot = m_range[i];
-    if (rangeplot < ymin) ymin = rangeplot;
-    if (rangeplot > ymax) ymax = rangeplot;
-    grrange->SetPoint(i, eplot, rangeplot);
-  }
+
+  const double xmin = *std::min_element(std::begin(m_ekin), std::end(m_ekin));
+  const double xmax = *std::max_element(std::begin(m_ekin), std::end(m_ekin));
+  const double ymax = *std::max_element(std::begin(m_range), std::end(m_range));
 
   // Prepare a plot frame
   TCanvas* crange = new TCanvas();
   crange->SetLogx();
-  frame(crange, xmin, 0.0, xmax, ymax * 1.05, "Ion energy [MeV]",
-        "Projected range [cm]");
-
-  grrange->SetLineColor(kOrange);
-  grrange->SetLineStyle(kSolid);
-  grrange->SetLineWidth(2.0);
-  grrange->SetMarkerStyle(21);
-  grrange->SetMarkerColor(kBlack);
-  grrange->Draw("SAME");
+  crange->SetGridx();
+  crange->SetGridy();
+  crange->DrawFrame(xmin, 0., xmax, 1.05 * ymax, ";Ion energy [MeV];Projected range [cm]");
+  // Make a graph
+  const unsigned int nPoints = m_ekin.size();
+  TGraph gr(nPoints);
+  gr.SetLineColor(kOrange);
+  gr.SetMarkerColor(kOrange);
+  gr.SetLineStyle(kSolid);
+  gr.SetLineWidth(2);
+  gr.SetMarkerStyle(21);
+  gr.DrawGraph(nPoints, m_ekin.data(), m_range.data(), "plsame");
+  crange->Update();
 }
 
 void TrackSrim::PlotStraggling() {
-  // Make a graph for the 2 curves to plot
-  double xmin = 0., xmax = 0.;
-  double ymin = 0., ymax = 0.;
-  const unsigned int nPoints = m_ekin.size();
-  TGraph* grlong = new TGraph(nPoints);
-  TGraph* grtrans = new TGraph(nPoints);
-  for (unsigned int i = 0; i < nPoints; ++i) {
-    const double eplot = m_ekin[i];
-    if (eplot < xmin) xmin = eplot;
-    if (eplot > xmax) xmax = eplot;
-    const double longplot = m_longstraggle[i];
-    const double transplot = m_transstraggle[i];
-    if (longplot < ymin) ymin = longplot;
-    if (longplot > ymax) ymax = longplot;
-    if (transplot < ymin) ymin = transplot;
-    if (transplot > ymax) ymax = transplot;
-    grlong->SetPoint(i, eplot, longplot);
-    grtrans->SetPoint(i, eplot, transplot);
-  }
 
+  const double xmin = *std::min_element(std::begin(m_ekin), std::end(m_ekin));
+  const double xmax = *std::max_element(std::begin(m_ekin), std::end(m_ekin));
+  const double ymax = std::max(*std::max_element(std::begin(m_longstraggle),
+                                                 std::end(m_longstraggle)),
+                                *std::max_element(std::begin(m_transstraggle),
+                                                  std::end(m_transstraggle)));
   // Prepare a plot frame
   TCanvas* cstraggle = new TCanvas();
   cstraggle->SetLogx();
-  frame(cstraggle, xmin, 0.0, xmax, ymax * 1.05, "Ion energy [MeV]",
-        "Straggling [cm]");
-  TLegend* legend = new TLegend(0.15, 0.75, 0.44, 0.95);
-  legend->SetShadowColor(0);
-  legend->SetTextFont(22);
-  legend->SetTextSize(0.044);
-  legend->SetFillColor(kWhite);
-  legend->SetBorderSize(1);
+  cstraggle->SetGridx();
+  cstraggle->SetGridy();
+  cstraggle->DrawFrame(xmin, 0., xmax, 1.05 * ymax, ";Ion energy [MeV];Straggling [cm]");
 
-  grlong->SetLineColor(kOrange);
-  grlong->SetLineStyle(kSolid);
-  grlong->SetLineWidth(2.0);
-  grlong->SetMarkerStyle(21);
-  grlong->SetMarkerColor(kBlack);
-  grlong->Draw("SAME");
-  legend->AddEntry(grlong, "Longitudinal", "l");
+  // Make a graph for the 2 curves to plot
+  const unsigned int nPoints = m_ekin.size();
+  TGraph gr(nPoints);
+  gr.SetLineStyle(kSolid);
+  gr.SetLineWidth(2);
+  gr.SetMarkerStyle(21);
 
-  grtrans->SetLineColor(kGreen + 2);
-  grtrans->SetLineStyle(kSolid);
-  grtrans->SetLineWidth(2.0);
-  grtrans->SetMarkerStyle(21);
-  grtrans->SetMarkerColor(kBlack);
-  grtrans->Draw("SAME");
-  legend->AddEntry(grtrans, "Transversal", "l");
+  gr.SetLineColor(kOrange);
+  gr.SetMarkerColor(kOrange);
+  gr.DrawGraph(nPoints, m_ekin.data(), m_longstraggle.data(), "plsame");
 
-  legend->Draw();
+  gr.SetLineColor(kGreen + 2);
+  gr.SetMarkerColor(kGreen + 2);
+  gr.DrawGraph(nPoints, m_ekin.data(), m_transstraggle.data(), "plsame");
+
+  TLatex label;
+  double xLabel = 1.2 * xmin;
+  double yLabel = 0.9 * ymax;
+  label.SetTextColor(kOrange);
+  label.SetText(xLabel, yLabel, "Longitudinal");
+  label.DrawLatex(xLabel, yLabel, "Longitudinal");
+  yLabel -= 1.5 * label.GetYsize();
+  label.SetTextColor(kGreen + 2);
+  label.DrawLatex(xLabel, yLabel, "Transverse");
+  cstraggle->Update();
 }
 
 double TrackSrim::DedxEM(const double e) const {
