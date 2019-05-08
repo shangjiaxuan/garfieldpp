@@ -6,14 +6,11 @@
 #include <vector>
 
 #include "Track.hh"
-#ifndef __CINT__
-#include "heed++/code/HeedCondElectron.h"
-#include "heed++/code/HeedParticle.h"
-#endif /* __CINT __ */
 
 namespace Heed {
 class gparticle;
 class HeedParticle;
+class HeedCondElectron;
 class HeedMatterDef;
 class GasDef;
 class MatterDef;
@@ -221,7 +218,7 @@ class TrackHeed : public Track {
 
   // Interface classes
   std::unique_ptr<HeedChamber> m_chamber;
-  Heed::HeedFieldMap m_fieldMap;
+  std::unique_ptr<Heed::HeedFieldMap> m_fieldMap;
 
   // Bounding box
   double m_lX = 0., m_lY = 0., m_lZ = 0.;

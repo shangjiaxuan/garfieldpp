@@ -50,6 +50,8 @@ TrackHeed::TrackHeed() : Track() {
   m_className = "TrackHeed";
   m_conductionElectrons.reserve(1000);
   m_conductionIons.reserve(1000);
+
+  m_fieldMap.reset(new Heed::HeedFieldMap());
 }
 
 TrackHeed::~TrackHeed() {}
@@ -173,7 +175,7 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
   }
 
   Heed::HeedParticle particle(m_chamber.get(), p0, velocity, t0, particleType,
-                              &m_fieldMap);
+                              m_fieldMap.get());
   // Set the step limits.
   particle.set_step_limits(m_maxStep * Heed::CLHEP::cm,
                            m_radStraight * Heed::CLHEP::cm,
@@ -516,7 +518,7 @@ void TrackHeed::TransportDeltaElectron(const double x0, const double y0,
   // Transport the electron.
   std::vector<Heed::gparticle*> secondaries;
   Heed::HeedDeltaElectron delta(m_chamber.get(), p0, velocity, t0, 0,
-                                &m_fieldMap);
+                                m_fieldMap.get());
   delta.fly(secondaries);
   ClearBank(secondaries);
 
@@ -617,7 +619,7 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
 
   // Create and transport the photon.
   Heed::HeedPhoton photon(m_chamber.get(), p0, velocity, t0, 0, e0 * 1.e-6,
-                          &m_fieldMap);
+                          m_fieldMap.get());
   std::vector<Heed::gparticle*> secondaries;
   photon.fly(secondaries);
 
@@ -675,10 +677,10 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
   ni = m_conductionIons.size();
 }
 
-void TrackHeed::EnableElectricField() { m_fieldMap.UseEfield(true); }
-void TrackHeed::DisableElectricField() { m_fieldMap.UseEfield(false); }
-void TrackHeed::EnableMagneticField() { m_fieldMap.UseBfield(true); }
-void TrackHeed::DisableMagneticField() { m_fieldMap.UseBfield(false); }
+void TrackHeed::EnableElectricField() { m_fieldMap->UseEfield(true); }
+void TrackHeed::DisableElectricField() { m_fieldMap->UseEfield(false); }
+void TrackHeed::EnableMagneticField() { m_fieldMap->UseBfield(true); }
+void TrackHeed::DisableMagneticField() { m_fieldMap->UseBfield(false); }
 
 void TrackHeed::SetEnergyMesh(const double e0, const double e1,
                               const int nsteps) {
@@ -783,7 +785,7 @@ bool TrackHeed::Setup(Medium* medium) {
                            "primary");
   m_chamber.reset(new HeedChamber(primSys, m_lX, m_lY, m_lZ,
                                   *m_transferCs.get(), *m_deltaCs.get()));
-  m_fieldMap.SetSensor(m_sensor);
+  m_fieldMap->SetSensor(m_sensor);
   return true;
 }
 
@@ -1116,8 +1118,8 @@ bool TrackHeed::UpdateBoundingBox(bool& update) {
               << "      z: " << m_cZ << " cm\n";
   }
 
-  m_fieldMap.SetSensor(m_sensor);
-  m_fieldMap.SetCentre(m_cX, m_cY, m_cZ);
+  m_fieldMap->SetSensor(m_sensor);
+  m_fieldMap->SetCentre(m_cX, m_cY, m_cZ);
 
   return true;
 }
