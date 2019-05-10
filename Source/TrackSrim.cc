@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <algorithm>
 
 #include <TCanvas.h>
 #include <TGraph.h>
@@ -328,29 +329,29 @@ void TrackSrim::PlotEnergyLoss() {
   gr.SetLineStyle(kSolid);
   gr.SetLineWidth(2);
   gr.SetMarkerStyle(21);
-  gr.SetLineColor(kBlue);
-  gr.SetMarkerColor(kBlue);
+  gr.SetLineColor(kBlue + 1);
+  gr.SetMarkerColor(kBlue + 1);
   gr.DrawGraph(nPoints, m_ekin.data(), yE.data(), "plsame");
 
   gr.SetLineColor(kGreen + 2);
   gr.SetMarkerColor(kGreen + 2);
   gr.DrawGraph(nPoints, m_ekin.data(), yH.data(), "plsame");
 
-  gr.SetLineColor(kOrange);
-  gr.SetMarkerColor(kOrange);
+  gr.SetLineColor(kOrange - 3);
+  gr.SetMarkerColor(kOrange - 3);
   gr.DrawGraph(nPoints, m_ekin.data(), yT.data(), "plsame");
 
   TLatex label;
   double xLabel = 0.4 * xmax;
   double yLabel = 0.9 * ymax;
-  label.SetTextColor(kBlue);
+  label.SetTextColor(kBlue + 1);
   label.SetText(xLabel, yLabel, "EM energy loss");
   label.DrawLatex(xLabel, yLabel, "EM energy loss");
   yLabel -= 1.5 * label.GetYsize();
   label.SetTextColor(kGreen + 2);
   label.DrawLatex(xLabel, yLabel, "HD energy loss");
   yLabel -= 1.5 * label.GetYsize();
-  label.SetTextColor(kOrange);
+  label.SetTextColor(kOrange - 3);
   label.DrawLatex(xLabel, yLabel, "Total energy loss");
   celoss->Update();
 }
@@ -370,8 +371,8 @@ void TrackSrim::PlotRange() {
   // Make a graph
   const unsigned int nPoints = m_ekin.size();
   TGraph gr(nPoints);
-  gr.SetLineColor(kOrange);
-  gr.SetMarkerColor(kOrange);
+  gr.SetLineColor(kOrange - 3);
+  gr.SetMarkerColor(kOrange - 3);
   gr.SetLineStyle(kSolid);
   gr.SetLineWidth(2);
   gr.SetMarkerStyle(21);
@@ -401,8 +402,8 @@ void TrackSrim::PlotStraggling() {
   gr.SetLineWidth(2);
   gr.SetMarkerStyle(21);
 
-  gr.SetLineColor(kOrange);
-  gr.SetMarkerColor(kOrange);
+  gr.SetLineColor(kOrange - 3);
+  gr.SetMarkerColor(kOrange - 3);
   gr.DrawGraph(nPoints, m_ekin.data(), m_longstraggle.data(), "plsame");
 
   gr.SetLineColor(kGreen + 2);
@@ -412,7 +413,7 @@ void TrackSrim::PlotStraggling() {
   TLatex label;
   double xLabel = 1.2 * xmin;
   double yLabel = 0.9 * ymax;
-  label.SetTextColor(kOrange);
+  label.SetTextColor(kOrange - 3);
   label.SetText(xLabel, yLabel, "Longitudinal");
   label.DrawLatex(xLabel, yLabel, "Longitudinal");
   yLabel -= 1.5 * label.GetYsize();
