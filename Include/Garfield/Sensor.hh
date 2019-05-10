@@ -54,6 +54,9 @@ class Sensor {
   bool GetMedium(const double x, const double y, const double z,
                  Medium*& medium);
 
+  /// Switch debugging messages on/off.
+  void EnableDebugging(const bool on = true) { m_debug = on; }
+
   /// Set the user area to the default.
   bool SetArea();
   /// Set the user area explicitly.
@@ -73,17 +76,6 @@ class Sensor {
   /// Reset signals and induced charges of all electrodes.
   void ClearSignal();
 
-  void AddSignal(const double q, const double t, const double dt,
-                 const double x, const double y, const double z,
-                 const double vx, const double vy, const double vz);
-  void AddSignal(const double q, const std::vector<double>& ts,
-                 const std::vector<std::array<double, 3> >& xs,
-                 const std::vector<std::array<double, 3> >& vs,
-                 const std::vector<double>& ns, const int navg);
-  void AddInducedCharge(const double q, const double x0, const double y0,
-                        const double z0, const double x1, const double y1,
-                        const double z1);
-
   /** Set the time window and binning for the signal calculation.
     * \param tstart start time [ns]
     * \param tstep bin width [ns]
@@ -98,6 +90,12 @@ class Sensor {
     tstep = m_tStep;
     nsteps = m_nTimeBins;
   }
+
+  /// Compute the component of the signal due to the delayed weighting field.
+  void EnableDelayedSignal(const bool on = true) { m_delayedSignal = on; }
+  /// Set the points in time at which to evaluate the delayed weighting field.
+  void SetDelayedSignalTimes(const std::vector<double>& ts);
+
   /// Retrieve the total signal for a given electrode and time bin.
   double GetSignal(const std::string& label, const unsigned int bin);
   /// Retrieve the electron signal for a given electrode and time bin.
@@ -145,8 +143,19 @@ class Sensor {
   bool GetThresholdCrossing(const unsigned int i, double& time, double& level,
                             bool& rise) const;
 
-  /// Switch debugging messages on/off.
-  void EnableDebugging(const bool on = true) { m_debug = on; }
+  /// Add the signal from a charge-carrier step.
+  void AddSignal(const double q, const double t, const double dt,
+                 const double x, const double y, const double z,
+                 const double vx, const double vy, const double vz);
+  /// Add the signal from a drift line.
+  void AddSignal(const double q, const std::vector<double>& ts,
+                 const std::vector<std::array<double, 3> >& xs,
+                 const std::vector<std::array<double, 3> >& vs,
+                 const std::vector<double>& ns, const int navg);
+  /// Add the induced charge from a charge carrier drift between two points.
+  void AddInducedCharge(const double q, const double x0, const double y0,
+                        const double z0, const double x1, const double y1,
+                        const double z1);
 
   /// Determine whether a line between two points has crossed a wire,
   /// calls ComponentBase::IsWireCrossed.
@@ -181,6 +190,8 @@ class Sensor {
   double m_tStep = 10.;
   unsigned int m_nEvents = 0;
   static double m_signalConversion;
+  bool m_delayedSignal = false;
+  std::vector<double> m_delayedSignalTimes;
 
   // Transfer function
   bool m_hasTransferFunction = false;
@@ -207,6 +218,9 @@ class Sensor {
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax);
 
+  void FillSignal(Electrode& electrode, const double q,
+                  const std::vector<double>& ts,
+                  const std::vector<double>& is, const int navg);
   double InterpolateTransferFunctionTable(const double t) const;
 };
 }

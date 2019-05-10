@@ -336,29 +336,38 @@ void Sensor::ClearSignal() {
   m_nEvents = 0;
 }
 
-void Sensor::AddSignal(const double q, const double t, const double dt,
+void Sensor::SetDelayedSignalTimes(const std::vector<double>& ts) {
+  if (!std::is_sorted(ts.begin(), ts.end())) {
+    std::cerr << m_className << "::SetDelayedSignalTimes:\n"
+              << "    Times are not in ascending order.\n";
+    return;
+  }
+  m_delayedSignalTimes = ts;
+}
+
+void Sensor::AddSignal(const double q, const double t0, const double dt,
                        const double x, const double y, const double z,
                        const double vx, const double vy, const double vz) {
   if (m_debug) std::cout << m_className << "::AddSignal:\n";
   // Get the time bin.
-  if (t < m_tStart || dt <= 0.) {
-    if (m_debug) {
-      if (t < m_tStart) std::cout << "  Time " << t << " out of range.\n";
-      if (dt <= 0.) std::cout << "  Time step < 0.\n";
-    }
+  if (t0 < m_tStart) {
+    if (m_debug) std::cout << "    Time " << t0 << " out of range.\n";
+    return;
+  } else if (dt <= 0.) {
+    if (m_debug) std::cout << "    Time step < 0.\n";
     return;
   }
-  const int bin = int((t - m_tStart) / m_tStep);
+  const int bin = int((t0 - m_tStart) / m_tStep);
   // Check if the starting time is outside the range
   if (bin < 0 || bin >= (int)m_nTimeBins) {
-    if (m_debug) std::cout << "  Bin " << bin << " out of range.\n";
+    if (m_debug) std::cout << "    Bin " << bin << " out of range.\n";
     return;
   }
   if (m_nEvents <= 0) m_nEvents = 1;
 
   double wx = 0., wy = 0., wz = 0.;
   if (m_debug) {
-    std::cout << "  Time: " << t << "\n"
+    std::cout << "  Time: " << t0 << "\n"
               << "  Step: " << dt << "\n"
               << "  Charge: " << q << "\n"
               << "  Velocity: (" << vx << ", " << vy << ", " << vz << ")\n";
@@ -373,7 +382,7 @@ void Sensor::AddSignal(const double q, const double t, const double dt,
                 << "    Weighting field: (" << wx << ", " << wy << ", " << wz
                 << ")\n    Induced charge: " << cur * dt << "\n";
     }
-    double delta = m_tStart + (bin + 1) * m_tStep - t;
+    double delta = m_tStart + (bin + 1) * m_tStep - t0;
     // Check if the provided timestep extends over more than one time bin
     if (dt > delta) {
       electrode.signal[bin] += cur * delta;
@@ -411,6 +420,40 @@ void Sensor::AddSignal(const double q, const double t, const double dt,
       }
     }
   }
+  if (!m_delayedSignal) return;
+  if (m_delayedSignalTimes.empty()) return;
+  // Locations and weights for 6-point Gaussian integration
+  constexpr double tg[6] = {-0.932469514203152028, -0.661209386466264514,
+                            -0.238619186083196909, 0.238619186083196909,
+                            0.661209386466264514,  0.932469514203152028};
+  constexpr double wg[6] = {0.171324492379170345, 0.360761573048138608,
+                            0.467913934572691047, 0.467913934572691047,
+                            0.360761573048138608, 0.171324492379170345};
+  const unsigned int nd = m_delayedSignalTimes.size();
+  // Establish the points in time at which we evaluate the delayed signal.
+  std::vector<double> td(nd); 
+  for (unsigned int i = 0; i < nd; ++i) {
+    td[i] = t0 + m_delayedSignalTimes[i];
+  }
+  // Calculate the signals for each electrode.
+  for (auto& electrode : m_electrodes) {
+    const std::string lbl = electrode.label;
+    std::vector<double> id(nd, 0.);
+    for (unsigned int i = 0; i < nd; ++i) {
+      // Integrate over the drift line segment.
+      const double step = 0.5 * std::min(m_delayedSignalTimes[i], dt);
+      double sum = 0.;
+      for (unsigned int j = 0; j < 6; ++j) {
+        const double t = m_delayedSignalTimes[i] - (1. + tg[j]) * step;
+        // Calculate the delayed weighting field.
+        electrode.comp->DelayedWeightingField(x, y, z, t, wx, wy, wz, lbl);
+        sum += -q * (wx * vx + wy * vy + wz * vz) * wg[j];
+      }
+      id[i] = 0.5 * sum;
+    }
+    FillSignal(electrode, q, td, id, 2);
+  }
+
 }
 
 void Sensor::AddSignal(const double q, const std::vector<double>& ts,
@@ -431,8 +474,6 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
               << "-vector (charge " << q << ").\n";
   }
   if (m_nEvents <= 0) m_nEvents = 1;
-  // Interpolation order.
-  constexpr unsigned int k = 1;
   for (auto& electrode : m_electrodes) {
     const std::string label = electrode.label;
     std::vector<double> signal(nPoints, 0.);
@@ -446,44 +487,54 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
       signal[i] = -q * (v[0] * wx + v[1] * wy + v[2] * wz);
       if (aval) signal[i] *= ns[i];
     }
-    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
-      const double t0 = m_tStart + i * m_tStep; 
-      const double t1 = t0 + m_tStep;
-      if (ts.front() > t1) continue;
-      if (ts.back() < t0) break;
-      // Integration over this bin.
-      double sum = 0.;
-      if (navg <= 0) {
-        for (unsigned int j = 0; j < nPoints - 1; ++j) {
-          if (ts[j] > t1) break;
-          if (ts[j + 1] <= t0) continue;
-          sum += signal[j] * (std::min(ts[j + 1], t1) - std::max(ts[j], t0));
-        }
-      } else {
-        const double tmin = std::max(ts.front(), t0);
-        const double tmax = std::min(ts.back(), t1);
-        const double h = 0.5 * (tmax - tmin) / navg;
-        for (int j = -navg; j <= navg; ++j) {
-          const int jj = j + navg;
-          const double t = t0 + jj * h;
-          if (t < ts.front() || t > ts.back()) continue;
-          if (j == -navg || j == navg) {
-            sum += Numerics::Divdif(signal, ts, nPoints, t, k);
-          } else if (jj == 2 * (jj /2)) {
-            sum += 2 * Numerics::Divdif(signal, ts, nPoints, t, k);
-          } else {
-            sum += 4 * Numerics::Divdif(signal, ts, nPoints, t, k);
-          }
-        }
-        sum *= h / 3.;
+    FillSignal(electrode, q, ts, signal, navg);
+  }
+}
+
+void Sensor::FillSignal(Electrode& electrode, const double q, 
+                        const std::vector<double>& ts,
+                        const std::vector<double>& is, const int navg) {
+
+  // Interpolation order.
+  constexpr unsigned int k = 1;
+  const unsigned int nPoints = ts.size();
+  for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+    const double t0 = m_tStart + i * m_tStep; 
+    const double t1 = t0 + m_tStep;
+    if (ts.front() > t1) continue;
+    if (ts.back() < t0) break;
+    // Integration over this bin.
+    double sum = 0.;
+    if (navg <= 0) {
+      for (unsigned int j = 0; j < nPoints - 1; ++j) {
+        if (ts[j] > t1) break;
+        if (ts[j + 1] <= t0) continue;
+        sum += is[j] * (std::min(ts[j + 1], t1) - std::max(ts[j], t0));
       }
-      // Add the result to the signal.
-      electrode.signal[i] += sum;
-      if (q < 0.) {
-        electrode.electronsignal[i] += sum;
-      } else {
-        electrode.ionsignal[i] += sum;
+    } else {
+      const double tmin = std::max(ts.front(), t0);
+      const double tmax = std::min(ts.back(), t1);
+      const double h = 0.5 * (tmax - tmin) / navg;
+      for (int j = -navg; j <= navg; ++j) {
+        const int jj = j + navg;
+        const double t = t0 + jj * h;
+        if (t < ts.front() || t > ts.back()) continue;
+        if (j == -navg || j == navg) {
+          sum += Numerics::Divdif(is, ts, nPoints, t, k);
+        } else if (jj == 2 * (jj /2)) {
+          sum += 2 * Numerics::Divdif(is, ts, nPoints, t, k);
+        } else {
+          sum += 4 * Numerics::Divdif(is, ts, nPoints, t, k);
+        }
       }
+      sum *= h / 3.;
+    }
+    // Add the result to the signal.
+    electrode.signal[i] += sum;
+    if (q < 0.) {
+      electrode.electronsignal[i] += sum;
+    } else {
+      electrode.ionsignal[i] += sum;
     }
   }
 }
