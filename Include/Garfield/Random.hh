@@ -94,6 +94,9 @@ inline double RndmPolya(const double theta) {
 double RndmLandau();
 /// Draw a random number from a Vavilov distribution.
 double RndmVavilov(const double rkappa, const double beta2);
+/// Draw a random energy needed to create a single electron in
+/// a material asymptotic work function W and Fano factor F,
+/// according to Igor Smirnov's phenomenological model.
 double RndmHeedWF(const double w, const double f);
 
 /// Draw a random (isotropic) direction vector.
