@@ -774,9 +774,6 @@ void AvalancheMC::Terminate(const std::array<double, 3>& x0, const double t0,
       t1 += dt;
     }
   }
-  // Place the particle OUTSIDE the drift medium and/or the drift area.
-  for (unsigned int k = 0; k < 3; ++k) x1[k] += dx[k] * ds;
-  t1 += dt;
 }
 
 bool AvalancheMC::ComputeGainLoss(const int type, 
