@@ -21,7 +21,9 @@ class MediumSilicon : public Medium {
 
   /// Trapping cross-sections for electrons and holes.
   void SetTrapCrossSection(const double ecs, const double hcs);
+  /// Trap density [cm-3], by default set to zero.
   void SetTrapDensity(const double n);
+  /// Set time constant for trapping of electrons and holes [ns].
   void SetTrappingTime(const double etau, const double htau);
 
   // Electron transport parameters
@@ -172,8 +174,8 @@ class MediumSilicon : public Medium {
   // Trapping parameters
   double m_eTrapCs = 1.e-15;
   double m_hTrapCs = 1.e-15;
-  double m_eTrapDensity = 1.e13;
-  double m_hTrapDensity = 1.e13;
+  double m_eTrapDensity = 0.;
+  double m_hTrapDensity = 0.;
   double m_eTrapTime = 0.;
   double m_hTrapTime = 0.;
   int m_trappingModel = 0;
