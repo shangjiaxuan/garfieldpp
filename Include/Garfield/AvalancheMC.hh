@@ -77,6 +77,8 @@ class AvalancheMC {
   /** Use exponentially distributed time steps with mean equal
     * to the specified multiple of the collision time (default model).*/
   void SetCollisionSteps(const unsigned int n = 100);
+  /// Retrieve the step distance from a user-supplied function. 
+  void SetStepDistanceFunction(double (*f)(double x, double y, double z));
 
   /// Define a time interval (only carriers inside the interval are drifted).
   void SetTimeWindow(const double t0, const double t1);
@@ -169,9 +171,9 @@ class AvalancheMC {
   /// Current drift line
   std::vector<DriftPoint> m_drift;
 
-  enum StepSizeModel { FixedTime, FixedDistance, CollisionTime };
+  enum class StepModel { FixedTime, FixedDistance, CollisionTime, UserDistance};
   /// Step size model.
-  StepSizeModel m_stepModel = CollisionTime;
+  StepModel m_stepModel = StepModel::CollisionTime;
 
   /// Fixed time step
   double m_tMc = 0.02;
@@ -179,6 +181,8 @@ class AvalancheMC {
   double m_dMc = 0.001;
   /// Sample step size according to collision time
   int m_nMc = 100;
+  /// User function returning the step size
+  double (*m_fStep)(double x, double y, double z) = nullptr;
 
   /// Flag whether a time window should be used.
   bool m_hasTimeWindow = false;

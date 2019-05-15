@@ -47,7 +47,7 @@ void AvalancheMC::EnablePlotting(ViewDrift* view) {
 }
 
 void AvalancheMC::SetTimeSteps(const double d) {
-  m_stepModel = FixedTime;
+  m_stepModel = StepModel::FixedTime;
   if (d < Small) {
     std::cerr << m_className << "::SetTimeSteps:\n    "
               << "Step size is too small. Using default (20 ps) instead.\n";
@@ -62,7 +62,7 @@ void AvalancheMC::SetTimeSteps(const double d) {
 }
 
 void AvalancheMC::SetDistanceSteps(const double d) {
-  m_stepModel = FixedDistance;
+  m_stepModel = StepModel::FixedDistance;
   if (d < Small) {
     std::cerr << m_className << "::SetDistanceSteps:\n    "
               << "Step size is too small. Using default (10 um) instead.\n";
@@ -77,7 +77,7 @@ void AvalancheMC::SetDistanceSteps(const double d) {
 }
 
 void AvalancheMC::SetCollisionSteps(const unsigned int n) {
-  m_stepModel = CollisionTime;
+  m_stepModel = StepModel::CollisionTime;
   if (n < 1) {
     std::cerr << m_className << "::SetCollisionSteps:\n    "
               << "Number of collisions set to default value (100).\n";
@@ -89,6 +89,17 @@ void AvalancheMC::SetCollisionSteps(const unsigned int n) {
               << "Number of collisions to be skipped set to " << n << ".\n";
   }
   m_nMc = n;
+}
+
+void AvalancheMC::SetStepDistanceFunction(
+  double (*f)(double x, double y, double z)) {
+
+  if (!f) {
+    std::cerr << m_className << "::SetStepDistanceFunction: Null pointer.\n";
+    return;
+  }
+  m_fStep = f;
+  m_stepModel = StepModel::UserDistance;
 }
 
 void AvalancheMC::SetTimeWindow(const double t0, const double t1) {
@@ -291,14 +302,17 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
     // Determine the time step.
     double dt = 0.;
     switch (m_stepModel) {
-      case FixedTime:
+      case StepModel::FixedTime:
         dt = m_tMc;
         break;
-      case FixedDistance:
+      case StepModel::FixedDistance:
         dt = m_dMc / vmag;
         break;
-      case CollisionTime:
+      case StepModel::CollisionTime:
         dt = -m_nMc * (c1 * vmag / emag) * log(RndmUniformPos());
+        break;
+      case StepModel::UserDistance:
+        dt = m_fStep(x0[0], x0[1], x0[2]) / vmag;
         break;
       default:
         std::cerr << m_className + "::DriftLine: Unknown stepping model.\n";
