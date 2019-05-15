@@ -582,7 +582,8 @@ bool DriftLineRKF::Avalanche(const Particle particle,
   const double qe = ne.back();
   const double qi = std::accumulate(ni.begin(), ni.end(), 0.);
   scale = 1.;
-  if (qi > 1.) {
+  if (qi > 1. && 
+      !(m_gainFluctuations == GainFluctuations::None && m_gain < 1.)) {
     const double gain = m_gain > 1. ? m_gain : GetGain();
     double q1 = gain;
     if (m_gainFluctuations == GainFluctuations::Polya) {
