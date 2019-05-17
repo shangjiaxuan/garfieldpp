@@ -1509,7 +1509,6 @@ void MediumSilicon::UpdateHighFieldMobilityCanali() {
   m_hBetaCanaliInv = 1. / m_hBetaCanali;
 }
 
-/*
 void MediumSilicon::UpdateImpactIonisationVanOverstraetenDeMan() {
 
   // References:
@@ -1517,31 +1516,7 @@ void MediumSilicon::UpdateImpactIonisationVanOverstraetenDeMan() {
   //    Solid State Electronics 13 (1970), 583-608
   //  - W. Maes, K. de Meyer and R. van Overstraeten,
   //    Solid State Electronics 33 (1990), 705-718
-  // - Sentaurus Device User Guide (2007)
-
-  // Temperature dependence as in Sentaurus Device
-  // Optical phonon energy
-  const double hbarOmega = 0.063;
-  // Temperature scaling coefficient
-  const double gamma = tanh(hbarOmega / (2. * BoltzmannConstant * 300.)) /
-                       tanh(hbarOmega / (2. * BoltzmannConstant *
-m_temperature));
-
-  // Low field coefficients taken from Maes, de Meyer, van Overstraeten
-  eImpactA0 = gamma * 3.318e5;
-  eImpactB0 = gamma * 1.135e6;
-  eImpactA1 = gamma * 7.03e5;
-  eImpactB1 = gamma * 1.231e6;
-
-  m_hImpactA0 = gamma * 1.582e6;
-  m_hImpactB0 = gamma * 2.036e6;
-  m_hImpactA1 = gamma * 6.71e5;
-  m_hImpactB1 = gamma * 1.693e6;
-}
-*/
-
-void MediumSilicon::UpdateImpactIonisationVanOverstraetenDeMan() {
-  // - Sentaurus Device User Guide (2007)
+  // - Sentaurus Device User Guide (2016)
 
   // Temperature dependence as in Sentaurus Device
   // Optical phonon energy
@@ -1552,6 +1527,8 @@ void MediumSilicon::UpdateImpactIonisationVanOverstraetenDeMan() {
       tanh(hbarOmega / (2. * BoltzmannConstant * m_temperature));
 
   // Low field coefficients taken from Maes, de Meyer, van Overstraeten
+  // eImpactA0 = gamma * 3.318e5;
+  // eImpactB0 = gamma * 1.135e6;
   m_eImpactA0 = gamma * 7.03e5;
   m_eImpactB0 = gamma * 1.231e6;
   m_eImpactA1 = gamma * 7.03e5;
