@@ -286,12 +286,16 @@ void SetModel(const int m);
   \caption{Fluctuation models in SRIM.}
   \label{Tab:SrimFluctuationModels}
 \end{table}
-Transverse and longitudinal straggling can be switchen on or off using
+The generation of Vavilov distributed random numbers is based on a 
+C++ implementation of the CERNLIB G115 procedures for the 
+fast, approximate calculation of functions related to the 
+Vavilov distribution. The description of the algorithm can be found 
+in Ref.~\cite{RotondiMontagna1990}.
+
+Transverse and longitudinal straggling can be switched on or off using
 \begin{lstlisting}
-void EnableTransverseStraggling();
-void DisableTransverseStraggling();
-void EnableLongitudinalStraggling();
-void DisableLongitudinalStraggling();
+void EnableTransverseStraggling(const bool on);
+void EnableLongitudinalStraggling(const bool on);
 \end{lstlisting}
 If energy loss fluctuations are used, longitudinal straggling should be disabled.
 By default, transverse straggling is switched on and longitudinal straggling 

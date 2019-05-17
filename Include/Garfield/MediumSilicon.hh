@@ -15,8 +15,9 @@ class MediumSilicon : public Medium {
 
   bool IsSemiconductor() const override { return true; }
 
-  /// Doping concentration [cm-3] and type ('i', 'n', 'p')
+  /// Set doping concentration [cm-3] and type ('i', 'n', 'p').
   void SetDoping(const char type, const double c);
+  /// Retrieve doping concentration. 
   void GetDoping(char& type, double& c) const;
 
   /// Trapping cross-sections for electrons and holes.
@@ -47,28 +48,45 @@ class MediumSilicon : public Medium {
                       const double bx, const double by, const double bz,
                       double& eta) override;
 
+  /// Specify the low field values of the electron and hole mobilities.
   void SetLowFieldMobility(const double mue, const double muh);
+  /// Calculate the lattice mobility using the Minimos model.
   void SetLatticeMobilityModelMinimos();
+  /// Calculate the lattice mobility using the Sentaurus model (default).
   void SetLatticeMobilityModelSentaurus();
+  /// Calculate the lattice mobility using the Reggiani model.
   void SetLatticeMobilityModelReggiani();
-
+  /// Use the Minimos model for the doping-dependence of the mobility.
   void SetDopingMobilityModelMinimos();
+  /// Use the Masetti model for the doping-dependence of the mobility (default).
   void SetDopingMobilityModelMasetti();
 
+  /// Specify the saturation velocities of electrons and holes.
   void SetSaturationVelocity(const double vsate, const double vsath);
+  /// Calculate the saturation velocities using the Minimos model.
   void SetSaturationVelocityModelMinimos();
+  /// Calculate the saturation velocities using the Canali model (default).
   void SetSaturationVelocityModelCanali();
+  /// Calculate the saturation velocities using the Reggiani model.
   void SetSaturationVelocityModelReggiani();
 
+  /// Parameterize the high-field mobility using the Minimos model.
   void SetHighFieldMobilityModelMinimos();
+  /// Parameterize the high-field mobility using the Canali model (default).
   void SetHighFieldMobilityModelCanali();
+  /// Parameterize the high-field mobility using the Reggiani model.
   void SetHighFieldMobilityModelReggiani();
+  /// Make the velocity proportional to the electric field (no saturation).
   void SetHighFieldMobilityModelConstant();
 
+  /// Calculate &alpha; using the van Overstraeten-de Man model (default).
   void SetImpactIonisationModelVanOverstraetenDeMan();
+  /// Calculate &alpha; using the Grant model.
   void SetImpactIonisationModelGrant();
+  /// Calculate &alpha; using the Massey model.
+  void SetImpactIonisationModelMassey();
 
-  // Scaling
+  /// Apply a scaling factor to the diffusion coefficients.
   void SetDiffusionScaling(const double d) { m_diffScale = d; }
 
   // Microscopic transport properties
@@ -133,7 +151,7 @@ class MediumSilicon : public Medium {
   enum class DopingMobility { Minimos = 0, Masetti };
   enum class SaturationVelocity { Minimos = 0, Canali, Reggiani };
   enum class HighFieldMobility { Minimos = 0, Canali, Reggiani, Constant };
-  enum class ImpactIonisation { VanOverstraeten = 0, Grant };
+  enum class ImpactIonisation { VanOverstraeten = 0, Grant, Massey };
 
   // Diffusion scaling factor
   double m_diffScale = 1.;
@@ -301,12 +319,15 @@ class MediumSilicon : public Medium {
   bool ElectronImpactIonisationVanOverstraetenDeMan(const double e,
                                                     double& alpha) const;
   bool ElectronImpactIonisationGrant(const double e, double& alpha) const;
+  bool ElectronImpactIonisationMassey(const double e, double& alpha) const;
+
   bool HoleMobilityMinimos(const double e, double& mu) const;
   bool HoleMobilityCanali(const double e, double& mu) const;
   bool HoleMobilityReggiani(const double e, double& mu) const;
   bool HoleImpactIonisationVanOverstraetenDeMan(const double e,
                                                 double& alpha) const;
   bool HoleImpactIonisationGrant(const double e, double& alpha) const;
+  bool HoleImpactIonisationMassey(const double e, double& alpha) const;
 
   bool LoadOpticalData(const std::string& filename);
 

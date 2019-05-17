@@ -728,13 +728,15 @@ void SetHighFieldMobilityModelConstant();
 \end{itemize}
 
 For the impact ionization coefficient, the user has currently the choice 
-between the model of Grant \cite{Grant1973} and the model of 
-van Overstraeten and de Man \cite{VanOverstraeten1970}.
+between the models of Grant \cite{Grant1973},
+van Overstraeten and de Man \cite{VanOverstraeten1970}, and Massey 
+\cite{Massey2006}.
 \begin{lstlisting}
 void SetImpactIonisationModelGrant();
 void SetImpactIonisationModelVanOverstraetenDeMan();
+void SetImpactIonisationModelMassey();
 \end{lstlisting}
-The latter model is used by default.
+By default, the model by van Overstraeten and de Man is used.
 
 On an experimental basis, electron collision rates for use with microscopic tracking 
 are also included. 

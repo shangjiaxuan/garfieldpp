@@ -219,6 +219,9 @@ bool MediumSilicon::ElectronTownsend(const double ex, const double ey,
     case ImpactIonisation::Grant:
       return ElectronImpactIonisationGrant(e, alpha);
       break;
+    case ImpactIonisation::Massey:
+      return ElectronImpactIonisationMassey(e, alpha);
+      break;
     default:
       std::cerr << m_className << "::ElectronTownsend: Unknown model. Bug!\n";
       break;
@@ -348,6 +351,9 @@ bool MediumSilicon::HoleTownsend(const double ex, const double ey,
       break;
     case ImpactIonisation::Grant:
       return HoleImpactIonisationGrant(e, alpha);
+      break;
+    case ImpactIonisation::Massey:
+      return HoleImpactIonisationMassey(e, alpha);
       break;
     default:
       std::cerr << m_className << "::HoleTownsend: Unknown model. Bug!\n";
@@ -496,6 +502,11 @@ void MediumSilicon::SetImpactIonisationModelVanOverstraetenDeMan() {
 
 void MediumSilicon::SetImpactIonisationModelGrant() {
   m_impactIonisationModel = ImpactIonisation::Grant;
+  m_isChanged = true;
+}
+
+void MediumSilicon::SetImpactIonisationModelMassey() {
+  m_impactIonisationModel = ImpactIonisation::Massey;
   m_isChanged = true;
 }
 
@@ -1264,6 +1275,8 @@ bool MediumSilicon::UpdateTransportParameters() {
     case ImpactIonisation::Grant:
       UpdateImpactIonisationGrant();
       break;
+    case ImpactIonisation::Massey:
+      break;
     default:
       std::cerr << m_className << "::UpdateTransportParameters:\n    "
                 << "Unknown impact ionisation model. Program bug!\n";
@@ -1516,7 +1529,7 @@ void MediumSilicon::UpdateImpactIonisationVanOverstraetenDeMan() {
   //    Solid State Electronics 13 (1970), 583-608
   //  - W. Maes, K. de Meyer and R. van Overstraeten,
   //    Solid State Electronics 33 (1990), 705-718
-  // - Sentaurus Device User Guide (2016)
+  //  - Sentaurus Device User Guide (2016)
 
   // Temperature dependence as in Sentaurus Device
   // Optical phonon energy
@@ -1608,27 +1621,6 @@ bool MediumSilicon::ElectronMobilityReggiani(const double e, double& mu) const {
   return true;
 }
 
-/*
-bool MediumSilicon::ElectronImpactIonisationVanOverstraetenDeMan(
-    const double e, double& alpha) const {
-
-  // References:
-  //  - R. van Overstraeten and H. de Man,
-  //    Solid State Electronics 13 (1970), 583-608
-  //  - W. Maes, K. de Meyer and R. van Overstraeten,
-  //    Solid State Electronics 33 (1990), 705-718
-
-  if (e < Small) {
-    alpha = 0.;
-  } else if (e < 1.2786e5) {
-    alpha = m_eImpactA0 * exp(-m_eImpactB0 / e);
-  } else {
-    alpha = m_eImpactA1 * exp(-m_eImpactB1 / e);
-  }
-  return true;
-}
-*/
-
 bool MediumSilicon::ElectronImpactIonisationVanOverstraetenDeMan(
     const double e, double& alpha) const {
   // References:
@@ -1636,6 +1628,7 @@ bool MediumSilicon::ElectronImpactIonisationVanOverstraetenDeMan(
   //    Solid State Electronics 13 (1970), 583-608
   //  - W. Maes, K. de Meyer and R. van Overstraeten,
   //    Solid State Electronics 33 (1990), 705-718
+  //  - Sentaurus Device User Guide (2016)
 
   if (e < Small) {
     alpha = 0.;
@@ -1660,6 +1653,24 @@ bool MediumSilicon::ElectronImpactIonisationGrant(const double e,
     alpha = m_eImpactA1 * exp(-m_eImpactB1 / e);
   } else {
     alpha = m_eImpactA2 * exp(-m_eImpactB2 / e);
+  }
+  return true;
+}
+
+bool MediumSilicon::ElectronImpactIonisationMassey(const double e,
+                                                   double& alpha) const {
+
+  // Reference:
+  // - D. J. Massey, J. P. R. David, and G. J. Rees,
+  //   IEEE Trans. Electron Devices 53 (2006), 2328 - 2334
+  constexpr double a = 4.43e5;
+  constexpr double c = 9.66e5;
+  constexpr double d = 4.99e2;
+  const double b = c + d * m_temperature;
+  if (e < Small) {
+    alpha = 0.;
+  } else {
+    alpha = a * exp(-b / e);
   }
   return true;
 }
@@ -1703,28 +1714,12 @@ bool MediumSilicon::HoleMobilityReggiani(const double e, double& mu) const {
   return true;
 }
 
-/*
 bool MediumSilicon::HoleImpactIonisationVanOverstraetenDeMan(
     const double e, double& alpha) const {
-
-  // Reference:
+  // References:
   //  - R. van Overstraeten and H. de Man,
   //    Solid State Electronics 13 (1970), 583-608
-
-  if (e < Small) {
-    alpha = 0.;
-  } else {
-    alpha = m_hImpactA1 * exp(-m_hImpactB1 / e);
-  }
-  return true;
-}
-*/
-
-bool MediumSilicon::HoleImpactIonisationVanOverstraetenDeMan(
-    const double e, double& alpha) const {
-  // Reference:
-  //  - R. van Overstraeten and H. de Man,
-  //    Solid State Electronics 13 (1970), 583-608
+  //  - Sentaurus Device User Guide (2016)
 
   if (e < Small) {
     alpha = 0.;
@@ -1747,6 +1742,24 @@ bool MediumSilicon::HoleImpactIonisationGrant(const double e,
     alpha = m_hImpactA0 * exp(-m_hImpactB0 / e);
   } else {
     alpha = m_hImpactA1 * exp(-m_hImpactB1 / e);
+  }
+  return true;
+}
+
+bool MediumSilicon::HoleImpactIonisationMassey(const double e,
+                                               double& alpha) const {
+
+  // Reference:
+  // - D. J. Massey, J. P. R. David, and G. J. Rees,
+  //   IEEE Trans. Electron Devices 53 (2006), 2328 - 2334
+  constexpr double a = 1.13e6;
+  constexpr double c = 1.17e6;
+  constexpr double d = 1.09e3;
+  const double b = c + d * m_temperature;
+  if (e < Small) {
+    alpha = 0.;
+  } else {
+    alpha = a * exp(-b / e);
   }
   return true;
 }
