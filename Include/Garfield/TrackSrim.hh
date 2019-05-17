@@ -15,59 +15,72 @@ class TrackSrim : public Track {
   /// Destructor
   virtual ~TrackSrim() {}
 
-  /// Set/get the W value [eV].
+  /// Set the W value [eV].
   void SetWorkFunction(const double w) { m_work = w; }
+  /// Get the W value [eV].
   double GetWorkFunction() const { return m_work; }
-  /// Set/get the Fano factor.
+  /// Set the Fano factor.
   void SetFanoFactor(const double f) { m_fano = f; }
+  /// Get the Fano factor.
   double GetFanoFactor() const { return m_fano; }
-  /// Set/get the density [g/cm3] of the target medium.
+  /// Set the density [g/cm3] of the target medium.
   void SetDensity(const double density) { m_density = density; }
+  /// Get the density [g/cm3] of the target medium.
   double GetDensity() const { return m_density; }
-  /// Set/get A and Z of the target medium.
+  /// Set A and Z of the target medium.
   void SetAtomicMassNumbers(const double a, const double z) {
     m_a = a;
     m_z = z;
   }
+  /// Get A and Z of the target medium.
   void GetAtomicMassMumbers(double& a, double& z) const {
     a = m_a;
     z = m_z;
   }
 
-  /// Set/get the fluctuation model
-  /// (0 = none, 1 = Landau, 2 = Vavilov, 3 = Gaussian, 4 = Combined)
+  /// Set the fluctuation model
+  /// (0 = none, 1 = Landau, 2 = Vavilov, 3 = Gaussian, 4 = Combined).
+  /// By default, the combined model (4) is used.
   void SetModel(const int m) { m_model = m; }
+  /// Get the fluctuation model.
   int GetModel() const { return m_model; }
 
-  void EnableTransverseStraggling() { m_useTransStraggle = true; }
-  void DisableTransverseStraggling() { m_useTransStraggle = false; }
-  void EnableLongitudinalStraggling() { m_useLongStraggle = true; }
-  void DisableLongitudinalStraggling() { m_useLongStraggle = false; }
+  /// Simulate transverse straggling (default: on).
+  void EnableTransverseStraggling(const bool on = true) { 
+    m_useTransStraggle = on; 
+  }
+  /// Simulate longitudinal straggling (default: off).
+  void EnableLongitudinalStraggling(const bool on = true) { 
+    m_useLongStraggle = on; 
+  }
 
-  void EnablePreciseVavilov() { m_precisevavilov = true; }
-  void DisablePreciseVavilov() { m_precisevavilov = false; }
-
+  /// Specify how many electrons should be grouped to a cluster.
   void SetTargetClusterSize(const int n) { m_nsize = n; }
+  /// Retrieve the target cluster size.
   int GetTargetClusterSize() const { return m_nsize; }
 
   void SetClustersMaximum(const int n) { m_maxclusters = n; }
   int GetClustersMaximum() const { return m_maxclusters; }
 
+  /// Load data from a SRIM file.
   bool ReadFile(const std::string& file);
   void Print();
+  /// Make a plot of the electromagnetic, hadronic, and total energy loss
+  /// as function of the projectile energy.
   void PlotEnergyLoss();
+  /// Make a plot of the projected range as function of the projectile energy.
   void PlotRange();
+  /// Make a plot of the transverse and longitudinal straggling as function
+  /// of the projectile energy. 
   void PlotStraggling();
 
-  virtual bool NewTrack(const double x0, const double y0, const double z0,
-                        const double t0, const double dx0, const double dy0,
-                        const double dz0);
-  virtual bool GetCluster(double& xcls, double& ycls, double& zcls,
-                          double& tcls, int& n, double& e, double& extra);
+  bool NewTrack(const double x0, const double y0, const double z0,
+                const double t0, const double dx0, const double dy0,
+                const double dz0) override;
+  bool GetCluster(double& xcls, double& ycls, double& zcls,
+                  double& tcls, int& n, double& e, double& extra) override;
 
  protected:
-  /// Use precise Vavilov generator
-  bool m_precisevavilov = false;
   /// Include transverse straggling
   bool m_useTransStraggle = true;
   /// Include longitudinal straggling
@@ -111,14 +124,15 @@ class TrackSrim : public Track {
   unsigned int m_model = 4;
   /// Targeted cluster size
   int m_nsize = -1;
-  struct cluster {
-    double x, y, z, t;  // Cluster location and time
-    double ec;          // Energy spent to make the clusterec
-    double kinetic;     // Ion energy when cluster was created
-    int electrons;      // Number of electrons in this cluster
+  struct Cluster {
+    double x, y, z, t;  ///< Cluster location and time
+    double ec;          ///< Energy spent to make the cluster
+    double kinetic;     ///< Ion energy when cluster was created
+    int electrons;      ///< Number of electrons in this cluster
   };
-  std::vector<cluster> m_clusters;
+  std::vector<Cluster> m_clusters;
 
+  double Xi(const double x, const double beta2) const;
   double DedxEM(const double e) const;
   double DedxHD(const double e) const;
   bool PreciseLoss(const double step, const double estart, double& deem,
