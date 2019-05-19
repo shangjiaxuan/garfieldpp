@@ -99,15 +99,19 @@ class ComponentAnalyticField : public ComponentBase {
   void AddPlaneY(const double y, const double voltage,
                  const std::string& label);
 
+  /// Add a strip in the y or z direction on an existing plane at constant x.
   void AddStripOnPlaneX(const char direction, const double x, const double smin,
                         const double smax, const std::string& label,
                         const double gap = -1.);
+  /// Add a strip in the x or z direction on an existing plane at constant y.
   void AddStripOnPlaneY(const char direction, const double y, const double smin,
                         const double smax, const std::string& label,
                         const double gap = -1.);
+  /// Add a pixel on an existing plane at constant x.
   void AddPixelOnPlaneX(const double x, const double ymin, const double ymax,
                         const double zmin, const double zmax,
                         const std::string& label, const double gap = -1.);
+  /// Add a pixel on an existing plane at constant y.
   void AddPixelOnPlaneY(const double y, const double xmin, const double xmax,
                         const double zmin, const double zmax,
                         const std::string& label, const double gap = -1.);
@@ -116,7 +120,9 @@ class ComponentAnalyticField : public ComponentBase {
   void SetPeriodicityX(const double s);
   /// Set the periodic length [cm] in the y-direction.
   void SetPeriodicityY(const double s);
+  /// Get the periodic length in the x-direction.
   bool GetPeriodicityX(double& s);
+  /// Get the periodic length in the y-direction.
   bool GetPeriodicityY(double& s);
 
   /// Print all available information on the cell. 
@@ -125,7 +131,9 @@ class ComponentAnalyticField : public ComponentBase {
   /// Add a point charge.
   void AddCharge(const double x, const double y, const double z,
                  const double q);
+  /// Remove all point charges.
   void ClearCharges();
+  /// Print a list of the point charges.
   void PrintCharges() const;
 
   /** Return the cell type.
@@ -160,20 +168,30 @@ class ComponentAnalyticField : public ComponentBase {
   void EnableChargeCheck(const bool on = true) { m_chargeCheck = on; }
   void DisableChargeCheck() { EnableChargeCheck(false); }
 
+  /// Get the number of wires.
   unsigned int GetNumberOfWires() const { return m_nWires; }
+  /// Retrieve the parameters of a wire.
   bool GetWire(const unsigned int i, double& x, double& y, double& diameter,
                double& voltage, std::string& label, double& length,
                double& charge, int& ntrap) const;
 
+  /// Get the number of equipotential planes at constant x.
   unsigned int GetNumberOfPlanesX() const;
+  /// Get the number of equipotential planes at constant y.
   unsigned int GetNumberOfPlanesY() const;
+  /// Retrieve the parameters of an x plane.
   bool GetPlaneX(const unsigned int i, double& x, double& voltage,
                  std::string& label) const;
+  /// Retrieve the parameters of a y plane.
   bool GetPlaneY(const unsigned int i, double& y, double& voltage,
                  std::string& label) const;
-
+  /// Retrieve the tube parameters.
   bool GetTube(double& r, double& voltage, int& nEdges,
                std::string& label) const;
+
+  /// Calculate the electric field at a given wire position, as if the wire 
+  /// itself were not there, but with the presence of its mirror images. 
+  bool ElectricFieldAtWire(const unsigned int iw, double& ex, double& ey);
 
   enum Cell {
     A00,
@@ -244,9 +262,6 @@ class ComponentAnalyticField : public ComponentBase {
     double density;    //< Density.
   };
   std::vector<Wire> m_w;
-
-  // Mirror charges for force calculations
-  std::vector<double> cnalso;
 
   // Option for computation of dipole terms
   bool dipole;
@@ -473,6 +488,46 @@ class ComponentAnalyticField : public ComponentBase {
                    double& ex, double& ey, double& ez, double& volt,
                    const int ip, const Pixel& pixel, const bool opt) const;
 
+  // Functions for calculating the electric field at a given wire position,
+  // as if the wire itself were not there but with the presence 
+  // of its mirror images.
+  void FieldAtWireA00(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireB1X(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireB1Y(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireB2X(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireB2Y(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireC10(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireC2X(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireC2Y(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireC30(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireD10(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireD20(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+  void FieldAtWireD30(const double xpos, const double ypos, 
+                      double& ex, double& ey, 
+                      const std::vector<bool>& cnalso) const;
+ 
   // Auxiliary functions for C type cells
   double Ph2(const double xpos, const double ypos) const;
   double Ph2Lim(const double radius) const {
