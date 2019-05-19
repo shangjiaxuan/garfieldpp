@@ -65,6 +65,10 @@ class DriftLineRKF {
   /// Simulate the drift line of an ion with a given starting point.
   bool DriftIon(const double x0, const double y0, const double z0,
                 const double t0);
+  /// Simulate the drift line of an electron with a given starting point,
+  /// assuming that it has positive charge.
+  bool DriftPositron(const double x0, const double y0, const double z0,
+                     const double t0);
 
   /// Print the trajectory of the most recent drift line.
   void PrintDriftLine() const;
@@ -96,7 +100,7 @@ class DriftLineRKF {
   // Pointer to sensor.
   Sensor* m_sensor = nullptr;
 
-  enum class Particle { Electron = 0, Ion, Hole };
+  enum class Particle { Electron = 0, Ion, Hole, Positron };
   // Type of particle (of the most current drift line).
   Particle m_particle = Particle::Electron;
 

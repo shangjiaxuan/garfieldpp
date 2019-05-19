@@ -116,6 +116,14 @@ bool DriftIon(const double x0, const double y0, const double z0, const double t0
   \item[x0, y0, z0, t0] initial position and time
 \end{description}
 
+The function 
+\begin{lstlisting}
+bool DriftPositron(const double x0, const double y0, const double z0, const double t0);
+\end{lstlisting}
+computes an electron drift line, but assuming that the electron has positive charge 
+(which can be useful for determining isochrons).
+% Note that the drift velocity vector is not anti-symmetric under charge inversion is there is a non-zero E-perpendicular component of the B field.
+
 After calculating a drift line, the multiplication and loss factors 
 \begin{equation*}
   \exp\left(\int\alpha\text{d}s\right), \exp\left(-\int\eta\text{d}s\right)

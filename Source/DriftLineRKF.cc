@@ -135,6 +135,19 @@ bool DriftLineRKF::DriftElectron(const double x0, const double y0,
   return true;
 }
 
+bool DriftLineRKF::DriftPositron(const double x0, const double y0,
+                                 const double z0, const double t0) {
+
+  m_particle = Particle::Positron;
+  if (!DriftLine(x0, y0, z0, t0, Particle::Positron, m_t, m_x, m_status)) {
+    return false;
+  }
+  if (m_doSignal) {
+    ComputeSignal(Particle::Positron, m_scaleE, m_t, m_x, {});
+  }
+  return true;
+}
+ 
 bool DriftLineRKF::DriftHole(const double x0, const double y0, const double z0,
                              const double t0) {
   m_particle = Particle::Hole;
@@ -213,7 +226,8 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
   if (m_view) {
     if (particle == Particle::Ion) {
       m_view->NewIonDriftLine(1, iLine, xi, yi, zi);
-    } else if (particle == Particle::Electron) {
+    } else if (particle == Particle::Electron ||
+               particle == Particle::Positron) {
       m_view->NewElectronDriftLine(1, iLine, xi, yi, zi);
     } else if (particle == Particle::Hole) {
       m_view->NewHoleDriftLine(1, iLine, xi, yi, zi);
@@ -807,7 +821,12 @@ bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
     return medium->IonVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } else if (particle == Particle::Hole) {
     return medium->HoleVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
-  }
+  } else if (particle == Particle::Positron) {
+    const bool ok = medium->ElectronVelocity(ex, ey, ez, bx, by, bz, 
+                                             v[0], v[1], v[2]);
+    for (unsigned int i = 0; i < 3; ++i) v[i] *= -1;
+    return ok;
+  } 
   std::cerr << m_className << "::GetVelocity:\n"
             << "    Cannot retrieve drift velocity at " << PrintVec(x) << ".\n";
   return false;
@@ -825,6 +844,11 @@ bool DriftLineRKF::GetVelocity(const double ex, const double ey,
     return medium->IonVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } else if (particle == Particle::Hole) {
     return medium->HoleVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
+  } else if (particle == Particle::Positron) {
+    const bool ok = medium->ElectronVelocity(ex, ey, ez, bx, by, bz, 
+                                             v[0], v[1], v[2]);
+    for (unsigned int i = 0; i < 3; ++i) v[i] *= -1;
+    return ok; 
   }
   return false;
 }
@@ -834,7 +858,7 @@ bool DriftLineRKF::GetDiffusion(const double ex, const double ey,
                                 const double by, const double bz, 
                                 Medium* medium, const Particle particle,
                                 double& dl, double& dt) const {
-  if (particle == Particle::Electron) {
+  if (particle == Particle::Electron || particle == Particle::Positron) {
     return medium->ElectronDiffusion(ex, ey, ez, bx, by, bz, dl, dt);
   } else if (particle == Particle::Ion) {
     return medium->IonDiffusion(ex, ey, ez, bx, by, bz, dl, dt);
@@ -848,7 +872,7 @@ bool DriftLineRKF::GetAlpha(const double ex, const double ey, const double ez,
                             const double bx, const double by, const double bz,
                             Medium* medium, const Particle particle,
                             double& alpha) const {
-  if (particle == Particle::Electron) {
+  if (particle == Particle::Electron || particle == Particle::Positron) {
     return medium->ElectronTownsend(ex, ey, ez, bx, by, bz, alpha);
   } else if (particle == Particle::Hole) {
     return medium->HoleTownsend(ex, ey, ez, bx, by, bz, alpha);
@@ -1507,6 +1531,7 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
   const unsigned int nPoints = ts.size();
   if (nPoints < 2) return;
   const double q = particle == Particle::Electron ? -1 * scale : scale;
+
   // Get the drift velocity at each point.
   std::vector<std::array<double, 3> > vs;
   for (const auto& x : xs) {
