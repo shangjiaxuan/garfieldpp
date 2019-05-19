@@ -961,6 +961,76 @@ bool ComponentAnalyticField::GetTube(double& r, double& voltage, int& nEdges,
   return true;
 }
 
+bool ComponentAnalyticField::ElectricFieldAtWire(const unsigned int iw,
+                                                 double& ex, double& ey) {
+
+  //-----------------------------------------------------------------------
+  //   FFIELD - Subroutine calculating the electric field at a given wire
+  //            position, as if the wire itself were not there but with
+  //            the presence of its mirror images.
+  //   VARIABLES : IW         : wire number
+  //               EX, EY     : x- and y-component of the electric field.
+  //   (Last changed on 27/ 1/96.)
+  //-----------------------------------------------------------------------
+  ex = ey = 0.;
+  // Check the wire number.
+  if (iw >= m_nWires) {
+    std::cerr << m_className << "::ElectricFieldAtWire: Index out of range.\n";
+    return false;
+  }
+  // Set the flags appropriately.
+  std::vector<bool> cnalso(m_nWires, true);
+  cnalso[iw] = false;
+
+  // Call the appropriate function.
+  switch (m_cellType) {
+    case A00:
+      FieldAtWireA00(xpos, ypos, ex, ey, cnalso);
+      break;
+    case B1X:
+      FieldAtWireB1X(xpos, ypos, ex, ey, cnalso);
+      break;
+    case B1Y:
+      FieldAtWireB1Y(xpos, ypos, ex, ey, cnalso);
+      break;
+    case B2X:
+      FieldAtWireB2X(xpos, ypos, ex, ey, cnalso);
+      break;
+    case B2Y:
+      FieldAtWireB2Y(xpos, ypos, ex, ey, cnalso);
+      break;
+    case C10:
+      FieldAtWireC10(xpos, ypos, ex, ey, cnalso);
+      break;
+    case C2X:
+      FieldAtWireC2X(xpos, ypos, ex, ey, cnalso);
+      break;
+    case C2Y:
+      FieldAtWireC2Y(xpos, ypos, ex, ey, cnalso);
+      break;
+    case C30:
+      FieldAtWireC30(xpos, ypos, ex, ey, cnalso);
+      break;
+    case D10:
+      FieldAtWireD10(xpos, ypos, ex, ey, cnalso);
+      break;
+    case D20:
+      FieldAtWireD20(xpos, ypos, ex, ey, cnalso);
+      break;
+    case D30:
+      FieldAtWireD30(xpos, ypos, ex, ey, cnalso);
+      break;
+    default:
+      std::cerr << m_className << "::ElectricFieldAtWire:\n"
+                << "    Unknown cell type (id " << m_cellType << ")\n";
+      return false;
+      break;
+  }
+  // Correct for the equipotential planes.
+  ex -= m_corvta;
+  ey -= m_corvtb;
+}
+
 int ComponentAnalyticField::Field(const double xin, const double yin,
                                   const double zin, double& ex, double& ey,
                                   double& ez, double& volt, const bool opt) {
@@ -1205,9 +1275,6 @@ void ComponentAnalyticField::CellInit() {
   // Wires.
   m_nWires = 0;
   m_w.clear();
-
-  // Force calculation parameters
-  cnalso.clear();
 
   // Dipole settings
   dipole = false;
@@ -3639,7 +3706,7 @@ void ComponentAnalyticField::FieldC2X(const double xpos, const double ypos,
       if (opt) volt -= wire.e * log(abs(zterm1));
     }
     // Find the plane nearest to the wire.
-    double cx = m_coplax - m_sx * int(round((m_coplax - wire.x) / m_sx));
+    const double cx = m_coplax - m_sx * int(round((m_coplax - wire.x) / m_sx));
     // Mirror contribution.
     zeta =
         m_zmult * std::complex<double>(2. * cx - xpos - wire.x, ypos - wire.y);
@@ -5887,7 +5954,7 @@ void ComponentAnalyticField::WfieldWireC2X(const double xpos, const double ypos,
       if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm1));
     }
     // Find the plane nearest to the wire.
-    double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
+    const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
     // Constant terms sum
     s += real(m_sigmat[isw][i]) * (m_w[i].x - cx);
     // Mirror contribution.
@@ -6048,7 +6115,7 @@ void ComponentAnalyticField::WfieldWireC30(const double xpos, const double ypos,
       if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm1));
     }
     // Find the plane nearest to the wire.
-    double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
+    const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
     // Mirror contribution from the x plane.
     zeta = m_zmult *
            std::complex<double>(2. * cx - xpos - m_w[i].x, ypos - m_w[i].y);
@@ -6428,7 +6495,7 @@ void ComponentAnalyticField::WfieldPlaneC2X(const double xpos,
       if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm1));
     }
     // Find the plane nearest to the wire.
-    double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
+    const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
     // Constant terms sum
     s += m_qplane[iplane][i] * (m_w[i].x - cx);
     // Mirror contribution.
@@ -6590,7 +6657,7 @@ void ComponentAnalyticField::WfieldPlaneC30(const double xpos,
       if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm1));
     }
     // Find the plane nearest to the wire.
-    double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
+    const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
     // Mirror contribution from the x plane.
     zeta = m_zmult *
            std::complex<double>(2. * cx - xpos - m_w[i].x, ypos - m_w[i].y);
@@ -7101,5 +7168,648 @@ void ComponentAnalyticField::WfieldPixel(const double xpos, const double ypos,
       ez = fy;
       break;
   }
+}
+
+void ComponentAnalyticField::FieldAtWireA00(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCA00 - Subroutine performing the actual field calculations in case
+  //          only one charge and not more than 1 mirror-charge in either
+  //          x or y is present.
+  //          The potential used is 1/2*pi*eps0  log(r).
+  // (Last changed on 27/ 1/96.)
+  //-----------------------------------------------------------------------
+  
+  ex = ey = 0.; 
+  // Loop over all wires.
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    // Calculate the field in case there are no planes.
+    double exhelp = 0.;
+    double eyhelp = 0.;
+    const double xx = xpos - wire.x;
+    const double yy = ypos - wire.y;
+    if (cnalso[i]) {
+      const double r2 = xx * xx + yy * yy;
+      exhelp = xx / r2;
+      eyhelp = yy / r2;
+    }
+    // Take care of a plane at constant x.
+    double xxmirr = 0.;
+    if (m_ynplax) {
+      xxmirr = wire.x + xpos - 2 * m_coplax;
+      const double r2plan = xxmirr * xxmirr + yy * yy;
+      exhelp -= xxmirr / r2plan;
+      eyhelp -= yy / r2plan;
+    } 
+    // Take care of a plane at constant y.
+    double yymirr = 0.;
+    if (m_ynplay) {
+      yymirr = wire.y + ypos - 2 * m_coplay;
+      const double r2plan = xx * xx + yymirr * yymirr;
+      exhelp -= xx / r2plan;
+      eyhelp -= yymirr / r2plan;
+    } 
+    // Take care of pairs of planes.
+    if (m_ynplax && m_ynplay) {
+      const double r2plan = xxmirr * xxmirr + yymirr * yymirr;
+      exhelp += xxmirr / r2plan;
+      eyhelp += yymirr / r2plan;
+    } 
+    ex += wire.e * exhelp;
+    ey += wire.e * eyhelp;
+  }
+}
+ 
+void ComponentAnalyticField::FieldAtWireB1X(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCB1X - Routine calculating the potential for a row of positive
+  //          charges. The potential used is Re(Log(sin pi/s (z-z0))).
+  //-----------------------------------------------------------------------
+
+  constexpr std::complex<double> icons(0., 1.);
+  std::complex<double> ecompl;
+  ex = ey = 0.;
+  const double tx = Pi / m_sx;
+  if (m_ynplay) {
+    // With a y plane.
+    for (unsigned int i = 0; i < m_nWires; ++i) {
+      const auto& wire = m_w[i];
+      const double xx = tx * (xpos - wire.x);
+      const double yy = tx * (ypos - wire.y);
+      if (!cnalso[i]) {
+        ecompl = 0.;
+      } else if (yy > 20.) {
+        ecompl = -icons;
+      } else if (yy < -20.) {
+        ecompl = icons;
+      } else {
+        const std::complex<double> zz(xx, yy);
+        const auto expzz = exp(2. * icons * zz);
+        ecompl = icons * (expzz + 1.) / (expzz - 1.);
+      }
+      const double yymirr = tx * (ypos + wire.y - 2. * m_coplay);
+      if (yymirr > 20.) {
+        ecompl += icons;
+      } else if (yymirr < -20.) {
+        ecompl += -icons;
+      } else {
+        const std::complex<double> zzmirr(xx, yymirr);
+        const auto expzzmirr = exp(2. * icons * zzmirr);
+        ecompl += -icons * (expzzmirr + 1.) / (expzzmirr - 1.);
+      }
+      // Update the field.
+      ex += wire.e * real(ecompl);
+      ey -= wire.e * imag(ecompl);
+    }
+  } else {
+    // Without a y plane.
+    for (unsigned int i = 0; i < m_nWires; ++i) {
+      if (!cnalso[i]) continue;
+      const auto& wire = m_w[i];
+      const double xx = tx * (xpos - wire.x);
+      const double yy = tx * (ypos - wire.y);
+      if (yy > 20.) {
+        ecompl = -icons;
+      } else if (yy < -20.) {
+        ecompl = icons;
+      } else {
+        const std::complex<double> zz(xx, yy);
+        const auto expzz = exp(2. * icons * zz);
+        ecompl = icons * (expzz + 1.) / (expzz - 1.);
+      }
+      ex += wire.e * real(ecompl);
+      ey -= wire.e * imag(ecompl);
+    }
+  }
+  ex *= tx;
+  ey *= tx;
+}
+
+void ComponentAnalyticField::FieldAtWireB1Y(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCB1Y - Routine calculating the potential for a row of positive
+  //          charges. The potential used is Re(Log(sinh pi/sy(z-z0)).
+  //-----------------------------------------------------------------------
+
+  std::complex<double> ecompl;
+  ex = ey = 0.;
+  const double ty = Pi / m_sy;
+  if (m_ynplax) {
+    // With an x plane.
+    for (unsigned int i = 0; i < m_nWires; ++i) {
+      const auto& wire = m_w[i];
+      const double xx = ty * (xpos - wire.x);
+      const double yy = ty * (ypos - wire.y);
+      if (!cnalso[i]) {
+        ecompl = 0.;
+      } else if (xx > 20.) {
+        ecompl = 1.;
+      } else if (xx < -20.) {
+        ecompl = -1.;
+      } else {
+        const std::complex<double> zz(xx, yy);
+        const auto expzz = exp(2. * zz);
+        ecompl = (expzz + 1.) / (expzz - 1.);
+      }
+      const double xxmirr = ty * (xpos + wire.x - 2. * m_coplax);
+      if (xxmirr > 20.) {
+        ecompl -= 1.;
+      } else if (xxmirr < -20.) {
+        ecompl += 1.;
+      } else {
+        const std::complex<double> zzmirr(xxmirr, yy);
+        const auto expzzmirr = exp(2. * zzmirr);
+        ecompl -= (expzzmirr + 1.) / (expzzmirr - 1.);
+      }
+      ex += wire.e * real(ecompl);
+      ey -= wire.e * imag(ecompl);
+    }
+  } else {
+    // Without an x plane.
+    for (unsigned int i = 0; i < m_nWires; ++i) {
+      if (!cnalso[i]) continue;
+      const auto& wire = m_w[i];
+      const double xx = ty * (xpos - wire.x);
+      const double yy = ty * (ypos - wire.y);
+      if (xx > 20.) {
+        ecompl = 1.;
+      } else if (xx < -20.) {
+        ecompl = -1.;
+      } else {
+        const std::complex<double> zz(xx, yy);
+        const auto expzz = exp(2. * zz);
+        ecompl = (expzz + 1.) / (expzz - 1.);
+      }
+      ex += wire.e * real(ecompl);
+      ey -= wire.e * imag(ecompl);
+    }
+  }
+  ex *= ty;
+  ey *= ty;
+}
+
+void ComponentAnalyticField::FieldAtWireB2X(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCB2X - Routine calculating the potential for a row of alternating
+  //          + - charges. The potential used is re log(sin pi/sx (z-z0))
+  //-----------------------------------------------------------------------
+  constexpr std::complex<double> icons(0., 1.);
+  ex = ey = 0.;
+  const double tx = HalfPi / m_sx;
+  // Loop over all wires.
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const double xx = tx * (xpos - m_w[i].x);
+    const double yy = tx * (ypos - m_w[i].y);
+    const double xxneg = tx * (xpos - m_w[i].x - 2 * m_coplax);
+    // Calculate the field in case there are no equipotential planes.
+    std::complex<double> ecompl(0., 0.);
+    if (cnalso[i] && fabs(yy) <= 20.) {
+      const std::complex<double> zz(xx, yy);
+      const std::complex<double> zzneg(xxneg, yy);
+      ecompl = -m_b2sin[i] / (sin(zz) * sin(zzneg));
+    } else if (fabs(yy) <= 20.) {
+      const std::complex<double> zzneg(xxneg, yy);
+      const auto expzzneg = exp(2. * icons * zzneg);
+      ecompl = -icons * (expzzneg + 1.) / (expzzneg - 1.);
+    }
+    // Take care of planes at constant y.
+    if (m_ynplay) {
+      const double yymirr = tx * (ypos + m_w[i].y - 2 * m_coplay);
+      if (fabs(yymirr) <= 20.) {
+        const std::complex<double> zzmirr(xx, yymirr);
+        const std::complex<double> zznmirr(xxneg, yymirr);
+        ecompl += m_b2sin[i] / (sin(zzmirr) * sin(zznmirr));
+      }
+    }
+    ex += m_w[i].e * real(ecompl);
+    ey -= m_w[i].e * imag(ecompl);
+  }
+  ex *= tx;
+  ey *= tx;
+}
+
+void ComponentAnalyticField::FieldAtWireB2Y(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCB2Y - Routine calculating the potential for a row of alternating
+  //          + - charges. The potential used is re log(sin pi/sx (z-z0))
+  //-----------------------------------------------------------------------
+  constexpr std::complex<double> icons(0., 1.);
+  ex = ey = 0.;
+  const double ty = HalfPi / m_sy;
+// Loop over all wires.
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const double xx = ty * (xpos - m_w[i].x);
+    const double yy = ty * (ypos - m_w[i].y);
+    const double yyneg = ty * (ypos + m_w[i].y - 2 * m_coplay);
+    // Calculate the field in case there are no equipotential planes.
+    std::complex<double> ecompl(0., 0.);
+    if (cnalso[i] && fabs(xx) <= 20.) {
+      const std::complex<double> zz(xx, yy);
+      const std::complex<double> zzneg(xx, yyneg);
+      ecompl = icons * m_b2sin[i] / (sin(icons * zz) * sin(icons * zzneg));
+    } else if (fabs(xx) <= 20.) {
+      const std::complex<double> zzneg(xx, yyneg);
+      const auto expzzneg = exp(2. * zzneg);
+      ecompl = -(expzzneg + 1.) / (expzzneg - 1.);
+    }
+    // Take care of a plane at constant x.
+    if (m_ynplax) {
+      const double xxmirr = ty * (xpos + m_w[i].x - 2 * m_coplax);
+      if (fabs(xxmirr) <= 20.) {
+        const std::complex<double> zzmirr(xxmirr, yy);
+        const std::complex<double> zznmirr(xxmirr, yyneg);
+        ecompl -=
+            icons * m_b2sin[i] / (sin(icons * zzmirr) * sin(icons * zznmirr));
+      }
+    }
+    ex += m_w[i].e * real(ecompl);
+    ey -= m_w[i].e * imag(ecompl);
+  }
+  ex *= ty;
+  ey *= ty;
+}
+
+void ComponentAnalyticField::FieldAtWireC10(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCC10 - Routine returning the potential and electric field. It
+  //          calls the routines PH2 and E2SUM written by G.A.Erskine.
+  //-----------------------------------------------------------------------
+  constexpr std::complex<double> icons(0., 1.);
+  std::complex<double> wsum(0., 0.);
+  // Loop over the wires.
+  for (unsigned int j = 0; j < m_nWires; ++j) {
+    if (!cnalso[j]) continue;
+    const auto& wire = m_w[j];
+    std::complex<double> zeta = m_zmult * std::complex<double>(xpos - wire.x, 
+                                                               ypos - wire.y);
+    if (imag(zeta) > 15.) {
+      wsum -= wire.e * icons;
+    } else if (imag(zeta) < -15.) {
+      wsum += wire.e * icons;
+    } else {
+      const std::complex<double> zsin = sin(zeta);
+      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
+      std::complex<double> zu = -m_p1 - zcof * m_p2;
+      std::complex<double> zunew = 1. - zcof * zu - m_p2;
+      const std::complex<double> zterm1 = (zunew + zu) * zsin;
+      zu = -3. * m_p1 - zcof * 5. * m_p2;
+      zunew = 1. - zcof * zu - 5. * m_p2;
+      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
+      wsum += wire.e * (zterm2 / zterm1);
+    }
+  }
+  ex = -real(-m_zmult * wsum);
+  ey = imag(-m_zmult * wsum);
+  if (m_mode == 0) ex -= m_c1;
+  if (m_mode == 1) ey -= m_c1;
+}
+
+void ComponentAnalyticField::FieldAtWireC2X(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCC2X - Routine returning the potential and electric field in a
+  //          configuration with 2 x planes and y periodicity.
+  //-----------------------------------------------------------------------
+  constexpr std::complex<double> icons(0., 1.);
+  std::complex<double> zeta;
+  // Initial values.
+  std::complex<double> wsum1 = 0.;
+  std::complex<double> wsum2 = 0.;
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    if (cnalso[i]) {
+      zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+      if (imag(zeta) > 15.) {
+        wsum1 -= wire.e * icons;
+      } else if (imag(zeta) < -15.) {
+        wsum1 += wire.e * icons;
+      } else {
+        const std::complex<double> zsin = sin(zeta);
+        const std::complex<double> zcof = 4. * zsin * zsin - 2.;
+        std::complex<double> zu = -m_p1 - zcof * m_p2;
+        std::complex<double> zunew = 1. - zcof * zu - m_p2;
+        const std::complex<double> zterm1 = (zunew + zu) * zsin;
+        zu = -3. * m_p1 - zcof * 5. * m_p2;
+        zunew = 1. - zcof * zu - 5. * m_p2;
+        const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
+        wsum1 += wire.e * (zterm2 / zterm1);
+      }
+    }
+    // Find the plane nearest to the wire.
+    const double cx = m_coplax - m_sx * int(round((m_coplax - wire.x) / m_sx));
+    // Mirror contribution.
+    zeta =
+        m_zmult * std::complex<double>(2. * cx - xpos - wire.x, ypos - wire.y);
+    if (imag(zeta) > 15.) {
+      wsum2 -= wire.e * icons;
+    } else if (imag(zeta) < -15.) {
+      wsum2 += wire.e * icons;
+    } else {
+      const std::complex<double> zsin = sin(zeta);
+      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
+      std::complex<double> zu = -m_p1 - zcof * m_p2;
+      std::complex<double> zunew = 1. - zcof * zu - m_p2;
+      const std::complex<double> zterm1 = (zunew + zu) * zsin;
+      zu = -3. * m_p1 - zcof * 5. * m_p2;
+      zunew = 1. - zcof * zu - 5. * m_p2;
+      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
+      wsum2 += wire.e * (zterm2 / zterm1);
+    }
+  }
+  // Convert the two contributions to a real field.
+  ex = real(m_zmult * (wsum1 + wsum2));
+  ey = -imag(m_zmult * (wsum1 - wsum2));
+  // Constant correction terms.
+  if (m_mode == 0) ex -= m_c1;
+}
+
+void ComponentAnalyticField::FieldAtWireC2Y(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCC2Y - Routine returning the potential and electric field in a
+  //          configuration with 2 y planes and x periodicity.
+  //-----------------------------------------------------------------------
+  const std::complex<double> icons(0., 1.);
+  std::complex<double> zeta;
+  // Initial values.
+  std::complex<double> wsum1 = 0.;
+  std::complex<double> wsum2 = 0.;
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    if (cnalso[i]) {
+      // Compute the direct contribution.
+      zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+      if (imag(zeta) > 15.) {
+        wsum1 -= wire.e * icons;
+      } else if (imag(zeta) < -15.) {
+        wsum1 += wire.e * icons;
+      } else {
+        const std::complex<double> zsin = sin(zeta);
+        const std::complex<double> zcof = 4. * zsin * zsin - 2.;
+        std::complex<double> zu = -m_p1 - zcof * m_p2;
+        std::complex<double> zunew = 1. - zcof * zu - m_p2;
+        const std::complex<double> zterm1 = (zunew + zu) * zsin;
+        zu = -3. * m_p1 - zcof * 5. * m_p2;
+        zunew = 1. - zcof * zu - 5. * m_p2;
+        const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
+        wsum1 += wire.e * (zterm2 / zterm1);
+      }
+    }
+    // Find the plane nearest to the wire.
+    const double cy = m_coplay - m_sy * int(round((m_coplay - wire.y) / m_sy));
+    // Mirror contribution from the y plane.
+    zeta =
+        m_zmult * std::complex<double>(xpos - wire.x, 2 * cy - ypos - wire.y);
+    if (imag(zeta) > 15.) {
+      wsum2 -= wire.e * icons;
+    } else if (imag(zeta) < -15.) {
+      wsum2 += wire.e * icons;
+    } else {
+      const std::complex<double> zsin = sin(zeta);
+      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
+      std::complex<double> zu = -m_p1 - zcof * m_p2;
+      std::complex<double> zunew = 1. - zcof * zu - m_p2;
+      const std::complex<double> zterm1 = (zunew + zu) * zsin;
+      zu = -3. * m_p1 - zcof * 5. * m_p2;
+      zunew = 1. - zcof * zu - 5. * m_p2;
+      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
+      wsum2 += wire.e * (zterm2 / zterm1);
+    }
+  }
+  // Convert the two contributions to a real field.
+  ex = real(m_zmult * (wsum1 - wsum2));
+  ey = -imag(m_zmult * (wsum1 + wsum2));
+  // Constant correction terms.
+  if (m_mode == 1) ey -= m_c1;
+}
+
+void ComponentAnalyticField::FieldAtWireC30(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCC30 - Routine returning the potential and electric field in a
+  //          configuration with 2 y and 2 x planes.
+  //-----------------------------------------------------------------------
+  constexpr std::complex<double> icons(0., 1.);
+  std::complex<double> zeta;
+  // Initial values.
+  std::complex<double> wsum1 = 0.;
+  std::complex<double> wsum2 = 0.;
+  std::complex<double> wsum3 = 0.;
+  std::complex<double> wsum4 = 0.;
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    if (cnalso[i]) {
+      zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+      if (imag(zeta) > 15.) {
+        wsum1 -= wire.e * icons;
+      } else if (imag(zeta) < -15.) {
+        wsum1 += wire.e * icons;
+      } else {
+        const std::complex<double> zsin = sin(zeta);
+        const std::complex<double> zcof = 4. * zsin * zsin - 2.;
+        std::complex<double> zu = -m_p1 - zcof * m_p2;
+        std::complex<double> zunew = 1. - zcof * zu - m_p2;
+        const std::complex<double> zterm1 = (zunew + zu) * zsin;
+        zu = -3. * m_p1 - zcof * 5. * m_p2;
+        zunew = 1. - zcof * zu - 5. * m_p2;
+        const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
+        wsum1 += wire.e * (zterm2 / zterm1);
+      }
+    }
+    // Find the plane nearest to the wire.
+    const double cx = m_coplax - m_sx * int(round((m_coplax - wire.x) / m_sx));
+    // Mirror contribution from the x plane.
+    zeta =
+        m_zmult * std::complex<double>(2. * cx - xpos - wire.x, ypos - wire.y);
+    if (imag(zeta) > 15.) {
+      wsum2 -= wire.e * icons;
+    } else if (imag(zeta) < -15.) {
+      wsum2 += wire.e * icons;
+    } else {
+      const std::complex<double> zsin = sin(zeta);
+      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
+      std::complex<double> zu = -m_p1 - zcof * m_p2;
+      std::complex<double> zunew = 1. - zcof * zu - m_p2;
+      const std::complex<double> zterm1 = (zunew + zu) * zsin;
+      zu = -3. * m_p1 - zcof * 5. * m_p2;
+      zunew = 1. - zcof * zu - 5. * m_p2;
+      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
+      wsum2 += wire.e * (zterm2 / zterm1);
+    }
+    // Find the plane nearest to the wire.
+    const double cy = m_coplay - m_sy * int(round((m_coplay - wire.y) / m_sy));
+    // Mirror contribution from the x plane.
+    zeta =
+        m_zmult * std::complex<double>(xpos - wire.x, 2. * cy - ypos - wire.y);
+    if (imag(zeta) > 15.) {
+      wsum3 -= wire.e * icons;
+    } else if (imag(zeta) < -15.) {
+      wsum3 += wire.e * icons;
+    } else {
+      const std::complex<double> zsin = sin(zeta);
+      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
+      std::complex<double> zu = -m_p1 - zcof * m_p2;
+      std::complex<double> zunew = 1. - zcof * zu - m_p2;
+      const std::complex<double> zterm1 = (zunew + zu) * zsin;
+      zu = -3. * m_p1 - zcof * 5. * m_p2;
+      zunew = 1. - zcof * zu - 5. * m_p2;
+      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
+      wsum3 += wire.e * (zterm2 / zterm1);
+    }
+    // Mirror contribution from both the x and the y plane.
+    zeta = m_zmult * std::complex<double>(2. * cx - xpos - wire.x,
+                                          2. * cy - ypos - wire.y);
+    if (imag(zeta) > 15.) {
+      wsum4 -= wire.e * icons;
+    } else if (imag(zeta) < -15.) {
+      wsum4 += wire.e * icons;
+    } else {
+      const std::complex<double> zsin = sin(zeta);
+      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
+      std::complex<double> zu = -m_p1 - zcof * m_p2;
+      std::complex<double> zunew = 1. - zcof * zu - m_p2;
+      const std::complex<double> zterm1 = (zunew + zu) * zsin;
+      zu = -3. * m_p1 - zcof * 5. * m_p2;
+      zunew = 1. - zcof * zu - 5. * m_p2;
+      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
+      wsum4 += wire.e * (zterm2 / zterm1);
+    }
+  }
+  // Convert the two contributions to a real field.
+  ex = real(m_zmult * (wsum1 + wsum2 - wsum3 - wsum4));
+  ey = -imag(m_zmult * (wsum1 - wsum2 + wsum3 - wsum4));
+}
+
+void ComponentAnalyticField::FieldAtWireD10(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCD10 - Subroutine performing the actual field calculations for a
+  //          cell which has a one circular plane and some wires.
+  //-----------------------------------------------------------------------
+  ex = ey = 0.;
+  // Set the complex position coordinates.
+  const std::complex<double> zpos(xpos, ypos);
+  // Loop over all wires.
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    // Set the complex version of the wire-coordinate for simplicity.
+    const std::complex<double> zi(wire.x, wire.y);
+    // First the case that the wire has to be taken fully.
+    if (cnalso[i]) {
+      const std::complex<double> wi =
+        1. / conj(zpos - zi) + zi / (m_cotube2 - conj(zpos) * zi);
+      ex += wire.e * real(wi);
+      ey += wire.e * imag(wi);
+    } else {
+      const std::complex<double> wi = zi / (m_cotube2 - conj(zpos) * zi);
+      ex += wire.e * real(wi);
+      ey += wire.e * imag(wi);
+    }
+  } 
+}
+
+void ComponentAnalyticField::FieldAtWireD20(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+
+  //-----------------------------------------------------------------------
+  // FFCD20 - Subroutine performing the actual field calculations for a
+  //          cell which has a tube and phi periodicity.
+  //-----------------------------------------------------------------------
+  ex = ey = 0.;
+  // Set the complex position coordinates.
+  const std::complex<double> zpos(xpos, ypos);
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    // Set the complex version of the wire-coordinate for simplicity.
+    const std::complex<double> zi(wire.x, wire.y);
+    if (cnalso[i]) {
+      // Case of the wire which is not in the centre.
+      if (std::abs(zi) > 0.5 * wire.d) {
+        const std::complex<double> wi =
+            double(m_mtube) * pow(conj(zpos), m_mtube - 1) *
+            (1. / conj(pow(zpos, m_mtube) - pow(zi, m_mtube)) +
+             pow(zi, m_mtube) /
+                 (pow(m_cotube, 2 * m_mtube) - pow(conj(zpos) * zi, m_mtube)));
+        ex += wire.e * real(wi);
+        ey += wire.e * imag(wi);
+      } else {
+        const std::complex<double> wi =
+            1. / conj(zpos - zi) + zi / (m_cotube2 - conj(zpos) * zi);
+        ex += wire.e * real(wi);
+        ey += wire.e * imag(wi);
+      }
+    } else {
+      if (abs(zi) > 0.5 * wire.d) {
+        const std::complex<double> wi =
+            double(m_mtube) * pow(conj(zpos), m_mtube - 1) *
+            (pow(zi, m_mtube) / (pow(m_cotube, 2 * m_mtube) - 
+             pow(conj(zpos) * zi, m_mtube)));
+        ex += wire.e * real(wi);
+        ey += wire.e * imag(wi);
+      } else {
+        const std::complex<double> wi = zi / (m_cotube2 - conj(zpos) * zi);
+        ex += wire.e * real(wi);
+        ey += wire.e * imag(wi);
+      }
+    }
+  }
+}
+
+void ComponentAnalyticField::FieldAtWireD30(
+    const double xpos, const double ypos, double& ex, double& ey, 
+    const std::vector<bool>& cnalso) const {
+  //-----------------------------------------------------------------------
+  // FFCD30 - Subroutine performing the actual field calculations for a
+  //          cell which has a polygon as tube and some wires.
+  //-----------------------------------------------------------------------
+  ex = ey = 0.;
+  // Get the mapping of the position.
+  std::complex<double> wpos, wdpos;
+  ConformalMap(std::complex<double>(xpos, ypos) / m_cotube, wpos, wdpos);
+  // Loop over all wires.
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    if (cnalso[i]) {
+      // Full contribution.
+      const std::complex<double> whelp = wdpos * (1. - pow(abs(wmap[i]), 2)) /
+        ((wpos - wmap[i]) * (1. - conj(wmap[i]) * wpos));
+      ex += m_w[i].e * real(whelp);
+      ey -= m_w[i].e * imag(whelp);
+    } else {
+      // Mirror charges only.
+      const std::complex<double> whelp = wdpos * conj(wmap[i]) /
+        (1. - conj(wmap[i]) * wpos);
+      ex += m_w[i].e * real(whelp);
+      ey -= m_w[i].e * imag(whelp);
+    }
+  }
+  ex /= m_cotube;
+  ey /= m_cotube;
 }
 }
