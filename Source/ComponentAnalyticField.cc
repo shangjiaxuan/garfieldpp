@@ -982,6 +982,8 @@ bool ComponentAnalyticField::ElectricFieldAtWire(const unsigned int iw,
   std::vector<bool> cnalso(m_nWires, true);
   cnalso[iw] = false;
 
+  const double xpos = m_w[iw].x;
+  const double ypos = m_w[iw].y;
   // Call the appropriate function.
   switch (m_cellType) {
     case A00:
@@ -1029,6 +1031,7 @@ bool ComponentAnalyticField::ElectricFieldAtWire(const unsigned int iw,
   // Correct for the equipotential planes.
   ex -= m_corvta;
   ey -= m_corvtb;
+  return true;
 }
 
 int ComponentAnalyticField::Field(const double xin, const double yin,
