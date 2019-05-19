@@ -8,6 +8,24 @@
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Numerics.hh"
 
+namespace {
+
+std::pair<std::complex<double>, std::complex<double> > Th1(
+    const std::complex<double>& zeta, 
+    const double p1, const double p2) {
+
+  const std::complex<double> zsin = sin(zeta);
+  const std::complex<double> zcof = 4. * zsin * zsin - 2.;
+  std::complex<double> zu = -p1 - zcof * p2;
+  std::complex<double> zunew = 1. - zcof * zu - p2;
+  const std::complex<double> zterm1 = (zunew + zu) * zsin;
+  zu = -3. * p1 - zcof * 5. * p2;
+  zunew = 1. - zcof * zu - 5. * p2;
+  const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
+  return std::make_pair(std::move(zterm1), std::move(zterm2));
+}
+}
+
 namespace Garfield {
 
 ComponentAnalyticField::ComponentAnalyticField() : ComponentBase() {
@@ -3300,25 +3318,15 @@ void ComponentAnalyticField::E2Sum(const double xpos, const double ypos,
   constexpr std::complex<double> icons(0., 1.);
 
   std::complex<double> wsum = 0.;
-  std::complex<double> zsin, zcof, zu, zunew;
-  std::complex<double> zterm1, zterm2, zeta;
-
   for (const auto& wire : m_w) {
-    zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+    const auto zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
     if (imag(zeta) > 15.) {
       wsum -= wire.e * icons;
     } else if (imag(zeta) < -15.) {
       wsum += wire.e * icons;
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum += wire.e * (zterm2 / zterm1);
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum += wire.e * (zterm.second / zterm.first);
     }
   }
   ex = -real(-m_zmult * wsum);
@@ -3396,7 +3404,7 @@ void ComponentAnalyticField::FieldB1X(const double xpos, const double ypos,
   //               ECOMPL     : EX + I*EY                   ; I**2=-1
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons = std::complex<double>(0., 1.);
+  constexpr std::complex<double> icons(0., 1.);
 
   std::complex<double> ecompl;
 
@@ -3676,10 +3684,7 @@ void ComponentAnalyticField::FieldC2X(const double xpos, const double ypos,
   //   VARIABLES : see the writeup
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons(0., 1.);
-
-  std::complex<double> zsin, zcof, zu, zunew;
-  std::complex<double> zterm1, zterm2, zeta;
+  constexpr std::complex<double> icons(0., 1.);
 
   // Initial values.
   std::complex<double> wsum1 = 0.;
@@ -3689,7 +3694,7 @@ void ComponentAnalyticField::FieldC2X(const double xpos, const double ypos,
   // Wire loop.
   for (const auto& wire : m_w) {
     // Compute the direct contribution.
-    zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+    auto zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
     if (imag(zeta) > 15.) {
       wsum1 -= wire.e * icons;
       if (opt) volt -= wire.e * (fabs(imag(zeta)) - CLog2);
@@ -3697,16 +3702,9 @@ void ComponentAnalyticField::FieldC2X(const double xpos, const double ypos,
       wsum1 += wire.e * icons;
       if (opt) volt -= wire.e * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum1 += wire.e * (zterm2 / zterm1);
-      if (opt) volt -= wire.e * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum1 += wire.e * (zterm.second / zterm.first);
+      if (opt) volt -= wire.e * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     const double cx = m_coplax - m_sx * int(round((m_coplax - wire.x) / m_sx));
@@ -3720,16 +3718,9 @@ void ComponentAnalyticField::FieldC2X(const double xpos, const double ypos,
       wsum2 += wire.e * icons;
       if (opt) volt += wire.e * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += wire.e * (zterm2 / zterm1);
-      if (opt) volt += wire.e * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += wire.e * (zterm.second / zterm.first);
+      if (opt) volt += wire.e * log(abs(zterm.first));
     }
     // Correct the voltage, if needed (MODE).
     if (opt && m_mode == 0) {
@@ -3752,10 +3743,7 @@ void ComponentAnalyticField::FieldC2Y(const double xpos, const double ypos,
   //   VARIABLES : see the writeup
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons(0., 1.);
-
-  std::complex<double> zsin, zcof, zu, zunew;
-  std::complex<double> zterm1, zterm2, zeta;
+  constexpr std::complex<double> icons(0., 1.);
 
   // Initial values.
   volt = 0.;
@@ -3765,7 +3753,7 @@ void ComponentAnalyticField::FieldC2Y(const double xpos, const double ypos,
   // Wire loop.
   for (const auto& wire : m_w) {
     // Compute the direct contribution.
-    zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+    auto zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
     if (imag(zeta) > 15.) {
       wsum1 -= wire.e * icons;
       if (opt) volt -= wire.e * (fabs(imag(zeta)) - CLog2);
@@ -3773,16 +3761,9 @@ void ComponentAnalyticField::FieldC2Y(const double xpos, const double ypos,
       wsum1 += wire.e * icons;
       if (opt) volt -= wire.e * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum1 += wire.e * (zterm2 / zterm1);
-      if (opt) volt -= wire.e * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum1 += wire.e * (zterm.second / zterm.first);
+      if (opt) volt -= wire.e * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     const double cy = m_coplay - m_sy * int(round((m_coplay - wire.y) / m_sy));
@@ -3796,16 +3777,9 @@ void ComponentAnalyticField::FieldC2Y(const double xpos, const double ypos,
       wsum2 += wire.e * icons;
       if (opt) volt += wire.e * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += wire.e * (zterm2 / zterm1);
-      if (opt) volt += wire.e * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += wire.e * (zterm.second / zterm.first);
+      if (opt) volt += wire.e * log(abs(zterm.first));
     }
     // Correct the voltage, if needed (MODE).
     if (opt && m_mode == 1) {
@@ -3828,10 +3802,7 @@ void ComponentAnalyticField::FieldC30(const double xpos, const double ypos,
   //   VARIABLES : see the writeup
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons(0., 1.);
-
-  std::complex<double> zsin, zcof, zu, zunew;
-  std::complex<double> zterm1, zterm2, zeta;
+  constexpr std::complex<double> icons(0., 1.);
 
   // Initial values.
   std::complex<double> wsum1 = 0.;
@@ -3843,7 +3814,7 @@ void ComponentAnalyticField::FieldC30(const double xpos, const double ypos,
   // Wire loop.
   for (const auto& wire : m_w) {
     // Compute the direct contribution.
-    zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+    auto zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
     if (imag(zeta) > 15.) {
       wsum1 -= wire.e * icons;
       if (opt) volt -= wire.e * (fabs(imag(zeta)) - CLog2);
@@ -3851,16 +3822,9 @@ void ComponentAnalyticField::FieldC30(const double xpos, const double ypos,
       wsum1 += wire.e * icons;
       if (opt) volt -= wire.e * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum1 += wire.e * (zterm2 / zterm1);
-      if (opt) volt -= wire.e * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum1 += wire.e * (zterm.second / zterm.first);
+      if (opt) volt -= wire.e * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     const double cx = m_coplax - m_sx * int(round((m_coplax - wire.x) / m_sx));
@@ -3874,16 +3838,9 @@ void ComponentAnalyticField::FieldC30(const double xpos, const double ypos,
       wsum2 += wire.e * icons;
       if (opt) volt += wire.e * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += wire.e * (zterm2 / zterm1);
-      if (opt) volt += wire.e * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += wire.e * (zterm.second / zterm.first);
+      if (opt) volt += wire.e * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     const double cy = m_coplay - m_sy * int(round((m_coplay - wire.y) / m_sy));
@@ -3897,16 +3854,9 @@ void ComponentAnalyticField::FieldC30(const double xpos, const double ypos,
       wsum3 += wire.e * icons;
       if (opt) volt += wire.e * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum3 += wire.e * (zterm2 / zterm1);
-      if (opt) volt += wire.e * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum3 += wire.e * (zterm.second / zterm.first);
+      if (opt) volt += wire.e * log(abs(zterm.first));
     }
     // Mirror contribution from both the x and the y plane.
     zeta = m_zmult * std::complex<double>(2. * cx - xpos - wire.x,
@@ -3918,16 +3868,9 @@ void ComponentAnalyticField::FieldC30(const double xpos, const double ypos,
       wsum4 += wire.e * icons;
       if (opt) volt -= wire.e * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum4 += wire.e * (zterm2 / zterm1);
-      if (opt) volt -= wire.e * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum4 += wire.e * (zterm.second / zterm.first);
+      if (opt) volt -= wire.e * log(abs(zterm.first));
     }
   }
   // Convert the two contributions to a real field.
@@ -5861,7 +5804,7 @@ void ComponentAnalyticField::WfieldWireB2Y(const double xpos, const double ypos,
   //   (Last changed on 20/ 2/90.)
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons = std::complex<double>(0., 1.);
+  constexpr std::complex<double> icons(0., 1.);
 
   // Initialise the electric field and potential.
   ex = ey = volt = 0.;
@@ -5925,8 +5868,7 @@ void ComponentAnalyticField::WfieldWireC2X(const double xpos, const double ypos,
   //   (Last changed on 12/10/06.)
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons = std::complex<double>(0., 1.);
-  std::complex<double> zsin, zcof, zu, zunew, zterm1, zterm2, zeta;
+  constexpr std::complex<double> icons(0., 1.);
 
   // Initial values.
   std::complex<double> wsum1 = 0.;
@@ -5937,7 +5879,7 @@ void ComponentAnalyticField::WfieldWireC2X(const double xpos, const double ypos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > 15.) {
       wsum1 -= real(m_sigmat[isw][i]) * icons;
       if (opt) volt -= real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
@@ -5945,16 +5887,9 @@ void ComponentAnalyticField::WfieldWireC2X(const double xpos, const double ypos,
       wsum1 += real(m_sigmat[isw][i]) * icons;
       if (opt) volt -= real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum1 += real(m_sigmat[isw][i]) * (zterm2 / zterm1);
-      if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum1 += real(m_sigmat[isw][i]) * (zterm.second / zterm.first);
+      if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
@@ -5970,16 +5905,9 @@ void ComponentAnalyticField::WfieldWireC2X(const double xpos, const double ypos,
       wsum2 += real(m_sigmat[isw][i]) * icons;
       if (opt) volt += real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += real(m_sigmat[isw][i]) * (zterm2 / zterm1);
-      if (opt) volt += real(m_sigmat[isw][i]) * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += real(m_sigmat[isw][i]) * (zterm.second / zterm.first);
+      if (opt) volt += real(m_sigmat[isw][i]) * log(abs(zterm.first));
     }
     // Correct the voltage, if needed (MODE).
     if (opt && m_mode == 0) {
@@ -6005,8 +5933,7 @@ void ComponentAnalyticField::WfieldWireC2Y(const double xpos, const double ypos,
   //   (Last changed on 12/10/06.)
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons = std::complex<double>(0., 1.);
-  std::complex<double> zsin, zcof, zu, zunew, zterm1, zterm2, zeta;
+  constexpr std::complex<double> icons(0., 1.);
 
   // Initial values.
   std::complex<double> wsum1 = 0.;
@@ -6017,7 +5944,7 @@ void ComponentAnalyticField::WfieldWireC2Y(const double xpos, const double ypos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > +15.) {
       wsum1 -= real(m_sigmat[isw][i]) * icons;
       if (opt) volt -= real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
@@ -6025,16 +5952,9 @@ void ComponentAnalyticField::WfieldWireC2Y(const double xpos, const double ypos,
       wsum1 += real(m_sigmat[isw][i]) * icons;
       if (opt) volt -= real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum1 += real(m_sigmat[isw][i]) * (zterm2 / zterm1);
-      if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum1 += real(m_sigmat[isw][i]) * (zterm.second / zterm.first);
+      if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     double cy = m_coplay - m_sy * int(round((m_coplay - m_w[i].y) / m_sy));
@@ -6050,16 +5970,9 @@ void ComponentAnalyticField::WfieldWireC2Y(const double xpos, const double ypos,
       wsum2 += real(m_sigmat[isw][i]) * icons;
       if (opt) volt += real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += real(m_sigmat[isw][i]) * (zterm2 / zterm1);
-      if (opt) volt += real(m_sigmat[isw][i]) * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += real(m_sigmat[isw][i]) * (zterm.second / zterm.first);
+      if (opt) volt += real(m_sigmat[isw][i]) * log(abs(zterm.first));
     }
     // Correct the voltage, if needed (MODE).
     if (opt && m_mode == 1) {
@@ -6085,8 +5998,7 @@ void ComponentAnalyticField::WfieldWireC30(const double xpos, const double ypos,
   //   (Last changed on 11/11/97.)
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons = std::complex<double>(0., 1.);
-  std::complex<double> zsin, zcof, zu, zunew, zterm1, zterm2, zeta;
+  constexpr std::complex<double> icons(0., 1.);
 
   // Initial values.
   std::complex<double> wsum1 = 0.;
@@ -6098,7 +6010,7 @@ void ComponentAnalyticField::WfieldWireC30(const double xpos, const double ypos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > +15.) {
       wsum1 -= real(m_sigmat[isw][i]) * icons;
       if (opt) volt -= real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
@@ -6106,16 +6018,9 @@ void ComponentAnalyticField::WfieldWireC30(const double xpos, const double ypos,
       wsum1 += real(m_sigmat[isw][i]) * icons;
       if (opt) volt -= real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum1 += real(m_sigmat[isw][i]) * (zterm2 / zterm1);
-      if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum1 += real(m_sigmat[isw][i]) * (zterm.second / zterm.first);
+      if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
@@ -6129,16 +6034,9 @@ void ComponentAnalyticField::WfieldWireC30(const double xpos, const double ypos,
       wsum2 += real(m_sigmat[isw][i]) * icons;
       if (opt) volt += real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += real(m_sigmat[isw][i]) * (zterm2 / zterm1);
-      if (opt) volt += real(m_sigmat[isw][i]) * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += real(m_sigmat[isw][i]) * (zterm.second / zterm.first);
+      if (opt) volt += real(m_sigmat[isw][i]) * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     double cy = m_coplay - m_sy * int(round((m_coplay - m_w[i].y) / m_sy));
@@ -6152,16 +6050,9 @@ void ComponentAnalyticField::WfieldWireC30(const double xpos, const double ypos,
       wsum3 += real(m_sigmat[isw][i]) * icons;
       if (opt) volt += real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum3 += real(m_sigmat[isw][i]) * (zterm2 / zterm1);
-      if (opt) volt += real(m_sigmat[isw][i]) * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum3 += real(m_sigmat[isw][i]) * (zterm.second / zterm.first);
+      if (opt) volt += real(m_sigmat[isw][i]) * log(abs(zterm.first));
     }
     // Mirror contribution from both the x and the y plane.
     zeta = m_zmult * std::complex<double>(2. * cx - xpos - m_w[i].x,
@@ -6173,16 +6064,9 @@ void ComponentAnalyticField::WfieldWireC30(const double xpos, const double ypos,
       wsum4 += real(m_sigmat[isw][i]) * icons;
       if (opt) volt -= real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum4 += real(m_sigmat[isw][i]) * (zterm2 / zterm1);
-      if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum4 += real(m_sigmat[isw][i]) * (zterm.second / zterm.first);
+      if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm.first));
     }
   }
   // Convert the two contributions to a real field.
@@ -6402,7 +6286,7 @@ void ComponentAnalyticField::WfieldPlaneB2Y(const double xpos,
   //   (Last changed on 12/11/98.)
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons = std::complex<double>(0., 1.);
+  constexpr std::complex<double> icons(0., 1.);
 
   // Initialise ex, ey and volt.
   ex = ey = volt = 0.;
@@ -6466,9 +6350,7 @@ void ComponentAnalyticField::WfieldPlaneC2X(const double xpos,
   //   (Last changed on 12/10/06.)
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons = std::complex<double>(0., 1.);
-
-  std::complex<double> zsin, zcof, zu, zunew, zterm1, zterm2, zeta;
+  constexpr std::complex<double> icons(0., 1.);
   // Initial values.
   std::complex<double> wsum1 = 0.;
   std::complex<double> wsum2 = 0.;
@@ -6478,7 +6360,7 @@ void ComponentAnalyticField::WfieldPlaneC2X(const double xpos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > +15.) {
       wsum1 -= m_qplane[iplane][i] * icons;
       if (opt) volt -= m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
@@ -6486,16 +6368,9 @@ void ComponentAnalyticField::WfieldPlaneC2X(const double xpos,
       wsum1 += m_qplane[iplane][i] * icons;
       if (opt) volt -= m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum1 += m_qplane[iplane][i] * (zterm2 / zterm1);
-      if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum1 += m_qplane[iplane][i] * (zterm.second / zterm.first);
+      if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
@@ -6511,16 +6386,9 @@ void ComponentAnalyticField::WfieldPlaneC2X(const double xpos,
       wsum2 += m_qplane[iplane][i] * icons;
       if (opt) volt += m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += m_qplane[iplane][i] * (zterm2 / zterm1);
-      if (opt) volt += m_qplane[iplane][i] * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += m_qplane[iplane][i] * (zterm.second / zterm.first);
+      if (opt) volt += m_qplane[iplane][i] * log(abs(zterm.first));
     }
     if (opt && m_mode == 0) {
       volt -= TwoPi * m_qplane[iplane][i] * (xpos - cx) * (m_w[i].x - cx) /
@@ -6546,9 +6414,8 @@ void ComponentAnalyticField::WfieldPlaneC2Y(const double xpos,
   //   (Last changed on 12/10/06.)
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons = std::complex<double>(0., 1.);
+  constexpr std::complex<double> icons(0., 1.);
 
-  std::complex<double> zsin, zcof, zu, zunew, zterm1, zterm2, zeta;
   // Initial values.
   std::complex<double> wsum1 = 0.;
   std::complex<double> wsum2 = 0.;
@@ -6558,7 +6425,7 @@ void ComponentAnalyticField::WfieldPlaneC2Y(const double xpos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > +15.) {
       wsum1 -= m_qplane[iplane][i] * icons;
       if (opt) volt -= m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
@@ -6566,16 +6433,9 @@ void ComponentAnalyticField::WfieldPlaneC2Y(const double xpos,
       wsum1 += m_qplane[iplane][i] * icons;
       if (opt) volt -= m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum1 += m_qplane[iplane][i] * (zterm2 / zterm1);
-      if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum1 += m_qplane[iplane][i] * (zterm.second / zterm.first);
+      if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     double cy = m_coplay - m_sy * int(round((m_coplay - m_w[i].y) / m_sy));
@@ -6591,16 +6451,9 @@ void ComponentAnalyticField::WfieldPlaneC2Y(const double xpos,
       wsum2 += m_qplane[iplane][i] * icons;
       if (opt) volt += m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += m_qplane[iplane][i] * (zterm2 / zterm1);
-      if (opt) volt += m_qplane[iplane][i] * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += m_qplane[iplane][i] * (zterm.second / zterm.first);
+      if (opt) volt += m_qplane[iplane][i] * log(abs(zterm.first));
     }
     // Correct the voltage, if needed (MODE).
     if (opt && m_mode == 1) {
@@ -6627,9 +6480,8 @@ void ComponentAnalyticField::WfieldPlaneC30(const double xpos,
   //   (Last changed on  9/11/98.)
   //-----------------------------------------------------------------------
 
-  const std::complex<double> icons = std::complex<double>(0., 1.);
+  constexpr std::complex<double> icons(0., 1.);
 
-  std::complex<double> zsin, zcof, zu, zunew, zterm1, zterm2, zeta;
   // Initial values.
   std::complex<double> wsum1 = 0.;
   std::complex<double> wsum2 = 0.;
@@ -6640,7 +6492,7 @@ void ComponentAnalyticField::WfieldPlaneC30(const double xpos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > +15.) {
       wsum1 -= m_qplane[iplane][i] * icons;
       if (opt) volt -= m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
@@ -6648,16 +6500,9 @@ void ComponentAnalyticField::WfieldPlaneC30(const double xpos,
       wsum1 += m_qplane[iplane][i] * icons;
       if (opt) volt -= m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum1 += m_qplane[iplane][i] * zterm2 / zterm1;
-      if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum1 += m_qplane[iplane][i] * zterm.second / zterm.first;
+      if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
@@ -6671,16 +6516,9 @@ void ComponentAnalyticField::WfieldPlaneC30(const double xpos,
       wsum2 += m_qplane[iplane][i] * icons;
       if (opt) volt += m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += m_qplane[iplane][i] * zterm2 / zterm1;
-      if (opt) volt += m_qplane[iplane][i] * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += m_qplane[iplane][i] * zterm.second / zterm.first;
+      if (opt) volt += m_qplane[iplane][i] * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
     double cy = m_coplay - m_sy * int(round((m_coplay - m_w[i].y) / m_sy));
@@ -6694,16 +6532,9 @@ void ComponentAnalyticField::WfieldPlaneC30(const double xpos,
       wsum3 += m_qplane[iplane][i] * icons;
       if (opt) volt += m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum3 += m_qplane[iplane][i] * zterm2 / zterm1;
-      if (opt) volt += m_qplane[iplane][i] * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum3 += m_qplane[iplane][i] * zterm.second / zterm.first;
+      if (opt) volt += m_qplane[iplane][i] * log(abs(zterm.first));
     }
     // Mirror contribution from both the x and the y plane.
     zeta = m_zmult * std::complex<double>(2. * cx - xpos - m_w[i].x,
@@ -6715,16 +6546,9 @@ void ComponentAnalyticField::WfieldPlaneC30(const double xpos,
       wsum4 += m_qplane[iplane][i] * icons;
       if (opt) volt -= m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
     } else {
-      zsin = sin(zeta);
-      zcof = 4. * zsin * zsin - 2.;
-      zu = -m_p1 - zcof * m_p2;
-      zunew = 1. - zcof * zu - m_p2;
-      zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      zterm2 = (zunew - zu) * cos(zeta);
-      wsum4 += m_qplane[iplane][i] * zterm2 / zterm1;
-      if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm1));
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum4 += m_qplane[iplane][i] * zterm.second / zterm.first;
+      if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm.first));
     }
   }
   ex = real(m_zmult * (wsum1 + wsum2 - wsum3 - wsum4));
@@ -7173,6 +6997,7 @@ void ComponentAnalyticField::WfieldPixel(const double xpos, const double ypos,
   }
 }
 
+
 void ComponentAnalyticField::FieldAtWireA00(
     const double xpos, const double ypos, double& ex, double& ey, 
     const std::vector<bool>& cnalso) const {
@@ -7461,22 +7286,14 @@ void ComponentAnalyticField::FieldAtWireC10(
   for (unsigned int j = 0; j < m_nWires; ++j) {
     if (!cnalso[j]) continue;
     const auto& wire = m_w[j];
-    std::complex<double> zeta = m_zmult * std::complex<double>(xpos - wire.x, 
-                                                               ypos - wire.y);
+    auto zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
     if (imag(zeta) > 15.) {
       wsum -= wire.e * icons;
     } else if (imag(zeta) < -15.) {
       wsum += wire.e * icons;
     } else {
-      const std::complex<double> zsin = sin(zeta);
-      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
-      std::complex<double> zu = -m_p1 - zcof * m_p2;
-      std::complex<double> zunew = 1. - zcof * zu - m_p2;
-      const std::complex<double> zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
-      wsum += wire.e * (zterm2 / zterm1);
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum += wire.e * (zterm.second / zterm.first);
     }
   }
   ex = -real(-m_zmult * wsum);
@@ -7494,49 +7311,34 @@ void ComponentAnalyticField::FieldAtWireC2X(
   //          configuration with 2 x planes and y periodicity.
   //-----------------------------------------------------------------------
   constexpr std::complex<double> icons(0., 1.);
-  std::complex<double> zeta;
   // Initial values.
   std::complex<double> wsum1 = 0.;
   std::complex<double> wsum2 = 0.;
   for (unsigned int i = 0; i < m_nWires; ++i) {
     const auto& wire = m_w[i];
     if (cnalso[i]) {
-      zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+      auto zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
       if (imag(zeta) > 15.) {
         wsum1 -= wire.e * icons;
       } else if (imag(zeta) < -15.) {
         wsum1 += wire.e * icons;
       } else {
-        const std::complex<double> zsin = sin(zeta);
-        const std::complex<double> zcof = 4. * zsin * zsin - 2.;
-        std::complex<double> zu = -m_p1 - zcof * m_p2;
-        std::complex<double> zunew = 1. - zcof * zu - m_p2;
-        const std::complex<double> zterm1 = (zunew + zu) * zsin;
-        zu = -3. * m_p1 - zcof * 5. * m_p2;
-        zunew = 1. - zcof * zu - 5. * m_p2;
-        const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
-        wsum1 += wire.e * (zterm2 / zterm1);
+        const auto zterm = Th1(zeta, m_p1, m_p2);
+        wsum1 += wire.e * (zterm.second / zterm.first);
       }
     }
     // Find the plane nearest to the wire.
     const double cx = m_coplax - m_sx * int(round((m_coplax - wire.x) / m_sx));
     // Mirror contribution.
-    zeta =
+    auto zeta =
         m_zmult * std::complex<double>(2. * cx - xpos - wire.x, ypos - wire.y);
     if (imag(zeta) > 15.) {
       wsum2 -= wire.e * icons;
     } else if (imag(zeta) < -15.) {
       wsum2 += wire.e * icons;
     } else {
-      const std::complex<double> zsin = sin(zeta);
-      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
-      std::complex<double> zu = -m_p1 - zcof * m_p2;
-      std::complex<double> zunew = 1. - zcof * zu - m_p2;
-      const std::complex<double> zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += wire.e * (zterm2 / zterm1);
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += wire.e * (zterm.second / zterm.first);
     }
   }
   // Convert the two contributions to a real field.
@@ -7555,7 +7357,6 @@ void ComponentAnalyticField::FieldAtWireC2Y(
   //          configuration with 2 y planes and x periodicity.
   //-----------------------------------------------------------------------
   const std::complex<double> icons(0., 1.);
-  std::complex<double> zeta;
   // Initial values.
   std::complex<double> wsum1 = 0.;
   std::complex<double> wsum2 = 0.;
@@ -7563,42 +7364,28 @@ void ComponentAnalyticField::FieldAtWireC2Y(
     const auto& wire = m_w[i];
     if (cnalso[i]) {
       // Compute the direct contribution.
-      zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+      auto zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
       if (imag(zeta) > 15.) {
         wsum1 -= wire.e * icons;
       } else if (imag(zeta) < -15.) {
         wsum1 += wire.e * icons;
       } else {
-        const std::complex<double> zsin = sin(zeta);
-        const std::complex<double> zcof = 4. * zsin * zsin - 2.;
-        std::complex<double> zu = -m_p1 - zcof * m_p2;
-        std::complex<double> zunew = 1. - zcof * zu - m_p2;
-        const std::complex<double> zterm1 = (zunew + zu) * zsin;
-        zu = -3. * m_p1 - zcof * 5. * m_p2;
-        zunew = 1. - zcof * zu - 5. * m_p2;
-        const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
-        wsum1 += wire.e * (zterm2 / zterm1);
+        const auto zterm = Th1(zeta, m_p1, m_p2);
+        wsum1 += wire.e * (zterm.second / zterm.first);
       }
     }
     // Find the plane nearest to the wire.
     const double cy = m_coplay - m_sy * int(round((m_coplay - wire.y) / m_sy));
     // Mirror contribution from the y plane.
-    zeta =
+    auto zeta =
         m_zmult * std::complex<double>(xpos - wire.x, 2 * cy - ypos - wire.y);
     if (imag(zeta) > 15.) {
       wsum2 -= wire.e * icons;
     } else if (imag(zeta) < -15.) {
       wsum2 += wire.e * icons;
     } else {
-      const std::complex<double> zsin = sin(zeta);
-      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
-      std::complex<double> zu = -m_p1 - zcof * m_p2;
-      std::complex<double> zunew = 1. - zcof * zu - m_p2;
-      const std::complex<double> zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += wire.e * (zterm2 / zterm1);
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += wire.e * (zterm.second / zterm.first);
     }
   }
   // Convert the two contributions to a real field.
@@ -7617,7 +7404,6 @@ void ComponentAnalyticField::FieldAtWireC30(
   //          configuration with 2 y and 2 x planes.
   //-----------------------------------------------------------------------
   constexpr std::complex<double> icons(0., 1.);
-  std::complex<double> zeta;
   // Initial values.
   std::complex<double> wsum1 = 0.;
   std::complex<double> wsum2 = 0.;
@@ -7626,42 +7412,28 @@ void ComponentAnalyticField::FieldAtWireC30(
   for (unsigned int i = 0; i < m_nWires; ++i) {
     const auto& wire = m_w[i];
     if (cnalso[i]) {
-      zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+      auto zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
       if (imag(zeta) > 15.) {
         wsum1 -= wire.e * icons;
       } else if (imag(zeta) < -15.) {
         wsum1 += wire.e * icons;
       } else {
-        const std::complex<double> zsin = sin(zeta);
-        const std::complex<double> zcof = 4. * zsin * zsin - 2.;
-        std::complex<double> zu = -m_p1 - zcof * m_p2;
-        std::complex<double> zunew = 1. - zcof * zu - m_p2;
-        const std::complex<double> zterm1 = (zunew + zu) * zsin;
-        zu = -3. * m_p1 - zcof * 5. * m_p2;
-        zunew = 1. - zcof * zu - 5. * m_p2;
-        const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
-        wsum1 += wire.e * (zterm2 / zterm1);
+        const auto zterm = Th1(zeta, m_p1, m_p2);
+        wsum1 += wire.e * (zterm.second / zterm.first);
       }
     }
     // Find the plane nearest to the wire.
     const double cx = m_coplax - m_sx * int(round((m_coplax - wire.x) / m_sx));
     // Mirror contribution from the x plane.
-    zeta =
+    auto zeta =
         m_zmult * std::complex<double>(2. * cx - xpos - wire.x, ypos - wire.y);
     if (imag(zeta) > 15.) {
       wsum2 -= wire.e * icons;
     } else if (imag(zeta) < -15.) {
       wsum2 += wire.e * icons;
     } else {
-      const std::complex<double> zsin = sin(zeta);
-      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
-      std::complex<double> zu = -m_p1 - zcof * m_p2;
-      std::complex<double> zunew = 1. - zcof * zu - m_p2;
-      const std::complex<double> zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
-      wsum2 += wire.e * (zterm2 / zterm1);
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum2 += wire.e * (zterm.second / zterm.first);
     }
     // Find the plane nearest to the wire.
     const double cy = m_coplay - m_sy * int(round((m_coplay - wire.y) / m_sy));
@@ -7673,15 +7445,8 @@ void ComponentAnalyticField::FieldAtWireC30(
     } else if (imag(zeta) < -15.) {
       wsum3 += wire.e * icons;
     } else {
-      const std::complex<double> zsin = sin(zeta);
-      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
-      std::complex<double> zu = -m_p1 - zcof * m_p2;
-      std::complex<double> zunew = 1. - zcof * zu - m_p2;
-      const std::complex<double> zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
-      wsum3 += wire.e * (zterm2 / zterm1);
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum3 += wire.e * (zterm.second / zterm.first);
     }
     // Mirror contribution from both the x and the y plane.
     zeta = m_zmult * std::complex<double>(2. * cx - xpos - wire.x,
@@ -7691,15 +7456,8 @@ void ComponentAnalyticField::FieldAtWireC30(
     } else if (imag(zeta) < -15.) {
       wsum4 += wire.e * icons;
     } else {
-      const std::complex<double> zsin = sin(zeta);
-      const std::complex<double> zcof = 4. * zsin * zsin - 2.;
-      std::complex<double> zu = -m_p1 - zcof * m_p2;
-      std::complex<double> zunew = 1. - zcof * zu - m_p2;
-      const std::complex<double> zterm1 = (zunew + zu) * zsin;
-      zu = -3. * m_p1 - zcof * 5. * m_p2;
-      zunew = 1. - zcof * zu - 5. * m_p2;
-      const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
-      wsum4 += wire.e * (zterm2 / zterm1);
+      const auto zterm = Th1(zeta, m_p1, m_p2);
+      wsum4 += wire.e * (zterm.second / zterm.first);
     }
   }
   // Convert the two contributions to a real field.

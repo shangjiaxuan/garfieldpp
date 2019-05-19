@@ -165,8 +165,8 @@ class ComponentAnalyticField : public ComponentBase {
   /// Setup the weighting field for a given group of wires or planes.
   void AddReadout(const std::string& label);
 
+  /// Check the quality of the capacitance matrix inversion (default: off).
   void EnableChargeCheck(const bool on = true) { m_chargeCheck = on; }
-  void DisableChargeCheck() { EnableChargeCheck(false); }
 
   /// Get the number of wires.
   unsigned int GetNumberOfWires() const { return m_nWires; }
