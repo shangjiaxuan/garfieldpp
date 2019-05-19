@@ -24,8 +24,8 @@ void spiral(ComponentAnalyticField* cmp,
             double& xmin, double& xmax, double& ymin, double& ymax) {
 
   const double d = 0.01;
-  const unsigned int n = 100;
-  for (unsigned int i = 0; i < n; ++i) {
+  const int n = 100;
+  for (int i = 0; i < n; ++i) {
     const double f = double(i) / n;
     const double r = 1. + 2 * f;
     const double phi = 4 * Pi * f;
@@ -209,7 +209,7 @@ int main(int argc, char * argv[]) {
     double xmin = 0., xmax = 0.;
     double ymin = 0., ymax = 0.;
     function(&cmp, xmin, xmax, ymin, ymax);
-    std::cout << cmp.GetCellType() << "\n";
+    cmp.PrintCell();
     fieldView.SetSensor(&sensor);
     fieldView.SetArea(xmin, ymin, xmax, ymax);
     fieldView.PlotContour();

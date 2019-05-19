@@ -119,6 +119,9 @@ class ComponentAnalyticField : public ComponentBase {
   bool GetPeriodicityX(double& s);
   bool GetPeriodicityY(double& s);
 
+  /// Print all available information on the cell. 
+  void PrintCell();
+
   /// Add a point charge.
   void AddCharge(const double x, const double y, const double z,
                  const double q);
@@ -206,7 +209,7 @@ class ComponentAnalyticField : public ComponentBase {
   double m_zmin, m_zmax;
 
   // Voltage range
-  double vmin, vmax;
+  double m_vmin, m_vmax;
 
   // Periodicities
   bool m_perx, m_pery;
@@ -237,13 +240,11 @@ class ComponentAnalyticField : public ComponentBase {
     int ind;           //< Readout group.
     /// Trap radius. Particle is "trapped" if within nTrap * radius of wire.
     int nTrap;
+    double tension;    //< Stretching weight.
+    double density;    //< Density.
   };
   std::vector<Wire> m_w;
 
-  // Stretching weight
-  std::vector<double> weight;
-  // Density
-  std::vector<double> dens;
   // Mirror charges for force calculations
   std::vector<double> cnalso;
 
@@ -328,7 +329,7 @@ class ComponentAnalyticField : public ComponentBase {
   unsigned int m_nTermPoly = 100;
 
   // Gravity
-  double down[3];
+  std::array<double, 3> m_down = {0, 0, 1};
 
   void UpdatePeriodicity() override;
   void Reset() override { CellInit(); }

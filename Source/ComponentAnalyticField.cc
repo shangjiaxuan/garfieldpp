@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <cstdio>
 
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -24,8 +25,8 @@ bool ComponentAnalyticField::GetVoltageRange(double& pmin, double& pmax) {
     }
   }
 
-  pmin = vmin;
-  pmax = vmax;
+  pmin = m_vmin;
+  pmax = m_vmax;
   return true;
 }
 
@@ -45,6 +46,256 @@ bool ComponentAnalyticField::GetBoundingBox(double& x0, double& y0, double& z0,
   y1 = m_ymax;
   z1 = m_zmax;
   return true;
+}
+
+void ComponentAnalyticField::PrintCell() {
+  //-----------------------------------------------------------------------
+  //   CELPRT - Subroutine printing all available information on the cell.
+  //-----------------------------------------------------------------------
+
+  // Make sure the cell is prepared.
+  if (!m_cellset) {
+    if (!Prepare()) {
+      std::cerr << m_className << "::PrintCell: Could not set up the cell.\n";
+      return;
+    }
+  }
+  std::cout << m_className << "::PrintCell:\n    Cell identification: "
+            << GetCellType() << "\n";
+  // Print positions of wires, applied voltages and resulting charges.
+  if (!m_w.empty()) {
+    std::cout << "  Table of the wires\n"
+              << "  Nr    Diameter     x        y      Voltage"
+              << "      Charge    Tension   Length   Density  Label\n"
+              << "       [micron]     [cm]     [cm]     [Volt]"
+              << "     [pC/cm]       [g]      [cm]    [g/cm3]\n";
+    for (unsigned int i = 0; i < m_nWires; ++i) {
+      const auto& w = m_w[i];
+      std::printf("%4d %9.2f %9.4f %9.4f %9.3f %12.4f %9.2f %9.2f %9.2f \"%s\"\n", 
+                  i, 1.e4 * w.d, w.x, w.y, w.v, 
+                  w.e * TwoPiEpsilon0 * 1.e-3, w.tension, w.u, w.density, 
+                  w.type.c_str());
+    }
+  }
+  // Print information on the tube if present.
+  if (m_tube) {
+    std::string shape;
+    if (m_ntube == 0) {
+      shape = "Circular";
+    } else if (m_ntube == 3) {
+      shape = "Triangular";
+    } else if (m_ntube == 4) {
+      shape = "Square";
+    } else if (m_ntube == 5) {
+      shape = "Pentagonal";
+    } else if (m_ntube == 6) {
+      shape = "Hexagonal";
+    } else if (m_ntube == 7) {
+      shape = "Heptagonal";
+    } else if (m_ntube == 8) {
+      shape = "Octagonal";
+    } else {
+      shape = "Polygonal with " + std::to_string(m_ntube) + " corners";
+    }
+    std::cout << "  Enclosing tube\n"
+              << "    Potential:  " << m_vttube << " V\n"
+              << "    Radius:     " << m_cotube << " cm\n"
+              << "    Shape:      " << shape << "\n"
+              << "    Label:      " << m_planes[4].type << "\n";
+  }
+  // Print data on the equipotential planes.
+  if (m_ynplan[0] || m_ynplan[1] || m_ynplan[2] || m_ynplan[3]) {
+    std::cout << "  Equipotential planes\n";
+    // First those at const x or r.
+    const std::string xr = m_polar ? "r" : "x";
+    if (m_ynplan[0] && m_ynplan[1]) {
+      std::cout << "    There are two planes at constant " << xr << ":\n";
+    } else if (m_ynplan[0] || m_ynplan[1]) {
+      std::cout << "    There is one plane at constant " << xr << ":\n";
+    }
+    for (unsigned int i = 0; i < 2; ++i) {
+      if (!m_ynplan[i]) continue;
+      if (m_polar) {
+        std::cout << "    r = " << exp(m_coplan[i]) << " cm, ";
+      } else {
+        std::cout << "    x = " << m_coplan[i] << " cm, ";
+      }
+      if (fabs(m_vtplan[i]) > 1.e-4) {
+        std::cout << "potential = " << m_vtplan[i] << " V, ";
+      } else {
+        std::cout << "earthed, ";
+      }
+      const auto& plane = m_planes[i];
+      if (plane.type.empty() && plane.type != "?") {
+        std::cout << "label = " << plane.type << ", ";
+      }
+      const unsigned int nStrips = plane.strips1.size() + plane.strips2.size();
+      const unsigned int nPixels = plane.pixels.size(); 
+      if (nStrips == 0 && nPixels == 0) {
+        std::cout << "no strips or pixels.\n";
+      } else if (nPixels == 0) {
+        std::cout << nStrips << " strips.\n";
+      } else if (nStrips == 0) {
+        std::cout << nPixels << " pixels.\n"; 
+      } else {
+        std::cout << nStrips << " strips, " << nPixels << " pixels.\n";
+      }
+      for (const auto& strip : plane.strips1) {
+        if (m_polar) {
+          std::cout << "      " << RadToDegree * strip.smin << " < phi < "
+                    << RadToDegree * strip.smax << " degrees, gap = " 
+                    << strip.gap << " cm";
+        } else {
+          std::cout << "      " << strip.smin << " < y < " << strip.smax 
+                    << " cm, gap = " << strip.gap << " cm";
+        } 
+        if (!strip.type.empty() && strip.type != "?") {
+          std::cout << " (\"" << strip.type << "\")";
+        }
+        std::cout << "\n";
+      }
+      for (const auto& strip : plane.strips2) {
+        std::cout << "      " << strip.smin << " < z < " << strip.smax 
+                  << " cm, gap = " << strip.gap << " cm";
+        if (!strip.type.empty() && strip.type != "?") {
+          std::cout << " (\"" << strip.type << "\")";
+        }
+        std::cout << "\n";
+      }
+      for (const auto& pixel : plane.pixels) {
+        std::cout << "    " << pixel.smin << " < y < " << pixel.smax 
+                  << " cm, " << pixel.zmin << " < z < " << pixel.zmax 
+                  << " cm, gap = " << pixel.gap << " cm";
+        if (!pixel.type.empty() && pixel.type != "?") {
+          std::cout << " (\"" << pixel.type << "\")";
+        }
+        std::cout << "\n";
+      }
+    }
+    // Next the planes at constant y or phi 
+    const std::string yphi = m_polar ? "phi" : "y";
+    if (m_ynplan[2] && m_ynplan[3]) {
+      std::cout << "    There are two planes at constant " << yphi << ":\n";
+    } else if (m_ynplan[2] || m_ynplan[3]) {
+      std::cout << "    There is one plane at constant " << yphi << ":\n";
+    }
+    for (unsigned int i = 2; i < 4; ++i) {
+      if (!m_ynplan[i]) continue;
+      if (m_polar) {
+        std::cout << "    phi = " << RadToDegree * m_coplan[i] << " degrees, ";
+      } else {
+        std::cout << "    y = " << m_coplan[i] << " cm, ";
+      }
+      if (fabs(m_vtplan[i]) > 1.e-4) {
+        std::cout << "potential = " << m_vtplan[i] << " V, ";
+      } else {
+        std::cout << "earthed, ";
+      }
+      const auto& plane = m_planes[i];
+      if (plane.type.empty() && plane.type != "?") {
+        std::cout << "label = " << plane.type << ", ";
+      }
+      const unsigned int nStrips = plane.strips1.size() + plane.strips2.size();
+      const unsigned int nPixels = plane.pixels.size(); 
+      if (nStrips == 0 && nPixels == 0) {
+        std::cout << "no strips or pixels.\n";
+      } else if (nPixels == 0) {
+        std::cout << nStrips << " strips.\n";
+      } else if (nStrips == 0) {
+        std::cout << nPixels << " pixels.\n"; 
+      } else {
+        std::cout << nStrips << " strips, " << nPixels << " pixels.\n";
+      }
+      for (const auto& strip : plane.strips1) {
+        if (m_polar) {
+          std::cout << "      " << exp(strip.smin) << " < r < "
+                    << exp(strip.smax) << " cm, gap = " << strip.gap << " cm";
+        } else {
+          std::cout << "      " << strip.smin << " < x < " << strip.smax 
+                    << " cm, gap = " << strip.gap << " cm";
+        } 
+        if (!strip.type.empty() && strip.type != "?") {
+          std::cout << " (\"" << strip.type << "\")";
+        }
+        std::cout << "\n";
+      }
+      for (const auto& strip : plane.strips2) {
+        std::cout << "      " << strip.smin << " < z < " << strip.smax 
+                  << " cm, gap = " << strip.gap << " cm";
+        if (!strip.type.empty() && strip.type != "?") {
+          std::cout << " (\"" << strip.type << "\")";
+        }
+        std::cout << "\n";
+      }
+      for (const auto& pixel : plane.pixels) {
+        std::cout << "    " << pixel.smin << " < x < " << pixel.smax 
+                  << " cm, " << pixel.zmin << " < z < " << pixel.zmax 
+                  << " cm, gap = " << pixel.gap << " cm";
+        if (!pixel.type.empty() && pixel.type != "?") {
+          std::cout << " (\"" << pixel.type << "\")";
+        }
+        std::cout << "\n";
+      }
+    }
+  }
+  // Print the type of periodicity.
+  std::cout << "  Periodicity\n";
+  if (m_perx) {
+    std::cout << "    The cell is repeated every ";
+    if (m_polar) {
+      std::cout << exp(m_sx) << " cm in r.\n";
+    } else {
+      std::cout << m_sx << " cm in x.\n";
+    }
+  } else {
+    if (m_polar) {
+      std::cout << "    The cell is not periodic in r.\n";
+    } else {
+      std::cout << "    The cell has no translation periodicity in x.\n";
+    }
+  }
+  if (m_pery) {
+    std::cout << "    The cell is repeated every ";
+    if (m_polar) {
+      std::cout << RadToDegree * m_sy << " degrees in phi.\n";
+    } else {
+      std::cout << m_sy << " cm in y.\n";
+    }
+  } else {
+    if (m_polar) {
+      std::cout << "    The cell is not periodic in phi.\n";
+    } else {
+      std::cout << "    The cell has no translation periodicity in y.\n";
+    }
+  }
+  // std::cout << "  Other data\n";
+  // std::cout << "    Gravity vector: (" << m_down[0] << ", " << m_down[1]
+  //           << ", " << m_down[2] << ") g.\n";
+  std::cout << "  Cell dimensions:\n    ";
+  if (!m_polar) {
+    std::cout << m_xmin << " < x < " << m_xmax << " cm, " 
+              << m_ymin << " < y < " << m_ymax << " cm.\n";
+  } else {
+    double xminp, yminp;
+    RTheta2RhoPhi(m_xmin, m_ymin, xminp, yminp);
+    double xmaxp, ymaxp;
+    RTheta2RhoPhi(m_xmax, m_ymax, xmaxp, ymaxp);
+    std::cout << xminp << " < r < " << xmaxp << " cm, " 
+              << yminp << " < phi < " << ymaxp << " degrees.\n";
+  }
+  std::cout << "  Potential range:\n    "
+            << m_vmin << " < V < " << m_vmax << " V.\n"; 
+  // Print voltage shift in case no equipotential planes are present.
+  if (!(m_ynplan[0] || m_ynplan[1] || m_ynplan[2] || m_ynplan[3] || m_tube)) {
+    std::cout << "  All voltages have been shifted by " << m_v0 
+              << " V to avoid net wire charge.\n";
+  } else {
+    // Print the net charge on wires.
+    double sum = 0.;
+    for (const auto& w : m_w) sum += w.e;
+    std::cout << "  The net charge on the wires is " 
+              << 1.e-3 * TwoPiEpsilon0 * sum << " pC/cm.\n";
+  }
 }
 
 bool ComponentAnalyticField::IsWireCrossed(const double x0, const double y0,
@@ -203,32 +454,27 @@ void ComponentAnalyticField::AddWire(const double x, const double y,
                                      double rho, const int ntrap) {
   // Check if the provided parameters make sense.
   if (diameter <= 0.) {
-    std::cerr << m_className << "::AddWire:\n";
-    std::cerr << "    Unphysical wire diameter.\n";
+    std::cerr << m_className << "::AddWire: Unphysical wire diameter.\n";
     return;
   }
 
   if (tension <= 0.) {
-    std::cerr << m_className << "::AddWire:\n";
-    std::cerr << "    Unphysical wire tension.\n";
+    std::cerr << m_className << "::AddWire: Unphysical wire tension.\n";
     return;
   }
 
-  if (rho <= 0.0) {
-    std::cerr << m_className << "::AddWire:\n";
-    std::cerr << "    Unphysical wire density.\n";
+  if (rho <= 0.) {
+    std::cerr << m_className << "::AddWire: Unphysical wire density.\n";
     return;
   }
 
-  if (length <= 0.0) {
-    std::cerr << m_className << "::AddWire:\n";
-    std::cerr << "    Unphysical wire length.\n";
+  if (length <= 0.) {
+    std::cerr << m_className << "::AddWire: Unphysical wire length.\n";
     return;
   }
 
   if (ntrap <= 0) {
-    std::cerr << m_className << "::AddWire:\n";
-    std::cerr << "    Number of trap radii must be > 0.\n";
+    std::cerr << m_className << "::AddWire: Nbr. of trap radii must be > 0.\n";
     return;
   }
   // Create a new wire
@@ -242,6 +488,8 @@ void ComponentAnalyticField::AddWire(const double x, const double y,
   newWire.e = 0.;
   newWire.ind = -1;
   newWire.nTrap = ntrap;
+  newWire.tension = tension;
+  newWire.density = rho;
   // Add the wire to the list
   m_w.push_back(std::move(newWire));
   ++m_nWires;
@@ -256,14 +504,13 @@ void ComponentAnalyticField::AddTube(const double radius, const double voltage,
                                      const std::string& label) {
   // Check if the provided parameters make sense.
   if (radius <= 0.0) {
-    std::cerr << m_className << "::AddTube:\n"
-              << "    Unphysical tube dimension.\n";
+    std::cerr << m_className << "::AddTube: Unphysical tube dimension.\n";
     return;
   }
 
   if (nEdges < 3 && nEdges != 0) {
-    std::cerr << m_className << "::AddTube:\n"
-              << "    Unphysical number of tube edges (" << nEdges << ")\n";
+    std::cerr << m_className << "::AddTube: Unphysical number of tube edges ("
+              << nEdges << ")\n";
     return;
   }
 
@@ -935,7 +1182,7 @@ void ComponentAnalyticField::CellInit() {
   m_xmin = m_xmax = 0.;
   m_ymin = m_ymax = 0.;
   m_zmin = m_zmax = 0.;
-  vmin = vmax = 0.;
+  m_vmin = m_vmax = 0.;
 
   // Periodicities
   m_perx = m_pery = false;
@@ -960,8 +1207,6 @@ void ComponentAnalyticField::CellInit() {
   m_w.clear();
 
   // Force calculation parameters
-  weight.clear();
-  dens.clear();
   cnalso.clear();
 
   // Dipole settings
@@ -1020,8 +1265,7 @@ void ComponentAnalyticField::CellInit() {
   m_ch3d.clear();
 
   // Gravity
-  down[0] = down[1] = 0.;
-  down[2] = 1.;
+  m_down = {0, 0, 1};
 }
 
 bool ComponentAnalyticField::Prepare() {
@@ -1471,7 +1715,7 @@ bool ComponentAnalyticField::CellCheck() {
   m_xmin = m_xmax = 0.;
   m_ymin = m_ymax = 0.;
   m_zmin = m_zmax = 0.;
-  vmin = vmax = 0.;
+  m_vmin = m_vmax = 0.;
 
   // Loop over the wires.
   for (const auto& wire : m_w) {
@@ -1501,10 +1745,10 @@ bool ComponentAnalyticField::CellCheck() {
       setz = true;
     }
     if (setv) {
-      vmin = std::min(vmin, wire.v);
-      vmax = std::max(vmax, wire.v);
+      m_vmin = std::min(m_vmin, wire.v);
+      m_vmax = std::max(m_vmax, wire.v);
     } else {
-      vmin = vmax = wire.v;
+      m_vmin = m_vmax = wire.v;
       setv = true;
     }
   }
@@ -1529,10 +1773,10 @@ bool ComponentAnalyticField::CellCheck() {
       }
     }
     if (setv) {
-      vmin = std::min(vmin, m_vtplan[i]);
-      vmax = std::max(vmax, m_vtplan[i]);
+      m_vmin = std::min(m_vmin, m_vtplan[i]);
+      m_vmax = std::max(m_vmax, m_vtplan[i]);
     } else {
-      vmin = vmax = m_vtplan[i];
+      m_vmin = m_vmax = m_vtplan[i];
       setv = true;
     }
   }
@@ -1545,8 +1789,8 @@ bool ComponentAnalyticField::CellCheck() {
     m_ymin = -1.1 * m_cotube;
     m_ymax = +1.1 * m_cotube;
     sety = true;
-    vmin = std::min(vmin, m_vttube);
-    vmax = std::max(vmax, m_vttube);
+    m_vmin = std::min(m_vmin, m_vttube);
+    m_vmax = std::max(m_vmax, m_vttube);
     setv = true;
   }
 
@@ -1595,7 +1839,7 @@ bool ComponentAnalyticField::CellCheck() {
   }
 
   // Check that at least some different voltages are present.
-  if (vmin == vmax || !setv) {
+  if (m_vmin == m_vmax || !setv) {
     std::cerr << m_className << "::CellCheck:\n";
     std::cerr << "    All potentials in the cell are the same.\n";
     std::cerr << "    There is no point in going on.\n";
