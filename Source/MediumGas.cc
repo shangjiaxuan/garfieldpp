@@ -1955,11 +1955,19 @@ bool MediumGas::WriteGasFile(const std::string& filename) {
         }
         // Get the excitation and ionisation rates.
         for (const auto& rexc : m_excRates) {
-          val.push_back(rexc[j][k][i]);
+          if (rexc[j][k][i] > Small) { 
+            val.push_back(rexc[j][k][i]);
+          } else {
+            val.push_back(0.);
+          }
           if (!m_tab2d) val.push_back(0.);
         }
         for (const auto& rion : m_ionRates) {
-          val.push_back(rion[j][k][i]);
+          if (rion[j][k][i] > Small) {
+            val.push_back(rion[j][k][i]);
+          } else {
+            val.push_back(0.);
+          }
           if (!m_tab2d) val.push_back(0.);
         }
         PrintArray(val, outfile, cnt, 8);
