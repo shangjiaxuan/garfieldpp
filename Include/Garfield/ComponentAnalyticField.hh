@@ -344,7 +344,7 @@ class ComponentAnalyticField : public ComponentBase {
   unsigned int m_nTermPoly = 100;
 
   // Gravity
-  std::array<double, 3> m_down = {0, 0, 1};
+  std::array<double, 3> m_down{{0, 0, 1}};
 
   void UpdatePeriodicity() override;
   void Reset() override { CellInit(); }
