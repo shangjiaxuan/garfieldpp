@@ -4,7 +4,7 @@
 #  Garfield_INCLUDE_DIRS - include directories for Garfield
 #  Garfield_LIBRARIES - at the moment only Garfield
 #  Garfield_VERSION
-$  Garfield_FOUND
+#  Garfield_FOUND
  
 # - Define exported version
 set(Garfield_VERSION "@PROJECT_VERSION@")
