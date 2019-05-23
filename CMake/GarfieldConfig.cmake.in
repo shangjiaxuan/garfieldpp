@@ -1,13 +1,13 @@
 # - Config file for the Garfield++ package
 #
 # It defines the following variables
-#  Garfield_INCLUDE_DIRS - include directories for Garfield
-#  Garfield_LIBRARIES - at the moment only Garfield
-#  Garfield_VERSION
-#  Garfield_FOUND
+#  GARFIELD_INCLUDE_DIRS - include directories for Garfield
+#  GARFIELD_LIBRARIES - at the moment only Garfield
+#  GARFIELD_VERSION
+#  GARFIELD_FOUND
  
 # - Define exported version
-set(Garfield_VERSION "@PROJECT_VERSION@")
+set(GARFIELD_VERSION "@PROJECT_VERSION@")
 
 # - Init CMakePackageConfigHelpers
 @PACKAGE_INIT@
@@ -15,16 +15,16 @@ set(Garfield_VERSION "@PROJECT_VERSION@")
 # - Create relocatable paths to headers.
 # NOTE: Do not strictly need paths as all usage requirements are encoded in
 # the imported targets created later.
-set_and_check(Garfield_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
-set(Garfield_FOUND TRUE)
-check_required_components(Garfield)
+set_and_check(GARFIELD_INCLUDE_DIR "@PACKAGE_CMAKE_INSTALL_INCLUDEDIR@")
+set(GARFIELD_FOUND TRUE)
+check_required_components(GARFIELD)
 
 # - Mandatory dependency to ROOT
 find_package(ROOT @ROOT_VERSION@ EXACT REQUIRED CONFIG)
 
 # - Define standard variables
-set(Garfield_LIBRARIES Garfield)
-set(Garfield_INCLUDE_DIRS ${Garfield_INCLUDE_DIR} ${ROOT_INCLUDE_DIRS})
+set(GARFIELD_LIBRARIES Garfield)
+set(GARFIELD_INCLUDE_DIRS ${GARFIELD_INCLUDE_DIR} ${ROOT_INCLUDE_DIRS})
 
 # - Include the targets file to create the imported targets that a client can
 # link to (libraries) or execute (programs)
