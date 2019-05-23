@@ -3,11 +3,7 @@
 #----------------------------------------------------------------------------
 # Setup the project
 #
-cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
-set(CMAKE_CXX_COMPILER "g++")
-set(CMAKE_C_COMPILER "gcc")
-set(CMAKE_CXX_FLAGS "-std=c++11")
-set(CMAKE_C_FLAGS "-std=c++11")
+cmake_minimum_required(VERSION 3.3)
 
 project(garfieldpp)
 option(G4ANALYSIS_USE "use ROOT" ON)

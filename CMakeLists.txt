@@ -1,69 +1,67 @@
 ########################################################
 # build Garfield++ library and examples
 # depend on: ROOT
-# @author Klaus Zenker
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0 FATAL_ERROR)
+# @author Klaus Zenker, Pere Mato
+cmake_minimum_required(VERSION 3.3)
 ########################################################
 
-PROJECT( Garfield CXX Fortran)
+project(Garfield LANGUAGES CXX Fortran VERSION 0.3.0)
+
+#---- Use GNU-style hierarchy for installing build products
+include(GNUInstallDirs)
 
 ### DEPENDENCIES #######################################
-IF(DEFINED ENV{ROOTSYS})
+if(DEFINED ENV{ROOTSYS})
     list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
-ELSEIF(DEFINED ROOTSYS)
+elseif(DEFINED ROOTSYS)
     list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
-ELSEIF(DEFINED ROOT_CMAKE_DIR)
+elseif(DEFINED ROOT_CMAKE_DIR)
     list(APPEND CMAKE_PREFIX_PATH ${ROOT_CMAKE_DIR} )
-ELSE()
-    MESSAGE(FATAL_ERROR "Please consider to set ROOTSYS or use -DROOTSYS=..."
+else()
+    message(FATAL_ERROR "Please consider to set ROOTSYS or use -DROOTSYS=..."
                         "If still there is a proplem, point to the directory which includes FindROOT.cmake using -DROOT_CMAKE_DIR=...")
-ENDIF(DEFINED ENV{ROOTSYS})
+endif(DEFINED ENV{ROOTSYS})
 
 
-FIND_PACKAGE( ROOT 5.0 REQUIRED COMPONENTS Geom Gdml)
-# Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
+find_package(ROOT 5.0 REQUIRED COMPONENTS Geom Gdml)
+#--- Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
 include(${ROOT_USE_FILE})
 
-# internal root dictionary building works starting with version 6.02
-IF(ROOT_VERSION VERSION_LESS 6.02)
-    SET( CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake )
-    INCLUDE( MacroCheckPackageLibs )
-    INCLUDE( MacroRootDict )
-    MESSAGE(STATUS "Using Garfields FindRoot.cmake")
-ENDIF()
+#--- Internal ROOT dictionary building works starting with version 6.02
+if(ROOT_VERSION VERSION_LESS 6.02)
+    set( CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake )
+    include( MacroCheckPackageLibs )
+    include( MacroRootDict )
+    message(STATUS "Using Garfield's FindRoot.cmake")
+endif()
 
-# If you cannot create symbolic links turn FALSE the library version
-SET(BUILD_WITH_VERSION_NUMBER TRUE)
-IF(BUILD_WITH_VERSION_NUMBER)
-    SET( ${PROJECT_NAME}_MAJOR_VERSION 0 )
-    SET( ${PROJECT_NAME}_MINOR_VERSION 2 )
-    SET( ${PROJECT_NAME}_PATCH_VERSION 0 )
-    SET( ${PROJECT_NAME}_VERSION
-    ${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME}_MINOR_VERSION}.${${PROJECT_NAME}_PATCH_VERSION} )
-    SET( ${PROJECT_NAME}_SOVERSION ${${PROJECT_NAME}_VERSION} )
-ENDIF(BUILD_WITH_VERSION_NUMBER)
+#--- If you cannot create symbolic links turn FALSE the library version
+set(BUILD_WITH_VERSION_NUMBER TRUE)
+if(BUILD_WITH_VERSION_NUMBER)
+    set( Garfield_SOVERSION ${Garfield_VERSION} )
+endif()
 
-## Add root libs ##
-IF(DEFINED ROOT_INCLUDE_DIRS)
+#--- Add ROOT libraries
+if(DEFINED ROOT_INCLUDE_DIRS)
     # ROOT 6
-    INCLUDE_DIRECTORIES ( ${ROOT_INCLUDE_DIRS} )
-    SET(ROOT_COMPONENT_LIBRARIES ROOT::Geom ROOT::Gdml ROOT::Graf3d) 
-ELSE()
+    include_directories ( ${ROOT_INCLUDE_DIRS} )
+    set(ROOT_COMPONENT_LIBRARIES ROOT::Geom ROOT::Gdml ROOT::Graf3d) 
+else()
     # ROOT 5
-    INCLUDE_DIRECTORIES ( ${ROOT_INCLUDE_DIR} )
-    # COMPONENT mechanism in the FIND_PACKAGE is not supported 
-    SET(ROOT_COMPONENT_LIBRARIES "-lGeom -lGdml")
-ENDIF(DEFINED ROOT_INCLUDE_DIRS)
+    include_directories ( ${ROOT_INCLUDE_DIR} )
+    # COMPONENT mechanism in the find_package is not supported 
+    set(ROOT_COMPONENT_LIBRARIES "-lGeom -lGdml")
+endif()
 
 ## add garfield  #######################################
-AUX_SOURCE_DIRECTORY( Source garfield_sources )
+aux_source_directory(Source garfield_sources)
 
 ## add magboltz ########################################
-SET( magboltz_sources Source/magboltz-11.7.f )
-SET_SOURCE_FILES_PROPERTIES( ${magboltz_sources}  PROPERTIES LANGUAGE Fortran )
+set(magboltz_sources Source/magboltz-11.7.f )
+set_source_files_properties(${magboltz_sources} PROPERTIES LANGUAGE Fortran )
 
 ## add Heed ############################################
-SET( heed_dirs 
+set( heed_dirs 
     Heed
     Heed/heed++/code 
     Heed/wcpplib/clhep_units 
@@ -77,129 +75,121 @@ SET( heed_dirs
     Heed/wcpplib/safetl 
     Heed/wcpplib/stream 
     Heed/wcpplib/util )
-FOREACH( heed_dir ${heed_dirs} )
-    AUX_SOURCE_DIRECTORY( ${heed_dir} heed_sources )
-ENDFOREACH()
-SET_SOURCE_FILES_PROPERTIES( ${heed_sources} PROPERTIES LANGUAGE CXX)
+foreach(heed_dir ${heed_dirs})
+    aux_source_directory(${heed_dir} heed_sources)
+endforeach()
+set_source_files_properties( ${heed_sources} PROPERTIES LANGUAGE CXX)
 
-## Flags to pass to the compiler #######################
+#--- Flags to pass to the compiler
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wabi -Wno-long-long -Woverloaded-virtual -fno-common -pg" )
 
-# Add common flags for gfortran and g++
-ADD_DEFINITIONS( "-c" )
-# Allow to use debug symbols
-IF( CMAKE_BUILD_TYPE STREQUAL "Debug" OR
- CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" )
- ADD_DEFINITIONS( "-ggdb -O0" )
-ELSE()
- ADD_DEFINITIONS( "-O2" )
-ENDIF()
-IF(NOT DEFINED CMAKE_CXX_STANDARD)
-  IF(ROOT_VERSION VERSION_GREATER 6.06)
-    SET(CMAKE_CXX_STANDARD 14)
-  ELSEIF(ROOT_VERSION VERSION_GREATER 5)
-    SET(CMAKE_CXX_STANDARD 98)
-  ENDIF()
-ENDIF()
+#--- Set the C++ standard (depencding on the ROOT version)
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+  if(ROOT_VERSION VERSION_GREATER 6.06)
+    set(CMAKE_CXX_STANDARD 14)
+  elseif(ROOT_VERSION VERSION_GREATER 5)
+    set(CMAKE_CXX_STANDARD 98)
+  endif()
+endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Add switches used in HEED
-# -DNOT_INCLUDE_GASLIB_IN_PACSLIB is used in Heed/heed++/code/PhotoAbsCS.c
-SET_SOURCE_FILES_PROPERTIES( ${heed_sources} PROPERTIES COMPILE_FLAGS "-DNOT_INCLUDE_GASLIB_IN_PACSLIB -DGARFIELD_HEED_INTERFACE -DUSE_SRANLUX -DEXCLUDE_FUNCTIONS_WITH_HISTDEF -DINS_CRETURN -DFUNNAMESTACK")
+#--- Add switches used in HEED
+#    -DNOT_INCLUDE_GASLIB_IN_PACSLIB is used in Heed/heed++/code/PhotoAbsCS.c
+set_source_files_properties(${heed_sources} PROPERTIES COMPILE_FLAGS "-DNOT_INCLUDE_GASLIB_IN_PACSLIB -DGARFIELD_HEED_INTERFACE -DUSE_SRANLUX -DEXCLUDE_FUNCTIONS_WITH_HISTDEF -DINS_CRETURN -DFUNNAMESTACK")
 
-## create dictionary  ##################################
-IF(ROOT_VERSION VERSION_LESS 6.02)
-    LIST( APPEND ROOT_DICT_INCLUDE_DIRS Include/Garfield Heed)
-    SET( ROOT_DICT_CINT_DEFINITIONS "-DHANDLE_DICT_EXCEPTIONS=IGNORED_FOR_CINT" )
+#--- create ROOT dictionary
+if(ROOT_VERSION VERSION_LESS 6.02)
+    list(APPEND ROOT_DICT_INCLUDE_DIRS Include/Garfield Heed)
+    set(ROOT_DICT_CINT_DEFINITIONS "-DHANDLE_DICT_EXCEPTIONS=IGNORED_FOR_CINT" )
     PREPARE_ROOT_DICT_HEADERS( Include/Garfield )
     GEN_ROOT_DICT_SOURCES( GarfieldDict.cxx )
-    LIST( APPEND garfield_sources ${ROOT_DICT_OUTPUT_SOURCES} )
-ELSEIF(ROOT_VERSION VERSION_LESS 6.17)
+    list(APPEND garfield_sources ${ROOT_DICT_OUTPUT_SOURCES})
+elseif(ROOT_VERSION VERSION_LESS 6.17)
     file (GLOB garfield_header RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/Include Include/Garfield/*.hh)
     ROOT_GENERATE_DICTIONARY(GarfieldDict ${garfield_header}
                              LINKDEF Include/Garfield/LinkDef.h
                              OPTIONS -I${PROJECT_SOURCE_DIR}/Include -I${PROJECT_SOURCE_DIR}/Heed)
-    LIST( APPEND garfield_sources GarfieldDict.cxx )
-ELSE()
-    file (GLOB garfield_header  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/Include Include/Garfield/*.hh)
+    list(APPEND garfield_sources GarfieldDict.cxx)
+else()
+    file (GLOB garfield_header RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/Include Include/Garfield/*.hh)
     include_directories(Include Heed)
     ROOT_GENERATE_DICTIONARY(GarfieldDict ${garfield_header}
                              LINKDEF Include/Garfield/LinkDef.h )
-    LIST( APPEND garfield_sources GarfieldDict.cxx )
-ENDIF()
-
-## print information on considered files and the root dictionary include directories
-MESSAGE( STATUS "###########################################################" )
-MESSAGE( STATUS "Considered Garfield files :             ${garfield_sources}" )
-MESSAGE( STATUS "-----------------------------------------------------------" )
-MESSAGE( STATUS "Considered heed files :                 ${heed_sources}" )
-MESSAGE( STATUS "-----------------------------------------------------------" )
-MESSAGE( STATUS "Considered magboltz files :             ${magboltz_sources}" )
-MESSAGE( STATUS "-----------------------------------------------------------" )
-MESSAGE( STATUS "Directory used to find root dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
-MESSAGE( STATUS "###########################################################" )
-
-
-## SET output path for libraries 
-SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib/)
-## SET include directories 
-INCLUDE_DIRECTORIES( Include Include/Garfield Heed )
-## build the library
-ADD_LIBRARY( ${PROJECT_NAME} SHARED
-    ${garfield_sources} 
-    ${magboltz_sources}
-    ${heed_sources})
-TARGET_LINK_LIBRARIES( ${PROJECT_NAME} ${ROOT_COMPONENT_LIBRARIES} )
-IF(BUILD_WITH_VERSION_NUMBER)
-    SET_TARGET_PROPERTIES( ${PROJECT_NAME} PROPERTIES
-        VERSION ${${PROJECT_NAME}_VERSION}
-        SOVERSION ${${PROJECT_NAME}_SOVERSION} )
-ENDIF(BUILD_WITH_VERSION_NUMBER)
-
-## BUILD examples             ##########################
-option(WITH_EXAMPLES "Build Garfield++ examples" ON)
-if(WITH_EXAMPLES)
-    MESSAGE(STATUS "Garfield++ exmaples will be build. In order disable this option use -DWITH_EXAMPLES=OFF")
-    add_subdirectory(Examples)
-else()
-    MESSAGE(STATUS "Building of examples is switched off.")
+    list(APPEND garfield_sources GarfieldDict.cxx)
 endif()
 
-## EXPORT PACKAGE INFORMATION ##########################
-export(PACKAGE ${PROJECT_NAME})
-
-# Configure the config files 
-configure_file(CMake/GarfieldConfig.cmake.in
-  "${PROJECT_BINARY_DIR}/GarfieldConfig.cmake" @ONLY)
-configure_file(CMake/GarfieldConfigVersion.cmake.in
-  "${PROJECT_BINARY_DIR}/GarfieldConfigVersion.cmake" @ONLY)
-
-MESSAGE(STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
-MESSAGE(STATUS "If you want to change this path call cmake -DCMAKE_INSTALL_PREFIX=my_install_path ...")
-SET(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
+#--- Print information on considered files and the root dictionary include directories
+message( STATUS "###########################################################" )
+message( STATUS "Considered Garfield files :             ${garfield_sources}" )
+message( STATUS "-----------------------------------------------------------" )
+message( STATUS "Considered heed files :                 ${heed_sources}" )
+message( STATUS "-----------------------------------------------------------" )
+message( STATUS "Considered magboltz files :             ${magboltz_sources}" )
+message( STATUS "-----------------------------------------------------------" )
+message( STATUS "Directory used to find root dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
+message( STATUS "###########################################################" )
 
 
-# decide were the library will end up and to write info in  GarfieldLibraryDepends.cmake
-INSTALL(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/ EXPORT GarfieldLibraryDepends)
+#--- Set output path for libraries and executables
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 
-# decide were to install GarfieldLibraryDepends.camke
-INSTALL(EXPORT GarfieldLibraryDepends DESTINATION ${CMAKE_INSTALL_PREFIX}/cmake  COMPONENT cmakefiles)
+#--- build the Garfield library
+add_library(Garfield SHARED ${garfield_sources} ${magboltz_sources} ${heed_sources})
+target_link_libraries(Garfield ${ROOT_COMPONENT_LIBRARIES})
+target_compile_features(Garfield INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
+target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
+                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
+                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>)
+if(BUILD_WITH_VERSION_NUMBER)
+    set_target_properties(Garfield PROPERTIES
+                          VERSION Garfield_VERSION}
+                          SOVERSION Garfield_SOVERSION} )
+endif()
 
-# now install cofigured config files 
-INSTALL( FILES ${PROJECT_BINARY_DIR}/GarfieldConfig.cmake
-        ${PROJECT_BINARY_DIR}/GarfieldConfigVersion.cmake
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/cmake
-        COMPONENT cmakefiles )
-# install pcm file in case of root 6
-IF(ROOT_VERSION VERSION_GREATER 6.06)
-    INSTALL( FILES ${PROJECT_BINARY_DIR}/lib${PROJECT_NAME}Dict_rdict.pcm 
+#--- Build the examples ------------------------------------------------------------------------
+option(WITH_EXAMPLES "Build Garfield++ examples" ON)
+if(WITH_EXAMPLES)
+    message(STATUS "Garfield++ examples will be build. In order disable this option use -DWITH_EXAMPLES=OFF")
+    add_subdirectory(Examples)
+else()
+    message(STATUS "Building of examples is switched off.")
+endif()
+configure_file(${CMAKE_SOURCE_DIR}/CMake/setup.sh.in
+               ${CMAKE_BINARY_DIR}/setup.sh @ONLY)
+
+
+#--- target for Doxygen documentation ------------------------------------------
+option(WITH_DOC "Whether or not to create doxygen doc target." OFF)
+if(WITH_DOC)
+  include(cmake/GarfieldDoxygen.cmake)
+endif()
+
+#--- add CMake infrastructure --------------------------------------------------
+export(PACKAGE Garfield)
+include(CMake/GarfieldCreateConfig.cmake)
+
+#--- Installation of all artifacts
+message(STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "If you want to change this path call cmake -DCMAKE_INSTALL_PREFIX=my_install_path ...")
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
+
+#--- Where the library will end up and to write info in  GarfieldTargets.cmake
+install(TARGETS Garfield DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/ EXPORT GarfieldTargets)
+
+#--- Install pcm file in case of root 6
+if(ROOT_VERSION VERSION_GREATER 6.06)
+    install( FILES ${PROJECT_BINARY_DIR}/libGarfieldDict_rdict.pcm 
              DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/ 
              COMPONENT dict)
-ELSEIF(ROOT_VERSION VERSION_GREATER 5)
-    INSTALL( FILES ${PROJECT_BINARY_DIR}/${PROJECT_NAME}Dict_rdict.pcm 
+elseif(ROOT_VERSION VERSION_GREATER 5)
+    install( FILES ${PROJECT_BINARY_DIR}/GarfieldDict_rdict.pcm 
              DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/ 
              COMPONENT dict)
-ENDIF()
-# install the Heed database
-INSTALL(DIRECTORY Heed/heed++/database DESTINATION  Heed/heed++)
-# install headers
-INSTALL(DIRECTORY Include/ DESTINATION include REGEX LinkDef EXCLUDE)
+endif()
+
+#--- install the Heed database
+install(DIRECTORY Heed/heed++/database DESTINATION  Heed/heed++)
+#--- install headers
+install(DIRECTORY Include/ DESTINATION include REGEX LinkDef EXCLUDE)
