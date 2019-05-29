@@ -27,6 +27,9 @@ class ComponentUser : public ComponentBase {
                       const std::string& label) override;
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
+  void DelayedWeightingField(const double x, const double y, const double z,
+                             const double t, double& wx, double& wy, double& wz,
+                             const std::string& label) override;
 
   /// Set the function to be called for calculating the electric field.
   void SetElectricField(void (*f)(const double, const double, const double,
@@ -41,6 +44,11 @@ class ComponentUser : public ComponentBase {
   /// Set the function to be called for calculating the weighting potential.
   void SetWeightingPotential(void (*f)(const double, const double, const double,
                                        double&, const std::string));
+  /// Set the function to be called for calculating the delayed weighting field.
+  void SetDelayedWeightingField(void (*f)(const double, const double, 
+                                          const double, const double,
+                                          double&, double&, double&,
+                                          const std::string));
   /// Set the function to be called for calculating the magnetic field.
   void SetMagneticField(void (*f)(const double, const double, const double,
                                   double&, double&, double&));
@@ -61,6 +69,10 @@ class ComponentUser : public ComponentBase {
   /// Weighting potential function
   void (*m_wpot)(const double, const double, const double, double&,
                  const std::string) = nullptr;
+
+  /// Delayed weighting field function
+  void (*m_dwfield)(const double, const double, const double, const double,
+                    double&, double&, double&, const std::string) = nullptr;
 
   /// Magnetic field function
   void (*m_bfield)(const double, const double, const double, double&, double&,

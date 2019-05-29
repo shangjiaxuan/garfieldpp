@@ -276,6 +276,8 @@ void Sensor::AddElectrode(ComponentBase* comp, const std::string& label) {
   electrode.signal.assign(m_nTimeBins, 0.);
   electrode.electronsignal.assign(m_nTimeBins, 0.);
   electrode.ionsignal.assign(m_nTimeBins, 0.);
+  electrode.delayedElectronSignal.assign(m_nTimeBins, 0.);
+  electrode.delayedIonSignal.assign(m_nTimeBins, 0.);
   m_electrodes.push_back(std::move(electrode));
   std::cout << m_className << "::AddElectrode:\n"
             << "    Added readout electrode \"" << label << "\".\n"
@@ -332,6 +334,8 @@ void Sensor::ClearSignal() {
     electrode.signal.assign(m_nTimeBins, 0.);
     electrode.electronsignal.assign(m_nTimeBins, 0.);
     electrode.ionsignal.assign(m_nTimeBins, 0.);
+    electrode.delayedElectronSignal.assign(m_nTimeBins, 0.);
+    electrode.delayedIonSignal.assign(m_nTimeBins, 0.);
   }
   m_nEvents = 0;
 }
@@ -441,17 +445,17 @@ void Sensor::AddSignal(const double q, const double t0, const double dt,
     std::vector<double> id(nd, 0.);
     for (unsigned int i = 0; i < nd; ++i) {
       // Integrate over the drift line segment.
-      const double step = 0.5 * std::min(m_delayedSignalTimes[i], dt);
+      const double step = std::min(m_delayedSignalTimes[i], dt);
       double sum = 0.;
       for (unsigned int j = 0; j < 6; ++j) {
-        const double t = m_delayedSignalTimes[i] - (1. + tg[j]) * step;
+        const double t = m_delayedSignalTimes[i] - 0.5 * (1. + tg[j]) * step;
         // Calculate the delayed weighting field.
         electrode.comp->DelayedWeightingField(x, y, z, t, wx, wy, wz, lbl);
         sum += -q * (wx * vx + wy * vy + wz * vz) * wg[j];
       }
-      id[i] = 0.5 * sum;
+      id[i] = 0.5 * sum * step;
     }
-    FillSignal(electrode, q, td, id, 2);
+    FillSignal(electrode, q, td, id, 2, true);
   }
 
 }
@@ -493,7 +497,8 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
 
 void Sensor::FillSignal(Electrode& electrode, const double q, 
                         const std::vector<double>& ts,
-                        const std::vector<double>& is, const int navg) {
+                        const std::vector<double>& is, const int navg,
+                        const bool delayed) {
 
   // Interpolation order.
   constexpr unsigned int k = 1;
@@ -533,8 +538,10 @@ void Sensor::FillSignal(Electrode& electrode, const double q,
     electrode.signal[i] += sum;
     if (q < 0.) {
       electrode.electronsignal[i] += sum;
+      if (delayed) electrode.delayedElectronSignal[i] += sum;
     } else {
       electrode.ionsignal[i] += sum;
+      if (delayed) electrode.delayedIonSignal[i] += sum;
     }
   }
 }
@@ -608,6 +615,28 @@ double Sensor::GetIonSignal(const std::string& label, const unsigned int bin) {
   double sig = 0.;
   for (const auto& electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.ionsignal[bin];
+  }
+  return m_signalConversion * sig / (m_nEvents * m_tStep);
+}
+
+double Sensor::GetDelayedElectronSignal(const std::string& label,
+                                        const unsigned int bin) {
+  if (m_nEvents == 0) return 0.;
+  if (bin >= m_nTimeBins) return 0.;
+  double sig = 0.;
+  for (const auto& electrode : m_electrodes) {
+    if (electrode.label == label) sig += electrode.delayedElectronSignal[bin];
+  }
+  return m_signalConversion * sig / (m_nEvents * m_tStep);
+}
+
+double Sensor::GetDelayedIonSignal(const std::string& label,
+                                   const unsigned int bin) {
+  if (m_nEvents == 0) return 0.;
+  if (bin >= m_nTimeBins) return 0.;
+  double sig = 0.;
+  for (const auto& electrode : m_electrodes) {
+    if (electrode.label == label) sig += electrode.delayedIonSignal[bin];
   }
   return m_signalConversion * sig / (m_nEvents * m_tStep);
 }
