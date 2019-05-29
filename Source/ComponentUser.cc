@@ -96,6 +96,14 @@ double ComponentUser::WeightingPotential(const double x, const double y,
   return v;
 }
 
+void ComponentUser::DelayedWeightingField(const double x, const double y, 
+                                          const double z, const double t,
+                                          double& wx, double& wy, double& wz,
+                                          const std::string& label) {
+  wx = wy = wz = 0.;
+  if (m_dwfield) m_dwfield(x, y, z, t, wx, wy, wz, label);
+}
+
 void ComponentUser::SetElectricField(void (*f)(const double, const double,
                                                const double, double&, double&,
                                                double&)) {
@@ -134,6 +142,17 @@ void ComponentUser::SetWeightingPotential(void (*f)(const double, const double,
     return;
   }
   m_wpot = f;
+}
+
+void ComponentUser::SetDelayedWeightingField(
+    void (*f)(const double, const double, const double, const double,
+              double&, double&, double&, const std::string)) {
+
+  if (!f) {
+    std::cerr << m_className << "::SetDelayedWeightingField: Null pointer.\n";
+    return;
+  }
+  m_dwfield = f;
 }
 
 void ComponentUser::SetMagneticField(void (*f)(const double, const double,

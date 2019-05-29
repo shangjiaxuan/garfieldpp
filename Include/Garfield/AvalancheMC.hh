@@ -158,9 +158,6 @@ class AvalancheMC {
  private:
   std::string m_className = "AvalancheMC";
 
-  /// Numerical constant used during stepping.
-  static constexpr double c1 = ElectronMass / (SpeedOfLight * SpeedOfLight);
-
   Sensor* m_sensor = nullptr;
 
   struct DriftPoint {

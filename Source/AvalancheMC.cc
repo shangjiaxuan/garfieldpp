@@ -273,15 +273,15 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
   }
 
   while (0 == status) {
+    constexpr double tol = 1.e-10;
     // Make sure the electric field has a non-vanishing component.
     const double emag = Mag(e0);
-    if (emag < Small) {
+    if (emag < tol) {
       std::cerr << m_className + "::DriftLine: Too small electric field at " 
                 << PrintVec(x0) + ".\n";
       status = StatusCalculationAbandoned;
       break;
     }
-
     // Compute the drift velocity at this point.
     std::array<double, 3> v0;
     if (!GetVelocity(type, medium, x0, e0, b0, v0)) {
@@ -292,7 +292,7 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
 
     // Make sure the drift velocity vector has a non-vanishing component.
     const double vmag = Mag(v0);
-    if (vmag < Small) {
+    if (vmag < tol) {
       std::cerr << m_className + "::DriftLine: Too small drift velocity at " 
                 << PrintVec(x0) + ".\n";
       status = StatusCalculationAbandoned;
@@ -301,6 +301,8 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
 
     // Determine the time step.
     double dt = 0.;
+    // Coefficient for collision-time stepping.
+    constexpr double c1 = ElectronMass / (SpeedOfLight * SpeedOfLight);
     switch (m_stepModel) {
       case StepModel::FixedTime:
         dt = m_tMc;

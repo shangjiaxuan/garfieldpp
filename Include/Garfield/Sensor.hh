@@ -102,6 +102,10 @@ class Sensor {
   double GetElectronSignal(const std::string& label, const unsigned int bin);
   /// Retrieve the ion or hole signal for a given electrode and time bin.
   double GetIonSignal(const std::string& label, const unsigned int bin);
+  /// Retrieve the delayed electron signal for a given electrode and time bin.
+  double GetDelayedElectronSignal(const std::string& label, const unsigned int bin);
+  /// Retrieve the delayed ion/hole signal for a given electrode and time bin.
+  double GetDelayedIonSignal(const std::string& label, const unsigned int bin);
   /// Retrieve the total induced charge for a given electrode,
   /// calculated using the weighting potentials at the start and end points.
   double GetInducedCharge(const std::string& label);
@@ -180,6 +184,8 @@ class Sensor {
     std::vector<double> signal;
     std::vector<double> electronsignal;
     std::vector<double> ionsignal;
+    std::vector<double> delayedElectronSignal;
+    std::vector<double> delayedIonSignal;
     double charge;
   };
   std::vector<Electrode> m_electrodes;
@@ -220,7 +226,8 @@ class Sensor {
 
   void FillSignal(Electrode& electrode, const double q,
                   const std::vector<double>& ts,
-                  const std::vector<double>& is, const int navg);
+                  const std::vector<double>& is, const int navg,
+                  const bool delayed = false);
   double InterpolateTransferFunctionTable(const double t) const;
 };
 }
