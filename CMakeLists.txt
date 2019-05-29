@@ -9,6 +9,7 @@ project(Garfield LANGUAGES CXX Fortran VERSION 0.3.0)
 
 #---- Use GNU-style hierarchy for installing build products
 include(GNUInstallDirs)
+set(CMAKE_INSTALL_LIBDIR lib)  # overwrite this one
 
 ### DEPENDENCIES #######################################
 if(DEFINED ENV{ROOTSYS})
@@ -144,8 +145,8 @@ target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>)
 if(BUILD_WITH_VERSION_NUMBER)
     set_target_properties(Garfield PROPERTIES
-                          VERSION Garfield_VERSION}
-                          SOVERSION Garfield_SOVERSION} )
+                          VERSION ${Garfield_VERSION}
+                          SOVERSION ${Garfield_SOVERSION} )
 endif()
 
 #--- Build the examples ------------------------------------------------------------------------
@@ -173,23 +174,23 @@ include(CMake/GarfieldCreateConfig.cmake)
 #--- Installation of all artifacts
 message(STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "If you want to change this path call cmake -DCMAKE_INSTALL_PREFIX=my_install_path ...")
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
 
 #--- Where the library will end up and to write info in  GarfieldTargets.cmake
-install(TARGETS Garfield DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/ EXPORT GarfieldTargets)
+install(TARGETS Garfield DESTINATION ${CMAKE_INSTALL_LIBDIR} EXPORT GarfieldTargets)
 
 #--- Install pcm file in case of root 6
 if(ROOT_VERSION VERSION_GREATER 6.06)
     install( FILES ${PROJECT_BINARY_DIR}/libGarfieldDict_rdict.pcm 
-             DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/ 
+             DESTINATION ${CMAKE_INSTALL_LIBDIR}
              COMPONENT dict)
 elseif(ROOT_VERSION VERSION_GREATER 5)
     install( FILES ${PROJECT_BINARY_DIR}/GarfieldDict_rdict.pcm 
-             DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/ 
+             DESTINATION ${CMAKE_INSTALL_LIBDIR}
              COMPONENT dict)
 endif()
 
 #--- install the Heed database
 install(DIRECTORY Heed/heed++/database DESTINATION  Heed/heed++)
 #--- install headers
-install(DIRECTORY Include/ DESTINATION include REGEX LinkDef EXCLUDE)
+install(DIRECTORY Include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} REGEX LinkDef EXCLUDE)
