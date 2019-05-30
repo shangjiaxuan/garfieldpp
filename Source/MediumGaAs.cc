@@ -59,7 +59,7 @@ bool MediumGaAs::ElectronVelocity(const double ex, const double ey,
   } else {
     // Hall mobility
     const double muH = m_eHallFactor * mu;
-    const double mu2 = muH * muH
+    const double mu2 = muH * muH;
     const double eb = bx * ex + by * ey + bz * ez;
     const double f = muH / (1. + mu2 * b * b);
     // Compute the drift velocity using the Langevin equation.
