@@ -14,37 +14,31 @@ class MediumGaAs : public Medium {
   /// Destructor
   virtual ~MediumGaAs() {}
 
-  bool IsSemiconductor() const { return true; }
+  bool IsSemiconductor() const override { return true; }
 
-  void GetComponent(const unsigned int i, std::string& label, double& f);
-
-  /// Set electron and hole trapping cross-sections [cm-2].
-  void SetTrapCrossSection(const double ecs, const double hcs);
-  /// Set the density of traps [cm-3].
-  void SetTrapDensity(const double n);
-  /// Set the trapping time [ns] for electrons and holes.
-  void SetTrappingTime(const double etau, const double htau);
+  void GetComponent(const unsigned int i, std::string& label, 
+                    double& f) override;
 
   // Electron transport parameters
   bool ElectronVelocity(const double ex, const double ey, const double ez,
                         const double bx, const double by, const double bz,
-                        double& vx, double& vy, double& vz);
+                        double& vx, double& vy, double& vz) override;
   bool ElectronTownsend(const double ex, const double ey, const double ez,
                         const double bx, const double by, const double bz,
-                        double& alpha);
+                        double& alpha) override;
   bool ElectronAttachment(const double ex, const double ey, const double ez,
                           const double bx, const double by, const double bz,
-                          double& eta);
+                          double& eta) override;
   // Hole transport parameters
   bool HoleVelocity(const double ex, const double ey, const double ez,
                     const double bx, const double by, const double bz,
-                    double& vx, double& vy, double& vz);
+                    double& vx, double& vy, double& vz) override;
   bool HoleTownsend(const double ex, const double ey, const double ez,
                     const double bx, const double by, const double bz,
-                    double& alpha);
+                    double& alpha) override;
   bool HoleAttachment(const double ex, const double ey, const double ez,
                       const double bx, const double by, const double bz,
-                      double& eta);
+                      double& eta) override;
 
   void SetLowFieldMobility(const double mue, const double muh);
 
@@ -52,20 +46,11 @@ class MediumGaAs : public Medium {
   // Band-gap energy [eV]
   // double m_bandGap = 1.42;
   // Low-field mobility
-  double eMobility = 8.8e-6;
-  double hMobility = 3.2e-6;
+  double m_eMobility = 8.8e-6;
+  double m_hMobility = 3.2e-6;
   // Hall factor
-  double eHallFactor = 1.05;
-  double hHallFactor = 1.25;
-
-  // Trapping parameters
-  double eTrapCs = 1.e-15;
-  double hTrapCs = 1.e-15;
-  double eTrapDensity = 1.e13;
-  double hTrapDensity = 1.e13;
-  double eTrapTime = 0.;
-  double hTrapTime = 0.;
-  int trappingModel = 0;
+  double m_eHallFactor = 1.05;
+  double m_hHallFactor = 1.25;
 
   // Models
   bool m_hasUserMobility = false;
