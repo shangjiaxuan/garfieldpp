@@ -160,6 +160,8 @@ class AvalancheMC {
 
   Sensor* m_sensor = nullptr;
 
+  enum class Particle { Electron = 0, Ion, Hole };
+
   struct DriftPoint {
     std::array<double, 3> x;  //< Position.
     double t;                 //< Time.
@@ -237,7 +239,8 @@ class AvalancheMC {
 
   /// Compute a drift line with starting point (x0, y0, z0).
   bool DriftLine(const double x0, const double y0, const double z0,
-                 const double t0, const int type, const bool aval = false);
+                 const double t0, const Particle particle, 
+                 const bool aval = false);
   /// Compute an avalanche with starting point (x0, y0, z0).
   bool Avalanche(const double x0, const double y0, const double z0,
                  const double t0, const unsigned int ne, const unsigned int nh,
@@ -261,23 +264,23 @@ class AvalancheMC {
                std::array<double, 3>& e, std::array<double, 3>& b,
                Medium*& medium) const;
   /// Compute the drift velocity.
-  bool GetVelocity(const int type, Medium* medium, 
+  bool GetVelocity(const Particle particle, Medium* medium, 
                    const std::array<double, 3>& x,
                    const std::array<double, 3>& e,
                    const std::array<double, 3>& b,
                    std::array<double, 3>& v) const;
   /// Compute the attachment coefficient.
-  double GetAttachment(const int type, Medium* medium, 
+  double GetAttachment(const Particle particle, Medium* medium, 
                        const std::array<double, 3>& x,
                        const std::array<double, 3>& e,
                        const std::array<double, 3>& b) const;
   /// Compute end point and effective velocity for a step.
-  void StepRKF(const int type, const std::array<double, 3>& x0,
+  void StepRKF(const Particle particle, const std::array<double, 3>& x0,
                const std::array<double, 3>& v0, const double dt,
                std::array<double, 3>& xf, std::array<double, 3>& vf,
                int& status) const;
   /// Add a diffusion step.
-  bool AddDiffusion(const int type, Medium* medium, const double step,
+  bool AddDiffusion(const Particle particle, Medium* medium, const double step,
                     std::array<double, 3>& x,
                     const std::array<double, 3>& v,
                     const std::array<double, 3>& e,
@@ -286,22 +289,23 @@ class AvalancheMC {
   void Terminate(const std::array<double, 3>& x0, const double t0,
                  std::array<double, 3>& x, double& t) const;
   /// Compute multiplication and losses along the current drift line.
-  bool ComputeGainLoss(const int type, std::vector<DriftPoint>& driftLine,
-                       int& status);
+  bool ComputeGainLoss(const Particle particle, 
+                       std::vector<DriftPoint>& driftLine, int& status);
   /// Compute Townsend and attachment coefficients along the current drift line.
-  bool ComputeAlphaEta(const int q, 
+  bool ComputeAlphaEta(const Particle particle,
                        const std::vector<DriftPoint>& driftLine,
                        std::vector<double>& alphas,
                        std::vector<double>& etas) const;
   bool Equilibrate(std::vector<double>& alphas) const;
   /// Compute the induced signal for the current drift line.
-  void ComputeSignal(const double q,
+  void ComputeSignal(const Particle particle, const double q,
                      const std::vector<DriftPoint>& driftLine) const;
   /// Compute the induced charge for the current drift line.
   void ComputeInducedCharge(const double q,
                             const std::vector<DriftPoint>& driftLine) const;
   void PrintError(const std::string& fcn, const std::string& par, 
-                  const int type, const std::array<double, 3>& x) const;
+                  const Particle particle, 
+                  const std::array<double, 3>& x) const;
 
 };
 }
