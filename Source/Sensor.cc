@@ -493,6 +493,52 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
     }
     FillSignal(electrode, q, ts, signal, navg);
   }
+
+  if (!m_delayedSignal) return;
+  if (m_delayedSignalTimes.empty()) return;
+  // Locations and weights for 6-point Gaussian integration
+  constexpr double tg[6] = {-0.932469514203152028, -0.661209386466264514,
+                            -0.238619186083196909, 0.238619186083196909,
+                            0.661209386466264514,  0.932469514203152028};
+  constexpr double wg[6] = {0.171324492379170345, 0.360761573048138608,
+                            0.467913934572691047, 0.467913934572691047,
+                            0.360761573048138608, 0.171324492379170345};
+  const unsigned int nd = m_delayedSignalTimes.size();
+  for (unsigned int k = 0; k < nPoints - 1; ++k) {
+    const double t0 = ts[k];
+    const double t1 = ts[k + 1];
+    const double dt = t1 - t0;
+    const auto& x0 = xs[k];
+    const auto& x1 = xs[k + 1];
+    std::array<double, 3> x;
+    for (unsigned int ii = 0; ii < 3; ++ii) x[ii] = 0.5 * (x0[ii] + x1[ii]);
+    const auto& v = vs[k];
+    std::vector<double> td(nd); 
+    for (unsigned int i = 0; i < nd; ++i) {
+      td[i] = t0 + m_delayedSignalTimes[i];
+    }
+    // Calculate the signals for each electrode.
+    for (auto& electrode : m_electrodes) {
+      const std::string lbl = electrode.label;
+      std::vector<double> id(nd, 0.);
+      for (unsigned int i = 0; i < nd; ++i) {
+        // Integrate over the drift line segment.
+        const double step = std::min(m_delayedSignalTimes[i], dt);
+        double sum = 0.;
+        for (unsigned int j = 0; j < 6; ++j) {
+          const double t = m_delayedSignalTimes[i] - 0.5 * (1. + tg[j]) * step;
+          // Calculate the delayed weighting field.
+          double wx = 0., wy = 0., wz = 0.;
+          electrode.comp->DelayedWeightingField(x[0], x[1], x[2], t, wx, wy, wz, lbl);
+          sum += -q * (wx * v[0] + wy * v[1] + wz * v[2]) * wg[j];
+        }
+        id[i] = 0.5 * sum * step;
+      }
+      FillSignal(electrode, q, td, id, 2, true);
+    }
+  }
+
+
 }
 
 void Sensor::FillSignal(Electrode& electrode, const double q, 
