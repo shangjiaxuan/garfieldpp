@@ -798,11 +798,11 @@ bool ViewField::SetupFunction(const std::string& option, TF2*& f,
   if (wfield) {
     title = "weighting " + title;
     f->SetParameter(0, -parPlotType);
-    if (plotType == Potential) {
+    if (m_useAutoRange) {
+      SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, f, zmin, zmax);
+    } else if (plotType == Potential) {
       zmin = 0.;
       zmax = 1.;
-    } else if (m_useAutoRange) {
-      SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, f, zmin, zmax);
     } else {
       zmin = m_wmin;
       zmax = m_wmax;

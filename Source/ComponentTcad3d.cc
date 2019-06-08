@@ -24,7 +24,7 @@ void ComponentTcad3d::ElectricField(const double xin, const double yin,
                                     double& ez, double& p, Medium*& m,
                                     int& status) {
   ex = ey = ez = p = 0.;
-  m = NULL;
+  m = nullptr;
   // Make sure the field map has been loaded.
   if (!m_ready) {
     std::cerr << m_className << "::ElectricField:\n"
@@ -47,90 +47,28 @@ void ComponentTcad3d::ElectricField(const double xin, const double yin,
 
   // Assume this will work.
   status = 0;
-  double w[nMaxVertices] = {0};
-  if (m_lastElement >= 0) {
-    // Check if the point is still located in the previously found element.
-    const Element& last = m_elements[m_lastElement];
-    if (x >= last.xmin && x <= last.xmax && y >= last.ymin && y <= last.ymax &&
-        z >= last.zmin && z <= last.zmax) {
-      if (CheckElement(x, y, z, last, w)) {
-        const unsigned int nVertices = last.type == 2 ? 3 : 4;
-        for (unsigned int j = 0; j < nVertices; ++j) {
-          const Vertex& vj = m_vertices[last.vertex[j]];
-          ex += w[j] * vj.ex;
-          ey += w[j] * vj.ey;
-          ez += w[j] * vj.ez;
-          p += w[j] * vj.p;
-        }
-        if (xmirr) ex = -ex;
-        if (ymirr) ey = -ey;
-        if (zmirr) ez = -ez;
-        m = m_regions[last.region].medium;
-        if (!m_regions[last.region].drift || !m) status = -5;
-        return;
-      }
-    }
-    // The point is not in the previous element.
-    // Check the adjacent elements.
-    const unsigned int nNeighbours = last.neighbours.size();
-    for (unsigned int i = 0; i < nNeighbours; ++i) {
-      const Element& element = m_elements[last.neighbours[i]];
-      if (x < element.xmin || x > element.xmax || y < element.ymin ||
-          y > element.ymax || z < element.zmin || z > element.zmax)
-        continue;
-      if (!CheckElement(x, y, z, element, w)) continue;
-      const unsigned int nVertices = element.type == 2 ? 3 : 4;
-      for (unsigned int j = 0; j < nVertices; ++j) {
-        const Vertex& vj = m_vertices[element.vertex[j]];
-        ex += w[j] * vj.ex;
-        ey += w[j] * vj.ey;
-        ez += w[j] * vj.ez;
-        p += w[j] * vj.p;
-      }
-      if (xmirr) ex = -ex;
-      if (ymirr) ey = -ey;
-      if (zmirr) ez = -ez;
-      m = m_regions[element.region].medium;
-      if (!m_regions[element.region].drift || !m) status = -5;
-      m_lastElement = last.neighbours[i];
-      return;
-    }
-  }
-
-  // The point is not in the previous element.
-  // We have to loop over all elements.
-  const unsigned int nElements = m_elements.size();
-  for (unsigned int i = 0; i < nElements; ++i) {
-    const Element& element = m_elements[i];
-    if (x < element.xmin || x > element.xmax || y < element.ymin ||
-        y > element.ymax || z < element.zmin || z > element.zmax)
-      continue;
-    if (!CheckElement(x, y, z, element, w)) continue;
-    const unsigned int nVertices = element.type == 2 ? 3 : 4;
-    for (unsigned int j = 0; j < nVertices; ++j) {
-      const Vertex& vj = m_vertices[element.vertex[j]];
-      ex += w[j] * vj.ex;
-      ey += w[j] * vj.ey;
-      ez += w[j] * vj.ez;
-      p += w[j] * vj.p;
-    }
-    if (xmirr) ex = -ex;
-    if (ymirr) ey = -ey;
-    if (zmirr) ez = -ez;
-    m = m_regions[element.region].medium;
-    if (!m_regions[element.region].drift || !m) status = -5;
-    m_lastElement = i;
+  std::array<double, nMaxVertices> w;
+  const unsigned int i = FindElement(x, y, z, w);
+  if (i >= m_elements.size()) {
+    // Point is outside the mesh.
+    status = -6;
     return;
   }
-
-  // Point is outside the mesh.
-  if (m_debug) {
-    std::cerr << m_className << "::ElectricField:\n"
-              << "    Point (" << x << ", " << y << ", " << z
-              << ") is outside the mesh.\n";
+  const Element& element = m_elements[i];
+  const unsigned int nVertices = element.type == 2 ? 3 : 4;
+  for (unsigned int j = 0; j < nVertices; ++j) {
+    const Vertex& vj = m_vertices[element.vertex[j]];
+    ex += w[j] * vj.ex;
+    ey += w[j] * vj.ey;
+    ez += w[j] * vj.ez;
+    p += w[j] * vj.p;
   }
-  status = -6;
-  return;
+  if (xmirr) ex = -ex;
+  if (ymirr) ey = -ey;
+  if (zmirr) ez = -ez;
+  m = m_regions[element.region].medium;
+  if (!m_regions[element.region].drift || !m) status = -5;
+  m_lastElement = i;
 }
 
 void ComponentTcad3d::ElectricField(const double x, const double y,
@@ -140,13 +78,77 @@ void ComponentTcad3d::ElectricField(const double x, const double y,
   ElectricField(x, y, z, ex, ey, ez, v, m, status);
 }
 
+void ComponentTcad3d::WeightingField(const double xin, const double yin,
+                                     const double zin, double& wx, double& wy,
+                                     double& wz, const std::string& /*label*/) {
+  wx = wy = wz = 0.;
+  if (m_wf.empty()) {
+    std::cerr << m_className << "::WeightingField: Not available.\n";
+    return;
+  }
+  double x = xin, y = yin, z = zin;
+  // In case of periodicity, reduce to the cell volume.
+  bool xmirr = false, ymirr = false, zmirr = false;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr);
+
+  // Check if the point is inside the bounding box.
+  if (x < m_xMinBB || x > m_xMaxBB || y < m_yMinBB || y > m_yMaxBB ||
+      z < m_zMinBB || z > m_zMaxBB) return;
+
+  std::array<double, nMaxVertices> w;
+  const unsigned int i = FindElement(x, y, z, w);
+  if (i >= m_elements.size()) return;
+
+  const Element& element = m_elements[i];
+  const unsigned int nVertices = element.type == 2 ? 3 : 4;
+  for (unsigned int j = 0; j < nVertices; ++j) {
+    const auto& f = m_wf[element.vertex[j]];
+    wx += w[j] * f[0];
+    wy += w[j] * f[1];
+    wz += w[j] * f[2];
+  }
+  if (xmirr) wx = -wx;
+  if (ymirr) wy = -wy;
+  if (zmirr) wz = -wz;
+}
+
+double ComponentTcad3d::WeightingPotential(const double xin, const double yin,
+                                           const double zin, 
+                                           const std::string& /*label*/) {
+
+  if (m_wp.empty()) {
+    std::cerr << m_className << "::WeightingPotential: Not available.\n";
+    return 0.;
+  }
+  // In case of periodicity, reduce to the cell volume.
+  double x = xin, y = yin, z = zin;
+  bool xmirr = false, ymirr = false, zmirr = false;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr);
+
+  // Check if the point is inside the bounding box.
+  if (x < m_xMinBB || x > m_xMaxBB || y < m_yMinBB || y > m_yMaxBB ||
+      z < m_zMinBB || z > m_zMaxBB) return 0.;
+
+  std::array<double, nMaxVertices> w;
+  const unsigned int i = FindElement(x, y, z, w);
+  if (i >= m_elements.size()) return 0.;
+
+  double v = 0.;
+  const Element& element = m_elements[i];
+  const unsigned int nVertices = element.type == 2 ? 3 : 4;
+  for (unsigned int j = 0; j < nVertices; ++j) {
+    v += w[j] * m_wp[element.vertex[j]];
+  }
+  return v;
+}
+
 Medium* ComponentTcad3d::GetMedium(const double xin, const double yin,
                                    const double zin) {
   // Make sure the field map has been loaded.
   if (!m_ready) {
     std::cerr << m_className << "::GetMedium:\n"
               << "    Field map not available for interpolation.\n";
-    return NULL;
+    return nullptr;
   }
 
   double x = xin, y = yin, z = zin;
@@ -156,49 +158,18 @@ Medium* ComponentTcad3d::GetMedium(const double xin, const double yin,
   // Check if the point is inside the bounding box.
   if (x < m_xMinBB || x > m_xMaxBB || y < m_yMinBB || y > m_yMaxBB ||
       z < m_zMinBB || z > m_zMaxBB) {
-    return NULL;
+    return nullptr;
   }
 
-  double w[nMaxVertices] = {0};
-  if (m_lastElement >= 0) {
-    // Check if the point is still located in the previously found element.
-    const Element& last = m_elements[m_lastElement];
-    if (x >= last.xmin && x <= last.xmax && y >= last.ymin && y <= last.ymax &&
-        z >= last.zmin && z <= last.zmax) {
-      if (CheckElement(x, y, z, last, w)) {
-        return m_regions[last.region].medium;
-      }
-    }
-
-    // The point is not in the previous element.
-    // Check the adjacent elements.
-    const unsigned int nNeighbours = last.neighbours.size();
-    for (unsigned int i = 0; i < nNeighbours; ++i) {
-      const Element& element = m_elements[last.neighbours[i]];
-      if (x < element.xmin || x > element.xmax || y < element.ymin ||
-          y > element.ymax || z < element.zmin || z > element.zmax)
-        continue;
-      if (!CheckElement(x, y, z, element, w)) continue;
-      m_lastElement = last.neighbours[i];
-      return m_regions[element.region].medium;
-    }
+  std::array<double, nMaxVertices> w;
+  const unsigned int i = FindElement(x, y, z, w);
+  if (i >= m_elements.size()) {
+    // Point is outside the mesh.
+    return nullptr;
   }
-
-  // The point is not in the previous element nor in the adjacent ones.
-  // We have to loop over all elements.
-  const unsigned int nElements = m_elements.size();
-  for (unsigned int i = 0; i < nElements; ++i) {
-    const Element& element = m_elements[i];
-    if (x < element.xmin || x > element.xmax || y < element.ymin ||
-        y > element.ymax || z < element.zmin || z > element.zmax)
-      continue;
-    if (!CheckElement(x, y, z, element, w)) continue;
-    m_lastElement = i;
-    return m_regions[element.region].medium;
-  }
-
-  // The point is outside the mesh.
-  return NULL;
+  m_lastElement = i;
+  const Element& element = m_elements[i];
+  return m_regions[element.region].medium;
 }
 
 bool ComponentTcad3d::Initialise(const std::string& gridfilename,
@@ -247,7 +218,7 @@ bool ComponentTcad3d::Initialise(const std::string& gridfilename,
       if (vj.p < m_pMin) m_pMin = vj.p;
       if (vj.p > m_pMax) m_pMax = vj.p;
     }
-    const double tol = 1.e-6;
+    constexpr double tol = 1.e-6;
     element.xmin = xmin - tol;
     element.xmax = xmax + tol;
     element.ymin = ymin - tol;
@@ -401,8 +372,73 @@ bool ComponentTcad3d::Initialise(const std::string& gridfilename,
 
   m_ready = true;
   UpdatePeriodicity();
-  std::cout << m_className << "::Initialise:\n"
-            << "    Initialisation finished.\n";
+  std::cout << m_className << "::Initialise: Initialisation finished.\n";
+  return true;
+}
+
+bool ComponentTcad3d::SetWeightingField(const std::string& datfile1,
+                                        const std::string& datfile2,
+                                        const double dv) {
+
+  if (!m_ready) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Mesh is not available. Call Initialise first.\n";
+    return false;
+  }
+  if (dv < Small) {
+     std::cerr << m_className << "::SetWeightingField:\n"
+               << "    Voltage difference must be > 0.\n";
+     return false;
+  }
+  const double s = 1. / dv;
+
+  m_wf.clear();
+  m_wp.clear();
+  // Load first the field/potential at nominal bias.
+  std::vector<std::array<double, 3> > wf1;
+  std::vector<double> wp1;
+  if (!LoadWeightingField(datfile1, wf1, wp1)) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not import data from " << datfile1 << ".\n";
+    return false;
+  }
+  // Then load the field/potential for the configuration with the potential 
+  // at the electrode to be read out increased by small voltage dv. 
+  std::vector<std::array<double, 3> > wf2;
+  std::vector<double> wp2;
+  if (!LoadWeightingField(datfile2, wf2, wp2)) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not import data from " << datfile2 << ".\n";
+    return false;
+  }
+  const unsigned int nVertices = m_vertices.size();
+  bool foundField = true;
+  if (wf1.size() != nVertices || wf2.size() != nVertices) {
+    foundField = false;
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not load electric field values.\n";
+  }
+  bool foundPotential = true;
+  if (wp1.size() != nVertices || wp2.size() != nVertices) {
+    foundPotential = false;
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not load electrostatic potentials.\n";
+  }
+  if (!foundField && !foundPotential) return false;
+  if (foundField) {
+    m_wf.assign(nVertices, {0., 0., 0.});
+    for (unsigned int i = 0; i < nVertices; ++i) {
+      for (unsigned int j = 0; j < 3; ++j) {
+        m_wf[i][j] = (wf2[i][j] - wf1[i][j]) * s;
+      } 
+    }
+  }
+  if (foundPotential) {
+    m_wp.assign(nVertices, 0.);
+    for (unsigned int i = 0; i < nVertices; ++i) {
+      m_wp[i] = (wp2[i] - wp1[i]) * s; 
+    }
+  }
   return true;
 }
 
@@ -411,7 +447,7 @@ void ComponentTcad3d::FindNeighbours() {
   std::vector<std::vector<bool> > adjacent(nElements,
                                            std::vector<bool>(nElements, false));
 
-  const double tol = 5.e-4;
+  constexpr double tol = 5.e-4;
   for (unsigned int i = 0; i < nElements; ++i) {
     const Element& ei = m_elements[i];
     for (unsigned int j = 0; j < nElements; ++j) {
@@ -511,8 +547,7 @@ void ComponentTcad3d::PrintRegions() {
 void ComponentTcad3d::GetRegion(const unsigned int i, std::string& name,
                                 bool& active) const {
   if (i >= m_regions.size()) {
-    std::cerr << m_className << "::GetRegion:\n"
-              << "    Region " << i << " does not exist.\n";
+    std::cerr << m_className << "::GetRegion: Index out of range.\n";
     return;
   }
   name = m_regions[i].name;
@@ -521,8 +556,7 @@ void ComponentTcad3d::GetRegion(const unsigned int i, std::string& name,
 
 void ComponentTcad3d::SetDriftRegion(const unsigned int i) {
   if (i >= m_regions.size()) {
-    std::cerr << m_className << "::SetDriftRegion:\n"
-              << "    Region " << i << " does not exist.\n";
+    std::cerr << m_className << "::SetDriftRegion: Index out of range.\n";
     return;
   }
   m_regions[i].drift = true;
@@ -530,8 +564,7 @@ void ComponentTcad3d::SetDriftRegion(const unsigned int i) {
 
 void ComponentTcad3d::UnsetDriftRegion(const unsigned int i) {
   if (i >= m_regions.size()) {
-    std::cerr << m_className << "::UnsetDriftRegion:\n"
-              << "    Region " << i << " does not exist.\n";
+    std::cerr << m_className << "::UnsetDriftRegion: Index out of range.\n";
     return;
   }
   m_regions[i].drift = false;
@@ -539,13 +572,12 @@ void ComponentTcad3d::UnsetDriftRegion(const unsigned int i) {
 
 void ComponentTcad3d::SetMedium(const unsigned int i, Medium* medium) {
   if (i >= m_regions.size()) {
-    std::cerr << m_className << "::SetMedium:\n"
-              << "    Region " << i << " does not exist.\n";
+    std::cerr << m_className << "::SetMedium: Index out of range.\n";
     return;
   }
 
   if (!medium) {
-    std::cerr << m_className << "::SetMedium:\n    Null pointer.\n";
+    std::cerr << m_className << "::SetMedium: Null pointer.\n";
     return;
   }
   m_regions[i].medium = medium;
@@ -553,8 +585,7 @@ void ComponentTcad3d::SetMedium(const unsigned int i, Medium* medium) {
 
 bool ComponentTcad3d::GetMedium(const unsigned int i, Medium*& m) const {
   if (i >= m_regions.size()) {
-    std::cerr << m_className << "::GetMedium:\n"
-              << "    Region " << i << " does not exist.\n";
+    std::cerr << m_className << "::GetMedium: Index out of range.\n";
     return false;
   }
 
@@ -563,11 +594,54 @@ bool ComponentTcad3d::GetMedium(const unsigned int i, Medium*& m) const {
   return true;
 }
 
+unsigned int ComponentTcad3d::FindElement(
+    const double x, const double y, const double z,
+    std::array<double, nMaxVertices>& w) const {
+
+  w.fill(0.);
+  if (m_lastElement >= 0) {
+    // Check if the point is still located in the previously found element.
+    const Element& last = m_elements[m_lastElement];
+    if (x >= last.xmin && x <= last.xmax && y >= last.ymin && y <= last.ymax &&
+        z >= last.zmin && z <= last.zmax) {
+      if (CheckElement(x, y, z, last, w)) return m_lastElement;
+    }
+    // The point is not in the previous element.
+    // Check the adjacent elements.
+    const unsigned int nNeighbours = last.neighbours.size();
+    for (unsigned int i = 0; i < nNeighbours; ++i) {
+      const Element& element = m_elements[last.neighbours[i]];
+      if (x < element.xmin || x > element.xmax || y < element.ymin ||
+          y > element.ymax || z < element.zmin || z > element.zmax)
+        continue;
+      if (CheckElement(x, y, z, element, w)) continue;
+      return last.neighbours[i];
+    }
+  }
+
+  // The point is not in the previous element nor in the adjacent ones.
+  // We have to loop over all elements.
+  const unsigned int nElements = m_elements.size();
+  for (unsigned int i = 0; i < nElements; ++i) {
+    const Element& element = m_elements[i];
+    if (x < element.xmin || x > element.xmax || y < element.ymin ||
+        y > element.ymax || z < element.zmin || z > element.zmax)
+      continue;
+    if (CheckElement(x, y, z, element, w)) return i;
+  }
+
+  if (m_debug) {
+    std::cerr << m_className << "::FindElement:\n"
+              << "    Point (" << x << ", " << y << ", " << z
+              << ") is outside the mesh.\n";
+  }
+  return nElements;
+}
+
 bool ComponentTcad3d::GetElement(const unsigned int i, double& vol,
                                  double& dmin, double& dmax, int& type) const {
   if (i >= m_elements.size()) {
-    std::cerr << m_className << "::GetElement:\n"
-              << "    Element index (" << i << ") out of range.\n";
+    std::cerr << m_className << "::GetElement: Index out of range.\n";
     return false;
   }
 
@@ -654,8 +728,7 @@ bool ComponentTcad3d::GetNode(const unsigned int i, double& x, double& y,
                               double& z, double& v, double& ex, double& ey,
                               double& ez) const {
   if (i >= m_vertices.size()) {
-    std::cerr << m_className << "::GetNode:\n"
-              << "    Node index (" << i << ") out of range.\n";
+    std::cerr << m_className << "::GetNode: Index out of range.\n";
     return false;
   }
 
@@ -718,7 +791,7 @@ bool ComponentTcad3d::LoadData(const std::string& datafilename) {
     }
   }
   if (datafile.fail() && !datafile.eof()) {
-    std::cerr << m_className << "::LoadData\n"
+    std::cerr << m_className << "::LoadData:\n"
               << "    Error reading file " << datafilename << "\n";
     datafile.close();
     Cleanup();
@@ -774,6 +847,8 @@ bool ComponentTcad3d::ReadDataset(std::ifstream& datafile,
   if (index < 0) {
     std::cerr << m_className << "::ReadDataset:\n"
               << "    Unknown region " << name << ".\n";
+    datafile.close();
+    Cleanup();
     return false;
   }
   // Get the number of values.
@@ -849,6 +924,146 @@ bool ComponentTcad3d::ReadDataset(std::ifstream& datafile,
   return true;
 }
 
+bool ComponentTcad3d::LoadWeightingField(const std::string& datafilename,
+    std::vector<std::array<double, 3> >& wf, std::vector<double>& wp) {
+
+  std::ifstream datafile;
+  datafile.open(datafilename.c_str(), std::ios::in);
+  if (!datafile) {
+    std::cerr << m_className << "::LoadWeightingField:\n"
+              << "    Could not open file " << datafilename << ".\n";
+    return false;
+  }
+
+  const unsigned int nVertices = m_vertices.size();
+  bool ok = true;
+  while (!datafile.fail()) {
+    // Read one line.
+    std::string line;
+    std::getline(datafile, line);
+    // Strip white space from beginning of line.
+    ltrim(line);
+    // Find data section.
+    if (line.substr(0, 8) != "function") continue;
+    // Read type of data set.
+    const std::string::size_type pEq = line.find('=');
+    if (pEq == std::string::npos) {
+      // No "=" found.
+      std::cerr << m_className << "::LoadWeightingField:\n"
+                << "    Error reading file " << datafilename << ".\n"
+                << "    Line:\n    " << line << "\n";
+      datafile.close();
+      return false;
+    }
+    line = line.substr(pEq + 1);
+    std::string dataset;
+    std::istringstream data;
+    data.str(line);
+    data >> dataset;
+    data.clear();
+    if (dataset != "ElectrostaticPotential" && 
+        dataset != "ElectricField") continue;
+    bool field = false;
+    if (dataset == "ElectricField") {
+      wf.assign(nVertices, {0., 0., 0.});
+      field = true;
+    } else {
+      wp.assign(nVertices, 0.);
+    }
+    std::getline(datafile, line);
+    std::getline(datafile, line);
+    std::getline(datafile, line);
+    std::getline(datafile, line);
+    // Get the region name (given in brackets).
+    auto bra = line.find('[');
+    auto ket = line.find(']');
+    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+      std::cerr << m_className << "::LoadWeightingField:\n"
+                << "    Cannot extract region name.\n"
+                << "    Line:\n    " << line << "\n";
+      ok = false;
+      break;
+    }
+    line = line.substr(bra + 1, ket - bra - 1);
+    std::string name;
+    data.str(line);
+    data >> name;
+    data.clear();
+    // Check if the region name matches one from the mesh file.
+    const int index = FindRegion(name);
+    if (index < 0) {
+      std::cerr << m_className << "::LoadWeightingField:\n"
+                << "    Unknown region " << name << ".\n";
+      ok = false;
+      break;
+    }
+    // Get the number of values.
+    std::getline(datafile, line);
+    bra = line.find('(');
+    ket = line.find(')');
+    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+      std::cerr << m_className << "::LoadWeightingField:\n"
+                << "    Cannot extract number of values to be read.\n"
+                << "    Line:\n    " << line << "\n";
+      ok = false;
+      break;
+    }
+    line = line.substr(bra + 1, ket - bra - 1);
+    int nValues;
+    data.str(line);
+    data >> nValues;
+    if (field) nValues /= 3;
+    // Mark the vertices belonging to this region.
+    std::vector<bool> isInRegion(nVertices, false);
+    const unsigned int nElements = m_elements.size();
+    for (unsigned int j = 0; j < nElements; ++j) {
+      if (m_elements[j].region != index) continue;
+      for (int k = 0; k <= m_elements[j].type; ++k) {
+        isInRegion[m_elements[j].vertex[k]] = true;
+      }
+    }
+    unsigned int ivertex = 0;
+    for (int j = 0; j < nValues; ++j) {
+      // Read the next value.
+      double val1, val2, val3;
+      if (field) {
+        datafile >> val1 >> val2 >> val3;
+      } else {
+        datafile >> val1;
+      }
+      // Find the next vertex belonging to the region.
+      while (ivertex < nVertices) {
+        if (isInRegion[ivertex]) break;
+        ++ivertex;
+      }
+      // Check if there is a mismatch between the number of m_vertices
+      // and the number of potential values.
+      if (ivertex >= nVertices) {
+        std::cerr << m_className << "::LoadWeightingField:\n"
+                  << "    Dataset " << dataset << " has more values than "
+                  << "there are vertices in region " << name << "\n";
+        ok = false;
+        break;
+      }
+      if (field) {
+        wf[ivertex] = {val1, val2, val3};
+      } else {
+        wp[ivertex] = val1;
+      }
+      ++ivertex;
+    }
+  }
+
+  if (!ok || (datafile.fail() && !datafile.eof())) {
+    std::cerr << m_className << "::LoadWeightingField:\n"
+              << "    Error reading file " << datafilename << "\n";
+    datafile.close();
+    return false;
+  }
+  datafile.close();
+  return true;
+}
+
 bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
   // Open the file containing the mesh description.
   std::ifstream gridfile;
@@ -912,7 +1127,7 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
   for (unsigned int j = 0; j < nRegions; ++j) {
     m_regions[j].name = "";
     m_regions[j].drift = false;
-    m_regions[j].medium = NULL;
+    m_regions[j].medium = nullptr;
   }
 
   if (m_debug) {
@@ -983,8 +1198,8 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     const std::string::size_type ket = line.find(')');
     if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
       // No closed brackets [].
-      std::cerr << m_className << "::LoadGrid:\n";
-      std::cerr << "    Could not read number of vertices.\n";
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read number of vertices.\n";
       Cleanup();
       gridfile.close();
       return false;
@@ -1108,8 +1323,8 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     const std::string::size_type ket = line.find(')');
     if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
       // No closed brackets ()
-      std::cerr << m_className << "::LoadGrid:\n";
-      std::cerr << "    Could not read number of faces.\n";
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read number of faces.\n";
       Cleanup();
       gridfile.close();
       return false;
@@ -1123,8 +1338,8 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     for (int j = 0; j < nFaces; ++j) {
       gridfile >> faces[j].type;
       if (faces[j].type != 3 && faces[j].type != 4) {
-        std::cerr << m_className << "::LoadGrid:\n";
-        std::cerr << "    Face with index " << j
+        std::cerr << m_className << "::LoadGrid:\n"
+                  << "    Face with index " << j
                   << " has invalid number of edges, " << faces[j].type << ".\n";
         Cleanup();
         gridfile.close();
@@ -1167,8 +1382,8 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     const std::string::size_type ket = line.find(')');
     if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
       // No closed brackets ().
-      std::cerr << m_className << "::LoadGrid:\n";
-      std::cerr << "    Could not read number of elements.\n";
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read number of elements.\n";
       Cleanup();
       gridfile.close();
       return false;
@@ -1197,10 +1412,9 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
         // Make sure the indices are not out of range.
         if (edge0 >= nEdges || -edge0 - 1 >= nEdges || edge1 >= nEdges ||
             -edge1 - 1 >= nEdges || edge2 >= nEdges || -edge2 - 1 >= nEdges) {
-          std::cerr << m_className << "::LoadGrid:\n";
-          std::cerr << "    Error reading file " << gridfilename << " (line "
-                    << iLine << ").\n";
-          std::cerr << "    Edge index out of range.\n";
+          std::cerr << m_className << "::LoadGrid:\n    Error reading file "
+                    << gridfilename << " (line " << iLine << ").\n"
+                    << "    Edge index out of range.\n";
           Cleanup();
           gridfile.close();
           return false;
@@ -1227,10 +1441,9 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
         if (face0 >= nFaces || -face0 - 1 >= nFaces || face1 >= nFaces ||
             -face1 - 1 >= nFaces || face2 >= nFaces || -face2 - 1 >= nFaces ||
             face3 >= nFaces || -face3 - 1 >= nFaces) {
-          std::cerr << m_className << "::LoadGrid:\n";
-          std::cerr << "    Error reading file " << gridfilename << " (line "
-                    << iLine << ").\n";
-          std::cerr << "    Face index out of range.\n";
+          std::cerr << m_className << "::LoadGrid:\n    Error reading file "
+                    << gridfilename << " (line " << iLine << ").\n"
+                    << "    Face index out of range.\n";
           Cleanup();
           gridfile.close();
           return false;
@@ -1246,9 +1459,9 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
         if (edge2 < 0) edge2 = -edge2 - 1;
         // Make sure the edge indices are not out of range.
         if (edge0 >= nEdges || edge1 >= nEdges || edge2 >= nEdges) {
-          std::cerr << m_className << "::LoadGrid:\n";
-          std::cerr << "    Error reading file " << gridfilename << "\n";
-          std::cerr << "    Edge index in element " << j << " out of range.\n";
+          std::cerr << m_className << "::LoadGrid:\n"
+                    << "    Error reading file " << gridfilename << "\n"
+                    << "    Edge index in element " << j << " out of range.\n";
           Cleanup();
           gridfile.close();
           return false;
@@ -1286,9 +1499,9 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
                    edgeP2[edge1] != m_elements[j].vertex[2]) {
           m_elements[j].vertex[3] = edgeP2[edge1];
         } else {
-          std::cerr << m_className << "::LoadGrid:\n";
-          std::cerr << "    Error reading file " << gridfilename << "\n";
-          std::cerr << "    Face 1 of element " << j << " is degenerate.\n";
+          std::cerr << m_className << "::LoadGrid:\n"
+                    << "    Error reading file " << gridfilename << "\n"
+                    << "    Face 1 of element " << j << " is degenerate.\n";
           Cleanup();
           gridfile.close();
           return false;
@@ -1316,16 +1529,15 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     break;
   }
   if (gridfile.eof()) {
-    std::cerr << m_className << "::LoadGrid:\n";
-    std::cerr << "    Could not find section 'Elements' in file\n";
-    std::cerr << "    " << gridfilename << ".\n";
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Could not find section 'Elements' in file\n"
+              << "    " << gridfilename << ".\n";
     Cleanup();
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
-    std::cerr << m_className << "::LoadGrid:\n";
-    std::cerr << "    Error reading file " << gridfilename << " (line " << iLine
-              << ").\n";
+    std::cerr << m_className << "::LoadGrid:\n    Error reading file "
+              << gridfilename << " (line " << iLine << ").\n";
     Cleanup();
     gridfile.close();
     return false;
@@ -1343,8 +1555,8 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     std::string::size_type bra = line.find('(');
     std::string::size_type ket = line.find(')');
     if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      std::cerr << m_className << "::LoadGrid:\n";
-      std::cerr << "    Could not read region name.\n";
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read region name.\n";
       Cleanup();
       gridfile.close();
       return false;
@@ -1368,10 +1580,9 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     ket = line.find(')');
     if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
       // No closed brackets ().
-      std::cerr << m_className << "::LoadGrid:\n";
-      std::cerr << "    Error reading file " << gridfilename << ".\n";
-      std::cerr << "    Could not read number of elements in region " << name
-                << ".\n";
+      std::cerr << m_className << "::LoadGrid:\n    Error reading file "
+                << gridfilename << ".\n    Could not read number of elements "
+                << "in region " << name << ".\n";
       Cleanup();
       gridfile.close();
       return false;
@@ -1406,11 +1617,14 @@ void ComponentTcad3d::Cleanup() {
   m_elements.clear();
   // Regions
   m_regions.clear();
+  // Weighting fields and potentials.
+  m_wf.clear();
+  m_wp.clear();
 }
 
-bool ComponentTcad3d::CheckTetrahedron(const double x, const double y,
-                                       const double z, const Element& element,
-                                       double w[nMaxVertices]) const {
+bool ComponentTcad3d::CheckTetrahedron(
+    const double x, const double y, const double z, const Element& element,
+    std::array<double, nMaxVertices>& w) const {
   const Vertex& v0 = m_vertices[element.vertex[0]];
   const Vertex& v1 = m_vertices[element.vertex[1]];
   const Vertex& v2 = m_vertices[element.vertex[2]];
@@ -1489,9 +1703,9 @@ bool ComponentTcad3d::CheckTetrahedron(const double x, const double y,
   return true;
 }
 
-bool ComponentTcad3d::CheckTriangle(const double x, const double y,
-                                    const double z, const Element& element,
-                                    double w[nMaxVertices]) const {
+bool ComponentTcad3d::CheckTriangle(
+    const double x, const double y, const double z, const Element& element,
+    std::array<double, nMaxVertices>& w) const {
   const Vertex& v0 = m_vertices[element.vertex[0]];
   const Vertex& v1 = m_vertices[element.vertex[1]];
   const Vertex& v2 = m_vertices[element.vertex[2]];
