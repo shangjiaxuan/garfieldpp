@@ -79,7 +79,7 @@ class Sensor {
   /** Set the time window and binning for the signal calculation.
     * \param tstart start time [ns]
     * \param tstep bin width [ns]
-    * \param nstep number of bins
+    * \param nsteps number of bins
     */
   void SetTimeWindow(const double tstart, const double tstep,
                      const unsigned int nsteps);

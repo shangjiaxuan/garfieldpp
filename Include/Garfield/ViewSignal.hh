@@ -31,6 +31,7 @@ class ViewSignal {
     * \param total Flag whether to plot the total induced signal.
     * \param electron Flag whether to plot the electron-induced signal.
     * \param ion Flag whether to plot the ion/hole-induced signal.
+    * \param delayed Flag whether to plot the delayed signal component.
     */
   void PlotSignal(const std::string& label, const bool total = true,
                   const bool electron = false, const bool ion = false, 
