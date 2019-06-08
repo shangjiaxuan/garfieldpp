@@ -102,8 +102,8 @@ class ComponentBase {
     * \param x1,y1,z1 second point [cm]
     * \param xc,yc,zc point [cm] where the line crosses the wire or the 
              coordinates of the wire centre.
-    * \param flag whether to return the coordinates of the line-wire crossing
-             point or of the wire centre.
+    * \param centre flag whether to return the coordinates of the line-wire 
+    *        crossing point or of the wire centre.
     * \param rc radius [cm] of the wire.
     */
   virtual bool IsWireCrossed(const double x0, const double y0, const double z0,
