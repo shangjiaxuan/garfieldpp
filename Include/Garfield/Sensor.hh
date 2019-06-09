@@ -95,6 +95,13 @@ class Sensor {
   void EnableDelayedSignal(const bool on = true) { m_delayedSignal = on; }
   /// Set the points in time at which to evaluate the delayed weighting field.
   void SetDelayedSignalTimes(const std::vector<double>& ts);
+  /// Set the number of points to be used when averaging the delayed 
+  /// signal vector over a time bin (default: 0).
+  /// The averaging is done with a \f$2\times navg + 1\f$ point 
+  /// Newton-Raphson integration. 
+  void SetDelayedSignalAveragingOrder(const unsigned int navg) {
+    m_nAvgDelayedSignal = navg;
+  } 
 
   /// Retrieve the total signal for a given electrode and time bin.
   double GetSignal(const std::string& label, const unsigned int bin);
@@ -148,9 +155,10 @@ class Sensor {
                             bool& rise) const;
 
   /// Add the signal from a charge-carrier step.
-  void AddSignal(const double q, const double t, const double dt,
-                 const double x, const double y, const double z,
-                 const double vx, const double vy, const double vz);
+  void AddSignal(const double q, const double t0, const double t1,
+                 const double x0, const double y0, const double z0,
+                 const double x1, const double y1, const double z1,
+                 const bool integrate);
   /// Add the signal from a drift line.
   void AddSignal(const double q, const std::vector<double>& ts,
                  const std::vector<std::array<double, 3> >& xs,
@@ -198,6 +206,7 @@ class Sensor {
   static double m_signalConversion;
   bool m_delayedSignal = false;
   std::vector<double> m_delayedSignalTimes;
+  unsigned int m_nAvgDelayedSignal = 0;
 
   // Transfer function
   bool m_hasTransferFunction = false;
@@ -228,6 +237,17 @@ class Sensor {
                   const std::vector<double>& ts,
                   const std::vector<double>& is, const int navg,
                   const bool delayed = false);
+  void FillBin(Electrode& electrode, const unsigned int bin,
+               const double signal, const bool electron, const bool delayed) {
+    electrode.signal[bin] += signal;
+    if (electron) {
+      electrode.electronsignal[bin] += signal;
+      if (delayed) electrode.delayedElectronSignal[bin] += signal;
+    } else {
+      electrode.ionsignal[bin] += signal;
+      if (delayed) electrode.delayedIonSignal[bin] += signal;
+    }
+  }
   double InterpolateTransferFunctionTable(const double t) const;
 };
 }
