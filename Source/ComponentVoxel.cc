@@ -117,10 +117,11 @@ void ComponentVoxel::DelayedWeightingField(const double x, const double y,
   if (!GetField(xx, yy, zz, m_wdfields[i1], wx1, wy1, wz1, wp, region)) {
     return;
   } 
-  const double f = dt / (*it1 - *it0);
-  wx = wx0 + f * (wx1 - wx0);
-  wy = wy0 + f * (wy1 - wy0);
-  wz = wz0 + f * (wz1 - wz0);
+  const double f1 = dt / (*it1 - *it0);
+  const double f0 = 1. - f1;
+  wx = f0 * wx0 + f1 * wx1;
+  wy = f0 * wy0 + f1 * wy1;
+  wz = f0 * wz0 + f1 * wz1;
 }
 
 void ComponentVoxel::SetWeightingFieldOffset(const double x, const double y,

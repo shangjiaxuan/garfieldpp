@@ -1543,7 +1543,7 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
     }
     vs.push_back(std::move(v));
   }
-  m_sensor->AddSignal(q, ts, xs, vs, ne, 2);
+  m_sensor->AddSignal(q, ts, xs, vs, ne, m_navg);
 }
 
 }

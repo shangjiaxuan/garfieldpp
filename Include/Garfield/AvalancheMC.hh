@@ -29,12 +29,17 @@ class AvalancheMC {
   void DisablePlotting() { m_viewer = nullptr; }
 
   /// Switch on calculation of induced currents (default: disabled).
-  void EnableSignalCalculation() { m_doSignal = true; }
-  void DisableSignalCalculation() { m_doSignal = false; }
+  void EnableSignalCalculation(const bool on = true) { m_doSignal = on; }
+  /// Set the number of points to be used when averaging the delayed 
+  /// signal vector over a time bin in the Sensor class.
+  /// The averaging is done with a \f$2\times navg + 1\f$ point 
+  /// Newton-Raphson integration. Default: 2. 
+  void SetSignalAveragingOrder(const unsigned int navg) { m_navg = navg; }
 
   /// Switch on calculation of induced charge (default: disabled).
-  void EnableInducedChargeCalculation() { m_doInducedCharge = true; }
-  void DisableInducedChargeCalculation() { m_doInducedCharge = false; }
+  void EnableInducedChargeCalculation(const bool on = true) { 
+   m_doInducedCharge = on; 
+  }
 
   /** Switch on Runge-Kutta-Fehlberg stepping (as opposed to simple 
     * straight-line steps. */
@@ -64,7 +69,7 @@ class AvalancheMC {
   void EnableMagneticField() { m_useBfield = true; }
   void DisableMagneticField() { m_useBfield = false; }
 
-  /** Set a max. avalanche size (i. e. ignore ionising collisions
+  /** Set a max. avalanche size (i. e. ignore further multiplication
       once this size has been reached). */
   void EnableAvalancheSizeLimit(const unsigned int size) { m_sizeCut = size; }
   void DisableAvalancheSizeLimit() { m_sizeCut = 0; }
@@ -112,9 +117,12 @@ class AvalancheMC {
   unsigned int GetNumberOfElectronEndpoints() const {
     return m_endpointsElectrons.size();
   }
+  /** Return the number of hole trajectories in the last
+    * simulated avalanche (including captured holes). */
   unsigned int GetNumberOfHoleEndpoints() const {
     return m_endpointsHoles.size();
   }
+  /// Return the number of ion trajectories.
   unsigned int GetNumberOfIonEndpoints() const {
     return m_endpointsIons.size();
   }
@@ -136,16 +144,19 @@ class AvalancheMC {
                       double& t0, double& x1, double& y1, double& z1,
                       double& t1, int& status) const;
 
-  /// Simulate the drift line of an electron with a given starting point.
+  /// Simulate the drift line of an electron from a given starting point.
   bool DriftElectron(const double x0, const double y0, const double z0,
                      const double t0);
+  /// Simulate the drift line of a hole from a given starting point.
   bool DriftHole(const double x0, const double y0, const double z0,
                  const double t0);
+  /// Simulate the drift line of an ion from a given starting point.
   bool DriftIon(const double x0, const double y0, const double z0,
                 const double t0);
-  /// Simulate an avalanche initiated by an electron with given starting point.
+  /// Simulate an avalanche initiated by an electron at a given starting point.
   bool AvalancheElectron(const double x0, const double y0, const double z0,
                          const double t0, const bool hole = false);
+  /// Simulate an avalanche initiated by a hole at a given starting point.
   bool AvalancheHole(const double x0, const double y0, const double z0,
                      const double t0, const bool electron = false);
   bool AvalancheElectronHole(const double x0, const double y0, const double z0,
@@ -216,6 +227,7 @@ class AvalancheMC {
   ViewDrift* m_viewer = nullptr;
 
   bool m_doSignal = false;
+  unsigned int m_navg = 1;
   bool m_doInducedCharge = false;
   bool m_doEquilibration = true;
   bool m_doRKF = false;

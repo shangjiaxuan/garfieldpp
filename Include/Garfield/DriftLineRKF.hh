@@ -32,6 +32,11 @@ class DriftLineRKF {
 
   /// Switch on/off calculation of induced currents (default: enabled).
   void EnableSignalCalculation(const bool on = true) { m_doSignal = on; }
+  /// Set the number of points to be used when averaging the delayed 
+  /// signal vector over a time bin in the Sensor class.
+  /// The averaging is done with a \f$2\times navg + 1\f$ point 
+  /// Newton-Raphson integration. Default: 2. 
+  void SetSignalAveragingOrder(const unsigned int navg) { m_navg = navg; }
 
   /// Set the accuracy of the Runge Kutta Fehlberg drift line integration.
   void SetIntegrationAccuracy(const double eps);
@@ -125,6 +130,8 @@ class DriftLineRKF {
 
   // Flag whether to calculate induced signals or not.
   bool m_doSignal = true;
+  // Averaging order used when projecting the signal on the time bins.
+  unsigned int m_navg;
 
   // Scaling factor for electron signals.
   double m_scaleE = 1.;

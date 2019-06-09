@@ -1101,7 +1101,7 @@ void AvalancheMC::ComputeSignal(const Particle particle,
     xs.push_back(p.x);
     vs.push_back(std::move(v));
   }
-  m_sensor->AddSignal(q, ts, xs, vs, {}, 2);
+  m_sensor->AddSignal(q, ts, xs, vs, {}, m_navg);
 
 }
 

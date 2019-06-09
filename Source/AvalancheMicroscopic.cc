@@ -816,10 +816,10 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           // Try to terminate the drift line close to the boundary (endpoint
           // outside the drift medium/drift area) using iterative bisection.
           Terminate(x, y, z, t, x1, y1, z1, t1);
-          if (m_useSignal) {
+          if (m_doSignal) {
             const int q = hole ? 1 : -1;
-            m_sensor->AddSignal(q, t, t1 - t, 0.5 * (x + x1), 0.5 * (y + y1),
-                                0.5 * (z + z1), vx, vy, vz);
+            m_sensor->AddSignal(q, t, t1, x, y, z, x1, y1, z1, 
+                                m_integrateWeightingField);
           }
           Update(it, x1, y1, z1, t1, energy, newKx, newKy, newKz, band);
           if (status != 0) {
@@ -842,15 +842,15 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         if (m_sensor->IsWireCrossed(x, y, z, x1, y1, z1, 
                                     xc, yc, zc, false, rc)) {
           // If switched on, calculated the induced signal over this step.
-          if (m_useSignal) {
+          if (m_doSignal) {
             const double dx = xc - x;
             const double dy = yc - y;
             const double dz = zc - z;
             dt = sqrt(dx * dx + dy * dy + dz * dz) /
                  sqrt(vx * vx + vy * vy + vz * vz);
             const int q = hole ? 1 : -1;
-            m_sensor->AddSignal(q, t, dt, 0.5 * (x + xc), 0.5 * (y + yc),
-                                0.5 * (z + zc), vx, vy, vz);
+            m_sensor->AddSignal(q, t, t + dt, x, y, z, xc, yc, zc,
+                                m_integrateWeightingField);
           }
           Update(it, xc, yc, zc, t + dt, energy, newKx, newKy, newKz, band);
           (*it).status = StatusLeftDriftMedium;
@@ -861,10 +861,10 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         }
 
         // If switched on, calculate the induced signal.
-        if (m_useSignal) {
+        if (m_doSignal) {
           const int q = hole ? 1 : -1;
-          m_sensor->AddSignal(q, t, dt, 0.5 * (x + x1), 0.5 * (y + y1),
-                              0.5 * (z + z1), vx, vy, vz);
+          m_sensor->AddSignal(q, t, t + dt, x, y, z, x1, y1, z1,
+                              m_integrateWeightingField);
         }
 
         // Update the coordinates.
@@ -1142,7 +1142,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
   }
 
   // Calculate the induced charge.
-  if (m_useInducedCharge) {
+  if (m_doInducedCharge) {
     for (const auto& ep : m_endpointsElectrons) {
       m_sensor->AddInducedCharge(-1, ep.x0, ep.y0, ep.z0, ep.x, ep.y, ep.z);
     }
