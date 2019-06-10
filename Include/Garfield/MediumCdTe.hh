@@ -14,35 +14,31 @@ class MediumCdTe : public Medium {
   /// Destructor
   virtual ~MediumCdTe() {}
 
-  bool IsSemiconductor() const { return true; }
+  bool IsSemiconductor() const override { return true; }
 
-  void GetComponent(const unsigned int i, std::string& label, double& f);
-
-  // Trapping cross-section
-  void SetTrapCrossSection(const double ecs, const double hcs);
-  void SetTrapDensity(const double n);
-  void SetTrappingTime(const double etau, const double htau);
+  void GetComponent(const unsigned int i, std::string& label, 
+                    double& f) override;
 
   // Electron transport parameters
   bool ElectronVelocity(const double ex, const double ey, const double ez,
                         const double bx, const double by, const double bz,
-                        double& vx, double& vy, double& vz);
+                        double& vx, double& vy, double& vz) override;
   bool ElectronTownsend(const double ex, const double ey, const double ez,
                         const double bx, const double by, const double bz,
-                        double& alpha);
+                        double& alpha) override;
   bool ElectronAttachment(const double ex, const double ey, const double ez,
                           const double bx, const double by, const double bz,
-                          double& eta);
+                          double& eta) override;
   // Hole transport parameters
   bool HoleVelocity(const double ex, const double ey, const double ez,
                     const double bx, const double by, const double bz,
-                    double& vx, double& vy, double& vz);
+                    double& vx, double& vy, double& vz) override;
   bool HoleTownsend(const double ex, const double ey, const double ez,
                     const double bx, const double by, const double bz,
-                    double& alpha);
+                    double& alpha) override;
   bool HoleAttachment(const double ex, const double ey, const double ez,
                       const double bx, const double by, const double bz,
-                      double& eta);
+                      double& eta) override;
 
   void SetLowFieldMobility(const double mue, const double muh);
   void SetSaturationVelocity(const double vsate, const double vsath);
@@ -59,15 +55,6 @@ class MediumCdTe : public Medium {
   // Hall factor
   double m_eHallFactor = 1.15;
   double m_hHallFactor = 0.7;
-
-  // Trapping parameters
-  double m_eTrapCs = 1.e-15;
-  double m_hTrapCs = 1.e-15;
-  double m_eTrapDensity = 1.e13;
-  double m_hTrapDensity = 1.e13;
-  double m_eTrapTime = 0.;
-  double m_hTrapTime = 0.;
-  unsigned int m_trappingModel = 0;
 
   // Models
   bool m_hasUserMobility = false;

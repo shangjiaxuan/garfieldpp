@@ -137,7 +137,7 @@ class MediumMagboltz : public MediumGas {
     * \param[in] b magnetic field
     * \param[in] btheta angle between electric and magnetic field
     * \param[in] ncoll number of collisions (in multiples of 10<sup>7</sup>)
-                   to be simulated
+                 to be simulated
     * \param[in] verbose verbosity flag
     * \param[out] vx,vy,vz drift velocity vector
     * \param[out] dl,dt diffusion cofficients
@@ -148,7 +148,8 @@ class MediumMagboltz : public MediumGas {
     * \param[out] dlerr,dterr errors on diffusion coefficients
     * \param[out] alphaerr,etaerr errors on Townsend/attachment coefficients
     * \param[out] lorerr error on Lorentz angle
-    * \param[out] alphatof effective Townsend coefficient (#alpha - #eta) calculated using time-of-flight method
+    * \param[out] alphatof effective Townsend coefficient \f$(\alpha - \eta)\f$
+    *             calculated using time-of-flight method
     * \param[out] difftens components of the diffusion tensor (zz, xx, yy, xz, yz, xy)
     */
   void RunMagboltz(const double e, const double b, const double btheta,

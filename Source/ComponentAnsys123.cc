@@ -276,6 +276,16 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       il++;
       continue;
     }
+    // Skip page feed if ansys > v15.x
+    if (strstr(line,"***") != NULL) {
+      felist.getline(line, size, '\n');
+      il++;
+      felist.getline(line, size, '\n');
+      il++;
+      felist.getline(line, size, '\n');
+      il++;
+      continue;
+    }
     // Split the line in tokens
     char* token = NULL;
     // Split into tokens
@@ -496,6 +506,16 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       il++;
       continue;
     }
+    // Skip page feed if ansys > v15.x
+    if (strstr(line,"***") != NULL) {
+      fnlist.getline(line, size, '\n');
+      il++;
+      fnlist.getline(line, size, '\n');
+      il++;
+      fnlist.getline(line, size, '\n');
+      il++;
+      continue;
+    }
     // Split the line in tokens
     char* token = NULL;
     token = strtok(line, " ");
@@ -574,6 +594,16 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       il++;
       fprnsol.getline(line, size, '\n');
       il++;
+      fprnsol.getline(line, size, '\n');
+      il++;
+      fprnsol.getline(line, size, '\n');
+      il++;
+      fprnsol.getline(line, size, '\n');
+      il++;
+      continue;
+    }
+// Skip page feed if ansys > v15.x
+    if (strstr(line,"***") != NULL) {
       fprnsol.getline(line, size, '\n');
       il++;
       fprnsol.getline(line, size, '\n');

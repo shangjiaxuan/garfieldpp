@@ -80,7 +80,7 @@ class Sensor {
   /** Set the time window and binning for the signal calculation.
     * \param tstart start time [ns]
     * \param tstep bin width [ns]
-    * \param nstep number of bins
+    * \param nsteps number of bins
     */
   void SetTimeWindow(const double tstart, const double tstep,
                      const unsigned int nsteps);
@@ -96,6 +96,13 @@ class Sensor {
   void EnableDelayedSignal(const bool on = true) { m_delayedSignal = on; }
   /// Set the points in time at which to evaluate the delayed weighting field.
   void SetDelayedSignalTimes(const std::vector<double>& ts);
+  /// Set the number of points to be used when averaging the delayed 
+  /// signal vector over a time bin (default: 0).
+  /// The averaging is done with a \f$2\times navg + 1\f$ point 
+  /// Newton-Raphson integration. 
+  void SetDelayedSignalAveragingOrder(const unsigned int navg) {
+    m_nAvgDelayedSignal = navg;
+  } 
 
   /// Retrieve the total signal for a given electrode and time bin.
   double GetSignal(const std::string& label, const unsigned int bin);
@@ -103,6 +110,10 @@ class Sensor {
   double GetElectronSignal(const std::string& label, const unsigned int bin);
   /// Retrieve the ion or hole signal for a given electrode and time bin.
   double GetIonSignal(const std::string& label, const unsigned int bin);
+  /// Retrieve the delayed electron signal for a given electrode and time bin.
+  double GetDelayedElectronSignal(const std::string& label, const unsigned int bin);
+  /// Retrieve the delayed ion/hole signal for a given electrode and time bin.
+  double GetDelayedIonSignal(const std::string& label, const unsigned int bin);
   /// Retrieve the total induced charge for a given electrode,
   /// calculated using the weighting potentials at the start and end points.
   double GetInducedCharge(const std::string& label);
@@ -150,9 +161,10 @@ class Sensor {
                             bool& rise) const;
 
   /// Add the signal from a charge-carrier step.
-  void AddSignal(const double q, const double t, const double dt,
-                 const double x, const double y, const double z,
-                 const double vx, const double vy, const double vz);
+  void AddSignal(const double q, const double t0, const double t1,
+                 const double x0, const double y0, const double z0,
+                 const double x1, const double y1, const double z1,
+                 const bool integrate);
   /// Add the signal from a drift line.
   void AddSignal(const double q, const std::vector<double>& ts,
                  const std::vector<std::array<double, 3> >& xs,
@@ -186,6 +198,8 @@ class Sensor {
     std::vector<double> signal;
     std::vector<double> electronsignal;
     std::vector<double> ionsignal;
+    std::vector<double> delayedElectronSignal;
+    std::vector<double> delayedIonSignal;
     double charge;
   };
   std::vector<Electrode> m_electrodes;
@@ -198,6 +212,7 @@ class Sensor {
   static double m_signalConversion;
   bool m_delayedSignal = false;
   std::vector<double> m_delayedSignalTimes;
+  unsigned int m_nAvgDelayedSignal = 0;
 
   // Transfer function
   bool m_hasTransferFunction = false;
@@ -228,7 +243,19 @@ class Sensor {
 
   void FillSignal(Electrode& electrode, const double q,
                   const std::vector<double>& ts,
-                  const std::vector<double>& is, const int navg);
+                  const std::vector<double>& is, const int navg,
+                  const bool delayed = false);
+  void FillBin(Electrode& electrode, const unsigned int bin,
+               const double signal, const bool electron, const bool delayed) {
+    electrode.signal[bin] += signal;
+    if (electron) {
+      electrode.electronsignal[bin] += signal;
+      if (delayed) electrode.delayedElectronSignal[bin] += signal;
+    } else {
+      electrode.ionsignal[bin] += signal;
+      if (delayed) electrode.delayedIonSignal[bin] += signal;
+    }
+  }
   double InterpolateTransferFunctionTable(const double t) const;
 };
 }

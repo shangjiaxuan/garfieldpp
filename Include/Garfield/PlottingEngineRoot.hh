@@ -13,12 +13,13 @@ namespace Garfield {
 
 class PlottingEngineRoot : public PlottingEngine {
  public:
-  // Constructor
+  /// Constructor
   PlottingEngineRoot();
-  // Destructor
+  /// Destructor
   virtual ~PlottingEngineRoot();
 
-  void SetDefaultStyle();
+  /// Apply the default Garfield ROOT style.
+  void SetDefaultStyle(const bool serif = false);
 
   int GetRootColorLine1();
   int GetRootColorLine2();

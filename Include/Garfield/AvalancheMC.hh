@@ -29,12 +29,17 @@ class AvalancheMC {
   void DisablePlotting() { m_viewer = nullptr; }
 
   /// Switch on calculation of induced currents (default: disabled).
-  void EnableSignalCalculation() { m_doSignal = true; }
-  void DisableSignalCalculation() { m_doSignal = false; }
+  void EnableSignalCalculation(const bool on = true) { m_doSignal = on; }
+  /// Set the number of points to be used when averaging the delayed 
+  /// signal vector over a time bin in the Sensor class.
+  /// The averaging is done with a \f$2\times navg + 1\f$ point 
+  /// Newton-Raphson integration. Default: 1. 
+  void SetSignalAveragingOrder(const unsigned int navg) { m_navg = navg; }
 
   /// Switch on calculation of induced charge (default: disabled).
-  void EnableInducedChargeCalculation() { m_doInducedCharge = true; }
-  void DisableInducedChargeCalculation() { m_doInducedCharge = false; }
+  void EnableInducedChargeCalculation(const bool on = true) { 
+   m_doInducedCharge = on; 
+  }
 
   /** Switch on Runge-Kutta-Fehlberg stepping (as opposed to simple 
     * straight-line steps. */
@@ -64,7 +69,7 @@ class AvalancheMC {
   void EnableMagneticField() { m_useBfield = true; }
   void DisableMagneticField() { m_useBfield = false; }
 
-  /** Set a max. avalanche size (i. e. ignore ionising collisions
+  /** Set a max. avalanche size (i. e. ignore further multiplication
       once this size has been reached). */
   void EnableAvalancheSizeLimit(const unsigned int size) { m_sizeCut = size; }
   void DisableAvalancheSizeLimit() { m_sizeCut = 0; }
@@ -112,9 +117,12 @@ class AvalancheMC {
   unsigned int GetNumberOfElectronEndpoints() const {
     return m_endpointsElectrons.size();
   }
+  /** Return the number of hole trajectories in the last
+    * simulated avalanche (including captured holes). */
   unsigned int GetNumberOfHoleEndpoints() const {
     return m_endpointsHoles.size();
   }
+  /// Return the number of ion trajectories.
   unsigned int GetNumberOfIonEndpoints() const {
     return m_endpointsIons.size();
   }
@@ -136,16 +144,19 @@ class AvalancheMC {
                       double& t0, double& x1, double& y1, double& z1,
                       double& t1, int& status) const;
 
-  /// Simulate the drift line of an electron with a given starting point.
+  /// Simulate the drift line of an electron from a given starting point.
   bool DriftElectron(const double x0, const double y0, const double z0,
                      const double t0);
+  /// Simulate the drift line of a hole from a given starting point.
   bool DriftHole(const double x0, const double y0, const double z0,
                  const double t0);
+  /// Simulate the drift line of an ion from a given starting point.
   bool DriftIon(const double x0, const double y0, const double z0,
                 const double t0);
-  /// Simulate an avalanche initiated by an electron with given starting point.
+  /// Simulate an avalanche initiated by an electron at a given starting point.
   bool AvalancheElectron(const double x0, const double y0, const double z0,
                          const double t0, const bool hole = false);
+  /// Simulate an avalanche initiated by a hole at a given starting point.
   bool AvalancheHole(const double x0, const double y0, const double z0,
                      const double t0, const bool electron = false);
   bool AvalancheElectronHole(const double x0, const double y0, const double z0,
@@ -158,10 +169,9 @@ class AvalancheMC {
  private:
   std::string m_className = "AvalancheMC";
 
-  /// Numerical constant used during stepping.
-  static constexpr double c1 = ElectronMass / (SpeedOfLight * SpeedOfLight);
-
   Sensor* m_sensor = nullptr;
+
+  enum class Particle { Electron = 0, Ion, Hole };
 
   struct DriftPoint {
     std::array<double, 3> x;  //< Position.
@@ -217,6 +227,7 @@ class AvalancheMC {
   ViewDrift* m_viewer = nullptr;
 
   bool m_doSignal = false;
+  unsigned int m_navg = 1;
   bool m_doInducedCharge = false;
   bool m_doEquilibration = true;
   bool m_doRKF = false;
@@ -240,7 +251,8 @@ class AvalancheMC {
 
   /// Compute a drift line with starting point (x0, y0, z0).
   bool DriftLine(const double x0, const double y0, const double z0,
-                 const double t0, const int type, const bool aval = false);
+                 const double t0, const Particle particle, 
+                 const bool aval = false);
   /// Compute an avalanche with starting point (x0, y0, z0).
   bool Avalanche(const double x0, const double y0, const double z0,
                  const double t0, const unsigned int ne, const unsigned int nh,
@@ -264,23 +276,23 @@ class AvalancheMC {
                std::array<double, 3>& e, std::array<double, 3>& b,
                Medium*& medium) const;
   /// Compute the drift velocity.
-  bool GetVelocity(const int type, Medium* medium, 
+  bool GetVelocity(const Particle particle, Medium* medium, 
                    const std::array<double, 3>& x,
                    const std::array<double, 3>& e,
                    const std::array<double, 3>& b,
                    std::array<double, 3>& v) const;
   /// Compute the attachment coefficient.
-  double GetAttachment(const int type, Medium* medium, 
+  double GetAttachment(const Particle particle, Medium* medium, 
                        const std::array<double, 3>& x,
                        const std::array<double, 3>& e,
                        const std::array<double, 3>& b) const;
   /// Compute end point and effective velocity for a step.
-  void StepRKF(const int type, const std::array<double, 3>& x0,
+  void StepRKF(const Particle particle, const std::array<double, 3>& x0,
                const std::array<double, 3>& v0, const double dt,
                std::array<double, 3>& xf, std::array<double, 3>& vf,
                int& status) const;
   /// Add a diffusion step.
-  bool AddDiffusion(const int type, Medium* medium, const double step,
+  bool AddDiffusion(const Particle particle, Medium* medium, const double step,
                     std::array<double, 3>& x,
                     const std::array<double, 3>& v,
                     const std::array<double, 3>& e,
@@ -289,22 +301,23 @@ class AvalancheMC {
   void Terminate(const std::array<double, 3>& x0, const double t0,
                  std::array<double, 3>& x, double& t) const;
   /// Compute multiplication and losses along the current drift line.
-  bool ComputeGainLoss(const int type, std::vector<DriftPoint>& driftLine,
-                       int& status);
+  bool ComputeGainLoss(const Particle particle, 
+                       std::vector<DriftPoint>& driftLine, int& status);
   /// Compute Townsend and attachment coefficients along the current drift line.
-  bool ComputeAlphaEta(const int q, 
+  bool ComputeAlphaEta(const Particle particle,
                        const std::vector<DriftPoint>& driftLine,
                        std::vector<double>& alphas,
                        std::vector<double>& etas) const;
   bool Equilibrate(std::vector<double>& alphas) const;
   /// Compute the induced signal for the current drift line.
-  void ComputeSignal(const double q,
+  void ComputeSignal(const Particle particle, const double q,
                      const std::vector<DriftPoint>& driftLine) const;
   /// Compute the induced charge for the current drift line.
   void ComputeInducedCharge(const double q,
                             const std::vector<DriftPoint>& driftLine) const;
   void PrintError(const std::string& fcn, const std::string& par, 
-                  const int type, const std::array<double, 3>& x) const;
+                  const Particle particle, 
+                  const std::array<double, 3>& x) const;
 
 };
 }

@@ -1,6 +1,8 @@
 #ifndef G_COMPONENT_TCAD_3D_H
 #define G_COMPONENT_TCAD_3D_H
 
+#include <array>
+
 #include "ComponentBase.hh"
 
 namespace Garfield {
@@ -20,15 +22,36 @@ class ComponentTcad3d : public ComponentBase {
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
 
+  void WeightingField(const double x, const double y, const double z,
+                      double& wx, double& wy, double& wz,
+                      const std::string& label) override;
+  double WeightingPotential(const double x, const double y, const double z,
+                            const std::string& label) override;
+
   Medium* GetMedium(const double x, const double y, const double z) override;
 
   bool GetVoltageRange(double& vmin, double& vmax) override;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) override;
 
-  /// Import mesh and field map from files.
+  /** Import mesh and field map from files.
+    * \param gridfilename name of the .grd file containing the mesh 
+    * \param datafilename name of the .dat file containing the nodal solution
+    */
   bool Initialise(const std::string& gridfilename,
                   const std::string& datafilename);
+
+  /** Import field maps defining the weighting field and potential.
+    * \param datfile1 .dat file containing the field map at nominal bias.
+    * \param datfile2 .dat file containing the field map for a configuration 
+                      with the potential at the electrode to be read out
+                      increased by a small voltage dv.
+    * \param dv increase in electrode potential between the two field maps. 
+    *
+    * The field maps must use the same mesh as the drift field. 
+    */ 
+  bool SetWeightingField(const std::string& datfile1,
+                         const std::string& datfile2, const double dv);
 
   /// List all currently defined regions.
   void PrintRegions();
@@ -75,6 +98,10 @@ class ComponentTcad3d : public ComponentBase {
     double p, ex, ey, ez;
   };
   std::vector<Vertex> m_vertices;
+
+  // Weighting field and potential at each vertex.
+  std::vector<std::array<double, 3> > m_wf;
+  std::vector<double> m_wp;
 
   // Elements
   struct Element {
@@ -124,8 +151,11 @@ class ComponentTcad3d : public ComponentBase {
   void Reset() override;
   void UpdatePeriodicity() override;
 
+  unsigned int FindElement(const double x, const double y, const double z,
+                           std::array<double, nMaxVertices>& w) const;
   bool CheckElement(const double x, const double y, const double z,
-                    const Element& element, double w[nMaxVertices]) const {
+                    const Element& element, 
+                    std::array<double, nMaxVertices>& w) const {
     bool inside = false;
     switch (element.type) {
       case 2:
@@ -142,14 +172,19 @@ class ComponentTcad3d : public ComponentBase {
     return inside;
   }
   bool CheckTetrahedron(const double x, const double y, const double z,
-                        const Element& element, double w[nMaxVertices]) const;
+                        const Element& element, 
+                        std::array<double, nMaxVertices>& w) const;
   bool CheckTriangle(const double x, const double y, const double z,
-                     const Element& element, double w[nMaxVertices]) const;
+                     const Element& element, 
+                     std::array<double, nMaxVertices>& w) const;
 
   void FindNeighbours();
   bool LoadGrid(const std::string& gridfilename);
   bool LoadData(const std::string& datafilename);
   bool ReadDataset(std::ifstream& datafile, const std::string& dataset);
+  bool LoadWeightingField(const std::string& datafilename,
+                          std::vector<std::array<double, 3> >& wf, 
+                          std::vector<double>& wp);
   void Cleanup();
 
   void MapCoordinates(double& x, double& y, double& z, bool& xmirr, bool& ymirr,

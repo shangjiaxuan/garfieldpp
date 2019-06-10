@@ -1,6 +1,6 @@
 ########################################################
 # @author Klaus Zenker
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6 FATAL_ERROR)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.3 FATAL_ERROR)
 ########################################################
 PROJECT(GarfieldExamples)
 
@@ -92,7 +92,7 @@ endforeach()
 endif(Geant4_FOUND)
 #### Install                ############################
 if(Geant4_FOUND)
-  INSTALL(TARGETS generate read edep srim exampleGeant4Interface DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/)
+  install(TARGETS generate read edep srim exampleGeant4Interface DESTINATION examples)
 else()
-  INSTALL(TARGETS generate read edep srim DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/)
+  install(TARGETS generate read edep srim DESTINATION examples)
 endif(Geant4_FOUND)

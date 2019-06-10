@@ -1,0 +1,4 @@
+# Setup a minimal environment to run the examples
+
+export GARFIELD_HOME=@CMAKE_SOURCE_DIR@
+export HEED_DATABASE=$GARFIELD_HOME/Heed/heed++/database

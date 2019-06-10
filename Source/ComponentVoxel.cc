@@ -117,10 +117,11 @@ void ComponentVoxel::DelayedWeightingField(const double x, const double y,
   if (!GetField(xx, yy, zz, m_wdfields[i1], wx1, wy1, wz1, wp, region)) {
     return;
   } 
-  const double f = dt / (*it1 - *it0);
-  wx = wx0 + f * (wx1 - wx0);
-  wy = wy0 + f * (wy1 - wy0);
-  wz = wz0 + f * (wz1 - wz0);
+  const double f1 = dt / (*it1 - *it0);
+  const double f0 = 1. - f1;
+  wx = f0 * wx0 + f1 * wx1;
+  wy = f0 * wy0 + f1 * wy1;
+  wz = f0 * wz0 + f1 * wz1;
 }
 
 void ComponentVoxel::SetWeightingFieldOffset(const double x, const double y,
@@ -705,33 +706,45 @@ bool ComponentVoxel::GetField(
   // Get the field and potential.
   if (m_interpolate) {
     // Get the "nodes" (voxel centres) surrounding the point.
-    double vx = sx - i;
-    double vy = sy - j;
-    double vz = sz - k;
-    int i0 = i;
-    int j0 = j;
-    int k0 = k;
-    if (vx < 0.5) {
-      --i0;
-      vx += 0.5;
-    }
-    if (vy < 0.5) {
-      --j0;
-      vy += 0.5;
-    }
-    if (vz < 0.5) {
-      --k0;
-      vz += 0.5;
-    }
+    const double tx = sx - 0.5;
+    const double ty = sy - 0.5;
+    const double tz = sz - 0.5;
+    int i0 = static_cast<int>(std::floor(tx));
+    int j0 = static_cast<int>(std::floor(ty));
+    int k0 = static_cast<int>(std::floor(tz));
+    double vx = tx - i0;
+    double vy = ty - j0;
+    double vz = tz - k0;
     unsigned int i1 = i0 + 1;
     unsigned int j1 = j0 + 1;
     unsigned int k1 = k0 + 1;
     const bool perx = m_periodic[0] || m_mirrorPeriodic[0];
     const bool pery = m_periodic[1] || m_mirrorPeriodic[1];
     const bool perz = m_periodic[2] || m_mirrorPeriodic[2];
-    if (i0 < 0) i0 = perx ? m_nX - 1 : 0;
-    if (j0 < 0) j0 = pery ? m_nY - 1 : 0;
-    if (k0 < 0) k0 = perz ? m_nZ - 1 : 0;
+    if (i0 < 0) {
+      if (perx) {
+        i0 = m_nX - 1;
+      } else {
+        i0 = 0;
+        vx = 0.;
+      }
+    } 
+    if (j0 < 0) {
+      if (pery) {
+        j0 = m_nY - 1;
+      } else {
+        j0 = 0;
+        vy = 0.;
+      }
+    } 
+    if (k0 < 0) {
+      if (perz) {
+        k0 = m_nZ - 1;
+      } else {
+        k0 = 0;
+        vz = 0.;
+      }
+    } 
     if (i1 >= m_nX) i1 = perx ? 0 : m_nX - 1;
     if (j1 >= m_nY) j1 = pery ? 0 : m_nY - 1;
     if (k1 >= m_nZ) k1 = perz ? 0 : m_nZ - 1;
@@ -747,6 +760,16 @@ bool ComponentVoxel::GetField(
     const double ux = 1. - vx;
     const double uy = 1. - vy;
     const double uz = 1. - vz;
+    if (m_debug) {
+      std::cout << m_className << "::GetField:\n    Determining field at ("
+                << xi << ", " << yi << ", " << zi << ").\n"
+                << "    X: " << i0 << " (" << ux << ") - " 
+                             << i1 << " (" << vx << ").\n"
+                << "    Y: " << j0 << " (" << uy << ") - " 
+                             << j1 << " (" << vy << ").\n"
+                << "    Z: " << k0 << " (" << uz << ") - " 
+                             << k1 << " (" << vz << ").\n";
+    } 
     fx = ((n000.fx * ux + n100.fx * vx) * uy +
           (n010.fx * ux + n110.fx * vx) * vy) *
              uz +

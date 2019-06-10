@@ -131,7 +131,7 @@ view->SetGeometry(geo);
 view->Plot();
 \end{lstlisting}
 
-ROOT geometries can be visualizedby calling the \texttt{Draw()} function of
+ROOT geometries can be visualized by calling the \texttt{Draw()} function of
 \texttt{TGeoManager}. 
 
 The layout of an arrangement of wires, planes and tubes
@@ -319,7 +319,7 @@ bool Initialise(const std::string& gridfilename,
 
 Both files have to be exported in DF-ISE format, 
 files in the default TDR format cannot be read.
-To convert a TDR file to \texttt{\_.dat} and \texttt{.grid} files, the
+To convert a TDR file to \texttt{\_.dat} and \texttt{.grd} files, the
 Sentaurus tool \texttt{tdx} can be used
 \begin{lstlisting}
 tdx -dd fieldToConvert.tdr
@@ -370,6 +370,30 @@ void EnablePeriodicityX();
 void EnableMirrorPeriodicityX();
 \end{lstlisting}
 
+Using TCAD, the weighting field and potential are typically determined 
+by first computing the electric field $\mathbf{E}_{0}$ and potential 
+$V_{0}$ with all electrodes set at the nominal potentials.
+The potential at the electrode to be read out is then increased by a 
+small voltage $\Delta V$ and the corresponding electric field $E_{+}$ and 
+potential $V_{+}$ are calculated. The weighting field and potential 
+are then given by 
+\begin{equation*}
+  \mathbf{E}_{w} = \frac{1}{\Delta V}\left(\mathbf{E}_{+} - \mathbf{E}_{0}\right), \qquad V_{w} = \frac{1}{\Delta V}\left(V_{+} - V_{0}\right).
+\end{equation*}
+In \texttt{ComponentTcad2d} and \texttt{ComponentTcad3d} the weighting 
+field and potential loaded using
+\begin{lstlisting} 
+SetWeightingField(const std::string& datfile1, const std::string& datfile2,
+                  const double dv); 
+\end{lstlisting}
+\begin{description}
+  \item[datfile1] \texttt{.dat} file containing the solution $\mathbf{E}_0, V_0$,
+  \item[datfile2] \texttt{.dat} file containing the solution $\mathbf{E}_+, V_+$,
+  \item[dv] potential difference $\Delta V$
+\end{description}
+The mesh is assumed to be the same as the one for the drift field 
+(imported using \texttt{Initialise}).
+
 \subsection{Elmer}
 
 The class \texttt{ComponentElmer} (contributed by J. Renner) allows one to import 
@@ -394,7 +418,7 @@ bool Initialise(std::string header = "mesh.mphtxt",
 \end{lstlisting}
 \begin{description}
   \item[header] COMSOL Multiphysics text field (\texttt{.mphtxt}) containing the mesh data.
-  \item[] exported field data. 
+  \item[field] exported field data. 
 \end{description}
 
 \subsection{Regular grids}

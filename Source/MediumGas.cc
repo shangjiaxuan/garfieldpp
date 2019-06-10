@@ -584,6 +584,7 @@ bool MediumGas::ReadHeader(std::ifstream& gasfile, int& version,
   while (!done) {
     char line[256];
     gasfile.getline(line, 256);
+    const bool quotes = (strstr(line, "\"") != NULL);
     if (strncmp(line, " The gas tables follow:", 8) == 0 ||
         strncmp(line, "The gas tables follow:", 7) == 0) {
       done = true;
@@ -698,9 +699,14 @@ bool MediumGas::ReadHeader(std::ifstream& gasfile, int& version,
       } else if (strcmp(token, "Excitation") == 0) {
         // Skip number.
         token = strtok(NULL, " :,%");
-        // Get label.
-        token = strtok(NULL, " :,%");
         ExcLevel exc;
+        // Get label.
+        if (quotes) {
+          token = strtok(NULL, "\"");
+          token = strtok(NULL, "\"");
+        } else {
+          token = strtok(NULL, " :,%");
+        }
         exc.label = token;
         // Get energy.
         token = strtok(NULL, " :,%");
@@ -725,8 +731,13 @@ bool MediumGas::ReadHeader(std::ifstream& gasfile, int& version,
         // Skip number.
         token = strtok(NULL, " :,%");
         // Get label.
-        token = strtok(NULL, " :,%");
         IonLevel ion;
+        if (quotes) {
+          token = strtok(NULL, "\"");
+          token = strtok(NULL, "\"");
+        } else {
+          token = strtok(NULL, " :,%");
+        }
         ion.label += token;
         // Get energy.
         token = strtok(NULL, " :,%");
@@ -1861,15 +1872,27 @@ bool MediumGas::WriteGasFile(const std::string& filename) {
   cnt = 0;
   for (const auto& exc : m_excLevels) {
     ++cnt;
-    outfile << " Excitation " << FmtInt(cnt, 5) << ": " << std::setw(45)
-            << exc.label << "  " << FmtFloat(exc.energy) << FmtFloat(exc.prob) 
+    outfile << " Excitation " << FmtInt(cnt, 5) << ": " << std::setw(45);
+    // If the label contains white space, enclose it in quotes.
+    if (exc.label.find(" ") != std::string::npos) {
+      outfile << "\"" + exc.label + "\"";
+    } else {
+      outfile << exc.label;
+    }
+    outfile << "  " << FmtFloat(exc.energy) << FmtFloat(exc.prob) 
             << FmtFloat(exc.rms) << FmtFloat(exc.dt) << "\n";
   }
   cnt = 0;
   for (const auto& ion : m_ionLevels) {
     ++cnt;
-    outfile << " Ionisation " << FmtInt(cnt, 5) << ": " << std::setw(45)
-            << ion.label << "  " << FmtFloat(ion.energy) << "\n";
+    outfile << " Ionisation " << FmtInt(cnt, 5) << ": " << std::setw(45);
+    // If the label contains white space, enclose it in quotes.
+    if (ion.label.find(" ") != std::string::npos) {
+      outfile << "\"" + ion.label << "\"";
+    } else {
+      outfile << ion.label;
+    }
+    outfile << "  " << FmtFloat(ion.energy) << "\n";
   }
 
   const double sqrp = sqrt(m_pressureTable);
@@ -1932,11 +1955,19 @@ bool MediumGas::WriteGasFile(const std::string& filename) {
         }
         // Get the excitation and ionisation rates.
         for (const auto& rexc : m_excRates) {
-          val.push_back(rexc[j][k][i]);
+          if (rexc[j][k][i] > Small) { 
+            val.push_back(rexc[j][k][i]);
+          } else {
+            val.push_back(0.);
+          }
           if (!m_tab2d) val.push_back(0.);
         }
         for (const auto& rion : m_ionRates) {
-          val.push_back(rion[j][k][i]);
+          if (rion[j][k][i] > Small) {
+            val.push_back(rion[j][k][i]);
+          } else {
+            val.push_back(0.);
+          }
           if (!m_tab2d) val.push_back(0.);
         }
         PrintArray(val, outfile, cnt, 8);

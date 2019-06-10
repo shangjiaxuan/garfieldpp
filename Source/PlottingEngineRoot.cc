@@ -15,7 +15,7 @@ PlottingEngineRoot::PlottingEngineRoot()
 
 PlottingEngineRoot::~PlottingEngineRoot() {}
 
-void PlottingEngineRoot::SetDefaultStyle() {
+void PlottingEngineRoot::SetDefaultStyle(const bool serif) {
   m_garfieldStyle.Reset();
   m_garfieldStyle.SetFillColor(1);
   m_garfieldStyle.SetFillStyle(1001);
@@ -45,8 +45,7 @@ void PlottingEngineRoot::SetDefaultStyle() {
   m_garfieldStyle.SetPadGridX(kTRUE);
   m_garfieldStyle.SetPadGridY(kTRUE);
 
-  // const int font = 132;
-  const int font = 42;
+  const int font = serif ? 132 : 42;
   const double tsize = 0.04;
   m_garfieldStyle.SetTextFont(font);
   m_garfieldStyle.SetTextSize(tsize);

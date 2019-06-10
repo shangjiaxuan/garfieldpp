@@ -26,29 +26,41 @@ class AvalancheMicroscopic {
 
   /// Switch on drift line plotting.
   void EnablePlotting(ViewDrift* view);
+  /// Switch off drift line plotting.
   void DisablePlotting();
-  /// Draw a marker at every excitation.
-  void EnableExcitationMarkers() { m_plotExcitations = true; }
-  void DisableExcitationMarkers() { m_plotExcitations = false; }
-  /// Draw a marker at every ionising collision.
-  void EnableIonisationMarkers() { m_plotIonisations = true; }
-  void DisableIonisationMarkers() { m_plotIonisations = false; }
-  /// Draw a marker at every attachment.
-  void EnableAttachmentMarkers() { m_plotAttachments = true; }
-  void DisableAttachmentMarkers() { m_plotAttachments = false; }
+  /// Draw a marker at every excitation or not.
+  void EnableExcitationMarkers(const bool on = true) { 
+    m_plotExcitations = on; 
+  }
+  /// Draw a marker at every ionising collision or not.
+  void EnableIonisationMarkers(const bool on = true) { 
+    m_plotIonisations = on; 
+  }
+  /// Draw a marker at every attachment or not.
+  void EnableAttachmentMarkers(const bool on = true) { 
+    m_plotAttachments = on; 
+  }
 
-  /// Switch on calculation of induced currents
-  void EnableSignalCalculation() { m_useSignal = true; }
-  void DisableSignalCalculation() { m_useSignal = false; }
+  /// Switch on calculation of induced currents (default: off).
+  void EnableSignalCalculation(const bool on = true) { m_doSignal = on; }
 
-  /// Switch on calculation of the total induced charge
-  void EnableInducedChargeCalculation() { m_useInducedCharge = true; }
-  void DisableInducedChargeCalculation() { m_useInducedCharge = false; }
+  /// Switch on calculation of the total induced charge (default: off).
+  void EnableInducedChargeCalculation(const bool on = true) { 
+    m_doInducedCharge = on; 
+  }
 
-  /// Switch on filling histograms for electron energy distribution
+  /// Integrate the weighting field over a drift line step when 
+  /// calculating the induced current (default: off).
+  void EnableWeightingFieldIntegration(const bool on = true) { 
+    m_integrateWeightingField = on;
+  }
+  /// Fill a histogram with the electron energy distribution.
   void EnableElectronEnergyHistogramming(TH1* histo);
+  /// Stop histogramming the electron energy distribution.
   void DisableElectronEnergyHistogramming() { m_histElectronEnergy = nullptr; }
+  /// Fill a histogram with the hole energy distribution.
   void EnableHoleEnergyHistogramming(TH1* histo);
+  /// Stop histogramming the hole energy distribution.
   void DisableHoleEnergyHistogramming() { m_histHoleEnergy = nullptr; }
 
   /** Fill histograms of the distance between successive collisions.
@@ -58,26 +70,28 @@ class AvalancheMicroscopic {
              direction ('x', 'y', 'z', 'r')
     */
   void SetDistanceHistogram(TH1* histo, const char opt = 'r');
+  /// Fill distance distribution histograms for a given collision type.
   void EnableDistanceHistogramming(const int type);
-  /// Switch on distance distribution histograms for a given collision type.
+  /// Stop filling distance distribution histograms for a given collision type.
   void DisableDistanceHistogramming(const int type);
+  /// Stop filling distance distribution histograms.
   void DisableDistanceHistogramming();
   /// Fill histograms of the energy of electrons emitted in ionising collisions.
   void EnableSecondaryEnergyHistogramming(TH1* histo);
+  /// Stop histogramming the secondary electron energy distribution.
   void DisableSecondaryEnergyHistogramming() { m_histSecondary = nullptr; }
 
-  /// Switch on storage of drift lines.
-  void EnableDriftLines() { m_useDriftLines = true; }
-  void DisableDriftLines() { m_useDriftLines = false; }
+  /// Switch on storage of drift lines (default: off).
+  void EnableDriftLines(const bool on = true) { m_useDriftLines = on; }
 
   /** Switch on photon transport.
     * \remark This feature has not been tested thoroughly. */
-  void EnablePhotonTransport() { m_usePhotons = true; }
-  void DisablePhotonTransport() { m_usePhotons = false; }
+  void EnablePhotonTransport(const bool on = true) { m_usePhotons = on; }
 
   /// Switch on stepping according to band structure E(k), for semiconductors.
-  void EnableBandStructure() { m_useBandStructureDefault = true; }
-  void DisableBandStructure() { m_useBandStructureDefault = false; }
+  void EnableBandStructure(const bool on = true) { 
+    m_useBandStructureDefault = on;
+  }
 
   /// Switch on update of coordinates for null-collision steps (default: off).
   void EnableNullCollisionSteps() { m_useNullCollisionSteps = true; }
@@ -86,6 +100,7 @@ class AvalancheMicroscopic {
   /** Set a (lower) energy threshold for electron transport.
     * This can be useful for simulating delta electrons. */
   void SetElectronTransportCut(const double cut) { m_deltaCut = cut; }
+  /// Retrieve the value of the energy threshold.
   double GetElectronTransportCut() const { return m_deltaCut; }
 
   /// Set an energy threshold for photon transport.
@@ -95,12 +110,13 @@ class AvalancheMicroscopic {
   /** Set a max. avalanche size (i. e. ignore ionising collisions
       once this size has been reached). */
   void EnableAvalancheSizeLimit(const unsigned int size) { m_sizeCut = size; }
+  /// Do not apply a limit on the avalanche size. 
   void DisableAvalancheSizeLimit() { m_sizeCut = 0; }
+  /// Retrieve the currently set size limit.
   int GetAvalancheSizeLimit() const { return m_sizeCut; }
 
   /// Enable magnetic field in stepping algorithm (default: off).
-  void EnableMagneticField() { m_useBfield = true; }
-  void DisableMagneticField() { m_useBfield = false; }
+  void EnableMagneticField(const bool on = true) { m_useBfield = on; }
 
   /// Set number of collisions to be skipped for plotting
   void SetCollisionSteps(const unsigned int n) { m_nCollSkip = n; }
@@ -263,8 +279,9 @@ class AvalancheMicroscopic {
 
   TH1* m_histSecondary = nullptr;
 
-  bool m_useSignal = false;
-  bool m_useInducedCharge = false;
+  bool m_doSignal = false;
+  bool m_integrateWeightingField = false;
+  bool m_doInducedCharge = false;
   bool m_useDriftLines = false;
   bool m_usePhotons = false;
   bool m_useBandStructureDefault = true;

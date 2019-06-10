@@ -43,57 +43,6 @@ void MediumCdTe::GetComponent(const unsigned int i, std::string& label,
   }
 }
 
-void MediumCdTe::SetTrapCrossSection(const double ecs, const double hcs) {
-  if (ecs < 0.) {
-    std::cerr << m_className << "::SetTrapCrossSection:\n"
-              << "    Capture cross-section [cm2] must positive.\n";
-  } else {
-    m_eTrapCs = ecs;
-  }
-
-  if (hcs < 0.) {
-    std::cerr << m_className << "::SetTrapCrossSection:\n"
-              << "    Capture cross-section [cm2] must be positive.n";
-  } else {
-    m_hTrapCs = hcs;
-  }
-
-  m_trappingModel = 0;
-  m_isChanged = true;
-}
-
-void MediumCdTe::SetTrapDensity(const double n) {
-  if (n < 0.) {
-    std::cerr << m_className << "::SetTrapDensity:\n"
-              << "    Trap density [cm-3] must be greater than zero.\n";
-  } else {
-    m_eTrapDensity = n;
-    m_hTrapDensity = n;
-  }
-
-  m_trappingModel = 0;
-  m_isChanged = true;
-}
-
-void MediumCdTe::SetTrappingTime(const double etau, const double htau) {
-  if (etau <= 0.) {
-    std::cerr << m_className << "::SetTrappingTime:\n"
-              << "    Trapping time [ns-1] must be greater than zero.\n";
-  } else {
-    m_eTrapTime = etau;
-  }
-
-  if (htau <= 0.) {
-    std::cerr << m_className << "::SetTrappingTime:\n"
-              << "    Trapping time [ns-1] must be greater than zero.\n";
-  } else {
-    m_hTrapTime = htau;
-  }
-
-  m_trappingModel = 1;
-  m_isChanged = true;
-}
-
 bool MediumCdTe::ElectronVelocity(const double ex, const double ey,
                                   const double ez, const double bx,
                                   const double by, const double bz, double& vx,
@@ -115,11 +64,11 @@ bool MediumCdTe::ElectronVelocity(const double ex, const double ey,
     const double muH = m_eHallFactor * mu;
     const double muH2 = muH * muH;
     const double eb = bx * ex + by * ey + bz * ez;
-    const double nom = 1. + muH2 * b2;
+    const double f = mu / (1. + muH2 * b2);
     // Compute the drift velocity using the Langevin equation.
-    vx = mu * (ex + muH * (ey * bz - ez * by) + muH2 * bx * eb) / nom;
-    vy = mu * (ey + muH * (ez * bx - ex * bz) + muH2 * by * eb) / nom;
-    vz = mu * (ez + muH * (ex * by - ey * bx) + muH2 * bz * eb) / nom;
+    vx = f * (ex + muH * (ey * bz - ez * by) + muH2 * bx * eb);
+    vy = f * (ey + muH * (ez * bx - ex * bz) + muH2 * by * eb);
+    vz = f * (ez + muH * (ex * by - ey * bx) + muH2 * bz * eb);
   }
   return true;
 }
@@ -145,24 +94,6 @@ bool MediumCdTe::ElectronAttachment(const double ex, const double ey,
     // Interpolation in user table.
     return Medium::ElectronAttachment(ex, ey, ez, bx, by, bz, eta);
   }
-
-  switch (m_trappingModel) {
-    case 0:
-      eta = m_eTrapCs * m_eTrapDensity;
-      break;
-    case 1:
-      double vx, vy, vz;
-      ElectronVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
-      eta = m_eTrapTime * sqrt(vx * vx + vy * vy + vz * vz);
-      if (eta > 0.) eta = 1. / eta;
-      break;
-    default:
-      std::cerr << m_className << "::ElectronAttachment:\n"
-                << "    Unknown model activated. Program bug!\n";
-      return false;
-      break;
-  }
-
   return true;
 }
 
@@ -186,11 +117,11 @@ bool MediumCdTe::HoleVelocity(const double ex, const double ey, const double ez,
     const double muH = m_hHallFactor * mu;
     const double muH2 = muH * muH;
     const double eb = bx * ex + by * ey + bz * ez;
-    const double nom = 1. + muH2 * b2;
+    const double f = muH / (1. + muH2 * b2);
     // Compute the drift velocity using the Langevin equation.
-    vx = mu * (ex + muH * (ey * bz - ez * by) + muH2 * bx * eb) / nom;
-    vy = mu * (ey + muH * (ez * bx - ex * bz) + muH2 * by * eb) / nom;
-    vz = mu * (ez + muH * (ex * by - ey * bx) + muH2 * bz * eb) / nom;
+    vx = f * (ex + muH * (ey * bz - ez * by) + muH2 * bx * eb);
+    vy = f * (ey + muH * (ez * bx - ex * bz) + muH2 * by * eb);
+    vz = f * (ez + muH * (ex * by - ey * bx) + muH2 * bz * eb);
   }
   return true;
 }
@@ -213,22 +144,6 @@ bool MediumCdTe::HoleAttachment(const double ex, const double ey,
   if (!m_hAtt.empty()) {
     // Interpolation in user table.
     return Medium::HoleAttachment(ex, ey, ez, bx, by, bz, eta);
-  }
-  switch (m_trappingModel) {
-    case 0:
-      eta = m_hTrapCs * m_hTrapDensity;
-      break;
-    case 1:
-      double vx, vy, vz;
-      HoleVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
-      eta = m_hTrapTime * sqrt(vx * vx + vy * vy + vz * vz);
-      if (eta > 0.) eta = 1. / eta;
-      break;
-    default:
-      std::cerr << m_className << "::HoleAttachment:\n"
-                << "    Unknown model activated. Program bug!\n";
-      return false;
-      break;
   }
   return true;
 }
