@@ -826,8 +826,6 @@ bool Sensor::ConvoluteSignal() {
   // Evaluate the transfer function.
   for (unsigned int i = 0; i < m_nTimeBins; ++i) {
     // Negative time part.
-    //double t = (-int(i) + 0.5) * m_tStep;
-    // Ann fix --> if both t and t' are in the center of the bin, this should be not need the 0.5?
     double t = (-int(i)) * m_tStep;
     if (t < cnvMin || t > cnvMax) {
       cnvTab[offset - i] = 0.;
@@ -840,7 +838,6 @@ bool Sensor::ConvoluteSignal() {
     }
     if (i == 0) continue;
     // Positive time part.
-    //t = (i + 0.5) * m_tStep;
     t = i * m_tStep;
     if (t < cnvMin || t > cnvMax) {
       cnvTab[offset + i] = 0.;
