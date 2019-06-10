@@ -51,10 +51,6 @@ class Shaper {
   // Time window for signals                                                                    
   static double m_signalConversion;
 
-  // Transfer function
-  bool m_unipolarShaper = false;
-  bool m_bipolarShaper  = false;
-
   // Standard transfer function parameters.
   int m_n;
   double m_tau;
