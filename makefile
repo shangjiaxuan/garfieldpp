@@ -359,7 +359,7 @@ $(OBJDIR)/Sensor.o: \
 
 $(OBJDIR)/Shaper.o: \
 	$(SRCDIR)/Shaper.cc $(INCDIR)/Garfield/Shaper.hh \
-	$(INCDIR)/Garfield/ComponentBase.hh $(INCDIR)/Garfield/FundamentalConstants.hh
+	$(INCDIR)/Garfield/FundamentalConstants.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 

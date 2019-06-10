@@ -61,9 +61,6 @@ class Shaper {
   // Noise.
   TRandom3 * m_rand = nullptr;
 
-  // Switch on/off debugging messages
-  bool m_debug = false;
-
 };
 }
 
