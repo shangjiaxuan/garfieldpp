@@ -776,7 +776,6 @@ void Sensor::SetTransferFunction(Shaper &shaper) {
   m_hasTransferFunction = true;
   m_transferFunctionTimes.clear();
   m_transferFunctionValues.clear();
-
 }
 
 double Sensor::InterpolateTransferFunctionTable(const double t) const {
@@ -859,12 +858,6 @@ bool Sensor::ConvoluteSignal() {
       tmpSignal[j] = 0.;
       for (unsigned int k = 0; k < m_nTimeBins; ++k) {
         tmpSignal[j] += m_tStep * cnvTab[offset + j - k] * electrode.signal[k];
-//         std::cout << std::endl;
-//         std::cout << "it_out " << j <<", it_sig: " << k << std::endl;
-//         std::cout << "time: " << (j - k) * m_tStep << std::endl;
-//         std::cout << "transfer func: " << cnvTab[offset + j - k] << std::endl;
-//         std::cout << "sig: " << electrode.signal[k] << std::endl;
-//         std::cout << std::endl;
       }
     }
     electrode.signal.swap(tmpSignal);

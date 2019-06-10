@@ -36,12 +36,12 @@ double Shaper::BipolarShaper(double t){
 }
 
 double Shaper::Heaviside(double t, double t0){
-    if (t < t0)
-      return 0;
-    else if (fabs(t - t0) < pow(10,-20.))
-      return 0.5;
-    else
-      return 1;
+  if (t < t0)
+    return 0;
+  else if (fabs(t - t0) < pow(10,-20.))
+    return 0.5;
+  else
+    return 1;
 }
 
 double Shaper::PeakingTime() {
@@ -53,7 +53,6 @@ double Shaper::PeakingTime() {
 }
 
 double Shaper::WhiteNoise(int enc, double tStep){
-
   if (m_transfer_func_sq < 0) {
     std::cerr << m_className << "::WhiteNoise: Transfer function integral not calculated. \n";
   }
@@ -65,7 +64,7 @@ double Shaper::WhiteNoise(int enc, double tStep){
   // Calculate the number of delta pulses we need to add in this bin
   int npulse = NDeltaPulses(q_enc, m_signalConversion, tStep);
   return npulse;
-//   // Convert to current
+// Convert to current
 //   return npulse * m_signalConversion / tStep; 
 }
 
@@ -80,7 +79,7 @@ void Shaper::CalculateTransferFuncSq(double tStep, unsigned int nTimeBins){
   double t_temp = 0.;
   for (unsigned int it = 0; it < nTimeBins; it++){
     t_temp = (it + 0.5) * tStep;
-    // normalize transfer function to unity
+    // Normalize transfer function to unity
     integral += pow(Shape(t_temp)/m_g,2.) * tStep;
   }
   m_transfer_func_sq = integral;
