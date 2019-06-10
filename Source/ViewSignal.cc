@@ -83,6 +83,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     m_hSignal->SetLineColor(plottingEngine.GetRootColorLine1());
     m_hSignal->GetXaxis()->SetTitle("time [ns]");
     m_hSignal->GetYaxis()->SetTitle("signal [fC / ns]");
+    m_hSignal->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {
       const double sig = m_sensor->GetSignal(label, i);
       m_hSignal->SetBinContent(i + 1, sig);
@@ -112,6 +113,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       m_hDelayedSignal.reset(new TH1D(hname, title, nBins, t0, t1));
       m_hDelayedSignal->SetLineColor(kCyan + 2);
       m_hDelayedSignal->SetLineStyle(2);
+      m_hDelayedSignal->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
         const double sig = m_sensor->GetDelayedElectronSignal(label, i) +
                            m_sensor->GetDelayedIonSignal(label, i);
@@ -129,6 +131,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     m_hSignalElectrons->SetLineColor(plottingEngine.GetRootColorElectron());
     m_hSignalElectrons->GetXaxis()->SetTitle("time [ns]");
     m_hSignalElectrons->GetYaxis()->SetTitle("signal [fC / ns]");
+    m_hSignalElectrons->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {
       const double sig = m_sensor->GetElectronSignal(label, i);
       m_hSignalElectrons->SetBinContent(i + 1, sig);
@@ -143,6 +146,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       m_hDelayedSignalElectrons.reset(new TH1D(hname, title, nBins, t0, t1));
       m_hDelayedSignalElectrons->SetLineColor(kYellow - 7);
       m_hDelayedSignalElectrons->SetLineStyle(2);
+      m_hDelayedSignalElectrons->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
         const double sig = m_sensor->GetDelayedElectronSignal(label, i);
         m_hDelayedSignalElectrons->SetBinContent(i + 1, sig);
@@ -157,6 +161,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     m_hSignalIons->SetLineColor(plottingEngine.GetRootColorIon());
     m_hSignalIons->GetXaxis()->SetTitle("time [ns]");
     m_hSignalIons->GetYaxis()->SetTitle("signal [fC / ns]");
+    m_hSignalIons->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {
       const double sig = m_sensor->GetIonSignal(label, i);
       m_hSignalIons->SetBinContent(i + 1, sig);
@@ -171,6 +176,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       m_hDelayedSignalIons.reset(new TH1D(hname, title, nBins, t0, t1));
       m_hDelayedSignalIons->SetLineColor(kRed - 9);
       m_hDelayedSignalIons->SetLineStyle(2);
+      m_hDelayedSignalIons->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
         const double sig = m_sensor->GetDelayedIonSignal(label, i);
         m_hDelayedSignalIons->SetBinContent(i + 1, sig);
