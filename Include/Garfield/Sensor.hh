@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "ComponentBase.hh"
+#include "Shaper.hh"
 
 namespace Garfield {
 
@@ -110,6 +111,8 @@ class Sensor {
   /// Set the points to be used for interpolating the transfer function.
   void SetTransferFunction(const std::vector<double>& times,
                            const std::vector<double>& values);
+  // Set the transfer function using Shaper class.
+  void SetTransferFunction(Shaper &shaper);
   /// Evaluate the transfer function at a given time.
   double GetTransferFunction(const double t);
   /// Convolute the induced current with the transfer function.
@@ -121,6 +124,9 @@ class Sensor {
   /// Add noise to the induced signal.
   void AddNoise(const bool total = true, const bool electron = false,
                 const bool ion = false);
+  /// Add white noise to the induced signal, given a desired output enc.
+  void AddWhiteNoise(double enc, const bool total = true, 
+                     const bool electron = false, const bool ion = false);
   /** Determine the threshold crossings of the current signal curve.
     * \param thr threshold value
     * \param label electrode for which to compute the threshold crossings
@@ -196,6 +202,8 @@ class Sensor {
   // Transfer function
   bool m_hasTransferFunction = false;
   double (*m_fTransfer)(double t) = nullptr;
+  Shaper* m_shaper = nullptr;
+  
   std::vector<double> m_transferFunctionTimes;
   std::vector<double> m_transferFunctionValues;
 

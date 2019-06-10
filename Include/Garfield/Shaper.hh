@@ -13,12 +13,14 @@ class Shaper {
  public:
   /// Constructor
   Shaper() = delete;
-  Shaper(const int n, const double tau, 
+  Shaper(const int n, const double tau, const double g, 
          const std::string& shaperType){
     m_n = n;
     m_tau = tau;
+    m_g = g;
     m_type = shaperType;
     m_rand = new TRandom3(time(NULL));
+    m_transfer_func_sq = -1.;
   }
 
   /// Destructor
@@ -27,36 +29,38 @@ class Shaper {
   // Get transfer function value
   double Shape(double t);
   // Transfer function for a bipolar shaper
-  double UnipolarShaper(double t) const;
+  double UnipolarShaper(double t);
   // Transfer function for a unipolar shaper
   double BipolarShaper(double t);
   // Heaviside function, t0
-  double Heaviside(double t, double t0) const;
+  double Heaviside(double t, double t0);
+  // Time @ peak.
+  double PeakingTime();
 
-  // Add noise
 
-  // Calculate a current to add to the detector signal for a given output ENC.
+  // Calculate a noise current to add to the detector signal for a given ENC.
   double WhiteNoise(int enc, double tStep);
-  // Calculate the number of delta pulses 
-  double NDeltaPulses(double q_enc, double q0, double tStep, unsigned int nTimeBins);
-  double TransferFuncSq(double tStep, unsigned int nTimeBins);
+  // Calculate the number of delta pulses required for a given ENC.
+  double NDeltaPulses(double q_enc, double q0, double tStep);
+  // Calculate the integral of the transfer function squared.
+  void CalculateTransferFuncSq(double tStep, unsigned int nTimeBins);
 
   private:
   std::string m_className = "Shaper";
 
+  // Time window for signals                                                                    
   static double m_signalConversion;
 
   // Transfer function
   bool m_unipolarShaper = false;
   bool m_bipolarShaper  = false;
-  double (*m_fTransfer)(double t) = nullptr;
-  std::vector<double> m_transferFunctionTimes;
-  std::vector<double> m_transferFunctionValues;
 
   // Standard transfer function parameters.
   int m_n;
   double m_tau;
+  double m_g;  
   std::string m_type;
+  double m_transfer_func_sq;
 
   // Noise.
   TRandom3 * m_rand = nullptr;
@@ -64,11 +68,6 @@ class Shaper {
   // Switch on/off debugging messages
   bool m_debug = false;
 
-  // Return the current shaper size
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
-                      double& ymax, double& zmax);
-
-  double InterpolateTransferFunctionTable(const double t) const;
 };
 }
 
