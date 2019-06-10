@@ -33,7 +33,7 @@ class AvalancheMC {
   /// Set the number of points to be used when averaging the delayed 
   /// signal vector over a time bin in the Sensor class.
   /// The averaging is done with a \f$2\times navg + 1\f$ point 
-  /// Newton-Raphson integration. Default: 2. 
+  /// Newton-Raphson integration. Default: 1. 
   void SetSignalAveragingOrder(const unsigned int navg) { m_navg = navg; }
 
   /// Switch on calculation of induced charge (default: disabled).
