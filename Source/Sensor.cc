@@ -770,6 +770,14 @@ void Sensor::SetTransferFunction(const std::vector<double>& times,
   m_hasTransferFunction = true;
 }
 
+void Sensor::SetTransferFunction(Shaper &shaper) {
+  m_fTransfer = nullptr;
+  m_shaper = &shaper;
+  m_hasTransferFunction = true;
+  m_transferFunctionTimes.clear();
+  m_transferFunctionValues.clear();
+}
+
 double Sensor::InterpolateTransferFunctionTable(const double t) const {
   if (m_transferFunctionTimes.empty() || m_transferFunctionValues.empty()) {
     return 0.;
@@ -817,22 +825,27 @@ bool Sensor::ConvoluteSignal() {
   // Evaluate the transfer function.
   for (unsigned int i = 0; i < m_nTimeBins; ++i) {
     // Negative time part.
-    double t = (-int(i) + 0.5) * m_tStep;
+    double t = (-int(i)) * m_tStep;
     if (t < cnvMin || t > cnvMax) {
       cnvTab[offset - i] = 0.;
     } else if (m_fTransfer) {
       cnvTab[offset - i] = m_fTransfer(t);
+    } else if (m_shaper) {
+      cnvTab[offset - i] = m_shaper->Shape(t);
     } else {
       cnvTab[offset - i] = InterpolateTransferFunctionTable(t);
     }
     if (i == 0) continue;
     // Positive time part.
-    t = (i + 0.5) * m_tStep;
+    t = i * m_tStep;
     if (t < cnvMin || t > cnvMax) {
       cnvTab[offset + i] = 0.;
     } else if (m_fTransfer) {
       cnvTab[offset + i] = m_fTransfer(t);
-    } else {
+    } else if (m_shaper) {
+      cnvTab[offset + i] = m_shaper->Shape(t);
+    }
+    else {
       cnvTab[offset + i] = InterpolateTransferFunctionTable(t);
     }
   }
@@ -893,6 +906,34 @@ void Sensor::AddNoise(const bool total, const bool electron, const bool ion) {
     double t = m_tStart + 0.5 * m_tStep;
     for (unsigned int j = 0; j < m_nTimeBins; ++j) {
       const double noise = m_fNoise(t);
+      if (total) electrode.signal[j] += noise;
+      if (electron) electrode.electronsignal[j] += noise;
+      if (ion) electrode.ionsignal[j] += noise;
+      t += m_tStep;
+    }
+  }
+}
+
+void Sensor::AddWhiteNoise(double enc, const bool total, const bool electron, const bool ion) {
+  if (!m_hasTransferFunction) {
+    std::cerr << m_className << "::AddWhiteNoise: Transfer function not set.\n";
+    return;
+  }
+  if (!m_shaper) { 
+    std::cerr << m_className << "::AddWhiteNoise: Shaper not set.\n";
+    return;
+  }
+  if (m_nEvents == 0) m_nEvents = 1;
+  
+  // Calculate the number of time bins needed to integrate over transfer function
+  unsigned int nTimeBins = (int)(m_shaper->PeakingTime() * 10 / m_tStep);
+  m_shaper->CalculateTransferFuncSq(m_tStep, nTimeBins);
+
+  for (auto& electrode : m_electrodes) {
+    double t = m_tStart + 0.5 * m_tStep;
+    for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+      double noise = m_shaper->WhiteNoise(enc, m_tStep);
+      std::cout << "noise: " << noise << std::endl;
       if (total) electrode.signal[j] += noise;
       if (electron) electrode.electronsignal[j] += noise;
       if (ion) electrode.ionsignal[j] += noise;

@@ -357,6 +357,12 @@ $(OBJDIR)/Sensor.o: \
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 
+$(OBJDIR)/Shaper.o: \
+	$(SRCDIR)/Shaper.cc $(INCDIR)/Garfield/Shaper.hh \
+	$(INCDIR)/Garfield/FundamentalConstants.hh
+	@echo $@
+	@$(CXX) $(CFLAGS) $< -o $@
+
 $(OBJDIR)/TetrahedralTree.o: \
 	$(SRCDIR)/TetrahedralTree.cc $(INCDIR)/Garfield/TetrahedralTree.hh
 	@echo $@
