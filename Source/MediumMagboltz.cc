@@ -700,15 +700,6 @@ bool MediumMagboltz::GetElectronCollision(
       }
     } 
   } else if (type == ElectronCollisionTypeExcitation) {
-    // if (m_gas[igas] == "CH4" && loss * m_rgas[igas] < 13.35 && e > 12.65) {
-    //   if (RndmUniform() < 0.5) {
-    //     loss = 8.55 + RndmUniform() * (13.3 - 8.55);
-    //     loss /= m_rgas[igas];
-    //   } else {
-    //     loss = std::max(Small, RndmGaussian(loss * m_rgas[igas], 1.));
-    //     loss /= m_rgas[igas];
-    //   }
-    // }
     // Follow the de-excitation cascade (if switched on).
     if (m_useDeexcitation && m_iDeexcitation[level] >= 0) {
       int fLevel = 0;
@@ -720,11 +711,18 @@ bool MediumMagboltz::GetElectronCollision(
       // If the energy threshold of this level exceeds the
       // ionisation potential of one of the gases,
       // create a new electron (with probability rPenning).
-      if (m_energyLoss[level] * m_rgas[igas] > m_minIonPot &&
+      if (m_debug) {
+        std::cout << m_className << "::GetElectronCollision:\n"
+                  << "    Level: " << level << "\n"
+                  << "    Ionization potential: " << m_minIonPot << "\n"
+                  << "    Excitation energy: " << loss * m_rgas[igas] << "\n"
+                  << "    Penning probability: " << m_rPenning[level] << "\n"; 
+      }
+      if (loss * m_rgas[igas] > m_minIonPot &&
           RndmUniform() < m_rPenning[level]) {
         // The energy of the secondary electron is assumed to be given by
         // the difference of excitation and ionisation threshold.
-        double esec = m_energyLoss[level] * m_rgas[igas] - m_minIonPot;
+        double esec = loss * m_rgas[igas] - m_minIonPot;
         if (esec <= 0) esec = Small;
         // Add the secondary electron to the list.
         dxcProd newDxcProd;
