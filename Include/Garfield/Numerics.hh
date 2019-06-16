@@ -16,6 +16,7 @@ void Dfeqn(const int n, std::vector<std::vector<double> >& a,
            std::vector<int>& ir, std::vector<double>& b);
 void Dfinv(const int n, std::vector<std::vector<double> >& a,
            std::vector<int>& ir);
+/// Replace b by the solution x of A x = b, and replace A by its inverse.
 void Deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
             std::vector<double>& b);
 
@@ -24,6 +25,7 @@ void Cfact(const int n, std::vector<std::vector<std::complex<double> > >& a,
            int& jfail);
 void Cfinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
            std::vector<int>& ir);
+/// Replace A by its inverse.
 void Cinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
           int& ifail);
 
@@ -76,16 +78,25 @@ inline double BesselK1L(const double xx) {
           0.00325614 * pow(2. / xx, 5) - 0.00068245 * pow(2. / xx, 6));
 }
 
+/// C++ version of DIVDIF (CERN program library E105) which performs
+/// tabular interpolation using symmetrically placed argument points.
 double Divdif(const std::vector<double>& f, const std::vector<double>& a,
               int nn, double x, int mm);
 
+/// Interpolation of order 1 and 2 in an irregular rectangular
+/// two-dimensional grid.
+bool Boxin2(const std::vector<std::vector<double> >& value,
+            const std::vector<double>& xAxis, const std::vector<double>& yAxis,
+            const int nx, const int ny, const double xx, const double yy,
+            double& f, const int iOrder);
+/// Interpolation of order 1 and 2 in an irregular rectangular 
+/// three-dimensional grid.
 bool Boxin3(const std::vector<std::vector<std::vector<double> > >& value,
             const std::vector<double>& xAxis, const std::vector<double>& yAxis,
             const std::vector<double>& zAxis, const int nx, const int ny,
             const int nz, const double xx, const double yy, const double zz,
             double& f, const int iOrder);
 }
-
 inline double InterpolateBinarySearch(const std::vector<double>& x,
                                       const std::vector<double>& y,
                                       const double x0) {
