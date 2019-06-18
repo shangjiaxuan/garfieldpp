@@ -1802,8 +1802,8 @@ bool MediumMagboltz::Mixer(const bool verbose) {
 
   // Fill the photon collision rates table.
   if (!ComputePhotonCollisionTable(verbose)) {
-    std::cerr << m_className << "::Mixer:\n";
-    std::cerr << "    Photon collision rates could not be calculated.\n";
+    std::cerr << m_className << "::Mixer:\n"
+              << "    Photon collision rates could not be calculated.\n";
     if (m_useDeexcitation) {
       std::cerr << "    Deexcitation handling is switched off.\n";
       m_useDeexcitation = false;
@@ -1811,8 +1811,18 @@ bool MediumMagboltz::Mixer(const bool verbose) {
   }
 
   // Reset the Penning transfer parameters.
+  if (m_debug) {
+    std::cout << m_className << "::Mixer: Resetting transfer probabilities.\n"
+              << "    Global: " << m_rPenningGlobal << "\n";
+    for (unsigned int i = 0; i < m_nMaxGases; ++i) {
+      std::cout << "    Component " << i << ": " << m_rPenningGas[i] << "\n";
+    }
+  }
+  if (m_rPenningGlobal > Small) {
+    m_rPenning.fill(m_rPenningGlobal);
+    m_lambdaPenning.fill(m_lambdaPenningGlobal);
+  }
   for (unsigned int i = 0; i < m_nTerms; ++i) {
-    m_rPenning[i] = m_rPenningGlobal;
     int iGas = int(m_csType[i] / nCsTypes);
     if (m_rPenningGas[iGas] > Small) {
       m_rPenning[i] = m_rPenningGas[iGas];

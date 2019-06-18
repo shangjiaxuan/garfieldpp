@@ -73,7 +73,7 @@ class MediumMagboltz : public MediumGas {
   /// have changed).
   bool Initialise(const bool verbose = false);
 
-  void PrintGas();
+  void PrintGas() override;
 
   /// Get the overall null-collision rate [ns-1].
   double GetElectronNullCollisionRate(const int band) override;
