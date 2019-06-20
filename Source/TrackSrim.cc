@@ -133,17 +133,19 @@ bool TrackSrim::ReadFile(const std::string& file) {
     return false;
   }
   nread++;
+  const bool pre2013 = (strstr(line, "Target Density") != NULL); 
   token = strtok(line, " ");
   token = strtok(NULL, " ");
   token = strtok(NULL, " ");
-  token = strtok(NULL, " ");
+  if (pre2013) token = strtok(NULL, " ");
   SetDensity(std::atof(token));
 
   // Check the stopping units
   while (fsrim.getline(line, 100, '\n')) {
     nread++;
     if (strstr(line, "Stopping Units") == NULL) continue;
-    if (strstr(line, "Stopping Units =  MeV / (mg/cm2)") != NULL) {
+    if (strstr(line, "Stopping Units =  MeV / (mg/cm2)") != NULL ||
+        strstr(line, "Stopping Units =  MeV/(mg/cm2)") != NULL) {
       if (m_debug) {
         std::cout << hdr << "Stopping units: MeV / (mg/cm2) as expected.\n";
       }
