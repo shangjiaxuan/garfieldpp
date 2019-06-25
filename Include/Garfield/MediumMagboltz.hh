@@ -181,7 +181,7 @@ class MediumMagboltz : public MediumGas {
 
   /// Max. electron energy in the collision rate tables.
   double m_eMax;
-  /// Energy spacing in the linear part of of collision rate tables.
+  /// Energy spacing in the linear part of the collision rate tables.
   double m_eStep;
   double m_eHigh, m_eHighLog;
   double m_lnStep;
