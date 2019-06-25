@@ -205,6 +205,8 @@ bool MediumGas::SetComposition(const std::string& gas1, const double f1,
   // Copy the previous Penning transfer parameters.
   std::array<double, m_nMaxGases> rPenningGasOld;
   std::array<double, m_nMaxGases> lambdaPenningGasOld;
+  rPenningGasOld.fill(0.);
+  lambdaPenningGasOld.fill(0.);
   rPenningGasOld.swap(m_rPenningGas);
   lambdaPenningGasOld.swap(m_lambdaPenningGas);
   for (unsigned int i = 0; i < m_nComponents; ++i) {

@@ -69,7 +69,7 @@ class MediumGas : public Medium {
   virtual bool DisablePenningTransfer(std::string gasname);
 
   /// Print information about the present gas mixture and available data.
-  void PrintGas();
+  virtual void PrintGas();
 
   /// Read a table of ion mobilities as function of electric field from file.
   bool LoadIonMobility(const std::string& filename);
