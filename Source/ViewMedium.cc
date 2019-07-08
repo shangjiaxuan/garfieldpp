@@ -29,24 +29,7 @@ int FindIndex(const std::vector<double>& fields, const double field,
 
 namespace Garfield {
 
-ViewMedium::ViewMedium() { plottingEngine.SetDefaultStyle(); }
-
-ViewMedium::~ViewMedium() {
-  if (!m_hasExternalCanvas && m_canvas) delete m_canvas;
-}
-
-void ViewMedium::SetCanvas(TCanvas* c) {
-  if (!c) {
-    std::cerr << m_className << "::SetCanvas: Null pointer.\n";
-    return;
-  }
-  if (!m_hasExternalCanvas && m_canvas) {
-    delete m_canvas;
-    m_canvas = nullptr;
-  }
-  m_canvas = c;
-  m_hasExternalCanvas = true;
-}
+ViewMedium::ViewMedium() : ViewBase("ViewMedium") {}
 
 void ViewMedium::SetMedium(Medium* m) {
   if (!m) {
@@ -188,12 +171,7 @@ void ViewMedium::AddFunction(const bool keep, const Property type,
   }
 
   // Look for an unused function name.
-  int idx = 0;
-  std::string fname = "fMediumView_0";
-  while (gROOT->GetListOfFunctions()->FindObject(fname.c_str())) {
-    ++idx;
-    fname = "fMediumView_" + std::to_string(idx);
-  }
+  std::string fname = FindUnusedFunctionName("fMediumView");
   if (m_debug) {
     std::cout << m_className << "::AddFunction: Adding " << fname << "\n";
   }

@@ -10,10 +10,11 @@
 
 namespace Garfield {
 
-ViewGeometry::ViewGeometry() { plottingEngine.SetDefaultStyle(); }
+ViewGeometry::ViewGeometry() : ViewBase("ViewGeometry") { 
+  plottingEngine.SetDefaultStyle(); 
+}
 
 ViewGeometry::~ViewGeometry() {
-  if (!m_hasExternalCanvas && m_canvas) delete m_canvas;
   Reset();
 }
 
@@ -24,16 +25,6 @@ void ViewGeometry::SetGeometry(GeometrySimple* geo) {
   }
 
   m_geometry = geo;
-}
-
-void ViewGeometry::SetCanvas(TCanvas* c) {
-  if (!c) return;
-  if (!m_hasExternalCanvas && m_canvas) {
-    delete m_canvas;
-    m_canvas = nullptr;
-  }
-  m_canvas = c;
-  m_hasExternalCanvas = true;
 }
 
 void ViewGeometry::Plot() {

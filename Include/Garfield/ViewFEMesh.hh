@@ -8,7 +8,6 @@
 #endif
 
 #include <TArrayD.h>
-#include <TCanvas.h>
 #include <TGaxis.h>
 #include <TH2D.h>
 #include <TMatrixD.h>
@@ -17,23 +16,20 @@
 
 #include "ComponentCST.hh"
 #include "ComponentFieldMap.hh"
+#include "ViewBase.hh"
 #include "ViewDrift.hh"
 
 namespace Garfield {
 
 /// Draw the mesh of a field-map component.
 
-class ViewFEMesh {
+class ViewFEMesh : public ViewBase {
  public:
-  /// Constructor
+  /// Constructor.
   ViewFEMesh();
-  /// Destructor
-  ~ViewFEMesh();
+  /// Destructor.
+  ~ViewFEMesh() = default;
 
-  TCanvas* GetCanvas();
-
-  /// Set the canvas to be painted on.
-  void SetCanvas(TCanvas* c);
   /// Set the component from which to retrieve the mesh and field.
   void SetComponent(ComponentFieldMap* comp);
 
@@ -42,7 +38,6 @@ class ViewFEMesh {
   /// Set area to be plotted explicitly.
   void SetArea(const double xmin, const double ymin, const double zmin,
                const double xmax, const double ymax, const double zmax);
-
   /// Reset the projection plane.
   void SetDefaultProjection();
   /// Set the projection plane.
@@ -86,9 +81,6 @@ class ViewFEMesh {
     m_fillMesh = true;
   }
 
-  /// Switch on/off debugging output.
-  void EnableDebugging(const bool on = true) { m_debug = on; }
-
   /// Create a default set of custom-made axes.
   void CreateDefaultAxes();
 
@@ -98,16 +90,10 @@ class ViewFEMesh {
   }
 
  private:
-  std::string m_className = "ViewFEMesh";
   std::string m_label = "Mesh";
 
   // Options
-  bool m_debug = false;
   bool m_fillMesh = false;
-
-  // Canvas
-  TCanvas* m_canvas = nullptr;
-  bool m_hasExternalCanvas = false;
 
   // Viewing plane (plane normal is stored in m_proj[2])
   double m_proj[3][3];

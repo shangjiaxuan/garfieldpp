@@ -14,11 +14,7 @@
 
 namespace Garfield {
 
-ViewCell::ViewCell() { plottingEngine.SetDefaultStyle(); }
-
-ViewCell::~ViewCell() {
-  if (!m_hasExternalCanvas && m_canvas) delete m_canvas;
-}
+ViewCell::ViewCell() : ViewBase("ViewCell") {}
 
 void ViewCell::SetComponent(ComponentAnalyticField* comp) {
   if (!comp) {
@@ -27,16 +23,6 @@ void ViewCell::SetComponent(ComponentAnalyticField* comp) {
   }
 
   m_component = comp;
-}
-
-void ViewCell::SetCanvas(TCanvas* c) {
-  if (!c) return;
-  if (!m_hasExternalCanvas && m_canvas) {
-    delete m_canvas;
-    m_canvas = nullptr;
-  }
-  m_canvas = c;
-  m_hasExternalCanvas = true;
 }
 
 void ViewCell::SetArea(const double xmin, const double ymin, const double zmin,

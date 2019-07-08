@@ -44,13 +44,11 @@ void SampleRange(TF1* f, double& ymin, double& ymax) {
 
 namespace Garfield {
 
-ViewField::ViewField() {
+ViewField::ViewField() : ViewBase("ViewField") {
   SetDefaultProjection();
-  plottingEngine.SetDefaultStyle();
 }
 
 ViewField::~ViewField() {
-  if (!m_hasExternalCanvas && m_canvas) delete m_canvas;
   if (m_f2d) delete m_f2d;
   if (m_f2dW) delete m_f2dW;
   if (m_fProfile) delete m_fProfile;
@@ -75,16 +73,6 @@ void ViewField::SetComponent(ComponentBase* c) {
 
   m_component = c;
   m_sensor = nullptr;
-}
-
-void ViewField::SetCanvas(TCanvas* c) {
-  if (!c) return;
-  if (!m_hasExternalCanvas && m_canvas) {
-    delete m_canvas;
-    m_canvas = nullptr;
-  }
-  m_canvas = c;
-  m_hasExternalCanvas = true;
 }
 
 void ViewField::SetArea(const double xmin, const double ymin, const double xmax,
@@ -131,8 +119,8 @@ void ViewField::SetNumberOfContours(const unsigned int n) {
 }
 
 void ViewField::SetNumberOfSamples1d(const unsigned int n) {
-  const unsigned int nmin = 10;
-  const unsigned int nmax = 100000;
+  constexpr unsigned int nmin = 10;
+  constexpr unsigned int nmax = 100000;
   if (n < nmin || n > nmax) {
     std::cerr << m_className << "::SetNumberOfSamples1d:\n"
               << "    Number of points (" << n << ") out of range.\n"
@@ -145,8 +133,8 @@ void ViewField::SetNumberOfSamples1d(const unsigned int n) {
 
 void ViewField::SetNumberOfSamples2d(const unsigned int nx,
                                      const unsigned int ny) {
-  const unsigned int nmin = 10;
-  const unsigned int nmax = 10000;
+  constexpr unsigned int nmin = 10;
+  constexpr unsigned int nmax = 10000;
   if (nx < nmin || nx > nmax) {
     std::cerr << m_className << "::SetNumberOfSamples2d:\n"
               << "    Number of x-points (" << nx << ") out of range.\n"
@@ -222,15 +210,6 @@ void ViewField::PlotProfileWeightingField(const std::string& label,
   gPad->Update();
 }
 
-std::string ViewField::FindUnusedFunctionName(const std::string& s) {
-  int idx = 0;
-  std::string fname = s + "_0";
-  while (gROOT->GetListOfFunctions()->FindObject(fname.c_str())) {
-    ++idx;
-    fname = s + "_" + std::to_string(idx);
-  }
-  return fname;
-}
 
 void ViewField::SetDefaultProjection() {
   // Default projection: x-y at z=0

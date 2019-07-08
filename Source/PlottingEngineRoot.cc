@@ -80,7 +80,7 @@ void PlottingEngineRoot::SetDefaultStyle(const bool serif) {
   m_garfieldStyle.SetPaperSize(TStyle::kA4);
   m_garfieldStyle.SetFuncWidth(2);
   m_garfieldStyle.SetHistLineColor(kOrange - 3);
-  m_garfieldStyle.SetPalette(1);
+  // m_garfieldStyle.SetPalette(1);
   m_garfieldStyle.SetAxisColor(kBlack, "X");
   m_garfieldStyle.SetAxisColor(kBlack, "Y");
   m_garfieldStyle.SetAxisColor(kBlack, "Z");

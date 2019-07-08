@@ -4,10 +4,10 @@
 #include <string>
 #include <vector>
 
-#include <TCanvas.h>
 #include <TF1.h>
 #include <TGraph.h>
 
+#include "ViewBase.hh"
 #include "FundamentalConstants.hh"
 
 namespace Garfield {
@@ -16,15 +16,13 @@ class Medium;
 
 /// Plot transport coefficients as function of electric and magnetic field.
 
-class ViewMedium {
+class ViewMedium : public ViewBase {
  public:
-  /// Constructor
+  /// Constructor.
   ViewMedium();
-  /// Destructor
-  ~ViewMedium();
+  /// Destructor.
+  ~ViewMedium() = default;
 
-  /// Set the canvas to be painted on.
-  void SetCanvas(TCanvas* c);
   // Set the medium from which to retrieve the transport coefficients.
   void SetMedium(Medium* m);
 
@@ -86,15 +84,6 @@ class ViewMedium {
   };
 
  private:
-  std::string m_className = "ViewMedium";
-
-  // Options
-  bool m_debug = false;
-
-  // Canvas
-  TCanvas* m_canvas = nullptr;
-  bool m_hasExternalCanvas = false;
-
   Medium* m_medium = nullptr;
 
   // X-axis ranges

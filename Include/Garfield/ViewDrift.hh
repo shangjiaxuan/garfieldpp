@@ -5,25 +5,23 @@
 #include <string>
 #include <vector>
 
-#include <TCanvas.h>
 #include <TGraph.h>
 #include <TPolyLine3D.h>
 #include <TPolyMarker3D.h>
 #include <TView.h>
 
+#include "ViewBase.hh"
+
 namespace Garfield {
 
 /// Visualize drift lines and tracks.
 
-class ViewDrift {
+class ViewDrift : public ViewBase {
  public:
-  /// Constructor
+  /// Constructor.
   ViewDrift();
-  /// Destructor
+  /// Destructor.
   ~ViewDrift();
-
-  /// Set the canvas to be painted on.
-  void SetCanvas(TCanvas* c);
 
   /// Set the region to be plotted.
   void SetArea(const double xmin, const double ymin, const double zmin,
@@ -63,25 +61,15 @@ class ViewDrift {
   void AddIonisationMarker(const double x, const double y, const double z);
   void AddAttachmentMarker(const double x, const double y, const double z);
 
-  /// Switch on/off debugging output.
-  void EnableDebugging(const bool on = true) { m_debug = on; }
-
   friend class ViewFEMesh;
 
  private:
-  std::string m_className = "ViewDrift";
-
-  // Options
-  bool m_debug = false;
 
   struct Marker {
     double x;
     double y;
     double z;
   };
-  // Canvas
-  TCanvas* m_canvas = nullptr;
-  bool m_hasExternalCanvas = false;
 
   // Box dimensions
   double m_xMin = -1., m_yMin = -1., m_zMin = -1.;

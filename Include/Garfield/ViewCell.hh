@@ -4,8 +4,9 @@
 #include <memory>
 #include <string>
 
-#include <TCanvas.h>
 #include <TGeoManager.h>
+
+#include "ViewBase.hh"
 
 namespace Garfield {
 
@@ -13,15 +14,13 @@ class ComponentAnalyticField;
 
 /// Visualize the "cell" defined in an analytic-field component.
 
-class ViewCell {
+class ViewCell : public ViewBase {
  public:
   /// Constructor
   ViewCell();
   /// Destructor
-  ~ViewCell();
+  ~ViewCell() = default;
 
-  /// Set the canvas on which to draw the cell geometry.
-  void SetCanvas(TCanvas* c);
   /// Set the component for which to draw the cell geometry.
   void SetComponent(ComponentAnalyticField* comp);
 
@@ -36,26 +35,16 @@ class ViewCell {
   /// Make a three-dimensional drawing of the cell geometry (using TGeo).
   void Plot3d();
 
-  /// Switch on/off debugging output.
-  void EnableDebugging(const bool on = true) { m_debug = on; }
-
   /// Visualize wirers using markers or as a circle with the actual wire radius.
   /// The default is markers.
   void EnableWireMarkers(const bool on = true) { m_useWireMarker = on; }
   void DisableWireMarkers() { EnableWireMarkers(false); }
 
  private:
-  std::string m_className = "ViewCell";
-
   // Options
-  bool m_debug = false;
   bool m_useWireMarker = true;
 
   std::string m_label = "Cell Layout";
-
-  // Canvas
-  TCanvas* m_canvas = nullptr;
-  bool m_hasExternalCanvas = false;
 
   // Box dimensions
   bool m_hasUserArea = false;

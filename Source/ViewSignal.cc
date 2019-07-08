@@ -9,11 +9,7 @@
 
 namespace Garfield {
 
-ViewSignal::ViewSignal() { plottingEngine.SetDefaultStyle(); }
-
-ViewSignal::~ViewSignal() {
-  if (!m_hasExternalCanvas && m_canvas) delete m_canvas;
-}
+ViewSignal::ViewSignal() : ViewBase("ViewSignal") {}
 
 void ViewSignal::SetSensor(Sensor* s) {
   if (!s) {
@@ -21,16 +17,6 @@ void ViewSignal::SetSensor(Sensor* s) {
     return;
   }
   m_sensor = s;
-}
-
-void ViewSignal::SetCanvas(TCanvas* c) {
-  if (!c) return;
-  if (!m_hasExternalCanvas && m_canvas) {
-    delete m_canvas;
-    m_canvas = nullptr;
-  }
-  m_canvas = c;
-  m_hasExternalCanvas = true;
 }
 
 void ViewSignal::SetRangeX(const double xmin, const double xmax) {
@@ -78,7 +64,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
 
   const auto title = label.c_str();
   if (total) {
-    auto hname = FindHistogramName("hSignal_").c_str();
+    auto hname = FindUnusedHistogramName("hSignal_").c_str();
     m_hSignal.reset(new TH1D(hname, title, nBins, t0, t1));
     m_hSignal->SetLineColor(plottingEngine.GetRootColorLine1());
     m_hSignal->GetXaxis()->SetTitle("time [ns]");
@@ -109,7 +95,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     } 
 
     if (delayed) {
-      hname = FindHistogramName("hDelayedSignal_").c_str();
+      hname = FindUnusedHistogramName("hDelayedSignal_").c_str();
       m_hDelayedSignal.reset(new TH1D(hname, title, nBins, t0, t1));
       m_hDelayedSignal->SetLineColor(kCyan + 2);
       m_hDelayedSignal->SetLineStyle(2);
@@ -126,7 +112,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
 
   // Plot the electron and ion signals if requested.
   if (electron) {
-    auto hname = FindHistogramName("hSignalElectrons_").c_str();
+    auto hname = FindUnusedHistogramName("hSignalElectrons_").c_str();
     m_hSignalElectrons.reset(new TH1D(hname, title, nBins, t0, t1));
     m_hSignalElectrons->SetLineColor(plottingEngine.GetRootColorElectron());
     m_hSignalElectrons->GetXaxis()->SetTitle("time [ns]");
@@ -142,7 +128,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       if (m_userRangeY) m_hSignalElectrons->SetAxisRange(m_ymin, m_ymax, "Y");
     }
     if (delayed) {
-      hname = FindHistogramName("hDelayedSignalElectrons_").c_str();
+      hname = FindUnusedHistogramName("hDelayedSignalElectrons_").c_str();
       m_hDelayedSignalElectrons.reset(new TH1D(hname, title, nBins, t0, t1));
       m_hDelayedSignalElectrons->SetLineColor(kYellow - 7);
       m_hDelayedSignalElectrons->SetLineStyle(2);
@@ -156,7 +142,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     m_canvas->Update();
   }
   if (ion) {
-    auto hname = FindHistogramName("hSignalIons_").c_str();
+    auto hname = FindUnusedHistogramName("hSignalIons_").c_str();
     m_hSignalIons.reset(new TH1D(hname, title, nBins, t0, t1));
     m_hSignalIons->SetLineColor(plottingEngine.GetRootColorIon());
     m_hSignalIons->GetXaxis()->SetTitle("time [ns]");
@@ -172,7 +158,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       if (m_userRangeY) m_hSignalIons->SetAxisRange(m_ymin, m_ymax, "Y");
     }
     if (delayed) {
-      hname = FindHistogramName("hDelayedSignalIons_").c_str();
+      hname = FindUnusedHistogramName("hDelayedSignalIons_").c_str();
       m_hDelayedSignalIons.reset(new TH1D(hname, title, nBins, t0, t1));
       m_hDelayedSignalIons->SetLineColor(kRed - 9);
       m_hDelayedSignalIons->SetLineStyle(2);
@@ -187,13 +173,4 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
   }
 }
 
-std::string ViewSignal::FindHistogramName(const std::string& base) const {
-  std::string hname = base + "_0";
-  int idx = 0;
-  while (gDirectory->GetList()->FindObject(hname.c_str())) {
-    ++idx;
-    hname = base + "_" + std::to_string(idx);
-  }
-  return hname;
-}
 }

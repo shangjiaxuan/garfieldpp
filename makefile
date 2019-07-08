@@ -230,38 +230,49 @@ $(OBJDIR)/GeometryRoot.o: \
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@    
 
+$(OBJDIR)/ViewBase.o: \
+	$(SRCDIR)/ViewBase.cc $(INCDIR)/Garfield/ViewBase.hh
+	@echo $@
+	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewFEMesh.o: \
 	$(SRCDIR)/ViewFEMesh.cc $(INCDIR)/Garfield/ViewFEMesh.hh \
 	$(SRCDIR)/ViewDrift.cc $(INCDIR)/Garfield/ViewDrift.hh \
+	$(INCDIR)/Garfield/ViewBase.hh \
 	$(INCDIR)/Garfield/ComponentFieldMap.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewField.o: \
 	$(SRCDIR)/ViewField.cc $(INCDIR)/Garfield/ViewField.hh \
+	$(INCDIR)/Garfield/ViewBase.hh \
 	$(INCDIR)/Garfield/Sensor.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewDrift.o: \
-	$(SRCDIR)/ViewDrift.cc $(INCDIR)/Garfield/ViewDrift.hh
+	$(SRCDIR)/ViewDrift.cc $(INCDIR)/Garfield/ViewDrift.hh \
+	$(INCDIR)/Garfield/ViewBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewMedium.o: \
 	$(SRCDIR)/ViewMedium.cc $(INCDIR)/Garfield/ViewMedium.hh \
+	$(INCDIR)/Garfield/ViewBase.hh \
 	$(INCDIR)/Garfield/Medium.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewSignal.o: \
 	$(SRCDIR)/ViewSignal.cc $(INCDIR)/Garfield/ViewSignal.hh \
+	$(INCDIR)/Garfield/ViewBase.hh \
 	$(INCDIR)/Garfield/Sensor.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewCell.o: \
 	$(SRCDIR)/ViewCell.cc $(INCDIR)/Garfield/ViewCell.hh \
+	$(INCDIR)/Garfield/ViewBase.hh \
 	$(INCDIR)/Garfield/ComponentAnalyticField.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewGeometry.o: \
 	$(SRCDIR)/ViewGeometry.cc $(INCDIR)/Garfield/ViewGeometry.hh \
+	$(INCDIR)/Garfield/ViewBase.hh \
 	$(INCDIR)/Garfield/GeometrySimple.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@

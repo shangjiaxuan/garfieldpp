@@ -12,8 +12,7 @@
 
 namespace Garfield {
 
-ViewFEMesh::ViewFEMesh() {
-  plottingEngine.SetDefaultStyle();
+ViewFEMesh::ViewFEMesh() : ViewBase("ViewFEMesh") {
   SetDefaultProjection();
 
   // Create a blank histogram for the axes.
@@ -23,8 +22,19 @@ ViewFEMesh::ViewFEMesh() {
   m_axes->GetYaxis()->SetTitle("y");
 }
 
-ViewFEMesh::~ViewFEMesh() {
-  if (!m_hasExternalCanvas && m_canvas) delete m_canvas;
+void ViewFEMesh::SetDefaultProjection() {
+  // Default projection: x-y at z=0
+  m_proj[0][0] = 1;
+  m_proj[0][1] = 0;
+  m_proj[0][2] = 0;
+  m_proj[1][0] = 0;
+  m_proj[1][1] = 1;
+  m_proj[1][2] = 0;
+  m_proj[2][0] = 0;
+  m_proj[2][1] = 0;
+  m_proj[2][2] = 1;
+  // Plane distance to (0,0,0)
+  m_dist = 0;
 }
 
 void ViewFEMesh::SetComponent(ComponentFieldMap* comp) {
@@ -35,18 +45,6 @@ void ViewFEMesh::SetComponent(ComponentFieldMap* comp) {
 
   m_component = comp;
 }
-
-void ViewFEMesh::SetCanvas(TCanvas* c) {
-  if (!c) return;
-  if (!m_hasExternalCanvas && m_canvas) {
-    delete m_canvas;
-    m_canvas = nullptr;
-  }
-  m_canvas = c;
-  m_hasExternalCanvas = true;
-}
-
-TCanvas* ViewFEMesh::GetCanvas() { return m_canvas; }
 
 void ViewFEMesh::SetArea(double xmin, double ymin, double zmin, double xmax,
                          double ymax, double zmax) {
@@ -174,23 +172,6 @@ void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
   m_proj[1][2] = m_proj[2][0] * m_proj[0][1] - m_proj[2][1] * m_proj[0][0];
 
   IntersectPlaneArea();
-}
-
-// Set the default projection for the plane: copied from ViewField.cc
-void ViewFEMesh::SetDefaultProjection() {
-  // Default projection: x-y at z=0
-  m_proj[0][0] = 1;
-  m_proj[0][1] = 0;
-  m_proj[0][2] = 0;
-  m_proj[1][0] = 0;
-  m_proj[1][1] = 1;
-  m_proj[1][2] = 0;
-  m_proj[2][0] = 0;
-  m_proj[2][1] = 0;
-  m_proj[2][2] = 1;
-
-  // Plane distance to (0,0,0)
-  m_dist = 0;
 }
 
 // Set the x-axis.

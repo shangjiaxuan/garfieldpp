@@ -1,9 +1,10 @@
 #ifndef G_VIEW_FIELD
 #define G_VIEW_FIELD
 
-#include <TCanvas.h>
 #include <TF1.h>
 #include <TF2.h>
+
+#include "ViewBase.hh"
 
 namespace Garfield {
 
@@ -12,19 +13,17 @@ class ComponentBase;
 
 /// Visualize the potential or electric field of a component or sensor.
 
-class ViewField {
+class ViewField : public ViewBase {
  public:
-  /// Constructor
+  /// Constructor.
   ViewField();
-  /// Destructor
+  /// Destructor.
   ~ViewField();
 
   /// Set the sensor from which to retrieve the field.
   void SetSensor(Sensor* s);
   /// Set the component from which to retrieve the field.
   void SetComponent(ComponentBase* c);
-  /// Set the canvas to be painted on.
-  void SetCanvas(TCanvas* c);
 
   /// Set the plot limits for the potential.
   void SetVoltageRange(const double vmin, const double vmax);
@@ -131,9 +130,6 @@ class ViewField {
   /// Ignore the status flag returned by the sensor/component.
   void DisableAcknowledgeStatus() { m_useStatus = false; }
 
-  /// Switch on/off debugging output.
-  void EnableDebugging(const bool on = true) { m_debug = on; }
-
   friend class TF1;
   friend class TF2;
 
@@ -145,12 +141,7 @@ class ViewField {
  private:
   enum PlotType { Potential = 0, Magnitude, Ex, Ey, Ez, Unknown };
 
-  std::string m_className = "ViewField";
-
   static const unsigned int m_nMaxContours = 50;
-
-  // Options
-  bool m_debug = false;
 
   bool m_useAutoRange = true;
   bool m_useStatus = false;
@@ -184,10 +175,6 @@ class ViewField {
   // Weighting field label
   std::string m_electrode = "";
 
-  // Canvas
-  TCanvas* m_canvas = nullptr;
-  bool m_hasExternalCanvas = false;
-
   // Potential function
   TF2* m_f2d = nullptr;
   TF2* m_f2dW = nullptr;
@@ -203,7 +190,6 @@ class ViewField {
                     const std::string& option, TF1*& f, const bool wfield);
   void SetupCanvas();
   PlotType GetPlotType(const std::string& option, std::string& title) const;
-  std::string FindUnusedFunctionName(const std::string& s);
 };
 }
 #endif

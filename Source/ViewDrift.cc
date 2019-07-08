@@ -9,7 +9,7 @@
 
 namespace Garfield {
 
-ViewDrift::ViewDrift() {
+ViewDrift::ViewDrift() : ViewBase("ViewDrift") {
   m_driftLines.reserve(1000);
   m_driftLinePlots.reserve(1000);
   m_tracks.reserve(100);
@@ -20,18 +20,7 @@ ViewDrift::ViewDrift() {
 }
 
 ViewDrift::~ViewDrift() {
-  if (!m_hasExternalCanvas && m_canvas) delete m_canvas;
   Clear();
-}
-
-void ViewDrift::SetCanvas(TCanvas* c) {
-  if (!c) return;
-  if (!m_hasExternalCanvas && m_canvas) {
-    delete m_canvas;
-    m_canvas = nullptr;
-  }
-  m_canvas = c;
-  m_hasExternalCanvas = true;
 }
 
 void ViewDrift::SetArea(const double xmin, const double ymin, const double zmin,

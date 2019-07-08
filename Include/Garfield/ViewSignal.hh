@@ -4,9 +4,10 @@
 #include <memory>
 #include <string>
 
-#include <TCanvas.h>
 #include <TGraph.h>
 #include <TH1D.h>
+
+#include "ViewBase.hh"
 
 namespace Garfield {
 
@@ -14,17 +15,15 @@ class Sensor;
 
 /// Plot the signal computed by a sensor as a ROOT histogram.
 
-class ViewSignal {
+class ViewSignal : public ViewBase {
  public:
   /// Constructor
   ViewSignal();
   /// Destructor
-  ~ViewSignal();
+  ~ViewSignal() = default;
 
   /// Set the sensor from which to retrieve the signal.
   void SetSensor(Sensor* s);
-  /// Set the pad on which to draw the histogram.
-  void SetCanvas(TCanvas* c);
 
   /** Plot the signal.
     * \param label Identifier (weighting field) of the signal to be plotted.
@@ -56,21 +55,9 @@ class ViewSignal {
   /// Remove the user-defined y-axis limits.
   void UnsetRangeY() { m_userRangeY = false; }
 
-  /// Enable/disable debugging output.
-  void EnableDebugging(const bool on = true) { m_debug = on; }
-
  private:
-  std::string m_className = "ViewSignal";
-
-  // Options
-  bool m_debug = false;
-
   // Sensor
   Sensor* m_sensor = nullptr;
-
-  // Canvas
-  TCanvas* m_canvas = nullptr;
-  bool m_hasExternalCanvas = false;
 
   // Axis range.
   double m_xmin = 0.;
@@ -90,9 +77,6 @@ class ViewSignal {
 
   // Threshold crossings
   std::unique_ptr<TGraph> m_gCrossings;
-
-  // Find an unused histogram name.
-  std::string FindHistogramName(const std::string& base) const;
 };
 }
 #endif
