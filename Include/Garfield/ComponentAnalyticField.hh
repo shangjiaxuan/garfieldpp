@@ -125,7 +125,7 @@ class ComponentAnalyticField : public ComponentBase {
   /// Get the periodic length in the y-direction.
   bool GetPeriodicityY(double& s);
 
-  /// Print all available information on the cell. 
+  /// Print all available information on the cell.
   void PrintCell();
 
   /// Add a point charge.
@@ -137,24 +137,24 @@ class ComponentAnalyticField : public ComponentBase {
   void PrintCharges() const;
 
   /** Return the cell type.
-    * Cells are classified according to the number
-    * and orientation of planes, the presence of
-    * periodicities and the location of the wires
-    * as one of the following types:
-    *
-    * A    non-periodic cells with at most 1 x- and 1 y-plane
-    * B1X  x-periodic cells without x-planes and at most 1 y-plane
-    * B1Y  y-periodic cells without y-planes and at most 1 x-plane
-    * B2X  cells with 2 x-planes and at most 1 y-plane
-    * B2Y  cells with 2 y-planes and at most 1 x-plane
-    * C1   doubly periodic cells without planes
-    * C2X  doubly periodic cells with x-planes
-    * C2Y  doubly periodic cells with y-planes
-    * C3   double periodic cells with x- and y-planes
-    * D1   round tubes without axial periodicity
-    * D2   round tubes with axial periodicity
-    * D3   polygonal tubes without axial periodicity
-    */
+   * Cells are classified according to the number
+   * and orientation of planes, the presence of
+   * periodicities and the location of the wires
+   * as one of the following types:
+   *
+   * A    non-periodic cells with at most 1 x- and 1 y-plane
+   * B1X  x-periodic cells without x-planes and at most 1 y-plane
+   * B1Y  y-periodic cells without y-planes and at most 1 x-plane
+   * B2X  cells with 2 x-planes and at most 1 y-plane
+   * B2Y  cells with 2 y-planes and at most 1 x-plane
+   * C1   doubly periodic cells without planes
+   * C2X  doubly periodic cells with x-planes
+   * C2Y  doubly periodic cells with y-planes
+   * C3   double periodic cells with x- and y-planes
+   * D1   round tubes without axial periodicity
+   * D2   round tubes with axial periodicity
+   * D3   polygonal tubes without axial periodicity
+   */
   std::string GetCellType() {
     if (!m_cellset) {
       if (CellCheck()) CellType();
@@ -189,9 +189,39 @@ class ComponentAnalyticField : public ComponentBase {
   bool GetTube(double& r, double& voltage, int& nEdges,
                std::string& label) const;
 
-  /// Calculate the electric field at a given wire position, as if the wire 
-  /// itself were not there, but with the presence of its mirror images. 
+  /// Calculate the electric field at a given wire position, as if the wire
+  /// itself were not there, but with the presence of its mirror images.
   bool ElectricFieldAtWire(const unsigned int iw, double& ex, double& ey);
+
+  /// Set the number of grid lines at which the electrostatic force
+  /// as function of the wire displacement is computed.
+  void SetScanningGrid(const unsigned int nX, const unsigned int nY);
+  /// Specify explicitly the boundaries of the the scanning area (i. e. the
+  /// area in which the electrostatic force acting on a wire is computed).
+  void SetScanningArea(const double xmin, const double xmax, const double ymin,
+                       const double ymax);
+  /// Set the scanning area to the largest area around each wire
+  /// which is free from other cell elements.
+  void SetScanningAreaLargest() { m_scanRange = ScanningRange::Largest; }
+  /// Set the scanning area based on the zeroth-order estimates of the
+  /// wire shift, enlarged by a scaling factor. This is the default behaviour.
+  void SetScanningAreaFirstOrder(const double scale = 2.);
+  /// Switch on/off extrapolation of electrostatic forces beyond the 
+  /// scanning area (default: off).
+  void EnableExtrapolation(const bool on = true) { m_extrapolateForces = on; }
+
+  bool ForcesOnWire(const unsigned int iw, std::vector<double>& xMap,
+                    std::vector<double>& yMap,
+                    std::vector<std::vector<double> >& fxMap,
+                    std::vector<std::vector<double> >& fyMap);
+  bool WireDisplacement(const unsigned int iw, const bool detailed,
+                        std::vector<double>& csag, std::vector<double>& xsag,
+                        std::vector<double>& ysag, double& stretch);
+  /// Set the number of shots used for numerically solving the wire sag
+  /// differential equation.
+  void SetNumberOfShots(const unsigned int n) { m_nShots = n; }
+  /// Set the number of integration steps within each shot (must be >= 1).
+  void SetNumberOfSteps(const unsigned int n);
 
   enum Cell {
     A00,
@@ -258,8 +288,8 @@ class ComponentAnalyticField : public ComponentBase {
     int ind;           //< Readout group.
     /// Trap radius. Particle is "trapped" if within nTrap * radius of wire.
     int nTrap;
-    double tension;    //< Stretching weight.
-    double density;    //< Density.
+    double tension;  //< Stretching weight.
+    double density;  //< Density.
   };
   std::vector<Wire> m_w;
 
@@ -343,8 +373,30 @@ class ComponentAnalyticField : public ComponentBase {
   unsigned int m_nTermBessel = 10;
   unsigned int m_nTermPoly = 100;
 
+  bool m_useElectrostaticForce = true;
+  bool m_useGravitationalForce = true;
   // Gravity
   std::array<double, 3> m_down{{0, 0, 1}};
+  // Number of shots used for solving the wire sage differential equations
+  unsigned int m_nShots = 2;
+  // Number of integration steps within each shot.
+  unsigned int m_nSteps = 20;
+  // Options for setting the range of wire shifts
+  // for which the forces are computed.
+  enum class ScanningRange { Largest = 0, FirstOrder, User };
+  ScanningRange m_scanRange = ScanningRange::FirstOrder;
+  // Limits of the user-specified scanning range.
+  double m_xScanMin = 0.;
+  double m_xScanMax = 0.;
+  double m_yScanMin = 0.;
+  double m_yScanMax = 0.;
+  // Scaling factor for first-order estimate of the scanning range.
+  double m_scaleRange = 2.;
+  // Number of grid lines at which the forces are stored.
+  unsigned int m_nScanX = 11;
+  unsigned int m_nScanY = 11;
+  // Extrapolate beyond the scanning range or not.
+  bool m_extrapolateForces = false;
 
   void UpdatePeriodicity() override;
   void Reset() override { CellInit(); }
@@ -352,10 +404,10 @@ class ComponentAnalyticField : public ComponentBase {
   void CellInit();
   bool Prepare();
   bool CellCheck();
+  bool WireCheck() const;
   bool CellType();
   std::string GetCellType(const Cell) const;
   bool PrepareStrips();
-
   bool PrepareSignals();
   bool SetupWireSignals();
   bool SetupPlaneSignals();
@@ -489,45 +541,33 @@ class ComponentAnalyticField : public ComponentBase {
                    const int ip, const Pixel& pixel, const bool opt) const;
 
   // Functions for calculating the electric field at a given wire position,
-  // as if the wire itself were not there but with the presence 
+  // as if the wire itself were not there but with the presence
   // of its mirror images.
-  void FieldAtWireA00(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireB1X(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireB1Y(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireB2X(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireB2Y(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireC10(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireC2X(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireC2Y(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireC30(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireD10(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireD20(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
-  void FieldAtWireD30(const double xpos, const double ypos, 
-                      double& ex, double& ey, 
-                      const std::vector<bool>& cnalso) const;
- 
+  void FieldAtWireA00(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireB1X(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireB1Y(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireB2X(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireB2Y(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireC10(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireC2X(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireC2Y(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireC30(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireD10(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireD20(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+  void FieldAtWireD30(const double xpos, const double ypos, double& ex,
+                      double& ey, const std::vector<bool>& cnalso) const;
+
   // Auxiliary functions for C type cells
   double Ph2(const double xpos, const double ypos) const;
   double Ph2Lim(const double radius) const {
@@ -545,7 +585,7 @@ class ComponentAnalyticField : public ComponentBase {
 
   // Transformation between cartesian and polar coordinates
   void Cartesian2Polar(const double x0, const double y0, double& r,
-                       double& theta) {
+                       double& theta) const {
     if (x0 == 0. && y0 == 0.) {
       r = theta = 0.;
       return;
@@ -568,7 +608,36 @@ class ComponentAnalyticField : public ComponentBase {
     r = exp(rho);
     theta = RadToDegree * phi;
   }
+
+  bool SagDetailed(const Wire& wire, const std::vector<double>& xMap,
+                   const std::vector<double>& yMap,
+                   const std::vector<std::vector<double> >& fxMap,
+                   const std::vector<std::vector<double> >& fyMap,
+                   std::vector<double>& csag, std::vector<double>& xsag,
+                   std::vector<double>& ysag) const;
+  bool GetForceRatio(const Wire& wire, const double coor,
+                     const std::array<double, 2>& bend,
+                     const std::array<double, 2>& dbend,
+                     std::array<double, 2>& f, const std::vector<double>& xMap,
+                     const std::vector<double>& yMap,
+                     const std::vector<std::vector<double> >& fxMap,
+                     const std::vector<std::vector<double> >& fyMap) const;
+  bool FindZeroes(const Wire& wire, const double h, std::vector<double>& x,
+                  const std::vector<double>& xMap,
+                  const std::vector<double>& yMap,
+                  const std::vector<std::vector<double> >& fxMap,
+                  const std::vector<std::vector<double> >& fyMap) const;
+  bool StepRKN(const Wire& wire, const double h, double& x,
+               std::array<double, 2>& y, std::array<double, 2>& yp,
+               const std::vector<double>& xMap, const std::vector<double>& yMap,
+               const std::vector<std::vector<double> >& fxMap,
+               const std::vector<std::vector<double> >& fyMap) const;
+  bool Trace(const Wire& wire, const double h, const std::vector<double>& xx,
+             std::vector<double>& f, const std::vector<double>& xMap,
+             const std::vector<double>& yMap,
+             const std::vector<std::vector<double> >& fxMap,
+             const std::vector<std::vector<double> >& fyMap) const;
 };
-}
+}  // namespace Garfield
 
 #endif

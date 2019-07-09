@@ -10,6 +10,9 @@ namespace Garfield {
 namespace Numerics {
 
 // Linear algebra routines from CERNLIB
+/// Replace B by the solution X of A*X=B, after which A is undefined.
+void Deqn(const int n, std::vector<std::vector<double> >& a,
+          int& ifail, std::vector<double>& b);
 void Dfact(const int n, std::vector<std::vector<double> >& a,
            std::vector<int>& ir, int& ifail, double& det, int& jfail);
 void Dfeqn(const int n, std::vector<std::vector<double> >& a,

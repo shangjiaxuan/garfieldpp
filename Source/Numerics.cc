@@ -5,9 +5,120 @@
 
 #include "Garfield/Numerics.hh"
 
+namespace {
+
+void DeqnGen(const int n, std::vector<std::vector<double > >& a,
+             int& ifail, std::vector<double>& b) {
+
+  std::vector<int> ir(n, 0);
+  double det = 0.;
+  int jfail = 0;
+  Garfield::Numerics::Dfact(n, a, ir, ifail, det, jfail); 
+  if (ifail != 0) return;
+  Garfield::Numerics::Dfeqn(n, a, ir, b);
+}
+}
+
 namespace Garfield {
 
 namespace Numerics {
+
+void Deqn(const int n, std::vector<std::vector<double> >& a,
+          int& ifail, std::vector<double>& b) { 
+
+  // ******************************************************************
+  // REPLACES B BY THE SOLUTION X OF A*X=B, AFTER WHICH A IS UNDEFINED.
+  // (PARAMETERS AS FOR DEQINV.)
+  // ******************************************************************
+
+  if (n < 1) {
+    ifail = 1;
+    return;
+  } else if (n == 1) {
+    if (a[0][0] == 0.) {
+      ifail = -1;
+      return;
+    }
+    const double s = 1. / a[0][0];
+    b[0] *= s;
+    return;
+  } else if (n == 2) {
+    // Cramer's rule.
+    const double det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
+    if (det == 0.) {
+      ifail = -1;
+      return;
+    }
+    const double s = 1. / det;
+    const double b1 = b[0];
+    b[0] = s * ( a[1][1] * b1 - a[0][1] * b[1]);
+    b[1] = s * (-a[1][0] * b1 + a[0][0] * b[1]);
+    return;
+  } else if (n == 3) {
+    // Factorize matrix A=L*U.
+    // First pivot search.
+    const double t1 = std::abs(a[0][0]);
+    const double t2 = std::abs(a[1][0]);
+    const double t3 = std::abs(a[2][0]);
+    unsigned int m1 = 0, m2 = 0, m3 = 0;
+    if (t1 < t2 && t3 < t2) {
+      // Pivot is A21
+      m1 = 1;
+      m2 = 0;
+      m3 = 2;
+    } else if (t2 < t1 && t3 < t1) { 
+      // Pivot is A11
+      m1 = 0;
+      m2 = 1;
+      m3 = 2;
+    } else {
+      // Pivot is A31
+      m1 = 2;
+      m2 = 1;
+      m3 = 0;
+    }
+    double temp = a[m1][0];
+    if (temp == 0.) {
+      DeqnGen(n, a, ifail, b);
+      return;
+    }
+    const double l11 = 1. / temp;
+    const double u12 = l11 * a[m1][1];
+    const double u13 = l11 * a[m1][2];
+    double l22 = a[m2][1] - a[m2][0] * u12;
+    double l32 = a[m3][1] - a[m3][0] * u12;
+    // Second pivot search.
+    if (std::abs(l22) < std::abs(l32)) {
+      std::swap(m2, m3);
+      std::swap(l22, l32);
+    }
+    double l21 = a[m2][0];
+    double l31 = a[m3][0];
+    if (l22 == 0.) {
+      DeqnGen(n, a, ifail, b);
+      return;
+    }
+    l22 = 1. / l22;
+    const double u23 = l22 * (a[m2][2] - l21 * u13);
+    temp = a[m3][2] - l31 * u13 - l32 * u23;
+    if (temp == 0.) {
+      DeqnGen(n, a, ifail, b);
+      return;
+    }
+    const double l33 = 1. / temp;
+ 
+    // Solve L*Y=B and U*X=Y.
+    const double y1 = l11 * b[m1];
+    const double y2 = l22 * (b[m2] - l21 * y1);
+    b[2] = l33 * (b[m3] - l31 * y1 - l32 * y2);
+    b[1] = y2 - u23 * b[2];
+    b[0] = y1 - u12 * b[1] - u13 * b[2];
+    return;
+  }
+
+  // N > 3 cases. Factorize matrix and solve system.
+  DeqnGen(n, a, ifail, b);
+}
 
 void Dfact(const int n, std::vector<std::vector<double> >& a,
            std::vector<int>& ir, int& ifail, double& det, int& jfail) {

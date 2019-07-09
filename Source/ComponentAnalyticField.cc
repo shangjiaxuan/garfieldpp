@@ -1,8 +1,9 @@
 #include <algorithm>
+#include <cstdio>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <cstdio>
+#include <numeric>
 
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -10,10 +11,10 @@
 
 namespace {
 
-std::pair<std::complex<double>, std::complex<double> > Th1(
-    const std::complex<double>& zeta, 
-    const double p1, const double p2) {
+constexpr double Internal2Newton = 1.e-15 * Garfield::TwoPiEpsilon0 * 100.;
 
+std::pair<std::complex<double>, std::complex<double> > Th1(
+    const std::complex<double>& zeta, const double p1, const double p2) {
   const std::complex<double> zsin = sin(zeta);
   const std::complex<double> zcof = 4. * zsin * zsin - 2.;
   std::complex<double> zu = -p1 - zcof * p2;
@@ -24,7 +25,7 @@ std::pair<std::complex<double>, std::complex<double> > Th1(
   const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
   return std::make_pair(std::move(zterm1), std::move(zterm2));
 }
-}
+}  // namespace
 
 namespace Garfield {
 
@@ -78,8 +79,8 @@ void ComponentAnalyticField::PrintCell() {
       return;
     }
   }
-  std::cout << m_className << "::PrintCell:\n    Cell identification: "
-            << GetCellType() << "\n";
+  std::cout << m_className
+            << "::PrintCell: Cell identification: " << GetCellType() << "\n";
   // Print positions of wires, applied voltages and resulting charges.
   if (!m_w.empty()) {
     std::cout << "  Table of the wires\n"
@@ -89,10 +90,10 @@ void ComponentAnalyticField::PrintCell() {
               << "     [pC/cm]       [g]      [cm]    [g/cm3]\n";
     for (unsigned int i = 0; i < m_nWires; ++i) {
       const auto& w = m_w[i];
-      std::printf("%4d %9.2f %9.4f %9.4f %9.3f %12.4f %9.2f %9.2f %9.2f \"%s\"\n", 
-                  i, 1.e4 * w.d, w.x, w.y, w.v, 
-                  w.e * TwoPiEpsilon0 * 1.e-3, w.tension, w.u, w.density, 
-                  w.type.c_str());
+      std::printf(
+          "%4d %9.2f %9.4f %9.4f %9.3f %12.4f %9.2f %9.2f %9.2f \"%s\"\n", i,
+          1.e4 * w.d, w.x, w.y, w.v, w.e * TwoPiEpsilon0 * 1.e-3, w.tension,
+          w.u, w.density, w.type.c_str());
     }
   }
   // Print information on the tube if present.
@@ -148,32 +149,32 @@ void ComponentAnalyticField::PrintCell() {
         std::cout << "label = " << plane.type << ", ";
       }
       const unsigned int nStrips = plane.strips1.size() + plane.strips2.size();
-      const unsigned int nPixels = plane.pixels.size(); 
+      const unsigned int nPixels = plane.pixels.size();
       if (nStrips == 0 && nPixels == 0) {
         std::cout << "no strips or pixels.\n";
       } else if (nPixels == 0) {
         std::cout << nStrips << " strips.\n";
       } else if (nStrips == 0) {
-        std::cout << nPixels << " pixels.\n"; 
+        std::cout << nPixels << " pixels.\n";
       } else {
         std::cout << nStrips << " strips, " << nPixels << " pixels.\n";
       }
       for (const auto& strip : plane.strips1) {
         if (m_polar) {
           std::cout << "      " << RadToDegree * strip.smin << " < phi < "
-                    << RadToDegree * strip.smax << " degrees, gap = " 
-                    << strip.gap << " cm";
+                    << RadToDegree * strip.smax
+                    << " degrees, gap = " << strip.gap << " cm";
         } else {
-          std::cout << "      " << strip.smin << " < y < " << strip.smax 
+          std::cout << "      " << strip.smin << " < y < " << strip.smax
                     << " cm, gap = " << strip.gap << " cm";
-        } 
+        }
         if (!strip.type.empty() && strip.type != "?") {
           std::cout << " (\"" << strip.type << "\")";
         }
         std::cout << "\n";
       }
       for (const auto& strip : plane.strips2) {
-        std::cout << "      " << strip.smin << " < z < " << strip.smax 
+        std::cout << "      " << strip.smin << " < z < " << strip.smax
                   << " cm, gap = " << strip.gap << " cm";
         if (!strip.type.empty() && strip.type != "?") {
           std::cout << " (\"" << strip.type << "\")";
@@ -181,8 +182,8 @@ void ComponentAnalyticField::PrintCell() {
         std::cout << "\n";
       }
       for (const auto& pixel : plane.pixels) {
-        std::cout << "    " << pixel.smin << " < y < " << pixel.smax 
-                  << " cm, " << pixel.zmin << " < z < " << pixel.zmax 
+        std::cout << "    " << pixel.smin << " < y < " << pixel.smax << " cm, "
+                  << pixel.zmin << " < z < " << pixel.zmax
                   << " cm, gap = " << pixel.gap << " cm";
         if (!pixel.type.empty() && pixel.type != "?") {
           std::cout << " (\"" << pixel.type << "\")";
@@ -190,7 +191,7 @@ void ComponentAnalyticField::PrintCell() {
         std::cout << "\n";
       }
     }
-    // Next the planes at constant y or phi 
+    // Next the planes at constant y or phi
     const std::string yphi = m_polar ? "phi" : "y";
     if (m_ynplan[2] && m_ynplan[3]) {
       std::cout << "    There are two planes at constant " << yphi << ":\n";
@@ -214,13 +215,13 @@ void ComponentAnalyticField::PrintCell() {
         std::cout << "label = " << plane.type << ", ";
       }
       const unsigned int nStrips = plane.strips1.size() + plane.strips2.size();
-      const unsigned int nPixels = plane.pixels.size(); 
+      const unsigned int nPixels = plane.pixels.size();
       if (nStrips == 0 && nPixels == 0) {
         std::cout << "no strips or pixels.\n";
       } else if (nPixels == 0) {
         std::cout << nStrips << " strips.\n";
       } else if (nStrips == 0) {
-        std::cout << nPixels << " pixels.\n"; 
+        std::cout << nPixels << " pixels.\n";
       } else {
         std::cout << nStrips << " strips, " << nPixels << " pixels.\n";
       }
@@ -229,16 +230,16 @@ void ComponentAnalyticField::PrintCell() {
           std::cout << "      " << exp(strip.smin) << " < r < "
                     << exp(strip.smax) << " cm, gap = " << strip.gap << " cm";
         } else {
-          std::cout << "      " << strip.smin << " < x < " << strip.smax 
+          std::cout << "      " << strip.smin << " < x < " << strip.smax
                     << " cm, gap = " << strip.gap << " cm";
-        } 
+        }
         if (!strip.type.empty() && strip.type != "?") {
           std::cout << " (\"" << strip.type << "\")";
         }
         std::cout << "\n";
       }
       for (const auto& strip : plane.strips2) {
-        std::cout << "      " << strip.smin << " < z < " << strip.smax 
+        std::cout << "      " << strip.smin << " < z < " << strip.smax
                   << " cm, gap = " << strip.gap << " cm";
         if (!strip.type.empty() && strip.type != "?") {
           std::cout << " (\"" << strip.type << "\")";
@@ -246,8 +247,8 @@ void ComponentAnalyticField::PrintCell() {
         std::cout << "\n";
       }
       for (const auto& pixel : plane.pixels) {
-        std::cout << "    " << pixel.smin << " < x < " << pixel.smax 
-                  << " cm, " << pixel.zmin << " < z < " << pixel.zmax 
+        std::cout << "    " << pixel.smin << " < x < " << pixel.smax << " cm, "
+                  << pixel.zmin << " < z < " << pixel.zmax
                   << " cm, gap = " << pixel.gap << " cm";
         if (!pixel.type.empty() && pixel.type != "?") {
           std::cout << " (\"" << pixel.type << "\")";
@@ -291,27 +292,27 @@ void ComponentAnalyticField::PrintCell() {
   //           << ", " << m_down[2] << ") g.\n";
   std::cout << "  Cell dimensions:\n    ";
   if (!m_polar) {
-    std::cout << m_xmin << " < x < " << m_xmax << " cm, " 
-              << m_ymin << " < y < " << m_ymax << " cm.\n";
+    std::cout << m_xmin << " < x < " << m_xmax << " cm, " << m_ymin << " < y < "
+              << m_ymax << " cm.\n";
   } else {
     double xminp, yminp;
     RTheta2RhoPhi(m_xmin, m_ymin, xminp, yminp);
     double xmaxp, ymaxp;
     RTheta2RhoPhi(m_xmax, m_ymax, xmaxp, ymaxp);
-    std::cout << xminp << " < r < " << xmaxp << " cm, " 
-              << yminp << " < phi < " << ymaxp << " degrees.\n";
+    std::cout << xminp << " < r < " << xmaxp << " cm, " << yminp << " < phi < "
+              << ymaxp << " degrees.\n";
   }
-  std::cout << "  Potential range:\n    "
-            << m_vmin << " < V < " << m_vmax << " V.\n"; 
+  std::cout << "  Potential range:\n    " << m_vmin << " < V < " << m_vmax
+            << " V.\n";
   // Print voltage shift in case no equipotential planes are present.
   if (!(m_ynplan[0] || m_ynplan[1] || m_ynplan[2] || m_ynplan[3] || m_tube)) {
-    std::cout << "  All voltages have been shifted by " << m_v0 
+    std::cout << "  All voltages have been shifted by " << m_v0
               << " V to avoid net wire charge.\n";
   } else {
     // Print the net charge on wires.
     double sum = 0.;
     for (const auto& w : m_w) sum += w.e;
-    std::cout << "  The net charge on the wires is " 
+    std::cout << "  The net charge on the wires is "
               << 1.e-3 * TwoPiEpsilon0 * sum << " pC/cm.\n";
   }
 }
@@ -981,7 +982,6 @@ bool ComponentAnalyticField::GetTube(double& r, double& voltage, int& nEdges,
 
 bool ComponentAnalyticField::ElectricFieldAtWire(const unsigned int iw,
                                                  double& ex, double& ey) {
-
   //-----------------------------------------------------------------------
   //   FFIELD - Subroutine calculating the electric field at a given wire
   //            position, as if the wire itself were not there but with
@@ -1049,6 +1049,384 @@ bool ComponentAnalyticField::ElectricFieldAtWire(const unsigned int iw,
   // Correct for the equipotential planes.
   ex -= m_corvta;
   ey -= m_corvtb;
+  return true;
+}
+
+void ComponentAnalyticField::SetScanningGrid(const unsigned int nX,
+                                             const unsigned int nY) {
+  if (nX < 2) {
+    std::cerr << m_className << "::SetScanningGrid:\n"
+              << "    Number of x-lines must be > 1.\n";
+  } else {
+    m_nScanX = nX;
+  }
+  if (nY < 2) {
+    std::cerr << m_className << "::SetScanningGrid:\n"
+              << "    Number of y-lines must be > 1.\n";
+  } else {
+    m_nScanY = nY;
+  }
+}
+
+void ComponentAnalyticField::SetScanningArea(const double xmin,
+                                             const double xmax,
+                                             const double ymin,
+                                             const double ymax) {
+  if (std::abs(xmax - xmin) < Small || std::abs(ymax - ymin) < Small) {
+    std::cerr << m_className << "::SetScanningArea:\n"
+              << "    Zero range not permitted.\n";
+    return;
+  }
+  m_scanRange = ScanningRange::User;
+  m_xScanMin = std::min(xmin, xmax);
+  m_xScanMax = std::max(xmin, xmax);
+  m_yScanMin = std::min(ymin, ymax);
+  m_yScanMax = std::max(ymin, ymax);
+}
+
+void ComponentAnalyticField::SetScanningAreaFirstOrder(const double scale) {
+  m_scanRange = ScanningRange::FirstOrder;
+  if (scale > 0.) {
+    m_scaleRange = scale;
+  } else {
+    std::cerr << m_className << "::SetScanningAreaFirstOrder:\n"
+              << "    Scaling factor must be > 0.\n";
+  }
+}
+
+bool ComponentAnalyticField::ForcesOnWire(
+    const unsigned int iw, std::vector<double>& xMap, std::vector<double>& yMap,
+    std::vector<std::vector<double> >& fxMap,
+    std::vector<std::vector<double> >& fyMap) {
+  if (!m_cellset) {
+    if (!Prepare()) {
+      std::cerr << m_className << "::ForcesOnWire:\n"
+                << "    Could not set up the cell.\n";
+      return false;
+    }
+  }
+
+  if (iw >= m_nWires) {
+    std::cerr << m_className << "::ForcesOnWire: Wire index out of range.\n";
+    return false;
+  }
+  const auto& wire = m_w[iw];
+  // Compute a 'safe box' around the wire.
+  double bxmin = m_perx ? wire.x - 0.5 * m_sx : 2 * m_xmin - m_xmax;
+  double bxmax = m_perx ? wire.x + 0.5 * m_sx : 2 * m_xmax - m_xmin;
+  double bymin = m_pery ? wire.y - 0.5 * m_sy : 2 * m_ymin - m_ymax;
+  double bymax = m_pery ? wire.y + 0.5 * m_sy : 2 * m_ymax - m_ymin;
+
+  // If the initial area is almost zero in 1 direction, make it square.
+  if (std::abs(bxmax - bxmin) < 0.1 * std::abs(bymax - bymin)) {
+    bxmin = wire.x - 0.5 * std::abs(bymax - bymin);
+    bxmax = wire.x + 0.5 * std::abs(bymax - bymin);
+  } else if (std::abs(bymax - bymin) < 0.1 * std::abs(bxmax - bxmin)) {
+    bymin = wire.y - 0.5 * std::abs(bxmax - bxmin);
+    bymax = wire.y + 0.5 * std::abs(bxmax - bxmin);
+  }
+  // Scan the other wires.
+  for (unsigned int j = 0; j < m_nWires; ++j) {
+    if (j == iw) continue;
+    const double xj = m_w[j].x;
+    const double yj = m_w[j].y;
+    const double dj = m_w[j].d;
+    double xnear = m_perx ? xj - m_sx * int(round((xj - wire.x) / m_sx)) : xj;
+    double ynear = m_pery ? yj - m_sy * int(round((yj - wire.y) / m_sy)) : yj;
+    if (std::abs(xnear - wire.x) > std::abs(ynear - wire.y)) {
+      if (xnear < wire.x) {
+        bxmin = std::max(bxmin, xnear + dj + wire.d);
+        if (m_perx) bxmax = std::min(bxmax, xnear + m_sx - dj - wire.d);
+      } else {
+        bxmax = std::min(bxmax, xnear - dj - wire.d);
+        if (m_perx) bxmin = std::max(bxmin, xnear - m_sx + dj + wire.d);
+      }
+    } else {
+      if (ynear < wire.y) {
+        bymin = std::max({bymin, ynear - dj - wire.d, ynear + dj + wire.d});
+        if (m_pery) bymax = std::min(bymax, ynear + m_sy - dj - wire.d);
+      } else {
+        bymax = std::min({bymax, ynear - dj - wire.d, ynear + dj + wire.d});
+        if (m_pery) bymin = std::max(bymin, ynear - m_sy + dj + wire.d);
+      }
+    }
+  }
+  // Scan the planes.
+  if (m_ynplan[0]) bxmin = std::max(bxmin, m_coplan[0] + wire.d);
+  if (m_ynplan[1]) bxmax = std::min(bxmax, m_coplan[1] - wire.d);
+  if (m_ynplan[2]) bymin = std::max(bymin, m_coplan[2] + wire.d);
+  if (m_ynplan[3]) bymax = std::min(bymax, m_coplan[3] - wire.d);
+
+  // If there is a tube, check all corners.
+  if (m_tube) {
+    const double d2 = m_cotube2 - wire.d * wire.d;
+    if (d2 < Small) {
+      std::cerr << m_className << "::ForcesOnWire:\n    Diameter of wire " << iw
+                << " is too large compared to the tube.\n";
+      return false;
+    }
+
+    double corr = sqrt((bxmin * bxmin + bymin * bymin) / d2);
+    if (corr > 1.) {
+      bxmin /= corr;
+      bymin /= corr;
+    }
+    // TODO! Shouldn't this be BXMIN, BYMAX?
+    corr = sqrt((bxmin * bxmin + bymin * bymin) / d2);
+    if (corr > 1.) {
+      bxmin /= corr;
+      bymax /= corr;
+    }
+    corr = sqrt((bxmin * bxmin + bymin * bymin) / d2);
+    if (corr > 1.) {
+      bxmax /= corr;
+      bymin /= corr;
+    }
+    corr = sqrt((bxmin * bxmin + bymin * bymin) / d2);
+    if (corr > 1) {
+      bxmax /= corr;
+      bymax /= corr;
+    }
+  }
+  // Make sure we found a reasonable 'safe area'.
+  if ((bxmin - wire.x) * (wire.x - bxmax) <= 0 ||
+      (bymin - wire.y) * (wire.y - bymax) <= 0) {
+    std::cerr << m_className << "::ForcesOnWire:\n    Unable to find an area "
+              << "free of elements around wire " << iw << ".\n";
+    return false;
+  }
+  // Now set a reasonable scanning range.
+  double sxmin = bxmin;
+  double sxmax = bxmax;
+  double symin = bymin;
+  double symax = bymax;
+  if (m_scanRange == ScanningRange::User) {
+    // User-specified range.
+    sxmin = wire.x + m_xScanMin;
+    symin = wire.y + m_yScanMin;
+    sxmax = wire.x + m_xScanMax;
+    symax = wire.y + m_yScanMax;
+  } else if (m_scanRange == ScanningRange::FirstOrder) {
+    // Get the field and force at the nominal position.
+    double ex = 0., ey = 0.;
+    ElectricFieldAtWire(iw, ex, ey);
+    double fx = -ex * wire.e * Internal2Newton;
+    double fy = -ey * wire.e * Internal2Newton;
+    if (m_useGravitationalForce) {
+      // Mass per unit length [kg / cm].
+      const double m = 0.25e-3 * wire.density * Pi * wire.d * wire.d;
+      fx -= m_down[0] * GravitationalAcceleration * m;
+      fy -= m_down[1] * GravitationalAcceleration * m;
+    }
+    const double u2 = wire.u * wire.u;
+    const double shiftx =
+        -125 * fx * u2 / (GravitationalAcceleration * wire.tension);
+    const double shifty =
+        -125 * fy * u2 / (GravitationalAcceleration * wire.tension);
+    // If 0th order estimate of shift is not small.
+    const double tol = wire.d / 20.;
+    if (std::abs(shiftx) > tol || std::abs(shifty) > tol) {
+      sxmin = std::max(bxmin, std::min(wire.x + m_scaleRange * shiftx,
+                                       wire.x - shiftx / m_scaleRange));
+      symin = std::max(bymin, std::min(wire.y + m_scaleRange * shifty,
+                                       wire.y - shifty / m_scaleRange));
+      sxmax = std::min(bxmax, std::max(wire.x + m_scaleRange * shiftx,
+                                       wire.x - shiftx / m_scaleRange));
+      symax = std::min(bymax, std::max(wire.y + m_scaleRange * shifty,
+                                       wire.y - shifty / m_scaleRange));
+      // If one is very small, make the area square within bounds.
+      if (std::abs(sxmax - sxmin) < 0.1 * std::abs(symax - symin)) {
+        sxmin = std::max(bxmin, wire.x - 0.5 * std::abs(symax - symin));
+        sxmax = std::min(bxmax, wire.x + 0.5 * std::abs(symax - symin));
+      } else if (std::abs(symax - symin) < 0.1 * std::abs(sxmax - sxmin)) {
+        symin = std::max(bymin, wire.y - 0.5 * std::abs(sxmax - sxmin));
+        symax = std::min(bymax, wire.y + 0.5 * std::abs(sxmax - sxmin));
+      }
+    }
+  }
+  if (m_debug) {
+    std::cout << m_className << "::ForcesOnWire:\n";
+    std::printf("    Free area %12.5e < x < %12.5e\n", bxmin, bxmax);
+    std::printf("              %12.5e < y < %12.5e\n", bymin, bymax);
+    std::printf("    Scan area %12.5e < x < %12.5e\n", sxmin, sxmax);
+    std::printf("              %12.5e < y < %12.5e\n", symin, symax);
+  }
+
+  xMap.resize(m_nScanX);
+  const double stepx = (sxmax - sxmin) / (m_nScanX - 1);
+  for (unsigned int i = 0; i < m_nScanX; ++i) {
+    xMap[i] = sxmin + i * stepx;
+  }
+  yMap.resize(m_nScanY);
+  const double stepy = (symax - symin) / (m_nScanY - 1);
+  for (unsigned int i = 0; i < m_nScanY; ++i) {
+    yMap[i] = symin + i * stepy;
+  }
+  // Save the original coordinates of the wire.
+  const double x0 = wire.x;
+  const double y0 = wire.y;
+  // Prepare interpolation tables.
+  fxMap.assign(m_nScanX, std::vector<double>(m_nScanY, 0.));
+  fyMap.assign(m_nScanX, std::vector<double>(m_nScanY, 0.));
+  bool ok = true;
+  for (unsigned int i = 0; i < m_nScanX; ++i) {
+    for (unsigned int j = 0; j < m_nScanY; ++j) {
+      // Get the wire position for this shift.
+      m_w[iw].x = xMap[i];
+      m_w[iw].y = yMap[j];
+      // Verify the current situation.
+      if (!WireCheck()) {
+        std::cerr << m_className << "::ForcesOnWire: Wire " << iw << ".\n"
+                  << "    Scan involves a disallowed wire position.\n";
+        ok = false;
+        continue;
+      }
+      // Recompute the charges for this configuration.
+      if (!Setup()) {
+        std::cerr << m_className << "::ForcesOnWire: Wire " << iw << ".\n"
+                  << "    Failed to compute charges at a scan point.\n";
+        ok = false;
+        continue;
+      }
+      // Compute the forces.
+      double ex = 0., ey = 0.;
+      ElectricFieldAtWire(iw, ex, ey);
+      fxMap[i][j] = -ex * wire.e * Internal2Newton;
+      fyMap[i][j] = -ey * wire.e * Internal2Newton;
+    }
+  }
+  // Place the wire back in its shifted position.
+  m_w[iw].x = x0;
+  m_w[iw].y = y0;
+  Setup();
+  return true;
+}
+
+void ComponentAnalyticField::SetNumberOfSteps(const unsigned int n) {
+  if (n == 0) {
+    std::cerr << m_className << "::SetNumberOfSteps:\n"
+              << "    Number of steps must be > 0.\n";
+    return;
+  }
+  m_nSteps = n;
+}
+
+bool ComponentAnalyticField::WireDisplacement(
+    const unsigned int iw, const bool detailed, std::vector<double>& csag,
+    std::vector<double>& xsag, std::vector<double>& ysag, double& stretch) {
+  if (!m_cellset) {
+    if (!Prepare()) {
+      std::cerr << m_className << "::WireDisplacement:\n"
+                << "    Could not set up the cell.\n";
+      return false;
+    }
+  }
+  if (iw >= m_nWires) {
+    std::cerr << m_className
+              << "::WireDisplacement: Wire index out of range.\n";
+    return false;
+  }
+
+  const auto& wire = m_w[iw];
+  // Save the original coordinates.
+  const double x0 = wire.x;
+  const double y0 = wire.y;
+  // First-order approximation.
+  if (!Setup()) {
+    std::cerr << m_className << "::WireDisplacement:\n"
+              << "    Charge calculation failed at central position.\n";
+    return false;
+  }
+
+  double fx = 0., fy = 0.;
+  if (m_useElectrostaticForce) {
+    double ex = 0., ey = 0.;
+    ElectricFieldAtWire(iw, ex, ey);
+    fx -= ex * wire.e * Internal2Newton;
+    fy -= ey * wire.e * Internal2Newton;
+  }
+  if (m_useGravitationalForce) {
+    // Mass per unit length [kg / cm].
+    const double m = 0.25e-3 * wire.density * Pi * wire.d * wire.d;
+    fx -= m_down[0] * GravitationalAcceleration * m;
+    fy -= m_down[1] * GravitationalAcceleration * m;
+  }
+  const double u2 = wire.u * wire.u;
+  const double shiftx =
+      -125 * fx * u2 / (GravitationalAcceleration * wire.tension);
+  const double shifty =
+      -125 * fy * u2 / (GravitationalAcceleration * wire.tension);
+  // Get the elongation from this.
+  const double s = 4 * sqrt(shiftx * shiftx + shifty * shifty) / wire.u;
+  double length = wire.u;
+  if (s > Small) {
+    const double t = sqrt(1 + s * s);
+    length *= 0.5 * (t + log(s + t) / s);
+  }
+  stretch = (length - wire.u) / wire.u;
+  std::cout << m_className
+            << "::WireDisplacement: Forces and displacement in 0th order.\n"
+            << "    Wire information: number   = " << iw << "\n"
+            << "                      type     = " << wire.type << "\n"
+            << "                      location = (" << wire.x << ", " << wire.y
+            << ") cm\n"
+            << "                      voltage  = " << wire.v << " V\n"
+            << "                      length   = " << wire.u << " cm\n"
+            << "                      tension  = " << wire.tension << " g\n"
+            << "    In this position: Fx       = " << fx << " N/cm\n"
+            << "                      Fy       = " << fy << " N/cm\n"
+            << "                      x-shift  = " << shiftx << " cm\n"
+            << "                      y-shift  = " << shifty << " cm\n"
+            << "                      stretch  = " << stretch << " fraction\n";
+  if (!detailed) {
+    csag = {0.};
+    xsag = {shiftx};
+    ysag = {shifty};
+    return true;
+  }
+  std::vector<double> xMap(m_nScanX, 0.);
+  std::vector<double> yMap(m_nScanY, 0.);
+  std::vector<std::vector<double> > fxMap(m_nScanX,
+                                          std::vector<double>(m_nScanY, 0.));
+  std::vector<std::vector<double> > fyMap(m_nScanX,
+                                          std::vector<double>(m_nScanY, 0.));
+  if (!ForcesOnWire(iw, xMap, yMap, fxMap, fyMap)) {
+    std::cerr << m_className << "::WireDisplacement:\n"
+              << "    Could not compute the electrostatic force table.\n";
+    return false;
+  }
+  // Compute the detailed wire shift.
+  if (!SagDetailed(wire, xMap, yMap, fxMap, fyMap, csag, xsag, ysag)) {
+    std::cerr << m_className << "::WireDisplacement: Wire " << iw << ".\n"
+              << "    Computation of the wire sag failed.\n";
+    return false;
+  }
+  // Verify that the wire is in range.
+  const double sxmin = xMap.front();
+  const double sxmax = xMap.back();
+  const double symin = yMap.front();
+  const double symax = yMap.back();
+  const unsigned int nSag = xsag.size();
+  bool outside = false;
+  length = 0.;
+  for (unsigned int i = 0; i < nSag; ++i) {
+    if (x0 + xsag[i] < sxmin || x0 + xsag[i] > sxmax || y0 + ysag[i] < symin ||
+        y0 + ysag[i] > symax) {
+      outside = true;
+    }
+    if (i == 0) continue;
+    const double dx = xsag[i] - xsag[i - 1];
+    const double dy = ysag[i] - ysag[i - 1];
+    const double dz = csag[i] - csag[i - 1];
+    length += sqrt(dx * dx + dy * dy + dz * dz);
+  }
+  stretch = (length - wire.u) / wire.u;
+  // Warn if a point outside the scanning area was found.
+  if (outside) {
+    std::cerr
+        << m_className << "::WireDisplacement: Warning.\n    "
+        << "The wire profile is located partially outside the scanning area.\n";
+  }
   return true;
 }
 
@@ -1378,19 +1756,17 @@ bool ComponentAnalyticField::Prepare() {
 
   // Calculate the charges.
   if (!Setup()) {
-    std::cerr << m_className << "::Prepare:\n";
-    std::cerr << "    Calculation of charges failed.\n";
+    std::cerr << m_className << "::Prepare: Calculation of charges failed.\n";
     return false;
   }
   if (m_debug) {
-    std::cout << m_className << "::Prepare:\n";
-    std::cout << "    Calculation of charges was successful.\n";
+    std::cout << m_className << "::Prepare:\n"
+              << "    Calculation of charges was successful.\n";
   }
 
   // Assign default gaps for strips and pixels.
   if (!PrepareStrips()) {
-    std::cerr << m_className << "::Prepare:\n";
-    std::cerr << "    Strip/pixel preparation failed.\n";
+    std::cerr << m_className << "::Prepare: Strip/pixel preparation failed.\n";
     return false;
   }
 
@@ -1935,6 +2311,64 @@ bool ComponentAnalyticField::CellCheck() {
   }
 
   // Cell seems to be alright since it passed all critical tests.
+  return true;
+}
+
+bool ComponentAnalyticField::WireCheck() const {
+  //-----------------------------------------------------------------------
+  //    CELWCH - Subroutine checking the wire positions only, contrary
+  //             to CELCHK, this routine does not modify the cell.
+  //-----------------------------------------------------------------------
+
+  if (m_nWires == 0) return false;
+
+  if (m_nWires == 1 &&
+      !(m_ynplan[0] || m_ynplan[1] || m_ynplan[2] || m_ynplan[3]) && !m_tube) {
+    return false;
+  }
+  // Check position relative to the planes.
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    if (m_ynplan[0] && wire.x - 0.5 * wire.d <= m_coplan[0]) return false;
+    if (m_ynplan[1] && wire.x + 0.5 * wire.d >= m_coplan[1]) return false;
+    if (m_ynplan[2] && wire.y - 0.5 * wire.d <= m_coplan[2]) return false;
+    if (m_ynplan[3] && wire.y + 0.5 * wire.d >= m_coplan[3]) return false;
+    if (m_tube) {
+      if (!InTube(wire.x, wire.y, m_cotube, m_ntube)) return false;
+    } else if ((m_perx && wire.d >= m_sx) || (m_pery && wire.d >= m_sy)) {
+      return false;
+    }
+  }
+  // Check the wire spacing.
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const double xi = m_w[i].x;
+    const double yi = m_w[i].y;
+    for (unsigned int j = i + 1; j < m_nWires; ++j) {
+      const double xj = m_w[j].x;
+      const double yj = m_w[j].y;
+      double xsepar = std::abs(xi - xj);
+      double ysepar = std::abs(yi - yj);
+      if (m_tube) {
+        if (m_pery) {
+          double xaux1 = 0., yaux1 = 0.;
+          double xaux2 = 0., yaux2 = 0.;
+          Cartesian2Polar(xi, yi, xaux1, yaux1);
+          Cartesian2Polar(xj, yj, xaux2, yaux2);
+          yaux1 -= m_sy * int(round(yaux1 / m_sy));
+          yaux2 -= m_sy * int(round(yaux2 / m_sy));
+          Polar2Cartesian(xaux1, yaux1, xaux1, yaux1);
+          Polar2Cartesian(xaux2, yaux2, xaux2, yaux2);
+          xsepar = xaux1 - xaux2;
+          ysepar = yaux1 - yaux2;
+        }
+      } else {
+        if (m_perx) xsepar -= m_sx * int(round(xsepar / m_sx));
+        if (m_pery) ysepar -= m_sy * int(round(ysepar / m_sy));
+      }
+      const double dij = m_w[i].d + m_w[j].d;
+      if (xsepar * xsepar + ysepar * ysepar < 0.25 * dij * dij) return false;
+    }
+  }
   return true;
 }
 
@@ -3319,7 +3753,8 @@ void ComponentAnalyticField::E2Sum(const double xpos, const double ypos,
 
   std::complex<double> wsum = 0.;
   for (const auto& wire : m_w) {
-    const auto zeta = m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
+    const auto zeta =
+        m_zmult * std::complex<double>(xpos - wire.x, ypos - wire.y);
     if (imag(zeta) > 15.) {
       wsum -= wire.e * icons;
     } else if (imag(zeta) < -15.) {
@@ -5879,7 +6314,8 @@ void ComponentAnalyticField::WfieldWireC2X(const double xpos, const double ypos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta =
+        m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > 15.) {
       wsum1 -= real(m_sigmat[isw][i]) * icons;
       if (opt) volt -= real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
@@ -5892,7 +6328,8 @@ void ComponentAnalyticField::WfieldWireC2X(const double xpos, const double ypos,
       if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
-    const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
+    const double cx =
+        m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
     // Constant terms sum
     s += real(m_sigmat[isw][i]) * (m_w[i].x - cx);
     // Mirror contribution.
@@ -5944,7 +6381,8 @@ void ComponentAnalyticField::WfieldWireC2Y(const double xpos, const double ypos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta =
+        m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > +15.) {
       wsum1 -= real(m_sigmat[isw][i]) * icons;
       if (opt) volt -= real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
@@ -6010,7 +6448,8 @@ void ComponentAnalyticField::WfieldWireC30(const double xpos, const double ypos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta =
+        m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > +15.) {
       wsum1 -= real(m_sigmat[isw][i]) * icons;
       if (opt) volt -= real(m_sigmat[isw][i]) * (fabs(imag(zeta)) - CLog2);
@@ -6023,7 +6462,8 @@ void ComponentAnalyticField::WfieldWireC30(const double xpos, const double ypos,
       if (opt) volt -= real(m_sigmat[isw][i]) * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
-    const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
+    const double cx =
+        m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
     // Mirror contribution from the x plane.
     zeta = m_zmult *
            std::complex<double>(2. * cx - xpos - m_w[i].x, ypos - m_w[i].y);
@@ -6360,7 +6800,8 @@ void ComponentAnalyticField::WfieldPlaneC2X(const double xpos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta =
+        m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > +15.) {
       wsum1 -= m_qplane[iplane][i] * icons;
       if (opt) volt -= m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
@@ -6373,7 +6814,8 @@ void ComponentAnalyticField::WfieldPlaneC2X(const double xpos,
       if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
-    const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
+    const double cx =
+        m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
     // Constant terms sum
     s += m_qplane[iplane][i] * (m_w[i].x - cx);
     // Mirror contribution.
@@ -6425,7 +6867,8 @@ void ComponentAnalyticField::WfieldPlaneC2Y(const double xpos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta =
+        m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > +15.) {
       wsum1 -= m_qplane[iplane][i] * icons;
       if (opt) volt -= m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
@@ -6492,7 +6935,8 @@ void ComponentAnalyticField::WfieldPlaneC30(const double xpos,
   // Wire loop.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     // Compute the direct contribution.
-    auto zeta = m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
+    auto zeta =
+        m_zmult * std::complex<double>(xpos - m_w[i].x, ypos - m_w[i].y);
     if (imag(zeta) > +15.) {
       wsum1 -= m_qplane[iplane][i] * icons;
       if (opt) volt -= m_qplane[iplane][i] * (fabs(imag(zeta)) - CLog2);
@@ -6505,7 +6949,8 @@ void ComponentAnalyticField::WfieldPlaneC30(const double xpos,
       if (opt) volt -= m_qplane[iplane][i] * log(abs(zterm.first));
     }
     // Find the plane nearest to the wire.
-    const double cx = m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
+    const double cx =
+        m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
     // Mirror contribution from the x plane.
     zeta = m_zmult *
            std::complex<double>(2. * cx - xpos - m_w[i].x, ypos - m_w[i].y);
@@ -6997,11 +7442,9 @@ void ComponentAnalyticField::WfieldPixel(const double xpos, const double ypos,
   }
 }
 
-
 void ComponentAnalyticField::FieldAtWireA00(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
-
   //-----------------------------------------------------------------------
   // FFCA00 - Subroutine performing the actual field calculations in case
   //          only one charge and not more than 1 mirror-charge in either
@@ -7009,8 +7452,8 @@ void ComponentAnalyticField::FieldAtWireA00(
   //          The potential used is 1/2*pi*eps0  log(r).
   // (Last changed on 27/ 1/96.)
   //-----------------------------------------------------------------------
-  
-  ex = ey = 0.; 
+
+  ex = ey = 0.;
   // Loop over all wires.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     const auto& wire = m_w[i];
@@ -7031,7 +7474,7 @@ void ComponentAnalyticField::FieldAtWireA00(
       const double r2plan = xxmirr * xxmirr + yy * yy;
       exhelp -= xxmirr / r2plan;
       eyhelp -= yy / r2plan;
-    } 
+    }
     // Take care of a plane at constant y.
     double yymirr = 0.;
     if (m_ynplay) {
@@ -7039,22 +7482,21 @@ void ComponentAnalyticField::FieldAtWireA00(
       const double r2plan = xx * xx + yymirr * yymirr;
       exhelp -= xx / r2plan;
       eyhelp -= yymirr / r2plan;
-    } 
+    }
     // Take care of pairs of planes.
     if (m_ynplax && m_ynplay) {
       const double r2plan = xxmirr * xxmirr + yymirr * yymirr;
       exhelp += xxmirr / r2plan;
       eyhelp += yymirr / r2plan;
-    } 
+    }
     ex += wire.e * exhelp;
     ey += wire.e * eyhelp;
   }
 }
- 
-void ComponentAnalyticField::FieldAtWireB1X(
-    const double xpos, const double ypos, double& ex, double& ey, 
-    const std::vector<bool>& cnalso) const {
 
+void ComponentAnalyticField::FieldAtWireB1X(
+    const double xpos, const double ypos, double& ex, double& ey,
+    const std::vector<bool>& cnalso) const {
   //-----------------------------------------------------------------------
   // FFCB1X - Routine calculating the potential for a row of positive
   //          charges. The potential used is Re(Log(sin pi/s (z-z0))).
@@ -7120,9 +7562,8 @@ void ComponentAnalyticField::FieldAtWireB1X(
 }
 
 void ComponentAnalyticField::FieldAtWireB1Y(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
-
   //-----------------------------------------------------------------------
   // FFCB1Y - Routine calculating the potential for a row of positive
   //          charges. The potential used is Re(Log(sinh pi/sy(z-z0)).
@@ -7186,9 +7627,8 @@ void ComponentAnalyticField::FieldAtWireB1Y(
 }
 
 void ComponentAnalyticField::FieldAtWireB2X(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
-
   //-----------------------------------------------------------------------
   // FFCB2X - Routine calculating the potential for a row of alternating
   //          + - charges. The potential used is re log(sin pi/sx (z-z0))
@@ -7229,9 +7669,8 @@ void ComponentAnalyticField::FieldAtWireB2X(
 }
 
 void ComponentAnalyticField::FieldAtWireB2Y(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
-
   //-----------------------------------------------------------------------
   // FFCB2Y - Routine calculating the potential for a row of alternating
   //          + - charges. The potential used is re log(sin pi/sx (z-z0))
@@ -7239,7 +7678,7 @@ void ComponentAnalyticField::FieldAtWireB2Y(
   constexpr std::complex<double> icons(0., 1.);
   ex = ey = 0.;
   const double ty = HalfPi / m_sy;
-// Loop over all wires.
+  // Loop over all wires.
   for (unsigned int i = 0; i < m_nWires; ++i) {
     const double xx = ty * (xpos - m_w[i].x);
     const double yy = ty * (ypos - m_w[i].y);
@@ -7273,9 +7712,8 @@ void ComponentAnalyticField::FieldAtWireB2Y(
 }
 
 void ComponentAnalyticField::FieldAtWireC10(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
-
   //-----------------------------------------------------------------------
   // FFCC10 - Routine returning the potential and electric field. It
   //          calls the routines PH2 and E2SUM written by G.A.Erskine.
@@ -7303,9 +7741,8 @@ void ComponentAnalyticField::FieldAtWireC10(
 }
 
 void ComponentAnalyticField::FieldAtWireC2X(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
-
   //-----------------------------------------------------------------------
   // FFCC2X - Routine returning the potential and electric field in a
   //          configuration with 2 x planes and y periodicity.
@@ -7349,9 +7786,8 @@ void ComponentAnalyticField::FieldAtWireC2X(
 }
 
 void ComponentAnalyticField::FieldAtWireC2Y(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
-
   //-----------------------------------------------------------------------
   // FFCC2Y - Routine returning the potential and electric field in a
   //          configuration with 2 y planes and x periodicity.
@@ -7396,9 +7832,8 @@ void ComponentAnalyticField::FieldAtWireC2Y(
 }
 
 void ComponentAnalyticField::FieldAtWireC30(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
-
   //-----------------------------------------------------------------------
   // FFCC30 - Routine returning the potential and electric field in a
   //          configuration with 2 y and 2 x planes.
@@ -7466,9 +7901,8 @@ void ComponentAnalyticField::FieldAtWireC30(
 }
 
 void ComponentAnalyticField::FieldAtWireD10(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
-
   //-----------------------------------------------------------------------
   // FFCD10 - Subroutine performing the actual field calculations for a
   //          cell which has a one circular plane and some wires.
@@ -7484,7 +7918,7 @@ void ComponentAnalyticField::FieldAtWireD10(
     // First the case that the wire has to be taken fully.
     if (cnalso[i]) {
       const std::complex<double> wi =
-        1. / conj(zpos - zi) + zi / (m_cotube2 - conj(zpos) * zi);
+          1. / conj(zpos - zi) + zi / (m_cotube2 - conj(zpos) * zi);
       ex += wire.e * real(wi);
       ey += wire.e * imag(wi);
     } else {
@@ -7492,13 +7926,12 @@ void ComponentAnalyticField::FieldAtWireD10(
       ex += wire.e * real(wi);
       ey += wire.e * imag(wi);
     }
-  } 
+  }
 }
 
 void ComponentAnalyticField::FieldAtWireD20(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
-
   //-----------------------------------------------------------------------
   // FFCD20 - Subroutine performing the actual field calculations for a
   //          cell which has a tube and phi periodicity.
@@ -7530,8 +7963,8 @@ void ComponentAnalyticField::FieldAtWireD20(
       if (abs(zi) > 0.5 * wire.d) {
         const std::complex<double> wi =
             double(m_mtube) * pow(conj(zpos), m_mtube - 1) *
-            (pow(zi, m_mtube) / (pow(m_cotube, 2 * m_mtube) - 
-             pow(conj(zpos) * zi, m_mtube)));
+            (pow(zi, m_mtube) /
+             (pow(m_cotube, 2 * m_mtube) - pow(conj(zpos) * zi, m_mtube)));
         ex += wire.e * real(wi);
         ey += wire.e * imag(wi);
       } else {
@@ -7544,7 +7977,7 @@ void ComponentAnalyticField::FieldAtWireD20(
 }
 
 void ComponentAnalyticField::FieldAtWireD30(
-    const double xpos, const double ypos, double& ex, double& ey, 
+    const double xpos, const double ypos, double& ex, double& ey,
     const std::vector<bool>& cnalso) const {
   //-----------------------------------------------------------------------
   // FFCD30 - Subroutine performing the actual field calculations for a
@@ -7558,14 +7991,15 @@ void ComponentAnalyticField::FieldAtWireD30(
   for (unsigned int i = 0; i < m_nWires; ++i) {
     if (cnalso[i]) {
       // Full contribution.
-      const std::complex<double> whelp = wdpos * (1. - pow(abs(wmap[i]), 2)) /
-        ((wpos - wmap[i]) * (1. - conj(wmap[i]) * wpos));
+      const std::complex<double> whelp =
+          wdpos * (1. - pow(abs(wmap[i]), 2)) /
+          ((wpos - wmap[i]) * (1. - conj(wmap[i]) * wpos));
       ex += m_w[i].e * real(whelp);
       ey -= m_w[i].e * imag(whelp);
     } else {
       // Mirror charges only.
-      const std::complex<double> whelp = wdpos * conj(wmap[i]) /
-        (1. - conj(wmap[i]) * wpos);
+      const std::complex<double> whelp =
+          wdpos * conj(wmap[i]) / (1. - conj(wmap[i]) * wpos);
       ex += m_w[i].e * real(whelp);
       ey -= m_w[i].e * imag(whelp);
     }
@@ -7573,4 +8007,482 @@ void ComponentAnalyticField::FieldAtWireD30(
   ex /= m_cotube;
   ey /= m_cotube;
 }
+
+bool ComponentAnalyticField::SagDetailed(
+    const Wire& wire, const std::vector<double>& xMap,
+    const std::vector<double>& yMap,
+    const std::vector<std::vector<double> >& fxMap,
+    const std::vector<std::vector<double> >& fyMap, std::vector<double>& csag,
+    std::vector<double>& xsag, std::vector<double>& ysag) const {
+  //-----------------------------------------------------------------------
+  //   OPTSAG - Computes the wire sag due to electrostatic and gravitational
+  //            forces, using a Runge-Kutta-Nystrom multiple shoot method,
+  //            where the intermediate conditions are imposed through a
+  //            Broyden rank-1 zero search.
+  //-----------------------------------------------------------------------
+
+  csag.clear();
+  xsag.clear();
+  ysag.clear();
+  const unsigned int np = m_nSteps * (m_nShots + 1);
+  // Compute the step width.
+  const double h = wire.u / np;
+  // Compute expected maximum sag, constant-force approximation.
+  std::array<double, 2> xst = {0., 0.};
+  std::array<double, 2> dxst = {0., 0.};
+  double fxmean = 0.;
+  double fymean = 0.;
+  // Loop over the whole wire.
+  for (unsigned int i = 0; i <= np; ++i) {
+    const double z = i * h;
+    std::array<double, 2> force = {0., 0.};
+    if (!GetForceRatio(wire, z, xst, dxst, force, xMap, yMap, fxMap, fyMap)) {
+      std::cerr << m_className << "::SagDetailed:\n"
+                << "    Wire at nominal position outside scanning area.\n";
+      return false;
+    }
+    fxmean += force[0];
+    fymean += force[1];
+  }
+  const double u2 = wire.u * wire.u;
+  // Compute expected sag.
+  const double s = u2 / (8. * (1. + np));
+  double sagx0 = -fxmean * s;
+  double sagy0 = -fymean * s;
+  if (m_debug) {
+    std::cout << m_className << "::SagDetailed: Parabolic sag.\n";
+    std::printf("    dx = %12.5e, dy = %12.5e [cm]\n", sagx0, sagy0);
+  }
+  // Starting position: parabolic sag.
+  std::vector<double> xx(4 * m_nShots + 2);
+  // Derivative first point.
+  xx[0] = 4 * sagx0 / wire.u;
+  xx[1] = 4 * sagy0 / wire.u;
+  // Intermediate points, both position and derivative.
+  for (unsigned int i = 1; i <= m_nShots; ++i) {
+    // Position along the wire.
+    const double z = -0.5 * wire.u + i * m_nSteps * h;
+    const unsigned int k = 4 * i - 2;
+    // Deflection.
+    const double f = 1. - 4 * z * z / u2;
+    xx[k] = sagx0 * f;
+    xx[k + 1] = sagy0 * f;
+    // Derivative.
+    const double fp = -8 * z / u2;
+    xx[k + 2] = sagx0 * fp;
+    xx[k + 3] = sagy0 * fp;
+  }
+  // Search for solution.
+  if (!FindZeroes(wire, h, xx, xMap, yMap, fxMap, fyMap)) {
+    std::cerr << m_className << "::SagDetailed:\n"
+              << "    Failed to solve the differential equation for the sag.\n";
+    return false;
+  }
+  // And return the detailed solution, first the starting point.
+  csag.assign(np, 0.);
+  xsag.assign(np, 0.);
+  ysag.assign(np, 0.);
+  csag[0] = -0.5 * wire.u;
+  double coor = -0.5 * wire.u;
+  for (unsigned int i = 0; i <= m_nShots; ++i) {
+    // Set the starting value and starting derivative.
+    if (i == 0) {
+      xst[0] = 0;
+      xst[1] = 0;
+      dxst[0] = xx[0];
+      dxst[1] = xx[1];
+    } else {
+      xst[0] = xx[4 * i - 2];
+      xst[1] = xx[4 * i - 1];
+      dxst[0] = xx[4 * i];
+      dxst[1] = xx[4 * i + 1];
+    }
+    // Store the intermediate values.
+    for (unsigned int j = 0; j < m_nSteps; ++j) {
+      StepRKN(wire, h, coor, xst, dxst, xMap, yMap, fxMap, fyMap);
+      // TODO!
+      csag[i * m_nSteps + j] = coor;
+      xsag[i * m_nSteps + j] = xst[0];
+      ysag[i * m_nSteps + j] = xst[1];
+    }
+  }
+  // Seems to have worked.
+  return true;
 }
+
+bool ComponentAnalyticField::GetForceRatio(
+    const Wire& wire, const double coor, const std::array<double, 2>& bend,
+    const std::array<double, 2>& dbend, std::array<double, 2>& f,
+    const std::vector<double>& xMap, const std::vector<double>& yMap,
+    const std::vector<std::vector<double> >& fxMap,
+    const std::vector<std::vector<double> >& fyMap) const {
+  //-----------------------------------------------------------------------
+  //    OPTSTP - Returns the electrostatic and gravitational force divided
+  //             by the stretching force acting on a wire at position COOR,
+  //             with deflection BEND and bending derivative DBEND.
+  //-----------------------------------------------------------------------
+
+  // TODO: COOR and DBEND don't seem to be used?
+
+  // Initialise the forces.
+  f.fill(0.);
+
+  const double xw = wire.x + bend[0];
+  const double yw = wire.y + bend[1];
+  if (m_useElectrostaticForce) {
+    // Electrostatic force.
+    if (xMap.empty() || yMap.empty() || fxMap.empty() || fyMap.empty()) {
+      return false;
+    }
+    // In case extrapolation is not permitted, check range.
+    if (!m_extrapolateForces) {
+      if ((xMap.front() - xw) * (xw - xMap.back()) < 0 ||
+          (yMap.front() - yw) * (yw - yMap.back()) < 0) {
+        return false;
+      }
+    }
+    // Interpolation order.
+    constexpr int order = 2;
+    // Electrostatic force: interpolate the table, first along the y-lines.
+    const unsigned int nX = xMap.size();
+    const unsigned int nY = yMap.size();
+    std::vector<double> xaux(nX, 0.);
+    std::vector<double> yaux(nX, 0.);
+    for (unsigned int i = 0; i < nX; ++i) {
+      xaux[i] = Numerics::Divdif(fxMap[i], yMap, nY, yw, order);
+      yaux[i] = Numerics::Divdif(fyMap[i], yMap, nY, yw, order);
+    }
+    // Then along the x-lines.
+    f[0] += Numerics::Divdif(xaux, xMap, nX, xw, order);
+    f[1] += Numerics::Divdif(yaux, xMap, nX, xw, order);
+  }
+  // Add the gravity term.
+  if (m_useGravitationalForce) {
+    // Mass per unit length [kg / cm]. 
+    const double m = 0.25e-3 * wire.density * Pi * wire.d * wire.d;
+    f[0] -= m_down[0] * m * GravitationalAcceleration;
+    f[1] -= m_down[1] * m * GravitationalAcceleration;
+  }
+  // Divide by the stretching force.
+  const double s = 1000. / (GravitationalAcceleration * wire.tension);
+  f[0] *= s;
+  f[1] *= s;
+  return true;
+}
+
+// Subroutine subprograms RRKNYS and DRKNYS advance the solution of the system
+// of n >= 1 second-order differential equations
+// by a single step of length h in the independent variable x.
+bool ComponentAnalyticField::StepRKN(
+    const Wire& wire, const double h, double& x, std::array<double, 2>& y,
+    std::array<double, 2>& yp, const std::vector<double>& xMap,
+    const std::vector<double>& yMap,
+    const std::vector<std::vector<double> >& fxMap,
+    const std::vector<std::vector<double> >& fyMap) const {
+  constexpr double r2 = 1. / 2.;
+  constexpr double r6 = 1. / 6.;
+  constexpr double r8 = 1. / 8.;
+  if (h == 0) return true;
+  const double h2 = r2 * h;
+  const double h6 = r6 * h;
+  const double hh2 = h * h2;
+  const double hh6 = h * h6;
+  const double hh8 = r8 * h * h;
+
+  constexpr unsigned int n = 2;
+  std::array<std::array<double, n>, 6> w;
+  if (!GetForceRatio(wire, x, y, yp, w[0], xMap, yMap, fxMap, fyMap)) {
+    return false;
+  }
+  for (unsigned int j = 0; j < n; ++j) {
+    w[3][j] = y[j] + h2 * yp[j];
+    w[4][j] = w[3][j] + hh8 * w[0][j];
+    w[5][j] = yp[j] + h2 * w[0][j];
+  }
+  const double xh2 = x + h2;
+  if (!GetForceRatio(wire, xh2, w[4], w[5], w[1], xMap, yMap, fxMap, fyMap)) {
+    return false;
+  }
+  for (unsigned int j = 0; j < n; ++j) {
+    w[5][j] = yp[j] + h2 * w[1][j];
+    w[0][j] = w[0][j] + w[1][j];
+    w[1][j] = w[0][j] + w[1][j];
+  }
+  if (!GetForceRatio(wire, xh2, w[4], w[5], w[2], xMap, yMap, fxMap, fyMap)) {
+    return false;
+  }
+  for (unsigned int j = 0; j < n; ++j) {
+    w[3][j] = w[3][j] + h2 * yp[j];
+    w[4][j] = w[3][j] + hh2 * w[2][j];
+    w[5][j] = yp[j] + h * w[2][j];
+    w[0][j] = w[0][j] + w[2][j];
+    w[1][j] = w[1][j] + 2 * w[2][j];
+  }
+  const double xh = x + h;
+  if (!GetForceRatio(wire, xh, w[4], w[5], w[2], xMap, yMap, fxMap, fyMap)) {
+    return false;
+  }
+  for (unsigned int j = 0; j < n; ++j) {
+    y[j] = w[3][j] + hh6 * w[0][j];
+    yp[j] += h6 * (w[1][j] + w[2][j]);
+  }
+  x = xh;
+  return true;
+}
+
+bool ComponentAnalyticField::FindZeroes(
+    const Wire& wire, const double h, std::vector<double>& x,
+    const std::vector<double>& xMap, const std::vector<double>& yMap,
+    const std::vector<std::vector<double> >& fxMap,
+    const std::vector<std::vector<double> >& fyMap) const {
+  //-----------------------------------------------------------------------
+  //   OPTZRO - Tries to find zeroes of a set of functions F. Uses the
+  //            Broyden rank-1 update variant of an n-dimensional Newton-
+  //            Raphson zero search in most steps, except every 5th step
+  //            and whenever the step length update becomes less than 0.5,
+  //            when a new derivative is computed.
+  //-----------------------------------------------------------------------
+
+  if (x.empty()) {
+    std::cerr << m_className << "::FindZeroes: Empty vector.\n";
+    return false;
+  }
+  const unsigned int n = x.size();
+  // Initial deviation.
+  std::vector<double> fold(n, 0.);
+  if (!Trace(wire, h, x, fold, xMap, yMap, fxMap, fyMap)) {
+    std::cerr << m_className << "::FindZeroes: Zero search stopped.\n    "
+              << "Initial position outside scanning area.\n";
+    return false;
+  }
+  double fnorml =
+      std::inner_product(fold.begin(), fold.end(), fold.begin(), 0.);
+  // Debugging output for initial situation.
+  constexpr unsigned int nbsmax = 10;
+  constexpr unsigned int nitmax = 20;
+  constexpr double eps = 1.e-4;
+  constexpr double epsx = 1.e-4;
+  constexpr double epsf = 1.e-4;
+  if (m_debug) {
+    std::cout << m_className << "::FindZeroes: Start of zero search.\n"
+              << "    Number of parameters:      " << n << "\n"
+              << "    Maximum bisections:        " << nbsmax << "\n"
+              << "    Maximum iterations:        " << nitmax << "\n"
+              << "    Epsilon differentiation:   " << eps << "\n"
+              << "    Required location change:  " << epsx << "\n"
+              << "    Required function norm:    " << epsf << "\n"
+              << "    Initial function norm:     " << sqrt(fnorml) << "\n"
+              << " Parameter        Value     Function\n";
+    for (unsigned int i = 0; i < n; ++i) {
+      std::printf(" %9d %12.5e %12.5e\n", i, x[i], fold[i]);
+    }
+  }
+  // Derivative matrix.
+  std::vector<std::vector<double> > b(n, std::vector<double>(n, 0.));
+  std::vector<std::vector<double> > bb(n, std::vector<double>(n, 0.));
+  // Flag whether the matrix needs to be recomputed.
+  bool updateMatrix = true;
+  // Count function calls.
+  unsigned int nCalls = 0;
+  bool converged = false;
+  for (unsigned int iter = 0; iter < nitmax; ++iter) {
+    // If needed, (re-)compute the derivative matrix.
+    if (updateMatrix) {
+      std::vector<double> f1(n, 0.);
+      std::vector<double> f2(n, 0.);
+      for (unsigned int i = 0; i < n; ++i) {
+        const double epsdif = eps * (1. + std::abs(x[i]));
+        x[i] += 0.5 * epsdif;
+        if (!Trace(wire, h, x, f1, xMap, yMap, fxMap, fyMap)) {
+          std::cerr << m_className << "::FindZeroes: Zero search stopped.\n    "
+                    << "Differential matrix requires a point "
+                    << "outside scanning area.\n";
+          return false;
+        }
+        x[i] -= epsdif;
+        if (!Trace(wire, h, x, f2, xMap, yMap, fxMap, fyMap)) {
+          std::cerr << m_className << "::FindZeroes: Zero search stopped.\n    "
+                    << "Differential matrix requires a point "
+                    << "outside scanning area.\n";
+          return false;
+        }
+        x[i] += 0.5 * epsdif;
+        for (unsigned int j = 0; j < n; ++j) {
+          b[j][i] = (f1[j] - f2[j]) / epsdif;
+        }
+      }
+      nCalls += 2 * n;
+      updateMatrix = false;
+    }
+    if (m_debug) {
+      std::cout << "    Start of iteration " << iter << "\n";
+      for (unsigned int i = 0; i < m_nShots; ++i) {
+        const unsigned int k = 4 * i + 2;
+        std::printf("     x = %12.5e,  y = %12.5e\n", x[k], x[k + 1]);
+      }
+    }
+    // Find the correction vector to 0th order.
+    std::vector<double> dx = fold;
+    bb = b;
+    int ifail = 0;
+    Numerics::Deqn(n, bb, ifail, dx);
+    if (ifail != 0) {
+      std::cerr << m_className << "::FindZeroes: Zero search stopped.\n"
+                << "    Solving the update equation failed.\n";
+      break;
+    }
+    if (m_debug) {
+      for (unsigned int i = 0; i < m_nShots; ++i) {
+        const unsigned int k = 4 * i + 2;
+        std::printf("    dx = %12.5e, dy = %12.5e\n", dx[k], dx[k + 1]);
+      }
+    }
+    // Scale the correction vector to improve FNORM, AUX3: f.
+    double scale = 1.;
+    double fnorm = 2 * fnorml;
+    std::vector<double> xnew(n, 0.);
+    std::vector<double> fnew(n, 0.);
+    for (unsigned int kbs = 0; kbs < nbsmax; ++kbs) {
+      for (unsigned int i = 0; i < n; ++i) {
+        xnew[i] = x[i] - scale * dx[i];
+      }
+      if (!Trace(wire, h, xnew, fnew, xMap, yMap, fxMap, fyMap)) {
+        std::cerr
+            << m_className << "::FindZeroes: Zero search stopped.\n    "
+            << "Step update leads to a point outside the scanning area.\n";
+        return false;
+      }
+      ++nCalls;
+      fnorm = std::inner_product(fnew.begin(), fnew.end(), fnew.begin(), 0.);
+      if (fnorm <= fnorml) {
+        if (m_debug) std::cout << "    Scaling factor: " << scale << "\n";
+        break;
+      }
+      scale *= 0.5;
+    }
+    if (fnorm > fnorml) {
+      std::cerr << m_className << "::FindZeroes: Zero search stopped.\n    "
+                << "Bisection search for scaling factor did not converge.\n";
+      break;
+    }
+    // Update the estimate.
+    std::vector<double> df(n, 0.);
+    for (unsigned int i = 0; i < n; ++i) {
+      dx[i] = xnew[i] - x[i];
+      x[i] = xnew[i];
+      df[i] = fnew[i] - fold[i];
+      fold[i] = fnew[i];
+    }
+    double xnorm = std::inner_product(x.begin(), x.end(), x.begin(), 0.);
+    double dxnorm = std::inner_product(dx.begin(), dx.end(), dx.begin(), 0.);
+    double dfnorm = std::inner_product(df.begin(), df.end(), df.begin(), 0.);
+    // Debugging output to show current status.
+    if (m_debug) {
+      std::cout << "    After this iteration...\n";
+      std::printf("      Norm and change of position: %12.5e %12.5e\n",
+                  sqrt(xnorm), sqrt(dxnorm));
+      std::printf("      Norm and change of function: %12.5e %12.5e\n",
+                  sqrt(fnorm), sqrt(dfnorm));
+    }
+    // See whether convergence has been achieved.
+    if (sqrt(dxnorm) < epsx * sqrt(xnorm)) {
+      if (m_debug) {
+        std::cout << "    Positional convergence criterion is satisfied.\n";
+      }
+      converged = true;
+      break;
+    } else if (sqrt(fnorm) < epsf) {
+      if (m_debug) {
+        std::cout << "    Function value convergence criterion is satisfied.\n";
+      }
+      converged = true;
+      break;
+    }
+    // Update the difference.
+    fnorml = fnorm;
+    if (scale > 0.4 && iter != 5 * (iter / 5)) {
+      // If the scaling factor is small, then update (rank-1 Broyden).
+      if (m_debug) std::cout << "    Performing a Broyden rank-1 update.\n";
+      // Compute the "df - B dx" term.
+      std::vector<double> corr(n, 0.);
+      for (unsigned int i = 0; i < n; ++i) {
+        corr[i] = df[i];
+        for (unsigned int j = 0; j < n; ++j) {
+          corr[i] -= b[i][j] * dx[j];
+        }
+      }
+      // Update the matrix.
+      for (unsigned int i = 0; i < n; ++i) {
+        for (unsigned int j = 0; j < n; ++j) {
+          b[i][j] += corr[i] * dx[j] / dxnorm;
+        }
+      }
+    } else {
+      // Otherwise, recompute the differential.
+      if (m_debug) std::cout << "    Recomputing the covariance matrix.\n";
+      updateMatrix = true;
+    }
+  }
+  if (!converged) {
+    std::cerr << m_className << "::FindZeroes: Search did not converge.\n";
+  }
+  if (m_debug) {
+    std::vector<double> f(n, 0.);
+    Trace(wire, h, x, f, xMap, yMap, fxMap, fyMap);
+    ++nCalls;
+    std::cout << "    Final values:\n"
+              << " Parameter        Value     Function\n";
+    for (unsigned int i = 0; i < n; ++i) {
+      std::printf(" %9d %12.5e %12.5e\n", i, x[i], f[i]);
+    }
+    std::cout << "    Total number of function calls: " << nCalls << "\n";
+  }
+  return converged;
+}
+
+bool ComponentAnalyticField::Trace(
+    const Wire& wire, const double h, const std::vector<double>& xx,
+    std::vector<double>& delta, const std::vector<double>& xMap,
+    const std::vector<double>& yMap,
+    const std::vector<std::vector<double> >& fxMap,
+    const std::vector<std::vector<double> >& fyMap) const {
+  //-----------------------------------------------------------------------
+  //   OPTSHT - Auxiliary routine for the wire sag routines which computes
+  //            for a given set of positions and derivatives the next set
+  //            which is used by OPTZRO to match the sections. Uses a
+  //            2nd order Runge-Kutta-Nystrom integration routine (D203).
+  //-----------------------------------------------------------------------
+
+  delta.assign(xx.size(), 0.);
+  // For the starting set in XX, compute the next round.
+  double z = -0.5 * wire.u;
+  std::array<double, 2> xst = {0., 0.};
+  std::array<double, 2> dxst = {xx[0], xx[1]};
+  for (unsigned int i = 0; i <= m_nShots; ++i) {
+    const unsigned int k = 4 * i;
+    // Set the starting value and starting derivative.
+    if (i > 0) {
+      xst = {xx[k - 2], xx[k - 1]};
+      dxst = {xx[k], xx[k + 1]};
+    }
+    // Compute the end value and end derivative.
+    for (unsigned int j = 0; j < m_nSteps; ++j) {
+      if (!StepRKN(wire, h, z, xst, dxst, xMap, yMap, fxMap, fyMap)) {
+        return false;
+      }
+    }
+    // Store the differences as function value.
+    if (i < m_nShots) {
+      delta[k] = xst[0] - xx[k + 2];
+      delta[k + 1] = xst[1] - xx[k + 3];
+      delta[k + 2] = dxst[0] - xx[k + 4];
+      delta[k + 3] = dxst[1] - xx[k + 5];
+    } else {
+      delta[k] = xst[0];
+      delta[k + 1] = xst[1];
+    }
+  }
+  return true;
+}
+
+}  // namespace Garfield
