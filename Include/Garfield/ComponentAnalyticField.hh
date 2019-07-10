@@ -377,7 +377,7 @@ class ComponentAnalyticField : public ComponentBase {
   bool m_useGravitationalForce = true;
   // Gravity
   std::array<double, 3> m_down{{0, 0, 1}};
-  // Number of shots used for solving the wire sage differential equations
+  // Number of shots used for solving the wire sag differential equations
   unsigned int m_nShots = 2;
   // Number of integration steps within each shot.
   unsigned int m_nSteps = 20;

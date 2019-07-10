@@ -1377,7 +1377,7 @@ bool ComponentAnalyticField::WireDisplacement(
             << "                      Fy       = " << fy << " N/cm\n"
             << "                      x-shift  = " << shiftx << " cm\n"
             << "                      y-shift  = " << shifty << " cm\n"
-            << "                      stretch  = " << stretch << " fraction\n";
+            << "                      stretch  = " << 100. * stretch << "%\n";
   if (!detailed) {
     csag = {0.};
     xsag = {shiftx};
@@ -8111,8 +8111,8 @@ bool ComponentAnalyticField::SagDetailed(
 }
 
 bool ComponentAnalyticField::GetForceRatio(
-    const Wire& wire, const double coor, const std::array<double, 2>& bend,
-    const std::array<double, 2>& dbend, std::array<double, 2>& f,
+    const Wire& wire, const double /*coor*/, const std::array<double, 2>& bend,
+    const std::array<double, 2>& /*dbend*/, std::array<double, 2>& f,
     const std::vector<double>& xMap, const std::vector<double>& yMap,
     const std::vector<std::vector<double> >& fxMap,
     const std::vector<std::vector<double> >& fyMap) const {
