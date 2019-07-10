@@ -1456,8 +1456,6 @@ bool ComponentAnalyticField::WireDisplacement(
   }
   xAvg /= nSag;
   yAvg /= nSag;
-  std::cout << "length = " << length << "\n";
-  std::cout << "original: " << wire.u << "\n";
   stretch = (length - wire.u) / wire.u;
   // Warn if a point outside the scanning area was found.
   if (outside) {
