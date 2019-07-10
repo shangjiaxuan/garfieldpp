@@ -210,13 +210,19 @@ class ComponentAnalyticField : public ComponentBase {
   /// scanning area (default: off).
   void EnableExtrapolation(const bool on = true) { m_extrapolateForces = on; }
 
+  /// Set the gravity orientation.
+  void SetGravity(const double dx, const double dy, const double dz);
+  /// Get the gravity orientation.
+  void GetGravity(double& dx, double& dy, double& dz) const;
+
   bool ForcesOnWire(const unsigned int iw, std::vector<double>& xMap,
                     std::vector<double>& yMap,
                     std::vector<std::vector<double> >& fxMap,
                     std::vector<std::vector<double> >& fyMap);
   bool WireDisplacement(const unsigned int iw, const bool detailed,
                         std::vector<double>& csag, std::vector<double>& xsag,
-                        std::vector<double>& ysag, double& stretch);
+                        std::vector<double>& ysag, double& stretch,
+                        const bool print = true);
   /// Set the number of shots used for numerically solving the wire sag
   /// differential equation.
   void SetNumberOfShots(const unsigned int n) { m_nShots = n; }

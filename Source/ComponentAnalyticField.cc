@@ -287,9 +287,9 @@ void ComponentAnalyticField::PrintCell() {
       std::cout << "    The cell has no translation periodicity in y.\n";
     }
   }
-  // std::cout << "  Other data\n";
-  // std::cout << "    Gravity vector: (" << m_down[0] << ", " << m_down[1]
-  //           << ", " << m_down[2] << ") g.\n";
+  std::cout << "  Other data\n";
+  std::cout << "    Gravity vector: (" << m_down[0] << ", " << m_down[1]
+            << ", " << m_down[2] << ") [g].\n";
   std::cout << "  Cell dimensions:\n    ";
   if (!m_polar) {
     std::cout << m_xmin << " < x < " << m_xmax << " cm, " << m_ymin << " < y < "
@@ -1094,6 +1094,28 @@ void ComponentAnalyticField::SetScanningAreaFirstOrder(const double scale) {
   }
 }
 
+void ComponentAnalyticField::SetGravity(const double dx, const double dy, 
+                                        const double dz) {
+
+  const double d = sqrt(dx * dx + dy * dy + dz * dz);
+  if (d > 0.) {
+    m_down[0] = dx / d;
+    m_down[1] = dy / d;
+    m_down[2] = dz / d;
+  } else {
+    std::cerr << m_className << "::SetGravity:\n"
+              << "    The gravity vector has zero norm ; ignored.\n";
+  } 
+} 
+
+void ComponentAnalyticField::GetGravity(double& dx, double& dy, 
+                                        double& dz) const {
+
+  dx = m_down[0];
+  dy = m_down[1];
+  dz = m_down[2];
+}
+
 bool ComponentAnalyticField::ForcesOnWire(
     const unsigned int iw, std::vector<double>& xMap, std::vector<double>& yMap,
     std::vector<std::vector<double> >& fxMap,
@@ -1313,7 +1335,8 @@ void ComponentAnalyticField::SetNumberOfSteps(const unsigned int n) {
 
 bool ComponentAnalyticField::WireDisplacement(
     const unsigned int iw, const bool detailed, std::vector<double>& csag,
-    std::vector<double>& xsag, std::vector<double>& ysag, double& stretch) {
+    std::vector<double>& xsag, std::vector<double>& ysag, double& stretch,
+    const bool print) {
   if (!m_cellset) {
     if (!Prepare()) {
       std::cerr << m_className << "::WireDisplacement:\n"
@@ -1364,20 +1387,23 @@ bool ComponentAnalyticField::WireDisplacement(
     length *= 0.5 * (t + log(s + t) / s);
   }
   stretch = (length - wire.u) / wire.u;
-  std::cout << m_className
-            << "::WireDisplacement: Forces and displacement in 0th order.\n"
-            << "    Wire information: number   = " << iw << "\n"
-            << "                      type     = " << wire.type << "\n"
-            << "                      location = (" << wire.x << ", " << wire.y
-            << ") cm\n"
-            << "                      voltage  = " << wire.v << " V\n"
-            << "                      length   = " << wire.u << " cm\n"
-            << "                      tension  = " << wire.tension << " g\n"
-            << "    In this position: Fx       = " << fx << " N/cm\n"
-            << "                      Fy       = " << fy << " N/cm\n"
-            << "                      x-shift  = " << shiftx << " cm\n"
-            << "                      y-shift  = " << shifty << " cm\n"
-            << "                      stretch  = " << 100. * stretch << "%\n";
+  if (print) {
+    std::cout << m_className
+              << "::WireDisplacement:\n"
+              << "    Forces and displacement in 0th order.\n"
+              << "    Wire information: number   = " << iw << "\n"
+              << "                      type     = " << wire.type << "\n"
+              << "                      location = (" << wire.x << ", " << wire.y
+              << ") cm\n"
+              << "                      voltage  = " << wire.v << " V\n"
+              << "                      length   = " << wire.u << " cm\n"
+              << "                      tension  = " << wire.tension << " g\n"
+              << "    In this position: Fx       = " << fx << " N/cm\n"
+              << "                      Fy       = " << fy << " N/cm\n"
+              << "                      x-shift  = " << shiftx << " cm\n"
+              << "                      y-shift  = " << shifty << " cm\n"
+              << "                      stretch  = " << 100. * stretch << "%\n";
+  }
   if (!detailed) {
     csag = {0.};
     xsag = {shiftx};
@@ -1409,23 +1435,48 @@ bool ComponentAnalyticField::WireDisplacement(
   const unsigned int nSag = xsag.size();
   bool outside = false;
   length = 0.;
+  double xAvg = 0.;
+  double yAvg = 0.;
+  double xMax = 0.;
+  double yMax = 0.;
   for (unsigned int i = 0; i < nSag; ++i) {
     if (x0 + xsag[i] < sxmin || x0 + xsag[i] > sxmax || y0 + ysag[i] < symin ||
         y0 + ysag[i] > symax) {
       outside = true;
     }
+    xAvg += xsag[i];
+    yAvg += ysag[i];
+    xMax = std::max(xMax, std::abs(xsag[i]));
+    yMax = std::max(yMax, std::abs(ysag[i]));
     if (i == 0) continue;
     const double dx = xsag[i] - xsag[i - 1];
     const double dy = ysag[i] - ysag[i - 1];
     const double dz = csag[i] - csag[i - 1];
     length += sqrt(dx * dx + dy * dy + dz * dz);
   }
+  xAvg /= nSag;
+  yAvg /= nSag;
+  std::cout << "length = " << length << "\n";
+  std::cout << "original: " << wire.u << "\n";
   stretch = (length - wire.u) / wire.u;
   // Warn if a point outside the scanning area was found.
   if (outside) {
     std::cerr
         << m_className << "::WireDisplacement: Warning.\n    "
         << "The wire profile is located partially outside the scanning area.\n";
+  }
+  if (print) {
+    std::cout << "    Sag profile for wire " << iw << ".\n"
+              << " Point     z [cm]   x-sag [um]   y-sag [um]\n";
+    for (unsigned int i = 0; i < nSag; ++i) {
+      std::printf(" %3d   %10.4f  %10.4f  %10.4f\n", 
+                  i, csag[i], xsag[i] * 1.e4, ysag[i] * 1.e4);
+    }
+    std::printf("    Average sag in x and y: %10.4f and %10.4f micron\n",
+                1.e4 * xAvg, 1.e4 * yAvg);
+    std::printf("    Maximum sag in x and y: %10.4f and %10.4f micron\n",
+                1.e4 * xMax, 1.e4 * yMax);
+    std::cout << "    Elongation:             " << 100. * stretch << "%\n";
   }
   return true;
 }
@@ -8079,9 +8130,9 @@ bool ComponentAnalyticField::SagDetailed(
     return false;
   }
   // And return the detailed solution, first the starting point.
-  csag.assign(np, 0.);
-  xsag.assign(np, 0.);
-  ysag.assign(np, 0.);
+  csag.assign(np + 1, 0.);
+  xsag.assign(np + 1, 0.);
+  ysag.assign(np + 1, 0.);
   csag[0] = -0.5 * wire.u;
   double coor = -0.5 * wire.u;
   for (unsigned int i = 0; i <= m_nShots; ++i) {
@@ -8098,9 +8149,8 @@ bool ComponentAnalyticField::SagDetailed(
       dxst[1] = xx[4 * i + 1];
     }
     // Store the intermediate values.
-    for (unsigned int j = 0; j < m_nSteps; ++j) {
+    for (unsigned int j = 1; j <= m_nSteps; ++j) {
       StepRKN(wire, h, coor, xst, dxst, xMap, yMap, fxMap, fyMap);
-      // TODO!
       csag[i * m_nSteps + j] = coor;
       xsag[i * m_nSteps + j] = xst[0];
       ysag[i * m_nSteps + j] = xst[1];
