@@ -55,8 +55,11 @@ class ViewSignal : public ViewBase {
   /// Remove the user-defined y-axis limits.
   void UnsetRangeY() { m_userRangeY = false; }
 
+  /// Override the default y-axis label.
+  void SetLabelY(const std::string& label) { m_labelY = label; }
+
  private:
-  // Sensor
+  // Sensor.
   Sensor* m_sensor = nullptr;
 
   // Axis range.
@@ -67,7 +70,10 @@ class ViewSignal : public ViewBase {
   double m_ymax = 0.;
   bool m_userRangeY = false;
 
-  // Histograms
+  // Axis label.
+  std::string m_labelY = "signal [fC / ns]";
+
+  // Histograms.
   std::unique_ptr<TH1D> m_hSignal;
   std::unique_ptr<TH1D> m_hSignalElectrons;
   std::unique_ptr<TH1D> m_hSignalIons;
@@ -75,7 +81,7 @@ class ViewSignal : public ViewBase {
   std::unique_ptr<TH1D> m_hDelayedSignalElectrons;
   std::unique_ptr<TH1D> m_hDelayedSignalIons;
 
-  // Threshold crossings
+  // Threshold crossings.
   std::unique_ptr<TGraph> m_gCrossings;
 };
 }
