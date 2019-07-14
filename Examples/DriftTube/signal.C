@@ -7,10 +7,8 @@
 #include <TApplication.h>
 
 #include "Garfield/ViewCell.hh"
-#include "Garfield/ViewField.hh"
 #include "Garfield/ViewDrift.hh"
 #include "Garfield/ViewSignal.hh"
-#include "Garfield/Plotting.hh"
 
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/MediumMagboltz.hh"
@@ -47,7 +45,6 @@ bool readTransferFunction(Sensor& sensor) {
 int main(int argc, char * argv[]) {
 
   TApplication app("app", &argc, argv);
-  plottingEngine.SetDefaultStyle();
  
   // Make a gas medium.
   MediumMagboltz gas;
