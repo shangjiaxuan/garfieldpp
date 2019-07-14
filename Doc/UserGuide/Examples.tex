@@ -15,9 +15,12 @@ Sample macros and further examples can be found on the webpage
 (\url{http://garfieldpp.web.cern.ch/garfieldpp/Examples}) and 
 in the directory \texttt{Examples} of the project.
  
-\subsection{Drift Tube}\label{Sec:ExampleTube}
+\subsection{Drift tube}\label{Sec:ExampleTube}
+In this example, we consider a drift tube with an outer diameter of 
+15\,mm and a wire diameter of 50\,\textmu{m}, similar to the 
+ATLAS small-diameter muon drift tubes (sMDTs).
 
-\subsubsection{Gas Table}
+\subsubsection{Gas table}
 First, we prepare a table of transport parameters 
 (drift velocity, diffusion coefficients, Townsend coefficient,
 and attachment coefficient) as a function 
@@ -27,18 +30,18 @@ as well as the angle between \(\mathbf{E}\) and \(\mathbf{B}\)).
 In this example, we use a gas mixture of 93\% argon and 7\% 
 carbon dioxide at a pressure of 3\,atm and room temperature.
 \begin{lstlisting}
-MediumMagboltz* gas = new MediumMagboltz();
-gas->SetComposition("ar", 93., "co2", 7.);
+MediumMagboltz gas;
+gas.SetComposition("ar", 93., "co2", 7.);
 // Set temperature [K] and pressure [Torr].
-gas->SetPressure(3 * 760.);
-gas->SetTemperature(293.15);
+gas.SetPressure(3 * 760.);
+gas.SetTemperature(293.15);
 \end{lstlisting} 
 We also have to specify the number of electric fields to be 
 included in the table and the electric field range to be covered. 
 Here we use 20 field points between 100\,V\,/\,cm and 100\,kV\,/\,cm 
 with logarithmic spacing. 
 \begin{lstlisting}
-gas->SetFieldGrid(100., 100.e3, 20, true);
+gas.SetFieldGrid(100., 100.e3, 20, true);
 \end{lstlisting}
 Now we run Magboltz to generate the gas table for this grid. 
 As input parameter we have to specify the number of collisions 
@@ -46,22 +49,35 @@ As input parameter we have to specify the number of collisions
 by Magboltz.
 \begin{lstlisting}
 const int ncoll = 10;
-const bool verbose = true;
-gas->GenerateGasTable(ncoll, verbose);
+gas.GenerateGasTable(ncoll);
 \end{lstlisting}
 This calculation will take a while, don't panic. 
 After the calculation is finished, we save the gas table to a 
 file for later use.
 \begin{lstlisting}
-gas->WriteGasFile("ar_93_co2_7.gas");
+gas.WriteGasFile("ar_93_co2_7.gas");
 \end{lstlisting}
+Once we have saved the transport parameters to file 
+we can skip the steps above, 
+and simply import the table in our program using
+\begin{lstlisting}
+gas.LoadGasFile("ar_93_co2_7.gas");
+\end{lstlisting} 
 
+In order to make sure the calculation of the gas table was successful, 
+it is a good idea to plot, for instance, 
+the drift velocity as a function of the electric field.
+\begin{lstlisting}
+ViewMedium mediumView;
+mediumView.SetMedium(&gas);
+mediumView.PlotElectronVelocity('e');
+\end{lstlisting}
 \subsubsection{Electric Field}
 For calculating the electric field inside the tube, 
 we use the class \texttt{ComponentAnalyticField} which can handle 
 (two-dimensional) arrangements of wires, planes and tubes.
 \begin{lstlisting}
-ComponentAnalyticField* cmp = new ComponentAnalyticField();
+ComponentAnalyticField cmp;
 \end{lstlisting} 
 The \texttt{Component} requires a description of the 
 geometry, that is a list of volumes and associated media.
@@ -69,32 +85,32 @@ geometry, that is a list of volumes and associated media.
 // Wire radius [cm]
 const double rWire = 25.e-4;
 // Outer radius of the tube [cm]
-const double rTube = 1.46;
+const double rTube = 0.71;
 // Half-length of the tube [cm]
-const double lTube = 10.;
-GeometrySimple* geo = new GeometrySimple();
+const double lTube = 2.;
+GeometrySimple geo;
 // Make a tube 
 // (centered at the origin, inner radius: rWire, outer radius: rTube).
-SolidTube* tube = new SolidTube(0., 0., 0., rWire, rTube, lTube);
+SolidTube tube(0, 0, 0, rWire, rTube, lTube);
 // Add the solid to the geometry, together with the medium inside.
-geo->AddSolid(tube, gas);
+geo.AddSolid(&tube, &gas);
 // Pass a pointer to the geometry class to the component.
-cmp->SetGeometry(geo); 
+cmp.SetGeometry(&geo); 
 \end{lstlisting}
 Next we setup the electric field.
 \begin{lstlisting}
 // Voltages
-const double vWire = 3270.;
+const double vWire = 2730.;
 const double vTube =    0.;
 // Add the wire in the center.
-cmp->AddWire(0., 0., 2 * rWire, vWire, "s");
+cmp.AddWire(0, 0, 2 * rWire, vWire, "s");
 // Add the tube.
-cmp->AddTube(rTube, vTube, 0, "t");
+cmp.AddTube(rTube, vTube, 0, "t");
 \end{lstlisting}
 We want to calculate the signal induced on the wire. 
 Using 
 \begin{lstlisting}
-cmp->AddReadout("s");
+cmp.AddReadout("s");
 \end{lstlisting}
 we tell the \texttt{Component} to prepare the solution for the weighting field 
 of the wire (which we have given the label ``s'' before).
@@ -102,52 +118,106 @@ of the wire (which we have given the label ``s'' before).
 Finally we assemble a \texttt{Sensor} object which acts as an 
 interface to the transport classes discussed below.
 \begin{lstlisting}
-Sensor* sensor = new Sensor();
+Sensor sensor;
 // Calculate the electric field using the Component object cmp.
-sensor->AddComponent(cmp);
+sensor.AddComponent(&cmp);
 // Request signal calculation for the electrode named "s", 
 // using the weighting field provided by the Component object cmp.
-sensor->AddElectrode(cmp, "s"); 
+sensor.AddElectrode(&cmp, "s"); 
 \end{lstlisting}
-
-In this (not very realistic) example, we want to calculate only the 
-electron signal. We set the time interval within which the 
-signal is recorded by the sensor to 2\,ns, with a binning of 0.02\,ns. 
+We further need to set the time interval within which the
+signal is recorded and the granularity (bin width). 
+In this example, we use use 1000 bins with a width of 0.5\,ns.
 \begin{lstlisting}
-const double tMin = 0.;
-const double tMax = 2.;
-const double tStep = 0.02;
-const int nTimeBins = int((tMax - tMin) / tStep);
-sensor->SetTimeWindow(0., tStep, nTimeBins);
+const double tstep = 0.5;
+const double tmin = -0.5 * tstep;
+const unsigned int nbins = 1000;
+sensor.SetTimeWindow(tmin, tstep, nbins);
 \end{lstlisting}
 
-\subsubsection{Avalanche}
-For simulating the electron avalanche we use the class \texttt{AvalancheMC} 
-which uses the previously computed tables of transport parameters to 
+\subsubsection{Drift lines from a track}
+We use Heed (Sec.~\ref{Sec:Heed}) to simulate the ionisation 
+produced by a charged particle crossing the tube 
+(a 170\,GeV muon in our example).
+\begin{lstlisting}
+TrackHeed track;
+track.SetParticle("muon");
+track.SetEnergy(170.e9);
+track.SetSensor(&sensor);
+\end{lstlisting}
+The drift lines of the electrons created along the track are simulated 
+along the track are calculated using Runge-Kutta-Fehlberg (RKF) integration,
+implemented in the class \texttt{DriftLineRKF}.
+This method uses the previously computed tables of transport parameters to 
 calculate drift lines and multiplication. 
 \begin{lstlisting}
-AvalancheMC* aval = new AvalancheMC();
-aval->SetSensor(sensor);
+DriftLineRKF drift;
+drift.SetSensor(&sensor);
 // Switch on signal calculation.
-aval->EnableSignalCalculation();
-// Do the drift line calculation in time steps of 50 ps.
-aval->SetTimeSteps(0.05);
-// Starting position [cm] and time [ns] of the initial electron.
-// The electron is started at 100 micron above the wire.
-const double x0 = 0.;
-const double y0 = rWire + 100.e-4;
-const double z0 = 0.;
-const double t0 = 0.;
-// Simulate an avalanche.
-aval->AvalancheElectron(x0, y0, z0, t0);
+drift.EnableSignalCalculation();
+\end{lstlisting}
+Let us consider a track that passes at a distance of 3\,mm
+from the wire centre. After simulating the passage of the charged particle,
+we loop over the ``clusters'' 
+(\textit{i. e.}~the ionizing collisions of the primary particle)
+along the track and calculate a drift line for each electron produced in 
+the cluster.
+\begin{lstlisting}
+const double rTrack = 0.3;
+const double x0 = rTrack;
+const double y0 = -sqrt(rTube * rTube - rTrack * rTrack);
+track.NewTrack(x0, y0, 0, 0, 0, 1, 0);
+// Loop over the clusters along the track.
+double xc = 0., yc = 0., zc = 0., tc = 0., ec = 0., extra = 0.;
+int nc = 0;
+while (track.GetCluster(xc, yc, zc, tc, nc, ec, extra)) {
+  // Loop over the electrons in the cluster.
+  for (int k = 0; k < nc; ++k) {
+    double xe = 0., ye = 0., ze = 0., te = 0., ee = 0.;
+    double dx = 0., dy = 0., dz = 0.;
+    track.GetElectron(k, xe, ye, ze, te, ee, dx, dy, dz);
+    drift.DriftElectron(xe, ye, ze, te);
+  }
+}
+\end{lstlisting}
+As a check whether the simulation is doing something sensible, 
+it can be useful to visualize the drift lines. 
+Before simulating the charged particle track and
+the electron drift lines, we have to instruct \texttt{TrackHeed} and
+\texttt{DriftLineRKF} to pass the coordinates of the clusters and the 
+points along the drift line to a \texttt{ViewDrift} object
+which then takes care of plotting them.
+\begin{lstlisting}
+// Create a canvas.
+cD = new TCanvas("cD", "", 600, 600);
+ViewDrift driftView;
+driftView.SetCanvas(cD);
+drift.EnablePlotting(&driftView);
+track.EnablePlotting(&driftView);
+\end{lstlisting}
+We use the class \texttt{ViewCell} to draw the
+outline of the tube and the position of the wire on the same plot as the
+drift lines.
+\begin{lstlisting}
+ViewCell cellView;
+cellView.SetCanvas(cD);
+cellView.SetComponent(&cmp);
+\end{lstlisting}
+After we've simulated all drift lines from a charged particle 
+track, we create a plot using
+\begin{lstlisting}
+cellView.Plot2d();
+constexpr bool twod = true;
+constexpr bool drawaxis = false;
+driftView.Plot(twod, drawaxis);
 \end{lstlisting}
 
 Using the class \texttt{ViewSignal}, we plot the current induced on 
-the wire by the avalanche simulated in the previous step.
+the wire by the drift lines simulated in the previous step.
 \begin{lstlisting}
-ViewSignal* signalView = new ViewSignal();
-signalView->SetSensor(sensor);
-signalView->PlotSignal("s");
+ViewSignal signalView;
+signalView.SetSensor(&sensor);
+signalView.PlotSignal("s");
 \end{lstlisting}
 
 \subsection{GEM}\label{Sec:ExampleGem}
@@ -213,6 +283,7 @@ const unsigned int nMaterials = fm->GetNumberOfMaterials();
 for (unsigned int i = 0; i < nMaterials; ++i) {
   const double eps = fm->GetPermittivity(i);
   if (fabs(eps - 1.) < 1.e-3) fm->SetMedium(i, gas);
+
 }
 // Print a list of the field map materials (for information).
 fm->PrintMaterials();
