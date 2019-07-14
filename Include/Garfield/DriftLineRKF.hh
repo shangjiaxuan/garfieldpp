@@ -55,6 +55,8 @@ class DriftLineRKF {
   /// Set multiplication factor for the signal induced by ions.
   void SetIonSignalScalingFactor(const double scale) { m_scaleI = scale; }
 
+  /// Enable/disable simulation electron multiplication (default: on).
+  void EnableAvalanche(const bool on = true) { m_doAvalanche = on; }
   /// Do not randomize the avalanche size.
   void SetGainFluctuationsFixed(const double gain = -1.);
   /// Sample the avalanche size from a Polya distribution with 
@@ -140,6 +142,8 @@ class DriftLineRKF {
   // Scaling factor for ion signals.
   double m_scaleI = 1.;
 
+  // Flag wether to simulate electron multiplication or not.
+  bool m_doAvalanche = true;
   enum class GainFluctuations { None = 0, Polya };
   // Model to be used for randomizing the avalanche size.
   GainFluctuations m_gainFluctuations = GainFluctuations::None; 

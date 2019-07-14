@@ -128,7 +128,7 @@ bool DriftLineRKF::DriftElectron(const double x0, const double y0,
   std::vector<double> ne(m_t.size(), 1.);
   std::vector<double> ni(m_t.size(), 0.);
   double scale = 1.;
-  Avalanche(Particle::Electron, m_x, ne, ni, scale);
+  if (m_doAvalanche) Avalanche(Particle::Electron, m_x, ne, ni, scale);
   if (m_doSignal) {
     ComputeSignal(Particle::Electron, scale * m_scaleE, m_t, m_x, ne);
   }
