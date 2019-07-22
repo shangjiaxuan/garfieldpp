@@ -233,6 +233,10 @@ bool MediumMagboltz::EnablePenningTransfer(const double r, const double lambda,
 
   if (!MediumGas::EnablePenningTransfer(r, lambda, gasname)) return false;
 
+  // Get (again) the "standard" name of this gas.
+  gasname = GetGasName(gasname);
+  if (gasname.empty()) return false;
+
   // Look (again) for this gas in the present mixture.
   int iGas = -1;
   for (unsigned int i = 0; i < m_nComponents; ++i) {
