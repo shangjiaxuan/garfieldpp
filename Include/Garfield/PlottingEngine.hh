@@ -1,29 +1,23 @@
 #ifndef G_PLOTTING_ENGINE_H
 #define G_PLOTTING_ENGINE_H
 
-#include "Medium.hh"
-#include "Sensor.hh"
-
 namespace Garfield {
 
 /// Abstract base class for plotting engines.
 
 class PlottingEngine {
  public:
+  /// Default constructor
+  PlottingEngine() = delete;
   /// Constructor
-  PlottingEngine()
-      : m_className("PlottingEngine"),
-        m_colorLine1("dark-blue"),
-        m_colorLine2("olive"),
-        m_colorElectron("orange"),
-        m_colorHole("red"),
-        m_colorIon("dark-red"),
-        m_colorPhoton("blue"),
-        m_colorChargedParticle("dark-green"),
-        m_debug(false) {}
-
+  PlottingEngine(const std::string& name) : m_className(name) {}
   /// Destructor
   virtual ~PlottingEngine() {}
+
+  /// Use serif font.
+  void SetSerif() { m_serif = true; }
+  /// Use sans-serif font.
+  void SetSansSerif() { m_serif = false; }
 
   // Set/get colors.
   void SetLineColor1(const std::string& col) { m_colorLine1 = col; }
@@ -44,21 +38,23 @@ class PlottingEngine {
   std::string GetPhotonColor() const { return m_colorPhoton; }
   std::string GetChargedParticleColor() const { return m_colorChargedParticle; }
 
-  // Switch on/off debugging messages
-  void EnableDebugging() { m_debug = true; }
-  void DisableDebugging() { m_debug = false; }
+  /// Switch debugging messages on/off.
+  void EnableDebugging(const bool on = true) { m_debug = on; }
 
  protected:
-  std::string m_className;
+  std::string m_className = "PlottingEngine";
 
-  std::string m_colorLine1, m_colorLine2;
-  std::string m_colorElectron;
-  std::string m_colorHole;
-  std::string m_colorIon;
-  std::string m_colorPhoton;
-  std::string m_colorChargedParticle;
+  bool m_serif = false;
 
-  bool m_debug;
+  std::string m_colorLine1 = "dark-blue";
+  std::string m_colorLine2 = "olive";
+  std::string m_colorElectron = "orange";
+  std::string m_colorHole = "red";
+  std::string m_colorIon = "dark-red";
+  std::string m_colorPhoton = "blue";
+  std::string m_colorChargedParticle = "dark-green";
+
+  bool m_debug = false;
 };
 }
 

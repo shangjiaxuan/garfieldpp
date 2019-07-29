@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include <TROOT.h>
+
 #include "Garfield/Plotting.hh"
 #include "Garfield/ViewBase.hh"
 

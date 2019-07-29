@@ -1,8 +1,6 @@
 #ifndef G_PLOTTING_ENGINE_ROOT_H
 #define G_PLOTTING_ENGINE_ROOT_H
 
-#include <TF1.h>
-#include <TROOT.h>
 #include <TStyle.h>
 
 #include "PlottingEngine.hh"
@@ -19,7 +17,7 @@ class PlottingEngineRoot : public PlottingEngine {
   virtual ~PlottingEngineRoot();
 
   /// Apply the default Garfield ROOT style.
-  void SetDefaultStyle(const bool serif = false);
+  void SetDefaultStyle();
 
   int GetRootColorLine1();
   int GetRootColorLine2();

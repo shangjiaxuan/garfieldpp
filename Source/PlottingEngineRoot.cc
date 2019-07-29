@@ -1,6 +1,8 @@
 #include <iomanip>
 #include <iostream>
 
+#include <TROOT.h>
+#include <TF1.h>
 #include <TAxis.h>
 #include <TCanvas.h>
 
@@ -11,11 +13,12 @@ namespace Garfield {
 PlottingEngineRoot plottingEngine;
 
 PlottingEngineRoot::PlottingEngineRoot()
-    : PlottingEngine(), m_garfieldStyle("Garfield", "Garfield Style") {}
+    : PlottingEngine("PlottingEngineRoot"), 
+      m_garfieldStyle("Garfield", "Garfield Style") {}
 
 PlottingEngineRoot::~PlottingEngineRoot() {}
 
-void PlottingEngineRoot::SetDefaultStyle(const bool serif) {
+void PlottingEngineRoot::SetDefaultStyle() {
   m_garfieldStyle.Reset();
   m_garfieldStyle.SetFillColor(1);
   m_garfieldStyle.SetFillStyle(1001);
@@ -45,7 +48,7 @@ void PlottingEngineRoot::SetDefaultStyle(const bool serif) {
   m_garfieldStyle.SetPadGridX(kTRUE);
   m_garfieldStyle.SetPadGridY(kTRUE);
 
-  const int font = serif ? 132 : 42;
+  const int font = m_serif ? 132 : 42;
   const double tsize = 0.04;
   m_garfieldStyle.SetTextFont(font);
   m_garfieldStyle.SetTextSize(tsize);
@@ -86,6 +89,8 @@ void PlottingEngineRoot::SetDefaultStyle(const bool serif) {
   m_garfieldStyle.SetAxisColor(kBlack, "Z");
   m_garfieldStyle.SetNdivisions(505, "x");
   m_garfieldStyle.SetNdivisions(510, "y");
+  m_garfieldStyle.SetMarkerStyle(20);
+  m_garfieldStyle.SetMarkerSize(1.2);
   const double lw = 2;
   m_garfieldStyle.SetLineWidth(lw);
   m_garfieldStyle.SetLineStyleString(2, "[12 12]");
@@ -93,7 +98,6 @@ void PlottingEngineRoot::SetDefaultStyle(const bool serif) {
   m_garfieldStyle.SetHistLineWidth(lw);
   m_garfieldStyle.SetFuncWidth(lw);
   m_garfieldStyle.SetGridWidth(lw);
-  m_garfieldStyle.SetMarkerSize(1.2);
   m_garfieldStyle.cd();
 }
 
