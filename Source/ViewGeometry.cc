@@ -1,6 +1,11 @@
 #include <cmath>
 #include <iostream>
 
+#include <TGeoBBox.h>
+#include <TGeoCone.h>
+#include <TGeoBoolNode.h>
+#include <TGeoCompositeShape.h>
+
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/GeometrySimple.hh"
@@ -91,29 +96,33 @@ void ViewGeometry::Plot() {
                         -stheta,       0,     ctheta};
     TGeoVolume* volume = nullptr;
     if (solid->IsTube()) {
-      double rmin = 0., rmax = 0., lz = 0.;
-      if (!solid->GetDimensions(rmin, rmax, lz)) {
-        std::cerr << m_className << "::Plot:\n"
-                  << "    Could not determine tube dimensions.\n";
-        continue;
-      }
+      const double rmin = solid->GetInnerRadius();
+      const double rmax = solid->GetOuterRadius();
+      const double lz = solid->GetHalfLengthZ();
       volume = m_geoManager->MakeTube("Tube", medDefault, rmin, rmax, lz);
     } else if (solid->IsBox()) {
-      double dx = 0., dy = 0., dz = 0.;
-      if (!solid->GetDimensions(dx, dy, dz)) {
-        std::cerr << m_className << "::Plot:\n"
-                  << "    Could not determine box dimensions.\n";
-        continue;
-      }
+      const double dx = solid->GetHalfLengthX();
+      const double dy = solid->GetHalfLengthY();
+      const double dz = solid->GetHalfLengthZ();
       volume = m_geoManager->MakeBox("Box", medDefault, dx, dy, dz);
     } else if (solid->IsSphere()) {
-      double rmin = 0., rmax = 0., dummy = 0.;
-      if (!solid->GetDimensions(rmin, rmax, dummy)) {
-        std::cerr << m_className << "::Plot:\n"
-                  << "    Could not determine sphere dimensions.\n";
-        continue;
-      }
+      const double rmin = solid->GetInnerRadius();
+      const double rmax = solid->GetOuterRadius();
       volume = m_geoManager->MakeSphere("Sphere", medDefault, rmin, rmax);
+    } else if (solid->IsHole()) {
+      const double r1 = solid->GetLowerRadius();
+      const double r2 = solid->GetUpperRadius();
+      const double rm = 0.5 * (r1 + r2);
+      const double dr = (r2 - r1);
+      const double dx = solid->GetHalfLengthX();
+      const double dy = solid->GetHalfLengthY();
+      const double dz = solid->GetHalfLengthZ();
+      TGeoBBox* box = new TGeoBBox("HoleBox", dx, dy, dz);
+      TGeoCone* cone = new TGeoCone("HoleCone", 2 * dz, 0, rm - dr, 0, rm + dr);
+      TGeoCompositeShape* hole = new TGeoCompositeShape("Hole", 
+        new TGeoSubtraction(box, cone));
+      hole->RegisterYourself();
+      volume = new TGeoVolume("Hole", hole, medDefault); 
     } else {
       std::cerr << m_className << "::Plot: Unknown type of solid.\n";
       continue;

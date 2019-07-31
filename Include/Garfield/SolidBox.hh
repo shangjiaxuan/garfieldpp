@@ -24,8 +24,6 @@ class SolidBox : public Solid {
                       double& ymax, double& zmax) const override;
   bool IsBox() const override { return true; }
 
-  bool GetDimensions(double& l1, double& l2, double& l3) const override;
-
   double GetHalfLengthX() const override { return m_lX; }
   double GetHalfLengthY() const override { return m_lY; }
   double GetHalfLengthZ() const override { return m_lZ; }

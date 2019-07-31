@@ -54,13 +54,6 @@ bool SolidSphere::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   return true;
 }
 
-bool SolidSphere::GetDimensions(double& l1, double& l2, double& l3) const {
-  l1 = m_rMin;
-  l2 = m_rMax;
-  l3 = 0.;
-  return true;
-}
-
 void SolidSphere::SetInnerRadius(const double rmin) {
   if (rmin <= 0.) {
     std::cerr << "SolidSphere::SetInnerRadius: Radius must be > 0.\n";

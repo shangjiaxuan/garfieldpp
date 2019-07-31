@@ -30,14 +30,12 @@ class SolidTube : public Solid {
                       double& ymax, double& zmax) const override;
   bool IsTube() const override { return true; }
 
-  bool GetDimensions(double& l1, double& l2, double& l3) const override;
-
   void SetHalfLength(const double lz);
   void SetInnerRadius(const double rmin);
   void SetOuterRadius(const double rmax);
   void SetRadius(const double r);
 
-  double GetHalfLength() const override { return m_lZ; }
+  double GetHalfLengthZ() const override { return m_lZ; }
   double GetInnerRadius() const override { return m_rMin; }
   double GetOuterRadius() const override { return m_rMax; }
   double GetRadius() const override { return m_r; }
@@ -64,7 +62,7 @@ class SolidTube : public Solid {
 
   unsigned int GetSectors() const { return m_n; }
   double GetRotation() const { return m_rot; }
-  double GetAverage() const { return m_average; }
+  bool GetAverage() const { return m_average; }
 
   bool SolidPanels(std::vector<Panel>& panels) override;
 
