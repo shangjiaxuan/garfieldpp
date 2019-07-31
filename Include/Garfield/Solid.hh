@@ -51,6 +51,8 @@ class Solid {
   virtual bool IsTube() const { return false; }
   /// Return true if the solid is a sphere.
   virtual bool IsSphere() const { return false; }
+  /// Return true if the solid is a hole.
+  virtual bool IsHole() const { return false; }
 
   /// Retrieve the centre point of the solid.
   bool GetCentre(double& x, double& y, double& z) const {
