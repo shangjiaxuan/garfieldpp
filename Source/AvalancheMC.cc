@@ -272,6 +272,8 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
     std::cout << m_className + "::DriftLine: Starting at " 
               << PrintVec(x0) + ".\n";
   }
+  // Determine if the medium is a gas or semiconductor.
+  const bool semiconductor = medium->IsSemiconductor();
 
   while (0 == status) {
     constexpr double tol = 1.e-10;
@@ -398,7 +400,7 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
   if ((particle == Particle::Electron || particle == Particle::Hole) && 
       (aval || m_useAttachment) && 
       (m_sizeCut == 0 || m_nElectrons < m_sizeCut)) {
-    ComputeGainLoss(particle, m_drift, status);
+    ComputeGainLoss(particle, m_drift, status, semiconductor);
     if (status == StatusAttached && m_debug) {
       std::cout << m_className + "::DriftLine: Attached at " 
                 << PrintVec(m_drift.back().x) + ".\n";
@@ -800,7 +802,8 @@ void AvalancheMC::Terminate(const std::array<double, 3>& x0, const double t0,
 }
 
 bool AvalancheMC::ComputeGainLoss(const Particle particle, 
-    std::vector<DriftPoint>& driftLine, int& status) {
+    std::vector<DriftPoint>& driftLine, int& status,
+    const bool semiconductor) {
 
   const unsigned int nPoints = driftLine.size();
   std::vector<double> alps(nPoints, 0.);
@@ -874,7 +877,7 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
     }
     if (ni > 0) {
       if (particle == Particle::Electron) {
-        if (m_useIons) {
+        if (semiconductor) {
           driftLine[i].ni = ni;
           m_nIons += ni;
         } else {

@@ -87,11 +87,8 @@ class AvalancheMC {
 
   /// Define a time interval (only carriers inside the interval are drifted).
   void SetTimeWindow(const double t0, const double t1);
+  /// Do not limit the time interval within which carriers are drifted.
   void UnsetTimeWindow() { m_hasTimeWindow = false; }
-
-  /// Treat positive charge carriers as holes (default: ions).
-  void SetHoles() { m_useIons = false; }
-  void SetIons() { m_useIons = true; }
 
   /// Set multiplication factor for the signal induced by electrons.
   void SetElectronSignalScalingFactor(const double scale) { m_scaleE = scale; }
@@ -234,7 +231,6 @@ class AvalancheMC {
   bool m_useDiffusion = true;
   bool m_useAttachment = true;
   bool m_useBfield = false;
-  bool m_useIons = true;
   /// Scaling factor for electron signals.
   double m_scaleE = 1.;
   /// Scaling factor for hole signals.
@@ -302,7 +298,8 @@ class AvalancheMC {
                  std::array<double, 3>& x, double& t) const;
   /// Compute multiplication and losses along the current drift line.
   bool ComputeGainLoss(const Particle particle, 
-                       std::vector<DriftPoint>& driftLine, int& status);
+                       std::vector<DriftPoint>& driftLine, int& status,
+                       const bool semiconductor = false);
   /// Compute Townsend and attachment coefficients along the current drift line.
   bool ComputeAlphaEta(const Particle particle,
                        const std::vector<DriftPoint>& driftLine,
