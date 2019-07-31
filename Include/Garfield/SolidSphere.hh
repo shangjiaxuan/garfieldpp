@@ -20,12 +20,15 @@ class SolidSphere : public Solid {
                       double& ymax, double& zmax) const override;
   bool IsSphere() const override { return true; }
 
-  bool GetDimensions(double& l1, double& l2, double& l3) const override;
-
+  /// Set the inner radius of the sphere.
   void SetInnerRadius(const double rmin);
+  /// Set the outer radius of the sphere.
   void SetOuterRadius(const double rmax);
 
-  /// When calculating surface panels, the sphere is approxiamted by a set of
+  double GetInnerRadius() const override { return m_rMin; }
+  double GetOuterRadius() const override { return m_rMax; }
+
+  /// When calculating surface panels, the sphere is approximated by a set of
   /// parallelograms, much the same way maps are drawn. N specifies the number
   /// of meridians and also the number of parallels.
   void SetMeridians(const unsigned int n);
@@ -33,10 +36,12 @@ class SolidSphere : public Solid {
   bool SolidPanels(std::vector<Panel>& panels) override;
 
  private:
-  // Inner and outer radius
-  double m_rMin = 0., m_rMax;
+  /// Inner radius.
+  double m_rMin = 0.;
+  /// Outer radius
+  double m_rMax;
 
-  // Number of meridians.
+  /// Number of meridians.
   unsigned int m_n = 10;
 };
 }
