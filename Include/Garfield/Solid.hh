@@ -71,28 +71,36 @@ class Solid {
     return true;
   }
 
-  /// Return the characteristic dimensions of the solid.
-  virtual bool GetDimensions(double& l1, double& l2, double& l3) const = 0;
-
+  /// Return the half-length along x.
   virtual double GetHalfLengthX() const {
     return NotImplemented("GetHalfLengthX");
   }
+  /// Return the half-length along y.
   virtual double GetHalfLengthY() const {
     return NotImplemented("GetHalfLengthY");
   }
+  /// Return the half-length along z.
   virtual double GetHalfLengthZ() const {
     return NotImplemented("GetHalfLengthZ");
   }
-  virtual double GetHalfLength() const {
-    return NotImplemented("GetHalfLength");
-  }
+  /// Return the inner radius.
   virtual double GetInnerRadius() const {
     return NotImplemented("GetInnerRadius");
   }
+  /// Return the outer radius.
   virtual double GetOuterRadius() const {
     return NotImplemented("GetOuterRadius");
   }
+  /// Return the radius.
   virtual double GetRadius() const { return NotImplemented("GetRadius"); }
+  /// Return the lower radius (of a hole).
+  virtual double GetLowerRadius() const { 
+    return NotImplemented("GetLowerRadius");
+  } 
+  /// Return the upper radius (of a hole).
+  virtual double GetUpperRadius() const { 
+    return NotImplemented("GetUpperRadius");
+  } 
   virtual double GetRidgeOffset() const {
     return NotImplemented("GetRidgeOffset");
   }

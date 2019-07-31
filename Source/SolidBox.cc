@@ -62,13 +62,6 @@ bool SolidBox::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   return true;
 }
 
-bool SolidBox::GetDimensions(double& l1, double& l2, double& l3) const {
-  l1 = m_lX;
-  l2 = m_lY;
-  l3 = m_lZ;
-  return true;
-}
-
 void SolidBox::SetHalfLengthX(const double lx) {
   if (lx > 0.) {
     m_lX = lx;

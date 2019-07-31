@@ -27,25 +27,28 @@ class SolidHole : public Solid {
                       double& ymax, double& zmax) const override;
   bool IsHole() const override { return true; }
 
+  /// Set the half-length of the box along x.
   void SetHalfLengthX(const double lx);
+  /// Set the half-length of the box along y.
   void SetHalfLengthY(const double ly);
+  /// Set the half-length of the box along z.
   void SetHalfLengthZ(const double lz);
+  /// Set the radius at z = +lz.
   void SetUpperRadius(const double r);
+  /// Set the radius at z = -lz.
   void SetLowerRadius(const double r);
 
   double GetHalfLengthX() const override { return m_lX; }
   double GetHalfLengthY() const override { return m_lY; }
   double GetHalfLengthZ() const override { return m_lZ; }
+  double GetUpperRadius() const override { return m_rUp; }
+  double GetLowerRadius() const override { return m_rLow; }
 
   /// When calculating the surface panels, the hole is
   /// approximated as a polygon with a finite number of panels.
   /// The number of corners of the polygon equals \f$4(n - 1)\f$.
   /// Thus, \f$n = 2\f$ will produce a square, \f$n = 3\f$ an octagon etc.
   void SetSectors(const unsigned int n);
-  /// Specify a rotation angle (radian) of the hole.
-  /// Such a rotation is meaningful only if the number of sectors
-  /// (when approximating the circle with a polygon) has been chosen small.
-  void SetRotation(const double angle) { m_rot = angle; }
   /// By default, the polygon used for approximating the hole when
   /// calculating surface panels is inscribed in a circle
   /// of the specified radius. If the "average-radius" flag is activated,
@@ -53,13 +56,13 @@ class SolidHole : public Solid {
   /// that approximates the cylinder.
   void SetAverageRadius(const bool average) { m_average = average; }
 
+  /// Return the order of the approximating polygon.
   unsigned int GetSectors() const { return m_n; }
-  double GetRotation() const { return m_rot; }
+  /// Return the state of the "average-radius" flag. 
   bool GetAverage() const { return m_average; }
-
+ 
   bool SolidPanels(std::vector<Panel>& panels) override;
 
-bool GetDimensions(double& l1, double& l2, double& l3) const override { return true; } 
  private:
   // Upper and lower radius
   double m_rUp;
@@ -69,8 +72,6 @@ bool GetDimensions(double& l1, double& l2, double& l3) const override { return t
   double m_lY;
   double m_lZ;
 
-  /// Rotation angle
-  double m_rot = 0.; // TODO: not used at the moment.
   /// Number of sectors
   unsigned int m_n = 2;
   /// Average chord over the sectors.

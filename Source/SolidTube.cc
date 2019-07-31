@@ -81,13 +81,6 @@ bool SolidTube::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   return true;
 }
 
-bool SolidTube::GetDimensions(double& l1, double& l2, double& l3) const {
-  l1 = m_rMin;
-  l2 = m_rMax;
-  l3 = m_lZ;
-  return true;
-}
-
 void SolidTube::SetInnerRadius(const double rmin) {
   if (rmin <= 0.) {
     std::cerr << "SolidTube::SetInnerRadius: Radius must be > 0.\n";
