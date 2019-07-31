@@ -64,7 +64,7 @@ class SolidTube : public Solid {
 
   unsigned int GetSectors() const { return m_n; }
   double GetRotation() const { return m_rot; }
-  double GetAverage() const { return m_average; }
+  bool GetAverage() const { return m_average; }
 
   bool SolidPanels(std::vector<Panel>& panels) override;
 
