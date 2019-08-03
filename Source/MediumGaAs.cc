@@ -49,10 +49,17 @@ bool MediumGaAs::ElectronVelocity(const double ex, const double ey,
     // Interpolation in user table.
     return Medium::ElectronVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
   }
-  // Calculate the mobility
-  double mu = -m_eMobility;
-  const double b = sqrt(bx * bx + by * by + bz * bz);
-  if (b < Small) {
+  // Calculate the mobility.
+  // - J. J. Barnes, R. J. Lomax, G. I. Haddad, 
+  //   IEEE Trans. Electron Devices ED-23 (1976), 1042.
+  const double e2 = ex * ex + ey * ey + ez * ez;
+  // Inverse of the critical field.
+  constexpr double r = 1. / 4000.;
+  constexpr double r4 = r * r * r * r;
+  const double er4 = e2 * e2 * r4;
+  const double mu = -(m_eMobility + er4 * m_eSatVel / sqrt(e2)) / (1. + er4);
+  const double bmag = sqrt(bx * bx + by * by + bz * bz);
+  if (bmag < Small) {
     vx = mu * ex;
     vy = mu * ey;
     vz = mu * ez;
@@ -61,7 +68,7 @@ bool MediumGaAs::ElectronVelocity(const double ex, const double ey,
     const double muH = m_eHallFactor * mu;
     const double mu2 = muH * muH;
     const double eb = bx * ex + by * ey + bz * ez;
-    const double f = muH / (1. + mu2 * b * b);
+    const double f = muH / (1. + mu2 * bmag * bmag);
     // Compute the drift velocity using the Langevin equation.
     vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
     vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
@@ -79,7 +86,11 @@ bool MediumGaAs::ElectronTownsend(const double ex, const double ey,
     // Interpolation in user table.
     return Medium::ElectronTownsend(ex, ey, ez, bx, by, bz, alpha);
   }
-  return false;
+  const double emag = sqrt(ex * ex + ey * ey + ez * ez);
+  if (emag > Small) {
+    alpha = m_eImpactA * exp(-pow(m_eImpactB / emag, 1.82));
+  } 
+  return true;
 }
 
 bool MediumGaAs::ElectronAttachment(const double ex, const double ey,
@@ -102,10 +113,15 @@ bool MediumGaAs::HoleVelocity(const double ex, const double ey, const double ez,
     // Interpolation in user table.
     return Medium::HoleVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
   }
-  // Calculate the mobility
-  double mu = m_hMobility;
-  const double b = sqrt(bx * bx + by * by + bz * bz);
-  if (b < Small) {
+  // Calculate the mobility.
+  // - J. J. Barnes, R. J. Lomax, G. I. Haddad, 
+  //   IEEE Trans. Electron Devices ED-23 (1976), 1042–1048.
+  const double emag = sqrt(ex * ex + ey * ey + ez * ez);
+  // Inverse of the critical field.
+  constexpr double r = 1. / 4000.;
+  const double mu = (m_hMobility + m_hSatVel * r) / (1. + emag * r);
+  const double bmag = sqrt(bx * bx + by * by + bz * bz);
+  if (bmag < Small) {
     vx = mu * ex;
     vy = mu * ey;
     vz = mu * ez;
@@ -114,7 +130,7 @@ bool MediumGaAs::HoleVelocity(const double ex, const double ey, const double ez,
     const double muH = m_hHallFactor * mu;
     const double mu2 = muH * muH;
     const double eb = bx * ex + by * ey + bz * ez;
-    const double f = mu / (1. + mu2 * b * b);
+    const double f = mu / (1. + mu2 * bmag * bmag);
     // Compute the drift velocity using the Langevin equation.
     vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
     vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
@@ -131,7 +147,12 @@ bool MediumGaAs::HoleTownsend(const double ex, const double ey, const double ez,
     // Interpolation in user table.
     return Medium::HoleTownsend(ex, ey, ez, bx, by, bz, alpha);
   }
-  return false;
+  const double emag = sqrt(ex * ex + ey * ey + ez * ez);
+  if (emag > Small) {
+    // alpha = m_hImpactA * exp(-m_hImpactB / emag);
+    alpha = m_hImpactA * exp(-pow(m_hImpactB / emag, 1.75));
+  } 
+  return true;
 }
 
 bool MediumGaAs::HoleAttachment(const double ex, const double ey,
@@ -145,16 +166,31 @@ bool MediumGaAs::HoleAttachment(const double ex, const double ey,
   return true;
 }
 
-void MediumGaAs::SetLowFieldMobility(const double mue, const double muh) {
-  if (mue <= 0. || muh <= 0.) {
-    std::cerr << m_className << "::SetLowFieldMobility:\n"
-              << "    Mobility must be greater than zero.\n";
-    return;
-  }
+void MediumGaAs::UpdateTransportParameters() {
 
-  m_eMobility = mue;
-  m_hMobility = muh;
-  m_hasUserMobility = true;
-  m_isChanged = true;
+  // Update the low field lattice mobility.
+  // Temperature dependence as in Sentaurus Device and Silvaco Atlas.
+  constexpr double eMu0 = 8.0e-6;
+  constexpr double hMu0 = 0.4e-6;
+  const double t = m_temperature / 300.;
+  m_eMobility = eMu0 / t;
+  m_hMobility = hMu0 * pow(t, -2.1);
+
+  //  - J. S. Blakemore, Journal of Applied Physics 53, R123 (1982)
+  //    https://doi.org/10.1063/1.331665
+  // m_eMobility = 8.0e-6 * pow(t, -2.3);
+
+  // Update the saturation velocity.
+  //  - M. J. Littlejohn, J. R. Hauser, T. H. Glisson, 
+  //    J. Appl. Phys. 48 (1977), 4587
+  m_eSatVel = std::max(1.13e-2 - 3.6e-3 * t, 5.e-4);
+  m_hSatVel = std::max(1.13e-2 - 3.6e-3 * t, 5.e-4);
+
+  // Update the impact ionization parameters.
+  // Selberherr model parameters from Silvaco Atlas.
+  m_eImpactA = 1.889e5 * (1. + 0.588 * (t  - 1));
+  m_hImpactA = 2.215e5 * (1. + 0.588 * (t  - 1));
+  m_eImpactB = 5.75e5 * (1. + 0.248 * (t  - 1));
+  m_hImpactB = 6.57e5 * (1. + 0.248 * (t  - 1));
 }
 }

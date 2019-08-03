@@ -40,20 +40,24 @@ class MediumGaAs : public Medium {
                       const double bx, const double by, const double bz,
                       double& eta) override;
 
-  void SetLowFieldMobility(const double mue, const double muh);
-
  private:
   // Band-gap energy [eV]
   // double m_bandGap = 1.42;
   // Low-field mobility
-  double m_eMobility = 8.8e-6;
-  double m_hMobility = 3.2e-6;
+  double m_eMobility = 8.0e-6;
+  double m_hMobility = 0.4e-6;
+  // Saturation velocity
+  double m_eSatVel = 7.7e-3;
+  double m_hSatVel = 7.7e-3;
   // Hall factor
   double m_eHallFactor = 1.05;
   double m_hHallFactor = 1.25;
-
-  // Models
-  bool m_hasUserMobility = false;
+  // Impact ionization parameters
+  double m_eImpactA = 1.889e5;
+  double m_hImpactA = 2.215e5;
+  double m_eImpactB = 5.75e5;
+  double m_hImpactB = 6.57e5;
+  void UpdateTransportParameters();
 };
 }
 
