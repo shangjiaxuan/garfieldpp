@@ -1,14 +1,8 @@
-#include <algorithm>
 #include <cmath>
-#include <fstream>
 #include <iostream>
-#include <sstream>
-#include <vector>
 
-#include "Garfield/FundamentalConstants.hh"
-#include "Garfield/GarfieldConstants.hh"
 #include "Garfield/MediumCdTe.hh"
-#include "Garfield/Random.hh"
+#include "Garfield/GarfieldConstants.hh"
 
 namespace Garfield {
 
@@ -17,7 +11,7 @@ MediumCdTe::MediumCdTe() : Medium() {
   m_name = "CdTe";
 
   SetTemperature(300.);
-  SetDielectricConstant(11.);
+  SetDielectricConstant(10.9);
   SetAtomicNumber(48.52);
   SetAtomicWeight(240.01);
   SetMassDensity(5.85);
@@ -48,6 +42,10 @@ bool MediumCdTe::ElectronVelocity(const double ex, const double ey,
                                   const double by, const double bz, double& vx,
                                   double& vy, double& vz) {
   vx = vy = vz = 0.;
+  if (m_isChanged) {
+    UpdateTransportParameters();
+    m_isChanged = false;
+  }
   if (!m_eVelE.empty()) {
     // Interpolation in user table.
     return Medium::ElectronVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
@@ -101,6 +99,10 @@ bool MediumCdTe::HoleVelocity(const double ex, const double ey, const double ez,
                               const double bx, const double by, const double bz,
                               double& vx, double& vy, double& vz) {
   vx = vy = vz = 0.;
+  if (m_isChanged) {
+    UpdateTransportParameters();
+    m_isChanged = false;
+  }
   if (!m_hVelE.empty()) {
     // Interpolation in user table.
     return Medium::HoleVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
@@ -154,23 +156,24 @@ void MediumCdTe::SetLowFieldMobility(const double mue, const double muh) {
               << "    Mobility must be greater than zero.\n";
     return;
   }
-
   m_eMobility = mue;
   m_hMobility = muh;
-  m_hasUserMobility = true;
+  m_userMobility = true;
   m_isChanged = true;
 }
 
-void MediumCdTe::SetSaturationVelocity(const double vsate, const double vsath) {
-  if (vsate <= 0. || vsath <= 0.) {
-    std::cout << m_className << "::SetSaturationVelocity:\n"
-              << "    Restoring default values.\n";
-    m_hasUserSaturationVelocity = false;
-  } else {
-    m_eSatVel = vsate;
-    m_hSatVel = vsath;
-    m_hasUserSaturationVelocity = true;
-  }
+void MediumCdTe::UnsetLowFieldMobility() {
+  m_userMobility = false;
   m_isChanged = true;
 }
+
+void MediumCdTe::UpdateTransportParameters() {
+
+  if (!m_userMobility) {
+    const double t = m_temperature / 300.;
+    m_eMobility = 1.05e-6 * pow(t, -1.7);
+    m_hMobility = 0.1e-6 * pow(t, 1.67);
+  }
+}
+
 }

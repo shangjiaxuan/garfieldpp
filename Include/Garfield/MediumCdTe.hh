@@ -41,24 +41,21 @@ class MediumCdTe : public Medium {
                       double& eta) override;
 
   void SetLowFieldMobility(const double mue, const double muh);
-  void SetSaturationVelocity(const double vsate, const double vsath);
+  void UnsetLowFieldMobility();
 
  private:
   // Band gap energy [eV]
   // m_bandGap = 1.44;
   // Low-field mobility
-  double m_eMobility = 1.1e-6;
+  double m_eMobility = 1.05e-6;
   double m_hMobility = 0.1e-6;
-  // Saturation velocity
-  double m_eSatVel = 1.02e-2;
-  double m_hSatVel = 0.72e-2;
   // Hall factor
   double m_eHallFactor = 1.15;
   double m_hHallFactor = 0.7;
 
-  // Models
-  bool m_hasUserMobility = false;
-  bool m_hasUserSaturationVelocity = false;
+  bool m_userMobility = false;
+
+  void UpdateTransportParameters();
 };
 }
 

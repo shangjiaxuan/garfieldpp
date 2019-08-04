@@ -45,6 +45,10 @@ bool MediumGaAs::ElectronVelocity(const double ex, const double ey,
                                   const double by, const double bz, double& vx,
                                   double& vy, double& vz) {
   vx = vy = vz = 0.;
+  if (m_isChanged) {
+    UpdateTransportParameters();
+    m_isChanged = false;
+  }
   if (!m_eVelE.empty()) {
     // Interpolation in user table.
     return Medium::ElectronVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
@@ -82,6 +86,10 @@ bool MediumGaAs::ElectronTownsend(const double ex, const double ey,
                                   const double by, const double bz,
                                   double& alpha) {
   alpha = 0.;
+  if (m_isChanged) {
+    UpdateTransportParameters();
+    m_isChanged = false;
+  }
   if (!m_eAlp.empty()) {
     // Interpolation in user table.
     return Medium::ElectronTownsend(ex, ey, ez, bx, by, bz, alpha);
@@ -109,6 +117,10 @@ bool MediumGaAs::HoleVelocity(const double ex, const double ey, const double ez,
                               const double bx, const double by, const double bz,
                               double& vx, double& vy, double& vz) {
   vx = vy = vz = 0.;
+  if (m_isChanged) {
+    UpdateTransportParameters();
+    m_isChanged = false;
+  }
   if (!m_hVelE.empty()) {
     // Interpolation in user table.
     return Medium::HoleVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
@@ -143,6 +155,10 @@ bool MediumGaAs::HoleTownsend(const double ex, const double ey, const double ez,
                               const double bx, const double by, const double bz,
                               double& alpha) {
   alpha = 0.;
+  if (m_isChanged) {
+    UpdateTransportParameters();
+    m_isChanged = false;
+  }
   if (!m_hAlp.empty()) {
     // Interpolation in user table.
     return Medium::HoleTownsend(ex, ey, ez, bx, by, bz, alpha);
@@ -166,16 +182,35 @@ bool MediumGaAs::HoleAttachment(const double ex, const double ey,
   return true;
 }
 
+void MediumGaAs::SetLowFieldMobility(const double mue, const double muh) {
+
+  if (mue <= 0. || muh <= 0.) {
+    std::cerr << m_className << "::SetLowFieldMobility:\n"
+              << "    Mobility must be greater than zero.\n";
+    return;
+  }
+  m_eMobility = mue;
+  m_hMobility = muh;
+  m_userMobility = true;
+  m_isChanged = true;
+}
+
+void MediumGaAs::UnsetLowFieldMobility() {
+  m_userMobility = false;
+  m_isChanged = true;
+}
+
 void MediumGaAs::UpdateTransportParameters() {
 
-  // Update the low field lattice mobility.
-  // Temperature dependence as in Sentaurus Device and Silvaco Atlas.
-  constexpr double eMu0 = 8.0e-6;
-  constexpr double hMu0 = 0.4e-6;
   const double t = m_temperature / 300.;
-  m_eMobility = eMu0 / t;
-  m_hMobility = hMu0 * pow(t, -2.1);
-
+  // Update the low field lattice mobility.
+  if (!m_userMobility) {
+    // Temperature dependence as in Sentaurus Device and Silvaco Atlas.
+    constexpr double eMu0 = 8.0e-6;
+    constexpr double hMu0 = 0.4e-6;
+    m_eMobility = eMu0 / t;
+    m_hMobility = hMu0 * pow(t, -2.1);
+  }
   //  - J. S. Blakemore, Journal of Applied Physics 53, R123 (1982)
   //    https://doi.org/10.1063/1.331665
   // m_eMobility = 8.0e-6 * pow(t, -2.3);

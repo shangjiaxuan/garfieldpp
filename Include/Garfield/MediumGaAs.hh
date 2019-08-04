@@ -40,6 +40,9 @@ class MediumGaAs : public Medium {
                       const double bx, const double by, const double bz,
                       double& eta) override;
 
+  void SetLowFieldMobility(const double mue, const double muh);
+  void UnsetLowFieldMobility();
+
  private:
   // Band-gap energy [eV]
   // double m_bandGap = 1.42;
@@ -57,6 +60,8 @@ class MediumGaAs : public Medium {
   double m_hImpactA = 2.215e5;
   double m_eImpactB = 5.75e5;
   double m_hImpactB = 6.57e5;
+
+  bool m_userMobility = false;
   void UpdateTransportParameters();
 };
 }
