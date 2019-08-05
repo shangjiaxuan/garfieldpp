@@ -1052,13 +1052,16 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
                 m_sensor->ElectricField(xp, yp, zp, fx, fy, fz, med, status);
                 // Check if this location is inside a drift medium/area.
                 if (status != 0 || !m_sensor->IsInArea(xp, yp, zp)) continue;
-                // Increment the electron and ion counters.
-                ++m_nElectrons;
-                ++m_nIons;
                 // Make sure we haven't jumped across a wire.
                 if (m_sensor->IsWireCrossed(x, y, z, xp, yp, zp, xc, yc, zc, 
                                             false, rc)) {
                   continue;
+                }
+                // Increment the electron and ion counters.
+                ++m_nElectrons;
+                ++m_nIons;
+                if (m_userHandleIonisation) {
+                  m_userHandleIonisation(xp, yp, zp, t, cstype, level, medium);
                 }
                 if (!aval) continue;
                 // Add the Penning electron to the list.
