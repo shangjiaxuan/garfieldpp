@@ -2327,8 +2327,10 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
     return false;
   }
 
-  std::cout << m_className << "::InitializeTetrahedralTree:\n"
-            << "    About to initialize the tetrahedral tree.\n";
+  if (m_debug) {
+    std::cout << m_className << "::InitializeTetrahedralTree:\n"
+              << "    About to initialize the tetrahedral tree.\n";
+  }
 
   // Cache the bounding boxes if it has not been done yet.
   if (!m_cacheElemBoundingBoxes) CalculateElementBoundingBoxes();
@@ -2355,10 +2357,12 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
     zmax = std::max(zmax, n.z);
   }
 
-  std::cout << "    Bounding box:\n"
-            << std::scientific << "\tx: " << xmin << " -> " << xmax << "\n"
-            << std::scientific << "\ty: " << ymin << " -> " << ymax << "\n"
-            << std::scientific << "\tz: " << zmin << " -> " << zmax << "\n";
+  if (m_debug) {
+    std::cout << "    Bounding box:\n"
+              << std::scientific << "\tx: " << xmin << " -> " << xmax << "\n"
+              << std::scientific << "\ty: " << ymin << " -> " << ymax << "\n"
+              << std::scientific << "\tz: " << zmin << " -> " << zmax << "\n";
+  }
 
   const double hx = 0.5 * (xmax - xmin);
   const double hy = 0.5 * (ymax - ymin);
@@ -2366,26 +2370,24 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   m_tetTree = new TetrahedralTree(Vec3(xmin + hx, ymin + hy, zmin + hz),
                                   Vec3(hx, hy, hz));
 
-  std::cout << "    Tree instantiated.\n";
+  if (m_debug) std::cout << "    Tree instantiated.\n";
 
-  // insert all mesh nodes in the tree
+  // Insert all mesh nodes in the tree
   for (unsigned int i = 0; i < nodes.size(); i++) {
     const Node& n = nodes[i];
     m_tetTree->InsertMeshNode(Vec3(n.x, n.y, n.z), i);
   }
 
-  std::cout << m_className << "::InitializeTetrahedralTree:\n"
-            << "    Tetrahedral tree nodes initialized successfully.\n";
+  if (m_debug) std::cout << "    Tree nodes initialized successfully.\n"; 
 
-  // insert all mesh elements (tetrahedrons) in the tree
+  // Insert all mesh elements (tetrahedrons) in the tree
   for (unsigned int i = 0; i < elements.size(); i++) {
     const Element& e = elements[i];
     const double bb[6] = {e.xmin, e.ymin, e.zmin, e.xmax, e.ymax, e.zmax};
     m_tetTree->InsertTetrahedron(bb, i);
   }
 
-  std::cerr << m_className << "::InitializeTetrahedralTree:\n";
-  std::cerr << "    Tetrahedral tree initialized successfully.\n";
+  std::cout << m_className << "::InitializeTetrahedralTree: Success.\n";
 
   m_isTreeInitialized = true;
   return true;

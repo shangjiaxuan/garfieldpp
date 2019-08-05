@@ -208,7 +208,7 @@ class ComponentFieldMap : public ComponentBase {
   bool m_checkMultipleElement = false;
 
   // Tetrahedral tree
-  bool m_useTetrahedralTree = false;
+  bool m_useTetrahedralTree = true;
   bool m_isTreeInitialized = false;
   TetrahedralTree* m_tetTree = nullptr;
 
