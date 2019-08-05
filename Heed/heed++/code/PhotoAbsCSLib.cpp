@@ -231,6 +231,9 @@ ExAtomPhotoAbsCS Argon_PACS =
 
 ExAtomPhotoAbsCS Gallium_PACS(31, shelllist_dir_name + "shelllist.dat",
                               pacs_table_dir_name + "Ga.dat");
+ExAtomPhotoAbsCS Gallium_for_GaAs_PACS(31, shelllist_dir_name + "shelllist_solid.dat",
+                                       pacs_table_dir_name + "Ga.dat",
+                                       "Ga_for_GaAs");
 ExAtomPhotoAbsCS Germanium_PACS(32, shelllist_dir_name + "shelllist.dat",
                                 pacs_table_dir_name + "Ge.dat");
 ExAtomPhotoAbsCS Germanium_crystal_PACS(32,
@@ -239,14 +242,24 @@ ExAtomPhotoAbsCS Germanium_crystal_PACS(32,
                                         "Ge_crystal", 0.67e-06);
 ExAtomPhotoAbsCS Arsenic_PACS(33, shelllist_dir_name + "shelllist.dat",
                               pacs_table_dir_name + "As.dat");
+ExAtomPhotoAbsCS Arsenic_for_GaAs_PACS(33, shelllist_dir_name + "shelllist_solid.dat",
+                                      pacs_table_dir_name + "As.dat",
+                                      "As_for_GaAs");
 ExAtomPhotoAbsCS Bromine_PACS(35, shelllist_dir_name + "shelllist.dat",
                               pacs_table_dir_name + "Br.dat");
 ExAtomPhotoAbsCS Krypton_PACS(36, shelllist_dir_name + "shelllist.dat",
                               pacs_table_dir_name + "Kr.dat");
 ExAtomPhotoAbsCS Cadmium_PACS(48, shelllist_dir_name + "shelllist.dat",
                               pacs_table_dir_name + "Cd.dat");
-ExAtomPhotoAbsCS Tellurium_PACS(49, shelllist_dir_name + "shelllist.dat",
+ExAtomPhotoAbsCS Cadmium_for_CdTe_PACS(48, shelllist_dir_name + "shelllist_solid.dat",
+                                       pacs_table_dir_name + "Cd.dat",
+                                       "Cd_for_CdTe");
+ExAtomPhotoAbsCS Tellurium_PACS(52, shelllist_dir_name + "shelllist.dat",
                                 pacs_table_dir_name + "Te.dat");
+ExAtomPhotoAbsCS Tellurium_for_CdTe_PACS(52, 
+                                         shelllist_dir_name + "shelllist_solid.dat",
+                                         pacs_table_dir_name + "Te.dat",
+                                         "Te_for_CdTe");
 ExAtomPhotoAbsCS Xenon_PACS(54, shelllist_dir_name + "shelllist.dat",
                             pacs_table_dir_name + "Xe.dat");
 ExAtomPhotoAbsCS Caesium_PACS(55, shelllist_dir_name + "shelllist.dat",
