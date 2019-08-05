@@ -201,6 +201,7 @@ class AvalancheMicroscopic {
   void SetUserHandleStep(void (*f)(double x, double y, double z, double t,
                                    double e, double dx, double dy, double dz,
                                    bool hole));
+  /// Deactivate the user handle called at every step.
   void UnsetUserHandleStep() { m_userHandleStep = nullptr; }
   /// Set a user handling procedure, to be called at every (real) collision.
   void SetUserHandleCollision(void (*f)(double x, double y, double z, double t,
@@ -208,18 +209,23 @@ class AvalancheMicroscopic {
                                         double e0, double e1,
                                         double dx0, double dy0, double dz0,
                                         double dx1, double dy1, double dz1));
+  /// Deactivate the user handle called at every collision.
   void UnsetUserHandleCollision() { m_userHandleCollision = nullptr; }
   /// Set a user handling procedure, to be called at every attachment.
   void SetUserHandleAttachment(void (*f)(double x, double y, double z, double t,
                                          int type, int level, Medium* m));
+  /// Deactivate the user handle called at every attachment.
   void UnsetUserHandleAttachment() { m_userHandleAttachment = nullptr; }
   /// Set a user handling procedure, to be called at every inelastic collision.
   void SetUserHandleInelastic(void (*f)(double x, double y, double z, double t,
                                         int type, int level, Medium* m));
+  /// Deactivate the user handle called at every inelastic collision.
   void UnsetUserHandleInelastic() { m_userHandleInelastic = nullptr; }
-  /// Set a user handling procedure, to be called at every ionising collision.
+  /// Set a user handling procedure, to be called at every ionising collision
+  /// or excitation followed by Penning transfer.
   void SetUserHandleIonisation(void (*f)(double x, double y, double z, double t,
                                          int type, int level, Medium* m));
+  /// Deactivate the user handle called at every ionisation.
   void UnsetUserHandleIonisation() { m_userHandleIonisation = nullptr; }
 
   /// Switch on debugging messages.

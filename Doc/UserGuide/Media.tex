@@ -11,7 +11,7 @@ unsigned int GetNumberOfComponents();
 void GetComponent(const unsigned int i, std::string& label, double& f);
 \end{lstlisting} 
 
-\section{Transport Parameters}
+\section{Transport parameters}
 
 \texttt{Medium} classes provide functions for calculating the 
 macroscopic transport 
@@ -88,7 +88,7 @@ along the two remaining axes.
   \label{Tab:PressureScaling}
 \end{table}
 
-\subsection{Transport Tables}
+\subsection{Transport parameter tables}
 
 The transport parameters can either be stored in a 
 one-dimensional table (as a function of the electric field only) or 
@@ -260,12 +260,12 @@ void SetRangeB(const double bmin, const double bmax, const bool logscale);
 void SetRangeA(const double amin, const double amax, const bool logscale);
 void SetRangeY(const double ymin, const double ymax, const bool logscale);
 \end{lstlisting} 
-\section{Electron Scattering Rates}
+\section{Electron scattering rates}
 
 For calculating electron drift lines using ``microscopic tracking'' 
 (see Sec.~\ref{Sec:MicroscopicTracking}),
-the preparation of an electron transport table is not necessary, 
-since this method is based directly on the electron-atom/molecule 
+the preparation of a table of electron transport parameters, 
+since this method uses directly the electron-atom/molecule 
 scattering rates. 
 
 The following functions which are meant to be called from within the 
@@ -323,7 +323,7 @@ bool GetElectronCollision(const double e, int& type, int& level,
 \end{table}
 \section{Gases}
 
-There are currently two classes implemented which can be used for the 
+There are currently two classes implemented that can be used for the 
 description of gaseous media: \texttt{MediumGas} and its 
 daughter class \texttt{MediumMagboltz}. 
 While \texttt{MediumGas} deals only with the interpolation of gas tables 
@@ -382,14 +382,15 @@ void PrintGas();
 prints information about the present transport parameter tables and 
 cross-section terms (if available). 
 
-\subsection{Ion Transport}
+\subsection{Ion transport}
 
 The \texttt{\$GARFIELD\_HOME/Data} directory includes a few files 
 (\textit{e.~g.} \texttt{IonMobility\_Ar+\_Ar.txt} for Ar\(^{+}\) ions in argon) 
-which contain ion mobility data in form of 
-a table of reduced electric fields \(E/N\) 
-(in Td\footnote{1\,Td = 10\(^{-17}\) V\,cm\(^{2}\)}) vs. 
-mobilities (in cm\(^{2}\)\,V\(^{-1}\)\,s\(^{-1}\)). 
+containing ion mobility data (more precisely: a table of 
+reduced electric fields \(E/N\) and corresponding mobilities).
+The reduced electric fields are given in units of   
+Td\footnote{1\,Td = 10\(^{-17}\) V\,cm\(^{2}\)}) and the mobility values 
+in cm\(^{2}\)\,V\(^{-1}\)\,s\(^{-1}\). 
 These mobility files can be imported using
 \begin{lstlisting}
 bool MediumGas::LoadIonMobility(const std::string& filename);
@@ -402,9 +403,10 @@ can be found in Refs.~\cite{Ellis1976,Ellis1978,Ellis1984,Viehland1995}.
 
 \subsection{Magboltz}
 
-Magboltz, written by Steve Biagi, is a program \cite{Biagi1999} 
+Magboltz, written by Steve Biagi, is a program 
 for the calculation of electron transport properties in gas 
-mixtures using semi-classical Monte Carlo simulation. 
+mixtures using semi-classical Monte Carlo simulation
+\cite{Biagi1999}. 
 It includes a database of electron-atom/molecule cross-sections 
 for a large number of detection gases. 
 
@@ -491,7 +493,7 @@ bool LoadGasFile(const std::string& filename);
 The format of the gas file used in Garfield++ is compatible with the 
 one used in Garfield 9. 
 
-\subsubsection{Scattering Rates}
+\subsubsection{Scattering rates}
 
 As a prerequisite for ``microscopic tracking'' a 
 table of the electron scattering rates 
@@ -564,7 +566,7 @@ The counters can be reset using
 void ResetCollisionCounters();
 \end{lstlisting} 
 
-\subsubsection{Excitation Transfer}
+\subsubsection{Excitation transfer}
 
 Penning transfer can be taken into account in terms of a transfer efficiency 
 \(r_{i}\), \textit{i.\,e.} the probability for an excited level \(i\) with an  
@@ -606,15 +608,13 @@ energy above the ionisation potential of the gas mixture, and
 $r_{\text{ion}, i}$ is the rate of an ionization level $i$.
 
 \section{Semiconductors}
-\texttt{MediumSilicon} is the only semiconductor-type \texttt{Medium} class implemented 
-so far. 
-\subsection{Transport Parameters}
+\subsection{Silicon}
 Like for all \texttt{Medium} classes the user has the possibility to specify the 
 transport parameters in tabulated form 
 as function of electric field, magnetic field, and angle. 
 If no such tables have been entered, the transport parameters are calculated 
 based on empirical parameterizations (as used, for instance, in device simulation 
-programs). Several mobility models are implemented.
+programs). Several mobility models are implemented in \texttt{MediumSilicon}.
 \begin{table}
   \begin{tabular}{l . . . .}
     \toprule
@@ -657,10 +657,10 @@ void SetLatticeMobilityModelReggiani();
   \end{lstlisting} 
   In all cases, the dependence of the lattice mobility \(\mu_{L}\) 
   on the temperature \(T\) is described by 
-  \begin{equation*}
+  \begin{equation}\label{Eqn:LatticeMobilityTemperatureDependence}
     \mu_{L}\left(T\right) = \mu_{L}\left(T_{0}\right) 
               \left(\frac{T}{T_{0}}\right)^{\beta}, \qquad T_{0} = 300\text{ K}.
-  \end{equation*}
+  \end{equation}
   The values of the parameters \(\mu_{L}\left(T_{0}\right)\) and \(\beta\) 
   used in the different models are shown in Table~\ref{Tab:LatticeMobility}. 
   By default, the ``Sentaurus'' model is activated. 
@@ -738,4 +738,37 @@ void SetImpactIonisationModelMassey();
 By default, the model by van Overstraeten and de Man is used.
 
 On an experimental basis, electron collision rates for use with microscopic tracking 
-are also included. 
+are also included.
+ 
+\subsection{Gallium arsenide}
+By default, \texttt{MediumGaAs} uses 
+Eq.~\eqref{Eqn:LatticeMobilityTemperatureDependence} for calculating the 
+low-field lattice mobility, with 
+\begin{equation*}
+\mu_{L}\left(T = 300\,\text{K}\right) = 8\times10^{-6}\,\text{cm}^{2}\,\text{V}^{-1}\,\text{ns}^{-1}, \qquad \beta=-1
+\end{equation*}
+for electrons and 
+\begin{equation*}
+\mu_{L}\left(T = 300\,\text{K}\right) = 0.4\times10^{-6}\,\text{cm}^{2}\,\text{V}^{-1}\,\text{ns}^{-1}, \beta=-2.1
+\end{equation*}
+for holes. Alternatively, the low-field mobilities can be set explicitly using
+\begin{lstlisting}
+SetLowFieldMobility(const double mue, const double muh);
+\end{lstlisting}
+For the dependence of the mobility on the electric field $E$, the 
+parameterizations \cite{Barnes1976} 
+\begin{equation*}
+  \mu^{e}\left(E\right) = \frac{\mu_{0}^{e} + \frac{v_{\text{sat}}}{E}\left(\frac{E}{E_{c}}\right)^{4}}{1 + \left(\frac{E}{E_{c}}\right)^4}, \qquad
+  \mu^{h}\left(E\right) = \frac{\mu_{0}^{h} + \frac{v_{\text{sat}}}{E_{c}}}{1 + \frac{E}{E_{c}}}, \qquad E_{c} = 4000\,\text{V}\,/\,\text{cm}
+\end{equation*}
+are used, and the saturation velocity is calculated using
+\begin{equation*}
+  v_{\text{sat}}^{e,h} = 1.13\times10^{-2} - 3.6\times10^{-3}\left(\frac{T}{T_{0}}\right)\,\text{cm}\,/\,\text{ns}. 
+\end{equation*}
+
+The Townsend (impact ionization) coefficient as a function of the 
+electric field $E$ is calculated using
+\begin{equation*}
+  \alpha^{e} = a \exp\left(-\left(\frac{b}{E}\right)^{1.75}\right), \qquad
+  \alpha^{h} = a \exp\left(-\left(\frac{b}{E}\right)^{1.82}\right).
+\end{equation*} 
