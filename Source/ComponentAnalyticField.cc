@@ -1321,7 +1321,7 @@ bool ComponentAnalyticField::ForcesOnWire(
   m_w[iw].x = x0;
   m_w[iw].y = y0;
   Setup();
-  return true;
+  return ok;
 }
 
 void ComponentAnalyticField::SetNumberOfSteps(const unsigned int n) {
