@@ -38,11 +38,11 @@ class ViewSignal : public ViewBase {
 
   /** Retrieve the histogram for the induced signal.
     * \param h histogram to be returned
-               ('t': total, 'e': electron-induced, 'h': ion-induced).
+               ('t': total, 'e': electron-induced, 'i': ion/hole-induced).
     **/
   TH1D* GetHistogram(const char h = 't') {
     return h == 'e' ? m_hSignalElectrons.get()
-                    : 'i' ? m_hSignalIons.get() : m_hSignal.get();
+               : h == 'i' ? m_hSignalIons.get() : m_hSignal.get();
   }
 
   /// Set the x-axis limits explicitly.
