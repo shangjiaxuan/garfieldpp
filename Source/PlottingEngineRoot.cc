@@ -24,7 +24,6 @@ void PlottingEngineRoot::SetDefaultStyle() {
   m_garfieldStyle.SetFillStyle(1001);
   m_garfieldStyle.SetCanvasBorderMode(0);
   m_garfieldStyle.SetCanvasColor(0);
-  m_garfieldStyle.SetCanvasPreferGL(kTRUE);
   m_garfieldStyle.SetCanvasDefH(600);
   m_garfieldStyle.SetCanvasDefW(600);
   m_garfieldStyle.SetPadBorderMode(0);
@@ -33,8 +32,6 @@ void PlottingEngineRoot::SetDefaultStyle() {
   m_garfieldStyle.SetPadBottomMargin(0.1);
   m_garfieldStyle.SetPadRightMargin(0.05);
   m_garfieldStyle.SetPadTopMargin(0.05);
-  m_garfieldStyle.SetPadTickX(1);
-  m_garfieldStyle.SetPadTickY(1);
   m_garfieldStyle.SetPadTickX(1);
   m_garfieldStyle.SetPadTickY(1);
   m_garfieldStyle.SetFrameFillColor(0);
