@@ -1193,18 +1193,17 @@ bool ComponentAnalyticField::ForcesOnWire(
       bxmin /= corr;
       bymin /= corr;
     }
-    // TODO! Shouldn't this be BXMIN, BYMAX?
-    corr = sqrt((bxmin * bxmin + bymin * bymin) / d2);
+    corr = sqrt((bxmin * bxmin + bymax * bymax) / d2);
     if (corr > 1.) {
       bxmin /= corr;
       bymax /= corr;
     }
-    corr = sqrt((bxmin * bxmin + bymin * bymin) / d2);
+    corr = sqrt((bxmax * bxmax + bymin * bymin) / d2);
     if (corr > 1.) {
       bxmax /= corr;
       bymin /= corr;
     }
-    corr = sqrt((bxmin * bxmin + bymin * bymin) / d2);
+    corr = sqrt((bxmax * bxmax + bymax * bymax) / d2);
     if (corr > 1) {
       bxmax /= corr;
       bymax /= corr;
