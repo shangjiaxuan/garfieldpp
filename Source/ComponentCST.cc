@@ -727,12 +727,9 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   std::sort(m_ylines.begin(), m_ylines.end());
   std::sort(m_zlines.begin(), m_zlines.end());
   if (funit != 1) {
-    std::transform(m_xlines.begin(), m_xlines.end(), m_xlines.begin(),
-                   std::bind1st(std::multiplies<double>(), funit));
-    std::transform(m_ylines.begin(), m_ylines.end(), m_ylines.begin(),
-                   std::bind1st(std::multiplies<double>(), funit));
-    std::transform(m_zlines.begin(), m_zlines.end(), m_zlines.begin(),
-                   std::bind1st(std::multiplies<double>(), funit));
+    std::transform(m_xlines.begin(), m_xlines.end(), m_xlines.begin(), [funit](double x) { return x * funit;});
+    std::transform(m_ylines.begin(), m_ylines.end(), m_ylines.begin(), [funit](double x) { return x * funit;});
+    std::transform(m_zlines.begin(), m_zlines.end(), m_zlines.begin(), [funit](double x) { return x * funit;});
   }
 
   std::cout << m_className << "::Initialise" << std::endl;
@@ -974,12 +971,9 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
 
 void ComponentCST::ShiftComponent(const double xShift, const double yShift,
                                   const double zShift) {
-  std::transform(m_xlines.begin(), m_xlines.end(), m_xlines.begin(),
-                 std::bind1st(std::plus<double>(), xShift));
-  std::transform(m_ylines.begin(), m_ylines.end(), m_ylines.begin(),
-                 std::bind1st(std::plus<double>(), yShift));
-  std::transform(m_zlines.begin(), m_zlines.end(), m_zlines.begin(),
-                 std::bind1st(std::plus<double>(), zShift));
+  std::transform(m_xlines.begin(), m_xlines.end(), m_xlines.begin(), [xShift](double x) { return x + xShift;});
+  std::transform(m_ylines.begin(), m_ylines.end(), m_ylines.begin(), [yShift](double x) { return x + yShift;});
+  std::transform(m_zlines.begin(), m_zlines.end(), m_zlines.begin(), [zShift](double x) { return x + zShift;});
   SetRange();
   UpdatePeriodicity();
 
