@@ -98,7 +98,12 @@ class ComponentAnalyticField : public ComponentBase {
   /// Add a plane at constant y.
   void AddPlaneY(const double y, const double voltage,
                  const std::string& label);
-
+  /// Add a plane at constant radius.
+  void AddPlaneR(const double r, const double voltage,
+                 const std::string& label);
+  /// Add a plane at constant phi.
+  void AddPlanePhi(const double phi, const double voltage,
+                   const std::string& label);
   /// Add a strip in the y or z direction on an existing plane at constant x.
   void AddStripOnPlaneX(const char direction, const double x, const double smin,
                         const double smax, const std::string& label,
@@ -107,6 +112,14 @@ class ComponentAnalyticField : public ComponentBase {
   void AddStripOnPlaneY(const char direction, const double y, const double smin,
                         const double smax, const std::string& label,
                         const double gap = -1.);
+  /// Add a strip in the phi or z direction on an existing plane at constant radius.
+  void AddStripOnPlaneR(const char direction, const double r, const double smin,
+                        const double smax, const std::string& label,
+                        const double gap = -1.);
+  /// Add a strip in the r or z direction on an existing plane at constant phi.
+  void AddStripOnPlanePhi(const char direction, const double phi, const double smin,
+                          const double smax, const std::string& label,
+                          const double gap = -1.);
   /// Add a pixel on an existing plane at constant x.
   void AddPixelOnPlaneX(const double x, const double ymin, const double ymax,
                         const double zmin, const double zmax,
@@ -115,15 +128,36 @@ class ComponentAnalyticField : public ComponentBase {
   void AddPixelOnPlaneY(const double y, const double xmin, const double xmax,
                         const double zmin, const double zmax,
                         const std::string& label, const double gap = -1.);
+  /// Add a pixel on an existing plane at constant radius.
+  void AddPixelOnPlaneR(const double r, 
+                        const double phimin, const double phimax,
+                        const double zmin, const double zmax,
+                        const std::string& label, const double gap = -1.);
+  /// Add a pixel on an existing plane at constant phi.
+  void AddPixelOnPlanePhi(const double phi, 
+                          const double rmin, const double rmax,
+                          const double zmin, const double zmax,
+                          const std::string& label, const double gap = -1.);
 
   /// Set the periodic length [cm] in the x-direction.
   void SetPeriodicityX(const double s);
   /// Set the periodic length [cm] in the y-direction.
   void SetPeriodicityY(const double s);
+  /// Set the periodicity [degree] in phi.
+  void SetPeriodicityPhi(const double phi);
   /// Get the periodic length in the x-direction.
   bool GetPeriodicityX(double& s);
   /// Get the periodic length in the y-direction.
   bool GetPeriodicityY(double& s);
+  /// Get the periodicity [degree] in phi.
+  bool GetPeriodicityPhi(double& s);
+
+  /// Use Cartesian coordinates (default).
+  void SetCartesianCoordinates();
+  /// Use polar coordinates.
+  void SetPolarCoordinates();
+  /// Are polar coordinates being used?  
+  bool IsPolar() const { return m_polar; }
 
   /// Print all available information on the cell.
   void PrintCell();
@@ -179,12 +213,22 @@ class ComponentAnalyticField : public ComponentBase {
   unsigned int GetNumberOfPlanesX() const;
   /// Get the number of equipotential planes at constant y.
   unsigned int GetNumberOfPlanesY() const;
-  /// Retrieve the parameters of an x plane.
+  /// Get the number of equipotential planes at constant radius.
+  unsigned int GetNumberOfPlanesR() const;
+  /// Get the number of equipotential planes at constant phi.
+  unsigned int GetNumberOfPlanesPhi() const;
+  /// Retrieve the parameters of a plane at constant x.
   bool GetPlaneX(const unsigned int i, double& x, double& voltage,
                  std::string& label) const;
-  /// Retrieve the parameters of a y plane.
+  /// Retrieve the parameters of a plane at constant y.
   bool GetPlaneY(const unsigned int i, double& y, double& voltage,
                  std::string& label) const;
+  /// Retrieve the parameters of a plane at constant radius.
+  bool GetPlaneR(const unsigned int i, double& r, double& voltage,
+                 std::string& label) const;
+  /// Retrieve the parameters of a plane at constant phi.
+  bool GetPlanePhi(const unsigned int i, double& phi, double& voltage,
+                   std::string& label) const;
   /// Retrieve the tube parameters.
   bool GetTube(double& r, double& voltage, int& nEdges,
                std::string& label) const;
@@ -588,32 +632,6 @@ class ComponentAnalyticField : public ComponentBase {
 
   bool InTube(const double x0, const double y0, const double a,
               const int n) const;
-
-  // Transformation between cartesian and polar coordinates
-  void Cartesian2Polar(const double x0, const double y0, double& r,
-                       double& theta) const {
-    if (x0 == 0. && y0 == 0.) {
-      r = theta = 0.;
-      return;
-    }
-    r = sqrt(x0 * x0 + y0 * y0);
-    theta = atan2(y0, x0) * RadToDegree;
-  }
-
-  void Polar2Cartesian(const double r, const double theta, double& x0,
-                       double& y0) const {
-    const double thetap = theta * DegreeToRad;
-    x0 = r * cos(thetap);
-    y0 = r * sin(thetap);
-  }
-
-  // Transformation (r, theta) to (rho, phi) via the map
-  // (r, theta) = (exp(rho), 180 * phi / Pi).
-  void RTheta2RhoPhi(const double rho, const double phi, double& r,
-                     double& theta) const {
-    r = exp(rho);
-    theta = RadToDegree * phi;
-  }
 
   bool SagDetailed(const Wire& wire, const std::vector<double>& xMap,
                    const std::vector<double>& yMap,

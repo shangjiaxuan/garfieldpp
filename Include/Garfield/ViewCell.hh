@@ -57,8 +57,23 @@ class ViewCell : public ViewBase {
   std::unique_ptr<TGeoManager> m_geo;
 
   bool Plot(const bool use3d);
+  // Draw a wire in 2D.
   void PlotWire(const double x, const double y, const double d, const int type);
+  // Draw a wire in 3D.
+  void PlotWire(const double x, const double y, const double d, const int type,
+                const double lz);
+  // Draw a tube in 2D.
   void PlotTube(const double x0, const double y0, const double r, const int n);
+  // Draw a tube in 3D.
+  void PlotTube(const double x0, const double y0,
+                const double r1, const double r2, const int n,
+                const double lz); 
+  // Draw a plane in 2D.
+  void PlotPlane(const double x0, const double y0, 
+                 const double x1, const double y1);
+  // Draw a plane in 3D.
+  void PlotPlane(const double dx, const double dy, const double dz,
+                 const double x0, const double y0);
 };
 }
 #endif
