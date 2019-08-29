@@ -116,7 +116,7 @@ bool ViewCell::Plot(const bool use3d) {
   // Get the cell type.
   const std::string cellType = m_component->GetCellType();
 
-  // Get the periodicities.
+  // Get the x/y periodicities.
   double sx = 0., sy = 0.;
   const bool perX = m_component->GetPeriodicityX(sx);
   const bool perY = m_component->GetPeriodicityY(sy);
@@ -125,7 +125,11 @@ bool ViewCell::Plot(const bool use3d) {
   const int nMaxX = perX ? int(x1 / sx) + 1 : 0;
   const int nMinY = perY ? int(y0 / sy) - 1 : 0;
   const int nMaxY = perY ? int(y1 / sy) + 1 : 0;
-
+  // Get the phi periodicity.
+  double sphi = 0.;
+  const bool perPhi = m_component->GetPeriodicityPhi(sphi);
+  const int nPhi = perPhi ? int(360. / sphi) : 0;
+  sphi *= DegreeToRad; 
   if (use3d) {
     if (!m_geo) {
       m_geo.reset(new TGeoManager("ViewCellGeoManager", m_label.c_str()));
@@ -145,6 +149,7 @@ bool ViewCell::Plot(const bool use3d) {
       if (box) box->SetDimensions(halfLenghts);
     }
   }
+  const bool polar = m_component->IsPolar();
 
   // Get the number of wires.
   const unsigned int nWires = m_component->GetNumberOfWires();
@@ -173,6 +178,20 @@ bool ViewCell::Plot(const bool use3d) {
         wireTypes.push_back(lbl);
       }
     }
+    if (polar) {
+      const double r = xw;
+      for (int j = 0; j < nPhi; ++j) {
+        const double phi = yw * Garfield::DegreeToRad + j * sphi;
+        const double x = r * cos(phi);
+        const double y = r * sin(phi);
+        if (use3d) {
+          PlotWire(x, y, dw, type, std::min(0.5 * lw, dz));
+        } else {
+          PlotWire(x, y, dw, type);
+        }
+      }
+      continue;
+    }
     for (int nx = nMinX; nx <= nMaxX; ++nx) {
       const double x = xw + nx * sx;
       if (x + 0.5 * dw <= x0 || x - 0.5 * dw >= x1) continue;
@@ -180,28 +199,7 @@ bool ViewCell::Plot(const bool use3d) {
         const double y = yw + ny * sy;
         if (y + 0.5 * dw <= y0 || y - 0.5 * dw >= y1) continue;
         if (use3d) {
-          TGeoVolume* wire =
-              m_geo->MakeTube("Wire", m_geo->GetMedium("Metal"), 0., 0.5 * dw,
-                              std::min(0.5 * lw, dz));
-          switch (type) {
-            case 0:
-              wire->SetLineColor(kGray + 2);
-              break;
-            case 1:
-              wire->SetLineColor(kRed + 2);
-              break;
-            case 2:
-              wire->SetLineColor(kPink + 3);
-              break;
-            case 3:
-              wire->SetLineColor(kCyan + 3);
-              break;
-            default:
-              wire->SetLineColor(kBlue + type);
-              break;
-          }
-          m_geo->GetTopVolume()->AddNode(wire, 1,
-                                         new TGeoTranslation(x, y, 0.));
+          PlotWire(x, y, dw, type, std::min(0.5 * lw, dz));
         } else {
           PlotWire(x, y, dw, type);
         }
@@ -209,7 +207,7 @@ bool ViewCell::Plot(const bool use3d) {
     }
   }
 
-  // Draw lines at the positions of the x planes.
+  // Draw the x planes.
   const unsigned int nPlanesX = m_component->GetNumberOfPlanesX();
   for (unsigned int i = 0; i < nPlanesX; ++i) {
     double xp = 0., vp = 0.;
@@ -220,21 +218,14 @@ bool ViewCell::Plot(const bool use3d) {
       if (x < x0 || x > x1) continue;
       if (use3d) {
         const double width = std::min(0.01 * dx, 0.01 * dy);
-        TGeoVolume* plane =
-            m_geo->MakeBox("PlaneX", m_geo->GetMedium("Metal"), width, dy, dz);
-        plane->SetLineColor(kGreen - 5);
-        plane->SetTransparency(75);
-        m_geo->GetTopVolume()->AddNode(plane, 1,
-                                       new TGeoTranslation(x, 0., 0.));
+        PlotPlane(width, dy, dz, x, 0);
       } else {
-        TLine line;
-        line.SetDrawOption("same");
-        line.DrawLine(x, y0, x, y1);
+        PlotPlane(x, y0, x, y1);
       }
     }
   }
 
-  // Draw lines at the positions of the y planes.
+  // Draw the y planes.
   const unsigned int nPlanesY = m_component->GetNumberOfPlanesY();
   for (unsigned int i = 0; i < nPlanesY; ++i) {
     double yp = 0., vp = 0.;
@@ -245,44 +236,80 @@ bool ViewCell::Plot(const bool use3d) {
       if (y < y0 || y > y1) continue;
       if (use3d) {
         const double width = std::min(0.01 * dx, 0.01 * dy);
-        TGeoVolume* plane =
-            m_geo->MakeBox("PlaneY", m_geo->GetMedium("Metal"), dx, width, dz);
-        plane->SetLineColor(kGreen - 5);
-        plane->SetTransparency(75);
-        m_geo->GetTopVolume()->AddNode(plane, 1,
-                                       new TGeoTranslation(0., y, 0.));
+        PlotPlane(dx, width, dz, 0, y);
       } else {
-        TLine line;
-        line.SetDrawOption("same");
-        line.DrawLine(x0, y, x1, y);
+        PlotPlane(x0, y, x1, y);
       }
     }
   }
 
+  // Draw the r and phi planes.
+  const unsigned int nPlanesR = m_component->GetNumberOfPlanesR();
+  const unsigned int nPlanesPhi = m_component->GetNumberOfPlanesPhi();
+  if (nPlanesR > 0 || nPlanesPhi > 0) {
+    double vp = 0.;
+    std::string lbl;
+    std::array<double, 2> phi = {0., 360.};
+    double dphi = 360.;
+    if (nPlanesPhi == 2 && !m_component->GetPeriodicityPhi(dphi)) {
+      m_component->GetPlanePhi(0, phi[0], vp, lbl);
+      m_component->GetPlanePhi(1, phi[1], vp, lbl);
+    }
+    double w = 0.01 * std::min(dx, dy);
+    std::array<double, 2> r = {0., 0.};
+    if (nPlanesR > 0) {
+      m_component->GetPlaneR(0, r[0], vp, lbl);
+      w = 0.02 * r[0];
+    }
+    if (nPlanesR == 2) {
+      m_component->GetPlaneR(1, r[1], vp, lbl);
+      w = 0.01 * (r[1] - r[0]);
+    }
+    for (unsigned int i = 0; i < nPlanesR; ++i) {
+      if (use3d) {
+        const auto med = m_geo->GetMedium("Metal");
+        const auto tubs = m_geo->MakeTubs("Plane", med, r[i] - w, r[i] + w,
+                                          dz, phi[0], phi[1]);
+        tubs->SetLineColor(kGreen - 5);
+        tubs->SetTransparency(75);
+        m_geo->GetTopVolume()->AddNode(tubs, 1);
+      } else {
+        TEllipse circle;
+        circle.SetDrawOption("same");
+        circle.SetFillStyle(0);
+        circle.SetNoEdges();
+        circle.DrawEllipse(0, 0, r[i], r[i], phi[0], phi[1], 0);
+      }
+    }
+    if (nPlanesR == 1) {
+      std::swap(r[0], r[1]);
+    } else if (nPlanesR == 0) {
+      r[1] = std::max(dx, dy); 
+    }
+    for (unsigned int i = 0; i < nPlanesPhi; ++i) {
+      const double cp = cos(phi[i] * DegreeToRad);
+      const double sp = sin(phi[i] * DegreeToRad);
+      if (use3d) {
+        const auto med = m_geo->GetMedium("Metal");
+        const double dr = 0.5 * (r[1] - r[0]);
+        TGeoVolume* plane = m_geo->MakeBox("Plane", med, dr, w, dz);
+        plane->SetLineColor(kGreen - 5);
+        plane->SetTransparency(75);
+        TGeoRotation* rot = new TGeoRotation("", phi[i], 0, 0);
+        const double rm = 0.5 * (r[0] + r[1]); 
+        TGeoCombiTrans* tr = new TGeoCombiTrans(cp * rm, sp * rm, 0, rot);
+        m_geo->GetTopVolume()->AddNode(plane, 1, tr);
+      } else {
+        PlotPlane(r[0] * cp, r[0] * sp, r[1] * cp, r[1] * sp);
+      }
+    } 
+  }
   double rt = 0., vt = 0.;
   int nt = 0;
   std::string lbl;
   if (m_component->GetTube(rt, vt, nt, lbl)) {
     if (use3d) {
-      if (nt <= 0) {
-        // Round tube
-        TGeoVolume* tube = m_geo->MakeTube("Tube", m_geo->GetMedium("Metal"),
-                                           0.98 * rt, 1.02 * rt, dz);
-        tube->SetLineColor(kGreen + 2);
-        tube->SetTransparency(75);
-        m_geo->GetTopVolume()->AddNode(tube, 1,
-                                       new TGeoTranslation(0., 0., 0.));
-      } else {
-        TGeoVolume* tube =
-            m_geo->MakePgon("Tube", m_geo->GetMedium("Metal"), 0., 360., nt, 2);
-        TGeoPgon* pgon = dynamic_cast<TGeoPgon*>(tube->GetShape());
-        pgon->DefineSection(0, -dz, 0.98 * rt, 1.02 * rt);
-        pgon->DefineSection(1, +dz, 0.98 * rt, 1.02 * rt);
-        tube->SetLineColor(kGreen + 2);
-        tube->SetTransparency(75);
-        m_geo->GetTopVolume()->AddNode(tube, 1,
-                                       new TGeoTranslation(0., 0., 0.));
-      }
+      PlotTube(0.98 * rt, 1.02 * rt, nt, dz);
     } else {
       PlotTube(0., 0., rt, nt);
     }
@@ -325,6 +352,31 @@ void ViewCell::PlotWire(const double x, const double y, const double d,
   circle.DrawEllipse(x, y, 0.5 * d, 0.5 * d, 0, 360, 0);
 }
 
+void ViewCell::PlotWire(const double x, const double y, const double d,
+                        const int type, const double lz) {
+
+  const auto medium = m_geo->GetMedium("Metal");
+  TGeoVolume* wire = m_geo->MakeTube("Wire", medium, 0., 0.5 * d, lz);
+  switch (type) {
+    case 0:
+      wire->SetLineColor(kGray + 2);
+      break;
+    case 1:
+      wire->SetLineColor(kRed + 2);
+      break;
+    case 2:
+      wire->SetLineColor(kPink + 3);
+      break;
+    case 3:
+      wire->SetLineColor(kCyan + 3);
+      break;
+    default:
+      wire->SetLineColor(kBlue + type);
+      break;
+  }
+  m_geo->GetTopVolume()->AddNode(wire, 1, new TGeoTranslation(x, y, 0.));
+}
+
 void ViewCell::PlotTube(const double x0, const double y0, const double r,
                         const int n) {
   if (n <= 0) {
@@ -348,4 +400,42 @@ void ViewCell::PlotTube(const double x0, const double y0, const double r,
   delete[] x;
   delete[] y;
 }
+
+void ViewCell::PlotTube(const double x0, const double y0, 
+                        const double r1, const double r2, const int n,
+                        const double lz) {
+
+  TGeoVolume* tube = nullptr;
+  if (n <= 0) {
+    // Round tube.
+    tube = m_geo->MakeTube("Tube", m_geo->GetMedium("Metal"), r1, r2, lz);
+  } else {
+    tube = m_geo->MakePgon("Tube", m_geo->GetMedium("Metal"), 0., 360., n, 2);
+    TGeoPgon* pgon = dynamic_cast<TGeoPgon*>(tube->GetShape());
+    pgon->DefineSection(0, -lz, r1, r2);
+    pgon->DefineSection(1, +lz, r1, r2);
+  }
+  tube->SetLineColor(kGreen + 2);
+  tube->SetTransparency(75);
+  m_geo->GetTopVolume()->AddNode(tube, 1, new TGeoTranslation(x0, y0, 0));
+}
+
+void ViewCell::PlotPlane(const double x0, const double y0, 
+                         const double x1, const double y1) {
+
+  TLine line;
+  line.SetDrawOption("same");
+  line.DrawLine(x0, y0, x1, y1);
+}
+
+void ViewCell::PlotPlane(const double dx, const double dy, const double dz,
+                         const double x0, const double y0) {
+
+  const auto medium = m_geo->GetMedium("Metal");
+  TGeoVolume* plane = m_geo->MakeBox("Plane", medium, dx, dy, dz);
+  plane->SetLineColor(kGreen - 5);
+  plane->SetTransparency(75);
+  m_geo->GetTopVolume()->AddNode(plane, 1, new TGeoTranslation(x0, y0, 0));
+}
+
 }

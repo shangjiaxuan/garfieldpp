@@ -25,6 +25,74 @@ std::pair<std::complex<double>, std::complex<double> > Th1(
   const std::complex<double> zterm2 = (zunew - zu) * cos(zeta);
   return std::make_pair(std::move(zterm1), std::move(zterm2));
 }
+
+// Transformation from Cartesian and polar coordinates.
+void Cartesian2Polar(const double x, const double y, double& r,
+                     double& theta) {
+  if (x == 0. && y == 0.) {
+    r = theta = 0.;
+    return;
+  }
+  r = sqrt(x * x + y * y);
+  theta = atan2(y, x) * Garfield::RadToDegree;
+}
+
+// Transformation from polar to Cartesian coordinates.
+void Polar2Cartesian(const double r, const double theta, double& x,
+                     double& y) {
+  const double thetap = theta * Garfield::DegreeToRad;
+  x = r * cos(thetap);
+  y = r * sin(thetap);
+}
+
+// Transformation (rho, phi) to (r, theta) via the map
+// (r, theta) = (exp(rho), 180 * phi / Pi).
+void Internal2Polar(const double rho, const double phi, double& r,
+                    double& theta) {
+  // CFMRTP
+  r = exp(rho);
+  theta = Garfield::RadToDegree * phi;
+}
+
+// Transformation (r, theta) to (rho, phi) via the map
+// (rho, phi) = (log(r), Pi * theta / 180).
+void Polar2Internal(const double r, const double theta, double& rho,
+                    double& phi) {
+  // CFMPTR
+  rho = r > 0. ? log(r) : -25.;
+  phi = Garfield::DegreeToRad * theta;
+}
+
+// Transformation (x, y) to (rho, phi) via the conformal map
+// (x, y) = exp(rho, phi)
+void Cartesian2Internal(const double x, const double y, double& rho,
+                        double& phi) {
+  // CFMCTR
+  if (x == 0 && y == 0) {
+    rho = -25.;
+    phi = 0.;
+    return;
+  }
+  // const std::complex<double> z = log(std::complex<double>(x, y));
+  // rho = real(z);
+  // phi = imag(z);
+  rho = 0.5 * log(x * x + y * y);
+  phi = atan2(y, x); 
+}
+
+// Transformation (rho, phi) to (x, y) via the conformal map
+// (x, y) = exp(rho, phi)
+void Internal2Cartesian(const double rho, const double phi, double& x, 
+                        double& y) {
+  // CFMRTC
+  // const std::complex<double> z = exp(std::complex<double>(rho, phi));
+  // x = real(z);
+  // y = imag(z);
+  const double r = exp(rho);
+  x = r * cos(phi);
+  y = r * sin(phi);
+}
+
 }  // namespace
 
 namespace Garfield {
@@ -83,16 +151,31 @@ void ComponentAnalyticField::PrintCell() {
             << "::PrintCell: Cell identification: " << GetCellType() << "\n";
   // Print positions of wires, applied voltages and resulting charges.
   if (!m_w.empty()) {
-    std::cout << "  Table of the wires\n"
-              << "  Nr    Diameter     x        y      Voltage"
-              << "      Charge    Tension   Length   Density  Label\n"
-              << "       [micron]     [cm]     [cm]     [Volt]"
-              << "     [pC/cm]       [g]      [cm]    [g/cm3]\n";
+    std::cout << "  Table of the wires\n";
+    if (m_polar) {
+      std::cout << "  Nr    Diameter     r       phi     Voltage";
+    } else {
+      std::cout << "  Nr    Diameter     x        y      Voltage";
+    }
+    std::cout << "      Charge    Tension   Length   Density  Label\n";
+    if (m_polar) {
+      std::cout << "       [micron]     [cm]     [deg]    [Volt]";
+    } else {
+      std::cout << "       [micron]     [cm]     [cm]     [Volt]";
+    }
+    std::cout << "     [pC/cm]       [g]      [cm]    [g/cm3]\n";
     for (unsigned int i = 0; i < m_nWires; ++i) {
       const auto& w = m_w[i];
+      double xw = w.x;
+      double yw = w.y;
+      double dw = 1.e4 * w.d;
+      if (m_polar) {
+        Internal2Polar(w.x, w.y, xw, yw);
+        dw *= xw;
+      }
       std::printf(
           "%4d %9.2f %9.4f %9.4f %9.3f %12.4f %9.2f %9.2f %9.2f \"%s\"\n", i,
-          1.e4 * w.d, w.x, w.y, w.v, w.e * TwoPiEpsilon0 * 1.e-3, w.tension,
+          dw, xw, yw, w.v, w.e * TwoPiEpsilon0 * 1.e-3, w.tension,
           w.u, w.density, w.type.c_str());
     }
   }
@@ -159,13 +242,16 @@ void ComponentAnalyticField::PrintCell() {
       } else {
         std::cout << nStrips << " strips, " << nPixels << " pixels.\n";
       }
-      for (const auto& strip : plane.strips1) {
+      for (const auto& strip : plane.strips2) {
+        std::cout << "      ";
         if (m_polar) {
-          std::cout << "      " << RadToDegree * strip.smin << " < phi < "
+          double gap = i == 0 ? exp(strip.gap) - 1. : 1. - exp(-strip.gap);
+          gap *= exp(m_coplan[i]);
+          std::cout << RadToDegree * strip.smin << " < phi < "
                     << RadToDegree * strip.smax
-                    << " degrees, gap = " << strip.gap << " cm";
+                    << " degrees, gap = " << gap << " cm";
         } else {
-          std::cout << "      " << strip.smin << " < y < " << strip.smax
+          std::cout << strip.smin << " < y < " << strip.smax
                     << " cm, gap = " << strip.gap << " cm";
         }
         if (!strip.type.empty() && strip.type != "?") {
@@ -173,20 +259,38 @@ void ComponentAnalyticField::PrintCell() {
         }
         std::cout << "\n";
       }
-      for (const auto& strip : plane.strips2) {
-        std::cout << "      " << strip.smin << " < z < " << strip.smax
-                  << " cm, gap = " << strip.gap << " cm";
+      for (const auto& strip : plane.strips1) {
+        std::cout << "      " << strip.smin << " < z < " << strip.smax;
+        if (m_polar) {
+          double gap = i == 0 ? exp(strip.gap) - 1. : 1. - exp(-strip.gap);
+          gap *= exp(m_coplan[i]);
+          std::cout << " cm, gap = " << gap << " cm";
+        } else {
+          std::cout << " cm, gap = " << strip.gap << " cm";
+        }
         if (!strip.type.empty() && strip.type != "?") {
           std::cout << " (\"" << strip.type << "\")";
         }
         std::cout << "\n";
       }
-      for (const auto& pixel : plane.pixels) {
-        std::cout << "    " << pixel.smin << " < y < " << pixel.smax << " cm, "
-                  << pixel.zmin << " < z < " << pixel.zmax
-                  << " cm, gap = " << pixel.gap << " cm";
-        if (!pixel.type.empty() && pixel.type != "?") {
-          std::cout << " (\"" << pixel.type << "\")";
+      for (const auto& pix : plane.pixels) {
+        std::cout << "      ";
+        if (m_polar) {
+          std::cout << RadToDegree * pix.smin << " < phi < "
+                    << RadToDegree * pix.smax << " degrees, "; 
+        } else {
+          std::cout << pix.smin << " < y < " << pix.smax << " cm, ";
+        }
+        std::cout << pix.zmin << " < z < " << pix.zmax << " cm, gap = ";
+        if (m_polar) {
+          double gap = i == 0 ? exp(pix.gap) - 1. : 1. - exp(-pix.gap);
+          gap *= exp(m_coplan[i]);
+          std::cout << gap << " cm";
+        } else {
+          std::cout << pix.gap << " cm";
+        }
+        if (!pix.type.empty() && pix.type != "?") {
+          std::cout << " (\"" << pix.type << "\")";
         }
         std::cout << "\n";
       }
@@ -225,12 +329,13 @@ void ComponentAnalyticField::PrintCell() {
       } else {
         std::cout << nStrips << " strips, " << nPixels << " pixels.\n";
       }
-      for (const auto& strip : plane.strips1) {
+      for (const auto& strip : plane.strips2) {
+        std::cout << "      ";
         if (m_polar) {
-          std::cout << "      " << exp(strip.smin) << " < r < "
-                    << exp(strip.smax) << " cm, gap = " << strip.gap << " cm";
+          std::cout << exp(strip.smin) << " < r < " << exp(strip.smax) 
+                    << " cm, gap = " << RadToDegree * strip.gap << " degrees";
         } else {
-          std::cout << "      " << strip.smin << " < x < " << strip.smax
+          std::cout << strip.smin << " < x < " << strip.smax
                     << " cm, gap = " << strip.gap << " cm";
         }
         if (!strip.type.empty() && strip.type != "?") {
@@ -238,20 +343,33 @@ void ComponentAnalyticField::PrintCell() {
         }
         std::cout << "\n";
       }
-      for (const auto& strip : plane.strips2) {
-        std::cout << "      " << strip.smin << " < z < " << strip.smax
-                  << " cm, gap = " << strip.gap << " cm";
+      for (const auto& strip : plane.strips1) {
+        std::cout << "      " << strip.smin << " < z < " << strip.smax;
+        if (m_polar) {
+          std::cout << " cm, gap = " << RadToDegree * strip.gap << " degrees";
+        } else {
+          std::cout << " cm, gap = " << strip.gap << " cm";
+        }
         if (!strip.type.empty() && strip.type != "?") {
           std::cout << " (\"" << strip.type << "\")";
         }
         std::cout << "\n";
       }
-      for (const auto& pixel : plane.pixels) {
-        std::cout << "    " << pixel.smin << " < x < " << pixel.smax << " cm, "
-                  << pixel.zmin << " < z < " << pixel.zmax
-                  << " cm, gap = " << pixel.gap << " cm";
-        if (!pixel.type.empty() && pixel.type != "?") {
-          std::cout << " (\"" << pixel.type << "\")";
+      for (const auto& pix : plane.pixels) {
+        std::cout << "      ";
+        if (m_polar) {
+          std::cout << exp(pix.smin) << " < r < " << exp(pix.smax) << " cm, "; 
+        } else {
+          std::cout << pix.smin << " < x < " << pix.smax << " cm, ";
+        }
+        std::cout << pix.zmin << " < z < " << pix.zmax << " cm, gap = ";
+        if (m_polar) {
+          std::cout << RadToDegree * pix.gap << " degrees";
+        } else {
+          std::cout << pix.gap << " cm";
+        }
+        if (!pix.type.empty() && pix.type != "?") {
+          std::cout << " (\"" << pix.type << "\")";
         }
         std::cout << "\n";
       }
@@ -296,9 +414,9 @@ void ComponentAnalyticField::PrintCell() {
               << m_ymax << " cm.\n";
   } else {
     double xminp, yminp;
-    RTheta2RhoPhi(m_xmin, m_ymin, xminp, yminp);
+    Internal2Polar(m_xmin, m_ymin, xminp, yminp);
     double xmaxp, ymaxp;
-    RTheta2RhoPhi(m_xmax, m_ymax, xmaxp, ymaxp);
+    Internal2Polar(m_xmax, m_ymax, xmaxp, ymaxp);
     std::cout << xminp << " < r < " << xmaxp << " cm, " << yminp << " < phi < "
               << ymaxp << " degrees.\n";
   }
@@ -317,17 +435,25 @@ void ComponentAnalyticField::PrintCell() {
   }
 }
 
-bool ComponentAnalyticField::IsWireCrossed(const double x0, const double y0,
-                                           const double z0, const double x1,
-                                           const double y1, const double z1,
+bool ComponentAnalyticField::IsWireCrossed(const double xx0, const double yy0,
+                                           const double z0, const double xx1,
+                                           const double yy1, const double z1,
                                            double& xc, double& yc, double& zc,
                                            const bool centre, double& rc) {
-  xc = x0;
-  yc = y0;
+  xc = xx0;
+  yc = yy0;
   zc = z0;
 
   if (m_w.empty()) return false;
 
+  double x0 = xx0;
+  double y0 = yy0;
+  double x1 = xx1;
+  double y1 = yy1;
+  if (m_polar) {
+    Cartesian2Internal(xx0, yy0, x0, y0);
+    Cartesian2Internal(xx1, yy1, x1, y1);
+  }
   const double dx = x1 - x0;
   const double dy = y1 - y0;
   const double d2 = dx * dx + dy * dy;
@@ -382,19 +508,28 @@ bool ComponentAnalyticField::IsWireCrossed(const double x0, const double y0,
     if (dMin2 < r2) {
       // Wire has been crossed.
       if (centre) {
-        xc = xw;
-        yc = yw;
+        if (m_polar) {
+          Internal2Cartesian(xw, yw, xc, yc);
+        } else {
+          xc = xw;
+          yc = yw;
+        }
       } else {
         // Find the point of intersection.
         const double p = -xIn0 * invd2;
         const double q = (dw02 - r2) * invd2;
         const double s = sqrt(p * p - q);
         const double t = std::min(-p + s, -p - s);
-        xc = x0 + t * dx;
-        yc = y0 + t * dy;
+        if (m_polar) {
+          Internal2Cartesian(x0 + t * dx, y0 + t * dy, xc, yc);
+        } else {
+          xc = x0 + t * dx;
+          yc = y0 + t * dy;
+        }
         zc = z0 + t * (z1 - z0);
       }
       rc = 0.5 * wire.d;
+      if (m_polar) rc *= exp(wire.x);
       return true;
     }
   }
@@ -405,12 +540,16 @@ bool ComponentAnalyticField::IsInTrapRadius(const double qin, const double xin,
                                             const double yin, const double zin,
                                             double& xw, double& yw,
                                             double& rw) {
-  // In case of periodicity, move the point into the basic cell.
+
   double x0 = xin;
   double y0 = yin;
+  if (m_polar) {
+    Cartesian2Internal(xin, yin, x0, y0);
+  }
+  // In case of periodicity, move the point into the basic cell.
   int nX = 0, nY = 0, nPhi = 0;
   if (m_perx) {
-    nX = int(round(xin / m_sx));
+    nX = int(round(x0 / m_sx));
     x0 -= m_sx * nX;
   }
   if (m_pery && m_tube) {
@@ -419,15 +558,27 @@ bool ComponentAnalyticField::IsInTrapRadius(const double qin, const double xin,
     y0 -= RadToDegree * m_sy * nPhi;
     Polar2Cartesian(x0, y0, x0, y0);
   } else if (m_pery) {
-    nY = int(round(yin / m_sy));
+    nY = int(round(y0 / m_sy));
     y0 -= m_sy * nY;
   }
-
   // Move the point to the correct side of the plane.
-  if (m_perx && m_ynplan[0] && x0 <= m_coplan[0]) x0 += m_sx;
-  if (m_perx && m_ynplan[1] && x0 >= m_coplan[1]) x0 -= m_sx;
-  if (m_pery && m_ynplan[2] && y0 <= m_coplan[2]) y0 += m_sy;
-  if (m_pery && m_ynplan[3] && y0 >= m_coplan[3]) y0 -= m_sy;
+  std::array<bool, 4> shift = {false, false, false, false};
+  if (m_perx && m_ynplan[0] && x0 <= m_coplan[0]) {
+    x0 += m_sx;
+    shift[0] = true;
+  }
+  if (m_perx && m_ynplan[1] && x0 >= m_coplan[1]) {
+    x0 -= m_sx;
+    shift[1] = true;
+  }
+  if (m_pery && m_ynplan[2] && y0 <= m_coplan[2]) {
+    y0 += m_sy;
+    shift[2] = true;
+  }
+  if (m_pery && m_ynplan[3] && y0 >= m_coplan[3]) {
+    y0 -= m_sy;
+    shift[3] = true;
+  }
 
   for (const auto& wire : m_w) {
     // Skip wires with the wrong charge.
@@ -440,10 +591,10 @@ bool ComponentAnalyticField::IsInTrapRadius(const double qin, const double xin,
       xw = wire.x;
       yw = wire.y;
       rw = wire.d * 0.5;
-      if (m_perx && m_ynplan[0] && x0 <= m_coplan[0]) x0 -= m_sx;
-      if (m_perx && m_ynplan[1] && x0 >= m_coplan[1]) x0 += m_sx;
-      if (m_pery && m_ynplan[2] && y0 <= m_coplan[2]) y0 -= m_sy;
-      if (m_pery && m_ynplan[3] && y0 >= m_coplan[3]) y0 += m_sy;
+      if (shift[0]) xw -= m_sx;
+      if (shift[1]) xw += m_sx;
+      if (shift[2]) yw -= m_sy;
+      if (shift[3]) yw += m_sy;
       if (m_pery && m_tube) {
         double rhow, phiw;
         Cartesian2Polar(xw, yw, rhow, phiw);
@@ -453,10 +604,13 @@ bool ComponentAnalyticField::IsInTrapRadius(const double qin, const double xin,
         y0 += m_sy * nY;
       }
       if (m_perx) xw += m_sx * nX;
+      if (m_polar) {
+        Internal2Cartesian(xw, yw, xw, yw);
+        rw *= exp(wire.x);
+      }
       if (m_debug) {
-        std::cout << m_className << "::IsInTrapRadius:\n";
-        std::cout << "    (" << xin << ", " << yin << ", " << zin << ")"
-                  << " within trap radius.\n";
+        std::cout << m_className << "::IsInTrapRadius: (" << xin << ", "
+                  << yin << ", " << zin << ")" << " within trap radius.\n";
       }
       return true;
     }
@@ -496,11 +650,25 @@ void ComponentAnalyticField::AddWire(const double x, const double y,
     std::cerr << m_className << "::AddWire: Nbr. of trap radii must be > 0.\n";
     return;
   }
-  // Create a new wire
+
+  if (m_polar && x <= diameter) {
+    std::cerr << m_className << "::AddWire: Wire is too close to the origin.\n";
+    return;
+  }
+
+  // Create a new wire.
   Wire newWire;
-  newWire.x = x;
-  newWire.y = y;
-  newWire.d = diameter;
+  if (m_polar) {
+    double r = 0., phi = 0.;
+    Polar2Internal(x, y, r, phi);
+    newWire.x = r;
+    newWire.y = phi;
+    newWire.d = diameter / x; 
+  } else {
+    newWire.x = x;
+    newWire.y = y;
+    newWire.d = diameter;
+  }
   newWire.v = voltage;
   newWire.u = length;
   newWire.type = label;
@@ -559,10 +727,15 @@ void ComponentAnalyticField::AddTube(const double radius, const double voltage,
 }
 
 void ComponentAnalyticField::AddPlaneX(const double x, const double v,
-                                       const std::string& lab) {
+                                       const std::string& label) {
+  if (m_polar) {
+    std::cerr << m_className << "::AddPlaneX:\n"
+              << "    Not compatible with polar coordinates; ignored.\n";
+    return;
+  }
   if (m_ynplan[0] && m_ynplan[1]) {
-    std::cerr << m_className << "::AddPlaneX:\n";
-    std::cerr << "    There are already two x planes defined.\n";
+    std::cerr << m_className << "::AddPlaneX:\n"
+              << "    Cannot have more than two planes at constant x.\n";
     return;
   }
 
@@ -570,13 +743,13 @@ void ComponentAnalyticField::AddPlaneX(const double x, const double v,
     m_ynplan[1] = true;
     m_coplan[1] = x;
     m_vtplan[1] = v;
-    m_planes[1].type = lab;
+    m_planes[1].type = label;
     m_planes[1].ind = -1;
   } else {
     m_ynplan[0] = true;
     m_coplan[0] = x;
     m_vtplan[0] = v;
-    m_planes[0].type = lab;
+    m_planes[0].type = label;
     m_planes[0].ind = -1;
   }
 
@@ -586,10 +759,15 @@ void ComponentAnalyticField::AddPlaneX(const double x, const double v,
 }
 
 void ComponentAnalyticField::AddPlaneY(const double y, const double v,
-                                       const std::string& lab) {
+                                       const std::string& label) {
+  if (m_polar) {
+    std::cerr << m_className << "::AddPlaneY:\n"
+              << "    Not compatible with polar coordinates; ignored.\n";
+    return;
+  }
   if (m_ynplan[2] && m_ynplan[3]) {
-    std::cerr << m_className << "::AddPlaneY:\n";
-    std::cerr << "    There are already two y planes defined.\n";
+    std::cerr << m_className << "::AddPlaneY:\n"
+              << "    Cannot have more than two planes at constant y.\n";
     return;
   }
 
@@ -597,13 +775,13 @@ void ComponentAnalyticField::AddPlaneY(const double y, const double v,
     m_ynplan[3] = true;
     m_coplan[3] = y;
     m_vtplan[3] = v;
-    m_planes[3].type = lab;
+    m_planes[3].type = label;
     m_planes[3].ind = -1;
   } else {
     m_ynplan[2] = true;
     m_coplan[2] = y;
     m_vtplan[2] = v;
-    m_planes[2].type = lab;
+    m_planes[2].type = label;
     m_planes[2].ind = -1;
   }
 
@@ -612,28 +790,101 @@ void ComponentAnalyticField::AddPlaneY(const double y, const double v,
   m_sigset = false;
 }
 
-void ComponentAnalyticField::AddStripOnPlaneX(const char direction,
-                                              const double x, const double smin,
-                                              const double smax,
-                                              const std::string& label,
-                                              const double gap) {
-  if (!m_ynplan[0] && !m_ynplan[1]) {
-    std::cerr << m_className << "::AddStripOnPlaneX:\n";
-    std::cerr << "    There are no planes at constant x defined.\n";
+void ComponentAnalyticField::AddPlaneR(const double r, const double v,
+                                       const std::string& label) {
+  if (!m_polar) {
+    std::cerr << m_className << "::AddPlaneR:\n"
+              << "    Not compatible with Cartesian coordinates; ignored.\n";
+    return;
+  }
+  if (r <= 0.) {
+    std::cerr << m_className << "::AddPlaneR:\n"
+              << "    Radius must be larger than zero; plane ignored.\n";
     return;
   }
 
-  if (direction != 'y' && direction != 'Y' && direction != 'z' &&
-      direction != 'Z') {
-    std::cerr << m_className << "::AddStripOnPlaneX:\n";
-    std::cerr << "    Invalid direction (" << direction << ").\n";
-    std::cerr << "    Only strips in y or z direction are possible.\n";
+  if (m_ynplan[0] && m_ynplan[1]) {
+    std::cerr << m_className << "::AddPlaneR:\n"
+              << "    Cannot have more than two circular planes.\n";
+    return;
+  }
+
+  if (m_ynplan[0]) {
+    m_ynplan[1] = true;
+    m_coplan[1] = log(r);
+    m_vtplan[1] = v;
+    m_planes[1].type = label;
+    m_planes[1].ind = -1;
+  } else {
+    m_ynplan[0] = true;
+    m_coplan[0] = log(r);
+    m_vtplan[0] = v;
+    m_planes[0].type = label;
+    m_planes[0].ind = -1;
+  }
+
+  // Force recalculation of the capacitance and signal matrices.
+  m_cellset = false;
+  m_sigset = false;
+}
+
+void ComponentAnalyticField::AddPlanePhi(const double phi, const double v,
+                                         const std::string& label) {
+  if (!m_polar) {
+    std::cerr << m_className << "::AddPlanePhi:\n"
+              << "    Not compatible with Cartesian coordinates; ignored.\n";
+    return;
+  }
+  if (m_ynplan[2] && m_ynplan[3]) {
+    std::cerr << m_className << "::AddPlanePhi:\n"
+              << "    Cannot have more than two planes at constant phi.\n";
+    return;
+  }
+
+  if (m_ynplan[2]) {
+    m_ynplan[3] = true;
+    m_coplan[3] = phi * DegreeToRad;
+    m_vtplan[3] = v;
+    m_planes[3].type = label;
+    m_planes[3].ind = -1;
+  } else {
+    m_ynplan[2] = true;
+    m_coplan[2] = phi * DegreeToRad;
+    m_vtplan[2] = v;
+    m_planes[2].type = label;
+    m_planes[2].ind = -1;
+    // Switch off default periodicity.
+    if (m_pery && std::abs(m_sy - TwoPi) < 1.e-4) {
+      m_pery = false;
+    }
+  }
+
+  // Force recalculation of the capacitance and signal matrices.
+  m_cellset = false;
+  m_sigset = false;
+}
+
+void ComponentAnalyticField::AddStripOnPlaneX(const char dir, const double x,
+                                              const double smin,
+                                              const double smax,
+                                              const std::string& label,
+                                              const double gap) {
+  if (m_polar || (!m_ynplan[0] && !m_ynplan[1])) {
+    std::cerr << m_className << "::AddStripOnPlaneX:\n"
+              << "    There are no planes at constant x.\n";
+    return;
+  }
+
+  if (dir != 'y' && dir != 'Y' && dir != 'z' && dir != 'Z') {
+    std::cerr << m_className << "::AddStripOnPlaneX:\n"
+              << "    Invalid direction (" << dir << ").\n"
+              << "    Only strips in y or z direction are possible.\n";
     return;
   }
 
   if (fabs(smax - smin) < Small) {
-    std::cerr << m_className << "::AddStripOnPlaneX:\n";
-    std::cerr << "    Strip width must be greater than zero.\n";
+    std::cerr << m_className << "::AddStripOnPlaneX:\n"
+              << "    Strip width must be greater than zero.\n";
     return;
   }
 
@@ -651,35 +902,34 @@ void ComponentAnalyticField::AddStripOnPlaneX(const char direction,
     if (d1 < d0) iplane = 1;
   }
 
-  if (direction == 'y' || direction == 'Y') {
+  if (dir == 'y' || dir == 'Y') {
     m_planes[iplane].strips1.push_back(std::move(newStrip));
   } else {
     m_planes[iplane].strips2.push_back(std::move(newStrip));
   }
 }
 
-void ComponentAnalyticField::AddStripOnPlaneY(const char direction,
-                                              const double y, const double smin,
+void ComponentAnalyticField::AddStripOnPlaneY(const char dir, const double y,
+                                              const double smin,
                                               const double smax,
                                               const std::string& label,
                                               const double gap) {
-  if (!m_ynplan[2] && !m_ynplan[3]) {
-    std::cerr << m_className << "::AddStripOnPlaneY:\n";
-    std::cerr << "    There are no planes at constant y defined.\n";
+  if (m_polar || (!m_ynplan[2] && !m_ynplan[3])) {
+    std::cerr << m_className << "::AddStripOnPlaneY:\n"
+              << "    There are no planes at constant y.\n";
     return;
   }
 
-  if (direction != 'x' && direction != 'X' && direction != 'z' &&
-      direction != 'Z') {
-    std::cerr << m_className << "::AddStripOnPlaneY:\n";
-    std::cerr << "    Invalid direction (" << direction << ").\n";
-    std::cerr << "    Only strips in x or z direction are possible.\n";
+  if (dir != 'x' && dir != 'X' && dir != 'z' && dir != 'Z') {
+    std::cerr << m_className << "::AddStripOnPlaneY:\n"
+              << "    Invalid direction (" << dir << ").\n"
+              << "    Only strips in x or z direction are possible.\n";
     return;
   }
 
   if (fabs(smax - smin) < Small) {
-    std::cerr << m_className << "::AddStripOnPlaneY:\n";
-    std::cerr << "    Strip width must be greater than zero.\n";
+    std::cerr << m_className << "::AddStripOnPlaneY:\n"
+              << "    Strip width must be greater than zero.\n";
     return;
   }
 
@@ -697,25 +947,137 @@ void ComponentAnalyticField::AddStripOnPlaneY(const char direction,
     if (d3 < d2) iplane = 3;
   }
 
-  if (direction == 'x' || direction == 'X') {
+  if (dir == 'x' || dir == 'X') {
     m_planes[iplane].strips1.push_back(std::move(newStrip));
   } else {
     m_planes[iplane].strips2.push_back(std::move(newStrip));
   }
 }
 
+void ComponentAnalyticField::AddStripOnPlaneR(const char dir, const double r,
+                                              const double smin,
+                                              const double smax,
+                                              const std::string& label,
+                                              const double gap) {
+  if (!m_polar || (!m_ynplan[0] && !m_ynplan[1])) {
+    std::cerr << m_className << "::AddStripOnPlaneR:\n"
+              << "    There are no planes at constant r.\n";
+    return;
+  }
+
+  if (dir != 'p' && dir != 'P' && dir != 'z' && dir != 'Z') {
+    std::cerr << m_className << "::AddStripOnPlaneR:\n"
+              << "    Invalid direction (" << dir << ").\n"
+              << "    Only strips in p(hi) or z direction are possible.\n";
+    return;
+  }
+
+  if (fabs(smax - smin) < Small) {
+    std::cerr << m_className << "::AddStripOnPlaneR:\n"
+              << "    Strip width must be greater than zero.\n";
+    return;
+  }
+
+  Strip newStrip;
+  newStrip.type = label;
+  newStrip.ind = -1;
+  if (dir == 'z' || dir == 'Z') {
+    const double phimin = smin * DegreeToRad;
+    const double phimax = smax * DegreeToRad;
+    newStrip.smin = std::min(phimin, phimax);
+    newStrip.smax = std::max(phimin, phimax);
+  } else {
+    newStrip.smin = std::min(smin, smax);
+    newStrip.smax = std::max(smin, smax);
+  }
+  newStrip.gap = gap > Small ? gap : -1.;
+
+  int iplane = 0;
+  if (m_ynplan[1]) {
+    const double rho = r > 0. ? log(r) : -25.;
+    const double d0 = fabs(m_coplan[0] - rho);
+    const double d1 = fabs(m_coplan[1] - rho);
+    if (d1 < d0) iplane = 1;
+  }
+
+  if (dir == 'p' || dir == 'P') {
+    m_planes[iplane].strips1.push_back(std::move(newStrip));
+  } else {
+    m_planes[iplane].strips2.push_back(std::move(newStrip));
+  }
+}
+
+void ComponentAnalyticField::AddStripOnPlanePhi(const char dir, 
+                                                const double phi,
+                                                const double smin,
+                                                const double smax,
+                                                const std::string& label,
+                                                const double gap) {
+  if (!m_polar || (!m_ynplan[2] && !m_ynplan[3])) {
+    std::cerr << m_className << "::AddStripOnPlanePhi:\n"
+              << "    There are no planes at constant phi.\n";
+    return;
+  }
+
+  if (dir != 'r' && dir != 'R' && dir != 'z' && dir != 'Z') {
+    std::cerr << m_className << "::AddStripOnPlanePhi:\n"
+              << "    Invalid direction (" << dir << ").\n"
+              << "    Only strips in r or z direction are possible.\n";
+    return;
+  }
+
+  if (fabs(smax - smin) < Small) {
+    std::cerr << m_className << "::AddStripOnPlanePhi:\n"
+              << "    Strip width must be greater than zero.\n";
+    return;
+  }
+
+  Strip newStrip;
+  newStrip.type = label;
+  newStrip.ind = -1;
+  if (dir== 'z' || dir == 'Z') {
+    if (smin < Small || smax < Small) {
+      std::cerr << m_className << "::AddStripOnPlanePhi:\n"
+                << "    Radius must be greater than zero.\n";
+      return;
+    }
+    const double rhomin = log(smin);
+    const double rhomax = log(smax);
+    newStrip.smin = std::min(rhomin, rhomax);
+    newStrip.smax = std::max(rhomin, rhomax);
+  } else {
+    newStrip.smin = std::min(smin, smax);
+    newStrip.smax = std::max(smin, smax);
+  }
+  newStrip.gap = gap > Small ? DegreeToRad * gap : -1.;
+
+  int iplane = 2;
+  if (m_ynplan[3]) {
+    const double d2 = fabs(m_coplan[2] - phi * DegreeToRad);
+    const double d3 = fabs(m_coplan[3] - phi * DegreeToRad);
+    if (d3 < d2) iplane = 3;
+  }
+
+  if (dir == 'r' || dir == 'R') {
+    m_planes[iplane].strips1.push_back(std::move(newStrip));
+  } else {
+    m_planes[iplane].strips2.push_back(std::move(newStrip));
+  }
+}
+
+
 void ComponentAnalyticField::AddPixelOnPlaneX(
     const double x, const double ymin, const double ymax, const double zmin,
     const double zmax, const std::string& label, const double gap) {
-  if (!m_ynplan[0] && !m_ynplan[1]) {
-    std::cerr << m_className << "::AddPixelOnPlaneX:\n";
-    std::cerr << "    There are no planes at constant x defined.\n";
+  if (m_polar || (!m_ynplan[0] && !m_ynplan[1])) {
+    std::cerr << m_className << "::AddPixelOnPlaneX:\n"
+              << "    There are no planes at constant x.\n";
     return;
   }
 
   if (fabs(ymax - ymin) < Small || fabs(zmax - zmin) < Small) {
-    std::cerr << m_className << "::AddSPixelOnPlaneX:\n";
-    std::cerr << "    Pixel width must be greater than zero.\n";
+    std::cerr << m_className << "::AddPixelOnPlaneX:\n"
+              << "    Pixel width must be greater than zero.\n";
     return;
   }
 
@@ -741,15 +1103,15 @@ void ComponentAnalyticField::AddPixelOnPlaneX(
 void ComponentAnalyticField::AddPixelOnPlaneY(
     const double y, const double xmin, const double xmax, const double zmin,
     const double zmax, const std::string& label, const double gap) {
-  if (!m_ynplan[2] && !m_ynplan[3]) {
-    std::cerr << m_className << "::AddPixelOnPlaneY:\n";
-    std::cerr << "    There are no planes at constant y defined.\n";
+  if (m_polar || (!m_ynplan[2] && !m_ynplan[3])) {
+    std::cerr << m_className << "::AddPixelOnPlaneY:\n"
+              << "    There are no planes at constant y.\n";
     return;
   }
 
   if (fabs(xmax - xmin) < Small || fabs(zmax - zmin) < Small) {
-    std::cerr << m_className << "::AddPixelOnPlaneY:\n";
-    std::cerr << "    Pixel width must be greater than zero.\n";
+    std::cerr << m_className << "::AddPixelOnPlaneY:\n"
+              << "    Pixel width must be greater than zero.\n";
     return;
   }
 
@@ -772,10 +1134,94 @@ void ComponentAnalyticField::AddPixelOnPlaneY(
   m_planes[iplane].pixels.push_back(std::move(newPixel));
 }
 
+void ComponentAnalyticField::AddPixelOnPlaneR(
+    const double r, const double phimin, const double phimax, 
+    const double zmin, const double zmax, const std::string& label, 
+    const double gap) {
+  if (!m_polar || (!m_ynplan[0] && !m_ynplan[1])) {
+    std::cerr << m_className << "::AddPixelOnPlaneR:\n"
+              << "    There are no planes at constant r.\n";
+    return;
+  }
+
+  if (fabs(phimax - phimin) < Small || fabs(zmax - zmin) < Small) {
+    std::cerr << m_className << "::AddPixelOnPlaneR:\n"
+              << "    Pixel width must be greater than zero.\n";
+    return;
+  }
+
+  Pixel newPixel;
+  newPixel.type = label;
+  newPixel.ind = -1;
+  const double smin = phimin * DegreeToRad;
+  const double smax = phimax * DegreeToRad;
+  newPixel.smin = std::min(smin, smax);
+  newPixel.smax = std::max(smin, smax);
+  newPixel.zmin = std::min(zmin, zmax);
+  newPixel.zmax = std::max(zmin, zmax);
+  newPixel.gap = gap > Small ? gap : -1.;
+
+  int iplane = 0;
+  if (m_ynplan[1]) {
+    const double rho = r > 0. ? log(r) : -25.;
+    const double d0 = fabs(m_coplan[0] - rho);
+    const double d1 = fabs(m_coplan[1] - rho);
+    if (d1 < d0) iplane = 1;
+  }
+
+  m_planes[iplane].pixels.push_back(std::move(newPixel));
+}
+
+void ComponentAnalyticField::AddPixelOnPlanePhi(
+    const double phi, const double rmin, const double rmax, 
+    const double zmin, const double zmax, const std::string& label, 
+    const double gap) {
+  if (!m_polar || (!m_ynplan[2] && !m_ynplan[3])) {
+    std::cerr << m_className << "::AddPixelOnPlanePhi:\n"
+              << "    There are no planes at constant phi.\n";
+    return;
+  }
+
+  if (fabs(rmax - rmin) < Small || fabs(zmax - zmin) < Small) {
+    std::cerr << m_className << "::AddPixelOnPlanePhi:\n"
+              << "    Pixel width must be greater than zero.\n";
+    return;
+  }
+  if (rmin < Small || rmax < Small) {
+    std::cerr << m_className << "::AddPixelOnPlanePhi:\n"
+              << "    Radius must be greater than zero.\n";
+    return;
+  }
+  Pixel newPixel;
+  newPixel.type = label;
+  newPixel.ind = -1;
+  const double smin = log(rmin);
+  const double smax = log(rmax);
+  newPixel.smin = std::min(smin, smax);
+  newPixel.smax = std::max(smin, smax);
+  newPixel.zmin = std::min(zmin, zmax);
+  newPixel.zmax = std::max(zmin, zmax);
+  newPixel.gap = gap > Small ? DegreeToRad * gap : -1.;
+
+  int iplane = 2;
+  if (m_ynplan[3]) {
+    const double d0 = fabs(m_coplan[2] - phi * DegreeToRad);
+    const double d1 = fabs(m_coplan[3] - phi * DegreeToRad);
+    if (d1 < d0) iplane = 3;
+  }
+
+  m_planes[iplane].pixels.push_back(std::move(newPixel));
+}
+
 void ComponentAnalyticField::SetPeriodicityX(const double s) {
+  if (m_polar) {
+    std::cerr << m_className << "::SetPeriodicityX:\n"
+              << "    Cannot use x-periodicity with polar coordinates.\n";
+    return;
+  }
   if (s < Small) {
-    std::cerr << m_className << "::SetPeriodicityX:\n";
-    std::cerr << "    Periodic length must be greater than zero.\n";
+    std::cerr << m_className << "::SetPeriodicityX:\n"
+              << "    Periodic length must be greater than zero.\n";
     return;
   }
 
@@ -785,9 +1231,14 @@ void ComponentAnalyticField::SetPeriodicityX(const double s) {
 }
 
 void ComponentAnalyticField::SetPeriodicityY(const double s) {
+  if (m_polar) {
+    std::cerr << m_className << "::SetPeriodicityY:\n"
+              << "    Cannot use y-periodicity with polar coordinates.\n";
+    return;
+  }
   if (s < Small) {
-    std::cerr << m_className << "::SetPeriodicityY:\n";
-    std::cerr << "    Periodic length must be greater than zero.\n";
+    std::cerr << m_className << "::SetPeriodicityY:\n"
+              << "    Periodic length must be greater than zero.\n";
     return;
   }
 
@@ -796,8 +1247,26 @@ void ComponentAnalyticField::SetPeriodicityY(const double s) {
   UpdatePeriodicity();
 }
 
+void ComponentAnalyticField::SetPeriodicityPhi(const double s) {
+  if (!m_polar && !m_tube) {
+    std::cerr << m_className << "::SetPeriodicityPhi:\n"
+              << "    Cannot use phi-periodicity with Cartesian coordinates.\n";
+    return;
+  }
+  if (std::abs(360. - s * int(360. / s)) > 1.e-4) {
+    std::cerr << m_className << "::SetPeriodicityPhi:\n"
+              << "    Phi periods must divide 360; ignored.\n";
+    return;
+  }
+
+  m_periodic[1] = true;
+  m_sy = DegreeToRad * s;
+  m_mtube = int(360. / s);
+  UpdatePeriodicity();
+}
+
 bool ComponentAnalyticField::GetPeriodicityX(double& s) {
-  if (!m_periodic[0]) {
+  if (!m_periodic[0] || m_polar) {
     s = 0.;
     return false;
   }
@@ -807,12 +1276,22 @@ bool ComponentAnalyticField::GetPeriodicityX(double& s) {
 }
 
 bool ComponentAnalyticField::GetPeriodicityY(double& s) {
-  if (!m_periodic[1]) {
+  if (!m_periodic[1] || m_polar) {
     s = 0.;
     return false;
   }
 
   s = m_sy;
+  return true;
+}
+
+bool ComponentAnalyticField::GetPeriodicityPhi(double& s) {
+  if (!m_periodic[1] || (!m_polar && !m_tube)) {
+    s = 0.;
+    return false;
+  }
+
+  s = RadToDegree * m_sy;
   return true;
 }
 
@@ -873,6 +1352,27 @@ void ComponentAnalyticField::UpdatePeriodicity() {
   }
 }
 
+void ComponentAnalyticField::SetCartesianCoordinates() {
+  if (m_polar) {
+    std::cout << m_className << "::SetCartesianCoordinates:\n    "
+              << "Switching to Cartesian coordinates; resetting the cell.\n";
+    Reset();
+  }
+  m_polar = false;
+}
+
+void ComponentAnalyticField::SetPolarCoordinates() {
+  if (!m_polar) {
+    std::cout << m_className << "::SetPolarCoordinates:\n    "
+              << "Switching to polar coordinates; resetting the cell.\n";
+    Reset();
+  }
+  m_polar = true;
+  // Set default phi period.
+  m_pery = true;
+  m_sy = TwoPi;
+}
+
 void ComponentAnalyticField::AddCharge(const double x, const double y,
                                        const double z, const double q) {
   // Convert from fC to internal units (division by 4 pi epsilon0).
@@ -905,7 +1405,9 @@ void ComponentAnalyticField::PrintCharges() const {
 }
 
 unsigned int ComponentAnalyticField::GetNumberOfPlanesX() const {
-  if (m_ynplan[0] && m_ynplan[1]) {
+  if (m_polar) {
+    return 0;
+  } else if (m_ynplan[0] && m_ynplan[1]) {
     return 2;
   } else if (m_ynplan[0] || m_ynplan[1]) {
     return 1;
@@ -914,7 +1416,31 @@ unsigned int ComponentAnalyticField::GetNumberOfPlanesX() const {
 }
 
 unsigned int ComponentAnalyticField::GetNumberOfPlanesY() const {
-  if (m_ynplan[2] && m_ynplan[3]) {
+  if (m_polar) {
+    return 0;
+  } else if (m_ynplan[2] && m_ynplan[3]) {
+    return 2;
+  } else if (m_ynplan[2] || m_ynplan[3]) {
+    return 1;
+  }
+  return 0;
+}
+
+unsigned int ComponentAnalyticField::GetNumberOfPlanesR() const {
+  if (!m_polar) {
+    return 0;
+  } else if (m_ynplan[0] && m_ynplan[1]) {
+    return 2;
+  } else if (m_ynplan[0] || m_ynplan[1]) {
+    return 1;
+  }
+  return 0;
+}
+
+unsigned int ComponentAnalyticField::GetNumberOfPlanesPhi() const {
+  if (!m_polar) {
+    return 0;
+  } else if (m_ynplan[2] && m_ynplan[3]) {
     return 2;
   } else if (m_ynplan[2] || m_ynplan[3]) {
     return 1;
@@ -931,9 +1457,17 @@ bool ComponentAnalyticField::GetWire(const unsigned int i, double& x, double& y,
     return false;
   }
 
-  x = m_w[i].x;
-  y = m_w[i].y;
-  diameter = m_w[i].d;
+  if (m_polar) {
+    double r = 0., theta = 0.;
+    Internal2Polar(m_w[i].x, m_w[i].y, r, theta);
+    x = r;
+    y = theta;
+    diameter = m_w[i].d * r;
+  } else {
+    x = m_w[i].x;
+    y = m_w[i].y;
+    diameter = m_w[i].d;
+  }
   voltage = m_w[i].v;
   label = m_w[i].type;
   length = m_w[i].u;
@@ -945,8 +1479,8 @@ bool ComponentAnalyticField::GetWire(const unsigned int i, double& x, double& y,
 bool ComponentAnalyticField::GetPlaneX(const unsigned int i, double& x,
                                        double& voltage,
                                        std::string& label) const {
-  if (i >= 2 || (i == 1 && !m_ynplan[1])) {
-    std::cerr << m_className << "::GetPlaneX: Plane index out of range.\n";
+  if (m_polar || i >= 2 || (i == 1 && !m_ynplan[1])) {
+    std::cerr << m_className << "::GetPlaneX: Index out of range.\n";
     return false;
   }
 
@@ -959,12 +1493,40 @@ bool ComponentAnalyticField::GetPlaneX(const unsigned int i, double& x,
 bool ComponentAnalyticField::GetPlaneY(const unsigned int i, double& y,
                                        double& voltage,
                                        std::string& label) const {
-  if (i >= 2 || (i == 1 && !m_ynplan[3])) {
-    std::cerr << m_className << "::GetPlaneY: Plane index out of range.\n";
+  if (m_polar || i >= 2 || (i == 1 && !m_ynplan[3])) {
+    std::cerr << m_className << "::GetPlaneY: Index out of range.\n";
     return false;
   }
 
   y = m_coplan[i + 2];
+  voltage = m_vtplan[i + 2];
+  label = m_planes[i + 2].type;
+  return true;
+}
+
+bool ComponentAnalyticField::GetPlaneR(const unsigned int i, double& r,
+                                       double& voltage,
+                                       std::string& label) const {
+  if (!m_polar || i >= 2 || (i == 1 && !m_ynplan[1])) {
+    std::cerr << m_className << "::GetPlaneR: Index out of range.\n";
+    return false;
+  }
+
+  r = exp(m_coplan[i]);
+  voltage = m_vtplan[i];
+  label = m_planes[i].type;
+  return true;
+}
+
+bool ComponentAnalyticField::GetPlanePhi(const unsigned int i, double& phi,
+                                         double& voltage,
+                                         std::string& label) const {
+  if (!m_polar || i >= 2 || (i == 1 && !m_ynplan[3])) {
+    std::cerr << m_className << "::GetPlanePhi: Index out of range.\n";
+    return false;
+  }
+
+  phi = RadToDegree * m_coplan[i + 2];
   voltage = m_vtplan[i + 2];
   label = m_planes[i + 2].type;
   return true;
@@ -1508,7 +2070,7 @@ int ComponentAnalyticField::Field(const double xin, const double yin,
   }
 
   double xpos = xin, ypos = yin;
-
+  if (m_polar) Cartesian2Internal(xin, yin, xpos, ypos);
   // In case of periodicity, move the point into the basic cell.
   if (m_perx) {
     xpos -= m_sx * int(round(xin / m_sx));
@@ -1520,7 +2082,7 @@ int ComponentAnalyticField::Field(const double xin, const double yin,
     ypos -= arot;
     Polar2Cartesian(xpos, ypos, xpos, ypos);
   } else if (m_pery) {
-    ypos -= m_sy * int(round(yin / m_sy));
+    ypos -= m_sy * int(round(ypos / m_sy));
   }
 
   // Move the point to the correct side of the plane.
@@ -1682,6 +2244,16 @@ int ComponentAnalyticField::Field(const double xin, const double yin,
     volt += volt3d;
   }
 
+  if (m_polar) {
+    const double r = exp(xpos);
+    const double er = ex / r;
+    const double ep = ey / r;
+    const double theta = atan2(yin, xin);
+    const double ct = cos(theta);
+    const double st = sin(theta);
+    ex = +ct * er - st * ep;
+    ey = +st * er + ct * ep; 
+  }
   return 0;
 }
 
@@ -1836,6 +2408,7 @@ bool ComponentAnalyticField::CellCheck() {
 
   // Checks on the planes, first move the x planes to the basic cell.
   if (m_perx) {
+    const std::string xr = m_polar ? "r" : "x";
     double conew1 = m_coplan[0] - m_sx * int(round(m_coplan[0] / m_sx));
     double conew2 = m_coplan[1] - m_sx * int(round(m_coplan[1] / m_sx));
     // Check that they are not one on top of the other.
@@ -1848,32 +2421,32 @@ bool ComponentAnalyticField::CellCheck() {
     // Print some warnings if the planes have been moved.
     if ((conew1 != m_coplan[0] && m_ynplan[0]) ||
         (conew2 != m_coplan[1] && m_ynplan[1])) {
-      std::cout << m_className << "::CellCheck:\n";
-      std::cout << "    The planes in x or r are moved to the basic period.\n";
-      std::cout << "    This should not affect the results.";
+      std::cout << m_className << "::CellCheck:\n    The planes in "
+                << xr << " are moved to the basic period.\n"
+                << "    This should not affect the results.\n";
     }
     m_coplan[0] = conew1;
     m_coplan[1] = conew2;
 
     // Two planes should now be separated by SX, cancel PERX if not.
     if (m_ynplan[0] && m_ynplan[1] && fabs(m_coplan[1] - m_coplan[0]) != m_sx) {
-      std::cerr << m_className << "::CellCheck:\n";
-      std::cerr << "    The separation of the x or r planes"
-                << " does not match the period.\b";
-      std::cerr << "    The periodicity is cancelled.\n";
+      std::cerr << m_className << "::CellCheck:\n    The separation of the "
+                << xr << " planes does not match the period.\n"
+                << "    The periodicity is cancelled.\n";
       m_perx = false;
     }
     // If there are two planes left, they should have identical V's.
     if (m_ynplan[0] && m_ynplan[1] && m_vtplan[0] != m_vtplan[1]) {
-      std::cerr << m_className << "::CellCheck\n";
-      std::cerr << "    The voltages of the two x (or r) planes differ.\n";
-      std::cerr << "    The periodicity is cancelled.\n";
+      std::cerr << m_className << "::CellCheck:\n    The voltages of the two "
+                << xr << " planes differ.\n"
+                << "    The periodicity is cancelled.\n";
       m_perx = false;
     }
   }
 
-  // Idem for the y or r planes: move them to the basic period.
+  // Idem for the y or phi planes: move them to the basic period.
   if (m_pery) {
+    const std::string yp = m_polar ? "phi" : "y";
     double conew3 = m_coplan[2] - m_sy * int(round(m_coplan[2] / m_sy));
     double conew4 = m_coplan[3] - m_sy * int(round(m_coplan[3] / m_sy));
     // Check that they are not one on top of the other.
@@ -1886,26 +2459,25 @@ bool ComponentAnalyticField::CellCheck() {
     // Print some warnings if the planes have been moved.
     if ((conew3 != m_coplan[2] && m_ynplan[2]) ||
         (conew4 != m_coplan[3] && m_ynplan[3])) {
-      std::cout << m_className << "::CellCheck:\n";
-      std::cout << "    The planes in y are moved to the basic period.\n";
-      std::cout << "    This should not affect the results.";
+      std::cout << m_className << "::CellCheck:\n    The planes in "
+                << yp << " are moved to the basic period.\n"
+                << "    This should not affect the results.\n";
     }
     m_coplan[2] = conew3;
     m_coplan[3] = conew4;
 
     // Two planes should now be separated by SY, cancel PERY if not.
     if (m_ynplan[2] && m_ynplan[3] && fabs(m_coplan[3] - m_coplan[2]) != m_sy) {
-      std::cerr << m_className << "::CellCheck:\n";
-      std::cerr << "    The separation of the two y planes"
-                << " does not match the period.\b";
-      std::cerr << "    The periodicity is cancelled.\n";
+      std::cerr << m_className << "::CellCheck:\n    The separation of the two "
+                << yp << " planes does not match the period.\n"
+                << "    The periodicity is cancelled.\n";
       m_pery = false;
     }
     // If there are two planes left, they should have identical V's.
     if (m_ynplan[2] && m_ynplan[3] && m_vtplan[2] != m_vtplan[3]) {
-      std::cerr << m_className << "::CellCheck\n";
-      std::cerr << "    The voltages of the two y planes differ.\n";
-      std::cerr << "    The periodicity is cancelled.\n";
+      std::cerr << m_className << "::CellCheck:\n    The voltages of the two "
+                << yp << " planes differ.\n"
+                << "    The periodicity is cancelled.\n";
       m_pery = false;
     }
   }
@@ -1914,28 +2486,28 @@ bool ComponentAnalyticField::CellCheck() {
   for (int i = 0; i < 2; ++i) {
     for (int j = 2; j < 3; ++j) {
       if (m_ynplan[i] && m_ynplan[j] && m_vtplan[i] != m_vtplan[j]) {
-        std::cerr << m_className << "::CellCheck\n";
-        std::cerr << "    Conflicting potential of 2 crossing planes.\n";
-        std::cerr << "    One y (or phi) plane is removed.\n";
+        const std::string yp = m_polar ? "phi" : "y";
+        std::cerr << m_className << "::CellCheck:\n"
+                  << "    Conflicting potential of two crossing planes.\n"
+                  << "    One " << yp << " plane is removed.\n";
         m_ynplan[j] = false;
       }
     }
   }
 
-  // Make sure the the coordinates of the planes are properly ordered.
+  // Make sure the coordinates of the planes are properly ordered.
   for (int i = 0; i < 3; i += 2) {
     if (m_ynplan[i] && m_ynplan[i + 1]) {
       if (m_coplan[i] == m_coplan[i + 1]) {
-        std::cerr << m_className << "::CellCheck:\n";
-        std::cerr << "    Two planes are on top of each other.\n";
-        std::cerr << "    One of them is removed.\n";
+        std::cerr << m_className << "::CellCheck:\n"
+                  << "    Two planes are on top of each other.\n"
+                  << "    One of them is removed.\n";
         m_ynplan[i + 1] = false;
       }
       if (m_coplan[i] > m_coplan[i + 1]) {
         if (m_debug) {
-          std::cout << m_className << "::CellCheck:\n";
-          std::cout << "    Planes " << i << " and " << i + 1
-                    << " are interchanged.\n";
+          std::cout << m_className << "::CellCheck:\n    Planes "
+                    << i << " and " << i + 1 << " are interchanged.\n";
         }
         // Interchange the two planes.
         const double cohlp = m_coplan[i];
@@ -1956,14 +2528,17 @@ bool ComponentAnalyticField::CellCheck() {
   // Checks on the wires, start moving them to the basic x period.
   if (m_perx) {
     for (auto& wire : m_w) {
-      const double xnew = wire.x - m_sx * int(round(wire.x / m_sx));
-      if (int(round(wire.x / m_sx)) != 0) {
+      double xnew = wire.x - m_sx * int(round(wire.x / m_sx));
+      if (m_ynplan[0] && xnew <= m_coplan[0]) xnew += m_sx;
+      if (m_ynplan[1] && xnew >= m_coplan[1]) xnew -= m_sx;
+      if (fabs(xnew - wire.x) > 1.e-8) {
         double xprt = wire.x;
         double yprt = wire.y;
-        if (m_polar) RTheta2RhoPhi(wire.x, wire.y, xprt, yprt);
+        if (m_polar) Internal2Polar(wire.x, wire.y, xprt, yprt);
+        const std::string xr = m_polar ? "r" : "x";
         std::cout << m_className << "::CellCheck:\n    The " << wire.type
                   << "-wire at (" << xprt << ", " << yprt
-                  << ") is moved to the basic x (or r) period.\n"
+                  << ") is moved to the basic " << xr << " period.\n"
                   << "    This should not affect the results.\n";
       }
       wire.x = xnew;
@@ -1989,13 +2564,16 @@ bool ComponentAnalyticField::CellCheck() {
   } else if (m_pery) {
     for (auto& wire : m_w) {
       double ynew = wire.y - m_sy * int(round(wire.y / m_sy));
-      if (int(round(wire.y / m_sy)) != 0) {
+      if (m_ynplan[2] && ynew <= m_coplan[2]) ynew += m_sy;
+      if (m_ynplan[3] && ynew >= m_coplan[3]) ynew -= m_sy;
+      if (fabs(ynew - wire.y) > 1.e-8) {
         double xprt = wire.x;
         double yprt = wire.y;
-        if (m_polar) RTheta2RhoPhi(wire.x, wire.y, xprt, yprt);
+        if (m_polar) Internal2Polar(wire.x, wire.y, xprt, yprt);
+        const std::string yp = m_polar ? "phi" : "y";
         std::cout << m_className << "::CellCheck:\n    The " << wire.type
                   << "-wire at (" << xprt << ", " << yprt
-                  << ") is moved to the basic y period.\n"
+                  << ") is moved to the basic " << yp << " period.\n"
                   << "    This should not affect the results.\n";
       }
       wire.y = ynew;
@@ -2123,14 +2701,14 @@ bool ComponentAnalyticField::CellCheck() {
     } else if (wrong[i]) {
       double xprt = m_w[i].x;
       double yprt = m_w[i].y;
-      if (m_polar) RTheta2RhoPhi(m_w[i].x, m_w[i].y, xprt, yprt);
+      if (m_polar) Internal2Polar(m_w[i].x, m_w[i].y, xprt, yprt);
       std::cerr << m_className << "::CellCheck:\n    The " << m_w[i].type
                 << "-wire at (" << xprt << ", " << yprt << ") is located "
                 << "outside the planes.\n    This wire is removed.\n";
     } else if ((m_perx && m_w[i].d >= m_sx) || (m_pery && m_w[i].d >= m_sy)) {
       double xprt = m_w[i].x;
       double yprt = m_w[i].y;
-      if (m_polar) RTheta2RhoPhi(m_w[i].x, m_w[i].y, xprt, yprt);
+      if (m_polar) Internal2Polar(m_w[i].x, m_w[i].y, xprt, yprt);
       std::cerr << m_className << "::CellCheck:\n    The diameter of the "
                 << m_w[i].type << "-wire at (" << xprt << ", " << yprt
                 << ") exceeds 1 period.\n    This wire is removed.\n";
@@ -2173,8 +2751,8 @@ bool ComponentAnalyticField::CellCheck() {
       double xprtj = m_w[j].x;
       double yprtj = m_w[j].y;
       if (m_polar) {
-        RTheta2RhoPhi(xprti, yprti, xprti, yprti);
-        RTheta2RhoPhi(xprtj, yprtj, xprtj, yprtj);
+        Internal2Polar(m_w[i].x, m_w[i].y, xprti, yprti);
+        Internal2Polar(m_w[j].x, m_w[j].y, xprtj, yprtj);
       }
       std::cerr << m_className << "::CellCheck:\n    Wires " << m_w[i].type
                 << " at (" << xprti << ", " << yprti << ") and " << m_w[j].type
@@ -2653,30 +3231,58 @@ bool ComponentAnalyticField::PrepareStrips() {
   // Assign.
   for (unsigned int i = 0; i < 4; ++i) {
     for (auto& strip : m_planes[i].strips1) {
-      if (strip.gap < 0.) strip.gap = gapDef[i];
-      if (strip.gap < 0.) {
+      if (strip.gap < 0. && gapDef[i] < 0.) {
         std::cerr << m_className << "::PrepareStrips:\n"
-                  << "    Not able to set a default anode-cathode gap\n"
-                  << "    for x/y-strips of plane " << i << ".\n";
+                  << "    Not able to set a default anode-cathode gap\n";
+        if (m_polar) {
+          std::cerr << "    for r/phi-strips of plane " << i << ".\n";
+        } else {
+          std::cerr << "    for x/y-strips of plane " << i << ".\n";
+        }
         return false;
+      }
+      if (strip.gap < 0.) {
+        strip.gap = gapDef[i];
+      } else if (m_polar && i < 2) {
+        if (i == 0) {
+          strip.gap = log(1. + strip.gap / exp(m_coplan[i]));
+        } else {
+          strip.gap = -log(1. - strip.gap / exp(m_coplan[i]));
+        }
       }
     }
     for (auto& strip : m_planes[i].strips2) {
-      if (strip.gap < 0.) strip.gap = gapDef[i];
-      if (strip.gap < 0.) {
+      if (strip.gap < 0. && gapDef[i] < 0.) {
         std::cerr << m_className << "::PrepareStrips:\n"
                   << "    Not able to set a default anode-cathode gap\n"
                   << "    for z-strips of plane " << i << ".\n";
         return false;
       }
+      if (strip.gap < 0.) {
+        strip.gap = gapDef[i];
+      } else if (m_polar && i < 2) {
+        if (i == 0) {
+          strip.gap = log(1. + strip.gap / exp(m_coplan[i]));
+        } else {
+          strip.gap = -log(1. - strip.gap / exp(m_coplan[i]));
+        }
+      }
     }
     for (auto& pixel : m_planes[i].pixels) {
-      if (pixel.gap < 0.) pixel.gap = gapDef[i];
-      if (pixel.gap < 0.) {
+      if (pixel.gap < 0. && gapDef[i] < 0.) {
         std::cerr << m_className << "::PrepareStrips:\n"
                   << "    Not able to set a default anode-cathode gap\n"
                   << "    for pixels on plane " << i << ".\n";
         return false;
+      }
+      if (pixel.gap < 0.) {
+        pixel.gap = gapDef[i];
+      } else if (m_polar && i < 2) {
+        if (i == 0) {
+          pixel.gap = log(1. + pixel.gap / exp(m_coplan[i]));
+        } else {
+          pixel.gap = -log(1. - pixel.gap / exp(m_coplan[i]));
+        }
       }
     }
   }
@@ -5974,7 +6580,7 @@ bool ComponentAnalyticField::IprD30() {
   return true;
 }
 
-bool ComponentAnalyticField::Wfield(const double xpos, const double ypos,
+bool ComponentAnalyticField::Wfield(const double xin, const double yin,
                                     const double zpos, double& exsum,
                                     double& eysum, double& ezsum, double& vsum,
                                     const std::string& label,
@@ -5989,11 +6595,12 @@ bool ComponentAnalyticField::Wfield(const double xpos, const double ypos,
   double ex = 0., ey = 0., ez = 0.;
   double volt = 0.;
 
+  double xpos = xin, ypos = yin;
+  if (m_polar) Cartesian2Internal(xin, yin, xpos, ypos);
   // Stop here if there are no weighting fields defined.
   if (m_readout.empty()) return false;
   if (!m_sigset) {
-    std::cerr << m_className << "::Wfield::\n"
-              << "    No weighting fields available.\n";
+    std::cerr << m_className << "::Wfield: No weighting fields available.\n";
     return false;
   }
 
@@ -6144,6 +6751,16 @@ bool ComponentAnalyticField::Wfield(const double xpos, const double ypos,
       ezsum += ez;
       if (opt) vsum += volt;
     }
+  }
+  if (m_polar) {
+    const double r = exp(xpos);
+    const double er = exsum / r;
+    const double ep = eysum / r;
+    const double theta = atan2(yin, xin);
+    const double ct = cos(theta);
+    const double st = sin(theta);
+    exsum = +ct * er - st * ep;
+    eysum = +st * er + ct * ep; 
   }
   return true;
 }
@@ -7181,10 +7798,10 @@ void ComponentAnalyticField::WfieldStripZ(
     volt /= Pi;
   }
   // Evaluate the field.
-  const double ewx = (s / g) * (e1 / (ce12 + s * s) - e2 / (ce22 + s * s));
-  const double ewy = ((c / (c - e2) + s * s / ce22) / (1. + s * s / ce22) -
-                      (c / (c - e1) + s * s / ce12) / (1. + s * s / ce12)) /
-                     g;
+  const double s2 = s * s;
+  const double ewx = (s / g) * (e1 / (ce12 + s2) - e2 / (ce22 + s2));
+  const double ewy = ((c / (c - e2) + s2 / ce22) / (1. + s2 / ce22) -
+                      (c / (c - e1) + s2 / ce12) / (1. + s2 / ce12)) / g;
 
   // Rotate the field back to the original coordinates.
   switch (ip) {
@@ -7265,10 +7882,10 @@ void ComponentAnalyticField::WfieldStripXy(const double xpos, const double ypos,
     volt /= Pi;
   }
   // Evaluate the field.
-  const double ewx = (s / g) * (e1 / (ce12 + s * s) - e2 / (ce22 + s * s));
-  const double ewy = ((c / (c - e2) + s * s / ce22) / (1. + s * s / ce22) -
-                      (c / (c - e1) + s * s / ce12) / (1. + s * s / ce12)) /
-                     g;
+  const double s2 = s * s;
+  const double ewx = (s / g) * (e1 / (ce12 + s2) - e2 / (ce22 + s2));
+  const double ewy = ((c / (c - e2) + s2 / ce22) / (1. + s2 / ce22) -
+                      (c / (c - e1) + s2 / ce12) / (1. + s2 / ce12)) / g;
 
   // Rotate the field back to the original coordinates.
   switch (ip) {
@@ -7345,7 +7962,7 @@ void ComponentAnalyticField::WfieldPixel(const double xpos, const double ypos,
     default:
       return;
   }
-  if (z < 0.) std::cerr << " z = " << z << std::endl;
+  // if (z < 0.) std::cerr << " z = " << z << std::endl;
   // Make sure we are in the fiducial part of the weighting map.
   // Commenting out this lines either breaks the simulation or the plot!
   // TODO!

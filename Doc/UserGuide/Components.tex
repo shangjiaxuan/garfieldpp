@@ -37,7 +37,7 @@ Medium* GetMedium(const double& x, const double& y, const double& z);
   \label{Tab:StatusFlagsField}
 \end{table}
 
-\section{Defining the Geometry}
+\section{Defining the geometry}
 
 As mentioned above, the purpose of \texttt{Component} classes is to 
 provide, for a given location, the electric (and magnetic) field and a pointer to the 
@@ -118,7 +118,7 @@ after assembly the geometry is passed to the \texttt{Component} as a pointer:
 void SetGeometry(GeometryBase* geo);
 \end{lstlisting}
 
-\subsection{Visualizing the Geometry}
+\subsection{Visualizing the geometry}
 
 Geometries described by \texttt{GeometrySimple} can be viewed 
 using the class \texttt{ViewGeometry}. 
@@ -153,7 +153,7 @@ view->Plot2d();
 Similarly, the function \texttt{ViewCell::Plot3d()} paints
 a three-dimensional view of the cell layout.
 
-\section{Field Maps}
+\section{Field maps}
 
 \subsection{Ansys}
 
@@ -490,7 +490,7 @@ This feature can be activated using the function
 void EnableInterpolation(const bool on = true);
 \end{lstlisting} 
  
-\subsection{Visualizing the Mesh}
+\subsection{Visualizing the mesh}
 
 For visualizing the mesh imported from a FEM field map, the class 
 \texttt{ViewFEMesh} (written by J. Renner) is available. 
@@ -535,13 +535,13 @@ and \texttt{driftView} is a pointer to a \texttt{ViewDrift} class)
   meshView->Plot();
 \end{lstlisting}
 
-\section{Analytic Fields}
+\section{Analytic fields}
 
 For two-dimensional geometries consisting of wires, planes and tubes, 
 semi-analytic calculation techniques -- based essentially 
 on the capacitance matrix method -- are implemented.
 
-\subsection{Describing the Cell}
+\subsection{Describing the cell}
 
 Wires, tubes and planes can be added to the cell layout by means of the 
 following functions:
@@ -597,15 +597,95 @@ a check is performed whether the provided geometry matches the requirements.
 If necessary, the planes and wires are reordered. 
 Wires outside the tube or the planes as well as overlapping wires are removed.
 
+\subsection{Cylindrical geometries}
+
+By default, the wire coordinates are specified in Cartesian coordinates and 
+the planes are parallel to the $x$ or $y$ axis.
+Calling 
+\begin{lstlisting}
+void SetPolarCoordinates();
+\end{lstlisting} 
+switches to a polar coordinate system. This can be useful for 
+certain types of cells which are more conveniently described in polar coordinates
+$\left(r, \phi\right)$, for instance because of the presence of a circular plane. 
+
+Internally, the class uses log-polar coordinates $\left(\rho, \phi\right)$, 
+where the angular coordinate $\phi$ is the same as in polar coordinates, 
+and $\rho = \ln r$. The transformation\footnote{
+Using complex numbers, the transformation can be written as 
+$x + \text{i}y = \exp\left(\rho + \text{i}\phi\right)$.}
+\begin{equation*}
+\left(x, y\right) = \text{e}^{\rho}\left(\cos\phi, \sin\phi\right)
+\end{equation*}
+is a conformal mapping\footnote{This implies that the Laplace equation in log-polar coordinates has the same form as in Cartesian coordinates.} 
+which translates circles to lines at constant $\rho$. 
+After calculating the field in internal coordinates, it is transformed back to 
+Cartesian coordinates using
+\begin{equation*}
+\begin{pmatrix}E_{x}\\E_{y}\end{pmatrix} = \text{e}^{\rho}
+\begin{pmatrix}\cos\phi & -\sin\phi \\ \sin\phi & \cos\phi\end{pmatrix}
+\begin{pmatrix}E_{\rho}\\E_{\phi}\end{pmatrix}. 
+\end{equation*}
+
+By calling 
+\begin{lstlisting}
+void SetCartesianCoordinates();
+\end{lstlisting} 
+one can change back to Cartesian coordinates. 
+Mixed coordinates are not permitted; when switching from Cartesian to polar 
+coordinates or vice versa the description of the cell is reset.
+
+In order to add a wire 
+to the cell, the same function is used 
+for both Cartesian and polar coordinates. In the latter case, the 
+first coordinate corresponds to the radius of the wire (in cm), 
+and the second coordinate corresponds to the angle (in degrees). 
+A wire may not be positioned at the origin if polar coordinates are being used.
+
+Planes at constant radius or at constant angle are specified using
+\begin{lstlisting}
+void AddPlaneR(const double r, const double voltage, const std::string& label);
+void AddPlanePhi(const double phi, const double voltage, const std::string& label);
+\end{lstlisting}
+\begin{description}
+  \item[r] radius of the plane (in cm),
+  \item[phi] angle of the plane (in degrees).
+\end{description}
+
+The following simple example generates a pie wedge with a wire inside.
+\begin{lstlisting}
+ComponentAnalyticField cmp;
+cmp.SetPolarCoordinates();
+const double r = 2.;
+cmp.AddPlaneR(r, 0., "r");
+cmp.AddPlanePhi( 0., 0., "phi1");
+cmp.AddPlanePhi(60., 0., "phi2");
+cmp.AddWire(0.5 * r, 30., 50.e-4, 500., "w");
+\end{lstlisting}
+
 \subsection{Periodicities}
 The class supports simple periodicity in \(x\) and \(y\) direction.
-The periodic lengths are set by means of
+The periodic lengths are set using
 \begin{lstlisting}
 void SetPeriodicityX(const double s);
 void SetPeriodicityY(const double s);
 \end{lstlisting}
 
-\subsection{Cell Types}
+When working in polar coordinates, one can set the $\phi$ periodicity 
+using
+\begin{lstlisting}
+void SetPeriodicityPhi(const double s);
+\end{lstlisting} 
+\begin{description}
+  \item[s] angular period (in degrees).
+\end{description}
+If the $\phi$ periodicity is not set explicitly by the user, 
+a cyclic boundary condition with a period of $2\pi$ is imposed.
+
+Radial periodicity is not supported since the internal coordinate 
+$\rho$ is not linear in $r$.
+
+\subsection{Cell types}
 
 Internally, cells are classified as belonging to one of these types:
 \begin{description}
@@ -641,7 +721,7 @@ retrieved by the function
 std::string GetCellType();
 \end{lstlisting}
 
-\subsection{Weighting Fields}
+\subsection{Weighting fields}
 
 The weighting field calculation for a readout group 
 -- \textit{i.\,e.} all elements (wires, planes, etc.) with the same label --
@@ -699,7 +779,28 @@ void AddPixelOnPlaneY(const double y, const double xmin, const double xmax,
 \end{lstlisting}
 Pixel weighting fields are calculated using the expressions given in 
 Ref.~\cite{Riegler2014}.
-\section{Other Components}
+
+When working in polar coordinates, strips and pixels are defined using
+\begin{lstlisting}
+void AddStripOnPlaneR(const char direction, const double r, const double smin    ,
+                      const double smax, const std::string& label,
+                      const double gap = -1.);
+void AddStripOnPlanePhi(const char direction, const double phi, const double     smin,
+                        const double smax, const std::string& label,
+                        const double gap = -1.);
+void AddPixelOnPlaneR(const double r,
+                      const double phimin, const double phimax,
+                      const double zmin, const double zmax,
+                      const std::string& label, const double gap = -1.);
+void AddPixelOnPlanePhi(const double phi,
+                        const double rmin, const double rmax,
+                        const double zmin, const double zmax,
+                        const std::string& label, const double gap = -1.);
+\end{lstlisting} 
+Valid strip directions are \texttt{'p'} ($\phi$) or \texttt{'z'} for 
+circular planes and \texttt{'r'} or \texttt{'z'} for $\phi$ planes.
+
+\section{Other components}
 
 For simple calculations, the class \texttt{ComponentConstant} can be used. 
 As the name implies, it provides a uniform electric field. 
@@ -770,7 +871,7 @@ void SetWeightingField(void (*f)(const double, const double, const double,
                                  double&, double&, double&, const std::string));
 \end{lstlisting}
 
-\section{Visualizing the Field}
+\section{Visualizing the field}
 
 The class \texttt{ViewField} provides a number of functions 
 for plotting the potential and field of a component. 

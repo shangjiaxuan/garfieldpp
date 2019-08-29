@@ -10,6 +10,10 @@ Microscopic transport of electrons and
 the use of finite element field maps are dealt with in 
 Sec.~\ref{Sec:ExampleGem}. 
 
+Section~\ref{Sec:ExampleSilicon} presents an example of 
+the simulation of drift lines and induced signals in a 
+silicon sensor.
+ 
 Sample macros and further examples can be found on the webpage 
 %(\href{http://garfieldpp.web.cern.ch/garfieldpp/}{cern.ch/garfieldpp}). 
 (\url{http://garfieldpp.web.cern.ch/garfieldpp/Examples}) and 
@@ -242,7 +246,7 @@ ComponentAnsys123* fm = new ComponentAnsys123();
 fm->Initialise("ELIST.lis", "NLIST.lis", "MPLIST.lis", "PRNSOL.lis", "mm");
 // Set the periodicities
 fm->EnableMirrorPeriodicityX();
-fm->EnableMirorPeriodicityY();
+fm->EnableMirrorPeriodicityY();
 // Print some information about the cell dimensions.
 fm->PrintRange();
 \end{lstlisting}
@@ -295,7 +299,7 @@ Microscopic tracking is handled by the class
 \texttt{AvalancheMicroscopic}.
 \begin{lstlisting}
 AvalancheMicroscopic* aval = new AvalancheMicroscopic();
-aval->SetSensor(aval);
+aval->SetSensor(sensor);
 \end{lstlisting}
 We are now ready to track an electron through the GEM.  
 \begin{lstlisting}
@@ -310,3 +314,255 @@ double dx0 = 0., dy0 = 0., dz0 = 0.;
 // Calculate an electron avalanche.
 aval->AvalancheElectron(x0, y0, 0, t0, e0, dx0, dy0, dz0);
 \end{lstlisting}
+
+\subsection{Silicon sensor}\label{Sec:ExampleSilicon}
+In this example, we will simulate the signal in a 100\,\textmu{m} thick 
+planar silicon sensor due to the passage of a charged particle. 
+We will adopt a coordinate system where the back side of the sensor is at 
+$y = 0$ and the front side (\ie the strip or pixel side) is at $y = 100$\,\textmu{m}.
+
+\subsubsection{Transport properties}
+We start by creating a \texttt{MediumSilicon} object, 
+which provides the transport parameters (\eg drift velocity and 
+diffusion coefficients) of electrons and holes as function 
+of the electric field (and, in general, also the magnetic field, 
+but we will assume that it is zero in this example).
+\begin{lstlisting}
+MediumSilicon si;
+// Set the temperature [K].
+si.SetTemperature(293.15);
+\end{lstlisting}
+Unless the user overrides the default behaviour 
+(by providing a table of velocities at different electric fields), 
+\texttt{MediumSilicon} calculates the drift velocities according to 
+analytic parameterizations. 
+A description of the mobility models is given in Sec.~\ref{Sec:Silicon}.
+In this example, we will use the default parameterizations, 
+which correspond to the default models in Sentaurus Device \cite{Synopsys}. 
+The diffusion coefficients are calculated according to the Einstein relation.
+
+\subsubsection{Geometry}
+As a next step, we define the active volume, 
+which in our case is simply a box with a length of $d = 100$\,\textmu{m} 
+along $y$, centred at $y = 50$\,\textmu{m}, and made of silicon. 
+To describe the shape of our detector, 
+we therefore create a \texttt{SolidBox} object.
+\begin{lstlisting}
+// Thickness of the silicon [cm]
+constexpr double d = 100.e-4;
+SolidBox box(0, 0.5 * d, 0, 2 * d, 0.5 * d, 2 * d);
+\end{lstlisting}
+We then create a \texttt{GeometrySimple} object, and attach the box to it 
+(\ie we pass it a pointer to the \texttt{SolidBox} object), 
+together with the medium inside 
+(\ie a pointer to the \texttt{MediumSilicon} object).
+\begin{lstlisting}
+// Set up the geometry.
+GeometrySimple geo;
+geo.AddSolid(&box, &si);
+\end{lstlisting}
+
+\subsubsection{Electric field}
+For accurate calculations of the electric field in a segmented silicon sensor, 
+one normally uses TCAD device simulation programs such as 
+Synopsys Sentaurus Device \cite{Synopsys}. 
+In the present example, we will follow a simplified approach 
+and approximate the electric field by that of an overdepleted pad sensor. 
+In that case, the $x$ and $z$ components of the electric field vanish, 
+and the $y$ component varies linearly between
+\begin{equation*}
+E_y = \frac{V_{\text{bias}} - V_{\text{dep}}}{d}
+\end{equation*}
+at the back side of the sensor ($y = 0$) and
+\begin{equation*}
+E_y = \frac{V_{\text{bias}} + V_{\text{dep}}}{d}
+\end{equation*}
+at the front side of the sensor ($y = d$), where 
+$V_{\text{dep}}$ is the depletion voltage of the sensor and 
+$V_{\text{bias}}$ is the applied bias voltage. 
+In this example, we will use $V_{\text{dep}} = -20$\,V and 
+$V_{\text{bias}} = -50$\,V.
+
+In order to use this expression for the electric field in our simulation, 
+we need to write a small function
+\begin{lstlisting}
+void eLinear(const double /*x*/, const double /*y*/, const double /*z*/,
+             double& ex, double& ey, double& ez) {
+
+  // Bias voltage [V]
+  constexpr double vbias = -50.;
+  // Depletion voltage [V]
+  constexpr double vdep = -20.;
+  ex = ez = 0.;
+  ey = (vbias - vdep) / d + 2 * y * vdep / (d * d);
+}
+\end{lstlisting}
+and set up a \texttt{ComponentUser} object 
+which delegates the calculation of the electric field to this function.
+\begin{lstlisting}
+ComponentUser linearField;
+linearField.SetGeometry(&geo);
+linearField.SetElectricField(eLinear);
+\end{lstlisting}
+A pointer to this \texttt{Component} is then passed to a \texttt{Sensor}
+which acts as an interface to the transport classes.
+\begin{lstlisting}
+Sensor sensor;
+sensor.AddComponent(&linearField);
+\end{lstlisting}
+
+\subsubsection{Weighting field}
+
+For signal simulations, 
+we need to know not only the actual electric field in the sensor, 
+but also the weighting field of the electrode for which we want to 
+calculate the induced current (Chapter~\ref{Chap:Signals}).
+
+In this example, 
+we will use an analytic expression for the weighting field of a strip, 
+as implemented in the class \texttt{ComponentAnalyticField}. 
+We thus create a \texttt{ComponentAnalyticField} object, 
+define the equipotential planes ($y = 0$ and $y = d$) 
+and set the voltages at these planes to ground and $V = V_{\text{bias}}$. 
+We will not use this class to calculate the ``real'' electric field 
+in the sensor though, so the voltage settings don't actually matter 
+for our purposes.
+\begin{lstlisting}
+ComponentAnalyticField wField;
+wField.SetGeometry(&geo);
+wField.AddPlaneY(0, vbias, "back");
+wField.AddPlaneY(d, 0, "front");
+\end{lstlisting}
+We now define a strip (55\,\textmu{m} width, centred at $x = 0$) 
+on the front side of the sensor and request the calculation of its 
+weighting field (which we label ``strip'').
+\begin{lstlisting}
+constexpr double pitch = 55.e-4;
+constexpr double halfpitch = 0.5 * pitch;
+wField.AddStripOnPlaneY('z', d, -halfpitch, halfpitch, "strip");
+wField.AddReadout("strip");
+\end{lstlisting}
+Similarly we could have set up the weighting field of a pixel electrode.
+\begin{lstlisting}
+wField.AddPixelOnPlaneY(d, -halfpitch, halfpitch, -halfpitch, halfpitch, "pixel");
+wField.AddReadout("pixel");
+\end{lstlisting}
+
+Finally, we need to instruct the \texttt{Sensor} 
+to use the strip weighting field we just prepared 
+for computing the induced signal
+\begin{lstlisting}
+// Request signal calculation for the electrode named "strip",
+// using the weighting field provided by the Component object wField.
+sensor.AddElectrode(&wField, "strip");
+\end{lstlisting}
+and we need to set the granularity with which we want to record the signal 
+(in our example: 1000 bins between 0 and 10\,ns).
+
+\begin{lstlisting}
+// Set the time bins.
+const unsigned int nTimeBins = 1000;
+const double tmin =  0.;
+const double tmax = 10.;
+const double tstep = (tmax - tmin) / nTimeBins;
+sensor.SetTimeWindow(tmin, tstep, nTimeBins);
+\end{lstlisting}
+
+\subsubsection{Primary ionization and charge carrier transport}
+
+We use Heed (Sec.~\ref{Sec:Heed}) to simulate the electron/hole pairs 
+produced by a 180\,GeV\,/\,$c$ charged pion traversing the sensor.
+\begin{lstlisting}
+TrackHeed track;
+track.SetSensor(&sensor);
+// Set the particle type and momentum [eV/c].
+track.SetParticle("pion");
+track.SetMomentum(180.e9);
+\end{lstlisting}
+For transporting the electrons and holes, we use the class \texttt{AvalancheMC}. 
+When setting up the \texttt{AvalancheMC} object, 
+we need to set the step size used for the drift line calculation 
+to a reasonable value. In this example, we use steps of 1\,\textmu{m}. 
+This means that at each step, the electron/hole will be propagated by 
+1\,\textmu{m} in the direction of the drift velocity at the local field, 
+followed by a random step based on the diffusion coefficient.
+\begin{lstlisting}
+AvalancheMC drift;
+drift.SetSensor(&sensor);
+// Set the step size [cm].
+drift.SetDistanceSteps(1.e-4);
+drift.EnableSignalCalculation();
+\end{lstlisting}
+We are now ready to run the simulation. In the snippet below, 
+we simulate a perpendicularly incident charged particle track 
+passing through the centre of the strip ($x = 0$), 
+loop over the electron/hole pairs produced by the particle, 
+and simulate a drift line for each electron and hole.
+\begin{lstlisting}
+double x0 = 0., y0 = 0., z0 = 0., t0 = 0.;
+double dx = 0., dy = 1., dz = 0.; 
+track.NewTrack(x0, y0, z0, t0, dx, dy, dz);
+double xc = 0., yc = 0., zc = 0., tc = 0., ec = 0., extra = 0.;
+int ne = 0;
+// Retrieve the clusters along the track.
+while (track.GetCluster(xc, yc, zc, tc, ne, ec, extra)) {
+  // Loop over the electrons in the cluster.
+  for (int j = 0; j < ne; ++j) {
+    double xe = 0., ye = 0., ze = 0., te = 0., ee = 0.;
+    double dxe = 0., dye = 0., dze = 0.;
+    track.GetElectron(j, xe, ye, ze, te, ee, dxe, dye, dze);
+    // Simulate the electron and hole drift lines.
+    drift.DriftElectron(xe, ye, ze, te);
+    drift.DriftHole(xe, ye, ze, te);
+  }
+}
+\end{lstlisting}
+To check whether the results are sensible, 
+it can be instructive to visualize the drift lines 
+using the class \texttt{ViewDrift}.
+\begin{lstlisting}
+ViewDrift driftView;
+driftView.SetArea(-0.5 * d, 0, -0.5 * d, 0.5 * d, d, 0.5 * d);
+track.EnablePlotting(&driftView);
+drift.EnablePlotting(&driftView);
+\end{lstlisting}
+With the plotting option switched on, \texttt{AvalancheMC} 
+will pass the coordinates of all drift line points 
+to a \texttt{ViewDrift} object. 
+After having simulated all drift lines from a track, we can create a plot using
+\begin{lstlisting}
+constexpr bool twod = true;
+driftView.Plot(twod);
+\end{lstlisting}
+Plotting the drift lines can slow down the execution time quite a bit, so it is advisable to switch it off when simulating a large number of tracks.
+
+\subsubsection{Retrieving the signal}
+After having simulated the charge carrier drift lines, 
+we can plot the induced current using the class \texttt{ViewSignal}.
+\begin{lstlisting}
+ViewSignal signalView;
+signalView.SetSensor(&sensor);
+constexpr bool plotTotalSignal = true;
+constexpr bool plotElectronSignal = false;
+constexpr bool plotHoleSignal = false;
+signalView.PlotSignal("strip", plotTotalSignal, plotElectronSignal, plotHoleSignal);
+\end{lstlisting}
+
+To post-process the induced current pulse, one can convolute 
+it with a transfer function that describes the response 
+of the front-end electronics.
+
+Often it can also be useful to save the signal to a file. 
+An example for doing so is given in the code snippet below.
+\begin{lstlisting}
+std::ofstream outfile;
+outfile.open("signal.txt", std::ios::out);
+for (unsigned int i = 0; i < nTimeBins; ++i) {
+  const double t = (i + 0.5) * tstep;
+  const double f = sensor.GetSignal(label, i);
+  const double fe = sensor.GetElectronSignal(label, i);
+  const double fh = sensor.GetIonSignal(label, i);
+  outfile << t << "  " << f << "  " << fe << "  " << fh << "\n";
+}
+\end{lstlisting}
+
