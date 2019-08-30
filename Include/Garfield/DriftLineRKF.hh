@@ -133,7 +133,7 @@ class DriftLineRKF {
   // Flag whether to calculate induced signals or not.
   bool m_doSignal = true;
   // Averaging order used when projecting the signal on the time bins.
-  unsigned int m_navg;
+  unsigned int m_navg = 2;
 
   // Scaling factor for electron signals.
   double m_scaleE = 1.;
