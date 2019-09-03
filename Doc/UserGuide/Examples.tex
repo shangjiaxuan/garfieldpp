@@ -225,9 +225,21 @@ signalView.PlotSignal("s");
 \end{lstlisting}
 
 \subsection{GEM}\label{Sec:ExampleGem}
+In this example, we will simulate the drift of electrons and ions 
+in a standard GEM, which consists of a 50\,\textmu{m} thick kapton foil 
+coated on both sides with a 5\,\textmu{m} layer of copper, 
+with a hexagonal pattern of holes (outer hole diameter: 70\,\textmu{m}, 
+inner hole diameter: 50\,\textmu{m}, pitch: 140\,\textmu{m}) 
+etched into the foil.
+\subsubsection{Field map}
+As a first step, we need to calculate the electric field in the GEM. 
+Currently this calculation has to be performed using an external field 
+solver like Ansys \cite{ANSYS} or Elmer \cite{Elmer}. In this example, 
+we use Ansys, but the steps for importing and using an Elmer field map 
+are very similar.
 
-\subsubsection{Field Map}
-
+In the following we assume that the output files resulting from the 
+Ansys run are located in the current working directory.
 The initialisation of \texttt{ComponentAnsys123} consists of 
 \begin{itemize}
   \item
@@ -250,7 +262,28 @@ fm->EnableMirrorPeriodicityY();
 // Print some information about the cell dimensions.
 fm->PrintRange();
 \end{lstlisting}
+We need to apply mirror periodicity in $x$ and $y$
+in \texttt{ComponentAnsys123} since -- exploiting the symmetry   
+of the geometry -- we only modelled half a hole in Ansys.
 
+Using the class \texttt{ViewField}, we do a visual inspection of the 
+field map to make sure it makes sense. 
+We first make a plot of the potential along the hole axis ($z$ axis).
+\begin{lstlisting}
+ViewField* fieldView = new ViewField();
+fieldView->SetComponent(fm);
+// Plot the potential along the hole axis.
+fieldView->PlotProfile(0., 0., 0.02, 0., 0., -0.02);
+\end{lstlisting}
+We also make a contour plot of the potential in the $x - z$ plane.
+\begin{lstlisting}
+const double pitch = 0.014;
+// Set the normal vector (0, -1, 0) of the viewing plane.
+fieldView->SetPlane(0., -1., 0., 0., 0., 0.);
+fieldView->SetArea(-pitch / 2., -0.02, pitch / 2., 0.02);
+fieldView->SetVoltageRange(-160., 160.);
+fieldView->PlotContour();
+\end{lstlisting}
 Next we create a \texttt{Sensor} and add the field map 
 component to it
 \begin{lstlisting}
@@ -259,7 +292,6 @@ sensor->AddComponent(fm);
 \end{lstlisting}
 
 \subsubsection{Gas}
-
 We use a gas mixture of 80\% argon and 20\% CO\(_{2}\).
 \begin{lstlisting}
 MediumMagboltz* gas = new MediumMagboltz();
@@ -268,20 +300,68 @@ gas->SetComposition("ar", 80., "co2", 20.);
 gas->SetTemperature(293.15);
 gas->SetPressure(760.);
 \end{lstlisting}
+\paragraph{Electron collision rates}
+In this example, we will simulate electron avalanches using 
+a ``microscopic'' Monte Carlo method,
+based on the electron-atom/molecule cross-sections in the database of the 
+Magboltz program. 
+As discussed in more detail in Sec.~\ref{Sec:MicroscopicTracking},
+the algorithm takes as input the collision rates (as function of the 
+electron's kinetic energy) for each scattering mechanism 
+that can take place in the gas.
+The preparation of the tables of collision rates and the interpolation 
+in these tables is done by the class \texttt{MediumMagboltz}, which -- as
+the name suggests -- provides an interface to Magboltz.
 
-In this example, we will calculate electron avalanches using 
-``microscopic'' Monte Carlo simulation, based directly on the 
-electron-atom/molecule cross-sections in the Magboltz database. 
- 
-%\begin{lstlisting}
-%gas->SetMaxElectronEnergy(200.);
-%const bool verbose = true;
-%gas->Initialise(verbose);
-%\end{lstlisting}
+In \texttt{MediumMagboltz} the collision rates are stored on an
+evenly spaced energy grid. The max. energy can be set by the user.
+For avalanche calculations, 50 -- 200\,eV is usually a reasonable choice.
+\begin{lstlisting}
+gas->SetMaxElectronEnergy(200.);
+gas->Initialise();
+\end{lstlisting}
+\paragraph{Penning transfer}
+Argon includes a number of excitation levels with an excitation energy
+exceeding the ionisation potential of CO$_{2}$ (13.78\,eV).
+These excited states can contribute to the gain,
+since (part of) the excitation energy can be transferred
+to a CO$_2$ molecule through collisions or by photo-ionisation.
 
+In the simulation, this so-called Penning effect can be described 
+in terms of a probability $r$ that an excitation is converted to an 
+ionising collision (Sec.~\ref{Sec:PenningTransfer}).
+\begin{lstlisting}
+// Penning transfer probability.
+const double rPenning = 0.57;
+// Mean distance from the point of excitation.
+const double lambdaPenning = 0.;
+gas-&gt;EnablePenningTransfer(rPenning, lambdaPenning, "ar");
+\end{lstlisting}
+\paragraph{Ion transport properties}
+Unlike electrons, ions cannnot be tracked microscopically in Garfield++.
+Moreover, there is no program like Magboltz that can compute  
+the macroscopic transport properties (such as the drift velocity),
+so we have to provide these data ourselves.
+In this example, we use the mobility of Ar$^{+}$ ions in Ar
+as an approximation because there is no literature data for drift in the
+mixture.
+Example files with mobility data for various pure gases are located
+in the \texttt{Data} directory of the project.
+Note that the \texttt{LoadIonMobility} method does not prefix
+the file name with a directory.
+If your mobility file is not located in your current working directory,
+then you have to specify a fully qualified file name.
+\begin{lstlisting}
+const std::string path = getenv("GARFIELD\_HOME");
+gas->LoadIonMobility(path + "/Data/IonMobility\_Ar+\_Ar.txt");
+\end{lstlisting}
+\paragraph{Associating the gas to a field map region}
 In order to track a particle through the detector we have to 
 tell \texttt{ComponentAnsys123} which field map material corresponds 
 to which \texttt{Medium}.
+The gas can be distinguished from the other materials
+(here: kapton and copper) by its dielectric constant, in our case
+$\varepsilon = 1$.
 \begin{lstlisting}
 const unsigned int nMaterials = fm->GetNumberOfMaterials();
 for (unsigned int i = 0; i < nMaterials; ++i) {
@@ -293,15 +373,17 @@ for (unsigned int i = 0; i < nMaterials; ++i) {
 fm->PrintMaterials();
 \end{lstlisting}
 
-\subsubsection{Avalanche}
-
+\subsubsection{Electron transport}
 Microscopic tracking is handled by the class 
-\texttt{AvalancheMicroscopic}.
+\texttt{AvalancheMicroscopic} (Sec.~\ref{Sec:MicroscopicTracking}).
 \begin{lstlisting}
 AvalancheMicroscopic* aval = new AvalancheMicroscopic();
 aval->SetSensor(sensor);
 \end{lstlisting}
-We are now ready to track an electron through the GEM.  
+We are now ready to simulate an electron avalanche in the GEM.
+We place the initial electron 200\,\textmu{m} above centre of the GEM hole 
+and set its initial energy to a typical energy in the electric field 
+of the drift gap.
 \begin{lstlisting}
 // Initial position [cm] and starting time [ns]
 double x0 = 0., y0 = 0., z0 = 0.02;
@@ -314,7 +396,56 @@ double dx0 = 0., dy0 = 0., dz0 = 0.;
 // Calculate an electron avalanche.
 aval->AvalancheElectron(x0, y0, 0, t0, e0, dx0, dy0, dz0);
 \end{lstlisting}
-
+After the calculation, we can extract information such as
+the number of electrons/ions produced in the avalanche
+and the start- and endpoints of all electron trajectories. 
+\begin{lstlisting}
+int ne, ni;
+// Get the number of electrons and ions in the avalanche.
+aval->GetAvalancheSize(ne, ni);
+// Get the number of electron drift lines.
+int np = aval->GetNumberOfElectronEndpoints();
+// Initial position and time
+double x1, y1, z1, t1;
+// Final position and time
+double x2, y2, z2, t2;
+// Initial and final energy
+double e1, e2;
+// Flag indicating why the tracking of an electron was stopped.
+int status;
+// Loop over the avalanche electrons.
+for (int i = 0; i < np; ++i) {
+  aval->GetElectronEndpoint(i, x1, y1, z1, t1, e1,
+                               x2, y2, z2, t2, e2, status);
+} 
+\end{lstlisting}
+\paragraph{Ion transport}
+For tracking the ions, we use the class \texttt{AvalancheMC}, 
+which takes as input the macroscopic drift velocity as 
+function of the electric field and simulates drift lines using a 
+Monte Carlo technique (Sec.~\ref{Sec:DriftLineMC}).
+\begin{lstlisting}
+AvalancheMC* drift = new AvalancheMC();
+drift->SetSensor(sensor);
+drift->SetDistanceSteps(2.e-4);
+\end{lstlisting}
+After simulating an electron avalanche, we loop over all the electron
+trajectories, and calculate an ion drift line starting from the same
+initial point as the electron.
+\begin{lstlisting}
+// Loop over the avalanche electrons.
+for (int i = 0; i < np; ++i) {
+  aval->GetElectronEndpoint(i, x1, y1, z1, t1, e1,
+                               x2, y2, z2, t2, e2, status);
+  drift->DriftIon(x1, y1, z1, t1);
+\end{lstlisting}
+We can subsequently retrieve the endpoint of the ion drift line using
+\begin{lstlisting}
+double xi1, yi1, zi1, ti1;
+double xi2, yi2, zi2, ti2;
+drift->GetIonEndpoint(0, xi1, yi1, zi1, ti1,
+                         xi2, yi2, zi2, ti2, status);
+\end{lstlisting}
 \subsection{Silicon sensor}\label{Sec:ExampleSilicon}
 In this example, we will simulate the signal in a 100\,\textmu{m} thick 
 planar silicon sensor due to the passage of a charged particle. 

@@ -23,7 +23,7 @@ class ViewMedium : public ViewBase {
   /// Destructor.
   ~ViewMedium() = default;
 
-  // Set the medium from which to retrieve the transport coefficients.
+  /// Set the medium from which to retrieve the transport coefficients.
   void SetMedium(Medium* m);
 
   /// Try to choose the x-axis range based on the field grid. 

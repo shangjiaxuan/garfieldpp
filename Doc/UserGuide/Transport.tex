@@ -26,7 +26,7 @@ transporting electrons on a microscopic level --
 is the method of choice. 
 Microscopic tracking of electrons is dealt with by the class 
 \texttt{AvalancheMicroscopic}.  
-\section{Runge-Kutta-Fehlberg Integration}
+\section{Runge-Kutta-Fehlberg integration}
 This method, implemented in the class \texttt{DriftLineRKF}, 
 calculates a drift line by iterating over the following steps.
 \begin{enumerate}
@@ -212,7 +212,7 @@ void SetGainFluctuationsPolya(const double theta, const double mean = -1.);
   drift line is used instead (as is the default).
 \end{description}
 
-\section{Monte Carlo Integration}
+\section{Monte Carlo integration}\label{Sec:DriftLineMC}
 In the class \texttt{AvalancheMC}, Eq.~\eqref{Eqn:FirstOrderEquationOfMotion}
 is integrated in a stochastic manner:
 \begin{itemize}
@@ -357,19 +357,26 @@ void EnableAvalancheSizeLimit(const int size);
 \end{lstlisting}
 an upper limit to the number of electrons in an avalanche can be imposed.
 
-\section{Microscopic Tracking}\label{Sec:MicroscopicTracking}
+\section{Microscopic tracking}\label{Sec:MicroscopicTracking}
 In the microscopic tracking approach -- implemented at present only for electrons --
 a particle is followed from collision to collision. As input, it requires 
 a table of the collision rates $\tau^{-1}_{i}\left(\epsilon\right)$ for each 
 scattering process $i$ as function of the electron energy $\epsilon$. 
 For gases, these data are provided by the class \texttt{MediumMagboltz}.
 Between collisions, an electron is traced on a classical vacuum trajectory 
-according to the local electric (and optionally magnetic) field. The duration 
-$\Delta{t}$ of a free-flight step is sampled using the ``null-collision'' method 
-\cite{Skullerud1968}. 
-After the step, the scattering process to take place is sampled based on the 
-relative collision rates at the new energy $\epsilon'$, the energy and direction 
-of the electron are updated according to the type of collision.
+according to the local electric (and optionally magnetic) field. 
+The duration $\Delta{t}$ of a free-flight step is controlled by the 
+total collision rate 
+$\tau^{-1}\left(\epsilon\right) = 
+\sum_{i}\tau^{-1}_{i}\left(\epsilon\right)$.
+The sampling of $\Delta{t}$ of a free-flight step is done using the 
+``null-collision'' method \cite{Skullerud1968}, which accounts for 
+the change in electron energy during the step. 
+After the step, the energy, direction, and position of the electron 
+are updated and the scattering process to take place is sampled based 
+on the relative collision rates at the new energy $\epsilon'$.
+The energy and direction of the electron are subsequently updated 
+according to the type of collision.
 
 In Garfield++, the microscopic tracking method is implemented in the class 
 \texttt{AvalancheMicroscopic}. A calculation is started by means of
@@ -572,7 +579,7 @@ int main(int argc, char* argv[]) {
 
 \end{lstlisting}
  
-\section{Visualizing Drift Lines}
+\section{Visualizing drift lines}
 
 For plotting drift lines and tracks the class \texttt{ViewDrift} can be used. 
 After attaching a \texttt{ViewDrift} object to a transport class, 

@@ -106,8 +106,8 @@ void Sensor::SetTransferFunction(double (*f)(double t));
 where \texttt{double f(double t)} is a function provided by the user, 
 or using
 \begin{lstlisting}
-void Sensor::SetTransferFunction(std::vector<double> times,
-                                 std::vector<double> values);
+void Sensor::SetTransferFunction(const std::vector<double>& times,
+                                 const std::vector<double>& values);
 \end{lstlisting}
 in which case the transfer function will be calculated by 
 interpolation of the values provided in the table.
