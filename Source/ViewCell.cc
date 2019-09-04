@@ -180,7 +180,7 @@ bool ViewCell::Plot(const bool use3d) {
     }
     if (polar) {
       const double r = xw;
-      for (int j = 0; j < nPhi; ++j) {
+      for (int j = 0; j <= nPhi; ++j) {
         const double phi = yw * Garfield::DegreeToRad + j * sphi;
         const double x = r * cos(phi);
         const double y = r * sin(phi);
