@@ -84,7 +84,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       for (unsigned int i = 0; i < m_nMaterials; ++i) {
         materials[i].ohm = -1;
         materials[i].eps = -1;
-        materials[i].medium = NULL;
+        materials[i].medium = nullptr;
       }
       if (m_debug) {
         std::cout << m_className << "::Initialise:\n";
@@ -398,7 +398,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
     if (in8 > highestnode) highestnode = in8;
     if (in9 > highestnode) highestnode = in9;
 
-    // Skip quadrilaterals which are background.
+    // Skip elements in conductors.
     if (m_deleteBackground && materials[imat - 1].ohm == 0) {
       nbackground++;
       continue;

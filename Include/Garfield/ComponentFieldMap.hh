@@ -28,11 +28,11 @@ class ComponentFieldMap : public ComponentBase {
            z >= m_minBoundingBox[2] && y <= m_maxBoundingBox[2];
   }
 
-  virtual bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                               double& xmax, double& ymax,
                               double& zmax) override;
 
-  virtual bool GetVoltageRange(double& vmin, double& vmax) override {
+  bool GetVoltageRange(double& vmin, double& vmax) override {
     vmin = m_mapvmin;
     vmax = m_mapvmax;
     return true;
@@ -70,8 +70,10 @@ class ComponentFieldMap : public ComponentBase {
     m_lastElement = -1;
   }
   void DisableCheckMapIndices() { m_checkMultipleElement = false; }
-  void EnableDeleteBackgroundElements() { m_deleteBackground = true; }
-  void DisableDeleteBackgroundElements() { m_deleteBackground = false; }
+  /// Option to eliminate mesh elements in conductors (default: on).
+  void EnableDeleteBackgroundElements(const bool on = true) { 
+    m_deleteBackground = on; 
+  }
 
   /// Enable or disable the usage of the tetrahedral tree
   /// for searching the element in the mesh.

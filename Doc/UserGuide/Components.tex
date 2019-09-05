@@ -222,6 +222,15 @@ double GetPermittivity(const unsigned int imat);
 double GetConductivity(const unsigned int imat);
 \end{lstlisting}
 
+By default, mesh elements in conductors, \ie materials 
+with resistivity equal to zero, are eliminated. This feature can be 
+switched on or off using
+\begin{lstlisting}
+void EnableDeleteBackgroundElements(const bool on = true);
+\end{lstlisting}
+\begin{description}
+  \item[on] flag to delete mesh elements in conductors (\texttt{true}) or keep them (\texttt{false}) 
+\end{description}
 A weighting field map can be imported using
 \begin{lstlisting}
 bool SetWeightingField(std::string prnsol, std::string label);
