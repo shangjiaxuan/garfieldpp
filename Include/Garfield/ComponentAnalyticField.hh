@@ -259,10 +259,27 @@ class ComponentAnalyticField : public ComponentBase {
   /// Get the gravity orientation.
   void GetGravity(double& dx, double& dy, double& dz) const;
 
+  /** Calculate a table of the forces acting on a wire.
+    * \param iw index of the wire
+    * \param xMap coordinates of the grid lines in x
+    * \param yMap coordinates of the grid lines in y
+    * \param fxMap x-components of the force at the grid points
+    * \param fyMap y-components of the force at the grid points 
+    **/ 
   bool ForcesOnWire(const unsigned int iw, std::vector<double>& xMap,
                     std::vector<double>& yMap,
                     std::vector<std::vector<double> >& fxMap,
                     std::vector<std::vector<double> >& fyMap);
+  /** Compute the sag profile of a wire.
+    * \param iw index of the wire
+    * \param detailed flag to request a detailed calculation of the profile
+                      or only a fast one.
+    * \param csag coordinate along the wire
+
+    * \param xsag x components of the sag profile
+    * \param ysag y components of the sag profile
+    * \param flag to print the calculation results or not
+    **/ 
   bool WireDisplacement(const unsigned int iw, const bool detailed,
                         std::vector<double>& csag, std::vector<double>& xsag,
                         std::vector<double>& ysag, double& stretch,
