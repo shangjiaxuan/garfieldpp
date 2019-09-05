@@ -1331,24 +1331,24 @@ void ComponentAnalyticField::UpdatePeriodicity() {
 
   // Check if symmetries other than x/y periodicity have been requested
   if (m_periodic[2]) {
-    std::cerr << m_className << "::UpdatePeriodicity:\n";
-    std::cerr << "    Periodicity in z is not possible.\n";
+    std::cerr << m_className << "::UpdatePeriodicity:\n"
+              << "    Periodicity in z is not possible.\n";
   }
 
   if (m_mirrorPeriodic[0] || m_mirrorPeriodic[1] || m_mirrorPeriodic[2]) {
-    std::cerr << m_className << "::UpdatePeriodicity:\n";
-    std::cerr << "    Mirror periodicity is not possible.\n";
+    std::cerr << m_className << "::UpdatePeriodicity:\n"
+              << "    Mirror periodicity is not possible.\n";
   }
 
   if (m_axiallyPeriodic[0] || m_axiallyPeriodic[1] || m_axiallyPeriodic[2]) {
-    std::cerr << m_className << "::UpdatePeriodicity:\n";
-    std::cerr << "    Axial periodicity is not possible.\n";
+    std::cerr << m_className << "::UpdatePeriodicity:\n"
+              << "    Axial periodicity is not possible.\n";
   }
 
   if (m_rotationSymmetric[0] || m_rotationSymmetric[1] ||
       m_rotationSymmetric[2]) {
-    std::cerr << m_className << "::UpdatePeriodicity:\n";
-    std::cerr << "    Rotation symmetry is not possible.\n";
+    std::cerr << m_className << "::UpdatePeriodicity:\n"
+              << "    Rotation symmetry is not possible.\n";
   }
 }
 
@@ -1561,7 +1561,7 @@ bool ComponentAnalyticField::ElectricFieldAtWire(const unsigned int iw,
   // Set the flags appropriately.
   std::vector<bool> cnalso(m_nWires, true);
   cnalso[iw] = false;
-
+ 
   const double xpos = m_w[iw].x;
   const double ypos = m_w[iw].y;
   // Call the appropriate function.
@@ -1611,6 +1611,15 @@ bool ComponentAnalyticField::ElectricFieldAtWire(const unsigned int iw,
   // Correct for the equipotential planes.
   ex -= m_corvta;
   ey -= m_corvtb;
+  if (m_polar) {
+    const double r = exp(xpos);
+    const double er = ex / r;
+    const double ep = ey / r;
+    const double ct = cos(ypos);
+    const double st = sin(ypos);
+    ex = +ct * er - st * ep;
+    ey = +st * er + ct * ep;
+  }
   return true;
 }
 
@@ -1692,6 +1701,10 @@ bool ComponentAnalyticField::ForcesOnWire(
 
   if (iw >= m_nWires) {
     std::cerr << m_className << "::ForcesOnWire: Wire index out of range.\n";
+    return false;
+  }
+  if (m_polar) {
+    std::cerr << m_className << "::ForcesOnWire: Cannot handle polar cells.\n";
     return false;
   }
   const auto& wire = m_w[iw];
@@ -1910,7 +1923,11 @@ bool ComponentAnalyticField::WireDisplacement(
               << "::WireDisplacement: Wire index out of range.\n";
     return false;
   }
-
+  if (m_polar) {
+    std::cerr << m_className 
+              << "::WireDisplacement: Cannot handle polar cells.\n";
+    return false;
+  }
   const auto& wire = m_w[iw];
   // Save the original coordinates.
   const double x0 = wire.x;
