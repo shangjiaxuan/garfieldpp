@@ -7,6 +7,7 @@
 
 #include "Garfield/ComponentAnsys123.hh"
 #include "Garfield/ViewField.hh"
+#include "Garfield/ViewFEMesh.hh"
 #include "Garfield/MediumMagboltz.hh"
 #include "Garfield/Sensor.hh"
 #include "Garfield/AvalancheMicroscopic.hh"
@@ -121,8 +122,26 @@ int main(int argc, char * argv[]) {
   
   if (plotDrift) {
     TCanvas* cd = new TCanvas();
-    driftView->SetCanvas(cd);
-    driftView->Plot();
+    constexpr bool plotMesh = true;
+    if (plotMesh) {
+      ViewFEMesh* meshView = new ViewFEMesh();
+      meshView->SetArea(-2 * pitch, -2 * pitch, -0.02, 
+                         2 * pitch,  2 * pitch, 0.02);
+      meshView->SetCanvas(cd);
+      meshView->SetComponent(fm);
+      meshView->SetPlane(0, -1, 0, 0, 0, 0);
+      meshView->SetFillMesh(true);
+      meshView->SetColor(0, kGray);
+      meshView->SetColor(2, kYellow + 3);
+      meshView->EnableAxes();
+      meshView->SetXaxisTitle("x [cm]");
+      meshView->SetYaxisTitle("z [cm]");
+      meshView->SetViewDrift(driftView);
+      meshView->Plot();
+    } else {
+      driftView->SetCanvas(cd);
+      driftView->Plot();
+    }
   }
 
   app.Run(kTRUE);
