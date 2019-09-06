@@ -290,7 +290,13 @@ component to it
 Sensor* sensor = new Sensor();
 sensor->AddComponent(fm);
 \end{lstlisting}
-
+Normally, particles are transported until they exit the mesh. 
+To speed up the calculation we restrict the drift region to 
+$-100,\textmu\text{m} < z < +250\,\textmu\text{m}$.
+\begin{lstlisting}
+sensor->SetArea(-5 * pitch, -5 * pitch, -0.01,
+                 5 * pitch,  5 * pitch,  0.025);
+\end{lstlisting}
 \subsubsection{Gas}
 We use a gas mixture of 80\% argon and 20\% CO\(_{2}\).
 \begin{lstlisting}
@@ -445,6 +451,34 @@ double xi1, yi1, zi1, ti1;
 double xi2, yi2, zi2, ti2;
 drift->GetIonEndpoint(0, xi1, yi1, zi1, ti1,
                          xi2, yi2, zi2, ti2, status);
+\end{lstlisting}
+\subsubsection{Visualizing the drift lines}
+To plot the electron and ion drift lines together with the geometry, 
+we use the classes \texttt{ViewDrift} and \texttt{ViewFEMesh}. 
+When setting up the \texttt{AvalancheMicroscopic} and \texttt{AvalancheMC} 
+objects, we need to switch on the storage of the drift line points and 
+attach a pointer to a \texttt{ViewDrift} object.
+\begin{lstlisting}
+ViewDrift* driftView = new ViewDrift();
+aval->EnablePlotting(driftView);
+drift->EnablePlotting(driftView);
+\end{lstlisting}
+After having calculated the electron avalanche and ion drift lines, we create a plot using the snippet of code below.
+\begin{lstlisting}
+ViewFEMesh* meshView = new ViewFEMesh();
+meshView->SetArea(-2 * pitch, -2 * pitch, -0.02,
+                   2 * pitch,  2 * pitch,  0.02);
+meshView->SetComponent(fm);
+// x-z projection
+meshView->SetPlane(0, -1, 0, 0, 0, 0);
+meshView->SetFillMesh(true); 
+// Set the color of the kapton.
+meshView->SetColor(2, kYellow + 3);
+meshView->EnableAxes();
+meshView->SetXaxisTitle("x [cm]");
+meshView->SetYaxisTitle("z [cm]");
+meshView->SetViewDrift(driftView);
+meshView->Plot();
 \end{lstlisting}
 \subsection{Silicon sensor}\label{Sec:ExampleSilicon}
 In this example, we will simulate the signal in a 100\,\textmu{m} thick 
