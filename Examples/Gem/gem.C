@@ -129,9 +129,11 @@ int main(int argc, char * argv[]) {
                          2 * pitch,  2 * pitch, 0.02);
       meshView->SetCanvas(cd);
       meshView->SetComponent(fm);
+      // x-z projection.
       meshView->SetPlane(0, -1, 0, 0, 0, 0);
       meshView->SetFillMesh(true);
       meshView->SetColor(0, kGray);
+      // Set the color of the kapton.
       meshView->SetColor(2, kYellow + 3);
       meshView->EnableAxes();
       meshView->SetXaxisTitle("x [cm]");
