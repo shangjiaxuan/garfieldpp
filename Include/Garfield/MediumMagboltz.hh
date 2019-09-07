@@ -128,9 +128,12 @@ class MediumMagboltz : public MediumGas {
                                            unsigned int& nInelastic) const;
 
   /// Take the thermal motion of the gas at the selected temperature
-  /// into account in the calculations done Magboltz.
+  /// into account in the calculations done by Magboltz.
   /// By the default, this feature is off (static gas at 0 K).
   void EnableThermalMotion(const bool on = true) { m_useGasMotion = on; }
+  /// Let Magboltz determine the upper energy limit (this is the default)
+  /// or use the energy limit specified using SetMaxElectronEnergy).
+  void EnableAutoEnergyLimit(const bool on = true) { m_autoEnergyLimit = on; }
 
   /** Run Magboltz for a given electric field, magnetic field and angle.
     * \param[in] e electric field
@@ -178,7 +181,9 @@ class MediumMagboltz : public MediumGas {
 
   /// Simulate thermal motion of the gas or not (when running Magboltz).
   bool m_useGasMotion = false;
-
+  /// Automatic calculation of the energy limit by Magboltz or not.
+  bool m_autoEnergyLimit = true;
+ 
   /// Max. electron energy in the collision rate tables.
   double m_eMax;
   /// Energy spacing in the linear part of the collision rate tables.

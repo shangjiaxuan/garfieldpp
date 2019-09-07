@@ -452,8 +452,14 @@ void RunMagboltz(const double e, const double b, const double btheta,
     $\sigma_{yy}$, $\sigma_{xz} = \sigma_{zx}$, $\sigma_{yz} = \sigma_{zy}$,
     $\sigma_{xy} = \sigma_{yx}$) 
 \end{description}
-The max. energy of the cross-section table  
-is chosen automatically by Magboltz. 
+By default, the max. energy of the cross-section table  
+is chosen automatically by Magboltz. Using
+\begin{lstlisting}
+void EnableAutoEnergyLimit(const bool on = true);
+\end{lstlisting} 
+one can disable this feature. The program then uses the upper energy 
+limit set using \texttt{SetMaxElectronEnergy}. 
+
 For inelastic gases, setting \(\texttt{nColl} = 2 \dots 5\)
 should give an accuracy of about \(1\%\). 
 An accuracy better than \(0.5\%\) can be achieved by 

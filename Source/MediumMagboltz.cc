@@ -98,10 +98,6 @@ bool MediumMagboltz::SetMaxElectronEnergy(const double e) {
   // Determine the energy interval size.
   m_eStep = std::min(m_eMax, m_eHigh) / Magboltz::nEnergySteps;
 
-  // Set max. energy and step size also in Magboltz common block.
-  Magboltz::inpt_.efinal = std::min(m_eMax, m_eHigh);
-  Magboltz::inpt_.estep = m_eStep;
-
   // Force recalculation of the scattering rates table.
   m_isChanged = true;
 
@@ -1202,12 +1198,15 @@ int MediumMagboltz::GetGasNumberMagboltz(const std::string& input) const {
     return 43;
   } else if (input == "TMA") {
     return 44;
-  } else if (input == "paraH2") {
-    // Para hydrogen
-    return 45;
   } else if (input == "nC3H7OH") {
     // n-propanol
     return 46;
+  } else if (input == "paraH2") {
+    // Para hydrogen
+    return 47;
+  } else if (input == "orthoD2") {
+    // Ortho deuterium
+    return 48;
   } else if (input == "CHF3") {
     return 50;
   } else if (input == "CF3Br") {
@@ -3385,7 +3384,12 @@ void MediumMagboltz::RunMagboltz(
   Magboltz::inpt_.nGas = m_nComponents;
   Magboltz::inpt_.nStep = 4000;
   Magboltz::inpt_.nAniso = 2;
-
+  if (m_autoEnergyLimit) {
+    Magboltz::inpt_.efinal = 0.;
+  } else {
+    Magboltz::inpt_.efinal = std::min(m_eMax, m_eHigh);
+    Magboltz::inpt_.estep = m_eStep;
+  }
   Magboltz::inpt_.tempc = m_temperature - ZeroCelsius;
   Magboltz::inpt_.torr = m_pressure;
   Magboltz::inpt_.ipen = 0;
