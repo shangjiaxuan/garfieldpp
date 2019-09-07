@@ -54,14 +54,14 @@ else()
     set(ROOT_COMPONENT_LIBRARIES "-lGeom -lGdml")
 endif()
 
-## add garfield  #######################################
+#--- Add Garfield
 aux_source_directory(Source garfield_sources)
 
-## add magboltz ########################################
-set(magboltz_sources Source/magboltz-11.7.f )
+#--- Add Magboltz
+set(magboltz_sources Source/magboltz-11.9.f )
 set_source_files_properties(${magboltz_sources} PROPERTIES LANGUAGE Fortran )
 
-## add Heed ############################################
+#--- Add Heed
 set( heed_dirs 
     Heed
     Heed/heed++/code 

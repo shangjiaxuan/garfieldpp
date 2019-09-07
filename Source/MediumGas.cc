@@ -2634,7 +2634,7 @@ bool MediumGas::GetGasInfo(const std::string& gasname, double& a,
   } else if (gasname == "H2" || gasname == "paraH2") {
     a = 2 * 1.00794;
     z = 2;
-  } else if (gasname == "D2") {
+  } else if (gasname == "D2" || gasname == "orthoD2") {
     a = 2 * 2.01410177785;
     z = 2;
   } else if (gasname == "CO") {
@@ -2882,7 +2882,7 @@ std::string MediumGas::GetGasName(const int gasnumber, const int version) const 
       return "Ar";
       break;
     case 48:
-      return "Kr";
+      return version <= 11 ? "Kr" : "orthoD2";
       break;
     case 49:
       return "Xe";
@@ -2997,6 +2997,10 @@ std::string MediumGas::GetGasName(std::string input) const {
     return "paraH2";
   } else if (input == "D2" || input == "DEUTERIUM") {
     return "D2";
+  } else if (input == "ORTHO D2" || input == "ORTHO-D2" ||
+             input == "ORTHOD2" || input == "ORTHO DEUTERIUM" ||
+             input == "ORTHO-DEUTERIUM" || input == "ORTHODEUTERIUM") {
+    return "orthoD2";
   } else if (input == "CO" || input == "CARBON-MONOXIDE" ||
       input == "CARBON MONOXIDE") {
     return "CO";
@@ -3247,6 +3251,8 @@ int MediumGas::GetGasNumberGasFile(const std::string& input) const {
     return 45;
   } else if (input == "nC3H7OH") {
     return 46;
+  } else if (input == "orthoD2") {
+    return 48;
   } else if (input == "CHF3") {
     return 50;
   } else if (input == "CF3Br") {
