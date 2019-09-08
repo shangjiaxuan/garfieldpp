@@ -62,6 +62,7 @@ class SolidHole : public Solid {
   bool GetAverage() const { return m_average; }
  
   bool SolidPanels(std::vector<Panel>& panels) override;
+  double GetDiscretisationLevel(const Panel& panel) override;
 
  private:
   // Upper and lower radius
@@ -76,6 +77,9 @@ class SolidHole : public Solid {
   unsigned int m_n = 2;
   /// Average chord over the sectors.
   bool m_average = false;
+
+  /// Discretisation levels.
+  std::array<double, 7> m_dis{{-1., -1., -1., -1., -1., -1., -1.}};
 };
 }
 

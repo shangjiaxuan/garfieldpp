@@ -8,8 +8,10 @@
 namespace Garfield {
 
 SolidSphere::SolidSphere(const double cx, const double cy, const double cz,
-                         const double rmin, const double rmax)
-    : Solid(cx, cy, cz, "SolidSphere"), m_rMin(rmin), m_rMax(rmax) {}
+                         const double r)
+    : Solid(cx, cy, cz, "SolidSphere") {
+  SetRadius(r);
+}
 
 bool SolidSphere::IsInside(const double x, const double y,
                            const double z) const {
@@ -18,7 +20,7 @@ bool SolidSphere::IsInside(const double x, const double y,
   const double dy = y - m_cY;
   const double dz = z - m_cZ;
 
-  if (fabs(dx) > m_rMax || fabs(dy) > m_rMax || fabs(dz) > m_rMax) {
+  if (fabs(dx) > m_r || fabs(dy) > m_r || fabs(dz) > m_r) {
     if (m_debug) {
       std::cout << "SolidSphere::IsInside: (" << x << ", " << y << ", " << z
                 << ") is outside.\n";
@@ -27,7 +29,7 @@ bool SolidSphere::IsInside(const double x, const double y,
   }
 
   const double r = sqrt(dx * dx + dy * dy + dz * dz);
-  if (r >= m_rMin && r <= m_rMax) {
+  if (r <= m_r) {
     if (m_debug) {
       std::cout << "SolidSphere::IsInside: (" << x << ", " << y << ", " << z
                 << ") is inside.\n";
@@ -45,39 +47,21 @@ bool SolidSphere::IsInside(const double x, const double y,
 bool SolidSphere::GetBoundingBox(double& xmin, double& ymin, double& zmin,
                                  double& xmax, double& ymax,
                                  double& zmax) const {
-  xmin = m_cX - m_rMax;
-  xmax = m_cX + m_rMax;
-  ymin = m_cY - m_rMax;
-  ymax = m_cY + m_rMax;
-  zmin = m_cZ - m_rMax;
-  zmax = m_cZ + m_rMax;
+  xmin = m_cX - m_r;
+  xmax = m_cX + m_r;
+  ymin = m_cY - m_r;
+  ymax = m_cY + m_r;
+  zmin = m_cZ - m_r;
+  zmax = m_cZ + m_r;
   return true;
 }
 
-void SolidSphere::SetInnerRadius(const double rmin) {
-  if (rmin <= 0.) {
-    std::cerr << "SolidSphere::SetInnerRadius: Radius must be > 0.\n";
+void SolidSphere::SetRadius(const double r) {
+  if (r <= 0.) {
+    std::cerr << "SolidSphere::SetRadius: Radius must be > 0.\n";
     return;
   }
-  if (rmin >= m_rMax) {
-    std::cerr << "SolidSphere::SetInnerRadius:\n";
-    std::cerr << "    Inner radius must be smaller than outer radius.\n";
-    return;
-  }
-  m_rMin = rmin;
-}
-
-void SolidSphere::SetOuterRadius(const double rmax) {
-  if (rmax <= 0.) {
-    std::cerr << "SolidSphere::SetOuterRadius: Radius must be > 0.\n";
-    return;
-  }
-  if (rmax <= m_rMin) {
-    std::cerr << "SolidSphere::SetOuterRadius:\n";
-    std::cerr << "    Outer radius must be greater than inner radius.\n";
-    return;
-  }
-  m_rMax = rmax;
+  m_r = r;
 }
 
 void SolidSphere::SetMeridians(const unsigned int n) {
@@ -91,7 +75,6 @@ void SolidSphere::SetMeridians(const unsigned int n) {
 bool SolidSphere::SolidPanels(std::vector<Panel>& panels) {
   const auto id = GetId();
   const unsigned int nPanels = panels.size();
-  const double R = m_rMax;
   // Loop over the sphere.
   for (unsigned int i = 1; i <= m_n; ++i) {
     const double phi0 = TwoPi * (i - 1.) / m_n;
@@ -110,44 +93,44 @@ bool SolidSphere::SolidPanels(std::vector<Panel>& panels) {
       Panel newpanel;
       // Corners of this parcel.
       if (j == 1) {
-        const double xv0 = m_cX + R * cphi0 * ctheta0;
-        const double yv0 = m_cY + R * sphi0 * ctheta0;
-        const double zv0 = m_cZ + R * stheta0;
-        const double xv1 = m_cX + R * cphi1 * ctheta1;
-        const double yv1 = m_cY + R * sphi1 * ctheta1;
-        const double zv1 = m_cZ + R * stheta1;
-        const double xv2 = m_cX + R * cphi0 * ctheta1;
-        const double yv2 = m_cY + R * sphi0 * ctheta1;
-        const double zv2 = m_cZ + R * stheta1;
+        const double xv0 = m_cX + m_r * cphi0 * ctheta0;
+        const double yv0 = m_cY + m_r * sphi0 * ctheta0;
+        const double zv0 = m_cZ + m_r * stheta0;
+        const double xv1 = m_cX + m_r * cphi1 * ctheta1;
+        const double yv1 = m_cY + m_r * sphi1 * ctheta1;
+        const double zv1 = m_cZ + m_r * stheta1;
+        const double xv2 = m_cX + m_r * cphi0 * ctheta1;
+        const double yv2 = m_cY + m_r * sphi0 * ctheta1;
+        const double zv2 = m_cZ + m_r * stheta1;
         newpanel.xv = {xv0, xv1, xv2};
         newpanel.yv = {yv0, yv1, yv2};
         newpanel.zv = {zv0, zv1, zv2};
       } else if (j == m_n) {
-        const double xv0 = m_cX + R * cphi0 * ctheta0;
-        const double yv0 = m_cY + R * sphi0 * ctheta0;
-        const double zv0 = m_cZ + R * stheta0;
-        const double xv1 = m_cX + R * cphi1 * ctheta0;
-        const double yv1 = m_cY + R * sphi1 * ctheta0;
-        const double zv1 = m_cZ + R * stheta0;
-        const double xv2 = m_cX + R * cphi1 * ctheta1;
-        const double yv2 = m_cY + R * sphi1 * ctheta1;
-        const double zv2 = m_cZ + R * stheta1;
+        const double xv0 = m_cX + m_r * cphi0 * ctheta0;
+        const double yv0 = m_cY + m_r * sphi0 * ctheta0;
+        const double zv0 = m_cZ + m_r * stheta0;
+        const double xv1 = m_cX + m_r * cphi1 * ctheta0;
+        const double yv1 = m_cY + m_r * sphi1 * ctheta0;
+        const double zv1 = m_cZ + m_r * stheta0;
+        const double xv2 = m_cX + m_r * cphi1 * ctheta1;
+        const double yv2 = m_cY + m_r * sphi1 * ctheta1;
+        const double zv2 = m_cZ + m_r * stheta1;
         newpanel.xv = {xv0, xv1, xv2};
         newpanel.yv = {yv0, yv1, yv2};
         newpanel.zv = {zv0, zv1, zv2};
       } else {
-        const double xv0 = m_cX + R * cphi0 * ctheta0;
-        const double yv0 = m_cY + R * sphi0 * ctheta0;
-        const double zv0 = m_cZ + R * stheta0;
-        const double xv1 = m_cX + R * cphi1 * ctheta0;
-        const double yv1 = m_cY + R * sphi1 * ctheta0;
-        const double zv1 = m_cZ + R * stheta0;
-        const double xv2 = m_cX + R * cphi1 * ctheta1;
-        const double yv2 = m_cY + R * sphi1 * ctheta1;
-        const double zv2 = m_cZ + R * stheta1;
-        const double xv3 = m_cX + R * cphi0 * ctheta1;
-        const double yv3 = m_cY + R * sphi0 * ctheta1;
-        const double zv3 = m_cZ + R * stheta1;
+        const double xv0 = m_cX + m_r * cphi0 * ctheta0;
+        const double yv0 = m_cY + m_r * sphi0 * ctheta0;
+        const double zv0 = m_cZ + m_r * stheta0;
+        const double xv1 = m_cX + m_r * cphi1 * ctheta0;
+        const double yv1 = m_cY + m_r * sphi1 * ctheta0;
+        const double zv1 = m_cZ + m_r * stheta0;
+        const double xv2 = m_cX + m_r * cphi1 * ctheta1;
+        const double yv2 = m_cY + m_r * sphi1 * ctheta1;
+        const double zv2 = m_cZ + m_r * stheta1;
+        const double xv3 = m_cX + m_r * cphi0 * ctheta1;
+        const double yv3 = m_cY + m_r * sphi0 * ctheta1;
+        const double zv3 = m_cZ + m_r * stheta1;
         newpanel.xv = {xv0, xv1, xv2, xv3};
         newpanel.yv = {yv0, yv1, yv2, yv3};
         newpanel.zv = {zv0, zv1, zv2, zv3};
@@ -170,4 +153,10 @@ bool SolidSphere::SolidPanels(std::vector<Panel>& panels) {
             << " panels.\n";
   return true;
 }
+
+double SolidSphere::GetDiscretisationLevel(const Panel& /*panel*/) {
+  return m_dis;
+}
+
+
 }

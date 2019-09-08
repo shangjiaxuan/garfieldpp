@@ -33,10 +33,13 @@ class SolidBox : public Solid {
   void SetHalfLengthZ(const double lz);
 
   bool SolidPanels(std::vector<Panel>& panels) override;
+  double GetDiscretisationLevel(const Panel& panel) override;
 
  private:
   /// Half lengths.
   double m_lX = 0., m_lY = 0., m_lZ = 0.;
+  /// Discretisation levels.
+  std::array<double, 6> m_dis{{-1, -1, -1, -1, -1, -1}};
 };
 }
 

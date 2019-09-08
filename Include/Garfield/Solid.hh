@@ -2,6 +2,7 @@
 #define G_SOLID_H
 
 #include <vector>
+#include <array>
 
 namespace Garfield {
 
@@ -53,6 +54,8 @@ class Solid {
   virtual bool IsSphere() const { return false; }
   /// Return true if the solid is a hole.
   virtual bool IsHole() const { return false; }
+  /// Return true if the solid is a ridge.
+  virtual bool IsRidge() const { return false; }
 
   /// Retrieve the centre point of the solid.
   bool GetCentre(double& x, double& y, double& z) const {
@@ -101,9 +104,11 @@ class Solid {
   virtual double GetUpperRadius() const { 
     return NotImplemented("GetUpperRadius");
   } 
+  /// Return the x-offset of a ridge.
   virtual double GetRidgeOffset() const {
     return NotImplemented("GetRidgeOffset");
   }
+  /// Return the height of a ridge.
   virtual double GetRidgeHeight() const {
     return NotImplemented("GetRidgeHeight");
   }
@@ -113,6 +118,9 @@ class Solid {
 
   /// Retrieve the surface panels of the solid.
   virtual bool SolidPanels(std::vector<Panel>& panels) = 0;
+
+  /// Retrieve the discretization level of a panel.
+  virtual double GetDiscretisationLevel(const Panel& panel) = 0;
 
   enum BoundaryCondition {
     Voltage = 1,
@@ -174,7 +182,8 @@ class Solid {
   /// Dielectric constant.
   double m_eps = 0.;
 
-  /// Transform global coordinates (x, y, z) to local coordinates (u, v, w).
+  /// Transform a point from global coordinates (x, y, z) 
+  /// to local coordinates (u, v, w).
   void ToLocal(const double x, const double y, const double z, double& u,
                double& v, double& w) const {
     const double dx = x - m_cX;
@@ -185,12 +194,20 @@ class Solid {
     v = -m_sPhi * dx + m_cPhi * dy;
     w = m_cPhi * m_sTheta * dx + m_sPhi * m_sTheta * dy + m_cTheta * dz;
   }
-  /// Transform local coordinates (u, v, w) to global coordinates (x, y, z).
+  /// Transform a point from local coordinates (u, v, w) 
+  /// to global coordinates (x, y, z).
   void ToGlobal(const double u, const double v, const double w, double& x,
                 double& y, double& z) const {
     x = m_cX + m_cPhi * m_cTheta * u - m_sPhi * v + m_cPhi * m_sTheta * w;
     y = m_cY + m_sPhi * m_cTheta * u + m_cPhi * v + m_sPhi * m_sTheta * w;
     z = m_cZ - m_sTheta * u + m_cTheta * w;
+  }
+  /// Transform a vector from global to local coordinates.
+  void VectorToLocal(const double x, const double y, const double z,
+                     double& u, double& v, double& w) {
+    u = m_cPhi * m_cTheta * x + m_sPhi * m_cTheta * y - m_sTheta * z;
+    v = -m_sPhi * x + m_cPhi * y;
+    w = m_cPhi * m_sTheta * x + m_sPhi * m_sTheta * y + m_cTheta * z;
   }
 
   void SetDirection(const double dx, const double dy, const double dz);

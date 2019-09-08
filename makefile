@@ -343,6 +343,10 @@ $(OBJDIR)/SolidHole.o: \
 	$(SRCDIR)/SolidHole.cc $(INCDIR)/Garfield/SolidHole.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
+$(OBJDIR)/SolidRidge.o: \
+	$(SRCDIR)/SolidRidge.cc $(INCDIR)/Garfield/SolidRidge.hh
+	@echo $@
+	@$(CXX) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/Random.o: \
 	$(SRCDIR)/Random.cc $(INCDIR)/Garfield/Random.hh

@@ -321,4 +321,36 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
             << " panels.\n";
   return true;
 }
+
+double SolidHole::GetDiscretisationLevel(const Panel& panel) {
+  
+  // Transform the normal vector to local coordinates.
+  double un = 0., vn = 0., wn = 0.;
+  VectorToLocal(panel.a, panel.b, panel.c, un, vn, wn);
+  // Transform one of the points (first).
+  double u1 = 0., v1 = 0., w1 = 0.;
+  ToLocal(panel.xv[0], panel.yv[0], panel.zv[0], u1, v1, w1);
+  // Identify the vector.
+  if (wn > std::max(std::abs(un), std::abs(vn))) {
+    return m_dis[0];
+  } else if (wn < -std::max(std::abs(un), std::abs(vn))) {
+    return m_dis[1];
+  } else if (un * u1 + vn * v1 + wn * w1 < 0) {
+    return m_dis[2];
+  } else if (un > std::max(std::abs(vn), std::abs(wn))) {
+    return m_dis[3];
+  } else if (un < -std::max(std::abs(vn), std::abs(wn))) {
+    return m_dis[4];
+  } else if (vn > std::max(std::abs(un), std::abs(wn))) {
+    return m_dis[5];
+  } else if (vn < -std::max(std::abs(un), std::abs(wn))) {
+    return m_dis[6];
+  }
+  if (m_debug) {
+    std::cout << m_className << "::GetDiscretisationLevel:\n"
+              << "    Found no match for the panel; returning first value.\n";
+  }
+  return m_dis[0];
+}
+
 }
