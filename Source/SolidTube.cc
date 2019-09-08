@@ -256,4 +256,19 @@ bool SolidTube::SolidPanels(std::vector<Panel>& panels) {
             << " panels.\n";
   return true;
 }
+
+double SolidTube::GetDiscretisationLevel(const Panel& panel) {
+
+  // Transform the normal vector to local coordinates.
+  double u = 0., v = 0., w = 0.;
+  VectorToLocal(panel.a, panel.b, panel.c, u, v, w);
+  // Identify the vector.
+  if (w > std::max(std::abs(u), std::abs(v))) {
+    return m_dis[0];
+  } else if (w < -std::max(std::abs(u), std::abs(v))) {
+    return m_dis[1];
+  }
+  return m_dis[2];
+} 
+
 }

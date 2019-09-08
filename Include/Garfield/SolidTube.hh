@@ -65,6 +65,7 @@ class SolidTube : public Solid {
   bool GetAverage() const { return m_average; }
 
   bool SolidPanels(std::vector<Panel>& panels) override;
+  double GetDiscretisationLevel(const Panel& panel) override;
 
  private:
   // Inner and outer radius
@@ -83,6 +84,9 @@ class SolidTube : public Solid {
   bool m_toplid = true;
   /// Have a bottom lid?
   bool m_bottomlid = true;
+
+  /// Discretisation levels.
+  std::array<double, 3> m_dis{{-1.,-1.,-1.}};
 };
 }
 

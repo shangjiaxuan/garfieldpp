@@ -201,4 +201,31 @@ bool SolidBox::SolidPanels(std::vector<Panel>& panels) {
             << " panels.\n";
   return true;
 }
+
+double SolidBox::GetDiscretisationLevel(const Panel& panel) {
+
+  // Transform the normal vector to local coordinates.
+  double u = 0., v = 0., w = 0.;
+  VectorToLocal(panel.a, panel.b, panel.c, u, v, w);
+  // Identify the vector.
+  if (u > std::max(std::abs(v), std::abs(w))) {
+    return m_dis[0];
+  } else if (u < -std::max(std::abs(v), std::abs(w))) {
+    return m_dis[1];
+  } else if (v > std::max(std::abs(u), std::abs(w))) {
+    return m_dis[2];
+  } else if (v < -std::max(std::abs(u), std::abs(w))) {
+    return m_dis[3];
+  } else if (w > std::max(std::abs(u), std::abs(v))) {
+    return m_dis[4];
+  } else if (w < -std::max(std::abs(u), std::abs(v))) {
+    return m_dis[5];
+  }
+  if (m_debug) {
+    std::cout << m_className << "::GetDiscretisationLevel:\n"
+              << "    Found no match for the panel; return first value.\n";
+  }
+  return m_dis[0];
+}
+ 
 }

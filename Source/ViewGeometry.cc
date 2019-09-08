@@ -3,6 +3,7 @@
 
 #include <TGeoBBox.h>
 #include <TGeoCone.h>
+#include <TGeoArb8.h>
 #include <TGeoBoolNode.h>
 #include <TGeoCompositeShape.h>
 
@@ -106,9 +107,8 @@ void ViewGeometry::Plot() {
       const double dz = solid->GetHalfLengthZ();
       volume = m_geoManager->MakeBox("Box", medDefault, dx, dy, dz);
     } else if (solid->IsSphere()) {
-      const double rmin = solid->GetInnerRadius();
-      const double rmax = solid->GetOuterRadius();
-      volume = m_geoManager->MakeSphere("Sphere", medDefault, rmin, rmax);
+      const double r = solid->GetRadius();
+      volume = m_geoManager->MakeSphere("Sphere", medDefault, 0, r);
     } else if (solid->IsHole()) {
       const double r1 = solid->GetLowerRadius();
       const double r2 = solid->GetUpperRadius();
@@ -123,6 +123,22 @@ void ViewGeometry::Plot() {
         new TGeoSubtraction(box, cone));
       hole->RegisterYourself();
       volume = new TGeoVolume("Hole", hole, medDefault); 
+    } else if (solid->IsRidge()) {
+      const double dx = solid->GetHalfLengthX();
+      const double dy = solid->GetHalfLengthY();
+      const double dz = 0.5 * solid->GetRidgeHeight();
+      const double xr = solid->GetRidgeOffset();
+      volume = m_geoManager->MakeArb8("Ridge", medDefault, dz);
+      auto arb = (TGeoArb8*)volume->GetShape();
+      arb->SetVertex(0, -dx, -dy);
+      arb->SetVertex(1, -dx, +dy);
+      arb->SetVertex(2, +dx, +dy);
+      arb->SetVertex(3, +dx, -dy);
+      arb->SetVertex(4, xr, -dy);
+      arb->SetVertex(5, xr, +dy);
+      arb->SetVertex(6, xr, +dy);
+      arb->SetVertex(7, xr, -dy);
+      z0 += dz;
     } else {
       std::cerr << m_className << "::Plot: Unknown type of solid.\n";
       continue;
