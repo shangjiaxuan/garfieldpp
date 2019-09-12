@@ -164,7 +164,8 @@ class Sensor {
   void AddSignal(const double q, const double t0, const double t1,
                  const double x0, const double y0, const double z0,
                  const double x1, const double y1, const double z1,
-                 const bool integrate);
+                 const bool integrateWeightingField, 
+                 const bool useWeightingPotential = false);
   /// Add the signal from a drift line.
   void AddSignal(const double q, const std::vector<double>& ts,
                  const std::vector<std::array<double, 3> >& xs,

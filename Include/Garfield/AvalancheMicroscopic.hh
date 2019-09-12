@@ -43,17 +43,22 @@ class AvalancheMicroscopic {
 
   /// Switch on calculation of induced currents (default: off).
   void EnableSignalCalculation(const bool on = true) { m_doSignal = on; }
+  /// Use the weighting potential (as opposed to the weighting field) 
+  /// for calculating the induced current.
+  void UseWeightingPotential(const bool on = true) { 
+    m_useWeightingPotential = on; 
+  }
+  /// Integrate the weighting field over a drift line step when 
+  /// calculating the induced current (default: off).
+  void EnableWeightingFieldIntegration(const bool on = true) { 
+    m_integrateWeightingField = on;
+  }
 
   /// Switch on calculation of the total induced charge (default: off).
   void EnableInducedChargeCalculation(const bool on = true) { 
     m_doInducedCharge = on; 
   }
 
-  /// Integrate the weighting field over a drift line step when 
-  /// calculating the induced current (default: off).
-  void EnableWeightingFieldIntegration(const bool on = true) { 
-    m_integrateWeightingField = on;
-  }
   /// Fill a histogram with the electron energy distribution.
   void EnableElectronEnergyHistogramming(TH1* histo);
   /// Stop histogramming the electron energy distribution.
@@ -286,6 +291,7 @@ class AvalancheMicroscopic {
   TH1* m_histSecondary = nullptr;
 
   bool m_doSignal = false;
+  bool m_useWeightingPotential = false;
   bool m_integrateWeightingField = false;
   bool m_doInducedCharge = false;
   bool m_useDriftLines = false;

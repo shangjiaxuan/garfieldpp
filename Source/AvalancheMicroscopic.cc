@@ -819,7 +819,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           if (m_doSignal) {
             const int q = hole ? 1 : -1;
             m_sensor->AddSignal(q, t, t1, x, y, z, x1, y1, z1, 
-                                m_integrateWeightingField);
+                                m_integrateWeightingField,
+                                m_useWeightingPotential);
           }
           Update(it, x1, y1, z1, t1, energy, newKx, newKy, newKz, band);
           if (status != 0) {
@@ -850,7 +851,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
                  sqrt(vx * vx + vy * vy + vz * vz);
             const int q = hole ? 1 : -1;
             m_sensor->AddSignal(q, t, t + dt, x, y, z, xc, yc, zc,
-                                m_integrateWeightingField);
+                                m_integrateWeightingField,
+                                m_useWeightingPotential);
           }
           Update(it, xc, yc, zc, t + dt, energy, newKx, newKy, newKz, band);
           (*it).status = StatusLeftDriftMedium;
@@ -864,7 +866,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         if (m_doSignal) {
           const int q = hole ? 1 : -1;
           m_sensor->AddSignal(q, t, t + dt, x, y, z, x1, y1, z1,
-                              m_integrateWeightingField);
+                              m_integrateWeightingField,
+                              m_useWeightingPotential);
         }
 
         // Update the coordinates.

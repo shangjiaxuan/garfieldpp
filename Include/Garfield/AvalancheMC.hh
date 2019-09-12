@@ -30,11 +30,16 @@ class AvalancheMC {
 
   /// Switch on calculation of induced currents (default: disabled).
   void EnableSignalCalculation(const bool on = true) { m_doSignal = on; }
-  /// Set the number of points to be used when averaging the delayed 
+  /// Set the number of points to be used when averaging the 
   /// signal vector over a time bin in the Sensor class.
   /// The averaging is done with a \f$2\times navg + 1\f$ point 
   /// Newton-Raphson integration. Default: 1. 
   void SetSignalAveragingOrder(const unsigned int navg) { m_navg = navg; }
+  /// Use the weighting potential (as opposed to the weighting field)
+  /// for calculating the induced signal.
+  void UseWeightingPotential(const bool on = true) { 
+    m_useWeightingPotential = on; 
+  }
 
   /// Switch on calculation of induced charge (default: disabled).
   void EnableInducedChargeCalculation(const bool on = true) { 
@@ -225,6 +230,7 @@ class AvalancheMC {
 
   bool m_doSignal = false;
   unsigned int m_navg = 1;
+  bool m_useWeightingPotential = false;
   bool m_doInducedCharge = false;
   bool m_doEquilibration = true;
   bool m_doRKF = false;
