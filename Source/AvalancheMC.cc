@@ -1088,6 +1088,17 @@ void AvalancheMC::ComputeSignal(const Particle particle,
   const unsigned int nPoints = driftLine.size();
   if (nPoints < 2) return;
 
+  if (m_useWeightingPotential) {
+    for (unsigned int i = 0; i < nPoints - 1; ++i) {
+      const auto& x0 = driftLine[i].x;   
+      const auto& x1 = driftLine[i + 1].x;
+      const double t0 = driftLine[i].t; 
+      const double t1 = driftLine[i + 1].t;
+      m_sensor->AddSignal(q, t0, t1, x0[0], x0[1], x0[2], 
+                          x1[0], x1[1], x1[2], false, true);
+    }
+    return;
+  }
   // Get the drift velocity at each point.
   std::vector<double> ts;
   std::vector<std::array<double, 3> > xs;

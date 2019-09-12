@@ -373,7 +373,8 @@ void Sensor::SetDelayedSignalTimes(const std::vector<double>& ts) {
 void Sensor::AddSignal(const double q, const double t0, const double t1,
                        const double x0, const double y0, const double z0,
                        const double x1, const double y1, const double z1,
-                       const bool integrate) {
+                       const bool integrateWeightingField,
+                       const bool useWeightingPotential) {
   if (m_debug) std::cout << m_className << "::AddSignal: ";
   // Get the time bin.
   if (t0 < m_tStart) {
@@ -416,52 +417,62 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
                             0.360761573048138608, 0.171324492379170345};
   for (auto& electrode : m_electrodes) {
     const std::string lbl = electrode.label;
-    double wx = 0., wy = 0., wz = 0.;
-    // Calculate the weighting field for this electrode.
-    if (integrate) {
-      for (unsigned int j = 0; j < 6; ++j) {
-        const double s = 0.5 * (1. + tg[j]);
-        const double x = x0 + s * dx;
-        const double y = y0 + s * dy;
-        const double z = z0 + s * dz;
-        double fx = 0., fy = 0., fz = 0.; 
-        electrode.comp->WeightingField(x, y, z, fx, fy, fz, lbl);
-        wx += wg[j] * fx;
-        wy += wg[j] * fy;
-        wz += wg[j] * fz;
-      }
-      wx *= 0.5;
-      wy *= 0.5;
-      wz *= 0.5;
+    if (m_debug) std::cout << "  Electrode " << electrode.label << ":\n";
+    // Induced current.
+    double current = 0.;
+    if (useWeightingPotential) {
+      const double w0 = electrode.comp->WeightingPotential(x0, y0, z0, lbl);
+      const double w1 = electrode.comp->WeightingPotential(x1, y1, z1, lbl);
+      current = q * (w1 - w0) / dt; 
     } else {
-      const double x = x0 + 0.5 * dx;
-      const double y = y0 + 0.5 * dy;
-      const double z = z0 + 0.5 * dz;
-      electrode.comp->WeightingField(x, y, z, wx, wy, wz, lbl);
+      double wx = 0., wy = 0., wz = 0.;
+      // Calculate the weighting field for this electrode.
+      if (integrateWeightingField) {
+        for (unsigned int j = 0; j < 6; ++j) {
+          const double s = 0.5 * (1. + tg[j]);
+          const double x = x0 + s * dx;
+          const double y = y0 + s * dy;
+          const double z = z0 + s * dz;
+          double fx = 0., fy = 0., fz = 0.; 
+          electrode.comp->WeightingField(x, y, z, fx, fy, fz, lbl);
+          wx += wg[j] * fx;
+          wy += wg[j] * fy;
+          wz += wg[j] * fz;
+        }
+        wx *= 0.5;
+        wy *= 0.5;
+        wz *= 0.5;
+      } else {
+        const double x = x0 + 0.5 * dx;
+        const double y = y0 + 0.5 * dy;
+        const double z = z0 + 0.5 * dz;
+        electrode.comp->WeightingField(x, y, z, wx, wy, wz, lbl);
+      }
+      if (m_debug) {
+        std::cout << "    Weighting field: (" << wx << ", " << wy << ", " 
+                  << wz << ")\n";
+      }
+      // Calculate the induced current.
+      current = -q * (wx * vx + wy * vy + wz * vz);
+
     }
-    // Calculate the induced current.
-    const double cur = -q * (wx * vx + wy * vy + wz * vz);
-    if (m_debug) {
-      std::cout << "  Electrode " << electrode.label << ":\n"
-                << "    Weighting field: (" << wx << ", " << wy << ", " << wz
-                << ")\n    Induced charge: " << cur * dt << "\n";
-    }
+    if (m_debug) std::cout << "    Induced charge: " << current * dt << "\n";
     double delta = m_tStart + (bin + 1) * m_tStep - t0;
     // Check if the provided timestep extends over more than one time bin
     if (dt > delta) {
-      FillBin(electrode, bin, cur * delta, electron, false);
+      FillBin(electrode, bin, current * delta, electron, false);
       delta = dt - delta;
       unsigned int j = 1;
       while (delta > m_tStep && bin + j < m_nTimeBins) {
-        FillBin(electrode, bin + j, cur * m_tStep, electron, false);
+        FillBin(electrode, bin + j, current * m_tStep, electron, false);
         delta -= m_tStep;
         ++j;
       }
       if (bin + j < m_nTimeBins) {
-        FillBin(electrode, bin + j, cur * delta, electron, false);
+        FillBin(electrode, bin + j, current * delta, electron, false);
       }
     } else {
-      FillBin(electrode, bin, cur * dt, electron, false);
+      FillBin(electrode, bin, current * dt, electron, false);
     }
   }
   if (!m_delayedSignal) return;
