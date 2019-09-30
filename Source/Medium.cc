@@ -450,6 +450,11 @@ bool Medium::ElectronLorentzAngle(const double ex, const double ey,
   return true;
 }
 
+double Medium::ElectronMobility() {
+  if (m_eVelE.empty()) return -1.;
+  return m_eVelE[0][0][0] / UnScaleElectricField(m_eFields[0]);
+}
+
 double Medium::GetElectronEnergy(const double px, const double py,
                                  const double pz, double& vx, double& vy,
                                  double& vz, const int band) {
@@ -552,6 +557,11 @@ bool Medium::HoleAttachment(const double ex, const double ey, const double ez,
   return true;
 }
 
+double Medium::HoleMobility() {
+  if (m_hVelE.empty()) return -1.;
+  return m_hVelE[0][0][0] / UnScaleElectricField(m_eFields[0]);
+}
+
 bool Medium::IonVelocity(const double ex, const double ey, const double ez,
                          const double bx, const double by, const double bz,
                          double& vx, double& vy, double& vz) {
@@ -605,6 +615,10 @@ bool Medium::IonDissociation(const double ex, const double ey, const double ez,
   // Apply scaling.
   diss = ScaleDissociation(diss);
   return true;
+}
+
+double Medium::IonMobility() {
+  return m_iMob.empty() ? -1. : m_iMob[0][0][0];
 }
 
 bool Medium::GetOpticalDataRange(double& emin, double& emax,

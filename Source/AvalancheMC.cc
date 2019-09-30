@@ -279,7 +279,7 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
     constexpr double tol = 1.e-10;
     // Make sure the electric field has a non-vanishing component.
     const double emag = Mag(e0);
-    if (emag < tol) {
+    if (emag < tol && !m_useDiffusion) {
       std::cerr << m_className + "::DriftLine: Too small electric field at " 
                 << PrintVec(x0) + ".\n";
       status = StatusCalculationAbandoned;
@@ -294,54 +294,109 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
     }
 
     // Make sure the drift velocity vector has a non-vanishing component.
-    const double vmag = Mag(v0);
-    if (vmag < tol) {
+    double vmag = Mag(v0);
+    if (vmag < tol && !m_useDiffusion) {
       std::cerr << m_className + "::DriftLine: Too small drift velocity at " 
                 << PrintVec(x0) + ".\n";
       status = StatusCalculationAbandoned;
       break;
     }
 
-    // Determine the time step.
-    double dt = 0.;
-    // Coefficient for collision-time stepping.
-    constexpr double c1 = ElectronMass / (SpeedOfLight * SpeedOfLight);
-    switch (m_stepModel) {
-      case StepModel::FixedTime:
-        dt = m_tMc;
-        break;
-      case StepModel::FixedDistance:
-        dt = m_dMc / vmag;
-        break;
-      case StepModel::CollisionTime:
-        dt = -m_nMc * (c1 * vmag / emag) * log(RndmUniformPos());
-        break;
-      case StepModel::UserDistance:
-        dt = m_fStep(x0[0], x0[1], x0[2]) / vmag;
-        break;
-      default:
-        std::cerr << m_className + "::DriftLine: Unknown stepping model.\n";
-        status = StatusCalculationAbandoned;
-        break;
-    }
-    if (status != 0) break;
-
-    double t1 = t0 + dt;
-    // Compute the proposed end-point of this step and the mean velocity.
+    // Coordinates after the step.
     std::array<double, 3> x1 = x0;
-    std::array<double, 3> v1 = v0;
-    if (m_doRKF) {
-      StepRKF(particle, x0, v0, dt, x1, v1, status);
-    } else {
-      for (unsigned int k = 0; k < 3; ++k) x1[k] += dt * v0[k];
-    }
-
-    if (m_useDiffusion) {
-      if (!AddDiffusion(particle, medium, sqrt(vmag * dt), x1, v0, e0, b0)) {
+    // Time after the step.
+    double t1 = t0;
+    if (vmag < tol || emag < tol) {
+      // Diffusion only. Get the mobility.
+      const double mu = GetMobility(particle, medium);
+      if (mu < 0.) {
+        std::cerr << m_className + "::DriftLine: Invalid mobility.\n";
         status = StatusCalculationAbandoned;
-        std::cerr << m_className + "::DriftLine: Abandoning the calculation.\n";
         break;
       }
+      // Calculate the diffusion coefficient.
+      const double dif = mu * BoltzmannConstant * medium->GetTemperature();
+      double sigma = 0.;
+      switch (m_stepModel) {
+        case StepModel::FixedTime:
+          sigma = sqrt(2. * dif * m_tMc);
+          t1 += m_tMc;
+          break;
+        case StepModel::FixedDistance:
+          sigma = m_dMc;
+          break;
+        case StepModel::CollisionTime: {
+            // Thermal velocity.
+            const double vth = SpeedOfLight * sqrt(
+              2 * BoltzmannConstant * medium->GetTemperature() / ElectronMass);
+            sigma = m_nMc * dif / vth;
+          }
+          break;
+        case StepModel::UserDistance:
+          sigma = m_fStep(x0[0], x0[1], x0[2]);
+          break;
+        default:
+          std::cerr << m_className + "::DriftLine: Unknown stepping model.\n";
+          status = StatusCalculationAbandoned;
+          break;
+      }
+      if (status != 0) break;
+      if (m_stepModel != StepModel::FixedTime) {
+        t1 += sigma * sigma / (2 * dif); 
+      }
+      for (unsigned int i = 0; i < 3; ++i) x1[i] += RndmGaussian(0., sigma);
+    } else {
+      // Drift and diffusion. Determine the time step.
+      double dt = 0.;
+      // Coefficient for collision-time stepping.
+      constexpr double c1 = ElectronMass / (SpeedOfLight * SpeedOfLight);
+      switch (m_stepModel) {
+        case StepModel::FixedTime:
+          dt = m_tMc;
+          break;
+        case StepModel::FixedDistance:
+          dt = m_dMc / vmag;
+          break;
+        case StepModel::CollisionTime:
+          dt = -m_nMc * (c1 * vmag / emag) * log(RndmUniformPos());
+          break;
+        case StepModel::UserDistance:
+          dt = m_fStep(x0[0], x0[1], x0[2]) / vmag;
+          break;
+        default:
+          std::cerr << m_className + "::DriftLine: Unknown stepping model.\n";
+          status = StatusCalculationAbandoned;
+          break;
+      }
+      if (status != 0) break;
+
+      double difl = 0., dift = 0.;
+      if (m_useDiffusion) {
+        // Get the diffusion coefficients.
+        if (!GetDiffusion(particle, medium, e0, b0, difl, dift)) {
+          PrintError("DriftLine", "diffusion", particle, x0);
+          status = StatusCalculationAbandoned;
+          break;
+        } 
+        if (m_stepModel != StepModel::FixedTime) {
+          const double ds = vmag * dt;
+          const double dif = std::max(difl, dift);
+          if (dif * dif > ds) {
+            dt = ds * ds / (dif * dif * vmag);
+          }
+        }
+      }
+      // Compute the proposed end-point of this step and the mean velocity.
+      std::array<double, 3> v1 = v0;
+      if (m_doRKF) {
+        StepRKF(particle, x0, v0, dt, x1, v1, status);
+        vmag = Mag(v1);
+      } else {
+        for (unsigned int k = 0; k < 3; ++k) x1[k] += dt * v0[k];
+      }
+
+      if (m_useDiffusion) AddDiffusion(sqrt(vmag * dt), difl, dift, x1, v1);
+      t1 += dt;
     }
     if (m_debug) {
       std::cout << m_className + "::DriftLine: Next point: " 
@@ -597,6 +652,18 @@ int AvalancheMC::GetField(const std::array<double, 3>& x,
   return 0;
 }
 
+double AvalancheMC::GetMobility(const Particle particle, Medium* medium) const {
+
+  if (particle == Particle::Electron) {
+    return medium->ElectronMobility();
+  } else if (particle == Particle::Hole) {
+    return medium->HoleMobility();
+  } else if (particle == Particle::Ion) {
+    return medium->IonMobility();
+  }
+  return -1.;
+}
+
 bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium, 
                               const std::array<double, 3>& x,
                               const std::array<double, 3>& e,
@@ -648,6 +715,23 @@ bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium,
               << PrintVec(x) << " = " << PrintVec(v) << "\n";
   }
   return true;
+}
+
+bool AvalancheMC::GetDiffusion(const Particle particle, Medium* medium,
+                               const std::array<double, 3>& e,
+                               const std::array<double, 3>& b,
+                               double& dl, double& dt) const {
+
+  dl = 0., dt = 0.;
+  bool ok = false;
+  if (particle == Particle::Electron) {
+    ok = medium->ElectronDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
+  } else if (particle == Particle::Hole) {
+    ok = medium->HoleDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
+  } else if (particle == Particle::Ion) {
+    ok = medium->IonDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
+  }
+  return ok;
 }
 
 double AvalancheMC::GetAttachment(const Particle particle, Medium* medium, 
@@ -729,26 +813,10 @@ void AvalancheMC::StepRKF(const Particle particle,
   }
 }
 
-bool AvalancheMC::AddDiffusion(const Particle particle, Medium* medium,
-                               const double step, 
+void AvalancheMC::AddDiffusion(const double step,
+                               const double dl, const double dt, 
                                std::array<double, 3>& x,
-                               const std::array<double, 3>& v,
-                               const std::array<double, 3>& e,
-                               const std::array<double, 3>& b) {
-  bool ok = false;
-  double dl = 0., dt = 0.;
-  if (particle == Particle::Electron) {
-    ok = medium->ElectronDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
-  } else if (particle == Particle::Hole) {
-    ok = medium->HoleDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
-  } else if (particle == Particle::Ion) {
-    ok = medium->IonDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
-  }
-  if (!ok) {
-    PrintError("AddDiffusion", "diffusion", particle, x);
-    return false;
-  }
-
+                               const std::array<double, 3>& v) const {
   // Draw a random diffusion direction in the particle frame.
   const std::array<double, 3> d = {step * RndmGaussian(0., dl), 
                                    step * RndmGaussian(0., dt),
@@ -769,7 +837,6 @@ bool AvalancheMC::AddDiffusion(const Particle particle, Medium* medium,
   x[0] += cphi * ctheta * d[0] - sphi * d[1] - cphi * stheta * d[2];
   x[1] += sphi * ctheta * d[0] + cphi * d[1] - sphi * stheta * d[2];
   x[2] +=        stheta * d[0] +                      ctheta * d[2];
-  return true;
 }
 
 void AvalancheMC::Terminate(const std::array<double, 3>& x0, const double t0,

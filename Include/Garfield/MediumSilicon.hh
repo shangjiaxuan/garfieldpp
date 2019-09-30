@@ -37,6 +37,7 @@ class MediumSilicon : public Medium {
   bool ElectronAttachment(const double ex, const double ey, const double ez,
                           const double bx, const double by, const double bz,
                           double& eta) override;
+  double ElectronMobility() override { return m_eMobility; }
   // Hole transport parameters
   bool HoleVelocity(const double ex, const double ey, const double ez,
                     const double bx, const double by, const double bz,
@@ -47,7 +48,7 @@ class MediumSilicon : public Medium {
   bool HoleAttachment(const double ex, const double ey, const double ez,
                       const double bx, const double by, const double bz,
                       double& eta) override;
-
+  double HoleMobility() override { return m_hMobility; }
   /// Specify the low field values of the electron and hole mobilities.
   void SetLowFieldMobility(const double mue, const double muh);
   /// Calculate the lattice mobility using the Minimos model.

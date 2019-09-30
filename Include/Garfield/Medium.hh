@@ -117,7 +117,8 @@ class Medium {
                                     const double ez, const double bx,
                                     const double by, const double bz,
                                     double& lor);
-
+  /// Low-field mobility [cm2 V-1 ns-1]
+  virtual double ElectronMobility();
   // Microscopic electron transport properties
 
   /// Dispersion relation (energy vs. wave vector)
@@ -144,26 +145,35 @@ class Medium {
                                       double& energy) const;
 
   // Transport parameters for holes
+  /// Drift velocity [cm / ns]
   virtual bool HoleVelocity(const double ex, const double ey, const double ez,
                             const double bx, const double by, const double bz,
                             double& vx, double& vy, double& vz);
+  /// Longitudinal and transverse diffusion coefficients [cm1/2]
   virtual bool HoleDiffusion(const double ex, const double ey, const double ez,
                              const double bx, const double by, const double bz,
                              double& dl, double& dt);
+  /// Diffusion tensor
   virtual bool HoleDiffusion(const double ex, const double ey, const double ez,
                              const double bx, const double by, const double bz,
                              double cov[3][3]);
+  /// Ionisation coefficient [cm-1]
   virtual bool HoleTownsend(const double ex, const double ey, const double ez,
                             const double bx, const double by, const double bz,
                             double& alpha);
+  /// Attachment coefficient [cm-1]
   virtual bool HoleAttachment(const double ex, const double ey, const double ez,
                               const double bx, const double by, const double bz,
                               double& eta);
+  /// Low-field mobility [cm2 V-1 ns-1]
+  virtual double HoleMobility();
 
   // Transport parameters for ions
+  /// Drift velocity [cm / ns]
   virtual bool IonVelocity(const double ex, const double ey, const double ez,
                            const double bx, const double by, const double bz,
                            double& vx, double& vy, double& vz);
+  /// Longitudinal and transverse diffusion coefficients [cm1/2]
   virtual bool IonDiffusion(const double ex, const double ey, const double ez,
                             const double bx, const double by, const double bz,
                             double& dl, double& dt);
@@ -171,6 +181,8 @@ class Medium {
   virtual bool IonDissociation(const double ex, const double ey,
                                const double ez, const double bx,
                                const double by, const double bz, double& diss);
+  /// Low-field mobility [cm2 V-1 ns-1]
+  virtual double IonMobility();
 
   /// Set the range of fields to be covered by the transport tables.
   void SetFieldGrid(double emin, double emax, const size_t ne, bool logE,
