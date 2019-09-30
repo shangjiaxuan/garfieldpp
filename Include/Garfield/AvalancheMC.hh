@@ -277,12 +277,19 @@ class AvalancheMC {
   int GetField(const std::array<double, 3>& x, 
                std::array<double, 3>& e, std::array<double, 3>& b,
                Medium*& medium) const;
+  /// Retrieve the low-field mobility.
+  double GetMobility(const Particle particle, Medium* medium) const;
   /// Compute the drift velocity.
   bool GetVelocity(const Particle particle, Medium* medium, 
                    const std::array<double, 3>& x,
                    const std::array<double, 3>& e,
                    const std::array<double, 3>& b,
                    std::array<double, 3>& v) const;
+  /// Compute the diffusion coefficients.
+  bool GetDiffusion(const Particle particle, Medium* medium,
+                    const std::array<double, 3>& e,
+                    const std::array<double, 3>& b,
+                    double& dl, double& dt) const;
   /// Compute the attachment coefficient.
   double GetAttachment(const Particle particle, Medium* medium, 
                        const std::array<double, 3>& x,
@@ -294,11 +301,9 @@ class AvalancheMC {
                std::array<double, 3>& xf, std::array<double, 3>& vf,
                int& status) const;
   /// Add a diffusion step.
-  bool AddDiffusion(const Particle particle, Medium* medium, const double step,
+  void AddDiffusion(const double step, const double dl, const double dt,
                     std::array<double, 3>& x,
-                    const std::array<double, 3>& v,
-                    const std::array<double, 3>& e,
-                    const std::array<double, 3>& b);
+                    const std::array<double, 3>& v) const;
   /// Terminate a drift line close to the boundary.
   void Terminate(const std::array<double, 3>& x0, const double t0,
                  std::array<double, 3>& x, double& t) const;
