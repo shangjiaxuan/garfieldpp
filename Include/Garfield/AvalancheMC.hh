@@ -230,7 +230,7 @@ class AvalancheMC {
 
   bool m_doSignal = false;
   unsigned int m_navg = 1;
-  bool m_useWeightingPotential = false;
+  bool m_useWeightingPotential = true;
   bool m_doInducedCharge = false;
   bool m_doEquilibration = true;
   bool m_doRKF = false;
