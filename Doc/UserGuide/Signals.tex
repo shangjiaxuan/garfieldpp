@@ -2,30 +2,36 @@ Signals are calculated using the Shockley-Ramo theorem.
 The current \(i\left(t\right)\) induced by a particle with charge 
 \(q\) at a position \(\mathbf{r}\) moving at a velocity \(\mathbf{v}\)
 is given by
-\begin{equation*}
+\begin{equation}\label{Eqn:RamoShockleyWeightingField}
   i\left(t\right) = -q \mathbf{v} \cdot \mathbf{E}_{w}\left(\mathbf{r}\right),
-\end{equation*}
+\end{equation}
 where \(\mathbf{E}_{w}\) is the so-called weighting field for the 
-electrode to be read out. 
+electrode to be read out and the charge induced by particle moving from 
+$\mathbf{r}_{1}$ to $\mathbf{r}_{2}$ is given by
+\begin{equation}\label{Eqn:RamoShockleyWeightingPotential}
+  \int\limits_{t_{1}}^{t_{2}}i\left(t\right)\text{d}t = q\left[\phi_{w}\left(\mathbf{r}_{2}\right) - \phi_{w}\left(\mathbf{r}_{1}\right)\right],
+\end{equation} 
+where $\phi_{w}$ is the weighting potential.
 
 The basic steps for calculating the current induced 
 by the drift of electrons and ions/holes are:
 \begin{enumerate}
   \item
-  Prepare the weighting field for the electrode to be read out. 
+  Prepare the weighting field and/or weighting potential 
+  for the electrode to be read out. 
   This step depends on the field calculation technique 
   (\textit{i.\,e.} the type of \texttt{Component}) that is used 
   (see Chapter~\ref{Chap:Components}). 
   \item
   Tell the \texttt{Sensor} that you want to use this 
-  weighting field for the signal calculation. 
+  weighting field/potential for the signal calculation. 
   \begin{lstlisting}
 void Sensor::AddElectrode(ComponentBase* cmp, std::string label);
   \end{lstlisting}
   where \texttt{cmp} is a pointer to the \texttt{Component} 
-  which calculates the weighting field, and \texttt{label} 
-  (in our example \texttt{"readout"}) is 
-  the name you have assigned to the weighting field in the previous step.
+  which calculates the weighting field/potential, and \texttt{label} 
+  (in our example \texttt{"readout"}) is the name 
+  you have assigned to the weighting field/potential in the previous step.
   \item
   Setup the binning for the signal calculation.
   \begin{lstlisting}
@@ -94,11 +100,57 @@ signalView->SetSensor(sensor);
 signalView->Plot(label);
 \end{lstlisting}
 
-\section{Readout Electronics}
+The algorithms used for calculating the induced current are slightly different 
+for \texttt{DriftLineRKF}, \texttt{AvalancheMC}, and \texttt{AvalancheMicroscopic}.
+
+For drift lines calculated using the RKF method, 
+the times $t_j$, coordinates $\mathbf{r}_j$ and drift velocities $\mathbf{v}_j$
+at each point along the drift line are taken and the induced current 
+\begin{equation*}
+  i_{j} = -q \mathbf{E}_{w}\left(\mathbf{r}_{j}\right) \cdot \mathbf{v}_j
+\end{equation*}
+at these points is computed. In order to calculate the average current 
+in each time bin, the array of $\left(t_{j}, i_{j}\right)$ is interpolated 
+(linearly) and then integrated using Simpson's rule over $2n_\text{avg} + 1$ points. The parameter $n_\text{avg}$ defaults to 2 and can be set using
+\begin{lstlisting}
+void DriftLineRKF::SetSignalAveragingOrder(const unsigned int navg);
+\end{lstlisting} 
+
+For drift lines simulated using microscopic tracking 
+(\texttt{AvalancheMicroscopic}), the signal between subsequent points 
+along the drift path is assumed to be constant, and can be 
+calculated using either the weighting potential or the weighting field. 
+The method can be selected using 
+\begin{lstlisting}
+void AvalancheMicroscopic::UseWeightingPotential(const bool on = true);
+\end{lstlisting}
+By default, the weighting field is evaluated at the mid-point of a 
+drift line segment. 
+Using 
+\begin{lstlisting}
+void AvalancheMicroscopic::EnableWeightingFieldIntegration(const bool on = true);
+\end{lstlisting} 
+one can request 6-point Gaussian integration of the weighting field 
+over a drift line segment.
+
+The weighting potential method takes $\phi_{w}$ 
+at the start and end of each step $j \rightarrow j + 1$ along the drift path
+and calculates the average current $q\Delta\phi_{w}/\left(t_{j+1} - t_{j}\right)$.
+
+For drift lines simulated using \texttt{AvalancheMC} one also has the choice 
+between using the weighting potential or the weighting field for computing 
+the induced current. The method to be used can be selected using
+\begin{lstlisting}
+void UseWeightingPotential(const bool on = true);
+\end{lstlisting} 
+The weighting potential method should be used if one wants to ensure that 
+the integrated current is correct (equal to the collected charge).
+\section{Readout electronics}
 
 In order to model the signal-processing by the front-end electronics, the 
 ``raw signal'' -- \textit{i.\,e.} the induced current -- 
-can be convoluted with a so-called ``transfer function''. 
+can be convoluted with a so-called ``transfer function'' (often also referred 
+to as delta response function). 
 The transfer function to be applied can be set using
 \begin{lstlisting}
 void Sensor::SetTransferFunction(double (*f)(double t));

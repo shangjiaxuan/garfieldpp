@@ -26,6 +26,7 @@ SolidBox(const double cx, const double cy, const double cz,
 
 \tdplotsetmaincoords{60}{120}
 \begin{figure}
+\centering
 \begin{tikzpicture}[panel/.style={fill=lightgray,fill opacity=0.2},line join=round,>=stealth,tdplot_main_coords]
 \pgfmathsetmacro{\lx}{1.5}
 \pgfmathsetmacro{\ly}{3}
@@ -82,6 +83,7 @@ SolidTube(const double cx, const double cy, const double cz, const double r,
 can be used.
 
 \begin{figure}
+\centering
 \tdplotsetmaincoords{60}{120}
 \begin{tikzpicture}[panel/.style={fill=lightgray,fill opacity=0.2},line join=round,>=stealth,tdplot_main_coords]
 \pgfmathsetmacro{\rmax}{2}
@@ -136,6 +138,7 @@ SolidSphere(const double cx, const double cy, const double cz,
 \item[r] Radius of the sphere.
 \end{description}
 \begin{figure}
+\centering
 \tdplotsetmaincoords{60}{120}
 \begin{tikzpicture}[line join=round,>=stealth,tdplot_main_coords]
 \pgfmathsetmacro{\radius}{2}
@@ -182,6 +185,7 @@ SolidHole(const double cx, const double cy, const double cz,
 \end{lstlisting}
 is available.
 \begin{figure}
+\centering
 \tdplotsetmaincoords{60}{120}
 \begin{tikzpicture}[panel/.style={fill=lightgray,fill opacity=0.2},line join=round,>=stealth,tdplot_main_coords]
 \pgfmathsetmacro{\rtop}{1.5}
@@ -241,8 +245,9 @@ SolidRidge(const double cx, const double cy, const double cz,
 \end{description}
 An illustration is given in Fig.~\ref{Fig:SolidRidge}.
 By default, the ridge is taken to be parallel with the $y$-axis.
-\tdplotsetmaincoords{60}{160}
 \begin{figure}
+\centering
+\tdplotsetmaincoords{60}{160}
 \begin{tikzpicture}[panel/.style={fill=lightgray,fill opacity=0.2},line join=round,>=stealth,tdplot_main_coords]
 \pgfmathsetmacro{\lx}{2}
 \pgfmathsetmacro{\ly}{3}
