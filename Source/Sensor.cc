@@ -5,8 +5,8 @@
 
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Random.hh"
 #include "Garfield/Numerics.hh"
-#include "Garfield/Plotting.hh"
 #include "Garfield/Sensor.hh"
 
 namespace {
@@ -734,6 +734,18 @@ double Sensor::GetDelayedIonSignal(const std::string& label,
   return m_signalConversion * sig / (m_nEvents * m_tStep);
 }
 
+void Sensor::SetSignal(const std::string& label, const unsigned int bin,
+                       const double signal) {
+  if (bin >= m_nTimeBins) return;
+  if (m_nEvents == 0) m_nEvents = 1;
+  for (auto& electrode : m_electrodes) {
+    if (electrode.label == label) {
+      electrode.signal[bin] = m_nEvents * m_tStep * signal / m_signalConversion;
+      break;
+    }
+  }
+}
+
 double Sensor::GetSignal(const std::string& label, const unsigned int bin) {
   if (m_nEvents == 0) return 0.;
   if (bin >= m_nTimeBins) return 0.;
@@ -925,7 +937,9 @@ void Sensor::AddNoise(const bool total, const bool electron, const bool ion) {
   }
 }
 
-void Sensor::AddWhiteNoise(double enc, const bool total, const bool electron, const bool ion) {
+void Sensor::AddWhiteNoise(const double enc, const bool poisson, 
+                           const double q0) {
+
   if (!m_hasTransferFunction) {
     std::cerr << m_className << "::AddWhiteNoise: Transfer function not set.\n";
     return;
@@ -936,19 +950,37 @@ void Sensor::AddWhiteNoise(double enc, const bool total, const bool electron, co
   }
   if (m_nEvents == 0) m_nEvents = 1;
   
-  // Calculate the number of time bins needed to integrate over transfer function
-  unsigned int nTimeBins = (int)(m_shaper->PeakingTime() * 10 / m_tStep);
-  m_shaper->CalculateTransferFuncSq(m_tStep, nTimeBins);
+  const double f2 = m_shaper->TransferFuncSq();
+  if (f2 < 0.) {
+    std::cerr << m_className << "::AddWhiteNoise:\n"
+              << "  Could not calculate transfer function integral.\n";
+    return;
+  }
 
-  for (auto& electrode : m_electrodes) {
-    double t = m_tStart + 0.5 * m_tStep;
-    for (unsigned int j = 0; j < m_nTimeBins; ++j) {
-      double noise = m_shaper->WhiteNoise(enc, m_tStep);
-      std::cout << "noise: " << noise << std::endl;
-      if (total) electrode.signal[j] += noise;
-      if (electron) electrode.electronsignal[j] += noise;
-      if (ion) electrode.ionsignal[j] += noise;
-      t += m_tStep;
+  if (poisson) {
+    // Frequency of random delta pulses to model noise.
+    const double nu = (enc * enc / (q0 * q0)) / f2;
+    // Average number of delta pulses.
+    const double avg = nu * m_tStep * m_nTimeBins;
+    // Sample the number of pulses.
+    for (auto& electrode : m_electrodes) {
+      const int nPulses = RndmPoisson(avg);
+      for (int j = 0; j < nPulses; ++j) {
+        const int bin = static_cast<int>(m_nTimeBins * RndmUniform());
+        electrode.signal[bin] += q0;
+      }
+      const double offset = q0 * nu * m_tStep;
+      for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+        electrode.signal[j] -= offset;
+      }
+    }
+  } else {
+    // Gaussian approximation.
+    const double sigma = enc * sqrt(m_tStep / f2);
+    for (auto& electrode : m_electrodes) {
+      for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+        electrode.signal[j] += RndmGaussian(0., sigma);
+      }
     }
   }
 }

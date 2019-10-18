@@ -80,6 +80,24 @@ double denlan(const double v) {
     return u * u * (1 + (a2[0] + a2[1] * u) * u);
   }
 }
+
+double lngamma(const double xx) {
+
+  // Implementation from CLHEP.
+  constexpr double cof[6] = {76.18009172947146,-86.50532032941677,
+                             24.01409824083091, -1.231739572450155,
+                             0.1208650973866179e-2, -0.5395239384953e-5};
+  double x = xx - 1.0;
+  double tmp = x + 5.5;
+  tmp -= (x + 0.5) * std::log(tmp);
+  double ser = 1.000000000190015;
+  for (int j = 0; j <= 5; j++) {
+    x += 1.0;
+    ser += cof[j] / x;
+  }
+  return -tmp + std::log(2.5066282746310005 * ser);
+}
+
 }  // namespace
 namespace Garfield {
 
@@ -641,6 +659,41 @@ double RndmVavilov(const double rkappa, const double beta2) {
     v += ac[9] * (t - s0) / (s - s0);
   }
   return v;
+}
+
+int RndmPoisson(const double mean) {
+
+  // Implementation from CLHEP (RandPoisson) and ROOT.
+  if (mean <= 0) return 0;
+  if (mean < 25) {
+    const double expmean = exp(-mean);
+    double pir = 1.;
+    int n = -1;
+    while (1) {
+      n++;
+      pir *= RndmUniform();
+      if (pir <= expmean) break;
+    }
+    return n;
+  } else if (mean < 1.e9) {
+    // Use inversion method for large values.
+    const double sq = sqrt(2. * mean);
+    const double alxm = log(mean);
+    const double g = mean * alxm - lngamma(mean + 1.);
+    double y = 0., t = 0.;
+    double em = -1.;
+    do {
+      do {
+        y = tan(Pi * RndmUniform());
+        em = sq * y + mean;
+      } while (em < 0.0);
+      em = floor(em);
+      t = 0.9 * (1. + y * y) * exp(em * alxm - lngamma(em + 1.) - g);
+    } while (RndmUniform() > t);
+    return static_cast<int>(em);
+  }
+  // Use Gaussian approximation for very large values.
+  return int(RndmGaussian() * sqrt(mean) + mean + 0.5);
 }
 
 double RndmHeedWF(const double w, const double f) {
