@@ -104,6 +104,9 @@ class Sensor {
     m_nAvgDelayedSignal = navg;
   } 
 
+  /// Set/override the signal in a given time bin explicitly.
+  void SetSignal(const std::string& label, const unsigned int bin, 
+                 const double signal); 
   /// Retrieve the total signal for a given electrode and time bin.
   double GetSignal(const std::string& label, const unsigned int bin);
   /// Retrieve the electron signal for a given electrode and time bin.
@@ -135,9 +138,15 @@ class Sensor {
   /// Add noise to the induced signal.
   void AddNoise(const bool total = true, const bool electron = false,
                 const bool ion = false);
-  /// Add white noise to the induced signal, given a desired output enc.
-  void AddWhiteNoise(double enc, const bool total = true, 
-                     const bool electron = false, const bool ion = false);
+  /** Add white noise to the induced signal, given a desired output ENC.
+    * \param enc Equivalent Noise Charge, in electrons.
+    * \param poisson flag to sample the number of noise pulses from a 
+    *                Poisson distribution. Otherwise the noise charge in each
+    *                bin is sampled from a Gaussian distribution.
+    * \param q0      amplitude of the noise delta pulses (in electrons). 
+    */
+  void AddWhiteNoise(const double enc, const bool poisson = true, 
+                     const double q0 = 1.);
   /** Determine the threshold crossings of the current signal curve.
     * \param thr threshold value
     * \param label electrode for which to compute the threshold crossings

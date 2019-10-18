@@ -1,9 +1,8 @@
 #ifndef G_SHAPER_H
 #define G_SHAPER_H
 
-#include <vector>
-#include <time.h>
-#include <TRandom3.h>
+#include <string>
+#include <cmath>
 
 namespace Garfield {
 
@@ -11,56 +10,44 @@ namespace Garfield {
 
 class Shaper {
  public:
-  /// Constructor
+  /// Default constructor.
   Shaper() = delete;
-  Shaper(const int n, const double tau, const double g, 
-         const std::string& shaperType){
-    m_n = n;
-    m_tau = tau;
-    m_g = g;
-    m_type = shaperType;
-    m_rand = new TRandom3(time(NULL));
-    m_transfer_func_sq = -1.;
-  }
-
-  /// Destructor
+  /// Constructor.
+  Shaper(const unsigned int n, const double tau, const double g, 
+         std::string shaperType);
+  /// Destructor.
   ~Shaper() {}
   
-  // Get transfer function value
-  double Shape(double t);
-  // Transfer function for a bipolar shaper
-  double UnipolarShaper(double t);
-  // Transfer function for a unipolar shaper
-  double BipolarShaper(double t);
-  // Heaviside function, t0
-  double Heaviside(double t, double t0);
-  // Time @ peak.
-  double PeakingTime();
+  /// Evaluate the transfer function.
+  double Shape(const double t) const;
+  /// Transfer function for a unipolar shaper.
+  double UnipolarShaper(const double t) const;
+  /// Transfer function for a bipolar shaper.
+  double BipolarShaper(const double t) const;
+  /// Time for the transfer function to rise from zero to peak height.
+  double PeakingTime() const { return m_tp; }
 
-
-  // Calculate a noise current to add to the detector signal for a given ENC.
-  double WhiteNoise(int enc, double tStep);
-  // Calculate the number of delta pulses required for a given ENC.
-  double NDeltaPulses(double q_enc, double q0, double tStep);
-  // Calculate the integral of the transfer function squared.
-  void CalculateTransferFuncSq(double tStep, unsigned int nTimeBins);
+  /// Return the integral of the transfer function squared.
+  double TransferFuncSq() const { return m_transfer_func_sq; }
 
   private:
   std::string m_className = "Shaper";
 
-  // Time window for signals                                                                    
-  static double m_signalConversion;
-
-  // Standard transfer function parameters.
-  int m_n;
-  double m_tau;
-  double m_g;  
-  std::string m_type;
-  double m_transfer_func_sq;
-
-  // Noise.
-  TRandom3 * m_rand = nullptr;
-
+  // Shaper type.
+  enum class ShaperType { Unipolar = 0, Bipolar };
+  ShaperType m_type = ShaperType::Unipolar;
+  // Order of the shaper.
+  unsigned int m_n = 1;
+  // Time constant.
+  double m_tau = 1.;
+  // Peaking time.
+  double m_tp = 1.;
+  // Normalization factor.
+  double m_prefactor = 1.;
+  // Gain.
+  double m_g = 1.;
+  // Integral of the transfer function squared.
+  double m_transfer_func_sq = -1.;
 };
 }
 
