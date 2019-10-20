@@ -132,6 +132,41 @@ bool DriftLineRKF::DriftElectron(const double x0, const double y0,
   if (m_doSignal) {
     ComputeSignal(Particle::Electron, scale * m_scaleE, m_t, m_x, ne);
   }
+  if (m_doAvalanche && m_doIonTail) AddIonTail(m_t, m_x, ni, scale);
+  return true;
+}
+
+bool DriftLineRKF::AddIonTail(const std::vector<double>& te,
+                              const std::vector<std::array<double, 3> >& xe,
+                              const std::vector<double>& ni,
+                              const double scale) {
+  // SIGETR, SIGIOR
+  const unsigned int nPoints = te.size();
+  if (nPoints < 2) return false;
+  if (ni.size() != nPoints) return false;
+  // Loop over the electron track.
+  for (unsigned int i = 1; i < nPoints; ++i) {
+    // Skip points where there are no ions yet.
+    if (scale * ni[i] < 1.) continue;
+    // Skip also points with a negligible contribution.
+    // if (scale * ni[i] < threshold * m_nI) continue;
+    // Compute the ion drift line.
+    const auto& x0 = xe[i];
+    std::vector<double> ti;
+    std::vector<std::array<double, 3> > xi;
+    int stat = 0;
+    if (!DriftLine(x0[0], x0[1], x0[2], te[i], Particle::Ion, ti, xi, stat)) {
+      std::cerr << m_className << "::AddIonTail:\n"
+                << "    Unable to obtain an ion tail; tail not added.\n";
+      return false;
+    }
+    if (m_debug) {
+      std::cout << m_className << "::AddIonTail: Origin = " << PrintVec(x0)
+                << ", n = " << ti.size() << ", status = " << stat << "\n";
+    }
+    // Compute the contribution of the drift line to the signal.
+    ComputeSignal(Particle::Ion, scale * m_scaleI * ni[i], ti, xi, {});
+  }
   return true;
 }
 
