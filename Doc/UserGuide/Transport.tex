@@ -27,6 +27,32 @@ is the method of choice.
 Microscopic tracking of electrons is dealt with by the class 
 \texttt{AvalancheMicroscopic}.  
 \section{Runge-Kutta-Fehlberg integration}
+\begin{table}
+\centering
+\caption{Coefficients of the Runge-Kutta-Fehlberg formula.}
+\label{Tab:CoefficientsRKF}
+\begin{tabular}{c c c c} 
+\toprule
+                   & \multicolumn{3}{c}{$\beta_{k,i}$} \\
+\diagbox{$k$}{$i$} & 0 & 1 & 2 \\
+\midrule
+1 & $\frac{1}{4}$ \\
+2 & $\frac{-189}{800}$ & $\frac{729}{800}$ \\
+3 & $\frac{214}{891}$ & $\frac{1}{33}$ & $\frac{650}{891}$ \\
+\bottomrule
+\end{tabular}
+\quad
+\begin{tabular}{c c c}
+\toprule
+$k$ & $C_{I,k}$ & $C_{II,k}$ \\
+\midrule
+0 & $\frac{214}{891}$ & $\frac{533}{2106}$ \\  
+1 & $\frac{1}{33}$    & \\
+2 & $\frac{650}{891}$ & $\frac{800}{1053}$ \\ 
+3 &                   & $\frac{-1}{78}$ \\ 
+\bottomrule
+\end{tabular}
+\end{table}
 This method, implemented in the class \texttt{DriftLineRKF}, 
 calculates a drift line by iterating over the following steps.
 \begin{enumerate}
@@ -38,13 +64,14 @@ calculates a drift line by iterating over the following steps.
     \item
       $\boldsymbol{\Delta{v}}_{\text{I}} = \sum\limits_{k=0}^{2}C_{\text{I}, k}\mathbf{v}_{d}\left(\mathbf{x}_{k}\right)$, accurate to second order,
     \item
-      $\boldsymbol{\Delta{v}}_{\text{II}} = \sum\limits_{k=0}^{3}C_{\text{I}, k}\mathbf{v}_{d}\left(\mathbf{x}_{k}\right)$, accurate to third order.
+      $\boldsymbol{\Delta{v}}_{\text{II}} = \sum\limits_{k=0}^{3}C_{\text{II}, k}\mathbf{v}_{d}\left(\mathbf{x}_{k}\right)$, accurate to third order.
   \end{itemize}
   These two estimates are based on the drift velocity at the starting point 
   and the velocity at only three new locations
   \begin{equation*} 
   \mathbf{x}_{k} = \mathbf{x}_{0} + \Delta{t}\sum\limits_{i = 0}^{k - 1}\beta_{k,i}\mathbf{v}_{d}\left(\mathbf{x}_{i}\right).
   \end{equation*}
+  The values of the coefficients are shown in Table~\ref{Tab:CoefficientsRKF}. 
   \item
   The time step is updated by comparing the second and third order estimates 
   with the requested accuracy
@@ -258,6 +285,29 @@ This feature can be activated using
 \begin{lstlisting}
 void EnableRKFSteps(const bool on = true); 
 \end{lstlisting}
+The average velocity $\mathbf{v}$ over a step $\Delta{t}$ is then 
+calculated using
+\begin{equation*}
+\mathbf{v} = \sum\limits_{k=0}^{2}C_{k}\mathbf{v}_{d}\left(\mathbf{x}_{k}\right), \quad 
+\mathbf{x}_{1} = \mathbf{x}_{0} + \Delta{t}\beta_{1,0}\mathbf{v}_{d}\left(\mathbf{x}_{0}\right), \quad 
+\mathbf{x}_{2} = \mathbf{x}_{0} + \Delta{t}\left(\beta_{2,0}\mathbf{v}_{d}\left(\mathbf{x}_{0}\right) + \beta_{2,1}\mathbf{v}_{d}\left(\mathbf{x}_{1}\right)\right),
+\end{equation*}
+where $\mathbf{x}_{0}$ is the starting point of the step.
+
+If the electric field or drift speed is zero, the algorithm switches 
+to diffusion-only steps based on the low-field mobility.
+%drawing Gaussian-distributed random steps in all three directions.
+%In case of fixed time steps $\Delta{t}$, the $\sigma$ of the 
+%Gaussian distribution is given by $\sqrt{2D\Delta{t}}$.
+%In case of fixed distance steps $\Delta{s}$, we take $\sigma = \Delta{s}$ 
+%and calculate the corresponding time step using 
+%$\Delta{t} = \sigma^2/\left((2D\right)$. In case of ``collision'' steps, 
+%we calculate $\sigma$ using $\sigma = n D / v_{\text{th}}$, where 
+%$v_{\text{th}} = \sqrt{2 k_{\text{B}}T / m}$ is the thermal velocity, 
+%and subsequently determine the corresponding time step as in the case of 
+%fixed distance steps.
+%Note that the diffusion coefficient $D$ used here has dimensions 
+%$\text{cm}^2/\text{ns}$.
 
 Drift line calculations are started using 
 \begin{lstlisting}

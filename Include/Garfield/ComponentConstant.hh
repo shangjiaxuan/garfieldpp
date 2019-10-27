@@ -9,9 +9,9 @@ namespace Garfield {
 
 class ComponentConstant : public ComponentBase {
  public:
-  // Constructor
+  /// Constructor
   ComponentConstant();
-  // Destructor
+  /// Destructor
   ~ComponentConstant() {}
 
   void ElectricField(const double x, const double y, const double z, double& ex,
@@ -26,12 +26,16 @@ class ComponentConstant : public ComponentBase {
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
 
+  /// Set the components of the electric field [V / cm].
   void SetElectricField(const double ex, const double ey, const double ez);
+  /// Specify the potential at a given point.
   void SetPotential(const double x, const double y, const double z,
                     const double v = 0.);
 
+  /// Set the components of the weighting field [1 / cm].
   void SetWeightingField(const double wx, const double wy, const double wz,
                          const std::string label);
+  /// Specify the weighting potential at a given point.
   void SetWeightingPotential(const double x, const double y, const double z,
                              const double v = 0.);
 

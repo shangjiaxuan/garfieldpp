@@ -833,11 +833,19 @@ void SetPotential(const double x, const double p, const double z,
   \item[v]
   voltage at the given position
 \end{description}
-The weighting field can be set using
+The weighting field and potential can be set using
 \begin{lstlisting}
 void SetWeightingField(const double wx, const double wy, const double wz,
                        const std::string label);
+void SetWeightingPotential(const double x, const double y, const double z,
+                           const double v);
 \end{lstlisting}
+\begin{description}
+  \item[wx,wy,wz] components of the weighting field
+  \item[label] identifier of the weighting field/electrode
+  \item[x, y, z] coordinates where the weighting potential is specified
+  \item[v] weighting potential at the given position 
+\end{description}
 
 The class \texttt{ComponentUser} takes the electric field and potential
 from a user-defined function.
@@ -880,10 +888,12 @@ component->SetElectricField(efield);
 
 \end{lstlisting}
 
-A user-defined weighting field can be set using
+A user-defined weighting field and potential can be set using
 \begin{lstlisting}
 void SetWeightingField(void (*f)(const double, const double, const double,
                                  double&, double&, double&, const std::string));
+void SetWeightingPotential(void (*f)(const double, const double, const double,
+                                     double&, const std::string));
 \end{lstlisting}
 
 \section{Visualizing the field}
