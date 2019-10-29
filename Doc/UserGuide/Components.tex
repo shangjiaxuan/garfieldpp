@@ -1010,6 +1010,46 @@ void SetElectricFieldRange(const double emin, const double emax);
 void SetWeightingFieldRange(const double wmin, const double wmax);
 \end{lstlisting}
 
+\section{Inspecting the field}
+\texttt{ComponentBase} provides functions for inspecting the field, 
+in particular for determining the electric flux over a surface.
+\begin{lstlisting}
+double IntegrateFluxSphere(const double xc, const double yc, const double zc,
+                           const double r, const unsigned int nI = 20);
+\end{lstlisting}
+calculates the charge (in fC) enclosed in a sphere of radius $r$ centred at 
+$\left(x_{c}, y_{c}, z_{c}\right)$ using Gauss's law, \ie by 
+integrating the normal component of the electric field over the 
+surface of the sphere, 
+\begin{equation*}
+  Q = \varepsilon_{0} \oint \mathbf{E}\cdot \text{d}\mathbf{A}.
+\end{equation*}  
+Similarly,
+\begin{lstlisting}
+double IntegrateFluxCircle(const double xc, const double yc, 
+                           const double r, const unsigned int nI = 50);
+\end{lstlisting}
+calculates the line charge (in fC\,/\,cm) contained in a circle of radius $r$ 
+centred at $\left(x_{c}, y_{c}\right)$.  
+The integrations are performed using six-point Gaussian quadrature. 
+The number of integration intervals can be set as a parameter. 
+
+The integral of the flux over a parallelogram can be calculated using 
+the function
+\begin{lstlisting}
+double IntegrateFlux(const double x0, const double y0, const double z0,
+                     const double dx1, const double dy1, const double dz1,
+                     const double dx2, const double dy2, const double dz2,
+                     const unsigned int nU = 20, const unsigned int nV = 20); 
+\end{lstlisting}
+\begin{description}
+  \item[x0,y0,z0] coordinates of one of the corners of the parallelogram,
+  \item[dx1,dy1,dz1] direction vector from $\left(x_{0}, y_{0}, z_{0}\right)$ 
+                     to one of the adjacent corners,
+  \item[dx2,dy2,dz2] direction vector to the other adjacent corner,
+  \item[nU,nV] number of integration intervals along the two directions.
+\end{description}
+The result is given in units of V\,cm.
 \section{Sensor}
 
 The \texttt{Sensor} class can be viewed as a composite of components. 

@@ -97,6 +97,38 @@ class ComponentBase {
   virtual bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                               double& xmax, double& ymax, double& zmax);
 
+  /** Integrate the normal component of the electric field over a circle.
+    * \param xc,yc centre of the circle [cm]
+    * \param r radius [cm]
+    * \param nI number of intervals for the integration
+    *
+    * \return charge enclosed in the circle [fC / cm]
+    */
+  double IntegrateFluxCircle(const double xc, const double yc, const double r,
+                             const unsigned int nI = 50);
+  /** Integrate the normal component of the electric field over a sphere.
+    * \param xc,yc,zc centre of the sphere [cm]
+    * \param r radius of the sphere [cm]
+    * \param nI number of integration intervals in phi and theta 
+    * 
+    * \return charge enclosed in the sphere [fC]
+    */
+  double IntegrateFluxSphere(const double xc, const double yc, const double zc,
+                             const double r, const unsigned int nI = 20);
+
+  /** Integrate the normal component of the electric field over a parallelogram.
+    * \param x0,y0,z0 coordinates of one of the corners [cm]
+    * \param dx1,dy1,dz1 vector to one of the adjacent corners [cm]
+    * \param dx2,dy2,dz2 vector to the other adjacent corner [cm]
+    * \param nU,nV number of integration points in the two directions
+    *
+    * \return flux [V cm]
+    */
+  double IntegrateFlux(const double x0, const double y0, const double z0,
+                       const double dx1, const double dy1, const double dz1,
+                       const double dx2, const double dy2, const double dz2,
+                       const unsigned int nU = 20, const unsigned int nV = 20);
+
   /** Determine whether the line between two points crosses a wire.
     * \param x0,y0,z0 first point [cm].
     * \param x1,y1,z1 second point [cm]
