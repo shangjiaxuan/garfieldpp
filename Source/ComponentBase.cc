@@ -1,5 +1,8 @@
-#include "Garfield/ComponentBase.hh"
 #include <iostream>
+#include <cmath>
+
+#include "Garfield/FundamentalConstants.hh"
+#include "Garfield/ComponentBase.hh"
 
 namespace Garfield {
 
@@ -102,4 +105,176 @@ bool ComponentBase::IsInTrapRadius(const double /*q0*/, const double x0,
   rw = 0.;
   return false;
 }
+
+double ComponentBase::IntegrateFluxCircle(const double xc, const double yc, 
+                                          const double r, 
+                                          const unsigned int nI) {
+  // FLDIN2, FCHK3
+  if (nI == 0) {
+    std::cerr << m_className << "::IntegrateFlux:\n"
+              << "    Number of intervals must be > 0.\n";
+    return 0.;
+  }
+  // Number of Gaussian quadrature points per interval.
+  constexpr unsigned int nG = 6;
+  constexpr std::array<double, nG> t = { 
+     -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
+      0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
+  constexpr std::array<double, nG> w = {
+     0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
+     0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+  
+  // Width and half-width of intervals.
+  const double d = TwoPi / nI;
+  const double h = 0.5 * d;
+  // Arguments of ElectricField.
+  double ex = 0., ey = 0., ez = 0.;
+  Medium* m = nullptr;
+  int status = 0;
+  // Perform the integration.
+  double s = 0.;
+  for (unsigned int i = 0; i < nG; ++i) {
+    const double phi0 = h * (1. + t[i]);
+    for (unsigned int k = 0; k < nI; ++k) {
+      const double phi = phi0 + k * d;
+      const double cp = cos(phi);
+      const double sp = sin(phi);
+      ElectricField(xc + cp * r, yc + sp * r, 0., ex, ey, ez, m, status);
+      s += w[i] * r * (ex * cp + ey * sp);
+    }
+  }
+  return h * s * VacuumPermittivity;
+}
+
+double ComponentBase::IntegrateFluxSphere(const double xc, const double yc, 
+                                          const double zc, const double r,
+                                          const unsigned int nI) {
+  // FLDIN3, FCHK2, FCHK1
+  if (nI == 0) {
+    std::cerr << m_className << "::IntegrateFlux:\n"
+              << "    Number of intervals must be > 0.\n";
+    return 0.;
+  }
+  // Number of Gaussian quadrature points.
+  constexpr unsigned int nG = 6;
+  constexpr std::array<double, nG> t = { 
+     -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
+      0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
+  constexpr std::array<double, nG> w = {
+     0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
+     0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+
+  const double r2 = r * r;
+  // Width and half-width of theta intervals.
+  const double dt = Pi / nI;
+  const double ht = 0.5 * dt;
+  // Width and half-width of phi intervals.
+  const double dp = TwoPi / nI;
+  const double hp = 0.5 * dp;
+  // Arguments of ElectricField.
+  double ex = 0., ey = 0., ez = 0.;
+  Medium* m = nullptr;
+  int status = 0;
+  // Perform the integration.
+  double s2 = 0.;
+  // Loop over theta.
+  for (unsigned int i = 0; i < nG; ++i) {
+    const double theta0 = ht * (1. + t[i]) - HalfPi;
+    for (unsigned int k = 0; k < nI; ++k) {
+      const double theta = theta0 + k * dt;
+      const double ct = cos(theta);
+      const double st = sin(theta);
+      const double z = zc + st * r;
+      double s1 = 0.;
+      // Loop over phi.
+      for (unsigned int ii = 0; ii < nG; ++ii) {
+        const double phi0 = hp * (1. + t[ii]);
+        for (unsigned int kk = 0; kk < nI; ++kk) {
+          const double phi = phi0 + kk * dp;
+          const double cp = cos(phi);
+          const double sp = sin(phi);
+          const double x = xc + cp * ct * r;
+          const double y = yc + sp * ct * r;
+          ElectricField(x, y, z, ex, ey, ez, m, status);
+          s1 += w[ii] * ((ex * cp + ey * sp) * ct + ez * st);
+        }
+      }
+      s2 += w[i] * r2 * ct * hp * s1;
+    }
+  }
+  return ht * s2 * VacuumPermittivity;
+}
+
+double ComponentBase::IntegrateFlux(
+    const double x0, const double y0, const double z0,
+    const double dx1, const double dy1, const double dz1,
+    const double dx2, const double dy2, const double dz2,
+    const unsigned int nU, const unsigned int nV) {
+
+  // FLDIN4, FCHK4, FCHK5
+  if (nU <= 1 || nV <= 1) {
+    std::cerr << m_className << "::IntegrateFlux:\n"
+              << "    Number of points to integrate over must be > 1.\n";
+    return 0.;
+  }
+  // Number of Gaussian quadrature points.
+  constexpr unsigned int nG = 6;
+  constexpr std::array<double, nG> t = { 
+     -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
+      0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
+  constexpr std::array<double, nG> w = {
+     0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
+     0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+
+  // Compute the normal vector.
+  const double xn = dy1 * dz2 - dz1 * dy2;
+  const double yn = dz1 * dx2 - dx1 * dz2;
+  const double zn = dx1 * dy2 - dy1 * dx2;
+  if (m_debug) {
+    std::cout << m_className << "::IntegrateFlux: Normal vector = "
+              << xn << ", " << yn << ", " << zn << ".\n";
+  }
+  // If this vector has zero norm, return 0 flux.
+  const double d1 = dx1 * dx1 + dy1 * dy1 + dz1 * dz1;
+  const double d2 = dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
+  if (xn * xn + yn * yn + zn * zn < 1.e-10 * sqrt(d1 * d2) ||
+      d1 < 1.e-10 * d2 || d2 < 1.e-10 * d1) {
+    std::cerr << m_className << "::IntegrateFlux:\n"
+              << "    Parallelogram does not have non-zero area.\n";
+    return 0.;
+  }
+
+  // (Half-)step sizes in the two directions.
+  const double du = 1. / nU;
+  const double hu = 0.5 * du;
+  const double dv = 1. / nV;
+  const double hv = 0.5 * dv;
+  // Arguments of ElectricField.
+  double ex = 0., ey = 0., ez = 0.;
+  Medium* m = nullptr;
+  int status = 0;
+  // Perform the integration.
+  double s2 = 0.;
+  for (unsigned int i = 0; i < nG; ++i) {
+    const double v0 = hv * (1. + t[i]);
+    for (unsigned int k = 0; k < nV; ++k) {
+      const double v = v0 + k * dv;
+      double s1 = 0.;
+      for (unsigned int ii = 0; ii < nG; ++ii) {
+        const double u0 = hu * (1. + t[ii]);
+        for (unsigned int kk = 0; kk < nU; ++kk) {
+          const double u = u0 + kk * du;
+          const double x = x0 + u * dx1 + v * dx2;
+          const double y = y0 + u * dy1 + v * dy2;
+          const double z = z0 + u * dz1 + v * dz2;
+          ElectricField(x, y, z, ex, ey, ez, m, status);
+          s1 += w[ii] * (ex * xn + ey * yn + ez * zn);
+        }
+      } 
+      s2 += w[i] * hu * s1;
+    }
+  }
+  return hv * s2;
+}
+
 }

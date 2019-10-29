@@ -15,3 +15,7 @@ gallery: gallery.C
 	$(CXX) -o gallery gallery.o $(LDFLAGS)
 	rm gallery.o
 
+integrate: integrate.C 
+	$(CXX) $(CFLAGS) integrate.C
+	$(CXX) -o integrate integrate.o $(LDFLAGS)
+	rm integrate.o

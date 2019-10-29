@@ -3,6 +3,7 @@
 #include <TCanvas.h>
 #include <TROOT.h>
 #include <TApplication.h>
+#include <TSystem.h>
 
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/MediumMagboltz.hh"
@@ -215,6 +216,7 @@ int main(int argc, char * argv[]) {
     fieldView.PlotContour();
     cellView.SetArea(xmin, ymin, -1., xmax, ymax, 1.);
     cellView.Plot2d();
+    gSystem->ProcessEvents();
     std::cout << "Press ENTER to continue.\n";
     std::cin.get();
   }
