@@ -41,7 +41,7 @@ void ComponentTcad3d::ElectricField(const double xin, const double yin,
   // Check if the point is inside the bounding box.
   if (x < m_xMinBB || x > m_xMaxBB || y < m_yMinBB || y > m_yMaxBB ||
       z < m_zMinBB || z > m_zMaxBB) {
-    status = -11;
+    status = -6;
     return;
   }
 

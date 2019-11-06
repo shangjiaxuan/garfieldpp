@@ -197,7 +197,7 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
   MapCoordinates(x, y, xmirr, ymirr);
   // Check if the point is inside the bounding box.
   if (!InsideBoundingBox(x, y, z)) {
-    status = -11;
+    status = -6;
     return;
   }
 
@@ -245,7 +245,7 @@ void ComponentTcad2d::ElectronVelocity(const double xin, const double yin,
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
   if (!InsideBoundingBox(x, y, z)) {
-    status = -11;
+    status = -6;
     return;
   }
 
@@ -294,7 +294,7 @@ void ComponentTcad2d::HoleVelocity(const double xin, const double yin,
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
   if (!InsideBoundingBox(x, y, z)) {
-    status = -11;
+    status = -6;
     return;
   }
 

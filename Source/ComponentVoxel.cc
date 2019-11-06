@@ -33,7 +33,7 @@ void ComponentVoxel::ElectricField(const double x, const double y,
   status = 0;
   int region = -1;
   if (!GetField(x, y, z, m_efields, ex, ey, ez, p, region)) {
-    status = -11;
+    status = -6;
     return;
   }
 
@@ -142,7 +142,7 @@ void ComponentVoxel::MagneticField(const double x, const double y,
   int region = -1;
   double p = 0.;
   if (!GetField(x, y, z, m_bfields, bx, by, bz, p, region)) {
-    status = -11;
+    status = -6;
   }
 }
 
@@ -350,7 +350,7 @@ bool ComponentVoxel::LoadData(const std::string& filename, std::string format,
     fmt = 5;
   } else {
     std::cerr << m_className << "::LoadData:\n"
-              << "    Unkown format (" << format << ").\n";
+              << "    Unknown format (" << format << ").\n";
     return false;
   }
   std::string line;
@@ -604,8 +604,8 @@ bool ComponentVoxel::GetElectricFieldRange(double& exmin, double& exmax,
                                            double& eymin, double& eymax,
                                            double& ezmin, double& ezmax) {
   if (!m_ready) {
-    std::cerr << m_className << "::GetElectricFieldRange:\n";
-    std::cerr << "    Field map not available.\n";
+    std::cerr << m_className << "::GetElectricFieldRange:\n"
+              << "    Field map is not ready for interpolation.\n";
     return false;
   }
 
@@ -828,12 +828,9 @@ bool ComponentVoxel::GetElement(const double xi, const double yi,
   if (z < m_zMin || z > m_zMax) return false;
 
   // Get the indices.
-  const double dx = (m_xMax - m_xMin) / m_nX;
-  const double dy = (m_yMax - m_yMin) / m_nY;
-  const double dz = (m_zMax - m_zMin) / m_nZ;
-  i = (unsigned int)((x - m_xMin) / dx);
-  j = (unsigned int)((y - m_yMin) / dy);
-  k = (unsigned int)((z - m_zMin) / dz);
+  i = (unsigned int)((x - m_xMin) / m_dx);
+  j = (unsigned int)((y - m_yMin) / m_dy);
+  k = (unsigned int)((z - m_zMin) / m_dz);
   if (i >= m_nX) i = m_nX - 1;
   if (j >= m_nY) j = m_nY - 1;
   if (k >= m_nZ) k = m_nZ - 1;
