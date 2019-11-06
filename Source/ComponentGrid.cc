@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <sstream>
 #include <set>
+#include <bitset>
 
 #include "Garfield/ComponentGrid.hh"
 #include "Garfield/Utilities.hh"
