@@ -167,8 +167,8 @@ is dealt with by the classes
 The class names refer to the type of mesh element used by Ansys:
   \begin{itemize}
   \item
-  \texttt{ComponentAnys121} reads two-dimensional field maps 
-with 8-node curved quadrilaterals (known as ``plane121'' in Anys). 
+  \texttt{ComponentAnsys121} reads two-dimensional field maps 
+with 8-node curved quadrilaterals (known as ``plane121'' in Ansys). 
   \item
   \texttt{ComponentAnsys123} reads three-dimensional field maps 
 with quadric curved tetrahedra (known as ``solid123'' in Ansys).
@@ -439,27 +439,34 @@ bool Initialise(std::string header = "mesh.mphtxt",
 \end{description}
 
 \subsection{Regular grids}
-
+\begin{figure}
+  \centering
+  \begin{tikzpicture}
+    \draw[help lines,step=2] (0, 0) grid (6, 4);
+    \foreach \x in {0,2,4,6}
+    \foreach \y in {0,2,4} {
+      \fill (\x,\y) circle (2pt);
+    }
+    \node[below] at (0,0) {\footnotesize $x_{\text{min}}$};
+    \node[below] at (6,0) {\footnotesize $x_{\text{max}}$};
+    \node[left] at (0,0) {\footnotesize $y_{\text{min}}$};
+    \node[left] at (0,4) {\footnotesize $y_{\text{max}}$};
+    \node[above right] at (0,0) {\footnotesize $\left(0,0\right)$};
+    \node[above right] at (6,0) {\footnotesize $\left(3,0\right)$};
+    \node[above right] at (6,4) {\footnotesize $\left(3,2\right)$};
+  \end{tikzpicture}
+  \caption{Example of a two-dimensional regular mesh (as used in 
+           \texttt{ComponentGrid}) with $4\times3$ grid points, 
+           corresponding to $n_{x} = 4, n_{y} = 3$.} 
+  \label{Fig:MeshComponentGrid}
+\end{figure}
 Electric field values on a regular two-dimensional or three-dimensional grid 
-can be imported using the class \texttt{ComponentVoxel}. 
-As a first step, the grid needs to be defined using the function
-\begin{lstlisting}
-void SetMesh(const unsigned int nx, const unsigned int ny,
-             const unsigned int nz, const double xmin, const double xmax,
-             const double ymin, const double ymax, const double zmin,
-             const double zmax);
-\end{lstlisting}
-\begin{description}
-  \item[nx, ny, nz] 
-  number of cells along $x$, $y$, $z$
-  \item[xmin, xmax, \dots] 
-  boundaries of the grid in $x$, $y$, $z$
-\end{description}
-The electric field values (and potential) for each grid cell are read in 
-using
+can be imported from a text file using the class \texttt{ComponentGrid}. 
+The electric field values (and potential) for each point on the grid 
+are read in using
 \begin{lstlisting}
 bool LoadElectricField(const std::string& filename, const std::string& format,
-                       const bool withPotential, const bool withRegion,
+                       const bool withPotential, const bool withFlag,
                        const double scaleX = 1., const double scaleE = 1.,
                        const double scaleP = 1.);
 \end{lstlisting}
@@ -472,21 +479,62 @@ bool LoadElectricField(const std::string& filename, const std::string& format,
   flag whether the file contains an additional column with the electrostatic potential
   \item[withRegion]
   flag whether the file contains an additional column with an integer value 
-  corresponding to the region index (each region can be associated with a different medium)
+  indicating whether the point is in an active medium (1) or not (0).
   \item[scaleX, scaleE, scaleP]
   scaling factors to be applied to the coordinates, electric field values 
   and potentials 
 \end{description}
+The file should contain one line for each grid point.
 The available formats are \texttt{XY}, \texttt{IJ}, \texttt{XYZ}, 
 and \texttt{IJK}, the first two for two-dimensional maps, and the 
 last two for three-dimensional maps.
 In case of \texttt{XY} (\texttt{XYZ}), the first two (three) columns  
 contain the $x$, $y$ (and $z$) coordinates of a given point in the 
 grid, followed by the electric field values (and potential if available) at 
-this point. The class then looks up the grid cell corresponding to this 
-point and assigns the electric field and potential accordingly.
-In case of \texttt{IJ} (\texttt{IJK}) the indices of the grid cell 
+this point. The class then determines the closest grid point 
+and assigns the electric field and potential accordingly.
+In case of \texttt{IJ} (\texttt{IJK}) the indices of the grid point 
 along $x$, $y$ (and $z$) are specified directly.
+The file can include comments (lines starting with \texttt{\#} or \texttt{//}). 
+
+Prior to reading the electric field, the limits and spacing of the grid 
+can be set using the function
+\begin{lstlisting}
+void SetMesh(const unsigned int nx, const unsigned int ny,
+             const unsigned int nz, const double xmin, const double xmax,
+             const double ymin, const double ymax, const double zmin,
+             const double zmax);
+\end{lstlisting}
+\begin{description}
+  \item[nx, ny, nz] 
+  number of grid lines along $x$, $y$, $z$
+  \item[xmin, xmax, \dots] 
+  boundaries of the grid in $x$, $y$, $z$
+\end{description}
+An example illustrating the parameters defining the mesh and the 
+numbering of the grid nodes is shown in Fig.~\ref{Fig:MeshComponentGrid}.
+Alternatively, the grid parameters can be read from the file that contains
+the electric field/potential. For instance, to specify the 
+limits and number of grid lines along $z$, a line like 
+\begin{lstlisting}
+# ZMIN = -1., ZMAX = 1., NZ = 3 
+\end{lstlisting} 
+should be included at the beginning of the file.
+If the user has not specified the grid explicitly (using \texttt{SetMesh}) 
+and the information given in the comment lines is incomplete, the 
+class will try to determine the remaining grid parameters from the 
+table of coordinates and corresponding electric fields itself.
+
+When retrieving the field/potential at a given point $\left(x, y, z\right)$ 
+the class performs a trilinear interpolation between the values at the 
+grid nodes surrounding this point. The medium in the domain covered by the mesh 
+is set using 
+\begin{lstlisting}
+void SetMedium(Medium* m);
+\end{lstlisting}
+A point $\left(x,y,z\right)$ is considered in an active region 
+(\ie associated to the medium) if all surrounding grid nodes are 
+flagged as active. 
 
 A magnetic field map can be imported using the function
 \begin{lstlisting}
@@ -494,9 +542,90 @@ bool LoadMagneticField(const std::string& filename, const std::string& format,
                        const double scaleX = 1., const double scaleB = 1.);
 \end{lstlisting}
 The available formats are the same as for the electric field (except for the 
-extra columns for potential and region index).
+extra columns for potential and active medium flag).
+Prompt and delayed weighting fields/potentials can be imported using
+\begin{lstlisting}
+bool LoadWeightingField(const std::string& filename, const std::string& format,
+                        const bool withPotential,
+                        const double scaleX = 1., const double scaleE = 1.,
+                        const double scaleP = 1.);
+bool LoadWeightingField(const std::string& filename, const std::string& format,
+                        const double time, const bool withPotential,
+                        const double scaleX = 1., const double scaleE = 1.,
+                        const double scaleP = 1.);
+\end{lstlisting}
 
-By default, the field and potential are assumed to be constant throughout 
+\begin{figure}
+  \centering
+  \begin{tikzpicture}
+    \draw[help lines,step=2] (0, 0) grid (6, 4);
+    \foreach \x in {1,3,5}
+    \foreach \y in {1,3} {
+      \fill (\x,\y) circle (2pt);
+    }
+    \node[below] at (0,0) {\footnotesize $x_{\text{min}}$};
+    \node[below] at (6,0) {\footnotesize $x_{\text{max}}$};
+    \node[left] at (0,0) {\footnotesize $y_{\text{min}}$};
+    \node[left] at (0,4) {\footnotesize $y_{\text{max}}$};
+    \node[above right] at (1,1) {\footnotesize $\left(0,0\right)$};
+    \node[above right] at (5,1) {\footnotesize $\left(2,0\right)$};
+    \node[above right] at (5,3) {\footnotesize $\left(2,1\right)$};
+  \end{tikzpicture}
+  \caption{Example of a two-dimensional regular mesh (as used in 
+           \texttt{ComponentVoxel}) with $3\times2$ cells, 
+           corresponding to $n_{x} = 3, n_{y} = 2$.} 
+  \label{Fig:MeshComponentVoxel}
+\end{figure}
+
+The class \texttt{ComponentVoxel} is similar to \texttt{ComponentGrid} 
+but uses a different definition of the mesh. 
+An example illustrating the parameters of the mesh and the numbering of 
+the voxels/cells is shown in Fig.~\ref{Fig:MeshComponentVoxel}.
+As a first step, the mesh needs to be defined using the function
+\begin{lstlisting}
+void SetMesh(const unsigned int nx, const unsigned int ny,
+             const unsigned int nz, const double xmin, const double xmax,
+             const double ymin, const double ymax, const double zmin,
+             const double zmax);
+\end{lstlisting}
+\begin{description}
+  \item[nx, ny, nz] 
+  number of rows/columns of cells along $x$, $y$, $z$
+  \item[xmin, xmax, \dots] 
+  boundaries of the grid in $x$, $y$, $z$
+\end{description}
+The electric field values (and potential) for each voxel are imported using 
+\begin{lstlisting}
+bool LoadElectricField(const std::string& filename, const std::string& format,
+                       const bool withPotential, const bool withRegion,
+                       const double scaleX = 1., const double scaleE = 1.,
+                       const double scaleP = 1.);
+\end{lstlisting}
+\begin{description}
+  \item[filename]
+  name of the ASCII file
+  \item[format]
+  description of the file format (see \texttt{ComponentGrid})
+  \item[withPotential]
+  flag whether the file contains an additional column with the electrostatic potential
+  \item[withRegion]
+  flag whether the file contains an additional column with an integer value 
+  corresponding to the region index (each region can be associated with a different medium)
+  \item[scaleX, scaleE, scaleP]
+  scaling factors to be applied to the coordinates, electric field values 
+  and potentials 
+\end{description}
+The medium to be associated with a given region can be set using
+\begin{lstlisting}
+void SetMedium(const unsigned int i, Medium* m);
+\end{lstlisting}
+\begin{description}
+  \item[i] index of the region
+\end{description}
+If the regions are not assigned explicitly when importing the electric field, 
+all voxels are assumed to belong to the same region (index 0).
+
+By default, the field and potential are assumed to be constant within 
 a voxel. Alternatively, the fields/potentials given in the field map file
 can be interpreted to be the values at the voxel centres and the 
 fields/potentials at intermediate points be determined by trilinear interpolation.

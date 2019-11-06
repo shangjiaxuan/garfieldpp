@@ -215,6 +215,11 @@ $(OBJDIR)/ComponentVoxel.o: \
 	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@   
+$(OBJDIR)/ComponentGrid.o: \
+	$(SRCDIR)/ComponentGrid.cc $(INCDIR)/Garfield/ComponentGrid.hh \
+	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
+	@echo $@
+	@$(CXX) $(CFLAGS) $< -o $@   
 $(OBJDIR)/ComponentUserMapBase.o: \
 	$(SRCDIR)/ComponentUserMapBase.cc $(INCDIR)/Garfield/ComponentUserMapBase.hh \
 	$(SRCDIR)/ComponentBase.cc $(INCDIR)/Garfield/ComponentBase.hh
