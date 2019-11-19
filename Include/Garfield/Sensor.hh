@@ -133,6 +133,12 @@ class Sensor {
   bool ConvoluteSignal();
   /// Replace the current signal curve by its integral.
   bool IntegrateSignal();
+  /// Delay the signal and subtract an attenuated copy 
+  /// (modelling a constant fraction discriminator).
+  /// \f[
+  ///   v_{\text{out}} = v_{\text{in}}(t - t_d) - f v_{\text{in}}.
+  /// \f] 
+  bool DelayAndSubtractFraction(const double td, const double f);
   /// Set the function to be used for evaluating the noise component.
   void SetNoiseFunction(double (*f)(double t));
   /// Add noise to the induced signal.
