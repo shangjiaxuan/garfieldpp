@@ -136,7 +136,7 @@ class Sensor {
   /// Delay the signal and subtract an attenuated copy 
   /// (modelling a constant fraction discriminator).
   /// \f[
-  ///   v_{\text{out}} = v_{\text{in}}(t - t_d) - f v_{\text{in}}.
+  ///   v_{out} = v_{in}\left(t - t_d\right) - f v_{in}.
   /// \f] 
   bool DelayAndSubtractFraction(const double td, const double f);
   /// Set the function to be used for evaluating the noise component.
