@@ -909,6 +909,25 @@ bool Sensor::IntegrateSignal() {
   return true;
 }
 
+bool Sensor::DelayAndSubtractFraction(const double td, const double f) {
+
+  const int offset = int(td / m_tStep);
+  for (auto& electrode : m_electrodes) {
+    std::vector<double> signal1(m_nTimeBins, 0.);
+    std::vector<double> signal2(m_nTimeBins, 0.);
+    for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+      signal2[j] = f * electrode.signal[j];
+      const int bin = j - offset;
+      if (bin < 0 || bin >= (int)m_nTimeBins) continue;
+      signal1[j] = electrode.signal[bin];
+    }
+    for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+      electrode.signal[j] = signal1[j] - signal2[j];
+    }
+  }
+  return true;
+}
+
 void Sensor::SetNoiseFunction(double (*f)(double t)) {
   if (f == 0) {
     std::cerr << m_className << "::SetNoiseFunction: Null pointer.\n";
