@@ -202,11 +202,11 @@ int main(int argc, char * argv[]) {
       sprintf(filename, "signal_%05d.txt", i);
       std::ofstream outfile;
       outfile.open(filename, std::ios::out);
-      for (unsigned int i = 0; i < nTimeBins; ++i) {
-        const double t = (i + 0.5) * tstep;
-        const double f = sensor.GetSignal(label, i);
-        const double fe = sensor.GetElectronSignal(label, i);
-        const double fh = sensor.GetIonSignal(label, i);
+      for (unsigned int j = 0; j < nTimeBins; ++j) {
+        const double t = (j + 0.5) * tstep;
+        const double f = sensor.GetSignal(label, j);
+        const double fe = sensor.GetElectronSignal(label, j);
+        const double fh = sensor.GetIonSignal(label, j);
         outfile << t << "  " << f << "  " << fe << "  " << fh << "\n";
       }
       outfile.close();
