@@ -22,8 +22,7 @@ class GeometryRoot : public GeometryBase {
   /// Set the geometry (pointer to ROOT TGeoManager).
   void SetGeometry(TGeoManager* geoman);
 
-  // Get the medium at a given point (x, y, z)
-  Medium* GetMedium(const double x, const double y, const double z) const;
+  Medium* GetMedium(const double x, const double y, const double z) const override;
 
   /// Get the number of materials defined in the ROOT geometry.
   unsigned int GetNumberOfMaterials();
@@ -31,11 +30,12 @@ class GeometryRoot : public GeometryBase {
   TGeoMaterial* GetMaterial(const unsigned int i);
   /// Get pointer to ROOT material with given name.
   TGeoMaterial* GetMaterial(const char* name);
-  // Associate a ROOT material with Garfield medium.
+  /// Associate a ROOT material with Garfield medium.
   void SetMedium(const unsigned int imat, Medium* med);
+  /// Associate a ROOT material with Garfield medium.
   void SetMedium(const char* mat, Medium* med);
 
-  bool IsInside(const double x, const double y, const double z) const {
+  bool IsInside(const double x, const double y, const double z) const override {
     if (m_geoManager) {
       m_geoManager->SetCurrentPoint(x, y, z);
       return !m_geoManager->IsOutside();
@@ -43,13 +43,11 @@ class GeometryRoot : public GeometryBase {
     return false;
   }
 
-  // Bounding box (envelope of geometry)
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
-                      double& ymax, double& zmax);
+                      double& ymax, double& zmax) override;
 
-  // Switch on/off debugging and warning messages
-  void EnableDebugging() { m_debug = true; }
-  void DisableDebugging() { m_debug = false; }
+  /// Switch debugging and warning messages on/off.
+  void EnableDebugging(const bool on = true) { m_debug = on; }
 
  protected:
   // ROOT geometry manager
@@ -64,6 +62,7 @@ class GeometryRoot : public GeometryBase {
 
   // Switch on/off debugging messages
   bool m_debug = false;
+  void PrintGeoNotDefined(const std::string& fcn) const;
 };
 }
 
