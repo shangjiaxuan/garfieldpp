@@ -84,7 +84,7 @@ set_source_files_properties( ${heed_sources} PROPERTIES LANGUAGE CXX)
 #--- Flags to pass to the compiler
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wabi -Wno-long-long -Woverloaded-virtual -fno-common -pg" )
 
-#--- Set the C++ standard (depencding on the ROOT version)
+#--- Set the C++ standard (depending on the ROOT version)
 if(NOT DEFINED CMAKE_CXX_STANDARD)
   if(ROOT_VERSION VERSION_GREATER 6.06)
     set(CMAKE_CXX_STANDARD 14)
@@ -121,15 +121,15 @@ else()
 endif()
 
 #--- Print information on considered files and the root dictionary include directories
-message( STATUS "###########################################################" )
-message( STATUS "Considered Garfield files :             ${garfield_sources}" )
 message( STATUS "-----------------------------------------------------------" )
-message( STATUS "Considered heed files :                 ${heed_sources}" )
+message( STATUS "Considered Garfield files:             ${garfield_sources}" )
 message( STATUS "-----------------------------------------------------------" )
-message( STATUS "Considered magboltz files :             ${magboltz_sources}" )
+message( STATUS "Considered Heed files:                 ${heed_sources}" )
+message( STATUS "-----------------------------------------------------------" )
+message( STATUS "Considered Magboltz files:             ${magboltz_sources}" )
 message( STATUS "-----------------------------------------------------------" )
 message( STATUS "Directory used to find root dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
-message( STATUS "###########################################################" )
+message( STATUS "-----------------------------------------------------------" )
 
 
 #--- Set output path for libraries and executables
@@ -152,7 +152,7 @@ endif()
 #--- Build the examples ------------------------------------------------------------------------
 option(WITH_EXAMPLES "Build Garfield++ examples" ON)
 if(WITH_EXAMPLES)
-    message(STATUS "Garfield++ examples will be build. In order disable this option use -DWITH_EXAMPLES=OFF")
+    message(STATUS "Garfield++ examples will be built. In order disable this option use -DWITH_EXAMPLES=OFF")
     add_subdirectory(Examples)
 else()
     message(STATUS "Building of examples is switched off.")
