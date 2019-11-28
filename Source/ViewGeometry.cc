@@ -58,6 +58,7 @@ void ViewGeometry::Plot() {
     std::cerr << m_className << "::Plot: Cannot retrieve bounding box.\n";
     return;
   }
+  gGeoManager = nullptr;
   m_geoManager.reset(new TGeoManager("ViewGeometryGeoManager", ""));
   TGeoMaterial* matVacuum = new TGeoMaterial("Vacuum", 0., 0., 0.);
   TGeoMedium* medVacuum = new TGeoMedium("Vacuum", 1, matVacuum);

@@ -132,6 +132,7 @@ bool ViewCell::Plot(const bool use3d) {
   sphi *= DegreeToRad; 
   if (use3d) {
     if (!m_geo) {
+      gGeoManager = nullptr;
       m_geo.reset(new TGeoManager("ViewCellGeoManager", m_label.c_str()));
       TGeoMaterial* matVacuum = new TGeoMaterial("Vacuum", 0., 0., 0.);
       TGeoMaterial* matMetal = new TGeoMaterial("Metal", 63.546, 29., 8.92);
