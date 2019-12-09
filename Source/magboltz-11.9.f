@@ -483,6 +483,11 @@ C*****************
 C       GO TO 1
        RETURN
       ENDIF
+C HS: If alpha == 0, skip the SST calculation.
+      IF(ALPP.EQ.0.0) THEN
+       CALL OUTPUT2T
+       RETURN
+      ENDIF
    5  IF(BMAG.EQ.0.0D0) THEN 
        CALL ALPCALCT
       ELSE IF(BTHETA.EQ.0.0D0.OR.BTHETA.EQ.180.0D0) THEN
@@ -549,6 +554,11 @@ C*****************
       IF(DABS(ALPP-ATTP).LT.SSTMIN) THEN
        CALL OUTPUT2
 C       GO TO 1
+       RETURN
+      ENDIF
+C HS: If alpha == 0, skip the SST calculation.
+      IF(ALPP.EQ.0.0) THEN
+       CALL OUTPUT2
        RETURN
       ENDIF
    15 IF(BMAG.EQ.0.0D0) THEN 
