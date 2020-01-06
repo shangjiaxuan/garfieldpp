@@ -1039,7 +1039,7 @@ bool ComponentNeBem3d::DiscretizeTriangle(const Primitive& primitive,
   // Normal vector of the primitive.
   std::array<double, 3> nu = {primitive.a, primitive.b, primitive.c};
   nu = UnitVector(nu);
-  int flagDC = 0;
+  // int flagDC = 1;
   // We begin with trial 1: one of the possible orientations.
   double lx = sqrt(dx1 * dx1 + dy1 * dy1 + dz1 * dz1);
   double lz = sqrt(dx2 * dx2 + dy2 * dy2 + dz2 * dz2);
@@ -1047,19 +1047,16 @@ bool ComponentNeBem3d::DiscretizeTriangle(const Primitive& primitive,
   std::array<double, 3> zu = {dx2 / lz, dy2 / lz, dz2 / lz};
   std::array<double, 3> yu = CrossProduct(zu, xu);
   constexpr double tol = 1.e-3;
-  if ((fabs(yu[0] - nu[0]) < tol) && (fabs(yu[1] - nu[1]) < tol) &&
-      (fabs(yu[2] - nu[2]) < tol)) {
-    flagDC = 1;
-  } else {
+  if ((fabs(yu[0] - nu[0]) > tol) || (fabs(yu[1] - nu[1]) > tol) || 
+      (fabs(yu[2] - nu[2]) > tol)) {
+    // flagDC = 2;
     // Try the other orientation.
     std::swap(lx, lz);
     xu = {dx2 / lx, dy2 / lx, dz2 / lx};
     zu = {dx1 / lz, dy1 / lz, dz1 / lz};
     yu = CrossProduct(zu, xu);
-    if ((fabs(yu[0] - nu[0]) < tol) && (fabs(yu[1] - nu[1]) < tol) &&
-        (fabs(yu[2] - nu[2]) < tol)) {
-      flagDC = 2;
-    } else {
+    if ((fabs(yu[0] - nu[0]) > tol) || (fabs(yu[1] - nu[1]) > tol) || 
+        (fabs(yu[2] - nu[2]) > tol)) {
       // No other possibility, search failed.
       std::cerr << m_className << "::DiscretizeTriangle:\n"
                 << "    Could not establish direction vectors.\n";
