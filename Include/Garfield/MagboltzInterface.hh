@@ -107,9 +107,9 @@ extern struct {
   double ein[nMaxLevels];
   double tcf[nEnergySteps];
   long long iarry[nMaxLevels];
-  double rgas[nEnergySteps];
-  double ipn[nEnergySteps];
-  double wpl[nEnergySteps];
+  double rgas[nMaxLevels];
+  double ipn[nMaxLevels];
+  double wpl[nMaxLevels];
   long long last;
   long long isize;
   double penfra[nMaxLevels][3];
