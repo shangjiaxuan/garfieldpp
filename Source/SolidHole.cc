@@ -266,8 +266,10 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
       newpanel.zv = {zv0, zv1, zv2, zv3};
       panels.push_back(newpanel);
       // The panels for y=ymin.
-      ToGlobal(r * cos(-phi5), r * sin(-phi5), w, xv0, yv0, zv0);
-      ToGlobal(r * cos(-phi6), r * sin(-phi6), w, xv3, yv3, zv3);
+      const double phi7 = phi5 + HalfPi;
+      const double phi8 = phi7 + dphi;
+      ToGlobal(r * cos(phi7), r * sin(phi7), w, xv0, yv0, zv0);
+      ToGlobal(r * cos(phi8), r * sin(phi8), w, xv3, yv3, zv3);
       ToGlobal(m_lX * t1, -m_lY, w, xv1, yv1, zv1);
       ToGlobal(m_lX * t2, -m_lY, w, xv2, yv2, zv2);
       newpanel.xv = {xv0, xv1, xv2, xv3};

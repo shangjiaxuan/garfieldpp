@@ -127,7 +127,8 @@ class Solid {
     Charge,
     Float,
     Dielectric,
-    ParallelField = 6,
+    DielectricCharge,
+    ParallelField,
     PerpendicularField
   };
 
@@ -137,7 +138,7 @@ class Solid {
     m_bctype = Voltage;
   }
   /// Apply fixed-charge boundary conditions.
-  void SetBoundaryCharge(const double q) {
+  void SetBoundaryChargeDensity(const double q) {
     m_charge = q;
     m_bctype = Charge;
   }
@@ -152,6 +153,8 @@ class Solid {
   BoundaryCondition GetBoundaryConditionType() const { return m_bctype; }
   /// Retrieve the potential.
   double GetBoundaryPotential() const { return m_volt; }
+  /// Retrieve the surface charge density.
+  double GetBoundaryChargeDensity() const { return m_charge; }
 
   /// Switch debugging messages on/off.
   void EnableDebugging(const bool on = true) { m_debug = on; }
@@ -177,7 +180,7 @@ class Solid {
   BoundaryCondition m_bctype = Voltage;
   /// Potential at the surface.
   double m_volt = 0.;
-  /// Surface charge.
+  /// Surface charge density.
   double m_charge = 0.;
   /// Dielectric constant.
   double m_eps = 0.;
