@@ -3597,10 +3597,14 @@ void MediumMagboltz::GenerateGasTable(const int numColl, const bool verbose) {
             std::cout << "    " << ion.label << ", energy = " << ion.energy
                       << " eV.\n";
           }
-          Init(nEfields, nBfields, nAngles, m_excLevels.size(),
-               m_excRates, 0.);
-          Init(nEfields, nBfields, nAngles, m_ionLevels.size(),
-               m_ionRates, 0.);
+          if (!m_excLevels.empty()) {
+            Init(nEfields, nBfields, nAngles, m_excLevels.size(),
+                 m_excRates, 0.);
+          }
+          if (!m_ionLevels.empty()) {
+            Init(nEfields, nBfields, nAngles, m_ionLevels.size(),
+                 m_ionRates, 0.);
+          }
         }
         // Retrieve the excitation and ionisation rates.
         const unsigned int nExc = m_excLevels.size();
