@@ -1,13 +1,197 @@
 #include <cmath>
 #include <fstream>
-#include <iomanip>
 #include <iostream>
+#include <cstdio>
+#include <algorithm>
 #include <numeric>
 
 #include "Garfield/ComponentNeBem2d.hh"
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Random.hh"
+
+namespace {
+
+double Mag2(const std::array<double, 2>& x) {
+  return x[0] * x[0] + x[1] * x[1];
+}
+/// Determine whether a point (u, v) lies on a straight line
+/// (x1, y1) to (x2, y2).
+bool OnLine(const double x1, const double y1, const double x2, const double y2,
+            const double u, const double v) {
+  // Set tolerances.
+  double epsx = 1.e-10 * std::max({fabs(x1), fabs(x2), fabs(u)});
+  double epsy = 1.e-10 * std::max({fabs(y1), fabs(y2), fabs(v)});
+  epsx = std::max(1.e-10, epsx);
+  epsy = std::max(1.e-10, epsy);
+
+  if ((fabs(x1 - u) <= epsx && fabs(y1 - v) <= epsy) ||
+      (fabs(x2 - u) <= epsx && fabs(y2 - v) <= epsy)) {
+    // Point to be examined coincides with start or end.
+    return true;
+  } else if (fabs(x1 - x2) <= epsx && fabs(y1 - y2) <= epsy) {
+    // The line (x1, y1) to (x2, y2) is in fact a point.
+    return false;
+  }
+  double xc = 0., yc = 0.;
+  if (fabs(u - x1) + fabs(v - y1) < fabs(u - x2) + fabs(v - y2)) {
+    // (u, v) is nearer to (x1, y1).
+    const double dx = (x2 - x1);
+    const double dy = (y2 - y1);
+    const double xl = ((u - x1) * dx + (v - y1) * dy) / (dx * dx + dy * dy);
+    if (xl < 0.) {
+      xc = x1;
+      yc = y1;
+    } else if (xl > 1.) {
+      xc = x2;
+      yc = y2;
+    } else {
+      xc = x1 + xl * dx;
+      yc = y1 + xl * dy;
+    }
+  } else {
+    // (u, v) is nearer to (x2, y2).
+    const double dx = (x1 - x2);
+    const double dy = (y1 - y2);
+    const double xl = ((u - x2) * dx + (v - y2) * dy) / (dx * dx + dy * dy);
+    if (xl < 0.) {
+      xc = x2;
+      yc = y2;
+    } else if (xl > 1.) {
+      xc = x1;
+      yc = y1;
+    } else {
+      xc = x2 + xl * dx;
+      yc = y2 + xl * dy;
+    }
+  }
+  // See whether the point is on the line.
+  if (fabs(u - xc) < epsx && fabs(v - yc) < epsy) {
+    return true;
+  }
+  return false;
+}
+
+/// Determine whether the 2 straight lines (x1, y1) to (x2, y2)
+/// and (u1, v1) to (u2, v2) cross at an intermediate point for both lines.
+bool Crossing(const double x1, const double y1, const double x2,
+              const double y2, const double u1, const double v1,
+              const double u2, const double v2, double& xc, double& yc) {
+  /// Matrix to compute the crossing point.
+  std::array<std::array<double, 2>, 2> a;
+  a[0][0] = y2 - y1;
+  a[0][1] = v2 - v1;
+  a[1][0] = x1 - x2;
+  a[1][1] = u1 - u2;
+  const double det = a[0][0] * a[1][1] - a[1][0] * a[0][1];
+  // Initial values.
+  xc = 0.;
+  yc = 0.;
+  // Set tolerances.
+  double epsx = 1.e-10 * std::max({fabs(x1), fabs(x2), fabs(u1), fabs(u2)});
+  double epsy = 1.e-10 * std::max({fabs(y1), fabs(y2), fabs(v1), fabs(v2)});
+  epsx = std::max(epsx, 1.e-10);
+  epsy = std::max(epsy, 1.e-10);
+  // Check for a point of one line located on the other line.
+  if (OnLine(x1, y1, x2, y2, u1, v1)) {
+    xc = u1;
+    yc = v1;
+    return true;
+  } else if (OnLine(x1, y1, x2, y2, u2, v2)) {
+    xc = u2;
+    yc = v2;
+    return true;
+  } else if (OnLine(u1, v1, u2, v2, x1, y1)) {
+    xc = x1;
+    yc = y1;
+    return true;
+  } else if (OnLine(u1, v1, u2, v2, x2, y2)) {
+    xc = x2;
+    yc = y2;
+    return true;
+  } else if (fabs(det) < epsx * epsy) {
+    // Parallel, non-touching.
+    return false;
+  }
+  // Crossing, non-trivial lines: solve crossing equations.
+  const double aux = a[1][1];
+  a[1][1] = a[0][0] / det;
+  a[0][0] = aux / det;
+  a[1][0] = -a[1][0] / det;
+  a[0][1] = -a[0][1] / det;
+  // Compute crossing point.
+  xc = a[0][0] * (x1 * y2 - x2 * y1) + a[1][0] * (u1 * v2 - u2 * v1);
+  yc = a[0][1] * (x1 * y2 - x2 * y1) + a[1][1] * (u1 * v2 - u2 * v1);
+  // See whether the crossing point is on both lines.
+  if (OnLine(x1, y1, x2, y2, xc, yc) && OnLine(u1, v1, u2, v2, xc, yc)) {
+    // Intersecting lines.
+    return true;
+  }
+  // Crossing point not on both lines.
+  return false;
+}
+
+bool Intersecting(const std::vector<double>& xp1,
+                  const std::vector<double>& yp1,
+                  const std::vector<double>& xp2,
+                  const std::vector<double>& yp2) {
+  
+  const double xmin1 = *std::min_element(std::begin(xp1), std::end(xp1));
+  const double ymin1 = *std::min_element(std::begin(yp1), std::end(yp1));
+  const double xmax1 = *std::max_element(std::begin(xp1), std::end(xp1));
+  const double ymax1 = *std::max_element(std::begin(yp1), std::end(yp1));
+
+  const double xmin2 = *std::min_element(std::begin(xp2), std::end(xp2));
+  const double ymin2 = *std::min_element(std::begin(yp2), std::end(yp2));
+  const double xmax2 = *std::max_element(std::begin(xp2), std::end(xp2));
+  const double ymax2 = *std::max_element(std::begin(yp2), std::end(yp2));
+
+  const double epsx = 1.e-6 * std::max({std::abs(xmax1), std::abs(xmin1),
+                                        std::abs(xmax2), std::abs(xmin2)});
+  const double epsy = 1.e-6 * std::max({std::abs(ymax1), std::abs(ymin1),
+                                        std::abs(ymax2), std::abs(ymin2)});
+  if (xmax1 + epsx < xmin2 || xmax2 + epsx < xmin1) return false;
+  if (ymax1 + epsy < ymin2 || ymax2 + epsy < ymin1) return false;
+
+  const unsigned int n1 = xp1.size();
+  const unsigned int n2 = xp2.size();
+  for (unsigned int i = 0; i < n1; ++i) {
+    const double x0 = xp1[i];
+    const double y0 = yp1[i];
+    const unsigned int ii = i < n1 - 1 ? i + 1 : 0;
+    const double x1 = xp1[ii];
+    const double y1 = yp1[ii];
+    for (unsigned int j = 0; j < n2; ++j) {
+      const unsigned int jj = j < n2 - 1 ? j + 1 : 0;
+      const double u0 = xp2[j];
+      const double v0 = yp2[j];
+      const double u1 = xp2[jj];
+      const double v1 = yp2[jj];
+      double xc = 0., yc = 0.;
+      if (!Crossing(x0, y0, x1, y1, u0, v0, u1, v1, xc, yc)) continue;
+      if ((OnLine(x0, y0, x1, y1, u0, v0) || OnLine(x0, y0, x1, y1, u1, v1)) &&
+          (OnLine(u0, v0, u1, v1, x0, y0) || OnLine(u0, v0, u1, v1, x1, y1))) {
+        continue;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Determine the (signed) area of a polygon.
+double Area(const std::vector<double>& xp, const std::vector<double>& yp) {
+
+  double f = 0.;
+  const unsigned int n = xp.size();
+  for (unsigned int i = 0; i < n; ++i) {
+    const unsigned int ii = i < n - 1 ? i + 1 : 0;
+    f += xp[i] * yp[ii] - xp[ii] * yp[i];  
+  }
+  return 0.5 * f; 
+}
+
+}
 
 namespace Garfield {
 
@@ -37,38 +221,32 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
       status = -11;
       return;
     }
-    m_ready = true;
   }
 
-  // Sum up the contributions from all boundary elements
+  // Sum up the contributions from all boundary elements.
   for (const auto& element : m_elements) {
-    const double phi = element.phi;
-    const double dx = x - element.cX;
-    const double dy = y - element.cY;
-    // Transform to local coordinate system
-    double xLoc = 0., yLoc = 0.;
-    Rotate(dx, dy, phi, Global2Local, xLoc, yLoc);
-    // Compute the potential
-    double u = 0.;
-    if (!ComputePotential(element.geoType, element.len, xLoc, yLoc, u)) {
-      std::cerr << m_className << "::ElectricField:\n"
-                << "    Cannot calculate potential from element at "
-                << element.cX << ", " << element.cY << ".\n";
-      status = -11;
-      return;
+    const double cphi = element.cphi;
+    const double sphi = element.sphi;
+    // Transform to local coordinates.
+    double xL = 0., yL = 0.;
+    ToLocal(x - element.x, y - element.y, cphi, sphi, xL, yL);
+    // Compute the potential.
+    if (element.wire) {
+      v += WirePotential(element.a, xL, yL) * element.q;
+    } else {
+      v += LinePotential(element.a, xL, yL) * element.q;
     }
-    // Compute the field
+    // Compute the field.
     double fx = 0., fy = 0.;
-    if (!ComputeFlux(element.geoType, element.len, phi, xLoc, yLoc, fx, fy)) {
+    if (!Flux(element.wire, element.a, cphi, sphi, xL, yL, fx, fy)) {
       std::cerr << m_className << "::ElectricField:\n"
-                << "    Cannot calculate field from element at " << element.cX
-                << ", " << element.cY << ".\n";
+                << "    Cannot calculate field from element at " << element.x
+                << ", " << element.y << ".\n";
       status = -11;
       return;
     }
-    v += u * element.solution;
-    ex += fx * element.solution;
-    ey += fy * element.solution;
+    ex += fx * element.q;
+    ey += fy * element.q;
   }
 }
 
@@ -80,110 +258,157 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
 }
 
 bool ComponentNeBem2d::GetVoltageRange(double& vmin, double& vmax) {
-  if (m_panels.empty() && m_wires.empty()) return false;
   bool gotValue = false;
-  for (const auto& panel : m_panels) {
-    if (panel.bcType != 0) continue;
+  for (const auto& region : m_regions) {
+    if (region.bc.first != Voltage) continue;
     if (!gotValue) {
-      vmin = vmax = panel.bcValue;
+      vmin = vmax = region.bc.second;
       gotValue = true;
     } else {
-      vmin = std::min(vmin, panel.bcValue);
-      vmax = std::max(vmax, panel.bcValue);
+      vmin = std::min(vmin, region.bc.second);
+      vmax = std::max(vmax, region.bc.second);
+    }
+  }
+
+  for (const auto& segment : m_segments) {
+    if (segment.bc.first != Voltage) continue;
+    if (!gotValue) {
+      vmin = vmax = segment.bc.second;
+      gotValue = true;
+    } else {
+      vmin = std::min(vmin, segment.bc.second);
+      vmax = std::max(vmax, segment.bc.second);
     }
   }
 
   for (const auto& wire : m_wires) {
     if (!gotValue) {
-      vmin = vmax = wire.bcValue;
+      vmin = vmax = wire.v;
       gotValue = true;
     } else {
-      vmin = std::min(vmin, wire.bcValue);
-      vmax = std::max(vmax, wire.bcValue);
+      vmin = std::min(vmin, wire.v);
+      vmax = std::max(vmax, wire.v);
     }
   }
   return gotValue;
 }
 
-void ComponentNeBem2d::AddPanel(const double x0, const double y0,
-                                const double x1, const double y1,
-                                const unsigned int bctype, const double bcval,
-                                const double lambda) {
+bool ComponentNeBem2d::AddSegment(const double x0, const double y0,
+                                  const double x1, const double y1,
+                                  const double v) {
   const double dx = x1 - x0;
   const double dy = y1 - y0;
   if (dx * dx + dy * dy < Small) {
-    std::cerr << m_className << "::AddPanel:\n"
-              << "    Panel length must be greater than zero.\n";
-    return;
-  }
-  if (bctype > 3) {
-    std::cerr << m_className << "::AddPanel:\n"
-              << "    Unknown boundary condition type: " << bctype << "\n";
-    return;
+    std::cerr << m_className << "::AddSegment: Length must be > 0.\n";
+    return false;
   }
 
-  Panel newPanel;
-  newPanel.x0 = x0;
-  newPanel.y0 = y0;
-  newPanel.x1 = x1;
-  newPanel.y1 = y1;
-  newPanel.bcType = bctype;
-  newPanel.bcValue = bcval;
-  newPanel.lambda = lambda;
-  m_panels.push_back(std::move(newPanel));
+  Segment segment;
+  segment.x0 = {x0, y0};
+  segment.x1 = {x1, y1};
+  segment.bc = std::make_pair(Voltage, v);
+  segment.region1 = -1;
+  segment.region2 = -1;
+  m_segments.push_back(std::move(segment));
 
   if (m_debug) {
-    std::cout << m_className << "::AddPanel:\n"
-              << "    From: (" << x0 << ", " << y0 << ")\n"
-              << "    To:   (" << x1 << ", " << y1 << ")\n";
-    switch (bctype) {
-      case 0:
-        std::cout << "    Type: Conductor\n";
-        std::cout << "    Potential: " << bcval << " V\n";
-        break;
-      case 1:
-        std::cout << "    Floating conductor\n";
-        break;
-      case 2:
-        std::cout << "    Dielectric-dielectric interface\n";
-        std::cout << "    Lambda: " << lambda << "\n";
-        break;
-      case 3:
-        std::cout << "    Surface charge\n";
-        break;
-      default:
-        std::cout << "    Unknown boundary condition (program bug!)\n";
-    }
+    std::cout << m_className << "::AddSegment:\n    (" 
+              << x0 << ", " << y0 << ") - (" << x1 << ", " << y1 << ")\n"
+              << "    Potential: " << v << " V\n";
   }
 
   m_ready = false;
   m_matrixInversionFlag = false;
+  return true;
 }
 
-void ComponentNeBem2d::AddWire(const double x0, const double y0, const double d,
-                               const double bcval) {
+bool ComponentNeBem2d::AddWire(const double x, const double y, const double d,
+                               const double v) {
   if (d < Small) {
-    std::cerr << m_className << "::AddWire:\n"
-              << "    Wire diameter must be greater than zero.\n";
-    return;
+    std::cerr << m_className << "::AddWire: Diameter must be > 0.\n";
+    return false;
   }
 
-  Wire newWire;
-  newWire.cX = x0;
-  newWire.cY = y0;
-  newWire.d = d;
-  newWire.bcValue = bcval;
-  m_wires.push_back(std::move(newWire));
+  Wire wire;
+  wire.x = x;
+  wire.y = y;
+  wire.r = 0.5 * d;
+  wire.v = v;
+  m_wires.push_back(std::move(wire));
 
   if (m_debug) {
     std::cout << m_className << "::AddWire:\n"
-              << "    Center: (" << x0 << ", " << y0 << ")\n"
+              << "    Centre: (" << x << ", " << y << ")\n"
               << "    Diameter: " << d << " cm\n"
-              << "    Potential: " << bcval << " V\n";
+              << "    Potential: " << v << " V\n";
   }
 
   m_ready = false;
   m_matrixInversionFlag = false;
+  return true;
+}
+
+bool ComponentNeBem2d::AddPolygon(const std::vector<double>& xp,
+                                  const std::vector<double>& yp, 
+                                  Medium* medium, const unsigned int bctype, 
+                                  const double v) {
+
+  if (xp.size() != yp.size()) {
+    std::cerr << m_className << "::AddPolygon:\n"
+              << "    Mismatch between number of x- and y-coordinates.\n";
+    return false;
+  }
+  if (xp.size() < 3) {
+    std::cerr << m_className << "::AddPolygon: Too few points.\n";
+    return false;
+  }
+  if (bctype != 1 && bctype != 4) {
+    std::cerr << m_className << "::AddPolygon: Invalid boundary condition.\n";
+    return false;
+  }
+  // TODO
+  // Check if this is a valid polygon (no self-crossing).
+
+  std::vector<double> xv = xp;
+  std::vector<double> yv = yp;
+  const double xmin = *std::min_element(std::begin(xv), std::end(xv));
+  const double ymin = *std::min_element(std::begin(yv), std::end(yv));
+  const double xmax = *std::max_element(std::begin(xv), std::end(xv));
+  const double ymax = *std::max_element(std::begin(yv), std::end(yv));
+
+  const double epsx = 1.e-6 * std::max(std::abs(xmax), std::abs(xmin));
+  const double epsy = 1.e-6 * std::max(std::abs(ymax), std::abs(ymin));
+
+  const double f = Area(xp, yp);
+  if (std::abs(f) < std::max(1.e-10, epsx * epsy)) {
+    std::cerr << m_className << "::AddPolygon: Degenerate polygon.\n";
+    return false;
+  } else if (f > 0.) {
+    // Make sure all polygons have the same "handedness".
+    if (m_debug) {
+      std::cout << m_className << "::AddPolygon: Reversing orientation.\n";
+    }
+    std::reverse(xv.begin(), xv.end());
+    std::reverse(yv.begin(), yv.end());
+  }
+  for (const auto& region : m_regions) {
+    if (Intersecting(xv, yv, region.xv, region.yv)) {
+      std::cerr << m_className << "::AddPolygon:\n"
+                << "    Polygon intersects an existing region.\n";
+      return false;
+    }
+  }
+  Region region;
+  region.xv = xv;
+  region.yv = yv;
+  region.medium = medium;
+  if (bctype == 1) {
+    region.bc = std::make_pair(Voltage, v);
+  } else if (bctype == 4) {
+    region.bc = std::make_pair(Dielectric, v);
+  }
+  m_regions.push_back(std::move(region));
+  return true;
 }
 
 void ComponentNeBem2d::SetNumberOfDivisions(const unsigned int ndiv) {
@@ -201,7 +426,7 @@ void ComponentNeBem2d::SetNumberOfDivisions(const unsigned int ndiv) {
 void ComponentNeBem2d::SetNumberOfCollocationPoints(const unsigned int ncoll) {
   if (ncoll == 0) {
     std::cerr << m_className << "::SetNumberOfCollocationPoints:\n"
-              << "    Number of coll. points must be greater than zero.\n";
+              << "    Number of points must be greater than zero.\n";
     return;
   }
 
@@ -233,16 +458,130 @@ void ComponentNeBem2d::SetMaxNumberOfIterations(const unsigned int niter) {
 }
 
 bool ComponentNeBem2d::Initialise() {
-  // Break up panels into elements
-  if (!Discretise()) {
-    std::cerr << m_className << "::Initialise: Discretisation failed.\n";
-    return false;
+
+  m_ready = false;
+  m_elements.clear();
+  if (m_debug) std::cout << m_className << "::Initialise:\n";
+  std::vector<Segment> segments;
+  // Loop over the regions.
+  const unsigned int nRegions = m_regions.size();
+  for (unsigned int i = 0; i < nRegions; ++i) {
+    const auto& region = m_regions[i];
+    // Check if the region is fully enclosed by another one.
+    // TODO 
+    // Add the segments bounding this region. 
+    const unsigned int n = region.xv.size();
+    for (unsigned int j = 0; j < n; ++j) {
+      const unsigned int k = j < n - 1 ? j + 1 : 0;
+      Segment seg;
+      seg.x0 = {region.xv[j], region.yv[j]};
+      seg.x1 = {region.xv[k], region.yv[k]};
+      seg.region1 = i;
+      seg.region2 = -1;
+      seg.bc = region.bc;
+      segments.push_back(std::move(seg));
+    }
   }
-  if (m_debug) {
-    std::cout << m_className << "::Initialise: Discretisation ok.\n";
+  // Add the segments specified by the user.
+  segments.insert(segments.end(), m_segments.begin(), m_segments.end());
+  const unsigned int nSegments = segments.size();
+  if (m_debug) std::cout << "    " << nSegments << " segments.\n";
+  std::vector<bool> done(nSegments, false);
+  // Look for overlaps.
+  for (unsigned int i = 0; i < nSegments; ++i) {
+    if (done[i]) continue;
+    if (m_debug) {
+      std::cout << "    Segment " << i << ". (" 
+                << segments[i].x0[0] << ", " << segments[i].x0[1] << ") - (" 
+                << segments[i].x1[0] << ", " << segments[i].x1[1] << ")\n";
+    }
+    const double x0 = segments[i].x0[0];
+    const double x1 = segments[i].x1[0];
+    const double y0 = segments[i].x0[1];
+    const double y1 = segments[i].x1[1];
+    // Pick up all collinear segments.
+    std::vector<Segment> newSegments;
+    for (unsigned int j = i + 1; j < nSegments; ++j) {
+      const double u0 = segments[j].x0[0];
+      const double u1 = segments[j].x1[0];
+      const double v0 = segments[j].x0[1];
+      const double v1 = segments[j].x1[1];
+      const double epsx = std::max(1.e-10 * std::max({fabs(x0), fabs(x1), 
+                                                      fabs(u0), fabs(u1)}), 
+                                   1.e-10);
+      const double epsy = std::max(1.e-10 * std::max({fabs(y0), fabs(y1), 
+                                                      fabs(v0), fabs(v1)}), 
+                                   1.e-10);
+      const double a00 = y1 - y0;
+      const double a01 = v1 - v0;
+      const double a10 = x0 - x1;
+      const double a11 = u0 - u1;
+      const double det = a00 * a11 - a10 * a01;
+      const double tol = epsx * epsy;
+      // Skip non-parallel segments.
+      if (std::abs(det) > tol) continue;
+
+      if (std::abs(x0 * (y1 - v0) + x1 * (v0 - y0) + u0 * (y0 - y1)) > tol) {
+        continue;
+      }
+      newSegments.push_back(segments[j]);
+      done[j] = true;
+    }
+    newSegments.push_back(segments[i]);
+    if (newSegments.size() > 1) {
+      if (m_debug) {
+        std::cout << "      Determining overlaps of " << newSegments.size() 
+                  << " collinear segments.\n";
+      }
+      EliminateOverlaps(newSegments);
+      if (m_debug) {
+        std::cout << "      " << newSegments.size() 
+                  << " segments after splitting/merging.\n";
+      }
+    } 
+    for (const auto& segment : newSegments) {
+      double lambda = 0.;
+      if (segment.bc.first == Dielectric) {
+        // Dielectric-dielectric interface.
+        const int reg1 = segment.region1;
+        const int reg2 = segment.region2;
+        double eps1 = 1.;
+        if (reg1 >= 0 && m_regions[reg1].medium) {
+          eps1 = m_regions[reg1].medium->GetDielectricConstant();
+        }
+        double eps2 = 1.;
+        if (reg2 >= 0 && m_regions[reg2].medium) {
+          eps2 = m_regions[reg2].medium->GetDielectricConstant();
+        }
+        if (fabs(eps1 - eps2) < 1.e-6 * (1. + fabs(eps1) + fabs(eps2))) {
+          if (m_debug) std::cout << "      Same epsilon. Skip.\n";
+          continue;
+        }
+        // Compute lambda.
+        lambda = (eps2 - eps1) / (eps1 + eps2);
+        if (m_debug) std::cout << "      Lambda = " << lambda << "\n";
+      }
+      Discretise(segment, m_elements, lambda);
+    }
+  }  
+
+  // Add the wires.
+  for (const auto& wire : m_wires) {
+    Element element;
+    element.wire = true;
+    element.cphi = 1.;
+    element.sphi = 0.;
+    element.bc = std::make_pair(Voltage, wire.v);
+    element.lambda = 1.;
+    element.x = wire.x;
+    element.y = wire.y;
+    element.a = wire.r;
+    m_elements.push_back(std::move(element));
   }
 
-  const unsigned int nEntries = m_elements.size() + 1;
+  const unsigned int nElements = m_elements.size();
+  if (m_debug) std::cout << "    " << nElements << " elements.\n";
+  const unsigned int nEntries = nElements + 1;
   std::vector<std::vector<double> > influenceMatrix(
       nEntries, std::vector<double>(nEntries, 0.));
   std::vector<std::vector<double> > inverseMatrix(
@@ -272,17 +611,13 @@ bool ComponentNeBem2d::Initialise() {
     }
     // Set flag that the matrix has been inverted.
     m_matrixInversionFlag = true;
-
-    if (m_debug) {
-      std::cout << m_className << "::Initialise: Matrix inversion ok.\n";
-    }
+    if (m_debug) std::cout << "    Matrix inversion ok.\n";
 
     // Compute the right hand side vector (boundary conditions).
     std::vector<double> boundaryConditions(nEntries, 0.);
-    if (!GetBoundaryConditions(boundaryConditions)) {
-      std::cerr << m_className << "::Initialise:\n"
-                << "     Error computing the potential vector.\n";
-      return false;
+    for (unsigned int i = 0; i < nElements; ++i) {
+      if (m_elements[i].bc.first != Voltage) continue;
+      boundaryConditions[i] = m_elements[i].bc.second;
     }
 
     // Solve for the charge distribution.
@@ -290,66 +625,144 @@ bool ComponentNeBem2d::Initialise() {
       std::cerr << m_className << "::Initialise: Error in Solve function.\n";
       return false;
     }
-    if (m_debug) std::cout << m_className << "::Initialise: Solution ok.\n";
+    if (m_debug) std::cout << "    Solution ok.\n";
     converged = CheckConvergence();
     if (!m_autoSize) break;
     if (nIter >= m_nMaxIterations) break;
   }
-
+  m_ready = true;
   return true;
 }
 
-bool ComponentNeBem2d::Discretise() {
-  m_elements.clear();
+void ComponentNeBem2d::EliminateOverlaps(std::vector<Segment>& segments) {
 
-  if (m_debug) {
-    std::cout << m_className << "::Discretise:\n";
-    std::cout << "  Panel  BC Type  Bc Value  Rotation  Length\n";
+  if (segments.empty()) return;
+  const unsigned int nIn = segments.size();
+  // Find the first/last point along the line.
+  std::array<double, 2> x0 = segments[0].x0;
+  std::array<double, 2> x1 = segments[0].x1;
+  // Use x or y coordinate depending on the orientation of the line.
+  const unsigned int ic = fabs(x1[1] - x0[1]) > fabs(x1[0] - x0[0]) ? 1 : 0;
+  std::vector<bool> swapped(nIn, false);
+  for (unsigned int i = 0; i < nIn; ++i) {
+    const auto& seg = segments[i];
+    std::array<double, 2> u0 = seg.x0;
+    std::array<double, 2> u1 = seg.x1;
+    if (u0[ic] > u1[ic]) {
+      // Swap points.
+      std::swap(u0, u1);
+      swapped[i] = true;
+    }
+    if (u0[ic] < x0[ic]) x0 = u0;
+    if (u1[ic] > x1[ic]) x1 = u1;
   }
-  unsigned int j = 0;
-  for (const auto& panel : m_panels) {
-    Element newElement;
-    newElement.geoType = 0;
-    newElement.bcType = panel.bcType;
-    newElement.bcValue = panel.bcValue;
-    newElement.lambda = panel.lambda;
-    double dx = panel.x1 - panel.x0;
-    double dy = panel.y1 - panel.y0;
-    newElement.phi = atan2(dy, dx);
-    newElement.len = 0.5 * sqrt(dx * dx + dy * dy) / m_nDivisions;
-    dx /= m_nDivisions;
-    dy /= m_nDivisions;
-    newElement.cX = panel.x0 - 0.5 * dx;
-    newElement.cY = panel.y0 - 0.5 * dy;
-    for (unsigned int i = 0; i < m_nDivisions; ++i) {
-      newElement.cX += dx;
-      newElement.cY += dy;
-      m_elements.push_back(newElement);
-      if (m_debug) {
-        std::cout << "  " << j << "  " << newElement.bcType << "  "
-                  << newElement.bcValue << "  " << newElement.phi << "  "
-                  << newElement.len << "\n";
+  const std::array<double, 2> d = {x1[0] - x0[0], x1[1] - x0[1]};
+
+  // Make a list of all points and their linear coordinate.
+  std::vector<std::pair<double, std::vector<unsigned int> > > points;
+  for (unsigned int i = 0; i < nIn; ++i) {
+    for (const auto& xl : {segments[i].x0, segments[i].x1}) {
+      const std::array<double, 2> d0 = {xl[0] - x0[0], xl[1] - x0[1]};
+      const std::array<double, 2> d1 = {x1[0] - xl[0], x1[1] - xl[1]};
+      double lambda = 0.;
+      if (Mag2(d0) < Mag2(d1)) {
+        // Point nearer to x0.
+        lambda = d0[ic] / d[ic];
+      } else {
+        // Point nearer to p1.
+        lambda = 1. - d1[ic] / d[ic];
+      }
+      // Add the point to the list.
+      bool found = false;
+      for (auto& point : points) {
+        if (fabs(point.first - lambda) < 1.e-6) {
+          found = true;
+          point.second.push_back(i);
+          break;
+        }
+      }
+      if (found) continue;
+      points.push_back(std::make_pair(lambda, 
+                                      std::vector<unsigned int>({i})));
+    }
+  }
+  // Sort the points by linear coordinate.
+  std::sort(std::begin(points), std::end(points));
+  
+  std::vector<Segment> newSegments;
+  const unsigned int nPoints = points.size();
+  std::array<double, 2> xl = {x0[0] + points[0].first * d[0], 
+                              x0[1] + points[0].first * d[1]};
+  std::vector<unsigned int> left = points[0].second;
+  for (unsigned int i = 1; i < nPoints; ++i) {
+    Segment seg = segments[left.front()];
+    seg.x0 = xl;
+    xl = {x0[0] + points[i].first * d[0], x0[1] + points[i].first * d[1]};
+    seg.x1 = xl;
+    if (swapped[left.front()]) std::swap(seg.x0, seg.x1);
+    // Sort out the boundary conditions.
+    if (left.size() > 1) {
+      for (unsigned int j = 1; j < left.size(); ++j) {
+        const auto& other = segments[left[j]];
+        if (seg.bc.first == Dielectric) {
+          if (other.bc.first == Dielectric) {
+            // Dielectric-dielectric interface.
+            if ((seg.x1[ic] - seg.x0[ic]) * (other.x1[ic] - other.x0[ic]) > 0) {
+              // Same orientation.
+              continue;
+            }
+            seg.region2 = other.region1;
+          } else {
+            seg.bc = other.bc;
+          }
+        } else if (seg.bc.first != other.bc.first) {
+          std::cerr << m_className << "::EliminateOverlaps:\n"
+                    << "    Warning: conflicting boundary conditions.\n";
+        }
       }
     }
-    ++j;
+    newSegments.push_back(std::move(seg));
+    for (unsigned int k : points[i].second) {
+      const auto it = std::find(left.begin(), left.end(), k);
+      if (it == left.end()) {
+        left.push_back(k);
+      } else {
+        left.erase(it);
+      }
+    }
   }
-  for (const auto& wire : m_wires) {
-    Element newElement;
-    newElement.geoType = 1;
-    newElement.phi = 0.;
-    // Treat wires always as conductors
-    newElement.bcType = 0;
-    newElement.lambda = 1.;
-    newElement.cX = wire.cX;
-    newElement.cY = wire.cY;
-    newElement.len = wire.d / 2.;
-    newElement.bcValue = wire.bcValue;
-    m_elements.push_back(std::move(newElement));
-  }
-
-  return true;
+  segments.swap(newSegments); 
 }
 
+bool ComponentNeBem2d::Discretise(const Segment& seg,
+                                  std::vector<Element>& elements,
+                                  const double lambda) {
+
+  const double phi = atan2(seg.x1[1] - seg.x0[1], seg.x1[0] - seg.x0[0]);
+  const double cphi = cos(phi);
+  const double sphi = sin(phi);
+  const double dx = (seg.x1[0] - seg.x0[0]) / m_nDivisions;
+  const double dy = (seg.x1[1] - seg.x0[1]) / m_nDivisions;
+  const double len = 0.5 * sqrt(dx * dx + dy * dy);
+  double x = seg.x0[0] - 0.5 * dx;
+  double y = seg.x0[1] - 0.5 * dy;
+  for (unsigned int i = 0; i < m_nDivisions; ++i) {
+    x += dx;
+    y += dy;
+    Element element;
+    element.wire = false;
+    element.cphi = cphi;
+    element.sphi = sphi;
+    element.x = x;
+    element.y = y;
+    element.a = len;
+    element.bc = seg.bc;
+    element.lambda = lambda;
+    elements.push_back(std::move(element));
+  }
+  return true;
+}
+ 
 bool ComponentNeBem2d::ComputeInfluenceMatrix(
     std::vector<std::vector<double> >& infmat) const {
   if (m_matrixInversionFlag) return true;
@@ -357,54 +770,53 @@ bool ComponentNeBem2d::ComputeInfluenceMatrix(
   // Loop over the target elements (F)
   const unsigned int nElements = m_elements.size();
   for (unsigned int iF = 0; iF < nElements; ++iF) {
-    const double phiF = m_elements[iF].phi;
+    const auto& tgt = m_elements[iF];
+    const double cphiF = tgt.cphi;
+    const double sphiF = tgt.sphi;
     // Boundary type
-    const unsigned int etF = m_elements[iF].bcType;
+    const unsigned int etF = tgt.bc.first;
     // Collocation point
-    const double xF = m_elements[iF].cX;
-    const double yF = m_elements[iF].cY;
+    const double xF = tgt.x;
+    const double yF = tgt.y;
 
     // Loop over the source elements (S)
     for (unsigned int jS = 0; jS < nElements; ++jS) {
-      const int gtS = m_elements[jS].geoType;
-      const double xS = m_elements[jS].cX;
-      const double yS = m_elements[jS].cY;
-      const double phiS = m_elements[jS].phi;
-      const double lenS = m_elements[jS].len;
-      // Transform to local coordinate system of source element
-      const double dx = xF - xS;
-      const double dy = yF - yS;
-      double du = 0.;
-      double dv = 0.;
-      Rotate(dx, dy, phiS, Global2Local, du, dv);
+      const auto& src = m_elements[jS];
+      const double cphiS = src.cphi;
+      const double sphiS = src.sphi;
+      const double lenS = src.a;
+      // Transform to local coordinate system of the source element.
+      double xL = 0.;
+      double yL = 0.;
+      ToLocal(xF - src.x, yF - src.y, cphiS, sphiS, xL, yL);
       // Influence coefficient
       double infCoeff = 0.;
       // Depending on the element type at the field point
       // different boundary conditions need to be applied
       switch (etF) {
         // Conductor at fixed potential
-        case 0:
-          if (!ComputePotential(gtS, lenS, du, dv, infCoeff)) return false;
-          break;
-        // Floating conductor (not implemented)
-        case 1:
-          if (!ComputePotential(gtS, lenS, du, dv, infCoeff)) return false;
+        case Voltage:
+          if (src.wire) {
+            infCoeff = WirePotential(lenS, xL, yL);
+          } else {
+            infCoeff = LinePotential(lenS, xL, yL);
+          }
           break;
         // Dielectric-dielectric interface
         // Normal component of the displacement vector is continuous
-        case 2:
+        case Dielectric:
           if (iF == jS) {
             // Self-influence
-            infCoeff = 1. / (2. * m_elements[jS].lambda * VacuumPermittivity);
+            infCoeff = 1. / (2. * src.lambda * VacuumPermittivity);
           } else {
             // Compute flux at field point in global coordinate system
             double fx = 0., fy = 0.;
-            if (!ComputeFlux(gtS, lenS, phiS, du, dv, fx, fy)) {
+            if (!Flux(src.wire, lenS, cphiS, sphiS, xL, yL, fx, fy)) {
               return false;
             }
             // Rotate to local coordinate system of field element
             double ex = 0., ey = 0.;
-            Rotate(fx, fy, phiF, Global2Local, ex, ey);
+            ToLocal(fx, fy, cphiF, sphiF, ex, ey);
             infCoeff = ey;
           }
           break;
@@ -420,7 +832,7 @@ bool ComponentNeBem2d::ComputeInfluenceMatrix(
 
   // Add charge neutrality condition
   for (unsigned int i = 0; i < nElements; ++i) {
-    infmat[nElements][i] = m_elements[i].len;
+    infmat[nElements][i] = m_elements[i].a;
     infmat[i][nElements] = 0.;
   }
   infmat[nElements][nElements] = 0.;
@@ -428,31 +840,18 @@ bool ComponentNeBem2d::ComputeInfluenceMatrix(
   return true;
 }
 
-void ComponentNeBem2d::SplitElement(const unsigned int iel) {
+void ComponentNeBem2d::SplitElement(Element& oldElement) {
   // Make sure the element is a line
-  if (m_elements[iel].geoType != 0) return;
+  if (oldElement.wire) return;
+  oldElement.a *= 0.5;
 
-  const double phi = m_elements[iel].phi;
-  const double len = 0.5 * m_elements[iel].len;
-  m_elements[iel].len = len;
-
+  Element newElement = oldElement;
   double dx = 0., dy = 0.;
-  Rotate(len, 0., phi, Local2Global, dx, dy);
-
-  Element newElement;
-  newElement.geoType = m_elements[iel].geoType;
-  newElement.len = len;
-  newElement.phi = phi;
-  newElement.bcType = m_elements[iel].bcType;
-  newElement.bcValue = m_elements[iel].bcValue;
-  newElement.lambda = m_elements[iel].lambda;
-
-  const double x0 = m_elements[iel].cX;
-  const double y0 = m_elements[iel].cY;
-  m_elements[iel].cX = x0 + dx;
-  m_elements[iel].cY = y0 + dy;
-  newElement.cX = x0 - dx;
-  newElement.cY = y0 - dx;
+  ToGlobal(newElement.a, 0., newElement.cphi, newElement.sphi, dx, dy);
+  oldElement.x += dx;
+  oldElement.y += dy;
+  newElement.x -= dx;
+  newElement.y -= dx;
 
   m_elements.push_back(std::move(newElement));
 }
@@ -594,20 +993,6 @@ void ComponentNeBem2d::LUSubstitution(
   }
 }
 
-bool ComponentNeBem2d::GetBoundaryConditions(std::vector<double>& bc) const {
-  const unsigned int nElements = m_elements.size();
-  for (unsigned int i = 0; i < nElements; ++i) {
-    if (m_elements[i].bcType > 2) {
-      // Unknown type of boundary condition, should not occur.
-      return false;
-    }
-    if (m_elements[i].bcType != 0) continue;
-    // Conductor at fixed potential
-    bc[i] = m_elements[i].bcValue;
-  }
-  return true;
-}
-
 bool ComponentNeBem2d::Solve(const std::vector<std::vector<double> >& invmat,
                              const std::vector<double>& bc) {
   const unsigned int nElements = m_elements.size();
@@ -617,16 +1002,15 @@ bool ComponentNeBem2d::Solve(const std::vector<std::vector<double> >& invmat,
     for (unsigned int j = 0; j < nEntries; ++j) {
       solution += invmat[i][j] * bc[j];
     }
-    m_elements[i].solution = solution;
+    m_elements[i].q = solution;
   }
 
   if (m_debug) {
     std::cout << m_className << "::Solve:\n  Element  Solution\n";
     for (unsigned int i = 0; i < nElements; ++i) {
-      std::cout << "  " << i << "  " << m_elements[i].solution << "\n";
+      std::printf(" %8u   %15.5f\n", i, m_elements[i].q);
     }
   }
-
   return true;
 }
 
@@ -634,106 +1018,84 @@ bool ComponentNeBem2d::CheckConvergence() const {
   // Potential and normal component of the electric field
   // evaluated at the collocation points
   std::vector<double> v(m_nCollocationPoints, 0.);
-  std::vector<double> ne(m_nCollocationPoints, 0.);
-
-  double ex = 0., ey = 0.;
-  double fx = 0., fy = 0., u = 0.;
-  double r;
-
-  double dx = 0., dy = 0.;
-  double xLoc, yLoc;
+  std::vector<double> n(m_nCollocationPoints, 0.);
 
   if (m_debug) {
-    std::cout << m_className << "::CheckConvergence:\n";
-    std::cout << "element #  type      LHS      RHS\n";
+    std::cout << m_className << "::CheckConvergence:\n"
+              << "element #  type            LHS              RHS\n";
   }
   const double scale = 1. / m_nCollocationPoints;
-  const unsigned int nElements = m_elements.size();
   unsigned int i = 0;
-  for (const auto& element : m_elements) {
+  for (const auto& tgt : m_elements) {
     v.assign(m_nCollocationPoints, 0.);
-    ne.assign(m_nCollocationPoints, 0.);
-
+    n.assign(m_nCollocationPoints, 0.);
+    double x0 = tgt.x;
+    double y0 = tgt.y;
+    double dx = 0., dy = 0.;
+    if (!tgt.wire) {
+      // Straight line segment.
+      ToGlobal(2 * tgt.a, 0., tgt.cphi, tgt.sphi, dx, dy);
+      x0 -= 0.5 * dx;
+      y0 -= 0.5 * dy;
+    }
     // Sum up the contributions from all boundary elements
-    for (unsigned int j = 0; j < nElements; ++j) {
+    for (const auto& src : m_elements) {
       // Loop over the collocation points
       for (unsigned int k = 0; k < m_nCollocationPoints; ++k) {
-        double x = element.cX;
-        double y = element.cY;
-        if (element.geoType == 0) {
-          // Panel
-          Rotate(2. * element.len, 0., element.phi, Local2Global, dx, dy);
-          x -= 0.5 * dx;
-          y -= 0.5 * dy;
-          if (m_randomCollocation) {
-            r = RndmUniformPos();
-          } else {
-            r = (k + 1.) / (m_nCollocationPoints + 1.);
-          }
-          x += r * dx;
-          y += r * dy;
-        } else {
+        double xG = x0;
+        double yG = y0;
+        if (tgt.wire) {
           // Wire
-          r = TwoPi * RndmUniform();
-          x += element.len * cos(r);
-          y += element.len * sin(r);
+          const double phi = TwoPi * RndmUniform();
+          xG += tgt.a * cos(phi);
+          yG += tgt.a * sin(phi);
+        } else {
+          // Straight line
+          if (m_randomCollocation) {
+            const double r = RndmUniformPos();
+            xG += r * dx;
+            yG += r * dy;
+          } else {
+            const double s = (k + 1.) / (m_nCollocationPoints + 1.);
+            xG += s * dx;
+            yG += s * dy;
+          }
         }
-
-        dx = x - m_elements[j].cX;
-        dy = y - m_elements[j].cY;
-        // Transform to local coordinate system
-        Rotate(dx, dy, m_elements[j].phi, Global2Local, xLoc, yLoc);
-        // Compute the potential
-        ComputePotential(m_elements[j].geoType, m_elements[j].len, xLoc, yLoc,
-                         u);
-        // Compute the field
-        ComputeFlux(m_elements[j].geoType, m_elements[j].len, m_elements[j].phi,
-                    xLoc, yLoc, fx, fy);
-        // Rotate to the local coordinate system of the test element
-        Rotate(fx, fy, element.phi, Global2Local, ex, ey);
-        v[k] += u * m_elements[j].solution;
-        ne[k] += ey * m_elements[j].solution;
+        // Transform to local coordinate system.
+        double xL = 0., yL = 0.;
+        ToLocal(xG - src.x, yG - src.y, src.cphi, src.sphi, xL, yL);
+        // Compute the potential.
+        if (src.wire) {
+          v[k] += WirePotential(src.a, xL, yL) * src.q;
+        } else {
+          v[k] += LinePotential(src.a, xL, yL) * src.q;
+        }
+        // Compute the field.
+        double fx = 0., fy = 0.;
+        Flux(src.wire, src.a, src.cphi, src.sphi, xL, yL, fx, fy);
+        // Rotate to the local coordinate system of the test element.
+        double ex = 0., ey = 0.;
+        ToLocal(fx, fy, tgt.cphi, tgt.sphi, ex, ey);
+        n[k] += ey * src.q;
       }
     }
     const double v0 = scale * std::accumulate(v.begin(), v.end(), 0.);
-    const double ne0 = scale * std::accumulate(ne.begin(), ne.end(), 0.);
-    double ne1 = 0.;
-    if (element.bcType == 2) {
+    const double n0 = scale * std::accumulate(n.begin(), n.end(), 0.);
+    double n1 = 0.;
+    if (tgt.bc.first == Dielectric) {
       // Dielectric-dielectric interface
-      ne1 = ne0 + 0.5 * InvEpsilon0 * element.solution / element.lambda;
+      n1 = n0 + 0.5 * InvEpsilon0 * tgt.q / tgt.lambda;
     }
     if (m_debug) {
-      if (element.bcType == 0) {
-        std::cout << std::setw(5) << i << "  cond.   " << std::setw(10) << v0
-                  << "  " << std::setw(10) << element.bcValue << "\n";
-      } else if (element.bcType == 2) {
-        std::cout << std::setw(5) << i << "  diel.   " << std::setw(10) << ne0
-                  << "  " << ne1 << "         0\n";
+      if (tgt.bc.first == Voltage) {
+        std::printf(" %8u  cond.  %15.5f  %15.5f\n", i, v0, tgt.bc.second);
+      } else if (tgt.bc.first == Dielectric) {
+        std::printf(" %8u  diel.  %15.5f  %15.5f\n", i, n0, n1);
       }
     }
     ++i;
   }
-
   return true;
-}
-
-void ComponentNeBem2d::Rotate(const double xIn, const double yIn,
-                              const double phi, const int opt, double& xOut,
-                              double& yOut) const {
-  // Rotation angle represents clockwise rotation about the origin
-  // Transformation to local coordinates (opt = 1): clockwise rotation
-  // Transformation to global coordinates (opt = -1): anti-clockwise rotation
-
-  if (fabs(phi) < 1.e-12) {
-    xOut = xIn;
-    yOut = yIn;
-    return;
-  }
-
-  const double c = cos(phi);
-  const double s = opt * sin(phi);
-  xOut = c * xIn + s * yIn;
-  yOut = -s * xIn + c * yIn;
 }
 
 double ComponentNeBem2d::LinePotential(const double a, const double x,
@@ -778,7 +1140,7 @@ void ComponentNeBem2d::LineFlux(const double a, const double x, const double y,
     ey = 0.;
   } else {
     // Singularity at the end points of the line
-    const double eps2 = 1.e-24;
+    constexpr double eps2 = 1.e-24;
     ex = 0.25 * log(pow(apx * apx - eps2, 2) / pow(amx * amx - eps2, 2));
     ey = 0.;
   }
@@ -801,19 +1163,45 @@ void ComponentNeBem2d::WireFlux(const double r0, const double x, const double y,
     ex = ey = 0.;
     return;
   }
-
   ex *= InvEpsilon0;
   ey *= InvEpsilon0;
 }
 
 void ComponentNeBem2d::Reset() {
-  m_panels.clear();
+  m_regions.clear();
+  m_segments.clear();
   m_wires.clear();
   m_elements.clear();
+  m_ready = false;
 }
 
 void ComponentNeBem2d::UpdatePeriodicity() {
   std::cerr << m_className << "::UpdatePeriodicity:\n"
             << "    Periodicities are not supported.\n";
 }
+
+void ComponentNeBem2d::ToLocal(const double xIn, const double yIn, 
+                               const double cphi, const double sphi,
+                               double& xOut, double& yOut) const {
+  if (fabs(sphi) < 1.e-12) {
+    xOut = xIn;
+    yOut = yIn;
+    return;
+  }
+  xOut = +cphi * xIn + sphi * yIn;
+  yOut = -sphi * xIn + cphi * yIn;
+}
+
+void ComponentNeBem2d::ToGlobal(const double xIn, const double yIn,
+                                const double cphi, const double sphi,
+                                double& xOut, double& yOut) const {
+  if (fabs(sphi) < 1.e-12) {
+    xOut = xIn;
+    yOut = yIn;
+    return;
+  }
+  xOut = cphi * xIn - sphi * yIn;
+  yOut = sphi * xIn + cphi * yIn;
+}
+
 }
