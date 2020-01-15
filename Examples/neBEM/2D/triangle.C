@@ -1,0 +1,50 @@
+#include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <cmath>
+
+#include <TCanvas.h>
+#include <TROOT.h>
+#include <TApplication.h>
+
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/GeometrySimple.hh"
+#include "Garfield/SolidBox.hh"
+#include "Garfield/ComponentNeBem2d.hh"
+
+using namespace Garfield;
+
+int main(int argc, char * argv[]) {
+
+  MediumMagboltz gas;
+  gas.SetComposition("ar", 100.);
+  
+  SolidBox box(0., 0., 0., 2., 2., 2.);
+
+  GeometrySimple geo;
+  geo.AddSolid(&box, &gas);
+
+  ComponentNeBem2d cmp;
+  cmp.SetGeometry(&geo);
+  constexpr unsigned int nDiv = 200;
+  cmp.SetNumberOfDivisions(nDiv);
+  cmp.EnableRandomCollocation();
+  cmp.AddSegment(-1., 0., 0., 1., 1.);
+  cmp.AddSegment( 1., 0., 0., 1., 1.);
+  cmp.AddSegment(-1., 0., 1., 0., 0.);
+  cmp.Initialise();
+
+  std::ofstream outfile;
+  outfile.open("triangle.txt", std::ios::out);
+  outfile << "# " << nDiv << " divisions\n";
+  for (int i = 1; i < 10; ++i) {
+    Medium* medium = nullptr;
+    double ex = 0., ey = 0., ez = 0., v = 0.; 
+    int stat;
+    const double y = i * 0.1;
+    cmp.ElectricField(0, y, 0, ex, ey, ez, v, medium, stat);
+    outfile << y << "  " << std::setprecision(9) << v << "\n";
+  }
+  outfile.close();
+
+}
