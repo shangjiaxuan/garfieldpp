@@ -17,6 +17,7 @@ class MediumConductor : public Medium {
   /// Destructor
   virtual ~MediumConductor() {}
 
+  bool IsConductor() const override { return true; }
   void EnableDrift(const bool /*on*/) override {}
   void EnablePrimaryIonisation(const bool /*on*/) override {}
 };
