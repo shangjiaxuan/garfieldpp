@@ -42,15 +42,7 @@ std::array<double, 3> CrossProduct(const std::array<double, 3>& u,
                                    u[0] * v[1] - u[1] * v[0]};
   return w;
 }
-// Vector in a coord system with direction cosines specified
-// in terms of the existing system
-// Theory from Rotation representation (Wikipedia)
-// Sense +1 implies we are moving towards the new coordinate system whose
-// direction cosines we know in terms of the original coordinate system.
-// This option can be invoked by choosing 'global2local' defined in Vector.h
-// Sense -1 implies we are moving towards the original coordinate system in
-// which we know the direction cosines of the new coordinate system.
-// This option can be invoked by choosing 'local2global' defined in Vector.h
+
 std::array<double, 3> LocalToGlobal(const double x, const double y,
                                     const double z,
                                     const std::array<std::array<double, 3>, 3>& dcos,
@@ -75,7 +67,7 @@ std::array<double, 3> LocalToGlobal(const double x, const double y,
   return a;
 }
 
-/// Compute lambda for a point on a line (0 = start, 1 = end) .
+/// Compute lambda for a point on a line (0 = start, 1 = end).
 double Lambda(const double x1, const double x0, const double x2,
               const double y1, const double y0, const double y2) {
   // Segment of zero length.
@@ -107,7 +99,7 @@ double Lambda(const double x1, const double x0, const double x2,
   return xl;
 }
 
-/// Determine whether a point (u, v) lies on the straight lines
+/// Determine whether a point (u, v) lies on a straight line
 /// (x1, y1) to (x2, y2).
 bool OnLine(const double x1, const double y1, const double x2, const double y2,
             const double u, const double v) {
@@ -165,7 +157,7 @@ bool OnLine(const double x1, const double y1, const double x2, const double y2,
 }
 
 /// Determine whether the 2 straight lines (x1, y1) to (x2, y2)
-/// and (u1, u2) to (v1, v2) cross at an intermediate point for both lines.
+/// and (u1, v1) to (u2, v2) cross at an intermediate point for both lines.
 bool Crossing(const double x1, const double y1, const double x2,
               const double y2, const double u1, const double v1,
               const double u2, const double v2, double& xc, double& yc) {
