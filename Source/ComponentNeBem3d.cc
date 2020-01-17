@@ -10,7 +10,7 @@
 #include "Garfield/ComponentNeBem3d.hh"
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
-#include "Garfield/Random.hh"
+#include "Garfield/Polygon.hh"
 
 namespace {
 
@@ -319,95 +319,6 @@ void AddPoints(const std::vector<double>& xp1, const std::vector<double>& yp1,
   }
 }
 
-/// Determine whether the point (x, y) is located inside of the
-/// polygon (xpl, ypl).
-void Inside(const std::vector<double>& xpl, const std::vector<double>& ypl,
-            const double x, const double y, bool& inside, bool& edge) {
-  // Initial settings.
-  inside = false;
-  edge = false;
-  const unsigned int npl = xpl.size();
-  if (ypl.size() != npl) return;
-  // Special treatment for few points.
-  if (npl < 2) {
-    return;
-  } else if (npl == 2) {
-    edge = OnLine(xpl[0], ypl[0], xpl[1], ypl[1], x, y);
-    return;
-  }
-  // Determine the range of the data.
-  const double xmin = *std::min_element(std::begin(xpl), std::end(xpl));
-  const double xmax = *std::max_element(std::begin(xpl), std::end(xpl));
-  const double ymin = *std::min_element(std::begin(ypl), std::end(ypl));
-  const double ymax = *std::max_element(std::begin(ypl), std::end(ypl));
-
-  // Set tolerances.
-  double epsx = 1.e-8 * std::max(fabs(xmin), fabs(xmax));
-  double epsy = 1.e-8 * std::max(fabs(ymin), fabs(ymax));
-  epsx = std::max(epsx, 1.e-8);
-  epsy = std::max(epsy, 1.e-8);
-
-  // Ensure that we have a range.
-  if (fabs(xmax - xmin) <= epsx) {
-    if (y >= ymin - epsy && y <= ymax + epsy &&
-        fabs(xmax + xmin - 2 * x) <= epsx) {
-      edge = true;
-    } else {
-      edge = false;
-    }
-  } else if (fabs(ymax - ymin) <= epsy) {
-    if (x >= xmin - epsx && x <= xmax + epsx &&
-        fabs(ymax + ymin - 2 * y) <= epsy) {
-      edge = true;
-    } else {
-      edge = false;
-    }
-  }
-  // Choose a point at "infinity".
-  double xinf = xmin - fabs(xmax - xmin);
-  double yinf = ymin - fabs(ymax - ymin);
-
-  unsigned int nIter = 0;
-  bool ok = false;
-  while (!ok && nIter < 100) {
-    ok = true;
-    // Loop over the edges counting intersections.
-    unsigned int nCross = 0;
-    for (unsigned int j = 0; j < npl; ++j) {
-      const unsigned int jj = NextPoint(j, npl);
-      // Flag points located on one of the edges.
-      if (OnLine(xpl[j], ypl[j], xpl[jj], ypl[jj], x, y)) {
-        edge = true;
-        return;
-      }
-      // Count mid-line intersects.
-      double xc = 0., yc = 0.;
-      if (Crossing(x, y, xinf, yinf, xpl[j], ypl[j], xpl[jj], ypl[jj], xc,
-                   yc)) {
-        ++nCross;
-      }
-      // Ensure that the testing line doesn't cross a corner.
-      if (OnLine(x, y, xinf, yinf, xpl[j], ypl[j])) {
-        xinf = xmin - Garfield::RndmUniform() * fabs(xmax - xinf);
-        yinf = ymin - Garfield::RndmUniform() * fabs(ymax - yinf);
-        ok = false;
-        break;
-      }
-    }
-    if (ok) {
-      // Set the INSIDE flag.
-      if (nCross != 2 * (nCross / 2)) inside = true;
-      return;
-    }
-    ++nIter;
-  }
-
-  std::cerr << "ComponentNeBem3d::Inside:\n    Warning. Unable to verify "
-            << "whether a point is internal; setting to edge.\n";
-  inside = false;
-  edge = true;
-}
-
 /// Determine whether 2 panels are equal.
 bool Equal(const Garfield::Panel& panel1, const Garfield::Panel& panel2,
            const double epsx, const double epsy) {
@@ -458,6 +369,7 @@ bool Equal(const Garfield::Panel& panel1, const Garfield::Panel& panel2,
   // If we get this far, the curves are the same.
   return true;
 }
+
 }
 
 namespace Garfield {
@@ -1366,9 +1278,9 @@ bool ComponentNeBem3d::EliminateOverlaps(const Panel& panel1,
       }
       bool inside = false, edge = false;
       if (ic == 0) {
-        Inside(xp2, yp2, xl[ic][i], yl[ic][i], inside, edge);
+        Polygon::Inside(xp2, yp2, xl[ic][i], yl[ic][i], inside, edge);
       } else {
-        Inside(xp1, yp1, xl[ic][i], yl[ic][i], inside, edge);
+        Polygon::Inside(xp1, yp1, xl[ic][i], yl[ic][i], inside, edge);
       }
       if (!(inside || edge)) {
         allInside = false;
@@ -1432,9 +1344,9 @@ bool ComponentNeBem3d::EliminateOverlaps(const Panel& panel1,
         const double xm = 0.5 * (xl[ic][i] + xl[ic][ii]);
         const double ym = 0.5 * (yl[ic][i] + yl[ic][ii]);
         if (ic == 0) {
-          Inside(xp2, yp2, xm, ym, inside, edge);
+          Polygon::Inside(xp2, yp2, xm, ym, inside, edge);
         } else {
-          Inside(xp1, yp1, xm, ym, inside, edge);
+          Polygon::Inside(xp1, yp1, xm, ym, inside, edge);
         }
         if (inside || edge) continue;
         // Found one.
@@ -1482,7 +1394,7 @@ bool ComponentNeBem3d::EliminateOverlaps(const Panel& panel1,
       int ip2 = links[0][ip1];
       if (ip2 < 0 || flags[0][ip1] == 1) {
         bool inside = false, edge = false;
-        Inside(xp2, yp2, xl[0][ip1], yl[0][ip1], inside, edge);
+        Polygon::Inside(xp2, yp2, xl[0][ip1], yl[0][ip1], inside, edge);
         if (!(inside || edge)) continue;
       } else if (flags[1][ip2] == 1) {
         continue;
@@ -1596,7 +1508,7 @@ bool ComponentNeBem3d::TraceEnclosed(const std::vector<double>& xl1,
   for (int ip1 = 0; ip1 < n1; ++ip1) {
     if (ip1 == jp1 || ip1 == kp1) continue;
     bool inside = false, edge = false;
-    Inside(xpl, ypl, xl1[ip1], yl1[ip1], inside, edge);
+    Polygon::Inside(xpl, ypl, xl1[ip1], yl1[ip1], inside, edge);
     if (inside) {
       ok = false;
       break;
@@ -1722,7 +1634,7 @@ void ComponentNeBem3d::TraceNonOverlap(
         const double xm = 0.5 * (xl2[ip2] + xl2[NextPoint(ip2, n2)]);
         const double ym = 0.5 * (yl2[ip2] + yl2[NextPoint(ip2, n2)]);
         bool inside = false, edge = false;
-        Inside(xp1, yp1, xm, ym, inside, edge);
+        Polygon::Inside(xp1, yp1, xm, ym, inside, edge);
         if (inside) {
           ip2 = NextPoint(ip2, n2);
           il = 2;
@@ -1746,7 +1658,7 @@ void ComponentNeBem3d::TraceNonOverlap(
         const double xm = 0.5 * (xl2[ip2] + xl2[PrevPoint(ip2, n2)]);
         const double ym = 0.5 * (yl2[ip2] + yl2[PrevPoint(ip2, n2)]);
         bool inside = false, edge = false;
-        Inside(xp1, yp1, xm, ym, inside, edge);
+        Polygon::Inside(xp1, yp1, xm, ym, inside, edge);
         if (inside) {
           ip2 = PrevPoint(ip2, n2);
           il = 2;
@@ -1870,13 +1782,13 @@ void ComponentNeBem3d::TraceOverlap(
       if (links1[ii] >= 0) {
         edge = true;
       } else if (flags1[ii] == 1) {
-        Inside(xp2, yp2, xl1[ii], yl1[ii], inside, edge);
+        Polygon::Inside(xp2, yp2, xl1[ii], yl1[ii], inside, edge);
       }
       // If it is, check that it doesn't leave 2 at any stage.
       if (inside || edge) {
         const double xm = 0.5 * (xl1[ip1] + xl1[ii]);
         const double ym = 0.5 * (yl1[ip1] + yl1[ii]);
-        Inside(xp2, yp2, xm, ym, inside, edge);
+        Polygon::Inside(xp2, yp2, xm, ym, inside, edge);
       }
       // If it is, continue over 1.
       if (inside || edge) {
@@ -1926,7 +1838,7 @@ void ComponentNeBem3d::TraceOverlap(
           eoc = true;
           continue;
         }
-        Inside(xp1, yp1, xl2[ip2], yl2[ip2], inside, edge);
+        Polygon::Inside(xp1, yp1, xl2[ip2], yl2[ip2], inside, edge);
         if (inside || edge) {
           if (m_debug) {
             std::cout << "      Going to 2+ (point " << ip2 << " of 2).\n";
@@ -1958,7 +1870,7 @@ void ComponentNeBem3d::TraceOverlap(
           eoc = true;
           continue;
         }
-        Inside(xp1, yp1, xl2[ip2], yl2[ip2], inside, edge);
+        Polygon::Inside(xp1, yp1, xl2[ip2], yl2[ip2], inside, edge);
         if (inside || edge) {
           if (m_debug) {
             std::cout << "      Going to 2- (point " << ip2 << " of 2).\n";
@@ -2165,7 +2077,7 @@ bool ComponentNeBem3d::MakePrimitives(const Panel& panelIn,
         const double xm = 0.5 * (xp1[iprev] + xp1[inext]);
         const double ym = 0.5 * (yp1[iprev] + yp1[inext]);
         bool inside = false, edge = false;
-        Inside(xp1, yp1, xm, ym, inside, edge);
+        Polygon::Inside(xp1, yp1, xm, ym, inside, edge);
         if (!inside) continue;
       }
       // Check all vertex crossings.
@@ -2216,7 +2128,7 @@ bool ComponentNeBem3d::MakePrimitives(const Panel& panelIn,
         const double xm = 0.5 * (xp1[iprev] + xp1[inext]);
         const double ym = 0.5 * (yp1[iprev] + yp1[inext]);
         bool inside = false, edge = false;
-        Inside(xp1, yp1, xm, ym, inside, edge);
+        Polygon::Inside(xp1, yp1, xm, ym, inside, edge);
         if (!inside) continue;
       }
       // Check all vertex crossings.
@@ -2433,14 +2345,14 @@ bool ComponentNeBem3d::SplitTrapezium(const Panel panelIn,
       double xm = 0.5 * (xpl[0] + xpl[1]);
       double ym = 0.5 * (ypl[0] + ypl[1]);
       bool inside = false, edge = false;
-      Inside(xp1, yp1, xm, ym, inside, edge);
+      Polygon::Inside(xp1, yp1, xm, ym, inside, edge);
       if (!(inside || edge)) {
         if (m_debug) std::cout << "      Midpoint 1 not internal.\n";
         continue;
       }
       xm = 0.5 * (xpl[2] + xpl[3]);
       ym = 0.5 * (ypl[2] + ypl[3]);
-      Inside(xp1, yp1, xm, ym, inside, edge);
+      Polygon::Inside(xp1, yp1, xm, ym, inside, edge);
       if (!(inside || edge)) {
         if (m_debug) std::cout << "      Midpoint 2 not internal.\n";
         continue;
