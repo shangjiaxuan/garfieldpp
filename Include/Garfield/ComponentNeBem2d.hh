@@ -21,6 +21,8 @@ class ComponentNeBem2d : public ComponentBase {
                      int& status) override;
   bool GetVoltageRange(double& vmin, double& vmax) override;
 
+  Medium* GetMedium(const double x, const double y, const double z) override;
+
   /** Add a conducting line segment.
     * \param x0,y0,x1,y1 coordinates of start and end point.
     * \param v applied potential.
@@ -36,13 +38,12 @@ class ComponentNeBem2d : public ComponentBase {
   /** Add an area bounded by a polygon.
     * \param xp,yp x/y-coordinates of the vertices.
     * \param medium pointer to the medium associated to the region. 
-    * \param bctype 1: fixed voltage, 2: fixed charge density, 
-                    3: floating conductor, 4: dielectric-dielectric interface.
-    * \param bcval applied potential or charge density.
+    * \param bctype 1: fixed voltage, 4: dielectric-dielectric interface.
+    * \param v applied potential.
     */ 
   bool AddPolygon(const std::vector<double>& xp,
                   const std::vector<double>& yp, Medium* medium,
-                  const unsigned int bctype = 4, const double bcval = 0.);
+                  const unsigned int bctype = 4, const double v = 0.);
 
   bool Initialise();
 
@@ -59,7 +60,6 @@ class ComponentNeBem2d : public ComponentBase {
   unsigned int GetNumberOfSegments() const { return m_segments.size(); }
   unsigned int GetNumberOfWires() const { return m_wires.size(); }
   unsigned int GetNumberOfElements() const { return m_elements.size(); }
-
  private:
   static const double InvEpsilon0;
   static const double InvTwoPiEpsilon0;
@@ -83,6 +83,7 @@ class ComponentNeBem2d : public ComponentBase {
     std::vector<double> yv;    //< y-coordinates of the vertices.
     Medium* medium;            //< Medium associated to the region.
     std::pair<BC, double> bc;  //< Applied boundary condition.
+    unsigned int depth;        //< Level in the hierarchy.
   };
   std::vector<Region> m_regions;
 
@@ -135,26 +136,6 @@ class ComponentNeBem2d : public ComponentBase {
   bool Solve(const std::vector<std::vector<double> >& inverseMatrix,
              const std::vector<double>& bc);
   bool CheckConvergence() const;
-
-  // Compute the field
-  bool Flux(const int gt, const double len, const double cphi,
-            const double sphi, const double x, const double y, 
-            double& ex, double& ey) const {
-    double fx = 0., fy = 0.;
-    switch (gt) {
-      case 0:
-        LineFlux(len, x, y, fx, fy);
-        break;
-      case 1:
-        WireFlux(len, x, y, fx, fy);
-        break;
-      default:
-        return false;
-    }
-    // Transformation to global coordinate system
-    ToGlobal(fx, fy, cphi, sphi, ex, ey);
-    return true;
-  }
 
   double LinePotential(const double a, const double x, const double y) const;
   double WirePotential(const double r0, const double x, const double y) const;

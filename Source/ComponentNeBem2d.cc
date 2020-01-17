@@ -8,6 +8,7 @@
 #include "Garfield/ComponentNeBem2d.hh"
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Polygon.hh"
 #include "Garfield/Random.hh"
 
 namespace {
@@ -15,6 +16,7 @@ namespace {
 double Mag2(const std::array<double, 2>& x) {
   return x[0] * x[0] + x[1] * x[1];
 }
+
 /// Determine whether a point (u, v) lies on a straight line
 /// (x1, y1) to (x2, y2).
 bool OnLine(const double x1, const double y1, const double x2, const double y2,
@@ -77,6 +79,9 @@ bool OnLine(const double x1, const double y1, const double x2, const double y2,
 bool Crossing(const double x1, const double y1, const double x2,
               const double y2, const double u1, const double v1,
               const double u2, const double v2, double& xc, double& yc) {
+  // Initial values.
+  xc = 0.;
+  yc = 0.;
   /// Matrix to compute the crossing point.
   std::array<std::array<double, 2>, 2> a;
   a[0][0] = y2 - y1;
@@ -84,35 +89,14 @@ bool Crossing(const double x1, const double y1, const double x2,
   a[1][0] = x1 - x2;
   a[1][1] = u1 - u2;
   const double det = a[0][0] * a[1][1] - a[1][0] * a[0][1];
-  // Initial values.
-  xc = 0.;
-  yc = 0.;
   // Set tolerances.
-  double epsx = 1.e-10 * std::max({fabs(x1), fabs(x2), fabs(u1), fabs(u2)});
-  double epsy = 1.e-10 * std::max({fabs(y1), fabs(y2), fabs(v1), fabs(v2)});
-  epsx = std::max(epsx, 1.e-10);
-  epsy = std::max(epsy, 1.e-10);
-  // Check for a point of one line located on the other line.
-  if (OnLine(x1, y1, x2, y2, u1, v1)) {
-    xc = u1;
-    yc = v1;
-    return true;
-  } else if (OnLine(x1, y1, x2, y2, u2, v2)) {
-    xc = u2;
-    yc = v2;
-    return true;
-  } else if (OnLine(u1, v1, u2, v2, x1, y1)) {
-    xc = x1;
-    yc = y1;
-    return true;
-  } else if (OnLine(u1, v1, u2, v2, x2, y2)) {
-    xc = x2;
-    yc = y2;
-    return true;
-  } else if (fabs(det) < epsx * epsy) {
-    // Parallel, non-touching.
-    return false;
-  }
+  const double epsx = std::max(1.e-10, 1.e-10 * std::max({fabs(x1), fabs(x2), 
+                                                          fabs(u1), fabs(u2)}));
+  const double epsy = std::max(1.e-10, 1.e-10 * std::max({fabs(y1), fabs(y2),
+                                                          fabs(v1), fabs(v2)}));
+  // Check if the lines are parallel.
+  if (fabs(det) < epsx * epsy) return false;
+ 
   // Crossing, non-trivial lines: solve crossing equations.
   const double aux = a[1][1];
   a[1][1] = a[0][0] / det;
@@ -131,6 +115,7 @@ bool Crossing(const double x1, const double y1, const double x2,
   return false;
 }
 
+/// Determine whether two polygons are overlapping.
 bool Intersecting(const std::vector<double>& xp1,
                   const std::vector<double>& yp1,
                   const std::vector<double>& xp2,
@@ -150,6 +135,7 @@ bool Intersecting(const std::vector<double>& xp1,
                                         std::abs(xmax2), std::abs(xmin2)});
   const double epsy = 1.e-6 * std::max({std::abs(ymax1), std::abs(ymin1),
                                         std::abs(ymax2), std::abs(ymin2)});
+  // Check if the bounding boxes overlap.
   if (xmax1 + epsx < xmin2 || xmax2 + epsx < xmin1) return false;
   if (ymax1 + epsy < ymin2 || ymax2 + epsy < ymin1) return false;
 
@@ -179,16 +165,39 @@ bool Intersecting(const std::vector<double>& xp1,
   return false;
 }
 
-/// Determine the (signed) area of a polygon.
-double Area(const std::vector<double>& xp, const std::vector<double>& yp) {
+/// Determine whether polygon 1 is fully enclosed by polygon 2.
+bool Enclosed(const std::vector<double>& xp1,
+              const std::vector<double>& yp1,
+              const std::vector<double>& xp2,
+              const std::vector<double>& yp2) {
+  
+  const double xmin1 = *std::min_element(std::begin(xp1), std::end(xp1));
+  const double ymin1 = *std::min_element(std::begin(yp1), std::end(yp1));
+  const double xmax1 = *std::max_element(std::begin(xp1), std::end(xp1));
+  const double ymax1 = *std::max_element(std::begin(yp1), std::end(yp1));
 
-  double f = 0.;
-  const unsigned int n = xp.size();
-  for (unsigned int i = 0; i < n; ++i) {
-    const unsigned int ii = i < n - 1 ? i + 1 : 0;
-    f += xp[i] * yp[ii] - xp[ii] * yp[i];  
+  const double xmin2 = *std::min_element(std::begin(xp2), std::end(xp2));
+  const double ymin2 = *std::min_element(std::begin(yp2), std::end(yp2));
+  const double xmax2 = *std::max_element(std::begin(xp2), std::end(xp2));
+  const double ymax2 = *std::max_element(std::begin(yp2), std::end(yp2));
+
+  const double epsx = 1.e-6 * std::max({std::abs(xmax1), std::abs(xmin1),
+                                        std::abs(xmax2), std::abs(xmin2)});
+  const double epsy = 1.e-6 * std::max({std::abs(ymax1), std::abs(ymin1),
+                                        std::abs(ymax2), std::abs(ymin2)});
+  // Check the bounding boxes.
+  if (xmax1 + epsx < xmin2 || xmax2 + epsx < xmin1) return false;
+  if (ymax1 + epsy < ymin2 || ymax2 + epsy < ymin1) return false;
+  if (xmin1 + epsx < xmin2 || xmax1 > xmax2 + epsx) return false; 
+  if (ymin1 + epsy < ymin2 || ymax1 > ymax2 + epsy) return false; 
+ 
+  const unsigned int n1 = xp1.size();
+  for (unsigned int i = 0; i < n1; ++i) {
+    bool inside = false, edge = false;
+    Garfield::Polygon::Inside(xp2, yp2, xp1[i], yp1[i], inside, edge);
+    if (!inside) return false;
   }
-  return 0.5 * f; 
+  return true;
 }
 
 }
@@ -236,15 +245,15 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
     } else {
       v += LinePotential(element.a, xL, yL) * element.q;
     }
-    // Compute the field.
+    // Compute the field in local coordinates.
     double fx = 0., fy = 0.;
-    if (!Flux(element.wire, element.a, cphi, sphi, xL, yL, fx, fy)) {
-      std::cerr << m_className << "::ElectricField:\n"
-                << "    Cannot calculate field from element at " << element.x
-                << ", " << element.y << ".\n";
-      status = -11;
-      return;
-    }
+    if (element.wire) {
+      WireFlux(element.a, xL, yL, fx, fy);
+    } else {
+      LineFlux(element.a, xL, yL, fx, fy);
+    } 
+    // Rotate to the global frame.
+    ToGlobal(fx, fy, cphi, sphi, fx, fy);
     ex += fx * element.q;
     ey += fy * element.q;
   }
@@ -291,6 +300,18 @@ bool ComponentNeBem2d::GetVoltageRange(double& vmin, double& vmax) {
     }
   }
   return gotValue;
+}
+
+Medium* ComponentNeBem2d::GetMedium(const double x, const double y, 
+                                    const double z) {
+
+  if (m_geometry) return m_geometry->GetMedium(x, y, z);
+  for (const auto& region : m_regions) {
+    bool inside = false, edge = false;
+    Garfield::Polygon::Inside(region.xv, region.yv, x, y, inside, edge);
+    if (inside || edge) return region.medium;
+  }
+  return nullptr;
 }
 
 bool ComponentNeBem2d::AddSegment(const double x0, const double y0,
@@ -379,7 +400,7 @@ bool ComponentNeBem2d::AddPolygon(const std::vector<double>& xp,
   const double epsx = 1.e-6 * std::max(std::abs(xmax), std::abs(xmin));
   const double epsy = 1.e-6 * std::max(std::abs(ymax), std::abs(ymin));
 
-  const double f = Area(xp, yp);
+  const double f = Polygon::Area(xp, yp);
   if (std::abs(f) < std::max(1.e-10, epsx * epsy)) {
     std::cerr << m_className << "::AddPolygon: Degenerate polygon.\n";
     return false;
@@ -407,6 +428,7 @@ bool ComponentNeBem2d::AddPolygon(const std::vector<double>& xp,
   } else if (bctype == 4) {
     region.bc = std::make_pair(Dielectric, v);
   }
+  region.depth = 0;
   m_regions.push_back(std::move(region));
   return true;
 }
@@ -462,13 +484,38 @@ bool ComponentNeBem2d::Initialise() {
   m_ready = false;
   m_elements.clear();
   if (m_debug) std::cout << m_className << "::Initialise:\n";
-  std::vector<Segment> segments;
+  
   // Loop over the regions.
   const unsigned int nRegions = m_regions.size();
+  if (m_debug) std::cout << "    " << nRegions << " regions.\n";
+  std::vector<std::vector<unsigned int> > motherRegions(nRegions);
+  for (unsigned int i = 0; i < nRegions; ++i) {
+    auto& region = m_regions[i];
+    // Check if the region is fully enclosed by other ones.
+    for (unsigned int j = 0; j < nRegions; ++j) {
+      if (i == j) continue;
+      const auto& other = m_regions[j];
+      if (!Enclosed(region.xv, region.yv, other.xv, other.yv)) continue;
+      motherRegions[i].push_back(j);
+      if (m_debug) {
+        std::cout << "    Region " << i << " is enclosed by region "
+                  << j << ".\n";
+      }
+    }
+    region.depth = motherRegions[i].size();
+  }
+
+  std::vector<Segment> segments;
   for (unsigned int i = 0; i < nRegions; ++i) {
     const auto& region = m_regions[i];
-    // Check if the region is fully enclosed by another one.
-    // TODO 
+    int outerRegion = -1;
+    for (const unsigned int k : motherRegions[i]) {
+      if (outerRegion < 0) {
+        outerRegion = k;
+      } else if (m_regions[outerRegion].depth < m_regions[k].depth) {
+        outerRegion = k;
+      }
+    }
     // Add the segments bounding this region. 
     const unsigned int n = region.xv.size();
     for (unsigned int j = 0; j < n; ++j) {
@@ -477,7 +524,7 @@ bool ComponentNeBem2d::Initialise() {
       seg.x0 = {region.xv[j], region.yv[j]};
       seg.x1 = {region.xv[k], region.yv[k]};
       seg.region1 = i;
-      seg.region2 = -1;
+      seg.region2 = outerRegion;
       seg.bc = region.bc;
       segments.push_back(std::move(seg));
     }
@@ -605,8 +652,7 @@ bool ComponentNeBem2d::Initialise() {
     // Invert the influence matrix.
     inverseMatrix.assign(nEntries, std::vector<double>(nEntries, 0.));
     if (!InvertMatrix(influenceMatrix, inverseMatrix)) {
-      std::cerr << m_className << "::Initialise:\n"
-                << "     Error inverting the influence matrix.\n";
+      std::cerr << m_className << "::Initialise: Matrix inversion failed.\n";
       return false;
     }
     // Set flag that the matrix has been inverted.
@@ -622,7 +668,7 @@ bool ComponentNeBem2d::Initialise() {
 
     // Solve for the charge distribution.
     if (!Solve(inverseMatrix, boundaryConditions)) {
-      std::cerr << m_className << "::Initialise: Error in Solve function.\n";
+      std::cerr << m_className << "::Initialise: Solution failed.\n";
       return false;
     }
     if (m_debug) std::cout << "    Solution ok.\n";
@@ -630,6 +676,11 @@ bool ComponentNeBem2d::Initialise() {
     if (!m_autoSize) break;
     if (nIter >= m_nMaxIterations) break;
   }
+  // Sort the regions by depth (innermost first).
+  std::sort(m_regions.begin(), m_regions.end(),  
+            [](const Region& lhs, const Region& rhs) { 
+              return (lhs.depth > rhs.depth);
+            });
   m_ready = true;
   return true;
 }
@@ -743,7 +794,7 @@ bool ComponentNeBem2d::Discretise(const Segment& seg,
   const double sphi = sin(phi);
   const double dx = (seg.x1[0] - seg.x0[0]) / m_nDivisions;
   const double dy = (seg.x1[1] - seg.x0[1]) / m_nDivisions;
-  const double len = 0.5 * sqrt(dx * dx + dy * dy);
+  const double a = 0.5 * sqrt(dx * dx + dy * dy);
   double x = seg.x0[0] - 0.5 * dx;
   double y = seg.x0[1] - 0.5 * dy;
   for (unsigned int i = 0; i < m_nDivisions; ++i) {
@@ -755,7 +806,7 @@ bool ComponentNeBem2d::Discretise(const Segment& seg,
     element.sphi = sphi;
     element.x = x;
     element.y = y;
-    element.a = len;
+    element.a = a;
     element.bc = seg.bc;
     element.lambda = lambda;
     elements.push_back(std::move(element));
@@ -767,62 +818,61 @@ bool ComponentNeBem2d::ComputeInfluenceMatrix(
     std::vector<std::vector<double> >& infmat) const {
   if (m_matrixInversionFlag) return true;
 
-  // Loop over the target elements (F)
+  // Loop over the target elements (F).
   const unsigned int nElements = m_elements.size();
   for (unsigned int iF = 0; iF < nElements; ++iF) {
     const auto& tgt = m_elements[iF];
     const double cphiF = tgt.cphi;
     const double sphiF = tgt.sphi;
-    // Boundary type
-    const unsigned int etF = tgt.bc.first;
-    // Collocation point
+    // Collocation point.
     const double xF = tgt.x;
     const double yF = tgt.y;
 
-    // Loop over the source elements (S)
+    // Loop over the source elements (S).
     for (unsigned int jS = 0; jS < nElements; ++jS) {
       const auto& src = m_elements[jS];
       const double cphiS = src.cphi;
       const double sphiS = src.sphi;
-      const double lenS = src.a;
       // Transform to local coordinate system of the source element.
-      double xL = 0.;
-      double yL = 0.;
+      double xL = 0., yL = 0.;
       ToLocal(xF - src.x, yF - src.y, cphiS, sphiS, xL, yL);
-      // Influence coefficient
+      // Calculate the influence coefficient.
       double infCoeff = 0.;
       // Depending on the element type at the field point
-      // different boundary conditions need to be applied
-      switch (etF) {
-        // Conductor at fixed potential
+      // different boundary conditions need to be applied.
+      switch (tgt.bc.first) {
         case Voltage:
+          // Conductor at fixed potential.
           if (src.wire) {
-            infCoeff = WirePotential(lenS, xL, yL);
+            infCoeff = WirePotential(src.a, xL, yL);
           } else {
-            infCoeff = LinePotential(lenS, xL, yL);
+            infCoeff = LinePotential(src.a, xL, yL);
           }
           break;
-        // Dielectric-dielectric interface
-        // Normal component of the displacement vector is continuous
         case Dielectric:
+          // Dielectric-dielectric interface.
+          // Normal component of the displacement vector is continuous.
           if (iF == jS) {
-            // Self-influence
+            // Self-influence.
             infCoeff = 1. / (2. * src.lambda * VacuumPermittivity);
           } else {
-            // Compute flux at field point in global coordinate system
+            // Compute flux at the field point in local coordinates.
             double fx = 0., fy = 0.;
-            if (!Flux(src.wire, lenS, cphiS, sphiS, xL, yL, fx, fy)) {
-              return false;
-            }
-            // Rotate to local coordinate system of field element
-            double ex = 0., ey = 0.;
-            ToLocal(fx, fy, cphiF, sphiF, ex, ey);
-            infCoeff = ey;
+            if (src.wire) {
+              WireFlux(src.a, xL, yL, fx, fy);
+            } else {
+              LineFlux(src.a, xL, yL, fx, fy);
+            } 
+            // Rotate to the global frame.
+            ToGlobal(fx, fy, cphiS, sphiS, fx, fy);
+            // Rotate to the local frame of the field element.
+            ToLocal(fx, fy, cphiF, sphiF, fx, fy);
+            infCoeff = fy;
           }
           break;
         default:
           std::cerr << m_className << "::ComputeInfluenceMatrix:\n"
-                    << "    Unknown boundary type: " << etF << ".\n";
+                    << "    Unknown boundary type.\n";
           return false;
           break;
       }
@@ -830,7 +880,7 @@ bool ComponentNeBem2d::ComputeInfluenceMatrix(
     }
   }
 
-  // Add charge neutrality condition
+  // Add charge neutrality condition.
   for (unsigned int i = 0; i < nElements; ++i) {
     infmat[nElements][i] = m_elements[i].a;
     infmat[i][nElements] = 0.;
@@ -1016,13 +1066,13 @@ bool ComponentNeBem2d::Solve(const std::vector<std::vector<double> >& invmat,
 
 bool ComponentNeBem2d::CheckConvergence() const {
   // Potential and normal component of the electric field
-  // evaluated at the collocation points
+  // evaluated at the collocation points.
   std::vector<double> v(m_nCollocationPoints, 0.);
   std::vector<double> n(m_nCollocationPoints, 0.);
 
   if (m_debug) {
     std::cout << m_className << "::CheckConvergence:\n"
-              << "element #  type            LHS              RHS\n";
+              << "  element #  type          LHS              RHS\n";
   }
   const double scale = 1. / m_nCollocationPoints;
   unsigned int i = 0;
@@ -1038,19 +1088,17 @@ bool ComponentNeBem2d::CheckConvergence() const {
       x0 -= 0.5 * dx;
       y0 -= 0.5 * dy;
     }
-    // Sum up the contributions from all boundary elements
+    // Sum up the contributions from all boundary elements.
     for (const auto& src : m_elements) {
-      // Loop over the collocation points
+      // Loop over the collocation points.
       for (unsigned int k = 0; k < m_nCollocationPoints; ++k) {
         double xG = x0;
         double yG = y0;
         if (tgt.wire) {
-          // Wire
           const double phi = TwoPi * RndmUniform();
           xG += tgt.a * cos(phi);
           yG += tgt.a * sin(phi);
         } else {
-          // Straight line
           if (m_randomCollocation) {
             const double r = RndmUniformPos();
             xG += r * dx;
@@ -1072,11 +1120,16 @@ bool ComponentNeBem2d::CheckConvergence() const {
         }
         // Compute the field.
         double fx = 0., fy = 0.;
-        Flux(src.wire, src.a, src.cphi, src.sphi, xL, yL, fx, fy);
-        // Rotate to the local coordinate system of the test element.
-        double ex = 0., ey = 0.;
-        ToLocal(fx, fy, tgt.cphi, tgt.sphi, ex, ey);
-        n[k] += ey * src.q;
+        if (src.wire) {
+          WireFlux(src.a, xL, yL, fx, fy);
+        } else {
+          LineFlux(src.a, xL, yL, fx, fy);
+        } 
+        // Rotate to the global frame.
+        ToGlobal(fx, fy, src.cphi, src.sphi, fx, fy);
+        // Rotate to the local frame of the test element.
+        ToLocal(fx, fy, tgt.cphi, tgt.sphi, fx, fy);
+        n[k] += fy * src.q;
       }
     }
     const double v0 = scale * std::accumulate(v.begin(), v.end(), 0.);
