@@ -10,67 +10,6 @@
 
 namespace {
 
-unsigned int NextPoint(const unsigned int i, const unsigned int n) {
-  const unsigned int j = i + 1;
-  return j < n ? j : 0;
-}
-
-unsigned int PrevPoint(const unsigned int i, const unsigned int n) {
-  return i > 0 ? i - 1 : n - 1;
-}
-
-double Mag(const std::array<double, 3>& a) {
-  return sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
-}
-
-std::array<double, 3> UnitVector(const std::array<double, 3>& a) {
-
-  const double mag = Mag(a);
-  if (mag < 1.e-12) return a;
-  const std::array<double, 3> b = {a[0] / mag, a[1] / mag, a[2] / mag};
-  return b;
-}
-std::array<double, 3> CrossProduct(const std::array<double, 3>& u,
-                                   const std::array<double, 3>& v) {
-
-  const std::array<double, 3> w = {u[1] * v[2] - u[2] * v[1],
-                                   u[2] * v[0] - u[0] * v[2],
-                                   u[0] * v[1] - u[1] * v[0]};
-  return w;
-}
-
-/// Compute lambda for a point on a line (0 = start, 1 = end).
-double Lambda(const double x1, const double x0, const double x2,
-              const double y1, const double y0, const double y2) {
-  // Segment of zero length.
-  if ((x1 - x2) == 0. && (y1 - y2) == 0.) {
-    std::cerr << "Lambda: Zero length segment.\n";
-    return 2.;
-  }
-
-  double xl = 0.;
-  const double dx1 = x0 - x1;
-  const double dy1 = y0 - y1;
-  const double dx2 = x0 - x2;
-  const double dy2 = y0 - y2;
-  if (dx1 * dx1 + dy1 * dy1 < dx2 * dx2 + dy2 * dy2) {
-    // Point nearer to (x1, y1).
-    if (fabs(y1 - y2) > fabs(x1 - x2)) {
-      xl = dy1 / (y2 - y1);
-    } else {
-      xl = dx1 / (x2 - x1);
-    }
-  } else {
-    // Point nearer to (x2, y2).
-    if (fabs(y1 - y2) > fabs(x1 - x2)) {
-      xl = 1. - dy2 / (y1 - y2);
-    } else {
-      xl = 1. - dx2 / (x1 - x2);
-    }
-  }
-  return xl;
-}
-
 /// Determine whether a point (u, v) lies on a straight line
 /// (x1, y1) to (x2, y2).
 bool OnLine(const double x1, const double y1, const double x2, const double y2,
@@ -246,7 +185,7 @@ void Inside(const std::vector<double>& xpl, const std::vector<double>& ypl,
     // Loop over the edges counting intersections.
     unsigned int nCross = 0;
     for (unsigned int j = 0; j < npl; ++j) {
-      const unsigned int jj = NextPoint(j, npl);
+      const unsigned int jj = j < npl - 1 ? j + 1 : 0;
       // Flag points located on one of the edges.
       if (OnLine(xpl[j], ypl[j], xpl[jj], ypl[jj], x, y)) {
         edge = true;
