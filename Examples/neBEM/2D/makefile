@@ -20,3 +20,7 @@ dielectric: dielectric.C
 	$(CXX) -o dielectric dielectric.o $(LDFLAGS)
 	rm dielectric.o
 
+wire: wire.C 
+	$(CXX) $(CFLAGS) wire.C
+	$(CXX) -o wire wire.o $(LDFLAGS)
+	rm wire.o

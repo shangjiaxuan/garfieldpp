@@ -8,8 +8,6 @@
 #include <TApplication.h>
 
 #include "Garfield/MediumMagboltz.hh"
-#include "Garfield/GeometrySimple.hh"
-#include "Garfield/SolidBox.hh"
 #include "Garfield/ComponentNeBem2d.hh"
 
 using namespace Garfield;
@@ -19,16 +17,10 @@ int main(int argc, char * argv[]) {
   MediumMagboltz gas;
   gas.SetComposition("ar", 100.);
   
-  SolidBox box(0., 0., 0., 2., 2., 2.);
-
-  GeometrySimple geo;
-  geo.AddSolid(&box, &gas);
-
   ComponentNeBem2d cmp;
-  cmp.SetGeometry(&geo);
+  cmp.SetMedium(&gas);
   constexpr unsigned int nDiv = 200;
   cmp.SetNumberOfDivisions(nDiv);
-  cmp.EnableRandomCollocation();
   cmp.AddSegment(-1., 0., 0., 1., 1.);
   cmp.AddSegment( 1., 0., 0., 1., 1.);
   cmp.AddSegment(-1., 0., 1., 0., 0.);

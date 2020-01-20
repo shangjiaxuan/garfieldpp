@@ -9,8 +9,6 @@
 
 #include "Garfield/MediumMagboltz.hh"
 #include "Garfield/MediumPlastic.hh"
-#include "Garfield/GeometrySimple.hh"
-#include "Garfield/SolidBox.hh"
 #include "Garfield/ComponentNeBem2d.hh"
 
 using namespace Garfield;
@@ -22,39 +20,29 @@ int main(int argc, char * argv[]) {
 
   MediumPlastic plastic;
   plastic.SetDielectricConstant(5.);
-
-  const double delta = 1.;
-  
-  SolidBox box1(-1.5 * delta, 0., 0., delta,      20., 20.);
-  SolidBox box2(          0., 0., 0., delta / 2., 20., 20.);
-  SolidBox box3( 1.5 * delta, 0., 0., delta,      20., 20.);
-  GeometrySimple geo;
-  geo.AddSolid(&box1, &gas);
-  geo.AddSolid(&box2, &plastic);
-  geo.AddSolid(&box3, &gas);
-
+ 
   ComponentNeBem2d cmp;
-  cmp.SetGeometry(&geo);
+  cmp.SetMedium(&gas);
   cmp.SetNumberOfDivisions(10);
-  cmp.SetNumberOfCollocationPoints(5);
-  const double v = 100.;
+  constexpr double delta = 1.;
+  constexpr double v = 100.;
   // Left conducting plate.
   const double xMin = -1.5 * delta;
   cmp.AddSegment(xMin, -11., xMin, -1., v);
   cmp.AddSegment(xMin,  -1., xMin,  1., v);
   cmp.AddSegment(xMin,   1., xMin, 11., v);
 
-  // Right conducting plate
+  // Right conducting plate.
   const double xMax = 1.5 * delta;
   cmp.AddSegment(xMax, -11., xMax, -1., -v);
   cmp.AddSegment(xMax,  -1., xMax,  1., -v);
   cmp.AddSegment(xMax,   1., xMax, 11., -v);
 
-  // Dielectric
+  // Dielectric.
   const double xD = 0.5 * delta;
   std::vector<double> xv = {-xD, -xD, xD, xD}; 
   std::vector<double> yv = {-11., 11., 11., -11.};
-  cmp.AddPolygon(xv, yv, &plastic);
+  cmp.AddRegion(xv, yv, &plastic);
 
   // cmp.EnableDebugging();
   cmp.Initialise();
