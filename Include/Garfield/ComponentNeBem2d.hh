@@ -26,6 +26,16 @@ class ComponentNeBem2d : public ComponentBase {
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                       double& xmax, double& ymax, double& zmax) override;
 
+
+  bool IsWireCrossed(const double x0, const double y0, const double z0,
+                     const double x1, const double y1, const double z1,
+                     double& xc, double& yc, double& zc, const bool centre,
+                     double& rc) override;
+
+  bool IsInTrapRadius(const double q0, const double x0, const double y0,
+                      const double z0, double& xw, double& yx,
+                      double& rw) override;
+
   /// Set the "background" medium.
   void SetMedium(Medium* medium) { m_medium = medium; }
 
@@ -39,8 +49,11 @@ class ComponentNeBem2d : public ComponentBase {
     * \param x,y centre of the wire.
     * \param d wire diameter.
     * \param v applied potential.
+    * \param ntrap multiple of the wire radius within which a particle is 
+             considered trapped by the wire. 
     */
-  bool AddWire(const double x, const double y, const double d, const double v);
+  bool AddWire(const double x, const double y, const double d, const double v,
+               const int ntrap = 5);
   /** Add a region bounded by a polygon.
     * \param xp,yp x/y-coordinates of the vertices of the polygon.
     * \param medium pointer to the medium associated to the region. 
@@ -138,6 +151,7 @@ class ComponentNeBem2d : public ComponentBase {
     double r;    //< Radius.
     double v;    //< Potential.
     double q;    //< Charge.
+    int ntrap;   //< Trap radius (in units of the wire radius).
   };
   /// Wires.
   std::vector<Wire> m_wires;

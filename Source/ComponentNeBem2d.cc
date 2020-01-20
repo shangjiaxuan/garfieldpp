@@ -395,6 +395,94 @@ bool ComponentNeBem2d::GetBoundingBox(
   return gotValue; 
 }
 
+bool ComponentNeBem2d::IsWireCrossed(const double x0, const double y0,
+                                     const double z0, const double x1,
+                                     const double y1, const double z1,
+                                     double& xc, double& yc, double& zc,
+                                     const bool centre, double& rc) {
+  xc = x0;
+  yc = y0;
+  zc = z0;
+
+  if (m_wires.empty()) return false;
+
+  const double dx = x1 - x0;
+  const double dy = y1 - y0;
+  const double d2 = dx * dx + dy * dy;
+  // Make sure the step length is non-zero.
+  if (d2 < Small) return false;
+  const double invd2 = 1. / d2;
+
+  // Both coordinates are assumed to be located inside
+  // the drift area and inside a drift medium.
+  // This should have been checked before this call.
+
+  double dMin2 = 0.;
+  for (const auto& wire : m_wires) {
+    const double xw = wire.x;
+    const double yw = wire.y;
+    // Calculate the smallest distance between track and wire.
+    const double xIn0 = dx * (xw - x0) + dy * (yw - y0);
+    // Check if the minimum is located before (x0, y0).
+    if (xIn0 < 0.) continue;
+    const double xIn1 = -(dx * (xw - x1) + dy * (yw - y1));
+    // Check if the minimum is located behind (x1, y1).
+    if (xIn1 < 0.) continue;
+    // Minimum is located between (x0, y0) and (x1, y1).
+    const double xw0 = xw - x0;
+    const double xw1 = xw - x1;
+    const double yw0 = yw - y0;
+    const double yw1 = yw - y1;
+    const double dw02 = xw0 * xw0 + yw0 * yw0;
+    const double dw12 = xw1 * xw1 + yw1 * yw1;
+    if (xIn1 * xIn1 * dw02 > xIn0 * xIn0 * dw12) {
+      dMin2 = dw02 - xIn0 * xIn0 * invd2;
+    } else {
+      dMin2 = dw12 - xIn1 * xIn1 * invd2;
+    }
+    const double r2 = wire.r * wire.r;
+    if (dMin2 < r2) {
+      // Wire has been crossed.
+      if (centre) {
+        xc = xw;
+        yc = yw;
+      } else {
+        // Find the point of intersection.
+        const double p = -xIn0 * invd2;
+        const double q = (dw02 - r2) * invd2;
+        const double s = sqrt(p * p - q);
+        const double t = std::min(-p + s, -p - s);
+        xc = x0 + t * dx;
+        yc = y0 + t * dy;
+        zc = z0 + t * (z1 - z0);
+      }
+      rc = wire.r;
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ComponentNeBem2d::IsInTrapRadius(const double q, const double x,
+                                      const double y, const double /*z*/,
+                                      double& xw, double& yw, double& rw) {
+
+  for (const auto& wire : m_wires) {
+    // Skip wires with the wrong charge.
+    if (q * wire.q > 0.) continue;
+    const double dx = wire.x - x;
+    const double dy = wire.y - y;
+    const double rt = wire.r * wire.ntrap;
+    if (dx * dx + dy * dy < rt * rt) {
+      xw = wire.x;
+      yw = wire.y;
+      rw = wire.r;
+      return true;
+    }
+  }
+  return false;
+}
+
 void ComponentNeBem2d::SetRangeZ(const double zmin, const double zmax) {
 
    if (fabs(zmax - zmin) <= 0.) {
@@ -436,9 +524,13 @@ bool ComponentNeBem2d::AddSegment(const double x0, const double y0,
 }
 
 bool ComponentNeBem2d::AddWire(const double x, const double y, const double d,
-                               const double v) {
+                               const double v, const int ntrap) {
   if (d < Small) {
     std::cerr << m_className << "::AddWire: Diameter must be > 0.\n";
+    return false;
+  }
+  if (ntrap <= 0) {
+    std::cerr << m_className << "::AddWire: Nbr. of trap radii must be > 0.\n";
     return false;
   }
 
@@ -448,6 +540,7 @@ bool ComponentNeBem2d::AddWire(const double x, const double y, const double d,
   wire.r = 0.5 * d;
   wire.v = v;
   wire.q = 0.;
+  wire.ntrap = ntrap;
   m_wires.push_back(std::move(wire));
 
   if (m_debug) {
