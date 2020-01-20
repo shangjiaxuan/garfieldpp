@@ -232,7 +232,7 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
     }
   }
 
-  // Sum up the contributions from all boundary elements.
+  // Sum up the contributions from all straight-line elements.
   for (const auto& element : m_elements) {
     const double cphi = element.cphi;
     const double sphi = element.sphi;
@@ -240,23 +240,27 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
     double xL = 0., yL = 0.;
     ToLocal(x - element.x, y - element.y, cphi, sphi, xL, yL);
     // Compute the potential.
-    if (element.wire) {
-      v += WirePotential(element.a, xL, yL) * element.q;
-    } else {
-      v += LinePotential(element.a, xL, yL) * element.q;
-    }
+    v += LinePotential(element.a, xL, yL) * element.q;
     // Compute the field in local coordinates.
     double fx = 0., fy = 0.;
-    if (element.wire) {
-      WireFlux(element.a, xL, yL, fx, fy);
-    } else {
-      LineFlux(element.a, xL, yL, fx, fy);
-    } 
+    LineFlux(element.a, xL, yL, fx, fy);
     // Rotate to the global frame.
     ToGlobal(fx, fy, cphi, sphi, fx, fy);
     ex += fx * element.q;
     ey += fy * element.q;
   }
+
+  // Add the contributions from the wires.
+  for (const auto& wire : m_wires) {
+    // Compute the potential.
+    v += WirePotential(wire.r, x - wire.x, y - wire.y) * wire.q;
+    // Compute the field.
+    double fx = 0., fy = 0.;
+    WireFlux(wire.x, x - wire.x, y - wire.y, fx, fy);
+    ex += fx * wire.q;
+    ey += fy * wire.q;
+  }
+
 }
 
 void ComponentNeBem2d::ElectricField(const double x, const double y,
@@ -316,7 +320,7 @@ Medium* ComponentNeBem2d::GetMedium(const double x, const double y,
 
 bool ComponentNeBem2d::AddSegment(const double x0, const double y0,
                                   const double x1, const double y1,
-                                  const double v) {
+                                  const double v, const int ndiv) {
   const double dx = x1 - x0;
   const double dy = y1 - y0;
   if (dx * dx + dy * dy < Small) {
@@ -330,6 +334,7 @@ bool ComponentNeBem2d::AddSegment(const double x0, const double y0,
   segment.bc = std::make_pair(Voltage, v);
   segment.region1 = -1;
   segment.region2 = -1;
+  segment.ndiv = ndiv;
   m_segments.push_back(std::move(segment));
 
   if (m_debug) {
@@ -339,7 +344,6 @@ bool ComponentNeBem2d::AddSegment(const double x0, const double y0,
   }
 
   m_ready = false;
-  m_matrixInversionFlag = false;
   return true;
 }
 
@@ -355,6 +359,7 @@ bool ComponentNeBem2d::AddWire(const double x, const double y, const double d,
   wire.y = y;
   wire.r = 0.5 * d;
   wire.v = v;
+  wire.q = 0.;
   m_wires.push_back(std::move(wire));
 
   if (m_debug) {
@@ -365,28 +370,28 @@ bool ComponentNeBem2d::AddWire(const double x, const double y, const double d,
   }
 
   m_ready = false;
-  m_matrixInversionFlag = false;
   return true;
 }
 
-bool ComponentNeBem2d::AddPolygon(const std::vector<double>& xp,
-                                  const std::vector<double>& yp, 
-                                  Medium* medium, const unsigned int bctype, 
-                                  const double v) {
+bool ComponentNeBem2d::AddRegion(const std::vector<double>& xp,
+                                 const std::vector<double>& yp, 
+                                 Medium* medium, const unsigned int bctype,
+                                 const double v, const int ndiv) {
 
   if (xp.size() != yp.size()) {
-    std::cerr << m_className << "::AddPolygon:\n"
+    std::cerr << m_className << "::AddRegion:\n"
               << "    Mismatch between number of x- and y-coordinates.\n";
     return false;
   }
   if (xp.size() < 3) {
-    std::cerr << m_className << "::AddPolygon: Too few points.\n";
+    std::cerr << m_className << "::AddRegion: Too few points.\n";
     return false;
   }
   if (bctype != 1 && bctype != 4) {
-    std::cerr << m_className << "::AddPolygon: Invalid boundary condition.\n";
+    std::cerr << m_className << "::AddRegion: Invalid boundary condition.\n";
     return false;
   }
+
   // TODO
   // Check if this is a valid polygon (no self-crossing).
 
@@ -402,19 +407,19 @@ bool ComponentNeBem2d::AddPolygon(const std::vector<double>& xp,
 
   const double f = Polygon::Area(xp, yp);
   if (std::abs(f) < std::max(1.e-10, epsx * epsy)) {
-    std::cerr << m_className << "::AddPolygon: Degenerate polygon.\n";
+    std::cerr << m_className << "::AddRegion: Degenerate polygon.\n";
     return false;
   } else if (f > 0.) {
     // Make sure all polygons have the same "handedness".
     if (m_debug) {
-      std::cout << m_className << "::AddPolygon: Reversing orientation.\n";
+      std::cout << m_className << "::AddRegion: Reversing orientation.\n";
     }
     std::reverse(xv.begin(), xv.end());
     std::reverse(yv.begin(), yv.end());
   }
   for (const auto& region : m_regions) {
     if (Intersecting(xv, yv, region.xv, region.yv)) {
-      std::cerr << m_className << "::AddPolygon:\n"
+      std::cerr << m_className << "::AddRegion:\n"
                 << "    Polygon intersects an existing region.\n";
       return false;
     }
@@ -429,6 +434,7 @@ bool ComponentNeBem2d::AddPolygon(const std::vector<double>& xp,
     region.bc = std::make_pair(Dielectric, v);
   }
   region.depth = 0;
+  region.ndiv = ndiv;
   m_regions.push_back(std::move(region));
   return true;
 }
@@ -442,7 +448,6 @@ void ComponentNeBem2d::SetNumberOfDivisions(const unsigned int ndiv) {
 
   m_nDivisions = ndiv;
   m_ready = false;
-  m_matrixInversionFlag = false;
 }
 
 void ComponentNeBem2d::SetNumberOfCollocationPoints(const unsigned int ncoll) {
@@ -454,19 +459,6 @@ void ComponentNeBem2d::SetNumberOfCollocationPoints(const unsigned int ncoll) {
 
   m_nCollocationPoints = ncoll;
   m_ready = false;
-  m_matrixInversionFlag = false;
-}
-
-void ComponentNeBem2d::SetMinimumElementSize(const double minsize) {
-  if (minsize < Small) {
-    std::cerr << m_className << "::SetMinimumElementSize:\n"
-              << "    Provided element size is too small.\n";
-    return;
-  }
-
-  m_minSize = minsize;
-  m_ready = false;
-  m_matrixInversionFlag = false;
 }
 
 void ComponentNeBem2d::SetMaxNumberOfIterations(const unsigned int niter) {
@@ -475,16 +467,68 @@ void ComponentNeBem2d::SetMaxNumberOfIterations(const unsigned int niter) {
               << "    Number of iterations must be greater than zero.\n";
     return;
   }
-
   m_nMaxIterations = niter;
+}
+
+bool ComponentNeBem2d::GetSegment(const unsigned int i, 
+    double& x0, double& y0, double& x1, double& y1, double& v) const {
+ 
+  if (i >= m_segments.size()) return false;
+  const auto& seg = m_segments[i];
+  x0 = seg.x0[0];
+  y0 = seg.x0[1];
+  x1 = seg.x1[0];
+  y1 = seg.x1[1];
+  v = seg.bc.second;
+  return true;
+}
+
+bool ComponentNeBem2d::GetWire(const unsigned int i,
+  double& x, double& y, double& d, double& v, double& q) const {
+ 
+  if (i >= m_wires.size()) return false;
+  const auto& wire = m_wires[i];
+  x = wire.x;
+  y = wire.y;
+  d = 2 * wire.r;
+  v = wire.v;
+  q = wire.q;
+  return true;
+}
+
+bool ComponentNeBem2d::GetElement(const unsigned int i,
+  double& x0, double& y0, double& x1, double& y1, double& q) const {
+
+  if (i >= m_elements.size()) return false;
+  const auto& element = m_elements[i];
+  ToGlobal(-element.a, 0., element.cphi, element.sphi, x0, y0);
+  ToGlobal( element.a, 0., element.cphi, element.sphi, x1, y1);
+  x0 += element.x;
+  y0 += element.y;
+  x1 += element.x;
+  y1 += element.y;
+  q = element.q;
+  return true;
 }
 
 bool ComponentNeBem2d::Initialise() {
 
   m_ready = false;
   m_elements.clear();
+
+  double vmin = 0., vmax = 0.; 
+  if (!GetVoltageRange(vmin, vmax)) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Could not determine the voltage range.\n";
+    return false;
+  }
+  if (fabs(vmin - vmax) < 1.e-6 * (vmin + vmax)) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    All potentials are the same.\n";
+    return false;
+  }
+
   if (m_debug) std::cout << m_className << "::Initialise:\n";
-  
   // Loop over the regions.
   const unsigned int nRegions = m_regions.size();
   if (m_debug) std::cout << "    " << nRegions << " regions.\n";
@@ -526,6 +570,7 @@ bool ComponentNeBem2d::Initialise() {
       seg.region1 = i;
       seg.region2 = outerRegion;
       seg.bc = region.bc;
+      seg.ndiv = region.ndiv;
       segments.push_back(std::move(seg));
     }
   }
@@ -608,31 +653,12 @@ bool ComponentNeBem2d::Initialise() {
         lambda = (eps2 - eps1) / (eps1 + eps2);
         if (m_debug) std::cout << "      Lambda = " << lambda << "\n";
       }
-      Discretise(segment, m_elements, lambda);
+      const int ndiv = segment.ndiv <= 0 ? m_nDivisions : segment.ndiv;
+      Discretise(segment, m_elements, lambda, ndiv);
     }
   }  
-
-  // Add the wires.
-  for (const auto& wire : m_wires) {
-    Element element;
-    element.wire = true;
-    element.cphi = 1.;
-    element.sphi = 0.;
-    element.bc = std::make_pair(Voltage, wire.v);
-    element.lambda = 1.;
-    element.x = wire.x;
-    element.y = wire.y;
-    element.a = wire.r;
-    m_elements.push_back(std::move(element));
-  }
-
-  const unsigned int nElements = m_elements.size();
-  if (m_debug) std::cout << "    " << nElements << " elements.\n";
-  const unsigned int nEntries = nElements + 1;
-  std::vector<std::vector<double> > influenceMatrix(
-      nEntries, std::vector<double>(nEntries, 0.));
-  std::vector<std::vector<double> > inverseMatrix(
-      nEntries, std::vector<double>(nEntries, 0.));
+  std::vector<std::vector<double> > influenceMatrix;
+  std::vector<std::vector<double> > inverseMatrix;
 
   bool converged = false;
   unsigned int nIter = 0;
@@ -640,6 +666,12 @@ bool ComponentNeBem2d::Initialise() {
     ++nIter;
     if (m_autoSize) {
       std::cout << m_className << "::Initialise: Iteration " << nIter << "\n";
+    }
+    const unsigned int nElements = m_elements.size();
+    const unsigned int nEntries = nElements + m_wires.size() + 1;
+    if (m_debug) {
+      std::cout << "    " << nElements << " elements.\n"
+                << "    Matrix has " << nEntries << " rows/columns.\n";
     }
     // Compute the influence matrix.
     influenceMatrix.assign(nEntries, std::vector<double>(nEntries, 0.));
@@ -655,8 +687,6 @@ bool ComponentNeBem2d::Initialise() {
       std::cerr << m_className << "::Initialise: Matrix inversion failed.\n";
       return false;
     }
-    // Set flag that the matrix has been inverted.
-    m_matrixInversionFlag = true;
     if (m_debug) std::cout << "    Matrix inversion ok.\n";
 
     // Compute the right hand side vector (boundary conditions).
@@ -665,6 +695,10 @@ bool ComponentNeBem2d::Initialise() {
       if (m_elements[i].bc.first != Voltage) continue;
       boundaryConditions[i] = m_elements[i].bc.second;
     }
+    const unsigned int nWires = m_wires.size();
+    for (unsigned int i = 0; i < nWires; ++i) {
+      boundaryConditions[nElements + i] = m_wires[i].v;
+    }
 
     // Solve for the charge distribution.
     if (!Solve(inverseMatrix, boundaryConditions)) {
@@ -672,9 +706,17 @@ bool ComponentNeBem2d::Initialise() {
       return false;
     }
     if (m_debug) std::cout << "    Solution ok.\n";
-    converged = CheckConvergence();
+    const double tol = 1.e-6 * fabs(vmax - vmin);
+    std::vector<bool> ok(nElements, true);
+    converged = CheckConvergence(tol, ok);
     if (!m_autoSize) break;
     if (nIter >= m_nMaxIterations) break;
+    for (unsigned int j = 0; j < nElements; ++j) {
+      if (!ok[j]) {
+        SplitElement(m_elements[j], m_elements);
+        if (m_debug) std::cout << "    Splitting element " << j << ".\n";
+      }
+    }
   }
   // Sort the regions by depth (innermost first).
   std::sort(m_regions.begin(), m_regions.end(),  
@@ -787,21 +829,25 @@ void ComponentNeBem2d::EliminateOverlaps(std::vector<Segment>& segments) {
 
 bool ComponentNeBem2d::Discretise(const Segment& seg,
                                   std::vector<Element>& elements,
-                                  const double lambda) {
+                                  const double lambda, 
+                                  const unsigned int ndiv) {
 
+  if (ndiv < 1) {
+    std::cerr << m_className << "::Discretise: Number of elements < 1.\n";
+    return false;
+  }
   const double phi = atan2(seg.x1[1] - seg.x0[1], seg.x1[0] - seg.x0[0]);
   const double cphi = cos(phi);
   const double sphi = sin(phi);
-  const double dx = (seg.x1[0] - seg.x0[0]) / m_nDivisions;
-  const double dy = (seg.x1[1] - seg.x0[1]) / m_nDivisions;
+  const double dx = (seg.x1[0] - seg.x0[0]) / ndiv;
+  const double dy = (seg.x1[1] - seg.x0[1]) / ndiv;
   const double a = 0.5 * sqrt(dx * dx + dy * dy);
   double x = seg.x0[0] - 0.5 * dx;
   double y = seg.x0[1] - 0.5 * dy;
-  for (unsigned int i = 0; i < m_nDivisions; ++i) {
+  for (unsigned int i = 0; i < ndiv; ++i) {
     x += dx;
     y += dy;
     Element element;
-    element.wire = false;
     element.cphi = cphi;
     element.sphi = sphi;
     element.x = x;
@@ -816,83 +862,78 @@ bool ComponentNeBem2d::Discretise(const Segment& seg,
  
 bool ComponentNeBem2d::ComputeInfluenceMatrix(
     std::vector<std::vector<double> >& infmat) const {
-  if (m_matrixInversionFlag) return true;
 
+  const unsigned int nL = m_elements.size();
+  const unsigned int nE = nL + m_wires.size();
   // Loop over the target elements (F).
-  const unsigned int nElements = m_elements.size();
-  for (unsigned int iF = 0; iF < nElements; ++iF) {
-    const auto& tgt = m_elements[iF];
-    const double cphiF = tgt.cphi;
-    const double sphiF = tgt.sphi;
+  for (unsigned int iF = 0; iF < nE; ++iF) {
+    const auto bcF = iF < nL ? m_elements[iF].bc.first : Voltage;
+    const double cphiF = iF < nL ? m_elements[iF].cphi : 1.;
+    const double sphiF = iF < nL ? m_elements[iF].sphi : 0.;
     // Collocation point.
-    const double xF = tgt.x;
-    const double yF = tgt.y;
-
+    const double xF = iF < nL ? m_elements[iF].x : m_wires[iF - nL].x;
+    const double yF = iF < nL ? m_elements[iF].y : m_wires[iF - nL].y;
+    
     // Loop over the source elements (S).
-    for (unsigned int jS = 0; jS < nElements; ++jS) {
-      const auto& src = m_elements[jS];
-      const double cphiS = src.cphi;
-      const double sphiS = src.sphi;
-      // Transform to local coordinate system of the source element.
-      double xL = 0., yL = 0.;
-      ToLocal(xF - src.x, yF - src.y, cphiS, sphiS, xL, yL);
+    for (unsigned int jS = 0; jS < nE; ++jS) {
       // Calculate the influence coefficient.
       double infCoeff = 0.;
-      // Depending on the element type at the field point
-      // different boundary conditions need to be applied.
-      switch (tgt.bc.first) {
-        case Voltage:
-          // Conductor at fixed potential.
-          if (src.wire) {
-            infCoeff = WirePotential(src.a, xL, yL);
-          } else {
-            infCoeff = LinePotential(src.a, xL, yL);
-          }
-          break;
-        case Dielectric:
+      if (jS < nL) { 
+        // Straight line element.
+        const auto& src = m_elements[jS];
+        double xL = 0., yL = 0.;
+        ToLocal(xF - src.x, yF - src.y, src.cphi, src.sphi, xL, yL);
+        if (bcF == Voltage) {
+          infCoeff = LinePotential(src.a, xL, yL);
+        } else if (bcF == Dielectric) {
           // Dielectric-dielectric interface.
           // Normal component of the displacement vector is continuous.
           if (iF == jS) {
             // Self-influence.
             infCoeff = 1. / (2. * src.lambda * VacuumPermittivity);
           } else {
-            // Compute flux at the field point in local coordinates.
+            // Compute flux at the collocation point.
             double fx = 0., fy = 0.;
-            if (src.wire) {
-              WireFlux(src.a, xL, yL, fx, fy);
-            } else {
-              LineFlux(src.a, xL, yL, fx, fy);
-            } 
+            LineFlux(src.a, xL, yL, fx, fy);
             // Rotate to the global frame.
-            ToGlobal(fx, fy, cphiS, sphiS, fx, fy);
-            // Rotate to the local frame of the field element.
+            ToGlobal(fx, fy, src.cphi, src.sphi, fx, fy);
+            // Rotate to the local frame of the target element.
             ToLocal(fx, fy, cphiF, sphiF, fx, fy);
             infCoeff = fy;
           }
-          break;
-        default:
-          std::cerr << m_className << "::ComputeInfluenceMatrix:\n"
-                    << "    Unknown boundary type.\n";
-          return false;
-          break;
+        }
+      } else {
+        // Wire.
+        const auto& src = m_wires[jS - nL];
+        if (bcF == Voltage) {
+          infCoeff = WirePotential(src.r, xF - src.x, yF - src.y);
+        } else if (bcF == Dielectric) {
+          double fx = 0., fy = 0.;
+          WireFlux(src.r, xF - src.x, yF - src.y, fx, fy);
+          ToLocal(fx, fy, cphiF, sphiF, fx, fy);
+          infCoeff = fy;
+        }
       }
       infmat[iF][jS] = infCoeff;
     }
   }
 
   // Add charge neutrality condition.
-  for (unsigned int i = 0; i < nElements; ++i) {
-    infmat[nElements][i] = m_elements[i].a;
-    infmat[i][nElements] = 0.;
+  for (unsigned int i = 0; i < nE; ++i) {
+    if (i < nL) {
+      infmat[nE][i] = m_elements[i].a;
+    } else {
+      infmat[nE][i] = m_wires[i - nL].r;
+    }
+    infmat[i][nE] = 0.;
   }
-  infmat[nElements][nElements] = 0.;
+  infmat[nE][nE] = 0.;
 
   return true;
 }
 
-void ComponentNeBem2d::SplitElement(Element& oldElement) {
-  // Make sure the element is a line
-  if (oldElement.wire) return;
+void ComponentNeBem2d::SplitElement(Element& oldElement, 
+  std::vector<Element>& elements) {
   oldElement.a *= 0.5;
 
   Element newElement = oldElement;
@@ -903,16 +944,14 @@ void ComponentNeBem2d::SplitElement(Element& oldElement) {
   newElement.x -= dx;
   newElement.y -= dx;
 
-  m_elements.push_back(std::move(newElement));
+  elements.push_back(std::move(newElement));
 }
 
 bool ComponentNeBem2d::InvertMatrix(
     std::vector<std::vector<double> >& influenceMatrix,
     std::vector<std::vector<double> >& inverseMatrix) const {
-  // Check if matrix inversion has already been done
-  if (m_matrixInversionFlag) return true;
 
-  const unsigned int nEntries = m_elements.size() + 1;
+  const unsigned int nEntries = influenceMatrix.size();
 
   // Temporary arrays for LU decomposition/substitution
   std::vector<double> col(nEntries, 0.);
@@ -947,8 +986,7 @@ bool ComponentNeBem2d::LUDecomposition(std::vector<std::vector<double> >& mat,
   // W. H. Press,
   // Numerical recipes in C++: the Art of Scientific Computing (version 2.11)
 
-  const unsigned int n = m_elements.size();
-
+  const unsigned int n = m_elements.size() + m_wires.size();
   // v stores the implicit scaling of each row
   std::vector<double> v(n, 0.);
 
@@ -1015,8 +1053,8 @@ bool ComponentNeBem2d::LUDecomposition(std::vector<std::vector<double> >& mat,
 void ComponentNeBem2d::LUSubstitution(
     const std::vector<std::vector<double> >& mat, const std::vector<int>& index,
     std::vector<double>& col) const {
-  const unsigned int n = m_elements.size();
 
+  const unsigned int n = m_elements.size() + m_wires.size();
   unsigned int ii = 0;
   // Forward substitution
   for (unsigned i = 0; i < n; ++i) {
@@ -1045,8 +1083,8 @@ void ComponentNeBem2d::LUSubstitution(
 
 bool ComponentNeBem2d::Solve(const std::vector<std::vector<double> >& invmat,
                              const std::vector<double>& bc) {
-  const unsigned int nElements = m_elements.size();
   const unsigned int nEntries = bc.size();
+  const unsigned int nElements = m_elements.size();
   for (unsigned int i = 0; i < nElements; ++i) {
     double solution = 0.;
     for (unsigned int j = 0; j < nEntries; ++j) {
@@ -1054,17 +1092,33 @@ bool ComponentNeBem2d::Solve(const std::vector<std::vector<double> >& invmat,
     }
     m_elements[i].q = solution;
   }
+  const unsigned int nWires = m_wires.size();
+  for (unsigned int i = 0; i < nWires; ++i) {
+    double solution = 0.;
+    for (unsigned int j = 0; j < nEntries; ++j) {
+      solution += invmat[nElements + i][j] * bc[j];
+    }
+    m_wires[i].q = solution;
+  }
 
   if (m_debug) {
     std::cout << m_className << "::Solve:\n  Element  Solution\n";
     for (unsigned int i = 0; i < nElements; ++i) {
       std::printf(" %8u   %15.5f\n", i, m_elements[i].q);
     }
+    if (!m_wires.empty()) {
+      std::cout << "   Wire    Solution\n";
+      for (unsigned int i = 0; i < nWires; ++i) {
+        std::printf("  %8u   %15.5f\n", i, m_wires[i].q);
+      }
+    }
   }
   return true;
 }
 
-bool ComponentNeBem2d::CheckConvergence() const {
+bool ComponentNeBem2d::CheckConvergence(const double tol,
+                                        std::vector<bool>& ok) {
+
   // Potential and normal component of the electric field
   // evaluated at the collocation points.
   std::vector<double> v(m_nCollocationPoints, 0.);
@@ -1079,54 +1133,46 @@ bool ComponentNeBem2d::CheckConvergence() const {
   for (const auto& tgt : m_elements) {
     v.assign(m_nCollocationPoints, 0.);
     n.assign(m_nCollocationPoints, 0.);
-    double x0 = tgt.x;
-    double y0 = tgt.y;
     double dx = 0., dy = 0.;
-    if (!tgt.wire) {
-      // Straight line segment.
-      ToGlobal(2 * tgt.a, 0., tgt.cphi, tgt.sphi, dx, dy);
-      x0 -= 0.5 * dx;
-      y0 -= 0.5 * dy;
-    }
-    // Sum up the contributions from all boundary elements.
-    for (const auto& src : m_elements) {
-      // Loop over the collocation points.
-      for (unsigned int k = 0; k < m_nCollocationPoints; ++k) {
-        double xG = x0;
-        double yG = y0;
-        if (tgt.wire) {
-          const double phi = TwoPi * RndmUniform();
-          xG += tgt.a * cos(phi);
-          yG += tgt.a * sin(phi);
-        } else {
-          if (m_randomCollocation) {
-            const double r = RndmUniformPos();
-            xG += r * dx;
-            yG += r * dy;
-          } else {
-            const double s = (k + 1.) / (m_nCollocationPoints + 1.);
-            xG += s * dx;
-            yG += s * dy;
-          }
-        }
-        // Transform to local coordinate system.
+    ToGlobal(2 * tgt.a, 0., tgt.cphi, tgt.sphi, dx, dy);
+    const double x0 = tgt.x - 0.5 * dx;
+    const double y0 = tgt.y - 0.5 * dy;
+    // Loop over the collocation points.
+    for (unsigned int k = 0; k < m_nCollocationPoints; ++k) {
+      double xG = x0;
+      double yG = y0;
+      if (m_randomCollocation) {
+        const double r = RndmUniformPos();
+        xG += r * dx;
+        yG += r * dy;
+      } else {
+        const double s = (k + 1.) / (m_nCollocationPoints + 1.);
+        xG += s * dx;
+        yG += s * dy;
+      }
+      // Sum up the contributions from all boundary elements.
+      for (const auto& src : m_elements) {
         double xL = 0., yL = 0.;
+        // Transform to local coordinate system.
         ToLocal(xG - src.x, yG - src.y, src.cphi, src.sphi, xL, yL);
         // Compute the potential.
-        if (src.wire) {
-          v[k] += WirePotential(src.a, xL, yL) * src.q;
-        } else {
-          v[k] += LinePotential(src.a, xL, yL) * src.q;
-        }
+        v[k] += LinePotential(src.a, xL, yL) * src.q;
         // Compute the field.
         double fx = 0., fy = 0.;
-        if (src.wire) {
-          WireFlux(src.a, xL, yL, fx, fy);
-        } else {
-          LineFlux(src.a, xL, yL, fx, fy);
-        } 
+        LineFlux(src.a, xL, yL, fx, fy);
         // Rotate to the global frame.
         ToGlobal(fx, fy, src.cphi, src.sphi, fx, fy);
+        // Rotate to the local frame of the test element.
+        ToLocal(fx, fy, tgt.cphi, tgt.sphi, fx, fy);
+        n[k] += fy * src.q;
+      }
+
+      for (const auto& src : m_wires) {
+        // Compute the potential.
+        v[k] += WirePotential(src.r, xG - src.x, yG - src.y) * src.q;
+        // Compute the field.
+        double fx = 0., fy = 0.;
+        WireFlux(src.r, xG - src.x, yG - src.y, fx, fy);
         // Rotate to the local frame of the test element.
         ToLocal(fx, fy, tgt.cphi, tgt.sphi, fx, fy);
         n[k] += fy * src.q;
@@ -1135,19 +1181,50 @@ bool ComponentNeBem2d::CheckConvergence() const {
     const double v0 = scale * std::accumulate(v.begin(), v.end(), 0.);
     const double n0 = scale * std::accumulate(n.begin(), n.end(), 0.);
     double n1 = 0.;
-    if (tgt.bc.first == Dielectric) {
-      // Dielectric-dielectric interface
-      n1 = n0 + 0.5 * InvEpsilon0 * tgt.q / tgt.lambda;
-    }
-    if (m_debug) {
-      if (tgt.bc.first == Voltage) {
-        std::printf(" %8u  cond.  %15.5f  %15.5f\n", i, v0, tgt.bc.second);
-      } else if (tgt.bc.first == Dielectric) {
-        std::printf(" %8u  diel.  %15.5f  %15.5f\n", i, n0, n1);
+    if (tgt.bc.first == Voltage) {
+      const double dv = v0 - tgt.bc.second;
+      if (fabs(dv) > tol) ok[i] = false;
+      if (m_debug) {
+        std::printf(" %8u  cond.  %15.5f  %15.5f %15.5f\n", 
+                    i, v0, tgt.bc.second, dv);
       }
+    } else if (tgt.bc.first == Dielectric) {
+      // Dielectric-dielectric interface
+      // TODO.
+      n1 = n0 + 0.5 * InvEpsilon0 * tgt.q / tgt.lambda;
+      if (m_debug) std::printf(" %8u  diel.  %15.5f  %15.5f\n", i, n0, n1);
     }
     ++i;
   }
+
+  for (const auto& tgt : m_wires) {
+    v.assign(m_nCollocationPoints, 0.);
+    double x0 = tgt.x;
+    double y0 = tgt.y;
+    // Loop over the collocation points.
+    for (unsigned int k = 0; k < m_nCollocationPoints; ++k) {
+      const double phi = TwoPi * RndmUniform();
+      const double xG = x0 + tgt.r * cos(phi);
+      const double yG = y0 + tgt.r * sin(phi);
+      // Sum up the contributions from all boundary elements.
+      for (const auto& src : m_elements) {
+        // Transform to local coordinate system.
+        double xL = 0., yL = 0.;
+        ToLocal(xG - src.x, yG - src.y, src.cphi, src.sphi, xL, yL);
+        // Compute the potential.
+        v[k] += LinePotential(src.a, xL, yL) * src.q;
+      }
+      for (const auto& src : m_wires) {
+        v[k] += WirePotential(src.r, xG - src.x, yG - src.y) * src.q;
+      }
+    }
+    const double v0 = scale * std::accumulate(v.begin(), v.end(), 0.);
+    if (m_debug) {
+      std::printf(" %8u  wire   %15.5f  %15.5f\n", i, v0, tgt.v);
+    }
+    ++i;
+  }
+
   return true;
 }
 
