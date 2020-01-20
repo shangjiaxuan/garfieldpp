@@ -217,10 +217,15 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
                                      int& status) {
   ex = ey = ez = v = 0.;
   status = 0;
-  // Check if the requested point is inside a medium
+  // Check if the requested point is inside a medium.
   m = GetMedium(x, y, z);
   if (!m) {
     status = -6;
+    return;
+  }
+  // Inside a conductor?
+  if (m->IsConductor()) {
+    status = -5;
     return;
   }
 
@@ -228,6 +233,18 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
     if (!Initialise()) {
       std::cerr << m_className << "::ElectricField: Initialisation failed.\n";
       status = -11;
+      return;
+    }
+  }
+  
+  // See whether we are inside a wire.
+  const unsigned int nWires = m_wires.size();
+  for (unsigned int i = 0; i < nWires; ++i) {
+    const double dx = x - m_wires[i].x;
+    const double dy = y - m_wires[i].y;
+    if (dx * dx + dy * dy < m_wires[i].r * m_wires[i].r) {
+      v = m_wires[i].v;
+      status = i + 1;
       return;
     }
   }
@@ -315,7 +332,7 @@ Medium* ComponentNeBem2d::GetMedium(const double x, const double y,
     Garfield::Polygon::Inside(region.xv, region.yv, x, y, inside, edge);
     if (inside || edge) return region.medium;
   }
-  return nullptr;
+  return m_medium;
 }
 
 bool ComponentNeBem2d::AddSegment(const double x0, const double y0,
@@ -638,11 +655,15 @@ bool ComponentNeBem2d::Initialise() {
         const int reg1 = segment.region1;
         const int reg2 = segment.region2;
         double eps1 = 1.;
-        if (reg1 >= 0 && m_regions[reg1].medium) {
+        if (reg1 < 0) {
+          if (m_medium) eps1 = m_medium->GetDielectricConstant();
+        } else if (m_regions[reg1].medium) {
           eps1 = m_regions[reg1].medium->GetDielectricConstant();
         }
         double eps2 = 1.;
-        if (reg2 >= 0 && m_regions[reg2].medium) {
+        if (reg2 < 0) {
+          if (m_medium) eps2 = m_medium->GetDielectricConstant();
+        } else if (m_regions[reg2].medium) {
           eps2 = m_regions[reg2].medium->GetDielectricConstant();
         }
         if (fabs(eps1 - eps2) < 1.e-6 * (1. + fabs(eps1) + fabs(eps2))) {

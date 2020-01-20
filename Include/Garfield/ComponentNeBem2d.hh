@@ -23,6 +23,9 @@ class ComponentNeBem2d : public ComponentBase {
 
   Medium* GetMedium(const double x, const double y, const double z) override;
 
+  /// Set the "background" medium.
+  void SetMedium(Medium* medium) { m_medium = medium; }
+
   /** Add a conducting straight-line segment.
     * \param x0,y0,x1,y1 coordinates of start and end point.
     * \param v applied potential.
@@ -84,6 +87,9 @@ class ComponentNeBem2d : public ComponentBase {
   bool m_randomCollocation = false;
   unsigned int m_nMaxIterations = 3;
 
+  /// Background medium.
+  Medium* m_medium = nullptr;
+
   // Boundary condition types
   enum BC {
     Voltage = 1,
@@ -99,6 +105,7 @@ class ComponentNeBem2d : public ComponentBase {
     unsigned int depth;        //< Level in the hierarchy.
     int ndiv;                  //< Number of elements per segment.
   };
+  /// Regions.
   std::vector<Region> m_regions;
 
   struct Segment {
@@ -109,6 +116,7 @@ class ComponentNeBem2d : public ComponentBase {
     std::pair<BC, double> bc;  //< Applied boundary condition.
     int ndiv;                  //< Number of elements.
   };
+  /// User-specified conducting straight-line segments.
   std::vector<Segment> m_segments;
 
   struct Wire {
@@ -117,6 +125,7 @@ class ComponentNeBem2d : public ComponentBase {
     double v;    //< Potential.
     double q;    //< Charge.
   };
+  /// Wires.
   std::vector<Wire> m_wires;
 
   struct Element {
@@ -128,6 +137,7 @@ class ComponentNeBem2d : public ComponentBase {
     std::pair<BC, double> bc; //< Boundary condition.
     double lambda;            //< Ratio of dielectric permittivities.
   };
+  /// Straight-line boundary elements.
   std::vector<Element> m_elements;
 
   /// Split/merge overlapping segments.
