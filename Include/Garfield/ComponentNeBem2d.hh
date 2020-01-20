@@ -23,6 +23,9 @@ class ComponentNeBem2d : public ComponentBase {
 
   Medium* GetMedium(const double x, const double y, const double z) override;
 
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
+                      double& xmax, double& ymax, double& zmax) override;
+
   /// Set the "background" medium.
   void SetMedium(Medium* medium) { m_medium = medium; }
 
@@ -48,6 +51,8 @@ class ComponentNeBem2d : public ComponentBase {
                  const std::vector<double>& yp, Medium* medium,
                  const unsigned int bctype = 4, const double v = 0.,
                  const int ndiv = -1);
+  /// Set the range along z.
+  void SetRangeZ(const double zmin, const double zmax);
  
   /// Discretise the geometry and compute the solution.
   bool Initialise();
@@ -90,6 +95,9 @@ class ComponentNeBem2d : public ComponentBase {
   /// Background medium.
   Medium* m_medium = nullptr;
 
+  bool m_useRangeZ = false;
+  double m_zmin = -1.;
+  double m_zmax =  1.;
   // Boundary condition types
   enum BC {
     Voltage = 1,

@@ -217,6 +217,12 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
                                      int& status) {
   ex = ey = ez = v = 0.;
   status = 0;
+  // Check if the requested point is inside the z-range.
+  if (m_useRangeZ && (z < m_zmin || z > m_zmax)) {
+    status = -6;
+    return;
+  }
+
   // Check if the requested point is inside a medium.
   m = GetMedium(x, y, z);
   if (!m) {
@@ -333,6 +339,71 @@ Medium* ComponentNeBem2d::GetMedium(const double x, const double y,
     if (inside || edge) return region.medium;
   }
   return m_medium;
+}
+
+bool ComponentNeBem2d::GetBoundingBox(
+    double& xmin, double& ymin, double& zmin,
+    double& xmax, double& ymax, double& zmax) {
+
+  if (m_geometry) {
+    return m_geometry->GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax);
+  }
+  zmin = m_zmin;
+  zmax = m_zmax;
+  bool gotValue = false;
+  for (const auto& region : m_regions) {
+    const auto& xv = region.xv;
+    const auto& yv = region.yv;
+    if (!gotValue) {
+      xmin = *std::min_element(std::begin(xv), std::end(xv));
+      ymin = *std::min_element(std::begin(yv), std::end(yv));
+      xmax = *std::max_element(std::begin(xv), std::end(xv));
+      ymax = *std::max_element(std::begin(yv), std::end(yv));
+      gotValue = true;
+    } else {
+      xmin = std::min(*std::min_element(std::begin(xv), std::end(xv)), xmin);
+      ymin = std::min(*std::min_element(std::begin(yv), std::end(yv)), ymin);
+      xmax = std::max(*std::max_element(std::begin(xv), std::end(xv)), xmax);
+      ymax = std::max(*std::max_element(std::begin(yv), std::end(yv)), ymax);
+    }
+  }
+  for (const auto& seg : m_segments) {
+    if (!gotValue) {
+      xmin = std::min(seg.x0[0], seg.x1[0]);
+      xmax = std::max(seg.x0[0], seg.x1[0]);
+      ymin = std::min(seg.x0[1], seg.x1[1]);
+      ymax = std::max(seg.x0[1], seg.x1[1]);
+      gotValue = true;
+    } else {
+      xmin = std::min({xmin, seg.x0[0], seg.x1[0]});
+      xmax = std::max({xmax, seg.x0[0], seg.x1[0]});
+      ymin = std::min({ymin, seg.x0[1], seg.x1[1]});
+      ymax = std::max({ymax, seg.x0[1], seg.x1[1]});
+    }
+  }
+  for (const auto& wire : m_wires) {
+    if (!gotValue) {
+      xmin = xmax = wire.x;
+      ymin = ymax = wire.y;
+    } else {
+      xmin = std::min(xmin, wire.x);
+      xmax = std::max(xmax, wire.x);
+      ymin = std::min(ymin, wire.y);
+      ymax = std::max(ymax, wire.y);
+    }
+  }
+  return gotValue; 
+}
+
+void ComponentNeBem2d::SetRangeZ(const double zmin, const double zmax) {
+
+   if (fabs(zmax - zmin) <= 0.) {
+     std::cerr << m_className << "::SetRangeZ: Zero range is not permitted.\n";
+     return;
+   }
+   m_zmin = std::min(zmin, zmax);
+   m_zmax = std::max(zmin, zmax);
+   m_useRangeZ = true;
 }
 
 bool ComponentNeBem2d::AddSegment(const double x0, const double y0,
