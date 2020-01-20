@@ -9,11 +9,14 @@
 
 #include "Garfield/MediumMagboltz.hh"
 #include "Garfield/MediumPlastic.hh"
+#include "Garfield/ViewField.hh"
 #include "Garfield/ComponentNeBem2d.hh"
 
 using namespace Garfield;
 
 int main(int argc, char * argv[]) {
+
+  TApplication app("app", &argc, argv);
 
   MediumMagboltz gas;
   gas.SetComposition("ar", 100.);
@@ -28,15 +31,17 @@ int main(int argc, char * argv[]) {
   constexpr double v = 100.;
   // Left conducting plate.
   const double xMin = -1.5 * delta;
-  cmp.AddSegment(xMin, -11., xMin, -1., v);
-  cmp.AddSegment(xMin,  -1., xMin,  1., v);
-  cmp.AddSegment(xMin,   1., xMin, 11., v);
+  const double yMin = -10 * delta;
+  const double yMax =  10 * delta;
+  cmp.AddSegment(xMin,   yMin, xMin, -delta, v);
+  cmp.AddSegment(xMin, -delta, xMin,  delta, v);
+  cmp.AddSegment(xMin,  delta, xMin,   yMax, v);
 
   // Right conducting plate.
   const double xMax = 1.5 * delta;
-  cmp.AddSegment(xMax, -11., xMax, -1., -v);
-  cmp.AddSegment(xMax,  -1., xMax,  1., -v);
-  cmp.AddSegment(xMax,   1., xMax, 11., -v);
+  cmp.AddSegment(xMax,   yMin, xMax, -delta, -v);
+  cmp.AddSegment(xMax, -delta, xMax,  delta, -v);
+  cmp.AddSegment(xMax,  delta, xMax,   yMax, -v);
 
   // Dielectric.
   const double xD = 0.5 * delta;
@@ -68,4 +73,12 @@ int main(int argc, char * argv[]) {
   }
   outfile.close();
 
+  TCanvas canvas("c", "", 600, 600);
+  ViewField fieldView;
+  fieldView.SetCanvas(&canvas);
+  fieldView.SetComponent(&cmp);
+  fieldView.SetElectricFieldRange(0., 1.1 * f1);
+  fieldView.PlotProfile(xMin, 0., 0., xMax, 0., 0., "ex");
+
+  app.Run(true);
 }

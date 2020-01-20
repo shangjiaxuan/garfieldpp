@@ -1,6 +1,4 @@
 #include <iostream>
-#include <iomanip>
-#include <fstream>
 #include <cmath>
 
 #include <TCanvas.h>
@@ -10,7 +8,6 @@
 #include "Garfield/MediumMagboltz.hh"
 #include "Garfield/ComponentNeBem2d.hh"
 #include "Garfield/ViewField.hh"
-#include "Garfield/FundamentalConstants.hh"
 
 using namespace Garfield;
 
@@ -22,8 +19,8 @@ int main(int argc, char * argv[]) {
   gas.SetComposition("ar", 100.);
   
   ComponentNeBem2d cmp;
-  const double r = 2.;
-  const unsigned int n = 6;
+  constexpr double r = 2.;
+  constexpr unsigned int n = 6;
   std::vector<double> xv(n, 0.);
   std::vector<double> yv(n, 0.);
   for (unsigned int i = 0; i < n; ++i) {

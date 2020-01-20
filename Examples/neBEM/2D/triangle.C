@@ -8,11 +8,14 @@
 #include <TApplication.h>
 
 #include "Garfield/MediumMagboltz.hh"
+#include "Garfield/ViewField.hh"
 #include "Garfield/ComponentNeBem2d.hh"
 
 using namespace Garfield;
 
 int main(int argc, char * argv[]) {
+
+  TApplication app("app", &argc, argv);
 
   MediumMagboltz gas;
   gas.SetComposition("ar", 100.);
@@ -39,4 +42,12 @@ int main(int argc, char * argv[]) {
   }
   outfile.close();
 
+  TCanvas canvas("c", "", 600, 600);
+  ViewField fieldView;
+  fieldView.SetCanvas(&canvas);
+  fieldView.SetComponent(&cmp);
+  fieldView.SetArea(-1.1, -0.6, 1.1, 1.6);
+  fieldView.PlotContour();
+
+  app.Run(true);
 }
