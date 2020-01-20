@@ -9,6 +9,7 @@
 #include <TPolyLine.h>
 
 #include "Garfield/ComponentAnalyticField.hh"
+#include "Garfield/ComponentNeBem2d.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/ViewCell.hh"
 
@@ -23,6 +24,14 @@ void ViewCell::SetComponent(ComponentAnalyticField* comp) {
   }
 
   m_component = comp;
+}
+
+void ViewCell::SetComponent(ComponentNeBem2d* comp) {
+  if (!comp) {
+    std::cerr << m_className << "::SetComponent: Null pointer.\n";
+    return;
+  }
+  m_nebem = comp;
 }
 
 void ViewCell::SetArea(const double xmin, const double ymin, const double zmin,
@@ -55,26 +64,42 @@ void ViewCell::Plot3d() {
 }
 
 bool ViewCell::Plot(const bool use3d) {
-  if (!m_component) {
+  if (!m_component && !m_nebem) {
     std::cerr << m_className << "::Plot: Component is not defined.\n";
     return false;
   }
 
   double pmin = 0., pmax = 0.;
-  if (!m_component->GetVoltageRange(pmin, pmax)) {
-    std::cerr << m_className << "::Plot: Component ist not ready.\n";
-    return false;
+  if (m_component) {
+    if (!m_component->GetVoltageRange(pmin, pmax)) {
+      std::cerr << m_className << "::Plot: Component is not ready.\n";
+      return false;
+    }
+  } else {
+    if (!m_nebem->GetVoltageRange(pmin, pmax)) {
+      std::cerr << m_className << "::Plot: Component is not ready.\n";
+      return false;
+    }
   }
 
   // Get the bounding box
   double x0 = m_xMin, y0 = m_yMin, z0 = m_zMin;
   double x1 = m_xMax, y1 = m_yMax, z1 = m_zMax;
   if (!m_hasUserArea) {
-    if (!m_component->GetBoundingBox(x0, y0, z0, x1, y1, z1)) {
-      std::cerr << m_className << "::Plot:\n"
-                << "    Bounding box cannot be determined.\n"
-                << "    Call SetArea first.\n";
-      return false;
+    if (m_component) {
+      if (!m_component->GetBoundingBox(x0, y0, z0, x1, y1, z1)) {
+        std::cerr << m_className << "::Plot:\n"
+                  << "    Bounding box cannot be determined.\n"
+                  << "    Call SetArea first.\n";
+        return false;
+      }
+    } else {
+      if (!m_nebem->GetBoundingBox(x0, y0, z0, x1, y1, z1)) {
+        std::cerr << m_className << "::Plot:\n"
+                  << "    Bounding box cannot be determined.\n"
+                   << "    Call SetArea first.\n";
+        return false;
+      }
     }
   }
   // Get the max. half-length in z.
@@ -113,6 +138,8 @@ bool ViewCell::Plot(const bool use3d) {
                 y1 + (y1 - y0) * (tm / (1. - tm - lm)));
   }
 
+  if (m_nebem) return PlotNeBem(use3d);
+
   // Get the cell type.
   const std::string cellType = m_component->GetCellType();
 
@@ -130,26 +157,7 @@ bool ViewCell::Plot(const bool use3d) {
   const bool perPhi = m_component->GetPeriodicityPhi(sphi);
   const int nPhi = perPhi ? int(360. / sphi) : 0;
   sphi *= DegreeToRad; 
-  if (use3d) {
-    if (!m_geo) {
-      gGeoManager = nullptr;
-      m_geo.reset(new TGeoManager("ViewCellGeoManager", m_label.c_str()));
-      TGeoMaterial* matVacuum = new TGeoMaterial("Vacuum", 0., 0., 0.);
-      TGeoMaterial* matMetal = new TGeoMaterial("Metal", 63.546, 29., 8.92);
-      TGeoMedium* medVacuum = new TGeoMedium("Vacuum", 0, matVacuum);
-      TGeoMedium* medMetal = new TGeoMedium("Metal", 1, matMetal);
-      m_geo->AddMaterial(matVacuum);
-      m_geo->AddMaterial(medMetal->GetMaterial());
-      TGeoVolume* world =
-          m_geo->MakeBox("World", medVacuum, 1.05 * dx, 1.05 * dy, 1.05 * dz);
-      m_geo->SetTopVolume(world);
-    } else {
-      TGeoVolume* top = m_geo->GetTopVolume();
-      TGeoBBox* box = dynamic_cast<TGeoBBox*>(top);
-      double halfLenghts[3] = {1.05 * dx, 1.05 * dy, 1.05 * dz};
-      if (box) box->SetDimensions(halfLenghts);
-    }
-  }
+  if (use3d) SetupGeo(dx, dy, dz);
   const bool polar = m_component->IsPolar();
 
   // Get the number of wires.
@@ -324,6 +332,79 @@ bool ViewCell::Plot(const bool use3d) {
   }
 
   return true;
+}
+
+bool ViewCell::PlotNeBem(const bool use3d) {
+
+  if (use3d) {
+    std::cerr << m_className << "::PlotNeBem: 3D plot not implemented yet.\n";
+    return false;
+  }
+
+  // Draw the regions.
+  const unsigned int nRegions = m_nebem->GetNumberOfRegions();
+  for (unsigned int i = nRegions; i-- > 0;) {
+    std::vector<double> xv;
+    std::vector<double> yv;
+    Medium* medium = nullptr;
+    unsigned int bctype = 1;
+    double v = 0.;
+    if (!m_nebem->GetRegion(i, xv, yv, medium, bctype, v)) continue;
+    const unsigned int n = xv.size();
+    if (n < 3) continue;
+    TLine line;
+    line.SetDrawOption("same");
+    if (bctype == 4) {
+      line.SetLineStyle(2);
+    } else {
+      line.SetLineStyle(1);
+    }
+    for (unsigned int j = 0; j < n; ++j) {
+      const unsigned int k = j < n - 1 ? j + 1 : 0;
+      line.DrawLine(xv[j], yv[j], xv[k], yv[k]);
+    }
+  }
+
+  // Draw the wires.
+  const unsigned int nWires = m_nebem->GetNumberOfWires();
+  for (unsigned int i = 0; i < nWires; ++i) {
+    double x = 0., y = 0., d = 0., v = 0., q = 0.;
+    if (!m_nebem->GetWire(i, x, y, d, v, q)) continue;
+    PlotWire(x, y, d, 0);
+  }
+
+  // Draw the straight-line segments.
+  const unsigned int nSegments = m_nebem->GetNumberOfSegments();
+  for (unsigned int i = 0; i < nSegments; ++i) {
+    double x0 = 0., y0 = 0., x1 = 0., y1 = 0., v = 0.;
+    if (!m_nebem->GetSegment(i, x0, y0, x1, y1, v)) continue;
+    PlotPlane(x0, y0, x1, y1);
+  }
+
+  m_canvas->Update();
+  return true;
+}
+
+void ViewCell::SetupGeo(const double dx, const double dy, const double dz) {
+
+  if (!m_geo) {
+    gGeoManager = nullptr;
+    m_geo.reset(new TGeoManager("ViewCellGeoManager", m_label.c_str()));
+    TGeoMaterial* matVacuum = new TGeoMaterial("Vacuum", 0., 0., 0.);
+    TGeoMaterial* matMetal = new TGeoMaterial("Metal", 63.546, 29., 8.92);
+    TGeoMedium* medVacuum = new TGeoMedium("Vacuum", 0, matVacuum);
+    TGeoMedium* medMetal = new TGeoMedium("Metal", 1, matMetal);
+    m_geo->AddMaterial(matVacuum);
+    m_geo->AddMaterial(medMetal->GetMaterial());
+    TGeoVolume* world =
+        m_geo->MakeBox("World", medVacuum, 1.05 * dx, 1.05 * dy, 1.05 * dz);
+    m_geo->SetTopVolume(world);
+  } else {
+    TGeoVolume* top = m_geo->GetTopVolume();
+    TGeoBBox* box = dynamic_cast<TGeoBBox*>(top);
+    double halfLenghts[3] = {1.05 * dx, 1.05 * dy, 1.05 * dz};
+    if (box) box->SetDimensions(halfLenghts);
+  }
 }
 
 void ViewCell::PlotWire(const double x, const double y, const double d,

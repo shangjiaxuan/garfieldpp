@@ -10,6 +10,7 @@
 #include "Garfield/MediumMagboltz.hh"
 #include "Garfield/MediumPlastic.hh"
 #include "Garfield/ViewField.hh"
+#include "Garfield/ViewCell.hh"
 #include "Garfield/ComponentNeBem2d.hh"
 
 using namespace Garfield;
@@ -46,7 +47,7 @@ int main(int argc, char * argv[]) {
   // Dielectric.
   const double xD = 0.5 * delta;
   std::vector<double> xv = {-xD, -xD, xD, xD}; 
-  std::vector<double> yv = {-11., 11., 11., -11.};
+  std::vector<double> yv = {yMin, yMax, yMax, yMin};
   cmp.AddRegion(xv, yv, &plastic);
 
   // cmp.EnableDebugging();
@@ -77,8 +78,18 @@ int main(int argc, char * argv[]) {
   ViewField fieldView;
   fieldView.SetCanvas(&canvas);
   fieldView.SetComponent(&cmp);
-  fieldView.SetElectricFieldRange(0., 1.1 * f1);
-  fieldView.PlotProfile(xMin, 0., 0., xMax, 0., 0., "ex");
-
+  constexpr bool plotProfile = true;
+  if (plotProfile) {
+    fieldView.SetElectricFieldRange(0., 1.1 * f1);
+    fieldView.PlotProfile(xMin, 0., 0., xMax, 0., 0., "ex");
+  } else {
+    fieldView.SetArea(1.1 * xMin, 1.1 * yMin, 1.1 * xMax, 1.1 * yMax);
+    fieldView.PlotContour("ex");
+    ViewCell cellView;
+    cellView.SetCanvas(&canvas);
+    cellView.SetComponent(&cmp);
+    cellView.SetArea(1.1 * xMin, 1.1 * yMin, -1., 1.1 * xMax, 1.1 * yMax, 1.);
+    cellView.Plot2d();
+  }
   app.Run(true);
 }

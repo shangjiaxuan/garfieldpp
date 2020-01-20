@@ -6,8 +6,9 @@
 #include <TApplication.h>
 
 #include "Garfield/MediumMagboltz.hh"
-#include "Garfield/ComponentNeBem2d.hh"
 #include "Garfield/ViewField.hh"
+#include "Garfield/ViewCell.hh"
+#include "Garfield/ComponentNeBem2d.hh"
 
 using namespace Garfield;
 
@@ -40,6 +41,10 @@ int main(int argc, char * argv[]) {
   fieldView.SetComponent(&cmp);
   fieldView.SetArea(-1.1 * r, -1.1 * r, 1.1 * r, 1.1 * r);
   fieldView.PlotContour();
-
+  ViewCell cellView;
+  cellView.SetCanvas(&canvas);
+  cellView.SetComponent(&cmp);
+  cellView.SetArea(-1.1 * r, -1.1 * r, -1., 1.1 * r, 1.1 * r, 1.);
+  cellView.Plot2d();
   app.Run(true);
 }

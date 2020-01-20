@@ -558,6 +558,24 @@ void ComponentNeBem2d::SetMaxNumberOfIterations(const unsigned int niter) {
   m_nMaxIterations = niter;
 }
 
+bool ComponentNeBem2d::GetRegion(const unsigned int i,
+                                 std::vector<double>& xv, 
+                                 std::vector<double>& yv,
+                                 Medium*& medium, unsigned int& bctype, 
+                                 double& v) {
+  if (i >= m_regions.size()) return false;
+  if (!m_ready) {
+    if (!Initialise()) return false;
+  }
+  const auto& region = m_regions[i];
+  xv = region.xv;
+  yv = region.yv;
+  medium = region.medium;
+  bctype = region.bc.first == Voltage ? 1 : 4;
+  v = region.bc.second;
+  return true; 
+}
+
 bool ComponentNeBem2d::GetSegment(const unsigned int i, 
     double& x0, double& y0, double& x1, double& y1, double& v) const {
  

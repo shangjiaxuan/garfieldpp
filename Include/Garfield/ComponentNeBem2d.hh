@@ -67,6 +67,12 @@ class ComponentNeBem2d : public ComponentBase {
   }
   void SetMaxNumberOfIterations(const unsigned int niter);
 
+  /// Return the number of regions.
+  unsigned int GetNumberOfRegions() const { return m_regions.size(); }
+  /// Return the properties of a given region.
+  bool GetRegion(const unsigned int i,
+                 std::vector<double>& xv, std::vector<double>& yv,
+                 Medium*& medium, unsigned int& bctype, double& v);
   /// Return the number of conducting straight-line segments.
   unsigned int GetNumberOfSegments() const { return m_segments.size(); }
   /// Return the coordinates and voltage of a given straight-line segment.
