@@ -232,6 +232,15 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
   // Inside a conductor?
   if (m->IsConductor()) {
     status = -5;
+    // Find the potential.
+    for (const auto& region : m_regions) {
+      bool inside = false, edge = false;
+      Garfield::Polygon::Inside(region.xv, region.yv, x, y, inside, edge);
+      if (inside || edge) {
+        v = region.bc.second;
+        break;
+      }
+    }
     return;
   }
 
@@ -573,9 +582,23 @@ bool ComponentNeBem2d::AddRegion(const std::vector<double>& xp,
     return false;
   }
 
-  // TODO
   // Check if this is a valid polygon (no self-crossing).
-
+  const unsigned int np = xp.size();
+  if (np > 3) {
+    for (unsigned int i0 = 0; i0 < np; ++i0) {
+      const unsigned int i1 = i0 < np - 1 ? i0 + 1 : 0;
+      for (unsigned int j = 0; j < np - 3; ++j) {
+        const unsigned int j0 = i1 < np - 1 ? i1 + 1 : 0;
+        const unsigned int j1 = j0 < np - 1 ? j0 + 1 : 0; 
+        double xc = 0., yc = 0.;
+        if (Crossing(xp[i0], yp[i0], xp[i1], yp[i1], 
+                     xp[j0], yp[j0], xp[j1], yp[j1], xc, yc)) {
+          std::cerr << m_className << "::AddRegion: Edges cross each other.\n";
+          return false;
+        }
+      }
+    }
+  } 
   std::vector<double> xv = xp;
   std::vector<double> yv = yp;
   const double xmin = *std::min_element(std::begin(xv), std::end(xv));

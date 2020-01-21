@@ -14,6 +14,8 @@ class ComponentNeBem2d : public ComponentBase {
   /// Destructor
   ~ComponentNeBem2d() {}
 
+  Medium* GetMedium(const double x, const double y, const double z) override;
+
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
   void ElectricField(const double x, const double y, const double z, double& ex,
@@ -21,17 +23,13 @@ class ComponentNeBem2d : public ComponentBase {
                      int& status) override;
   bool GetVoltageRange(double& vmin, double& vmax) override;
 
-  Medium* GetMedium(const double x, const double y, const double z) override;
-
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                       double& xmax, double& ymax, double& zmax) override;
-
 
   bool IsWireCrossed(const double x0, const double y0, const double z0,
                      const double x1, const double y1, const double z1,
                      double& xc, double& yc, double& zc, const bool centre,
                      double& rc) override;
-
   bool IsInTrapRadius(const double q0, const double x0, const double y0,
                       const double z0, double& xw, double& yx,
                       double& rw) override;
@@ -42,6 +40,7 @@ class ComponentNeBem2d : public ComponentBase {
   /** Add a conducting straight-line segment.
     * \param x0,y0,x1,y1 coordinates of start and end point.
     * \param v applied potential.
+    * \param ndiv number of elements in which to split the segment.
     */
   bool AddSegment(const double x0, const double y0, const double x1,
                   const double y1, const double v, const int ndiv = -1);
@@ -50,7 +49,7 @@ class ComponentNeBem2d : public ComponentBase {
     * \param d wire diameter.
     * \param v applied potential.
     * \param ntrap multiple of the wire radius within which a particle is 
-             considered trapped by the wire. 
+             considered to be trapped by the wire. 
     */
   bool AddWire(const double x, const double y, const double d, const double v,
                const int ntrap = 5);
@@ -59,12 +58,13 @@ class ComponentNeBem2d : public ComponentBase {
     * \param medium pointer to the medium associated to the region. 
     * \param bctype 1: fixed voltage, 4: dielectric-dielectric interface.
     * \param v applied potential.
+    * \param ndiv number of elements on each edge segment.
     */ 
   bool AddRegion(const std::vector<double>& xp,
                  const std::vector<double>& yp, Medium* medium,
                  const unsigned int bctype = 4, const double v = 0.,
                  const int ndiv = -1);
-  /// Set the range along z.
+  /// Set the extent of the drift region along z.
   void SetRangeZ(const double zmin, const double zmax);
  
   /// Discretise the geometry and compute the solution.
@@ -105,6 +105,7 @@ class ComponentNeBem2d : public ComponentBase {
   static const double InvEpsilon0;
   static const double InvTwoPiEpsilon0;
 
+  /// Default number elements per segment.
   unsigned int m_nDivisions = 5;
   unsigned int m_nCollocationPoints = 1;
   bool m_autoSize = false;
@@ -113,16 +114,18 @@ class ComponentNeBem2d : public ComponentBase {
 
   /// Background medium.
   Medium* m_medium = nullptr;
-
+  /// Flag whether a z-range has been defined by the user.
   bool m_useRangeZ = false;
+  /// Lower z limit. 
   double m_zmin = -1.;
+  /// Upper z limit.
   double m_zmax =  1.;
-  // Boundary condition types
+  /// Boundary condition type.
   enum BC {
-    Voltage = 1,
-    Charge,
-    Floating,
-    Dielectric
+    Voltage = 1, //< Fixed potential.
+    Charge,      //< Fixed charge density (not implemented).
+    Floating,    //< Floating conductor (not implemented).
+    Dielectric   //< Dielectric-dielectric interface.
   };
   struct Region {
     std::vector<double> xv;    //< x-coordinates of the vertices.
@@ -130,7 +133,7 @@ class ComponentNeBem2d : public ComponentBase {
     Medium* medium;            //< Medium associated to the region.
     std::pair<BC, double> bc;  //< Applied boundary condition.
     unsigned int depth;        //< Level in the hierarchy.
-    int ndiv;                  //< Number of elements per segment.
+    int ndiv;                  //< Number of elements per edge segment.
   };
   /// Regions.
   std::vector<Region> m_regions;
@@ -175,7 +178,6 @@ class ComponentNeBem2d : public ComponentBase {
                   const double lambda, const unsigned int ndiv);
 
   bool ComputeInfluenceMatrix(std::vector<std::vector<double> >& infmat) const;
-  void SplitElement(Element& oldElement, std::vector<Element>& elements);
   bool InvertMatrix(std::vector<std::vector<double> >& influenceMatrix,
                     std::vector<std::vector<double> >& inverseMatrix) const;
   bool LUDecomposition(std::vector<std::vector<double> >& mat,
@@ -187,19 +189,26 @@ class ComponentNeBem2d : public ComponentBase {
   bool Solve(const std::vector<std::vector<double> >& inverseMatrix,
              const std::vector<double>& bc);
   bool CheckConvergence(const double tol, std::vector<bool>& ok);
+  void SplitElement(Element& oldElement, std::vector<Element>& elements);
 
+  /// Potential of a line segment (half-width a) in local coordinates.
   double LinePotential(const double a, const double x, const double y) const;
+  /// Potential of a thin wire with radius r0.
   double WirePotential(const double r0, const double x, const double y) const;
+  /// Field of a line segment (half-width a) in local coordinates.
   void LineFlux(const double a, const double x, const double y, double& ex,
                 double& ey) const;
+  /// Field of a thin wire with radius r0.
   void WireFlux(const double r0, const double x, const double y, double& ex,
                 double& ey) const;
 
   void Reset() override;
   void UpdatePeriodicity() override;
+  /// Rotation from global to local coordinates.
   void ToLocal(const double xIn, const double yIn,
                const double cphi, const double sphi,
                double& xOut, double& yOut) const;
+  /// Rotation from local to global coordinates.
   void ToGlobal(const double xIn, const double yIn, 
                 const double cphi, const double sphi,
                 double& xOut, double& yOut) const;
