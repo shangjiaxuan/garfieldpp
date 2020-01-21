@@ -374,6 +374,10 @@ $(OBJDIR)/Numerics.o: \
 	$(SRCDIR)/Numerics.cc $(INCDIR)/Garfield/Numerics.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@  
+$(OBJDIR)/Polygon.o: \
+	$(SRCDIR)/Polygon.cc $(INCDIR)/Garfield/Polygon.hh
+	@echo $@
+	@$(CXX) $(CFLAGS) $< -o $@  
 
 $(OBJDIR)/Sensor.o: \
 	$(SRCDIR)/Sensor.cc $(INCDIR)/Garfield/Sensor.hh \

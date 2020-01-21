@@ -25,6 +25,8 @@ class Medium {
   virtual bool IsGas() const { return false; }
   /// Is this medium a semiconductor?
   virtual bool IsSemiconductor() const { return false; }
+  /// Is this medium a conductor?
+  virtual bool IsConductor() const { return false; }
 
   /// Set the temperature [K].
   void SetTemperature(const double t);

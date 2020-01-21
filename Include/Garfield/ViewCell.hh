@@ -11,6 +11,7 @@
 namespace Garfield {
 
 class ComponentAnalyticField;
+class ComponentNeBem2d;
 
 /// Visualize the "cell" defined in an analytic-field component.
 
@@ -23,6 +24,7 @@ class ViewCell : public ViewBase {
 
   /// Set the component for which to draw the cell geometry.
   void SetComponent(ComponentAnalyticField* comp);
+  void SetComponent(ComponentNeBem2d* comp);
 
   /// Set the plot range explicitly.
   void SetArea(const double xmin, const double ymin, const double zmin,
@@ -52,6 +54,7 @@ class ViewCell : public ViewBase {
   double m_xMax = 1., m_yMax = 1., m_zMax = 1.;
 
   ComponentAnalyticField* m_component = nullptr;
+  ComponentNeBem2d* m_nebem = nullptr;
 
   // 3D geometry.
   std::unique_ptr<TGeoManager> m_geo;
@@ -74,6 +77,10 @@ class ViewCell : public ViewBase {
   // Draw a plane in 3D.
   void PlotPlane(const double dx, const double dy, const double dz,
                  const double x0, const double y0);
+  // Draw a neBEM 2D layout.
+  bool PlotNeBem(const bool use3d);
+  // Setup the TGeoManager. 
+  void SetupGeo(const double dx, const double dy, const double dz);
 };
 }
 #endif
