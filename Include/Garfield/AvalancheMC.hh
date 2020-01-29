@@ -26,6 +26,7 @@ class AvalancheMC {
 
   /// Switch on drift line plotting.
   void EnablePlotting(ViewDrift* view);
+  /// Switch off drift line plotting.
   void DisablePlotting() { m_viewer = nullptr; }
 
   /// Switch on calculation of induced currents (default: disabled).
@@ -51,18 +52,20 @@ class AvalancheMC {
   void EnableRKFSteps(const bool on = true) { m_doRKF = on; }
  
   /** Switch on equilibration of multiplication and attachment
-    * over the drift line (default: enabled) */
+    * over the drift line (default: enabled). */
   void EnableProjectedPathIntegration(const bool on = true) { 
     m_doEquilibration = on; 
   }
 
-  /// Switch on diffusion (default: enabled)
+  /// Switch on diffusion (default: enabled).
   void EnableDiffusion() { m_useDiffusion = true; }
+  /// Switch off diffusion.
   void DisableDiffusion() { m_useDiffusion = false; }
 
   /** Switch on attachment (and multiplication) for drift line calculation
     * (default: enabled). For avalanches the flag is ignored. */
   void EnableAttachment() { m_useAttachment = true; }
+  /// Switch off attachment and multiplication.
   void DisableAttachment() { m_useAttachment = false; }
 
   /// Switch on calculating trapping with TCAD traps.
@@ -71,13 +74,14 @@ class AvalancheMC {
   void EnableTcadVelocity(const bool on = true) { m_useTcadVelocity = on; }
 
   /// Enable use of magnetic field in stepping algorithm.
-  void EnableMagneticField() { m_useBfield = true; }
-  void DisableMagneticField() { m_useBfield = false; }
+  void EnableMagneticField(const bool on = true) { m_useBfield = on; }
 
-  /** Set a max. avalanche size (i. e. ignore further multiplication
+  /** Set a maximum avalanche size (ignore further multiplication
       once this size has been reached). */
   void EnableAvalancheSizeLimit(const unsigned int size) { m_sizeCut = size; }
+  /// Do not limit the maximum avalanche size.
   void DisableAvalancheSizeLimit() { m_sizeCut = 0; }
+  /// Return the currently set avalanche size limit.
   int GetAvalancheSizeLimit() const { return m_sizeCut; }
 
   /// Use fixed-time steps (default 20 ps).
@@ -166,6 +170,7 @@ class AvalancheMC {
 
   /// Switch on debugging messages (default: off).
   void EnableDebugging() { m_debug = true; }
+  /// Switch off debugging messages.
   void DisableDebugging() { m_debug = false; }
 
  private:

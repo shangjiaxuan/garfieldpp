@@ -4,6 +4,8 @@
 
 namespace Garfield {
 
+/// Interface to neBEM.
+
 class ComponentNeBem3d : public ComponentBase {
  public:
   /// Constructor

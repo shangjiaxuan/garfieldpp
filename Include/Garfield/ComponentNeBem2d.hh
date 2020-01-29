@@ -5,7 +5,7 @@
 
 namespace Garfield {
 
-/// Two-dimensional implementation of the nearly exact Boundary Element Method.
+/// Two-dimensional implementation of the nearly exact Boundary %Element Method.
 
 class ComponentNeBem2d : public ComponentBase {
  public:

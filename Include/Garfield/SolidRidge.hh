@@ -5,7 +5,7 @@
 
 namespace Garfield {
 
-/// Box with a cylindrical hole.
+/// Triangular prism (Toblerone bar).
 
 class SolidRidge : public Solid {
  public:

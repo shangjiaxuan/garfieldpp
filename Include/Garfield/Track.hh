@@ -93,7 +93,9 @@ class Track {
   /// Switch off plotting.
   void DisablePlotting();
 
+  /// Switch on debugging messages.
   void EnableDebugging() { m_debug = true; }
+  /// Switch off debugging messages.
   void DisableDebugging() { m_debug = false; }
 
  protected:

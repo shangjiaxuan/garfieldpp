@@ -45,7 +45,7 @@ class ComponentBase {
   virtual void ElectricField(const double x, const double y, const double z,
                              double& ex, double& ey, double& ez, Medium*& m,
                              int& status) = 0;
-  //// Calculate the drift field [V/cm] and potential [V] at (x, y, z).
+  /// Calculate the drift field [V/cm] and potential [V] at (x, y, z).
   virtual void ElectricField(const double x, const double y, const double z,
                              double& ex, double& ey, double& ez, double& v,
                              Medium*& m, int& status) = 0;
