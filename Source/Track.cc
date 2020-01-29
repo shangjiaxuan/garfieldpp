@@ -1,4 +1,6 @@
 #include <iostream>
+#include <algorithm>
+#include <cctype>
 
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -11,67 +13,70 @@ namespace Garfield {
 Track::Track() : m_mass(MuonMass) { SetBetaGamma(3.); }
 
 void Track::SetParticle(const std::string& part) {
+  std::string id = part;
+  std::transform(id.begin(), id.end(), id.begin(), 
+                 [](unsigned char c) -> unsigned char { 
+                   return std::toupper(c);
+                 });
   m_isElectron = false;
-  if (part == "electron" || part == "Electron" || part == "e-") {
+  if (id == "ELECTRON" || id == "E-") {
     m_q = -1;
     m_mass = ElectronMass;
     m_spin = 1;
     m_isElectron = true;
     m_particleName = "e-";
-  } else if (part == "positron" || part == "Positron" || part == "e+") {
+  } else if (id == "POSITRON" || id == "E+") {
     m_q = 1;
     m_mass = ElectronMass;
     m_spin = 1;
     m_particleName = "e+";
-  } else if (part == "muon" || part == "Muon" || part == "mu" ||
-             part == "mu-") {
+  } else if (id == "MUON" || id == "MU" || id == "MU-") {
     m_q = -1;
     m_mass = MuonMass;
     m_spin = 1;
     m_particleName = "mu-";
-  } else if (part == "mu+") {
+  } else if (id == "MU+") {
     m_q = 1;
     m_mass = MuonMass;
     m_spin = 1;
     m_particleName = "mu+";
-  } else if (part == "pion" || part == "Pion" || part == "pi" ||
-             part == "pi-") {
+  } else if (id == "PION" || id == "PI" || id == "PI-") {
     m_q = -1;
     m_mass = 139.57018e6;
     m_spin = 0;
     m_particleName = "pi-";
-  } else if (part == "pi+") {
+  } else if (id == "PI+") {
     m_q = 1;
     m_mass = 139.57018e6;
     m_spin = 0;
     m_particleName = "pi+";
-  } else if (part == "kaon" || part == "Kaon" || part == "K" || part == "K-") {
+  } else if (id == "KAON" || id == "K" || id == "K-") {
     m_q = -1;
     m_mass = 493.677e6;
     m_spin = 0;
     m_particleName = "K-";
-  } else if (part == "K+") {
+  } else if (id == "K+") {
     m_q = 1;
     m_mass = 493.677e6;
     m_spin = 0;
     m_particleName = "K+";
-  } else if (part == "proton" || part == "Proton" || part == "p") {
+  } else if (id == "PROTON" || id == "P") {
     m_q = 1;
     m_mass = ProtonMass;
     m_spin = 1;
     m_particleName = "p";
-  } else if (part == "anti-proton" || part == "Anti-Proton" ||
-             part == "antiproton" || part == "Antiproton" || part == "p-bar") {
+  } else if (id == "ANTI-PROTON" || id == "ANTIPROTON" || 
+             id == "P-BAR" || id == "PBAR") {
     m_q = -1;
     m_mass = ProtonMass;
     m_spin = 1;
     m_particleName = "pbar";
-  } else if (part == "deuteron" || part == "Deuteron" || part == "d") {
+  } else if (id == "DEUTERON" || id == "D") {
     m_q = 1;
     m_mass = 1875.612793e6;
     m_spin = 2;
     m_particleName = "d";
-  } else if (part == "alpha" || part == "Alpha") {
+  } else if (id == "ALPHA") {
     m_q = 2;
     m_mass = 3.727379240e9;
     m_spin = 0;
