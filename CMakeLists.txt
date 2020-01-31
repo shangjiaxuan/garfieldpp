@@ -11,7 +11,7 @@ project(Garfield LANGUAGES CXX Fortran VERSION 0.3.0)
 include(GNUInstallDirs)
 set(CMAKE_INSTALL_LIBDIR lib)  # overwrite this one
 
-### DEPENDENCIES #######################################
+#--- Dependencies
 if(DEFINED ENV{ROOTSYS})
     list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 elseif(DEFINED ROOTSYS)
@@ -82,7 +82,11 @@ endforeach()
 set_source_files_properties( ${heed_sources} PROPERTIES LANGUAGE CXX)
 
 #--- Flags to pass to the compiler
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wabi -Wno-long-long -Woverloaded-virtual -fno-common -pg" )
+if(APPLE)
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wabi -Wno-long-long -Woverloaded-virtual -fno-common" )
+else()
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wabi -Wno-long-long -Woverloaded-virtual -fno-common -pg" )
+endif()
 
 #--- Set the C++ standard (depending on the ROOT version)
 if(NOT DEFINED CMAKE_CXX_STANDARD)
@@ -121,16 +125,15 @@ else()
 endif()
 
 #--- Print information on considered files and the root dictionary include directories
-message( STATUS "-----------------------------------------------------------" )
-message( STATUS "Considered Garfield files:             ${garfield_sources}" )
-message( STATUS "-----------------------------------------------------------" )
-message( STATUS "Considered Heed files:                 ${heed_sources}" )
-message( STATUS "-----------------------------------------------------------" )
-message( STATUS "Considered Magboltz files:             ${magboltz_sources}" )
-message( STATUS "-----------------------------------------------------------" )
-message( STATUS "Directory used to find root dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
-message( STATUS "-----------------------------------------------------------" )
-
+message(VERBOSE "-----------------------------------------------------------" )
+message(VERBOSE "Considered Garfield files: ${garfield_sources}" )
+message(VERBOSE "-----------------------------------------------------------" )
+message(VERBOSE "Considered Heed files: ${heed_sources}" )
+message(VERBOSE "-----------------------------------------------------------" )
+message(VERBOSE "Considered Magboltz files: ${magboltz_sources}" )
+message(VERBOSE "-----------------------------------------------------------" )
+message(VERBOSE "Directory used to find root dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
+message(VERBOSE "-----------------------------------------------------------" )
 
 #--- Set output path for libraries and executables
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
@@ -149,7 +152,7 @@ if(BUILD_WITH_VERSION_NUMBER)
                           SOVERSION ${Garfield_SOVERSION} )
 endif()
 
-#--- Build the examples ------------------------------------------------------------------------
+#--- Build the examples --------------------------------------------------------
 option(WITH_EXAMPLES "Build Garfield++ examples" ON)
 if(WITH_EXAMPLES)
     message(STATUS "Garfield++ examples will be built. In order disable this option use -DWITH_EXAMPLES=OFF")
