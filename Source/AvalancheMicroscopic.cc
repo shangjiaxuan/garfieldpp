@@ -10,6 +10,73 @@
 
 namespace {
 
+double Mag(const double x, const double y, const double z) {
+  return sqrt(x * x + y * y + z * z);
+}
+
+void ToLocal(const std::array<std::array<double, 3>, 3>& rot,
+             const double xg, const double yg, const double zg,
+             double& xl, double& yl, double& zl) {
+  xl = rot[0][0] * xg + rot[0][1] * yg + rot[0][2] * zg;
+  yl = rot[1][0] * xg + rot[1][1] * yg + rot[1][2] * zg;
+  zl = rot[2][0] * xg + rot[2][1] * yg + rot[2][2] * zg;
+}
+
+void ToGlobal(const std::array<std::array<double, 3>, 3>& rot,
+              const double xl, const double yl, const double zl,
+              double& xg, double& yg, double& zg) {
+  xg = rot[0][0] * xl + rot[1][0] * yl + rot[2][0] * zl;
+  yg = rot[0][1] * xl + rot[1][1] * yl + rot[2][1] * zl;
+  zg = rot[0][2] * xl + rot[1][2] * yl + rot[2][2] * zl;
+}
+
+void RotationMatrix(double bx, double by, double bz, const double bmag,
+                    const double ex, const double ey, const double ez,
+                    std::array<std::array<double, 3>, 3>& rot) {
+  // Adopting the Magboltz convention, the stepping is performed
+  // in a coordinate system with the B field along the x axis
+  // and the electric field at an angle btheta in the x-z plane.
+
+  // Calculate the first rotation matrix (to align B with x axis).
+  std::array<std::array<double, 3>, 3> rB = {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
+  if (bmag > Garfield::Small) {
+    bx /= bmag;
+    by /= bmag;
+    bz /= bmag;
+    const double bt = by * by + bz * bz;
+    if (bt > Garfield::Small) {
+      const double btInv = 1. / bt;
+      rB[0][0] = bx;
+      rB[0][1] = by;
+      rB[0][2] = bz;
+      rB[1][0] = -by;
+      rB[2][0] = -bz;
+      rB[1][1] = (bx * by * by + bz * bz) * btInv;
+      rB[2][2] = (bx * bz * bz + by * by) * btInv;
+      rB[1][2] = rB[2][1] = (bx - 1.) * by * bz * btInv;
+    }
+  }
+  // Calculate the second rotation matrix (rotation around x axis).
+  const double fy = rB[1][0] * ex + rB[1][1] * ey + rB[1][2] * ez;
+  const double fz = rB[2][0] * ex + rB[2][1] * ey + rB[2][2] * ez;
+  const double ft = sqrt(fy * fy + fz * fz);
+  std::array<std::array<double, 3>, 3> rX = {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
+  if (ft > Garfield::Small) {
+    // E and B field are not parallel.
+    rX[1][1] = rX[2][2] = fz / ft;
+    rX[1][2] = -fy / ft;
+    rX[2][1] = -rX[1][2];
+  }
+  for (unsigned int i = 0; i < 3; ++i) {
+    for (unsigned int j = 0; j < 3; ++j) {
+      rot[i][j] = 0.;
+      for (unsigned int k = 0; k < 3; ++k) {
+        rot[i][j] += rX[i][k] * rB[k][j];
+      }
+    }
+  }
+}
+
 void PrintStatus(const std::string& hdr, const std::string& status,
                  const double x, const double y, const double z,
                  const bool hole) {
@@ -25,6 +92,7 @@ AvalancheMicroscopic::AvalancheMicroscopic() {
   m_endpointsElectrons.reserve(10000);
   m_endpointsHoles.reserve(10000);
   m_photons.reserve(1000);
+
 }
 
 void AvalancheMicroscopic::SetSensor(Sensor* s) {
@@ -42,17 +110,11 @@ void AvalancheMicroscopic::EnablePlotting(ViewDrift* view) {
   }
 
   m_viewer = view;
-  m_usePlotting = true;
   if (!m_useDriftLines) {
     std::cout << m_className << "::EnablePlotting:\n"
               << "    Enabling storage of drift line.\n";
     EnableDriftLines();
   }
-}
-
-void AvalancheMicroscopic::DisablePlotting() {
-  m_viewer = nullptr;
-  m_usePlotting = false;
 }
 
 void AvalancheMicroscopic::EnableElectronEnergyHistogramming(TH1* histo) {
@@ -161,8 +223,6 @@ void AvalancheMicroscopic::SetTimeWindow(const double t0, const double t1) {
   m_tMax = std::max(t0, t1);
   m_hasTimeWindow = true;
 }
-
-void AvalancheMicroscopic::UnsetTimeWindow() { m_hasTimeWindow = false; }
 
 void AvalancheMicroscopic::GetElectronEndpoint(const unsigned int i, double& x0,
                                                double& y0, double& z0,
@@ -462,24 +522,6 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
   const double c1 = SpeedOfLight * sqrt(2. / ElectronMass);
   const double c2 = c1 * c1 / 4.;
 
-  // Electric and magnetic field
-  double ex = 0., ey = 0., ez = 0.;
-  double bx = 0., by = 0., bz = 0., bmag = 0.;
-  int status = 0;
-  // Cyclotron frequency
-  double cwt = 1., swt = 0.;
-  double wb = 0.;
-  // Flag indicating if magnetic field is usable
-  bool bOk = true;
-
-  // Direction, velocity and energy after a step
-  double newKx = 0., newKy = 0., newKz = 0.;
-  double newVx = 0., newVy = 0., newVz = 0.;
-  double newEnergy = 0.;
-
-  // Numerical factors
-  double a1 = 0., a2 = 0., a3 = 0., a4 = 0.;
-
   // Make sure the initial energy is positive.
   e0 = std::max(e0, Small);
 
@@ -503,15 +545,15 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
     double ky = dy0;
     double kz = dz0;
     // Check the given initial direction.
-    const double k = sqrt(kx * kx + ky * ky + kz * kz);
-    if (fabs(k) < Small) {
+    const double kmag = Mag(kx, ky, kz);
+    if (fabs(kmag) < Small) {
       // Direction has zero norm, draw a random direction.
       RndmDirection(kx, ky, kz);
     } else {
       // Normalise the direction to 1.
-      kx /= k;
-      ky /= k;
-      kz /= k;
+      kx /= kmag;
+      ky /= kmag;
+      kz /= kmag;
     }
     AddToStack(x0, y0, z0, t0, e0, kx, ky, kz, 0, hole0, stackOld);
   }
@@ -554,7 +596,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
       double y = (*it).y;
       double z = (*it).z;
       double t = (*it).t;
-      double energy = (*it).energy;
+      double en = (*it).energy;
       int band = (*it).band;
       double kx = (*it).kx;
       double ky = (*it).ky;
@@ -567,6 +609,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
       unsigned int nCollTemp = 0;
 
       // Get the local electric field and medium.
+      double ex = 0., ey = 0., ez = 0.;
+      int status = 0;
       m_sensor->ElectricField(x, y, z, ex, ey, ez, medium, status);
       // Sign change for electrons.
       if (!hole) {
@@ -574,11 +618,10 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         ey = -ey;
         ez = -ez;
       }
-
       if (m_debug) {
         const std::string eh = hole ? "hole " : "electron ";
-        std::cout << hdr << "\n    Drifting " << eh << it - stackOld.begin()
-                  << ".\n    Field [V/cm] at (" << x << ", " << y << ", " << z
+        std::cout << hdr + "Drifting " + eh << it - stackOld.begin() << ".\n"
+                  << "    Field [V/cm] at (" << x << ", " << y << ", " << z
                   << "): " << ex << ", " << ey << ", " << ez
                   << "\n    Status: " << status << "\n";
         if (medium) std::cout << "    Medium: " << medium->GetName() << "\n";
@@ -586,7 +629,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
 
       if (status != 0) {
         // Electron is not inside a drift medium.
-        Update(it, x, y, z, t, energy, kx, ky, kz, band);
+        Update(it, x, y, z, t, en, kx, ky, kz, band);
         (*it).status = StatusLeftDriftMedium;
         AddToEndPoints(*it, hole);
         if (m_debug) PrintStatus(hdr, "left the drift medium", x, y, z, hole);
@@ -594,16 +637,27 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
       }
 
       // If switched on, get the local magnetic field.
+      double bx = 0., by = 0., bz = 0.;
+      // Cyclotron frequency.
+      double omega = 0.;
+      // Ratio of transverse electric field component and magnetic field.
+      double ezovb = 0.;
+      std::array<std::array<double, 3>, 3> rot;
       if (m_useBfield) {
         m_sensor->MagneticField(x, y, z, bx, by, bz, status);
         const double scale = hole ? Tesla2Internal : -Tesla2Internal;
         bx *= scale;
         by *= scale;
         bz *= scale;
-        // Make sure that neither E nor B are zero.
-        bmag = sqrt(bx * bx + by * by + bz * bz);
-        const double emag2 = ex * ex + ey * ey + ez * ez;
-        bOk = (bmag > Small && emag2 > Small);
+        const double bmag = Mag(bx, by, bz);
+        // Calculate the rotation matrix to a local coordinate system 
+        // with B along x and E in the x-z plane.
+        RotationMatrix(bx, by, bz, bmag, ex, ey, ez, rot);
+        // Calculate the cyclotron frequency.
+        omega = OmegaCyclotronOverB * bmag;
+        // Calculate the electric field in the local frame.
+        ToLocal(rot, ex, ey, ez, ex, ey, ez);
+        ezovb = bmag > Small ? ez / bmag : 0.;
       }
 
       // Trace the electron/hole.
@@ -611,12 +665,12 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         bool isNullCollision = false;
 
         // Make sure the electron energy exceeds the transport cut.
-        if (energy < m_deltaCut) {
-          Update(it, x, y, z, t, energy, kx, ky, kz, band);
+        if (en < m_deltaCut) {
+          Update(it, x, y, z, t, en, kx, ky, kz, band);
           (*it).status = StatusBelowTransportCut;
           AddToEndPoints(*it, hole);
           if (m_debug) {
-            std::cout << hdr << "Kinetic energy (" << energy
+            std::cout << hdr << "Kinetic energy (" << en
                       << ") below transport cut.\n";
           }
           ok = false;
@@ -625,14 +679,14 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
 
         // Fill the energy distribution histogram.
         if (hole && m_histHoleEnergy) {
-          m_histHoleEnergy->Fill(energy);
+          m_histHoleEnergy->Fill(en);
         } else if (!hole && m_histElectronEnergy) {
-          m_histElectronEnergy->Fill(energy);
+          m_histElectronEnergy->Fill(en);
         }
 
-        // Check if the electrons is within the specified time window.
+        // Check if the electron is within the specified time window.
         if (m_hasTimeWindow && (t < m_tMin || t > m_tMax)) {
-          Update(it, x, y, z, t, energy, kx, ky, kz, band);
+          Update(it, x, y, z, t, en, kx, ky, kz, band);
           (*it).status = StatusOutsideTimeWindow;
           AddToEndPoints(*it, hole);
           if (m_debug) PrintStatus(hdr, "left the time window", x, y, z, hole);
@@ -644,7 +698,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           // Medium has changed.
           if (!medium->IsMicroscopic()) {
             // Electron/hole has left the microscopic drift medium.
-            Update(it, x, y, z, t, energy, kx, ky, kz, band);
+            Update(it, x, y, z, t, en, kx, ky, kz, band);
             (*it).status = StatusLeftDriftMedium;
             AddToEndPoints(*it, hole);
             ok = false;
@@ -666,68 +720,75 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           fInv = 1. / fLim;
         }
 
+        double a1 = 0., a2 = 0.;
+        // Initial velocity.
         double vx = 0., vy = 0., vz = 0.;
-        if (m_useBfield && bOk) {
-          // Calculate the cyclotron frequency.
-          wb = OmegaCyclotronOverB * bmag;
-          // Rotate the direction vector into the local coordinate system.
-          ComputeRotationMatrix(bx, by, bz, bmag, ex, ey, ez);
-          RotateGlobal2Local(kx, ky, kz);
-          // Calculate the electric field in the rotated system.
-          RotateGlobal2Local(ex, ey, ez);
+        if (m_useBfield) {
           // Calculate the velocity vector in the local frame.
-          const double v = c1 * sqrt(energy);
-          vx = v * kx;
-          vy = v * ky;
-          vz = v * kz;
+          const double vmag = c1 * sqrt(en);
+          ToLocal(rot, vmag * kx, vmag * ky, vmag * kz, vx, vy, vz);
           a1 = vx * ex;
           a2 = c2 * ex * ex;
-          a3 = ez / bmag - vy;
-          a4 = (ez / wb);
+          if (omega > Small) {
+            vy -= ezovb;
+          } else {
+            a1 += vz * ez;
+            a2 += c2 * ez * ez;
+          }
         } else if (useBandStructure) {
-          energy = medium->GetElectronEnergy(kx, ky, kz, vx, vy, vz, band);
+          en = medium->GetElectronEnergy(kx, ky, kz, vx, vy, vz, band);
         } else {
           // No band structure, no magnetic field.
           // Calculate the velocity vector.
-          const double v = c1 * sqrt(energy);
-          vx = v * kx;
-          vy = v * ky;
-          vz = v * kz;
-
+          const double vmag = c1 * sqrt(en);
+          vx = vmag * kx;
+          vy = vmag * ky;
+          vz = vmag * kz;
           a1 = vx * ex + vy * ey + vz * ez;
           a2 = c2 * (ex * ex + ey * ey + ez * ez);
         }
 
         if (m_userHandleStep) {
-          m_userHandleStep(x, y, z, t, energy, kx, ky, kz, hole);
+          m_userHandleStep(x, y, z, t, en, kx, ky, kz, hole);
         }
 
+        // Energy after the step.
+        double en1 = en;
         // Determine the timestep.
         double dt = 0.;
+        // Parameters for B-field stepping.
+        double cphi = 1., sphi = 0.;
+        double a3 = 0., a4 = 0.;
         while (1) {
           // Sample the flight time.
           const double r = RndmUniformPos();
           dt += -log(r) * fInv;
           // Calculate the energy after the proposed step.
-          if (m_useBfield && bOk) {
-            cwt = cos(wb * dt);
-            swt = sin(wb * dt);
-            newEnergy = std::max(energy + (a1 + a2 * dt) * dt +
-                                     a4 * (a3 * (1. - cwt) + vz * swt),
-                                 Small);
+          if (m_useBfield) {
+            en1 = en + (a1 + a2 * dt) * dt;
+            if (omega > Small) {
+              cphi = cos(omega * dt);
+              sphi = sin(omega * dt);
+              a3 = sphi / omega;
+              a4 = (1. - cphi) / omega;
+              en1 += ez * (vz * a3 - vy * a4);
+            }
           } else if (useBandStructure) {
             const double cdt = dt * SpeedOfLight;
-            newEnergy = std::max(medium->GetElectronEnergy(
-                                     kx + ex * cdt, ky + ey * cdt,
-                                     kz + ez * cdt, newVx, newVy, newVz, band),
-                                 Small);
+            const double kx1 = kx + ex * cdt;
+            const double ky1 = ky + ey * cdt;
+            const double kz1 = kz + ez * cdt;
+            double vx1 = 0., vy1 = 0., vz1 = 0.;
+            en1 = medium->GetElectronEnergy(kx1, ky1, kz1, 
+                                            vx1, vy1, vz1, band);
           } else {
-            newEnergy = std::max(energy + (a1 + a2 * dt) * dt, Small);
+            en1 = en + (a1 + a2 * dt) * dt;
           }
+          en1 = std::max(en1, Small);
           // Get the real collision rate at the updated energy.
-          double fReal = medium->GetElectronCollisionRate(newEnergy, band);
+          double fReal = medium->GetElectronCollisionRate(en1, band);
           if (fReal <= 0.) {
-            std::cerr << hdr << "Got collision rate <= 0 at " << newEnergy
+            std::cerr << hdr << "Got collision rate <= 0 at " << en1
                       << " eV (band " << band << ").\n";
             return false;
           }
@@ -753,55 +814,62 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         // Increase the collision counter.
         ++nCollTemp;
 
-        // Update the directions (at instant before collision)
-        // and calculate the proposed new position.
-        if (m_useBfield && bOk) {
+        // Calculate the direction at the instant before the collision
+        // and the proposed new position.
+        double kx1 = 0., ky1 = 0., kz1 = 0.;
+        double dx = 0., dy = 0., dz = 0.;
+        if (m_useBfield) {
           // Calculate the new velocity.
-          newVx = vx + 2. * c2 * ex * dt;
-          newVy = vz * swt - a3 * cwt + ez / bmag;
-          newVz = vz * cwt + a3 * swt;
-          // Normalise and rotate back to the lab frame.
-          const double v = sqrt(newVx * newVx + newVy * newVy + newVz * newVz);
-          newKx = newVx / v;
-          newKy = newVy / v;
-          newKz = newVz / v;
-          RotateLocal2Global(newKx, newKy, newKz);
+          double vx1 = vx + 2. * c2 * ex * dt;
+          double vy1 = vy * cphi + vz * sphi + ezovb;
+          double vz1 = vz * cphi - vy * sphi;
+          if (omega < Small) vz1 += 2. * c2 * ez * dt;
+          // Rotate back to the global frame and normalise.
+          ToGlobal(rot, vx1, vy1, vz1, kx1, ky1, kz1);
+          const double scale = 1. / Mag(kx1, ky1, kz1);
+          kx1 *= scale;
+          ky1 *= scale;
+          kz1 *= scale;
           // Calculate the step in coordinate space.
-          vx += c2 * ex * dt;
-          ky = (vz * (1. - cwt) - a3 * swt) / (wb * dt) + ez / bmag;
-          kz = (vz * swt + a3 * (1. - cwt)) / (wb * dt);
-          vy = ky;
-          vz = kz;
-          // Rotate back to the lab frame.
-          RotateLocal2Global(vx, vy, vz);
+          dx = vx * dt + c2 * ex * dt * dt;
+          if (omega > Small) {
+            dy = vy * a3 + vz * a4 + ezovb * dt;
+            dz = vz * a3 - vy * a4;
+          } else {
+            dy = vy * dt;
+            dz = vz * dt + c2 * ez * dt * dt;
+          } 
+          // Rotate back to the global frame.
+          ToGlobal(rot, dx, dy, dz, dx, dy, dz);
         } else if (useBandStructure) {
           // Update the wave-vector.
-          newKx = kx + ex * dt * SpeedOfLight;
-          newKy = ky + ey * dt * SpeedOfLight;
-          newKz = kz + ez * dt * SpeedOfLight;
-          // Average velocity over the step.
-          vx = 0.5 * (vx + newVx);
-          vy = 0.5 * (vy + newVy);
-          vz = 0.5 * (vz + newVz);
+          const double cdt = dt * SpeedOfLight;
+          kx1 = kx + ex * cdt;
+          ky1 = ky + ey * cdt;
+          kz1 = kz + ez * cdt;
+          double vx1 = 0., vy1 = 0, vz1 = 0.;
+          en1 = medium->GetElectronEnergy(kx1, ky1, kz1, 
+                                          vx1, vy1, vz1, band);
+          dx = 0.5 * (vx + vx1) * dt;
+          dy = 0.5 * (vy + vy1) * dt;
+          dz = 0.5 * (vz + vz1) * dt;
         } else {
           // Update the direction.
-          a1 = sqrt(energy / newEnergy);
-          a2 = 0.5 * c1 * dt / sqrt(newEnergy);
-          newKx = kx * a1 + ex * a2;
-          newKy = ky * a1 + ey * a2;
-          newKz = kz * a1 + ez * a2;
+          const double b1 = sqrt(en / en1);
+          const double b2 = 0.5 * c1 * dt / sqrt(en1);
+          kx1 = kx * b1 + ex * b2;
+          ky1 = ky * b1 + ey * b2;
+          kz1 = kz * b1 + ez * b2;
 
           // Calculate the step in coordinate space.
-          a1 = c1 * sqrt(energy);
-          a2 = dt * c2;
-          vx = kx * a1 + ex * a2;
-          vy = ky * a1 + ey * a2;
-          vz = kz * a1 + ez * a2;
+          const double b3 = dt * dt * c2;
+          dx = vx * dt + ex * b3;
+          dy = vy * dt + ey * b3;
+          dz = vz * dt + ez * b3;
         }
-
-        double x1 = x + vx * dt;
-        double y1 = y + vy * dt;
-        double z1 = z + vz * dt;
+        double x1 = x + dx;
+        double y1 = y + dy;
+        double z1 = z + dz;
         double t1 = t + dt;
         // Get the electric field and medium at the proposed new position.
         m_sensor->ElectricField(x1, y1, z1, ex, ey, ez, medium, status);
@@ -810,7 +878,6 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           ey = -ey;
           ez = -ez;
         }
-
         // Check if the electron is still inside a drift medium/the drift area.
         if (status != 0 || !m_sensor->IsInArea(x1, y1, z1)) {
           // Try to terminate the drift line close to the boundary (endpoint
@@ -822,7 +889,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
                                 m_integrateWeightingField,
                                 m_useWeightingPotential);
           }
-          Update(it, x1, y1, z1, t1, energy, newKx, newKy, newKz, band);
+          Update(it, x1, y1, z1, t1, en, kx1, ky1, kz1, band);
           if (status != 0) {
             (*it).status = StatusLeftDriftMedium;
             if (m_debug)
@@ -842,19 +909,16 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         double rc = 0.;
         if (m_sensor->IsWireCrossed(x, y, z, x1, y1, z1, 
                                     xc, yc, zc, false, rc)) {
+          const double dc = Mag(xc - x, yc - y, zc - z);
+          const double tc = t + dt * dc / Mag(dx, dy, dz);
           // If switched on, calculated the induced signal over this step.
           if (m_doSignal) {
-            const double dx = xc - x;
-            const double dy = yc - y;
-            const double dz = zc - z;
-            dt = sqrt(dx * dx + dy * dy + dz * dz) /
-                 sqrt(vx * vx + vy * vy + vz * vz);
             const int q = hole ? 1 : -1;
-            m_sensor->AddSignal(q, t, t + dt, x, y, z, xc, yc, zc,
+            m_sensor->AddSignal(q, t, tc, x, y, z, xc, yc, zc,
                                 m_integrateWeightingField,
                                 m_useWeightingPotential);
           }
-          Update(it, xc, yc, zc, t + dt, energy, newKx, newKy, newKz, band);
+          Update(it, xc, yc, zc, tc, en, kx1, ky1, kz1, band);
           (*it).status = StatusLeftDriftMedium;
           AddToEndPoints(*it, hole);
           ok = false;
@@ -883,17 +947,20 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           bx *= scale;
           by *= scale;
           bz *= scale;
-          // Make sure that neither E nor B are zero.
-          bmag = sqrt(bx * bx + by * by + bz * bz);
-          const double emag2 = ex * ex + ey * ey + ez * ez;
-          bOk = (bmag > Small && emag2 > Small);
+          const double bmag = Mag(bx, by, bz);
+          // Update the rotation matrix.
+          RotationMatrix(bx, by, bz, bmag, ex, ey, ez, rot);
+          omega = OmegaCyclotronOverB * bmag;
+          // Calculate the electric field in the local frame.
+          ToLocal(rot, ex, ey, ez, ex, ey, ez);
+          ezovb = bmag > Small ? ez / bmag : 0.;
         }
 
         if (isNullCollision) {
-          energy = newEnergy;
-          kx = newKx;
-          ky = newKy;
-          kz = newKz;
+          en = en1;
+          kx = kx1;
+          ky = ky1;
+          kz = kz1;
           continue;
         }
 
@@ -901,8 +968,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         int cstype = 0;
         int level = 0;
         int ndxc = 0;
-        medium->GetElectronCollision(newEnergy, cstype, level, energy, newKx,
-                                     newKy, newKz, secondaries, ndxc, band);
+        medium->GetElectronCollision(en1, cstype, level, en, kx1,
+                                     ky1, kz1, secondaries, ndxc, band);
         // If activated, histogram the distance with respect to the
         // last collision.
         if (m_histDistance && !m_distanceHistogramType.empty()) {
@@ -924,10 +991,9 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
                 m_histDistance->Fill((*it).zLast - z);
                 break;
               case 'r':
-                const double r2 = pow((*it).xLast - x, 2) +
-                                  pow((*it).yLast - y, 2) +
-                                  pow((*it).zLast - z, 2);
-                m_histDistance->Fill(sqrt(r2));
+                m_histDistance->Fill(Mag((*it).xLast - x, 
+                                         (*it).yLast - y, 
+                                         (*it).zLast - z));
                 break;
             }
             (*it).xLast = x;
@@ -938,8 +1004,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         }
 
         if (m_userHandleCollision) {
-          m_userHandleCollision(x, y, z, t, cstype, level, medium, newEnergy,
-                                energy, kx, ky, kz, newKx, newKy, newKz);
+          m_userHandleCollision(x, y, z, t, cstype, level, medium, en1,
+                                en, kx, ky, kz, kx1, ky1, kz1);
         }
         switch (cstype) {
           // Elastic collision
@@ -947,7 +1013,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
             break;
           // Ionising collision
           case ElectronCollisionTypeIonisation:
-            if (m_usePlotting && m_plotIonisations) {
+            if (m_viewer && m_plotIonisations) {
               m_viewer->AddIonisationMarker(x, y, z);
             }
             if (m_userHandleIonisation) {
@@ -994,14 +1060,13 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
             break;
           // Attachment
           case ElectronCollisionTypeAttachment:
-            if (m_usePlotting && m_plotAttachments) {
+            if (m_viewer && m_plotAttachments) {
               m_viewer->AddAttachmentMarker(x, y, z);
             }
             if (m_userHandleAttachment) {
               m_userHandleAttachment(x, y, z, t, cstype, level, medium);
             }
-            // TODO: check kx or newKx!
-            Update(it, x, y, z, t, energy, newKx, newKy, newKz, band);
+            Update(it, x, y, z, t, en, kx1, ky1, kz1, band);
             (*it).status = StatusAttached;
             if (hole) {
               m_endpointsHoles.push_back(*it);
@@ -1020,7 +1085,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
             break;
           // Excitation
           case ElectronCollisionTypeExcitation:
-            if (m_usePlotting && m_plotExcitations) {
+            if (m_viewer && m_plotExcitations) {
               m_viewer->AddExcitationMarker(x, y, z);
             }
             if (m_userHandleInelastic) {
@@ -1119,22 +1184,22 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
             (m_plotAttachments && cstype == ElectronCollisionTypeAttachment)) {
           break;
         }
-        kx = newKx;
-        ky = newKy;
-        kz = newKz;
+        kx = kx1;
+        ky = ky1;
+        kz = kz1;
       }
 
       if (!ok) continue;
 
       if (!useBandStructure) {
         // Normalise the direction vector.
-        const double k = sqrt(kx * kx + ky * ky + kz * kz);
-        kx /= k;
-        ky /= k;
-        kz /= k;
+        const double scale = 1. / Mag(kx, ky, kz);
+        kx *= scale;
+        ky *= scale;
+        kz *= scale;
       }
       // Update the stack.
-      Update(it, x, y, z, t, energy, kx, ky, kz, band);
+      Update(it, x, y, z, t, en, kx, ky, kz, band);
       // Add a new point to the drift line (if enabled).
       if (m_useDriftLines) {
         point newPoint;
@@ -1158,7 +1223,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
   }
 
   // Plot the drift paths and photon tracks.
-  if (m_usePlotting) {
+  if (m_viewer) {
     // Electrons
     const unsigned int nElectronEndpoints = m_endpointsElectrons.size();
     for (unsigned int i = 0; i < nElectronEndpoints; ++i) {
@@ -1254,7 +1319,7 @@ void AvalancheMicroscopic::TransportPhoton(const double x0, const double y0,
     x -= dx;
     y -= dy;
     z -= dz;
-    double delta = sqrt(dx * dx + dy * dy + dz * dz);
+    double delta = Mag(dx, dy, dz);
     if (delta > 0) {
       dx /= delta;
       dy /= delta;
@@ -1345,67 +1410,6 @@ void AvalancheMicroscopic::TransportPhoton(const double x0, const double y0,
   m_photons.push_back(std::move(newPhoton));
 }
 
-void AvalancheMicroscopic::ComputeRotationMatrix(
-    const double bx, const double by, const double bz, const double bmag,
-    const double ex, const double ey, const double ez) {
-  // Adopting the Magboltz convention, the stepping is performed
-  // in a coordinate system with the B field along the x axis
-  // and the electric field at an angle btheta in the x-z plane.
-
-  // Calculate the first rotation matrix (to align B with x axis).
-  const double bt = by * by + bz * bz;
-  if (bt < Small) {
-    // B field is already along axis.
-    m_rb11 = m_rb22 = m_rb33 = 1.;
-    m_rb12 = m_rb13 = m_rb21 = m_rb23 = m_rb31 = m_rb32 = 0.;
-  } else {
-    const double btInv = 1. / bt;
-    m_rb11 = bx / bmag;
-    m_rb12 = by / bmag;
-    m_rb21 = -m_rb12;
-    m_rb13 = bz / bmag;
-    m_rb31 = -m_rb13;
-    m_rb22 = (m_rb11 * by * by + bz * bz) * btInv;
-    m_rb33 = (m_rb11 * bz * bz + by * by) * btInv;
-    m_rb23 = m_rb32 = (m_rb11 - 1.) * by * bz * btInv;
-  }
-  // Calculate the second rotation matrix (rotation around x axis).
-  const double fy = m_rb21 * ex + m_rb22 * ey + m_rb23 * ez;
-  const double fz = m_rb31 * ex + m_rb32 * ey + m_rb33 * ez;
-  const double ft = sqrt(fy * fy + fz * fz);
-  if (ft < Small) {
-    // E and B field are parallel.
-    m_rx22 = m_rx33 = 1.;
-    m_rx23 = m_rx32 = 0.;
-  } else {
-    m_rx22 = m_rx33 = fz / ft;
-    m_rx23 = -fy / ft;
-    m_rx32 = -m_rx23;
-  }
-}
-
-void AvalancheMicroscopic::RotateGlobal2Local(double& dx, double& dy,
-                                              double& dz) const {
-  const double dx1 = m_rb11 * dx + m_rb12 * dy + m_rb13 * dz;
-  const double dy1 = m_rb21 * dx + m_rb22 * dy + m_rb23 * dz;
-  const double dz1 = m_rb31 * dx + m_rb32 * dy + m_rb33 * dz;
-
-  dx = dx1;
-  dy = m_rx22 * dy1 + m_rx23 * dz1;
-  dz = m_rx32 * dy1 + m_rx33 * dz1;
-}
-
-void AvalancheMicroscopic::RotateLocal2Global(double& dx, double& dy,
-                                              double& dz) const {
-  const double dx1 = dx;
-  const double dy1 = m_rx22 * dy + m_rx32 * dz;
-  const double dz1 = m_rx23 * dy + m_rx33 * dz;
-
-  dx = m_rb11 * dx1 + m_rb21 * dy1 + m_rb31 * dz1;
-  dy = m_rb12 * dx1 + m_rb22 * dy1 + m_rb32 * dz1;
-  dz = m_rb13 * dx1 + m_rb23 * dy1 + m_rb33 * dz1;
-}
-
 void AvalancheMicroscopic::Update(std::vector<Electron>::iterator it,
                                   const double x, const double y,
                                   const double z, const double t,
@@ -1470,7 +1474,7 @@ void AvalancheMicroscopic::Terminate(double x0, double y0, double z0, double t0,
   const double dx = x1 - x0;
   const double dy = y1 - y0;
   const double dz = z1 - z0;
-  double d = sqrt(dx * dx + dy * dy + dz * dz);
+  double d = Mag(dx, dy, dz);
   while (d > BoundaryDistance) {
     d *= 0.5;
     const double xm = 0.5 * (x0 + x1);

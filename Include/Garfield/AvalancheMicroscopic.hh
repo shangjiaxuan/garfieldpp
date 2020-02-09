@@ -27,7 +27,7 @@ class AvalancheMicroscopic {
   /// Switch on drift line plotting.
   void EnablePlotting(ViewDrift* view);
   /// Switch off drift line plotting.
-  void DisablePlotting();
+  void DisablePlotting() { m_viewer = nullptr; }
   /// Draw a marker at every excitation or not.
   void EnableExcitationMarkers(const bool on = true) { 
     m_plotExcitations = on; 
@@ -99,8 +99,9 @@ class AvalancheMicroscopic {
   }
 
   /// Switch on update of coordinates for null-collision steps (default: off).
-  void EnableNullCollisionSteps() { m_useNullCollisionSteps = true; }
-  void DisableNullCollisionSteps() { m_useNullCollisionSteps = false; }
+  void EnableNullCollisionSteps(const bool on = true) { 
+    m_useNullCollisionSteps = on; 
+  }
 
   /** Set a (lower) energy threshold for electron transport.
     * This can be useful for simulating delta electrons. */
@@ -110,6 +111,7 @@ class AvalancheMicroscopic {
 
   /// Set an energy threshold for photon transport.
   void SetPhotonTransportCut(const double cut) { m_gammaCut = cut; }
+  /// Retrieve the energy threshold for transporting photons.
   double GetPhotonTransportCut() const { return m_gammaCut; }
 
   /** Set a max. avalanche size (i. e. ignore ionising collisions
@@ -128,7 +130,8 @@ class AvalancheMicroscopic {
 
   /// Define a time interval (only carriers inside the interval are simulated).
   void SetTimeWindow(const double t0, const double t1);
-  void UnsetTimeWindow();
+  /// Do not restrict the time interval within which carriers are simulated.
+  void UnsetTimeWindow() { m_hasTimeWindow = false; }
 
   /// Return the number of electrons and ions in the avalanche.
   void GetAvalancheSize(int& ne, int& ni) const {
@@ -276,7 +279,6 @@ class AvalancheMicroscopic {
   /// Number of ions produced
   int m_nIons = 0;
 
-  bool m_usePlotting = false;
   ViewDrift* m_viewer = nullptr;
   bool m_plotExcitations = true;
   bool m_plotIonisations = true;
@@ -299,12 +301,6 @@ class AvalancheMicroscopic {
   bool m_useBandStructureDefault = true;
   bool m_useNullCollisionSteps = false;
   bool m_useBfield = false;
-
-  // Rotation matrices
-  double m_rb11 = 1., m_rb12 = 0., m_rb13 = 0.;
-  double m_rb21 = 0., m_rb22 = 1., m_rb23 = 0.;
-  double m_rb31 = 0., m_rb32 = 0., m_rb33 = 1.;
-  double m_rx22 = 1., m_rx23 = 0., m_rx32 = 0., m_rx33 = 1.;
 
   // Transport cuts
   double m_deltaCut = 0.;
@@ -347,13 +343,6 @@ class AvalancheMicroscopic {
   void TransportPhoton(const double x, const double y, const double z,
                        const double t, const double e,
                        std::vector<Electron>& stack);
-
-  void ComputeRotationMatrix(const double bx, const double by, const double bz,
-                             const double bmag, const double ex,
-                             const double ey, const double ez);
-
-  void RotateGlobal2Local(double& dx, double& dy, double& dz) const;
-  void RotateLocal2Global(double& dx, double& dy, double& dz) const;
 
   static bool IsInactive(const Electron& item) {
     return item.status == StatusLeftDriftMedium ||
