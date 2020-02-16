@@ -274,11 +274,11 @@ class ComponentAnalyticField : public ComponentBase {
     * \param iw index of the wire
     * \param detailed flag to request a detailed calculation of the profile
                       or only a fast one.
-    * \param csag coordinate along the wire
-
-    * \param xsag x components of the sag profile
-    * \param ysag y components of the sag profile
-    * \param flag to print the calculation results or not
+    * \param csag coordinate along the wire.
+    * \param xsag x components of the sag profile.
+    * \param ysag y components of the sag profile.
+    * \param stretch relative elongation.
+    * \param print flag to print the calculation results or not.
     **/ 
   bool WireDisplacement(const unsigned int iw, const bool detailed,
                         std::vector<double>& csag, std::vector<double>& xsag,
