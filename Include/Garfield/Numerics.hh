@@ -9,6 +9,22 @@ namespace Garfield {
 /// Collection of numerical routines.
 namespace Numerics {
 
+/// 
+/// R. Piessens, E. de Doncker-Kapenger, C. Ueberhuber, D. Kahaner,
+/// QUADPACK, a Subroutine Package for Automatic Integration,
+/// Springer, 1983
+namespace QUADPACK {
+
+void qagi(double (*f)(double x), double bound, const int inf, 
+          const double epsabs, const double epsrel, 
+          double& result, double& abserr, int& status);
+
+void qk15i(double (*f)(double x), double bound, const int inf,
+           const double a, const double b, double& result, double& abserr,
+           double& resabs, double& resasc);
+
+}
+
 // Linear algebra routines from CERNLIB
 /// Replace B by the solution X of A*X=B, after which A is undefined.
 void Deqn(const int n, std::vector<std::vector<double> >& a,

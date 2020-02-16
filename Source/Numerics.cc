@@ -17,11 +17,484 @@ void DeqnGen(const int n, std::vector<std::vector<double > >& a,
   if (ifail != 0) return;
   Garfield::Numerics::Dfeqn(n, a, ir, b);
 }
+
+/// Epsilon algorithm.
+/// Determines the limit of a given sequence of approximations, 
+/// by means of the epsilon algorithm of P. Wynn. 
+/// An estimate of the absolute error is also given.
+/// The condensed epsilon table is computed. Only those elements needed
+/// for the computation of the next diagonal are preserved.
+/// \param epstab elements of the two lower diagonals of the triangular
+///               epsilon table. The elements are numbered starting at the
+///               right-hand corner of the triangle.
+/// \param n size of the epsilon table.
+/// \param result resulting approximation to the integral.
+/// \param abserr estimate of the absolute error computed from
+///               result and the three previous results.
+/// \param lastResults last three results.
+/// \param nres number of calls to the function.
+void qelg(unsigned int& n, std::array<double, 52>& epstab, 
+          double& result, double& abserr, 
+          std::array<double, 3>& lastRes, unsigned int& nres) {
+
+  constexpr double eps = std::numeric_limits<double>::epsilon();
+
+  ++nres;
+  abserr = std::numeric_limits<double>::max(); 
+  result = epstab[n - 1];
+  if (n < 3) {
+    abserr = std::max(abserr, 50. * eps * std::abs(result));
+    return;
+  }
+  epstab[n + 1] = epstab[n - 1];
+  epstab[n - 1] = std::numeric_limits<double>::max();
+  // Number of elements to be computed in the new diagonal.
+  const unsigned int nnew = (n - 1) / 2;
+  const unsigned int nold = n;
+  unsigned int k = n;
+  for (unsigned int i = 1; i <= nnew; ++i) {
+    double res = epstab[k + 1];
+    // e0 - e3 are the four elements on which the computation of a new
+    // element in the epsilon table is based.
+    //                 e0
+    //           e3    e1    new
+    //                 e2
+    const double e0 = epstab[k - 3];
+    const double e1 = epstab[k - 2];
+    const double e2 = res;
+    const double delta2 = e2 - e1;
+    const double err2 = std::abs(delta2);
+    const double tol2 = std::max(std::abs(e2), std::abs(e1)) * eps;
+    const double delta3 = e1 - e0;
+    const double err3 = std::abs(delta3);
+    const double tol3 = std::max(std::abs(e1), std::abs(e0)) * eps;
+    if (err2 <= tol2 && err3 <= tol3) {
+      // If e0, e1 and e2 are equal to within machine accuracy,
+      // convergence is assumed.
+      result = res;
+      abserr = std::max(err2 + err3, 50. * eps * std::abs(result));
+      return;
+    }
+    const double e3 = epstab[k - 1];
+    epstab[k - 1] = e1;
+    const double delta1 = e1 - e3;
+    const double err1 = std::abs(delta1);
+    const double tol1 = std::max(std::abs(e1), std::abs(e3)) * eps;
+    // If two elements are very close to each other, omit
+    // a part of the table by adjusting the value of n
+    if (err1 <= tol1 || err2 <= tol2 || err3 <= tol3) {
+      n = i + i - 1;
+      break;
+    }
+    const double ss = 1. / delta1 + 1. / delta2 - 1./ delta3;
+    // Test to detect irregular behaviour in the table, and
+    // eventually omit a part of the table adjusting the value of n.
+    if (std::abs(ss * e1) <= 1.e-4) {
+      n = i + i - 1;
+      break;
+    }
+    // Compute a new element and eventually adjust the value of result.
+    res = e1 + 1. / ss;
+    epstab[k - 1] = res;
+    k -= 2;
+    const double error = err2 + std::abs(res - e2) + err3;
+    if (error <= abserr) {
+      abserr = error;
+      result = res;
+    }
+  }
+  // Shift the table.
+  constexpr unsigned int limexp = 50;
+  if (n == limexp) n = 2 * (limexp / 2) - 1;
+  unsigned int ib = (nold % 2 == 0) ? 1 : 0;
+  for (unsigned int i = 0; i <= nnew; ++i) {
+    epstab[ib] = epstab[ib + 2];
+    ib += 2;
+  } 
+  if (nold != n) {
+    for (unsigned int i = 0; i < n; ++i) {
+      epstab[i] = epstab[nold - n + i];
+    }
+  }
+  if (nres >= 4) {
+    // Compute error estimate.
+    abserr = std::abs(result - lastRes[2]) + 
+             std::abs(result - lastRes[1]) +
+             std::abs(result - lastRes[0]);
+    lastRes[0] = lastRes[1];
+    lastRes[1] = lastRes[2];
+    lastRes[2] = result;
+  } else {
+    lastRes[nres - 1] = result;
+    abserr = std::numeric_limits<double>::max();
+  }
+  abserr = std::max(abserr, 50. * eps * std::abs(result));
+}
+
 }
 
 namespace Garfield {
 
 namespace Numerics {
+
+namespace QUADPACK {
+
+void qagi(double (*f)(double x), double bound, const int inf, 
+          const double epsabs, const double epsrel, 
+          double& result, double& abserr, int& status) {
+
+  status = 0;
+  result = 0.;
+  abserr = 0.;
+
+  // Test on validity of parameters.
+  constexpr double eps = std::numeric_limits<double>::epsilon();
+  if (epsabs <= 0. && epsrel < std::max(50. * eps, 0.5e-28)) {
+    status = 6;
+    return;
+  }
+  // First approximation to the integral
+  if (inf == 2) bound = 0.;
+  double resabs0 = 0., resasc0 = 0.;
+  qk15i(f, bound, inf, 0., 1., result, abserr, resabs0, resasc0);
+
+  // Calculate the requested accuracy.
+  double tol = std::max(epsabs, epsrel * std::abs(result));
+  // Test on accuracy.
+  if (abserr <= 100. * eps * resabs0 && abserr > tol) {
+    // Roundoff error at the first attempt.
+    status = 2;
+    return;
+  }
+  // Test if the first approximation was good enough.
+  if ((abserr <= tol && abserr != resasc0) || abserr == 0.) return;
+
+  struct Interval {
+    double a; //< Left end point. 
+    double b; //< Right end point.
+    double r; //< Approximation to the integral over this interval.
+    double e; //< Error estimate.
+  };
+  std::vector<Interval> intervals(1);
+  intervals[0].a = 0.;
+  intervals[0].b = 1.;
+  intervals[0].r = result;
+  intervals[0].e = abserr;
+  constexpr unsigned int nMaxIntervals = 500;
+  unsigned int nIntervals = 1;
+  // Interval to be bisected.
+  auto it = intervals.begin();
+  size_t nrmax = 0;
+
+  // Initialize the epsilon table.
+  std::array<double, 52> epstab;
+  epstab[0] = result;
+  // Count the number of elements currently in the epsilon table.
+  unsigned int nEps = 2;
+  // Keep track of the last three results.
+  std::array<double, 3> lastRes = {0., 0., 0.};
+  // Count the number of calls to the epsilon extrapolation function.
+  unsigned int nRes = 0;
+  // Flag denoting that we are attempting to perform extrapolation.
+  bool extrap = false;
+  // Flag indicating that extrapolation is no longer allowed.
+  bool noext = false;
+  unsigned int ktmin = 0;
+
+  // Initialize the sum of the integrals over the subintervals.
+  double area = result;
+  // Initialize the sum of the errors over the subintervals.
+  double errSum = abserr;
+  // Length of the smallest interval considered up now, multiplied by 1.5. 
+  double small = 0.375; 
+  // Sum of the errors over the intervals larger than the smallest interval 
+  // considered up to now.
+  double errLarge = 0.;
+  double errTest = 0.;
+  // Error estimate of the interval with the largest error estimate.
+  double errMax = abserr;
+  abserr = std::numeric_limits<double>::max();
+
+  // Count roundoff errors.
+  std::array<unsigned int, 3> nRoundOff = {0, 0, 0};
+  bool roundOffErrors = false;
+  double correc = 0.;
+
+  // Set flag whether the integrand is positive.
+  const bool pos = (std::abs(result) >= (1. - 50. * eps) * resabs0);
+
+  // Main loop.
+  bool dosum = false;
+  for (nIntervals = 2; nIntervals <= nMaxIntervals; ++nIntervals) {
+    // Bisect the subinterval.
+    const double a1 = (*it).a;
+    const double b2 = (*it).b;
+    const double b1 = 0.5 * (a1 + b2);
+    const double a2 = b1;
+    // Save the error on the interval before doing the subdivision.
+    const double errLast = (*it).e;
+    double area1 = 0., err1 = 0., resabs1 = 0., resasc1 = 0.;
+    qk15i(f, bound, inf, a1, b1, area1, err1, resabs1, resasc1);
+    double area2 = 0., err2 = 0., resabs2 = 0., resasc2 = 0.;
+    qk15i(f, bound, inf, a2, b2, area2, err2, resabs2, resasc2);
+    // Improve previous approximations to integral and error 
+    // and test for accuracy.
+    const double area12 = area1 + area2;
+    const double err12 = err1 + err2;
+    errSum += err12 - errMax;
+    area += area12 - (*it).r;
+    if (resasc1 != err1 && resasc2 != err2) {
+      if (std::abs((*it).r - area12) <= 1.e-5 * std::abs(area12) && 
+          err12 >= 0.99 * errMax) {
+        if (extrap) {
+          ++nRoundOff[1];
+        } else {
+          ++nRoundOff[0];
+        }
+      }   
+      if (nIntervals > 10 && err12 > errMax) ++nRoundOff[2];
+    }
+    tol = std::max(epsabs, epsrel * std::abs(area));
+    // Test for roundoff error and eventually set error flag.
+    if (nRoundOff[0] + nRoundOff[1] >= 10 || nRoundOff[2] >= 20) status = 2;
+    if (nRoundOff[1] >= 5) roundOffErrors = true;
+    // Set error flag in the case that the number of subintervals equals limit.
+    if (nIntervals == nMaxIntervals) status = 1;
+    // Set error flag in the case of bad integrand behaviour
+    // at some points of the integration range.
+    constexpr double tol1 = 1. + 100. * eps;
+    constexpr double tol2 = 1000. * std::numeric_limits<double>::min();
+    if (std::max(std::abs(a1), std::abs(b2)) <= tol1 * (std::abs(a2) + tol2)) {
+      status = 4;
+    }
+    // Append the newly-created intervals to the list.
+    if (err2 > err1) {
+      (*it).a = a2;
+      (*it).r = area2;
+      (*it).e = err2;
+      Interval interval;
+      interval.a = a1;
+      interval.b = b1;
+      interval.r = area1;
+      interval.e = err1;
+      intervals.push_back(std::move(interval)); 
+    } else {
+      (*it).b = b1;
+      (*it).r = area1;
+      (*it).e = err1;
+      Interval interval;
+      interval.a = a2;
+      interval.b = b2;
+      interval.r = area2;
+      interval.e = err2;
+      intervals.push_back(std::move(interval)); 
+    }
+    // Sort the intervals in descending order by error estimate. 
+    std::sort(intervals.begin(), intervals.end(),
+             [](const Interval& lhs, const Interval& rhs) {
+               return (lhs.e > rhs.e);
+             });
+    // Select the subinterval to be bisected next.
+    it = intervals.begin() + nrmax;
+    errMax = (*it).e;
+    if (errSum <= tol) {
+      dosum = true;
+      break;
+    }
+    if (status != 0) break;
+    if (nIntervals == 2) {
+      errLarge = errSum;
+      errTest = tol;
+      epstab[1] = area;
+      continue;
+    }
+    if (noext) continue;
+    errLarge -= errLast;
+    if (std::abs(b1 - a1) > small) errLarge += err12;
+    if (!extrap) {
+      // Test whether the interval to be bisected next is the smallest one.
+      if (std::abs((*it).b - (*it).a) > small) continue;
+      extrap = true;
+      nrmax = 1; 
+    }
+    // The smallest interval has the largest error.
+    // Before bisecting decrease the sum of the errors over the
+    // larger intervals (errLarge) and perform extrapolation.
+    if (!roundOffErrors && errLarge > errTest) {
+      const size_t k0 = nrmax;
+      size_t k1 = nIntervals;
+      if (nIntervals > (2 + nMaxIntervals / 2)) {
+        k1 = nMaxIntervals + 3 - nIntervals;
+      }
+      bool found = false;
+      for (unsigned int k = k0; k < k1; ++k) {
+        it = intervals.begin() + nrmax;
+        errMax = (*it).e;
+        if (std::abs((*it).b - (*it).a) > small) {
+          found = true;
+          break;
+        }
+        ++nrmax;
+      }
+      if (found) continue;
+    }
+    // Perform extrapolation.
+    epstab[nEps] = area;
+    ++nEps;
+    double resExtr = 0., errExtr = 0.;
+    qelg(nEps, epstab, resExtr, errExtr, lastRes, nRes);
+    ++ktmin;
+    if (ktmin > 5 && abserr < 1.e-3 * errSum) status = 5;
+    if (errExtr < abserr) {
+      ktmin = 0;
+      abserr = errExtr;
+      result = resExtr;
+      correc = errLarge;
+      errTest = std::max(epsabs, epsrel * std::abs(resExtr));
+      if (abserr <= errTest) break;
+    }
+    // Prepare bisection of the smallest interval.
+    if (nEps == 1) noext = true;
+    if (status == 5) break;
+    it = intervals.begin();
+    errMax = (*it).e;
+    nrmax = 0;
+    extrap = false;
+    small *= 0.5;
+    errLarge = errSum;
+  }
+  // Set final result and error estimate.
+  if (abserr == std::numeric_limits<double>::max()) dosum = true;
+  if (!dosum) {
+    if ((status != 0 || roundOffErrors)) {
+      if (roundOffErrors) {
+        abserr += correc;
+        if (status == 0) status = 3;
+      }
+      if (result != 0. && area != 0.) {
+        if (abserr / std::abs(result) > errSum / std::abs(area)) dosum = true;
+      } else {
+        if (abserr > errSum) {
+          dosum = true;
+        } else if (area == 0.) {
+          if (status > 2) --status;
+          return;
+        }
+      }
+    }
+    // Test on divergence
+    if (!dosum) {
+      if (!pos && std::max(std::abs(result), std::abs(area)) <= resabs0 * 0.01) {
+        if (status > 2) --status;
+        return;
+      }
+      const double r = result / area;
+      if (r < 0.01 || r > 100. || errSum > std::abs(area)) {
+        status = 5;
+        return;
+      }
+    }
+  } else {
+    // Compute global integral sum.
+    result = 0.;
+    for (const auto& interval : intervals) result += interval.r;
+    abserr = errSum;
+    if (status > 2) --status;
+  }
+}
+
+void qk15i(double (*f)(double x), double bound, const int inf,
+           const double a, const double b, double& result, double& abserr,
+           double& resabs, double& resasc) {
+
+  // The abscissae and weights are supplied for the interval (-1, 1).
+  // Because of symmetry only the positive abscissae and
+  // their corresponding weights are given.
+
+  // Weights of the 7-point Gauss rule.
+  constexpr double wg[8] = {0., 0.129484966168869693270611432679082,
+                            0., 0.279705391489276667901467771423780,
+                            0., 0.381830050505118944950369775488975,
+                            0., 0.417959183673469387755102040816327};
+  // Abscissae of the 15-point Kronrod rule.
+  constexpr double xgk[8] = {
+    0.991455371120812639206854697526329, 
+    0.949107912342758524526189684047851,
+    0.864864423359769072789712788640926, 
+    0.741531185599394439863864773280788,
+    0.586087235467691130294144838258730, 
+    0.405845151377397166906606412076961,
+    0.207784955007898467600689403773245, 
+    0.};
+  // Weights of the 15-point Kronrod rule.
+  constexpr double wgk[8] = {
+    0.022935322010529224963732008058970,
+    0.063092092629978553290700663189204,
+    0.104790010322250183839876322541518,
+    0.140653259715525918745189590510238,
+    0.169004726639267902826583426598550,
+    0.190350578064785409913256402421014,
+    0.204432940075298892414161999234649,
+    0.209482141084727828012999174891714};
+
+  const int dinf = std::min(1, inf);
+
+  // Mid point of the interval.
+  const double xc = 0.5 * (a + b);
+  // Half-length of the interval.
+  const double h = 0.5 * (b - a);
+  // Transformed abscissa.
+  const double tc = bound + dinf * (1. - xc) / xc;
+  double fc = f(tc);
+  if (inf == 2) fc += f(-tc);
+  fc = (fc / xc) / xc;
+  // Result of the 7-point Gauss formula.
+  double resg = wg[7] * fc;
+  // Result of the 15-point Kronrod formula.
+  double resk = wgk[7] * fc;
+  resabs = std::abs(resk);
+  std::array<double, 7> fv1, fv2;
+  for (unsigned int j = 0; j < 7; ++j) {
+    const double absc = h * xgk[j];
+    const double x1 = xc - absc;
+    const double x2 = xc + absc;
+    const double t1 = bound + dinf * (1. - x1) / x1;
+    const double t2 = bound + dinf * (1. - x2) / x2;
+    double y1 = f(t1);
+    double y2 = f(t2);
+    if (inf == 2) {
+      y1 += f(-t1);
+      y2 += f(-t2);
+    }
+    y1 = (y1 / x1) / x1;
+    y2 = (y2 / x2) / x2;
+    fv1[j] = y1;
+    fv2[j] = y2;
+    const double fsum = y1 + y2;
+    resg += wg[j] * fsum;
+    resk += wgk[j] * fsum;
+    resabs += wgk[j] * (std::abs(y1) + std::abs(y2));
+  }
+  // Approximation to the mean value of the transformed integrand over (a,b).
+  const double reskh = resk * 0.5;
+  resasc = wgk[7] * std::abs(fc - reskh);
+  for (unsigned int j = 0; j < 7; ++j) {
+    resasc += wgk[j] * (std::abs(fv1[j] - reskh) + std::abs(fv2[j] - reskh));
+  }
+  result = resk * h;
+  resasc *= h;
+  resabs *= h;
+  abserr = std::abs((resk - resg) * h);
+  if (resasc != 0. && abserr != 0.) {
+    abserr = resasc * std::min(1., pow(200. * abserr / resasc, 1.5));
+  }
+  constexpr double eps = 50. * std::numeric_limits<double>::epsilon();
+  if (resabs > std::numeric_limits<double>::min() / eps) {
+    abserr = std::max(eps * resabs, abserr);
+  }
+}
+
+}
 
 void Deqn(const int n, std::vector<std::vector<double> >& a,
           int& ifail, std::vector<double>& b) { 
