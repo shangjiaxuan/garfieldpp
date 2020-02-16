@@ -455,9 +455,9 @@ void qk15i(double (*f)(double x), double bound, const int inf,
   resabs = std::abs(resk);
   std::array<double, 7> fv1, fv2;
   for (unsigned int j = 0; j < 7; ++j) {
-    const double absc = h * xgk[j];
-    const double x1 = xc - absc;
-    const double x2 = xc + absc;
+    const double x = h * xgk[j];
+    const double x1 = xc - x;
+    const double x2 = xc + x;
     const double t1 = bound + dinf * (1. - x1) / x1;
     const double t2 = bound + dinf * (1. - x2) / x2;
     double y1 = f(t1);
@@ -484,6 +484,96 @@ void qk15i(double (*f)(double x), double bound, const int inf,
   result = resk * h;
   resasc *= h;
   resabs *= h;
+  abserr = std::abs((resk - resg) * h);
+  if (resasc != 0. && abserr != 0.) {
+    abserr = resasc * std::min(1., pow(200. * abserr / resasc, 1.5));
+  }
+  constexpr double eps = 50. * std::numeric_limits<double>::epsilon();
+  if (resabs > std::numeric_limits<double>::min() / eps) {
+    abserr = std::max(eps * resabs, abserr);
+  }
+}
+
+void qk15(double (*f)(double x), const double a, const double b,
+          double& result, double& abserr, double& resabs, double& resasc) {
+
+  // Gauss quadrature weights and Kronron quadrature abscissae and weights
+  // as evaluated with 80 decimal digit arithmetic by L. W. Fullerton,
+  // Bell labs, Nov. 1981.
+
+  // Weights of the 7-point Gauss rule.
+  constexpr double wg[4] = {
+    0.129484966168869693270611432679082,
+    0.279705391489276667901467771423780,
+    0.381830050505118944950369775488975,
+    0.417959183673469387755102040816327};
+  // Abscissae of the 15-point Kronrod rule.
+  constexpr double xgk[8] = {
+    0.991455371120812639206854697526329,
+    0.949107912342758524526189684047851,
+    0.864864423359769072789712788640926,
+    0.741531185599394439863864773280788,
+    0.586087235467691130294144838258730,
+    0.405845151377397166906606412076961,
+    0.207784955007898467600689403773245,
+    0.};
+  // Weights of the 15-point Kronrod rule.
+  constexpr double wgk[8] = {
+    0.022935322010529224963732008058970,
+    0.063092092629978553290700663189204,
+    0.104790010322250183839876322541518,
+    0.140653259715525918745189590510238,
+    0.169004726639267902826583426598550,
+    0.190350578064785409913256402421014,
+    0.204432940075298892414161999234649,
+    0.209482141084727828012999174891714};
+
+  // Mid point of the interval.
+  const double xc = 0.5 * (a + b);
+  // Half-length of the interval.
+  const double h = 0.5 * (b - a);
+  const double dh = std::abs(h);
+  // Compute the 15-point Kronrod approximation to the integral, 
+  // and estimate the absolute error.
+  const double fc = f(xc);
+  // Result of the 7-point Gauss formula.
+  double resg = fc * wg[3];
+  // Result of the 15-point Kronrod formula.
+  double resk = fc * wgk[7];
+  resabs = std::abs(resk);
+  std::array<double, 7> fv1, fv2;
+  for (unsigned int j = 0; j < 3; ++j) {
+    const unsigned int k = j * 2 + 1;
+    const double x = h * xgk[k];
+    double y1 = f(xc - x);
+    double y2 = f(xc + x);
+    fv1[k] = y1;
+    fv2[k] = y2;
+    const double fsum = y1 + y2;
+    resg += wg[j] * fsum;
+    resk += wgk[k] * fsum;
+    resabs += wgk[k] * (std::abs(y1) + std::abs(y2));
+  }
+  for (unsigned int j = 0; j < 4; ++j) {
+    const unsigned int k = j * 2;
+    const double x = h * xgk[k];
+    const double y1 = f(xc - x);
+    const double y2 = f(xc + x);
+    fv1[k] = y1;
+    fv2[k] = y2;
+    const double fsum = y1 + y2;
+    resk += wgk[k] * fsum;
+    resabs += wgk[k] * (std::abs(y1) + std::abs(y2));
+  }
+  // Approximation to the mean value of f over (a,b), i.e. to i/(b-a).
+  const double reskh = resk * 0.5;
+  resasc = wgk[7] * std::abs(fc - reskh);
+  for (unsigned int j = 0; j < 7; ++j) {
+    resasc += wgk[j] * (std::abs(fv1[j] - reskh) + std::abs(fv2[j] - reskh));
+  }
+  result = resk * h;
+  resabs *= dh;
+  resasc *= dh;
   abserr = std::abs((resk - resg) * h);
   if (resasc != 0. && abserr != 0.) {
     abserr = resasc * std::min(1., pow(200. * abserr / resasc, 1.5));
@@ -1145,58 +1235,6 @@ void Cinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
     }
     a[0][0] = std::complex<double>(1., 0.) / a[0][0];
   }
-}
-
-// Numerical integration using 15-point Gauss-Kronrod algorithm
-// Origin: QUADPACK
-double GaussKronrod15(double (*f)(const double), const double a,
-                      const double b) {
-  // Abscissae of the 15-point Kronrod rule
-  // xGK[1], xGK[3], ... abscissae of the 7-point Gauss rule
-  // xGK[0], xGK[2], ... abscissae which are optimally added
-  //                     to the 7-point Gauss rule
-  constexpr double xGK[8] = {9.914553711208126e-01, 9.491079123427585e-01,
-                             8.648644233597691e-01, 7.415311855993944e-01,
-                             5.860872354676911e-01, 4.058451513773972e-01,
-                             2.077849550078985e-01, 0.0e+00};
-  // Weights of the 15-point Kronrod rule
-  constexpr double wGK[8] = {2.293532201052922e-02, 6.309209262997855e-02,
-                             1.047900103222502e-01, 1.406532597155259e-01,
-                             1.690047266392679e-01, 1.903505780647854e-01,
-                             2.044329400752989e-01, 2.094821410847278e-01};
-  // Weights of the 7-point Gauss rule
-  constexpr double wG[4] = {1.294849661688697e-01, 2.797053914892767e-01,
-                            3.818300505051189e-01, 4.179591836734694e-01};
-
-  // Mid-point of the interval
-  const double center = 0.5 * (a + b);
-  // Half-length of the interval
-  const double halfLength = 0.5 * (b - a);
-
-  double fC = f(center);
-  // Result of the 7-point Gauss formula
-  double resG = fC * wG[3];
-  // Result of the 15-point Kronrod formula
-  double resK = fC * wGK[7];
-
-  for (int j = 0; j < 3; ++j) {
-    const int i = j * 2 + 1;
-    // Abscissa
-    const double x = halfLength * xGK[i];
-    // Function value
-    const double fSum = f(center - x) + f(center + x);
-    resG += wG[j] * fSum;
-    resK += wGK[i] * fSum;
-  }
-
-  for (int j = 0; j < 4; ++j) {
-    const int i = j * 2;
-    const double x = halfLength * xGK[i];
-    const double fSum = f(center - x) + f(center + x);
-    resK += wGK[i] * fSum;
-  }
-
-  return resK * halfLength;
 }
 
 double Divdif(const std::vector<double>& f, const std::vector<double>& a,
