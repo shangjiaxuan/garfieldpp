@@ -139,9 +139,9 @@ namespace Numerics {
 
 namespace QUADPACK {
 
-void qagi(double (*f)(double x), double bound, const int inf, 
+void qagi(std::function<double(double)> f, double bound, const int inf, 
           const double epsabs, const double epsrel, 
-          double& result, double& abserr, int& status) {
+          double& result, double& abserr, unsigned int& status) {
 
   status = 0;
   result = 0.;
@@ -403,7 +403,7 @@ void qagi(double (*f)(double x), double bound, const int inf,
   }
 }
 
-void qk15i(double (*f)(double x), double bound, const int inf,
+void qk15i(std::function<double(double)> f, double bound, const int inf,
            const double a, const double b, double& result, double& abserr,
            double& resabs, double& resasc) {
 
@@ -494,7 +494,7 @@ void qk15i(double (*f)(double x), double bound, const int inf,
   }
 }
 
-void qk15(double (*f)(double x), const double a, const double b,
+void qk15(std::function<double(double)> f, const double a, const double b,
           double& result, double& abserr, double& resabs, double& resasc) {
 
   // Gauss quadrature weights and Kronron quadrature abscissae and weights
