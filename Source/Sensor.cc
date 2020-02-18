@@ -28,6 +28,38 @@ double Interpolate(const std::vector<double>& y,
   return y[it0 - x.cbegin()] * (1. - f) + f * y[it1 - x.cbegin()];
 }
 
+double Trapezoid2(const std::vector<std::pair<double, double> >& f) {
+
+  const unsigned int n = f.size();
+  if (n < 2) return -1.;
+  double sum = 0.;
+  const double x0 = f[0].first;
+  const double y0 = f[0].second;
+  const double x1 = f[1].first;
+  const double y1 = f[1].second;
+  if (n == 2) {
+    sum = (x1 - x0) * (y0 * y0 + y1 * y1);
+  } else if (n == 3) {
+    const double x2 = f[2].first;
+    const double y2 = f[2].second;
+    sum = (x1 - x0) * y0 * y0 + (x2 - x0) * y1 * y1 + (x2 - x1) * y2 * y2;
+  } else {
+    sum = (x1 - x0) * y0 * y0 + (f[2].first - x0) * y1 * y1;
+    const double xm = f[n - 2].first;
+    const double ym = f[n - 2].second;
+    const double xn = f[n - 1].first;
+    const double yn = f[n - 1].second;
+    sum += (xn - f[n - 3].first) * ym * ym + (xn - xm) * yn * yn; 
+    if (n > 4) {
+      for (unsigned int k = 2; k < n - 2; ++k) {
+        const double y = f[k].second;
+        sum += (f[k + 1].first - f[k - 1].first) * y * y;
+      }
+    }
+  }
+  return 0.5 * sum;
+}
+
 }
 
 namespace Garfield {
@@ -773,8 +805,7 @@ void Sensor::SetTransferFunction(double (*f)(double t)) {
   }
   m_fTransfer = f;
   m_hasTransferFunction = true;
-  m_transferFunctionTimes.clear();
-  m_transferFunctionValues.clear();
+  m_fTransferTab.clear();
 }
 
 void Sensor::SetTransferFunction(const std::vector<double>& times,
@@ -787,8 +818,12 @@ void Sensor::SetTransferFunction(const std::vector<double>& times,
               << "    Time and value vectors must have same size.\n";
     return;
   }
-  m_transferFunctionTimes = times;
-  m_transferFunctionValues = values;
+  const auto n = times.size();
+  m_fTransferTab.clear();
+  for (unsigned int i = 0; i < n; ++i) {
+    m_fTransferTab.emplace_back(std::make_pair(times[i], values[i]));
+  } 
+  std::sort(m_fTransferTab.begin(), m_fTransferTab.end());
   m_fTransfer = nullptr;
   m_hasTransferFunction = true;
 }
@@ -797,34 +832,34 @@ void Sensor::SetTransferFunction(Shaper &shaper) {
   m_fTransfer = nullptr;
   m_shaper = &shaper;
   m_hasTransferFunction = true;
-  m_transferFunctionTimes.clear();
-  m_transferFunctionValues.clear();
+  m_fTransferTab.clear();
 }
 
 double Sensor::InterpolateTransferFunctionTable(const double t) const {
-  if (m_transferFunctionTimes.empty() || m_transferFunctionValues.empty()) {
-    return 0.;
-  }
+  if (m_fTransferTab.empty()) return 0.;
   // Don't extrapolate beyond the range defined in the table.
-  if (t < m_transferFunctionTimes.front() ||
-      t > m_transferFunctionTimes.back()) {
+  if (t < m_fTransferTab.front().first || t > m_fTransferTab.back().first) {
     return 0.;
   }
   // Find the proper interval in the table.
-  const auto begin = m_transferFunctionTimes.cbegin();
-  const auto it1 = std::upper_bound(begin, m_transferFunctionTimes.cend(), t);
-  if (it1 == begin) return m_transferFunctionValues.front();
+  const auto begin = m_fTransferTab.cbegin();
+  const auto it1 = std::upper_bound(begin, m_fTransferTab.cend(), std::make_pair(t, 0.));
+  if (it1 == begin) return m_fTransferTab.front().second;
   const auto it0 = std::prev(it1);
-  const auto f0 = m_transferFunctionValues[it0 - begin];
-  const auto f1 = m_transferFunctionValues[it1 - begin];
-
+  const double t0 = (*it0).first;
+  const double t1 = (*it1).first;
+  const double f = t - t0 / (t1 - t0);
   // Linear interpolation.
-  return f0 + (t - *it0) * (f1 - f0) / (*it1 - *it0);
+  return (*it0).second * (1. - f) + (*it1).second * f;
 }
 
 double Sensor::GetTransferFunction(const double t) {
   if (!m_hasTransferFunction) return 0.;
-  if (m_fTransfer) return m_fTransfer(t);
+  if (m_fTransfer) {
+    return m_fTransfer(t);
+  } else if (m_shaper) {
+    return m_shaper->Shape(t); 
+  }
   return InterpolateTransferFunctionTable(t);
 }
 
@@ -929,16 +964,15 @@ bool Sensor::DelayAndSubtractFraction(const double td, const double f) {
 }
 
 void Sensor::SetNoiseFunction(double (*f)(double t)) {
-  if (f == 0) {
+  if (!f) {
     std::cerr << m_className << "::SetNoiseFunction: Null pointer.\n";
     return;
   }
   m_fNoise = f;
-  m_hasNoiseFunction = true;
 }
 
 void Sensor::AddNoise(const bool total, const bool electron, const bool ion) {
-  if (!m_hasNoiseFunction) {
+  if (!m_fNoise) {
     std::cerr << m_className << "::AddNoise: Noise function not set.\n";
     return;
   }
@@ -963,13 +997,9 @@ void Sensor::AddWhiteNoise(const double enc, const bool poisson,
     std::cerr << m_className << "::AddWhiteNoise: Transfer function not set.\n";
     return;
   }
-  if (!m_shaper) { 
-    std::cerr << m_className << "::AddWhiteNoise: Shaper not set.\n";
-    return;
-  }
   if (m_nEvents == 0) m_nEvents = 1;
   
-  const double f2 = m_shaper->TransferFuncSq();
+  const double f2 = TransferFunctionSq();
   if (f2 < 0.) {
     std::cerr << m_className << "::AddWhiteNoise:\n"
               << "  Could not calculate transfer function integral.\n";
@@ -1002,6 +1032,24 @@ void Sensor::AddWhiteNoise(const double enc, const bool poisson,
       }
     }
   }
+}
+
+double Sensor::TransferFunctionSq() const {
+
+  if (m_fTransfer) {
+    std::function<double(double)> fsq = [this](double x) {
+      const double y = m_fTransfer(x);
+      return y * y;
+    };
+    constexpr double epsrel = 1.e-8;
+    double integral = 0., err = 0.;
+    unsigned int stat = 0;
+    Numerics::QUADPACK::qagi(fsq, 0., 1, 0., epsrel, integral, err, stat);
+    return integral;
+  } else if (m_shaper) {
+    return m_shaper->TransferFuncSq();
+  }
+  return Trapezoid2(m_fTransferTab);
 }
 
 bool Sensor::ComputeThresholdCrossings(const double thr,

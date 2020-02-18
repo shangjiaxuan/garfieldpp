@@ -1,6 +1,7 @@
 #ifndef G_NUMERICS_H
 #define G_NUMERICS_H
 
+#include <functional>
 #include <complex>
 #include <vector>
 
@@ -55,9 +56,9 @@ namespace QUADPACK {
 ///          is the best that can be obtained.
 ///     - 5: integral is probably divergent, or slowly convergent.
 ///     - 6: invalid input.  
-void qagi(double (*f)(double x), double bound, const int inf, 
+void qagi(std::function<double(double)> f, double bound, const int inf, 
           const double epsabs, const double epsrel, 
-          double& result, double& abserr, int& status);
+          double& result, double& abserr, unsigned int& status);
 
 /// 15-point Gauss-Kronrod integration with (semi-)infinite integration range.
 /// \param f function to be integrated.
@@ -70,12 +71,12 @@ void qagi(double (*f)(double x), double bound, const int inf,
 /// \param resabs approximation to the integral over \f$\left|f\right|\f$.
 /// \param resasc approximation to the integral of 
 ///               \f$\left|f - I / (b-a)\right|\f$ over \f$(a,b)\f$.
-void qk15i(double (*f)(double x), double bound, const int inf,
+void qk15i(std::function<double(double)> f, double bound, const int inf,
            const double a, const double b, double& result, double& abserr,
            double& resabs, double& resasc);
 
 /// 15-point Gauss-Kronrod integration with finite integration range.
-void qk15(double (*f)(double x), const double a, const double b,
+void qk15(std::function<double(double)> f, const double a, const double b,
           double& result, double& abserr, double& resabs, double& resasc);
 
 }

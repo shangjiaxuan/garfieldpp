@@ -2,6 +2,7 @@
 #define G_SENSOR_H
 
 #include <vector>
+#include <utility>
 
 #include "ComponentBase.hh"
 #include "Shaper.hh"
@@ -234,12 +235,9 @@ class Sensor {
   bool m_hasTransferFunction = false;
   double (*m_fTransfer)(double t) = nullptr;
   Shaper* m_shaper = nullptr;
-  
-  std::vector<double> m_transferFunctionTimes;
-  std::vector<double> m_transferFunctionValues;
+  std::vector<std::pair<double, double> > m_fTransferTab;
 
   // Noise
-  bool m_hasNoiseFunction = false;
   double (*m_fNoise)(double t) = nullptr;
 
   std::vector<std::pair<double, bool> > m_thresholdCrossings;
@@ -272,6 +270,7 @@ class Sensor {
       if (delayed) electrode.delayedIonSignal[bin] += signal;
     }
   }
+  double TransferFunctionSq() const;
   double InterpolateTransferFunctionTable(const double t) const;
 };
 }
