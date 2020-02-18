@@ -155,48 +155,131 @@ The transfer function to be applied can be set using
 \begin{lstlisting}
 void Sensor::SetTransferFunction(double (*f)(double t));
 \end{lstlisting}
-where \texttt{double f(double t)} is a function provided by the user, 
-or using
+where \texttt{f} is a function provided by the user, or using
 \begin{lstlisting}
 void Sensor::SetTransferFunction(const std::vector<double>& times,
                                  const std::vector<double>& values);
 \end{lstlisting}
 in which case the transfer function will be calculated by 
 interpolation of the values provided in the table.
+A third option is to use a predefined expression, implemented in 
+the helper class \texttt{Shaper}. Its constructor,
+\begin{lstlisting}
+Shaper(const unsigned int n, const double tau, const double g, std::string shaperType);
+\end{lstlisting}
+takes four arguments: $n$ is the order of the shaper, 
+$\tau$ is the time constant, $g$ is the gain factor, 
+and \texttt{shaperType} is either \texttt{"unipolar"} or \texttt{"bipolar"}.
+In the first case (unipolar shaper), the transfer function is given by
+\begin{equation*}
+  f\left(t\right) = g \exp\left(n\right)\left(\frac{t}{t_{p}}\right)^{n}
+                    \exp\left(-t / \tau\right), \qquad t_{p} = n\tau,
+\end{equation*} 
+while for a bipolar shaper the expression
+\begin{equation*}
+  f\left(t\right) = g \frac{\exp\left(r\right)}{\sqrt{n}} \left(n - \frac{t}{\tau}\right)
+                    \left(\frac{t}{t_{p}}\right)^{n - 1} 
+                    \exp\left(-t / \tau\right), \qquad t_{p} = r\tau, \qquad r = n - \sqrt{n}.
+\end{equation*}
+is used. The normalization of these expressions is chosen such that the  
+value of the transfer function at the peaking time $t = t_{p}$ is unity.
+In order to use a transfer function provided by a \texttt{Shaper} class,
+one should call
+\begin{lstlisting}
+Sensor::SetTransferFunction(Shaper& shaper);
+\end{lstlisting}
 
-In order to convolute the presently stored signal with the 
-transfer function (specified using the above function), 
-the function
+The presently stored signal can be convoluted with the 
+transfer function (specified using one of the methods above) using 
 \begin{lstlisting}
 bool Sensor::ConvoluteSignal();
 \end{lstlisting}
-can be called. 
 
 As an example, consider the following transfer function
 \begin{equation*}
-  f\left(t\right) = e\frac{t}{\tau}\text{e}^{1 - t/\tau}, \qquad
-  \tau = 25~\text{ns}
+  f\left(t\right) = \frac{t}{\tau}\exp\left(1 - t/\tau\right), \qquad
+  \tau = 25\,\text{ns},
 \end{equation*}
-
+\textit{i.\,.e.} a unipolar shaper with $n = 1$. The two code snippets 
+below illustrate different methods for applying this transfer function 
+to the induced signal. 
+\begin{itemize}
+\item 
 \begin{lstlisting}
 double transfer(double t) {
-
   constexpr double tau = 25.;
   return (t / tau) * exp(1 - t / tau);
-
 }
 
 int main(int argc, char* argv[]) {
 
   // Setup component, media, etc.
-  ...
-  Sensor* sensor = new Sensor();
-  sensor->SetTransferFunction(transfer);
+  // ...
+  Sensor sensor;
+  sensor.SetTransferFunction(transfer);
   // Calculate the induced current.
-  ...
+  // ...
   // Apply the transfer function.
-  sensor->ConvoluteSignal();
-  ...
+  sensor.ConvoluteSignal();
+  // ...
 }
- 
 \end{lstlisting}
+
+\item
+
+\begin{lstlisting}
+int main(int argc, char* argv[]) {
+
+  // ...
+  Shaper shaper(1, 25., 1., "unipolar");
+  Sensor sensor;
+  sensor.SetTransferFunction(shaper);
+  // ...
+  sensor.ConvoluteSignal();
+  // ...
+}
+\end{lstlisting}
+\end{itemize}
+
+\subsection{Noise}
+Prior to convoluting the induced current with a transfer function, 
+one can add a random noise component to the signal using 
+\begin{lstlisting}
+void AddWhiteNoise(const double enc, const bool poisson = true, const double q0 = 1.);
+\end{lstlisting}
+\begin{description}
+  \item[enc] desired equivalent noise charge (ENC) of the convoluted signal,
+  \item[poisson] flag whether to sample the number of noise pulses 
+    from a Poisson distribution, or to sample the noise charge in each 
+    bin from a Gaussian distribution,
+  \item[q0] amplitude of the noise delta pulses (in electrons). 
+\end{description} 
+
+The algorithm is based on the fact that white current noise is equivalent 
+to a random sequence of delta current pulses with large frequency $\nu$ 
+and with constant amplitude $q_0$. When processing this signal by an 
+amplifier with transfer function $f\left(t\right)$, 
+with a peak normalized to unity, the variance of the output signal becomes
+\begin{equation*}
+  \nu q_{0}^{2} \int f\left(t\right)^{2} \text{d}t.
+\end{equation*}
+We want this to be equivalent to the ENC$^2$, 
+which defines 
+\begin{equation*}
+\nu = \frac{1}{q_{0}^{2}}\frac{\text{ENC}^2}{\int f\left(t\right)^2 \text{d}t}.
+\end{equation*}
+
+The total number of current delta pulses in a period of time $\Delta{t}$ 
+is Poisson distributed with a mean $\nu\Delta{t}$ 
+and a standard deviation $\sqrt{\nu\Delta{t}}$.
+With the flag \texttt{poisson} set to \texttt{true}, a Poisson-distributed 
+number of current pulses is added to the signal in the time window.
+
+For large frequencies, the Poisson distribution becomes a 
+Gaussian distribution, so the standard deviation of charge 
+in a time bin $\Delta{t}$ is 
+\begin{equation*}
+  \sigma_{q} = q_{0} \sqrt{\nu\Delta{t}}.
+\end{equation*}
+With the flag \texttt{poisson} set to \texttt{false}, 
+a Gaussian-distributed noise charge is added to each signal bin. 
