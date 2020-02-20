@@ -1132,29 +1132,29 @@ bool ComponentGrid::GetField(
                            << j1 << " (" << vy << ").\n"
               << "    Z: " << k0 << " (" << uz << ") - " 
                            << k1 << " (" << vz << ").\n";
-  } 
-  fx = ((n000.fx * ux + n100.fx * vx) * uy +
-        (n010.fx * ux + n110.fx * vx) * vy) *
-           uz +
-       ((n001.fx * ux + n101.fx * vx) * uy +
-        (n011.fx * ux + n111.fx * vx) * vy) *
-           vz;
-  fy = ((n000.fy * ux + n100.fy * vx) * uy +
-        (n010.fy * ux + n110.fy * vx) * vy) *
-           uz +
-       ((n001.fy * ux + n101.fy * vx) * uy +
-        (n011.fy * ux + n111.fy * vx) * vy) *
-           vz;
-  fz = ((n000.fz * ux + n100.fz * vx) * uy +
-        (n010.fz * ux + n110.fz * vx) * vy) *
-           uz +
-       ((n001.fz * ux + n101.fz * vx) * uy +
-        (n011.fz * ux + n111.fz * vx) * vy) *
-           vz;
-  p = ((n000.v * ux + n100.v * vx) * uy + (n010.v * ux + n110.v * vx) * vy) *
-          uz +
-      ((n001.v * ux + n101.v * vx) * uy + (n011.v * ux + n111.v * vx) * vy) *
-          vz;
+  }
+  fx = ((n000.fx * vx + n100.fx * ux) * vy +
+        (n010.fx * vx + n110.fx * ux) * uy) *
+           vz +
+       ((n001.fx * vx + n101.fx * ux) * vy +
+        (n011.fx * vx + n111.fx * ux) * uy) *
+           uz;
+  fy = ((n000.fy * vx + n100.fy * ux) * vy +
+        (n010.fy * vx + n110.fy * ux) * uy) *
+           vz +
+       ((n001.fy * vx + n101.fy * ux) * vy +
+        (n011.fy * vx + n111.fy * ux) * uy) *
+           uz;
+  fz = ((n000.fz * vx + n100.fz * ux) * vy +
+        (n010.fz * vx + n110.fz * ux) * uy) *
+           vz +
+       ((n001.fz * vx + n101.fz * ux) * vy +
+        (n011.fz * vx + n111.fz * ux) * uy) *
+           uz;
+  p = ((n000.v * vx + n100.v * ux) * vy + (n010.v * vx + n110.v * ux) * uy) *
+          vz +
+      ((n001.v * vx + n101.v * ux) * vy + (n011.v * vx + n111.v * ux) * uy) *
+          uz;
   if (xMirrored) fx = -fx;
   if (yMirrored) fy = -fy;
   if (zMirrored) fz = -fz;
