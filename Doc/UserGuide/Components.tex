@@ -48,7 +48,10 @@ In case of field maps, the geometry is already defined in the field solver.
 It is, therefore, sufficient to associate the materials 
 of the field map with the corresponding \texttt{Medium} classes. 
 
-For other components (e. g. analytic or user-parameterized fields), 
+For analytic fields, the geometry is, in general, given by the 
+cell layout.
+
+For other components (\textit{e. g.} user-parameterized fields), 
 the geometry has to be defined separately. 
 
 Simple structures can be described by the native geometry (\texttt{GeometrySimple}), which has only a very restricted repertoire of shapes (solids). 
@@ -686,7 +689,11 @@ semi-analytic calculation techniques -- based essentially
 on the capacitance matrix method -- are implemented.
 
 \subsection{Describing the cell}
-
+The medium to be associated with the active region of the cell 
+is set using
+\begin{lstlisting}
+SetMedium(Medium* medium);
+\end{lstlisting}
 Wires, tubes and planes can be added to the cell layout by means of the 
 following functions:
 \begin{lstlisting}

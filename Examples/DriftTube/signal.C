@@ -12,8 +12,6 @@
 
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/MediumMagboltz.hh"
-#include "Garfield/SolidTube.hh"
-#include "Garfield/GeometrySimple.hh"
 #include "Garfield/Sensor.hh"
 #include "Garfield/DriftLineRKF.hh"
 #include "Garfield/TrackHeed.hh"
@@ -52,22 +50,13 @@ int main(int argc, char * argv[]) {
   const std::string path = std::getenv("GARFIELD_HOME");
   gas.LoadIonMobility(path + "/Data/IonMobility_Ar+_Ar.txt");
 
+  // Make a component with analytic electric field.
+  ComponentAnalyticField cmp;
+  cmp.SetMedium(&gas);
   // Wire radius [cm]
   const double rWire = 25.e-4;
   // Outer radius of the tube [cm]
   const double rTube = 0.71;
-  // Half-length of the tube [cm]
-  const double lTube = 2.;
-  // Build the geometry.
-  GeometrySimple geo;
-  // Make a tube.
-  SolidTube tube(0, 0, 0, 0, rTube, lTube);
-  // Add the solid to the geometry, together with the medium inside.
-  geo.AddSolid(&tube, &gas);
-
-  // Make a component with analytic electric field.
-  ComponentAnalyticField cmp;
-  cmp.SetGeometry(&geo);
   // Voltages
   const double vWire = 2730.;
   const double vTube = 0.;

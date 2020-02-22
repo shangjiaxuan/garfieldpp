@@ -82,31 +82,21 @@ we use the class \texttt{ComponentAnalyticField} which can handle
 (two-dimensional) arrangements of wires, planes and tubes.
 \begin{lstlisting}
 ComponentAnalyticField cmp;
-\end{lstlisting} 
-The \texttt{Component} requires a description of the 
-geometry, that is a list of volumes and associated media.
+\end{lstlisting}
+We first set the medium inside the active region. 
+\begin{lstlisting}
+cmp.SetMedium(&gas); 
+\end{lstlisting}
+Next we add the elements (wire and tube) defining the electric field.
 \begin{lstlisting}
 // Wire radius [cm]
 const double rWire = 25.e-4;
 // Outer radius of the tube [cm]
 const double rTube = 0.71;
-// Half-length of the tube [cm]
-const double lTube = 2.;
-GeometrySimple geo;
-// Make a tube 
-// (centered at the origin, inner radius: rWire, outer radius: rTube).
-SolidTube tube(0, 0, 0, rWire, rTube, lTube);
-// Add the solid to the geometry, together with the medium inside.
-geo.AddSolid(&tube, &gas);
-// Pass a pointer to the geometry class to the component.
-cmp.SetGeometry(&geo); 
-\end{lstlisting}
-Next we setup the electric field.
-\begin{lstlisting}
 // Voltages
 const double vWire = 2730.;
 const double vTube =    0.;
-// Add the wire in the center.
+// Add the wire in the centre.
 cmp.AddWire(0, 0, 2 * rWire, vWire, "s");
 // Add the tube.
 cmp.AddTube(rTube, vTube, 0, "t");
