@@ -81,29 +81,38 @@ void qk15(std::function<double(double)> f, const double a, const double b,
 
 }
 
-// Linear algebra routines from CERNLIB
-/// Replace B by the solution X of A*X=B, after which A is undefined.
-void Deqn(const int n, std::vector<std::vector<double> >& a,
+/// Linear algebra routines from CERNLIB.
+namespace CERNLIB {
+
+/// Replaces b by the solution x of Ax = b, after which A is undefined.
+/// \param n order of the square matrix A.
+/// \param A n by n matrix.
+/// \param b right-hand side vector.
+/// \param ifail 0: normal exit, -1: singular matrix.
+void deqn(const int n, std::vector<std::vector<double> >& a,
           int& ifail, std::vector<double>& b);
-void Dfact(const int n, std::vector<std::vector<double> >& a,
-           std::vector<int>& ir, int& ifail, double& det, int& jfail);
-void Dfeqn(const int n, std::vector<std::vector<double> >& a,
-           std::vector<int>& ir, std::vector<double>& b);
-void Dfinv(const int n, std::vector<std::vector<double> >& a,
-           std::vector<int>& ir);
-/// Replace b by the solution x of A x = b, and replace A by its inverse.
-void Deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
+/// Replaces b by the solution x of Ax = b, and replace A by its inverse.
+void deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
             std::vector<double>& b);
 
-void Cfact(const int n, std::vector<std::vector<std::complex<double> > >& a,
+void dfact(const int n, std::vector<std::vector<double> >& a,
+           std::vector<int>& ir, int& ifail, double& det, int& jfail);
+void dfeqn(const int n, std::vector<std::vector<double> >& a,
+           std::vector<int>& ir, std::vector<double>& b);
+void dfinv(const int n, std::vector<std::vector<double> >& a,
+           std::vector<int>& ir);
+
+void cfact(const int n, std::vector<std::vector<std::complex<double> > >& a,
            std::vector<int>& ir, int& ifail, std::complex<double>& det,
            int& jfail);
-void Cfinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
+void cfinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
            std::vector<int>& ir);
-/// Replace A by its inverse.
-void Cinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
+
+/// Replace square matrix A by its inverse.
+void cinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
           int& ifail);
 
+}
 
 /// Modified Bessel functions.
 /// Series expansions from Abramowitz and Stegun.

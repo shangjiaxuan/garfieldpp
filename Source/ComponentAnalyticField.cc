@@ -4176,8 +4176,8 @@ bool ComponentAnalyticField::Charge() {
       m_a[m_nWires].push_back(1.);
     }
     m_a[m_nWires].push_back(0.);
-    // Solve equations to yield charges, using KERNLIB (scalar).
-    Numerics::Deqinv(m_nWires + 1, m_a, ifail, b);
+    // Solve equations to yield charges.
+    Numerics::CERNLIB::deqinv(m_nWires + 1, m_a, ifail, b);
     if (ifail != 0) {
       std::cerr << m_className << "::Charge:\n";
       std::cerr << "    Matrix inversion failed.\n";
@@ -4202,7 +4202,7 @@ bool ComponentAnalyticField::Charge() {
     m_v0 = b[m_nWires];
   } else {
     // Handle the case when the sum of the charges is zero automatically.
-    Numerics::Deqinv(m_nWires, m_a, ifail, b);
+    Numerics::CERNLIB::deqinv(m_nWires, m_a, ifail, b);
     // Reference potential chosen to be zero.
     m_v0 = 0.;
   }
@@ -5971,7 +5971,7 @@ bool ComponentAnalyticField::SetupWireSignals() {
       // Invert.
       if (m_nWires >= 1) {
         int ifail = 0;
-        Numerics::Cinv(m_nWires, m_sigmat, ifail);
+        Numerics::CERNLIB::cinv(m_nWires, m_sigmat, ifail);
         if (ifail != 0) {
           std::cerr << m_className << "::PrepareWireSignals:\n";
           std::cerr << "    Inversion of signal matrix (" << mx << ", " << my
@@ -9006,7 +9006,7 @@ bool ComponentAnalyticField::FindZeroes(
     std::vector<double> dx = fold;
     bb = b;
     int ifail = 0;
-    Numerics::Deqn(n, bb, ifail, dx);
+    Numerics::CERNLIB::deqn(n, bb, ifail, dx);
     if (ifail != 0) {
       std::cerr << m_className << "::FindZeroes: Zero search stopped.\n"
                 << "    Solving the update equation failed.\n";

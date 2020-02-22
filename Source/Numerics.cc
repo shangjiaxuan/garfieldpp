@@ -7,15 +7,15 @@
 
 namespace {
 
-void DeqnGen(const int n, std::vector<std::vector<double > >& a,
+void deqnGen(const int n, std::vector<std::vector<double > >& a,
              int& ifail, std::vector<double>& b) {
 
   std::vector<int> ir(n, 0);
   double det = 0.;
   int jfail = 0;
-  Garfield::Numerics::Dfact(n, a, ir, ifail, det, jfail); 
+  Garfield::Numerics::CERNLIB::dfact(n, a, ir, ifail, det, jfail); 
   if (ifail != 0) return;
-  Garfield::Numerics::Dfeqn(n, a, ir, b);
+  Garfield::Numerics::CERNLIB::dfeqn(n, a, ir, b);
 }
 
 /// Epsilon algorithm.
@@ -586,13 +586,12 @@ void qk15(std::function<double(double)> f, const double a, const double b,
 
 }
 
-void Deqn(const int n, std::vector<std::vector<double> >& a,
+namespace CERNLIB {
+
+void deqn(const int n, std::vector<std::vector<double> >& a,
           int& ifail, std::vector<double>& b) { 
 
-  // ******************************************************************
   // REPLACES B BY THE SOLUTION X OF A*X=B, AFTER WHICH A IS UNDEFINED.
-  // (PARAMETERS AS FOR DEQINV.)
-  // ******************************************************************
 
   if (n < 1) {
     ifail = 1;
@@ -642,7 +641,7 @@ void Deqn(const int n, std::vector<std::vector<double> >& a,
     }
     double temp = a[m1][0];
     if (temp == 0.) {
-      DeqnGen(n, a, ifail, b);
+      deqnGen(n, a, ifail, b);
       return;
     }
     const double l11 = 1. / temp;
@@ -658,14 +657,14 @@ void Deqn(const int n, std::vector<std::vector<double> >& a,
     double l21 = a[m2][0];
     double l31 = a[m3][0];
     if (l22 == 0.) {
-      DeqnGen(n, a, ifail, b);
+      deqnGen(n, a, ifail, b);
       return;
     }
     l22 = 1. / l22;
     const double u23 = l22 * (a[m2][2] - l21 * u13);
     temp = a[m3][2] - l31 * u13 - l32 * u23;
     if (temp == 0.) {
-      DeqnGen(n, a, ifail, b);
+      deqnGen(n, a, ifail, b);
       return;
     }
     const double l33 = 1. / temp;
@@ -680,10 +679,10 @@ void Deqn(const int n, std::vector<std::vector<double> >& a,
   }
 
   // N > 3 cases. Factorize matrix and solve system.
-  DeqnGen(n, a, ifail, b);
+  deqnGen(n, a, ifail, b);
 }
 
-void Dfact(const int n, std::vector<std::vector<double> >& a,
+void dfact(const int n, std::vector<std::vector<double> >& a,
            std::vector<int>& ir, int& ifail, double& det, int& jfail) {
   constexpr double g1 = 1.e-19;
   constexpr double g2 = 1.e-19;
@@ -719,16 +718,14 @@ void Dfact(const int n, std::vector<std::vector<double> >& a,
       continue;
     }
     for (int i = j + 1; i <= n; ++i) {
-      double q = fabs(a[i - 1][j - 1]);
+      double q = std::abs(a[i - 1][j - 1]);
       if (q <= p) continue;
       k = i;
       p = q;
     }
     if (k != j) {
       for (int l = 1; l <= n; ++l) {
-        double tf = a[j - 1][l - 1];
-        a[j - 1][l - 1] = a[k - 1][l - 1];
-        a[k - 1][l - 1] = tf;
+        std::swap(a[j - 1][l - 1], a[k - 1][l - 1]);
       }
       ++nxch;
       ir[nxch - 1] = j * 4096 + k;
@@ -770,19 +767,17 @@ void Dfact(const int n, std::vector<std::vector<double> >& a,
   ir[n - 1] = nxch;
 }
 
-void Dfeqn(const int n, std::vector<std::vector<double> >& a,
+void dfeqn(const int n, std::vector<std::vector<double> >& a,
            std::vector<int>& ir, std::vector<double>& b) {
   if (n <= 0) return;
 
   int nxch = ir[n - 1];
   if (nxch != 0) {
     for (int m = 1; m <= nxch; ++m) {
-      int ij = ir[m - 1];
-      int i = ij / 4096;
-      int j = ij % 4096;
-      double te = b[i - 1];
-      b[i - 1] = b[j - 1];
-      b[j - 1] = te;
+      const int ij = ir[m - 1];
+      const int i = ij / 4096;
+      const int j = ij % 4096;
+      std::swap(b[i - 1], b[j - 1]);
     }
   }
 
@@ -806,7 +801,7 @@ void Dfeqn(const int n, std::vector<std::vector<double> >& a,
   }
 }
 
-void Dfinv(const int n, std::vector<std::vector<double> >& a,
+void dfinv(const int n, std::vector<std::vector<double> >& a,
            std::vector<int>& ir) {
 
   if (n <= 1) return;
@@ -856,32 +851,12 @@ void Dfinv(const int n, std::vector<std::vector<double> >& a,
     int i = ij / 4096;
     int j = ij % 4096;
     for (k = 1; k <= n; ++k) {
-      double ti = a[k - 1][i - 1];
-      a[k - 1][i - 1] = a[k - 1][j - 1];
-      a[k - 1][j - 1] = ti;
+      std::swap(a[k - 1][i - 1], a[k - 1][j - 1]);
     }
   }
 }
 
-//   ******************************************************************
-//
-//   REPLACES B BY THE SOLUTION X OF A*X=B, AND REPLACES A BY ITS IN-
-//   VERSE.
-//
-//   n            ORDER OF THE SQUARE MATRIX IN ARRAY A.
-//   A            (DOUBLE PRECISION) TWO-DIMENSIONAL ARRAY CONTAINING
-//                AN n BY n MATRIX.
-//
-//   IFAIL        OUTPUT PARAMETER.   IFAIL= 0 ... NORMAL EXIT.
-//                                    IFAIL=-1 ... SINGULAR MATRIX.
-//
-//   B            (DOUBLE PRECISION) ONE-DIMENSIONAL ARRAY
-//
-//   CALLS ... DFACT, DFINV.
-//
-//   ******************************************************************
-
-void Deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
+void deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
             std::vector<double>& b) {
 
   // Test for parameter errors.
@@ -897,10 +872,10 @@ void Deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
   if (n > 3) {
     // n > 3 cases. Factorize matrix, invert and solve system.
     std::vector<int> ir(n, 0);
-    Dfact(n, a, ir, ifail, det, jfail);
+    dfact(n, a, ir, ifail, det, jfail);
     if (ifail != 0) return;
-    Dfeqn(n, a, ir, b);
-    Dfinv(n, a, ir);
+    dfeqn(n, a, ir, b);
+    dfinv(n, a, ir);
   } else if (n == 3) {
     // n = 3 case. Compute cofactors.
     const double c11 = a[1][1] * a[2][2] - a[1][2] * a[2][1];
@@ -990,7 +965,7 @@ void Deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
   }
 }
 
-void Cfact(const int n, std::vector<std::vector<std::complex<double> > >& a,
+void cfact(const int n, std::vector<std::vector<std::complex<double> > >& a,
            std::vector<int>& ir, int& ifail, std::complex<double>& det,
            int& jfail) {
   constexpr double g1 = 1.e-19;
@@ -1075,7 +1050,7 @@ void Cfact(const int n, std::vector<std::vector<std::complex<double> > >& a,
   ir[n - 1] = nxch;
 }
 
-void Cfinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
+void cfinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
            std::vector<int>& ir) {
 
   if (n <= 1) return;
@@ -1121,28 +1096,16 @@ void Cfinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
 
   for (int m = 1; m <= nxch; ++m) {
     int k = nxch - m + 1;
-    int ij = ir[k - 1];
-    int i = ij / 4096;
-    int j = ij % 4096;
+    const int ij = ir[k - 1];
+    const int i = ij / 4096;
+    const int j = ij % 4096;
     for (k = 1; k <= n; ++k) {
-      const auto ti = a[k - 1][i - 1];
-      a[k - 1][i - 1] = a[k - 1][j - 1];
-      a[k - 1][j - 1] = ti;
+      std::swap(a[k - 1][i - 1], a[k - 1][j - 1]);
     }
   }
 }
 
-//    ******************************************************************
-//
-//     REPLACES A BY ITS INVERSE.
-//
-//     (PARAMETERS AS FOR CEQINV.)
-//
-//     CALLS ... CFACT, CFINV.
-//
-//     ******************************************************************
-
-void Cinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
+void cinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
           int& ifail) {
 
   std::complex<double> det(0., 0.);
@@ -1158,9 +1121,9 @@ void Cinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
   if (n > 3) {
     // n > 3 cases. Factorize matrix and invert.
     std::vector<int> ir(n, 0);
-    Cfact(n, a, ir, ifail, det, jfail);
+    cfact(n, a, ir, ifail, det, jfail);
     if (ifail != 0) return;
-    Cfinv(n, a, ir);
+    cfinv(n, a, ir);
   } else if (n == 3) {
     // n = 3 case. Compute cofactors.
     const auto c11 = a[1][1] * a[2][2] - a[1][2] * a[2][1];
@@ -1235,6 +1198,8 @@ void Cinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
     }
     a[0][0] = std::complex<double>(1., 0.) / a[0][0];
   }
+}
+
 }
 
 double Divdif(const std::vector<double>& f, const std::vector<double>& a,
