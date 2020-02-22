@@ -7,8 +7,6 @@
 
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/MediumMagboltz.hh"
-#include "Garfield/SolidBox.hh"
-#include "Garfield/GeometrySimple.hh"
 #include "Garfield/Sensor.hh"
 #include "Garfield/ViewField.hh"
 #include "Garfield/ViewCell.hh"
@@ -171,14 +169,8 @@ int main(int argc, char * argv[]) {
   plottingEngine.SetDefaultStyle();
 
   // Setup the gas.
-  MediumMagboltz* gas = new MediumMagboltz();
-  gas->SetComposition("ne", 85.72, "co2", 9.52, "n2", 4.76);
-
-  // Build the geometry
-  GeometrySimple* geo = new GeometrySimple();
-  SolidBox* box = new SolidBox(0., 0., 0., 100., 100., 100.);
-  // Add the solid to the geometry, together with the gas
-  geo->AddSolid(box, gas);
+  MediumMagboltz gas;
+  gas.SetComposition("ne", 85.72, "co2", 9.52, "n2", 4.76);
 
   // Setup the electric field 
   ComponentAnalyticField cmp;
@@ -206,7 +198,7 @@ int main(int argc, char * argv[]) {
 
   for (auto function : cells) {
     cmp.Clear();
-    cmp.SetGeometry(geo);
+    cmp.SetMedium(&gas);
     double xmin = 0., xmax = 0.;
     double ymin = 0., ymax = 0.;
     function(&cmp, xmin, xmax, ymin, ymax);

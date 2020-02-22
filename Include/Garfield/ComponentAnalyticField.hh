@@ -19,6 +19,7 @@ class ComponentAnalyticField : public ComponentBase {
   /// Destructor
   ~ComponentAnalyticField() {}
 
+  Medium* GetMedium(const double x, const double y, const double z) override;
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override {
     m = nullptr;
@@ -27,7 +28,7 @@ class ComponentAnalyticField : public ComponentBase {
     status = Field(x, y, z, ex, ey, ez, v, false);
     // If the field is ok, get the medium.
     if (status == 0) {
-      m = GetMedium(x, y, z);
+      m = m_geometry ? m_geometry->GetMedium(x, y, z) : m_medium;
       if (!m) {
         status = -6;
       } else if (!m->IsDriftable()) {
@@ -44,7 +45,7 @@ class ComponentAnalyticField : public ComponentBase {
     status = Field(x, y, z, ex, ey, ez, v, true);
     // If the field is ok, get the medium.
     if (status == 0) {
-      m = GetMedium(x, y, z);
+      m = m_geometry ? m_geometry->GetMedium(x, y, z) : m_medium;
       if (!m) {
         status = -6;
       } else if (!m->IsDriftable()) {
@@ -84,6 +85,9 @@ class ComponentAnalyticField : public ComponentBase {
                       const double z0, double& xw, double& yx,
                       double& rw) override;
 
+
+  /// Set the medium inside the cell.
+  void SetMedium(Medium* medium) { m_medium = medium; }
   /// Add a wire at (x, y) .
   void AddWire(const double x, const double y, const double diameter,
                const double voltage, const std::string& label,
@@ -308,6 +312,8 @@ class ComponentAnalyticField : public ComponentBase {
   };
 
  private:
+  Medium* m_medium = nullptr;
+
   bool m_chargeCheck = false;
 
   bool m_cellset = false;
@@ -327,7 +333,8 @@ class ComponentAnalyticField : public ComponentBase {
   double m_vmin, m_vmax;
 
   // Periodicities
-  bool m_perx, m_pery;
+  bool m_perx = false;
+  bool m_pery = false;
   double m_sx, m_sy;
 
   // Signals
@@ -347,7 +354,7 @@ class ComponentAnalyticField : public ComponentBase {
   unsigned int m_nWires;
   struct Wire {
     double x, y;       //< Location.
-    double d;          //< Diameter.
+    double r;          //< Radius.
     double v;          //< Potential.
     double e;          //< Charge.
     std::string type;  //< Label.
@@ -418,11 +425,12 @@ class ComponentAnalyticField : public ComponentBase {
   std::array<Plane, 5> m_planes;
 
   // Tube
-  bool m_tube;
-  int m_mtube, m_ntube;
-  double m_cotube;
-  double m_cotube2;
-  double m_vttube;
+  bool m_tube = false;
+  int m_mtube = 0;
+  int m_ntube = 1;
+  double m_cotube = 1.;
+  double m_cotube2 = 1.;
+  double m_vttube = 0.;
 
   // Capacitance matrix
   std::vector<std::vector<double> > m_a;
