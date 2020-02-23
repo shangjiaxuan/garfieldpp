@@ -730,8 +730,7 @@ bool MediumMagboltz::GetElectronCollision(
         newDxcProd.s = 0.;
         if (m_lambdaPenning[level] > Small) {
           // Uniform distribution within a sphere of radius lambda
-          newDxcProd.s =
-              m_lambdaPenning[level] * pow(RndmUniformPos(), 1. / 3.);
+          newDxcProd.s = m_lambdaPenning[level] * std::cbrt(RndmUniformPos());
         }
         newDxcProd.energy = esec;
         newDxcProd.type = DxcProdTypeElectron;

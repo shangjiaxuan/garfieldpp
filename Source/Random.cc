@@ -725,7 +725,7 @@ double RndmHeedWF(const double w, const double f) {
   } else if (x < wref * 0.82174) {
     // E = w to 3.064 w: p = (w/E)^4, integral = w^4/3 (1/E^3 - 1/w^3)
     constexpr double w4 = wref * wref * wref * wref;
-    e = pow(2 * w4 / (5 * wref - 6 * x), 1.0 / 3.0);
+    e = std::cbrt(2 * w4 / (5 * wref - 6 * x));
   } else {
     // E > 3.064 w:      p = 0,       integral = 0
     std::cerr << "RndmHeedWF: Random number is above applicable range. "
