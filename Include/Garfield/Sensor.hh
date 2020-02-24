@@ -131,7 +131,7 @@ class Sensor {
   /// Evaluate the transfer function at a given time.
   double GetTransferFunction(const double t);
   /// Convolute the induced current with the transfer function.
-  bool ConvoluteSignal();
+  bool ConvoluteSignal(const bool fft = false);
   /// Replace the current signal curve by its integral.
   bool IntegrateSignal();
   /// Delay the signal and subtract an attenuated copy 
@@ -200,7 +200,7 @@ class Sensor {
                      const bool centre, double& rc);
   bool IsInTrapRadius(const double q0, const double x0, const double y0,
                       const double z0, double& xw, double& yw, double& rw);
-
+  void FFT(std::vector<double>& data, const bool inverse, const int nn);
  private:
   std::string m_className = "Sensor";
 
@@ -272,6 +272,7 @@ class Sensor {
   }
   double TransferFunctionSq() const;
   double InterpolateTransferFunctionTable(const double t) const;
+  bool ConvoluteSignalFFT(); 
 };
 }
 
