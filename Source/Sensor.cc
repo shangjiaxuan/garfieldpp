@@ -863,7 +863,7 @@ double Sensor::GetTransferFunction(const double t) {
   return InterpolateTransferFunctionTable(t);
 }
 
-bool Sensor::ConvoluteSignal() {
+bool Sensor::ConvoluteSignal(const bool fft) {
   if (!m_hasTransferFunction) {
     std::cerr << m_className << "::ConvoluteSignal: "
               << "Transfer function not set.\n";
@@ -874,9 +874,11 @@ bool Sensor::ConvoluteSignal() {
     return false;
   }
 
+  if (fft) return ConvoluteSignalFFT();
+
   // Set the range where the transfer function is valid.
-  double cnvMin = 0.;
-  double cnvMax = 1.e10;
+  constexpr double cnvMin = 0.;
+  constexpr double cnvMax = 1.e10;
 
   std::vector<double> cnvTab(2 * m_nTimeBins - 1, 0.);
   const unsigned int offset = m_nTimeBins - 1;
@@ -886,28 +888,18 @@ bool Sensor::ConvoluteSignal() {
     double t = (-int(i)) * m_tStep;
     if (t < cnvMin || t > cnvMax) {
       cnvTab[offset - i] = 0.;
-    } else if (m_fTransfer) {
-      cnvTab[offset - i] = m_fTransfer(t);
-    } else if (m_shaper) {
-      cnvTab[offset - i] = m_shaper->Shape(t);
     } else {
-      cnvTab[offset - i] = InterpolateTransferFunctionTable(t);
+      cnvTab[offset - i] = GetTransferFunction(t);
     }
     if (i == 0) continue;
     // Positive time part.
     t = i * m_tStep;
     if (t < cnvMin || t > cnvMax) {
       cnvTab[offset + i] = 0.;
-    } else if (m_fTransfer) {
-      cnvTab[offset + i] = m_fTransfer(t);
-    } else if (m_shaper) {
-      cnvTab[offset + i] = m_shaper->Shape(t);
-    }
-    else {
-      cnvTab[offset + i] = InterpolateTransferFunctionTable(t);
+    } else {
+      cnvTab[offset + i] = GetTransferFunction(t);
     }
   }
-
   std::vector<double> tmpSignal(m_nTimeBins, 0.);
   // Loop over all electrodes.
   for (auto& electrode : m_electrodes) {
@@ -919,6 +911,40 @@ bool Sensor::ConvoluteSignal() {
       }
     }
     electrode.signal.swap(tmpSignal);
+  }
+  return true;
+}
+
+bool Sensor::ConvoluteSignalFFT() {
+
+  // Number of bins must be a power of 2.
+  const unsigned int nn = pow(2, ceil(log(m_nTimeBins) / log(2.)));
+  std::vector<double> f(2 * (nn + 1), 0.);
+
+  for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+    f[2 * i + 1] = GetTransferFunction(i * m_tStep);
+  }
+  FFT(f, false, nn);
+
+  const double scale = m_tStep / nn;
+  for (auto& electrode : m_electrodes) {
+    std::vector<double> g(2 * (nn + 1), 0.);
+    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+      g[2 * i + 1] = electrode.signal[i];
+    }
+    FFT(g, false, nn);
+    for (unsigned int i = 0; i < nn; ++i) {
+      const double fr = f[2 * i + 1];
+      const double fi = f[2 * i + 2];
+      const double gr = g[2 * i + 1];
+      const double gi = g[2 * i + 2];
+      g[2 * i + 1] = fr * gr - fi * gi;
+      g[2 * i + 2] = fr * gi + gr * fi;
+    }
+    FFT(g, true, nn);
+    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+      electrode.signal[i] = scale * g[2 * i + 1];
+    }
   }
   return true;
 }
@@ -1221,4 +1247,57 @@ bool Sensor::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   }
   return true;
 }
+
+void Sensor::FFT(std::vector<double>& data, const bool inverse,
+                 const int nn) {
+
+  // Replaces data[1..2*nn] by its discrete fourier transform 
+  // or replaces data[1..2*nn] by nn times its inverse discrete 
+  // fourier transform. 
+  // nn MUST be an integer power of 2 (this is not checked for!).
+
+  const int n = 2 * nn;
+  // Bit reversal.
+  int j = 1;
+  for (int i = 1; i < n; i += 2) {
+    if (j > i) {
+      // Exchange the two complex numbers.
+      std::swap(data[j],data[i]);
+      std::swap(data[j+1],data[i+1]);
+    }        
+    int m = nn;
+    while (m >= 2 && j > m) {
+      j -= m;
+      m >>= 1;
+    } 
+    j += m;
+  }
+
+  const int isign = inverse ? -1 : 1;
+  int mmax = 2;
+  while (n > mmax) {
+    const int step = 2 * mmax;
+    const double theta = isign * TwoPi / mmax;
+    double wtemp = sin(0.5 * theta);
+    const double wpr = -2. * wtemp * wtemp;
+    const double wpi = sin(theta);
+    double wr = 1.;
+    double wi = 0.;
+    for (int m = 1; m < mmax; m += 2) {
+      for (int i = m; i <= n;i += step) {
+        j = i + mmax;
+        double tr = wr * data[j] - wi * data[j + 1];
+        double ti = wr * data[j + 1] + wi * data[j];
+        data[j] = data[i] - tr;
+        data[j + 1] = data[i + 1] - ti;
+        data[i] += tr;
+        data[i + 1] += ti;
+      }
+      wr = (wtemp = wr) * wpr - wi * wpi + wr;
+      wi = wi * wpr + wtemp * wpi + wi;
+    }
+    mmax = step;
+  }
+}
+
 }
