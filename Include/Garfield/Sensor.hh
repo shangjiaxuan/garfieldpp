@@ -200,7 +200,7 @@ class Sensor {
                      const bool centre, double& rc);
   bool IsInTrapRadius(const double q0, const double x0, const double y0,
                       const double z0, double& xw, double& yw, double& rw);
-  void FFT(std::vector<double>& data, const bool inverse, const int nn);
+
  private:
   std::string m_className = "Sensor";
 
@@ -273,6 +273,7 @@ class Sensor {
   double TransferFunctionSq() const;
   double InterpolateTransferFunctionTable(const double t) const;
   bool ConvoluteSignalFFT(); 
+  void FFT(std::vector<double>& data, const bool inverse, const int nn);
 };
 }
 

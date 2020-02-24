@@ -877,8 +877,8 @@ bool Sensor::ConvoluteSignal(const bool fft) {
   if (fft) return ConvoluteSignalFFT();
 
   // Set the range where the transfer function is valid.
-  double cnvMin = 0.;
-  double cnvMax = 1.e10;
+  constexpr double cnvMin = 0.;
+  constexpr double cnvMax = 1.e10;
 
   std::vector<double> cnvTab(2 * m_nTimeBins - 1, 0.);
   const unsigned int offset = m_nTimeBins - 1;
@@ -888,27 +888,18 @@ bool Sensor::ConvoluteSignal(const bool fft) {
     double t = (-int(i)) * m_tStep;
     if (t < cnvMin || t > cnvMax) {
       cnvTab[offset - i] = 0.;
-    } else if (m_fTransfer) {
-      cnvTab[offset - i] = m_fTransfer(t);
-    } else if (m_shaper) {
-      cnvTab[offset - i] = m_shaper->Shape(t);
     } else {
-      cnvTab[offset - i] = InterpolateTransferFunctionTable(t);
+      cnvTab[offset - i] = GetTransferFunction(t);
     }
     if (i == 0) continue;
     // Positive time part.
     t = i * m_tStep;
     if (t < cnvMin || t > cnvMax) {
       cnvTab[offset + i] = 0.;
-    } else if (m_fTransfer) {
-      cnvTab[offset + i] = m_fTransfer(t);
-    } else if (m_shaper) {
-      cnvTab[offset + i] = m_shaper->Shape(t);
     } else {
-      cnvTab[offset + i] = InterpolateTransferFunctionTable(t);
+      cnvTab[offset + i] = GetTransferFunction(t);
     }
   }
-
   std::vector<double> tmpSignal(m_nTimeBins, 0.);
   // Loop over all electrodes.
   for (auto& electrode : m_electrodes) {
@@ -928,7 +919,6 @@ bool Sensor::ConvoluteSignalFFT() {
 
   // Number of bins must be a power of 2.
   const unsigned int nn = pow(2, ceil(log(m_nTimeBins) / log(2.)));
-std::cout << "nn = " << nn << "\n";
   std::vector<double> f(2 * (nn + 1), 0.);
 
   for (unsigned int i = 0; i < m_nTimeBins; ++i) {
@@ -936,7 +926,6 @@ std::cout << "nn = " << nn << "\n";
   }
   FFT(f, false, nn);
 
-  // const double scale = 1. / (nn * nn);
   const double scale = m_tStep / nn;
   for (auto& electrode : m_electrodes) {
     std::vector<double> g(2 * (nn + 1), 0.);
@@ -1264,11 +1253,10 @@ void Sensor::FFT(std::vector<double>& data, const bool inverse,
 
   // Replaces data[1..2*nn] by its discrete fourier transform 
   // or replaces data[1..2*nn] by nn times its inverse discrete 
-  // fourier transform. data is a complex array of 
-  // length nn or, equivalently, a real array of length 2*nn.
+  // fourier transform. 
   // nn MUST be an integer power of 2 (this is not checked for!).
 
-  int n = 2 * nn;
+  const int n = 2 * nn;
   // Bit reversal.
   int j = 1;
   for (int i = 1; i < n; i += 2) {
