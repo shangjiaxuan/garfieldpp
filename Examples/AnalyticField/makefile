@@ -19,3 +19,8 @@ integrate: integrate.C
 	$(CXX) $(CFLAGS) integrate.C
 	$(CXX) -o integrate integrate.o $(LDFLAGS)
 	rm integrate.o
+
+dipole: dipole.C 
+	$(CXX) $(CFLAGS) dipole.C
+	$(CXX) -o dipole dipole.o $(LDFLAGS)
+	rm dipole.o
