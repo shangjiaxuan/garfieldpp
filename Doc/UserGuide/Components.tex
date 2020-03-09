@@ -872,6 +872,35 @@ retrieved by the function
 std::string GetCellType();
 \end{lstlisting}
 
+\subsection{Dipole moments}
+By default, \texttt{ComponentAnalyticField} uses the thin-wire approximation
+for computing the electric field and potential. In this approach, 
+dipole and higher-order terms are neglected which is usually a good   
+approximation if the wire spacing is large compared to the diameter.
+One can request dipole terms to be included in the calculation using
+\begin{lstlisting}
+void EnableDipoleTerms(const bool on = true);
+\end{lstlisting}
+Dipole terms are currently implemented only for cell types 
+A, B1X, B1Y, B2X and B2Y.
+To investigate whether dipole and higher order terms are significant, 
+one can use the function
+\begin{lstlisting}
+bool MultipoleMoments(const unsigned int iw, const unsigned int order = 4,
+  const bool print = false, const bool plot = false, const double rmult = 1.,
+  const double eps = 1.e-4, const unsigned int nMaxIter = 20);
+\end{lstlisting} 
+\begin{description}
+  \item[iw] index of the wire for which the multipole decomposition should be done,
+  \item[order] order of the highest multipole moment to be taken into account,
+  \item[print] flag to request verbose output during the minimisation step,
+  \item[plot] flag to create a plot of the result of the multipole fit,
+  \item[rmult] distance (in units of the wire radius) at which the potential 
+               is to be calculated,
+  \item[eps] ``small number'' used by the minimisation function to calculate the derivative matrix,
+  \item[nMaxIter] max. number of iteration in the minimisation.
+\end{description}
+
 \subsection{Weighting fields}
 
 The weighting field calculation for a readout group 
