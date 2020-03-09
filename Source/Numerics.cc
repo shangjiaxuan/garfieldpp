@@ -1,6 +1,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <numeric>
 #include <array>
 
 #include "Garfield/Numerics.hh"
@@ -799,6 +800,73 @@ void dfeqn(const int n, std::vector<std::vector<double> >& a,
     }
     b[n - i - 1] = -s22;
   }
+}
+
+int dinv(const int n, std::vector<std::vector<double> >& a) {
+
+  if (n < 1) return 1;
+  if (n > 3) {
+    // Factorize matrix and invert.
+    double det = 0.;
+    int ifail = 0;
+    int jfail = 0;
+    std::vector<int> ir(n, 0);
+    dfact(n, a, ir, ifail, det, jfail);
+    if (ifail != 0) return ifail;
+    dfinv(n, a, ir);
+  } else if (n == 3) {
+    // Compute cofactors.
+    const double c11 = a[1][1] * a[2][2] - a[1][2] * a[2][1];
+    const double c12 = a[1][2] * a[2][0] - a[1][0] * a[2][2];
+    const double c13 = a[1][0] * a[2][1] - a[1][1] * a[2][0];
+    const double c21 = a[2][1] * a[0][2] - a[2][2] * a[0][1];
+    const double c22 = a[2][2] * a[0][0] - a[2][0] * a[0][2];
+    const double c23 = a[2][0] * a[0][1] - a[2][1] * a[0][0];
+    const double c31 = a[0][1] * a[1][2] - a[0][2] * a[1][1];
+    const double c32 = a[0][2] * a[1][0] - a[0][0] * a[1][2];
+    const double c33 = a[0][0] * a[1][1] - a[0][1] * a[1][0];
+    const double t1 = fabs(a[0][0]);
+    const double t2 = fabs(a[1][0]);
+    const double t3 = fabs(a[2][0]);
+    double det = 0.;
+    double pivot = 0.;
+    if (t2 < t1 && t3 < t1) {
+      pivot = a[0][0];
+      det = c22 * c33 - c23 * c32;
+    } else if (t1 < t2 && t3 < t2) {
+      pivot = a[1][0];
+      det = c13 * c32 - c12 * c33;
+    } else {
+      pivot = a[2][0];
+      det = c23 * c12 - c22 * c13;
+    }
+    // Set elements of inverse in A.
+    if (det == 0.) return -1;
+    double s = pivot / det;
+    a[0][0] = s * c11;
+    a[0][1] = s * c21;
+    a[0][2] = s * c31;
+    a[1][0] = s * c12;
+    a[1][1] = s * c22;
+    a[1][2] = s * c32;
+    a[2][0] = s * c13;
+    a[2][1] = s * c23;
+    a[2][2] = s * c33;
+  } else if (n == 2) {
+    // Cramer's rule.
+    const double det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
+    if (det == 0.) return -1;
+    const double s = 1. / det;
+    const double c11 = s * a[1][1];
+    a[0][1] = -s * a[0][1];
+    a[1][0] = -s * a[1][0];
+    a[1][1] =  s * a[0][0];
+    a[0][0] = c11;
+  } else if (n == 1) {
+    if (a[0][0] == 0.) return -1;
+    a[0][0] = 1. / a[0][0];
+  }
+  return 0;
 }
 
 void dfinv(const int n, std::vector<std::vector<double> >& a,
@@ -1833,5 +1901,304 @@ bool Boxin3(const std::vector<std::vector<std::vector<double> > >& value,
   }
   return true;
 }
+
+bool LeastSquaresFit(
+    std::function<double(double, const std::vector<double>&)> f, 
+    std::vector<double>& par, std::vector<double>& epar,
+    const std::vector<double>& x, const std::vector<double>& y,
+    const std::vector<double>& ey, const unsigned int nMaxIter,
+    const double diff, double& chi2, const double eps, 
+    const bool debug, const bool verbose) {
+
+ //-----------------------------------------------------------------------
+ //   LSQFIT - Subroutine fitting the parameters A in the routine F to
+ //            the data points (X,Y) using a least squares method.
+ //            Translated from an Algol routine written by Geert Jan van
+ //            Oldenborgh and Rob Veenhof, based on Stoer + Bulirsch.
+ //   VARIABLES : F( . ,A,VAL) : Subroutine to be fitted.
+ //               (X,Y)        : Input data.
+ //               D            : Derivative matrix.
+ //               R            : Difference vector between Y and F(X,A).
+ //               S            : Correction vector for A.
+ //               EPSDIF       : Used for differentiating.
+ //               EPS          : Numerical resolution.
+ //   (Last updated on 23/ 5/11.)
+ //-----------------------------------------------------------------------
+
+  const unsigned int n = par.size();
+  const unsigned int m = x.size();
+  // Make sure that the # degrees of freedom < the number of data points.
+  if (n > m) {
+    std::cerr << "LeastSquaresFit: Number of parameters to be varied\n"
+              << "                 exceeds the number of data points.\n";
+    return false;
+  }
+
+  // Check the errors.
+  if (*std::min_element(ey.cbegin(), ey.cend()) <= 0.) {
+    std::cerr << "LeastSquaresFit: Not all errors are > 0; no fit done.\n";
+    return false;
+  }
+  chi2 = 0.;
+  // Largest difference.
+  double diffc = -1.;
+  // Initialise the difference vector R.
+  std::vector<double> r(m, 0.);
+  for (unsigned int i = 0; i < m; ++i) {
+    // Compute initial residuals.
+    r[i] = (y[i] - f(x[i], par)) / ey[i];
+    // Compute initial maximum difference.
+    diffc = std::max(std::abs(r[i]), diffc);
+    // And compute initial chi2.
+    chi2 += r[i] * r[i];
+  }
+  if (debug) {
+    std::cout << "  Input data points:\n"
+              << "                 X              Y          Y - F(X)\n";
+    for (unsigned int i = 0; i < m; ++i) {
+      std::printf(" %9u %15.8e %15.8e %15.8e\n", i, x[i], y[i], r[i]);
+    }
+    std::cout << "  Initial values of the fit parameters:\n"
+              << "    Parameter            Value\n";
+    for (unsigned int i = 0; i < n; ++i) {
+      std::printf("    %9u  %15.8e\n", i, par[i]);
+    }
+  }
+  if (verbose) {
+    std::cout << "  MINIMISATION SUMMARY\n"
+              << "  Initial situation:\n";
+    std::printf("    Largest difference between fit and target: %15.8e\n",
+                diffc);
+    std::printf("    Sum of squares of these differences:       %15.8e\n",
+                chi2);
+  }
+  // Start optimising loop.
+  bool converged = false;
+  double chi2L = 0.;
+  for (unsigned int iter = 1; iter <= nMaxIter; ++iter) {
+    // Check the stopping criteria: (1) max norm, (2) change in chi-squared.
+    if ((diffc < diff) || (iter > 1 && std::abs(chi2L - chi2) < eps * chi2)) {
+      if (debug || verbose) {
+        if (diffc < diff) {
+          std::cout << "  The maximum difference stopping criterion "
+                    << "is satisfied.\n";
+        } else {
+          std::cout << "  The relative change in chi-squared has dropped "
+                    << "below the threshold.\n";
+        }
+      }
+      converged = true;
+      break;
+    } 
+    // Calculate the derivative matrix.
+    std::vector<std::vector<double> > d(n, std::vector<double>(m, 0.));
+    for (unsigned int i = 0; i < n; ++i) {
+      const double epsdif = eps * (1. + std::abs(par[i]));
+      par[i] += 0.5 * epsdif;
+      for (unsigned int j = 0; j < m; ++j) d[i][j] = f(x[j], par);
+      par[i] -= epsdif;
+      for (unsigned int j = 0; j < m; ++j) {
+        d[i][j] = (d[i][j] - f(x[j], par)) / (epsdif * ey[j]);
+      }
+      par[i] += 0.5 * epsdif;
+    }
+    // Invert the matrix in Householder style.
+    std::vector<double> colsum(n, 0.);
+    std::vector<int> pivot(n, 0);
+    for (unsigned int i = 0; i < n; ++i) {
+      colsum[i] = std::inner_product(d[i].cbegin(), d[i].cend(), 
+                                     d[i].cbegin(), 0.);
+      pivot[i] = i;
+    }
+    // Decomposition.
+    std::vector<double> alpha(n, 0.);
+    bool singular = false;
+    for (unsigned int k = 0; k < n; ++k) {
+      double sigma = colsum[k];
+      unsigned int jbar = k;
+      for (unsigned int j = k + 1; j < n; ++j) {
+        if (sigma < colsum[j]) {
+          sigma = colsum[j];
+          jbar = j;
+        }
+      }
+      if (jbar != k) {
+        // Interchange columns.
+        std::swap(pivot[k], pivot[jbar]);
+        std::swap(colsum[k], colsum[jbar]);
+        std::swap(d[k], d[jbar]);
+      }
+      sigma = 0.;
+      for (unsigned int i = k; i < m; ++i) sigma += d[k][i] * d[k][i]; 
+      if (sigma == 0. || sqrt(sigma) < 1.e-8 * std::abs(d[k][k])) {
+        singular = true;
+        break;
+      }
+      alpha[k] = d[k][k] < 0. ? sqrt(sigma) : -sqrt(sigma);
+      const double beta = 1. / (sigma - d[k][k] * alpha[k]);
+      d[k][k] -= alpha[k];
+      std::vector<double> b(n, 0.);
+      for (unsigned int j = k + 1; j < n; ++j) {
+        for (unsigned int i = k; i < n; ++i) b[j] += d[k][i] * d[j][i];
+        b[j] *= beta;
+      }
+      for (unsigned int j = k + 1; j < n; ++j) {
+        for (unsigned int i = k; i < m; ++i) {
+          d[j][i] -= d[k][i] * b[j];
+          colsum[j] -= d[j][k] * d[j][k];
+        }
+      }
+    }
+    if (singular) {
+      std::cerr << "LeastSquaresFit: Householder matrix (nearly) singular;\n"
+                << "    no further optimisation.\n"
+                << "    Ensure the function depends on the parameters\n"
+                << "    and try to supply reasonable starting values.\n";
+      break;
+    }
+    // Solve.
+    for (unsigned int j = 0; j < n; ++j) {
+      double gamma = 0.;
+      for (unsigned int i = j; i < m; ++i) gamma += d[j][i] * r[i];
+      gamma *= 1. / (alpha[j] * d[j][j]);
+      for (unsigned int i = j; i < m; ++i) r[i] += gamma * d[j][i];
+    }
+    std::vector<double> z(n, 0.);
+    z[n - 1] = r[n - 1] / alpha[n - 1];
+    for (int i = n - 1; i >= 1; --i) {
+      double sum = 0.;
+      for (unsigned int j = i + 1; j <= n; ++j) {
+        sum += d[j - 1][i - 1] * z[j - 1];
+      } 
+      z[i - 1] = (r[i - 1] - sum) / alpha[i - 1]; 
+    }
+    // Correction vector.
+    std::vector<double> s(n, 0.);
+    for (unsigned int i = 0; i < n; ++i) s[pivot[i]] = z[i];
+    // Generate some debugging output.
+    if (debug) {
+      std::cout << "  Correction vector in iteration " << iter << ":\n";
+      for (unsigned int i = 0; i < n; ++i) {
+        std::printf("    %5u  %15.8e\n", i, s[i]);
+      }
+    }
+    // Add part of the correction vector to the estimate to improve chi2.
+    chi2L = chi2;
+    chi2 *= 2;
+    for (unsigned int i = 0; i < n; ++i) par[i] += s[i] * 2;
+    for (unsigned int i = 0; i <= 10; ++i) {
+      if (chi2 <= chi2L) break;
+      if (std::abs(chi2L - chi2) < eps * chi2) {
+        if (debug) {
+          std::cout << "    Too little improvement; reduction loop halted.\n";
+        }
+        break;
+      }
+      chi2 = 0.;
+      const double scale = 1. / pow(2, i);
+      for (unsigned int j = 0; j < n; ++j) par[j] -= s[j] * scale;
+      for (unsigned int j = 0; j < m; ++j) {
+        r[j] = (y[j] - f(x[j], par)) / ey[j];
+        chi2 += r[j] * r[j];
+      }
+      if (debug) {
+        std::printf("    Reduction loop %3i: chi2 = %15.8e\n", i, chi2);
+      }
+    }
+    // Calculate the max. norm.
+    diffc = std::abs(r[0]);
+    for (unsigned int i = 1; i < m; ++i) {
+      diffc = std::max(std::abs(r[i]), diffc);
+    }
+    // Print some debugging output.
+    if (debug) {
+      std::cout << "  Values of the fit parameters after iteration " 
+                << iter << "\n    Parameter            Value\n";
+      for (unsigned int i = 0; i < n; ++i) {
+        std::printf("    %9u  %15.8e\n", i, par[i]);
+      }
+      std::printf("  for which chi2 = %15.8e and diff = %15.8e\n", 
+                  chi2, diffc);
+    } else if (verbose) {
+      std::printf("  Step %3u: largest deviation = %15.8e, chi2 = %15.8e\n",
+                  iter, diffc, chi2);
+    }
+  }
+  // End of fit, perform error calculation.
+  if (!converged) {
+    std::cerr << "LeastSquaresFit: Maximum number of iterations reached.\n";
+  }
+  // Calculate the derivative matrix for the final settings.
+  std::vector<std::vector<double> > d(n, std::vector<double>(m, 0.));
+  for (unsigned int i = 0; i < n; ++i) {
+    const double epsdif = eps * (1. + std::abs(par[i]));
+    par[i] += 0.5 * epsdif;
+    for (unsigned int j = 0; j < m; ++j) d[i][j] = f(x[j], par);
+    par[i] -= epsdif;
+    for (unsigned int j = 0; j < m; ++j) {
+      d[i][j] = (d[i][j] - f(x[j], par)) / (epsdif * ey[j]);
+    }
+    par[i] += 0.5 * epsdif;
+  }
+  // Calculate the error matrix.
+  std::vector<std::vector<double> > cov(n, std::vector<double>(n, 0.));
+  for (unsigned int i = 0; i < n; ++i) {
+    for (unsigned int j = 0; j < n; ++j) {
+      cov[i][j] = std::inner_product(d[i].cbegin(), d[i].cend(), 
+                                     d[j].cbegin(), 0.);
+    }
+  }
+  // Compute the scaling factor for the errors.
+  double scale = m > n ? chi2 / (m - n) : 1.;
+  // Invert it to get the covariance matrix.
+  epar.assign(n, 0.);
+  if (Garfield::Numerics::CERNLIB::dinv(n, cov) != 0) {
+    std::cerr << "LeastSquaresFit: Singular covariance matrix; "
+              << "no error calculation.\n";
+  } else {
+    for (unsigned int i = 0; i < n; ++i) {
+      for (unsigned int j = 0; j < n; ++j) cov[i][j] *= scale;
+      epar[i] = sqrt(std::max(0., cov[i][i]));
+    }
+  }
+  // Print results.
+  if (debug) {
+    std::cout << "  Comparison between input and fit:\n"
+              << "            X            Y      F(X)\n";
+    for (unsigned int i = 0; i < m; ++i) {
+      std::printf(" %5u %15.8e %15.8e %15.8e\n", i, x[i], y[i], f(x[i], par));
+    }
+  }
+  if (verbose) {
+    std::cout << "  Final values of the fit parameters:\n"
+              << "    Parameter            Value            Error\n";
+    for (unsigned int i = 0; i < n; ++i) {
+      std::printf("    %9u  %15.8e  %15.8e\n", i, par[i], epar[i]);
+    }
+    std::cout << "  The errors have been scaled by a factor of "
+              << sqrt(scale) << ".\n";
+    std::cout << "  Covariance matrix:\n";
+    for (unsigned int i = 0; i < n; ++i) {
+      for (unsigned int j = 0; j < n; ++j) {
+        std::printf(" %15.8e", cov[i][j]);
+      }
+      std::cout << "\n";
+    }
+    std::cout << "  Correlation matrix:\n";
+    for (unsigned int i = 0; i < n; ++i) {
+      for (unsigned int j = 0; j < n; ++j) {
+        double cor = 0.;
+        if (cov[i][i] > 0. && cov[j][j] > 0.) {
+          cor = cov[i][j] / sqrt(cov[i][i] * cov[j][j]);
+        }
+        std::printf(" %15.8e", cor);
+      }
+      std::cout << "\n";
+    }
+    std::cout << "  Minimisation finished.\n";
+  }
+  return converged;
+}
+
 }
 }
