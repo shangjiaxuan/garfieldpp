@@ -5,6 +5,9 @@
 #include <iostream>
 #include <numeric>
 
+#include <TCanvas.h>
+#include <TGraph.h>
+
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Numerics.hh"
@@ -9773,6 +9776,155 @@ void ComponentAnalyticField::DipoleFieldB2Y(
     ey -= m_amp2[i] * 0.5 * ty2 * fy;
     if (opt) volt -= 0.5 * ty * m_amp2[i] * v;
   }
+}
+
+bool ComponentAnalyticField::MultipoleMoments(const unsigned int iw, 
+    const unsigned int nPoles, const bool print, const bool plot, 
+    const double rmult, const double eps,
+    const unsigned int nMaxIter) {
+
+  //-----------------------------------------------------------------------
+  //   EFMWIR - Computes the dipole moment of a given wire.
+  //-----------------------------------------------------------------------
+  if (!m_cellset && !Prepare()) return false;
+  // Check input parameters.
+  if (iw >= m_nWires) {
+    std::cerr << m_className << "::MultipoleMoments:\n"
+              << "    Wire index out of range.\n";
+    return false;
+  }
+  if (eps <= 0.) {
+    std::cerr << m_className << "::MultipoleMoments:\n"
+              << "    Epsilon must be positive.\n";
+    return false;
+  }
+  if (nPoles == 0) {
+    std::cerr << m_className << "::MultipoleMoments:\n"
+              << "    Multipole order out of range.\n";
+    return false;
+  }
+  if (rmult <= 0.) {
+    std::cerr << m_className << "::MultipoleMoments:\n"
+              << "    Radius multiplication factor out of range.\n";
+    return false;
+  }
+
+  const double xw = m_w[iw].x;
+  const double yw = m_w[iw].y;
+  // Set the radius of the wire to 0.
+  const double rw = m_w[iw].r;
+  m_w[iw].r = 0.;
+
+  // Loop around the wire.
+  constexpr unsigned int nPoints = 20000;
+  std::vector<double> angle(nPoints, 0.);
+  std::vector<double> volt(nPoints, 0.);
+  std::vector<double> weight(nPoints, 1.);
+  for (unsigned int i = 0; i < nPoints; ++i) {
+    // Set angle around wire.
+    angle[i] = TwoPi * (i + 1.) / nPoints;
+    // Compute E field, make sure the point is in a free region.
+    const double x = xw + rmult * rw * cos(angle[i]); 
+    const double y = yw + rmult * rw * sin(angle[i]);
+    double ex = 0., ey = 0., ez = 0., v = 0.;
+    if (Field(x, y, 0., ex, ey, ez, v, true) != 0) { 
+      std::cerr << m_className << "::MultipoleMoments:\n"
+                << "    Unexpected location code. Computation stopped.\n";
+      m_w[iw].r = rw;
+      return false;
+    }
+    // Assign the result to the fitting array.
+    volt[i] = v;
+  } 
+  // Restore the wire diameter.
+  m_w[iw].r = rw;
+
+  // Determine the maximum, minimum and average.
+  double vmin = *std::min_element(volt.cbegin(), volt.cend());
+  double vmax = *std::max_element(volt.cbegin(), volt.cend());
+  double vave = std::accumulate(volt.cbegin(), volt.cend(), 0.) / nPoints;
+  // Subtract the wire potential to centre the data more or less.
+  for (unsigned int i = 0; i < nPoints; ++i) volt[i] -= vave;
+  vmax -= vave;
+  vmin -= vave;
+
+  // Perform the fit.
+  const double vm = 0.5 * fabs(vmin) + fabs(vmax);
+  double chi2 = 1.e-6 * nPoints * vm * vm;
+  const double dist = 1.e-3 * (1. + vm);
+  const unsigned int nPar = 2 * nPoles + 1;
+  std::vector<double> par(nPar, 0.);
+  std::vector<double> epar(nPar, 0.);
+  par[0] = 0.5 * (vmax + vmin);
+  for (unsigned int i = 1; i <= nPoles; ++i) {
+    par[2 * i - 1] = 0.5 * (vmax - vmin);
+    par[2 * i] = 0.;
+  } 
+
+  auto f = [nPoles](const double x, const std::vector<double>& par) {
+    // EFMFUN
+    // Sum the series, initial value is the monopole term.
+    double sum = par[0];
+    for (unsigned int k = 1; k <= nPoles; ++k) {
+      // Obtain the Legendre polynomial of this order and add to the series.
+      const float cphi = cos(x - par[2 * k]);
+      sum += par[2 * k - 1] * sqrt(k + 0.5) * Numerics::Legendre(k, cphi);
+    }
+    return sum;
+  };
+
+  if (!Numerics::LeastSquaresFit(f, par, epar, angle, volt, weight, 
+                                 nMaxIter, dist, chi2, eps, m_debug, print)) {
+    std::cerr << m_className << "::MultipoleMoments:\n"
+              << "    Fitting the multipoles failed; computation stopped.\n";
+  }
+  // Plot the result of the fit.
+  if (plot) {
+    TCanvas* cfit = new TCanvas();
+    cfit->SetGridx();
+    cfit->SetGridy();
+    cfit->DrawFrame(0., vmin, TwoPi, vmax,
+                    ";Angle around the wire [rad]; Potential - average [V]");
+    TGraph graph;
+    graph.SetLineWidth(2);
+    graph.SetLineColor(kBlack);
+    graph.DrawGraph(angle.size(), angle.data(), volt.data(), "lsame");
+    // Sum of contributions.
+    constexpr unsigned int nP = 1000;
+    std::array<double, nP> xp;
+    std::array<double, nP> yp;
+    for (unsigned int i = 0; i < nP; ++i) {
+      xp[i] = TwoPi * (i + 1.) / nP;
+      yp[i] = f(xp[i], par);
+    }
+    graph.SetLineColor(kViolet + 3);
+    graph.DrawGraph(nP, xp.data(), yp.data(), "lsame");
+    // Individual contributions.
+    std::vector<double> parres = par;
+    for (unsigned int i = 1; i <= nPoles; ++i) parres[2 * i - 1] = 0.;
+    for (unsigned int j = 1; j <= nPoles; ++j) {
+      parres[2 * j - 1] = par[2 * j - 1];
+      for (unsigned int i = 0; i < nP; ++i) {
+        yp[i] = f(xp[i], parres);
+      }
+      parres[2 * j - 1] = 0.;
+      graph.SetLineColor(kAzure + j);
+      graph.DrawGraph(nP, xp.data(), yp.data(), "lsame"); 
+    }
+  }
+
+  // Print the results.
+  std::cout << m_className << "::MultipoleMoments:\n"
+            << "    Multipole moments for wire " << iw << ":\n"
+            << "  Moment            Value       Angle [degree]\n";
+  std::printf("  %6u  %15.8f        Arbitrary\n", 0, vave);
+  for (unsigned int i = 1; i <= nPoles; ++i) {
+    // Remove radial term from the multipole moment.
+    const double val = pow(rmult * rw, i) * par[2 * i - 1];
+    const double phi = RadToDegree * fmod(par[2 * i], Pi);
+    std::printf("  %6u  %15.8f  %15.8f\n", i, val, phi);
+  }
+  return true;
 }
 
 }  // namespace Garfield
