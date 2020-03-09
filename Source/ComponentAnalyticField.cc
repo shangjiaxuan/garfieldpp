@@ -9853,12 +9853,12 @@ bool ComponentAnalyticField::MultipoleMoments(const unsigned int iw,
   double chi2 = 1.e-6 * nPoints * vm * vm;
   const double dist = 1.e-3 * (1. + vm);
   const unsigned int nPar = 2 * nPoles + 1;
-  std::vector<double> par(nPar, 0.);
+  std::vector<double> pars(nPar, 0.);
   std::vector<double> epar(nPar, 0.);
-  par[0] = 0.5 * (vmax + vmin);
+  pars[0] = 0.5 * (vmax + vmin);
   for (unsigned int i = 1; i <= nPoles; ++i) {
-    par[2 * i - 1] = 0.5 * (vmax - vmin);
-    par[2 * i] = 0.;
+    pars[2 * i - 1] = 0.5 * (vmax - vmin);
+    pars[2 * i] = 0.;
   } 
 
   auto f = [nPoles](const double x, const std::vector<double>& par) {
@@ -9873,7 +9873,7 @@ bool ComponentAnalyticField::MultipoleMoments(const unsigned int iw,
     return sum;
   };
 
-  if (!Numerics::LeastSquaresFit(f, par, epar, angle, volt, weight, 
+  if (!Numerics::LeastSquaresFit(f, pars, epar, angle, volt, weight, 
                                  nMaxIter, dist, chi2, eps, m_debug, print)) {
     std::cerr << m_className << "::MultipoleMoments:\n"
               << "    Fitting the multipoles failed; computation stopped.\n";
@@ -9895,15 +9895,15 @@ bool ComponentAnalyticField::MultipoleMoments(const unsigned int iw,
     std::array<double, nP> yp;
     for (unsigned int i = 0; i < nP; ++i) {
       xp[i] = TwoPi * (i + 1.) / nP;
-      yp[i] = f(xp[i], par);
+      yp[i] = f(xp[i], pars);
     }
     graph.SetLineColor(kViolet + 3);
     graph.DrawGraph(nP, xp.data(), yp.data(), "lsame");
     // Individual contributions.
-    std::vector<double> parres = par;
+    std::vector<double> parres = pars;
     for (unsigned int i = 1; i <= nPoles; ++i) parres[2 * i - 1] = 0.;
     for (unsigned int j = 1; j <= nPoles; ++j) {
-      parres[2 * j - 1] = par[2 * j - 1];
+      parres[2 * j - 1] = pars[2 * j - 1];
       for (unsigned int i = 0; i < nP; ++i) {
         yp[i] = f(xp[i], parres);
       }
@@ -9920,8 +9920,8 @@ bool ComponentAnalyticField::MultipoleMoments(const unsigned int iw,
   std::printf("  %6u  %15.8f        Arbitrary\n", 0, vave);
   for (unsigned int i = 1; i <= nPoles; ++i) {
     // Remove radial term from the multipole moment.
-    const double val = pow(rmult * rw, i) * par[2 * i - 1];
-    const double phi = RadToDegree * fmod(par[2 * i], Pi);
+    const double val = pow(rmult * rw, i) * pars[2 * i - 1];
+    const double phi = RadToDegree * fmod(pars[2 * i], Pi);
     std::printf("  %6u  %15.8f  %15.8f\n", i, val, phi);
   }
   return true;
