@@ -6152,9 +6152,7 @@ bool ComponentAnalyticField::SetupWireSignals() {
       }
       // Invert.
       if (m_nWires >= 1) {
-        int ifail = 0;
-        Numerics::CERNLIB::cinv(m_nWires, m_sigmat, ifail);
-        if (ifail != 0) {
+        if (Numerics::CERNLIB::cinv(m_nWires, m_sigmat) != 0) {
           std::cerr << m_className << "::PrepareWireSignals:\n";
           std::cerr << "    Inversion of signal matrix (" << mx << ", " << my
                     << ") failed.\n";
@@ -9187,9 +9185,7 @@ bool ComponentAnalyticField::FindZeroes(
     // Find the correction vector to 0th order.
     std::vector<double> dx = fold;
     bb = b;
-    int ifail = 0;
-    Numerics::CERNLIB::deqn(n, bb, ifail, dx);
-    if (ifail != 0) {
+    if (Numerics::CERNLIB::deqn(n, bb, dx) != 0) {
       std::cerr << m_className << "::FindZeroes: Zero search stopped.\n"
                 << "    Solving the update equation failed.\n";
       break;

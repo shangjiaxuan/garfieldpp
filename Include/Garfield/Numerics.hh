@@ -88,9 +88,9 @@ namespace CERNLIB {
 /// \param n order of the square matrix A.
 /// \param A n by n matrix.
 /// \param b right-hand side vector.
-/// \param ifail 0: normal exit, -1: singular matrix.
-void deqn(const int n, std::vector<std::vector<double> >& a,
-          int& ifail, std::vector<double>& b);
+/// \returns ifail 0: normal exit, -1: singular matrix.
+int deqn(const int n, std::vector<std::vector<double> >& a,
+         std::vector<double>& b);
 /// Replaces b by the solution x of Ax = b, and replace A by its inverse.
 void deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
             std::vector<double>& b);
@@ -111,8 +111,7 @@ void cfinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
            std::vector<int>& ir);
 
 /// Replace square matrix A by its inverse.
-void cinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
-          int& ifail);
+int cinv(const int n, std::vector<std::vector<std::complex<double> > >& a);
 
 }
 
