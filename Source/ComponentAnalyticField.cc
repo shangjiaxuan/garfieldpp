@@ -4349,8 +4349,6 @@ bool ComponentAnalyticField::Charge() {
   }
 
   bool ok = true;
-  int ifail = 0;
-
   // Force sum charges = 0 in case of absence of equipotential planes.
   if (!(m_ynplan[0] || m_ynplan[1] || m_ynplan[2] || m_ynplan[3] || m_tube)) {
     // Add extra elements to A, acting as constraints.
@@ -4363,10 +4361,8 @@ bool ComponentAnalyticField::Charge() {
     }
     m_a[m_nWires].push_back(0.);
     // Solve equations to yield charges.
-    Numerics::CERNLIB::deqinv(m_nWires + 1, m_a, ifail, b);
-    if (ifail != 0) {
-      std::cerr << m_className << "::Charge:\n";
-      std::cerr << "    Matrix inversion failed.\n";
+    if (Numerics::CERNLIB::deqinv(m_nWires + 1, m_a, b) != 0) {
+      std::cerr << m_className << "::Charge: Matrix inversion failed.\n";
       return false;
     }
     // Modify A to give true inverse of capacitance matrix.
@@ -4378,26 +4374,28 @@ bool ComponentAnalyticField::Charge() {
         }
       }
     } else {
-      std::cerr << m_className << "::Charge:\n";
-      std::cerr << "    True inverse of the capacitance matrix"
+      std::cerr << m_className << "::Charge:\n"
+                << "    True inverse of the capacitance matrix"
                 << " could not be calculated.\n";
-      std::cerr << "    Use of the FACTOR instruction should be avoided.\n";
       ok = false;
     }
     // Store reference potential.
     m_v0 = b[m_nWires];
   } else {
     // Handle the case when the sum of the charges is zero automatically.
-    Numerics::CERNLIB::deqinv(m_nWires, m_a, ifail, b);
+    if (Numerics::CERNLIB::deqinv(m_nWires, m_a, b) != 0) {
+      std::cerr << m_className << "::Charge: Matrix inversion failed.\n";
+      return false;
+    }
     // Reference potential chosen to be zero.
     m_v0 = 0.;
   }
 
   // Check the error condition flag.
   if (!ok) {
-    std::cerr << m_className << "::Charge:\n";
-    std::cerr << "    Failure to solve the capacitance equations.\n";
-    std::cerr << "    No charges are available.\n";
+    std::cerr << m_className << "::Charge:\n"
+              << "    Failure to solve the capacitance equations.\n"
+              << "    No charges are available.\n";
     return false;
   }
 

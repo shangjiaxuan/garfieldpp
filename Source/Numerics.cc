@@ -906,24 +906,19 @@ void dfinv(const int n, std::vector<std::vector<double> >& a,
   }
 }
 
-void deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
-            std::vector<double>& b) {
+int deqinv(const int n, std::vector<std::vector<double> >& a, 
+           std::vector<double>& b) {
 
   // Test for parameter errors.
-  if (n < 1) {
-    ifail = +1;
-    return;
-  }
-
-  ifail = 0;
-  int jfail = 0;
+  if (n < 1) return 1;
 
   double det = 0.;
   if (n > 3) {
     // n > 3 cases. Factorize matrix, invert and solve system.
     std::vector<int> ir(n, 0);
+    int ifail = 0, jfail = 0;
     dfact(n, a, ir, ifail, det, jfail);
-    if (ifail != 0) return;
+    if (ifail != 0) return ifail;
     dfeqn(n, a, ir, b);
     dfinv(n, a, ir);
   } else if (n == 3) {
@@ -943,33 +938,19 @@ void deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
 
     // Set temp = pivot and det = pivot * det.
     double temp = 0.;
-    if (t1 >= t2) {
-      if (t3 >= t1) {
-        // Pivot is A31
-        temp = a[2][0];
-        det = c23 * c12 - c22 * c13;
-      } else {
-        // Pivot is A11
-        temp = a[0][0];
-        det = c22 * c33 - c23 * c32;
-      }
+    if (t2 < t1 && t3 < t1) {
+      temp = a[0][0];
+      det = c22 * c33 - c23 * c32;
+    } else if (t1 < t2 && t3 < t2) {
+      temp = a[1][0];
+      det = c13 * c32 - c12 * c33;
     } else {
-      if (t3 >= t2) {
-        // Pivot is A31
-        temp = a[2][0];
-        det = c23 * c12 - c22 * c13;
-      } else {
-        // Pivot is A21
-        temp = a[1][0];
-        det = c13 * c32 - c12 * c33;
-      }
+      temp = a[2][0];
+      det = c23 * c12 - c22 * c13;
     }
 
     // Set elements of inverse in A.
-    if (det == 0.) {
-      ifail = -1;
-      return;
-    }
+    if (det == 0.) return -1;
     const double s = temp / det;
     a[0][0] = s * c11;
     a[0][1] = s * c21;
@@ -990,10 +971,7 @@ void deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
   } else if (n == 2) {
     // n = 2 case by Cramer's rule.
     det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
-    if (det == 0.) {
-      ifail = -1;
-      return;
-    }
+    if (det == 0.) return -1;
     const double s = 1. / det;
     const double c11 = s * a[1][1];
     a[0][1] = -s * a[0][1];
@@ -1006,13 +984,11 @@ void deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
     b[1] = a[1][0] * b1 + a[1][1] * b[1];
   } else {
     // n = 1 case.
-    if (a[0][0] == 0.) {
-      ifail = -1;
-      return;
-    }
+    if (a[0][0] == 0.) return -1;
     a[0][0] = 1. / a[0][0];
     b[0] = a[0][0] * b[0];
   }
+  return 0;
 }
 
 void cfact(const int n, std::vector<std::vector<std::complex<double> > >& a,
