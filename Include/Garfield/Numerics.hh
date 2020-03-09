@@ -86,7 +86,7 @@ namespace CERNLIB {
 
 /// Replaces b by the solution x of Ax = b, after which A is undefined.
 /// \param n order of the square matrix A.
-/// \param A n by n matrix.
+/// \param a n by n matrix.
 /// \param b right-hand side vector.
 /// \returns ifail 0: normal exit, -1: singular matrix.
 int deqn(const int n, std::vector<std::vector<double> >& a,
