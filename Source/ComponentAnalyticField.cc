@@ -5,6 +5,9 @@
 #include <iostream>
 #include <numeric>
 
+#include <TCanvas.h>
+#include <TGraph.h>
+
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Numerics.hh"
@@ -93,6 +96,143 @@ void Internal2Cartesian(const double rho, const double phi, double& x,
   y = r * sin(phi);
 }
 
+bool FitDipoleMoment(const std::vector<double>& angle, 
+                     const std::vector<double>& volt,
+                     double& ampdip, double& phidip, const bool dbg) {
+  //-----------------------------------------------------------------------
+  //   DIPFIT - Determines the dipole moment of a wire.
+  //-----------------------------------------------------------------------
+
+  // Initial values.
+  phidip = 0.;
+  ampdip = 0.;
+  const unsigned int n = angle.size();
+  // Initial search for a maximum.
+  double phiMax = 0.;
+  double sumMax = 0.;
+  constexpr unsigned int nTry = 100;
+  std::array<double, nTry> phiTry;
+  std::array<double, nTry> sumTry;
+  for (unsigned int i = 0; i < nTry; ++i) {
+    // Make the internal product with a shifted cosine.
+    phiTry[i] = i * Garfield::TwoPi / nTry;
+    sumTry[i] = 0.;
+    for (unsigned int j = 0; j < n; ++j) {
+      sumTry[i] += volt[j] * cos(phiTry[i] - angle[j]);
+    }
+    sumTry[i] *= 2. / n;
+    // See whether this one beats earlier.
+    if (sumTry[i] > sumMax) {
+      phiMax = phiTry[i];
+      sumMax = sumTry[i];
+    }
+  }
+  if (dbg) {
+    std::printf("    Maximum of scan at phi = %12.5f, product = %12.5f\n",
+                phiMax, sumMax);
+    // CALL GRGRPH(phiTry, sumTry, nTry, 'Angle [radians]',
+    //             'Cos projection', 'Search of maximum')
+  }
+  phidip = phiMax;
+  ampdip = sumMax;
+  // Scan in the neighbourbood
+  constexpr double eps = 0.1;
+  double x1 = phiMax - eps;
+  double x2 = phiMax;
+  double x3 = phiMax + eps;
+  double f1 = 0.;
+  double f2 = sumMax;
+  double f3 = 0.;
+  for (unsigned int j = 0; j < n; ++j) {
+    f1 += volt[j] * cos(x1 - angle[j]);
+    f3 += volt[j] * cos(x3 - angle[j]);
+  }
+  f1 *= 2. / n;
+  f3 *= 2. / n;
+  // Refine the estimate by parabolic extremum search.
+  const double epsf = 1.e-3 * sumMax;
+  constexpr double epsx = 1.e-3 * Garfield::TwoPi;
+  constexpr unsigned int nMaxIter = 10;
+  for (unsigned int i = 0; i < nMaxIter; ++i) {
+    if (dbg) std::cout << "    Start of iteration " << i << ".\n";
+    // Estimate parabolic extremum.
+    const double det = (f1 - f2) * x3 + (f3 - f1) * x2 + (f2 - f3) * x1;
+    if (std::abs(det) <= 0.) {
+      std::cerr << "    Warning: Determinant = 0; parabolic search stopped.\n";
+      phidip = x2;
+      ampdip = f2;
+      return false;
+    }
+    const double xp = ((f1 - f2) * x3 * x3 + (f3 - f1) * x2 * x2 + 
+                       (f2 - f3) * x1 * x1) / (2 * det);
+    double fp = 0.;
+    for (unsigned int j = 0; j < n; ++j) {
+      fp += volt[j] * cos(xp - angle[j]);
+    }
+    fp *= 2. / n;
+    // Debugging output.
+    if (dbg) {
+      std::printf("    Point 1:  x = %15.8f f = %15.8f\n", x1, f1);
+      std::printf("    Point 2:  x = %15.8f f = %15.8f\n", x2, f2);
+      std::printf("    Point 3:  x = %15.8f f = %15.8f\n", x3, f3);
+      std::printf("    Parabola: x = %15.8f f = %15.8f\n", xp, fp);
+    }
+    // Check that the new estimate doesn't coincide with an old point.
+    const double tol = epsx * (epsx + std::abs(xp));
+    if (fabs(xp - x1) < tol || fabs(xp - x2) < tol || fabs(xp - x3) < tol) {
+      if (dbg) {
+        std::cout << "    Location convergence criterion satisfied.\n";
+      }
+      phidip = xp;
+      ampdip = fp;
+      return true;
+    }
+    // Check convergence.
+    if (std::abs(fp - f1) < epsf * (std::abs(fp) + std::abs(f1) + epsf)) {
+      if (dbg) {
+        std::cout << "    Function value convergence criterion satisfied.\n";
+      }
+      phidip = xp;
+      ampdip = fp;
+      return true;
+    }
+    // Store the value in the table.
+    if (fp > f1) {
+      f3 = f2;
+      x3 = x2;
+      f2 = f1;
+      x2 = x1;
+      f1 = fp;
+      x1 = xp;
+    } else if (fp > f2) {
+      f3 = f2;
+      x3 = x2;
+      f2 = fp;
+      x2 = xp;
+    } else if (fp > f3) {
+      f3 = fp;
+      x3 = xp;
+    } else {
+      std::cerr << "    Warning: Parabolic extremum is worse "
+                << "than current optimum; search stopped.\n";
+      std::printf("    Point 1:  x = %15.8f f = %15.8f\n", x1, f1);
+      std::printf("    Point 2:  x = %15.8f f = %15.8f\n", x2, f2);
+      std::printf("    Point 3:  x = %15.8f f = %15.8f\n", x3, f3);
+      std::printf("    Parabola: x = %15.8f f = %15.8f\n", xp, fp);
+      phidip = x2;
+      ampdip = f2;
+      return false;
+    }
+  }
+  // No convergence.
+  std::cerr << "    Warning: No convergence after maximum number of steps.\n"
+            << "    Current extremum f = " << f2 << "\n"
+            << "    Found for        x = " << x2 << "\n";
+  phidip = x2;
+  ampdip = f2;
+  return false;
+}
+
 }  // namespace
 
 namespace Garfield {
@@ -177,11 +317,20 @@ bool ComponentAnalyticField::GetBoundingBox(double& x0, double& y0, double& z0,
   }
   // Otherwise, return the cell dimensions.
   if (!m_cellset && !Prepare()) return false;
-  x0 = m_xmin;
-  y0 = m_ymin;
+  if (m_polar) {
+    double rmax, thetamax;
+    Internal2Polar(m_xmax, m_ymax, rmax, thetamax);
+    x0 = -rmax;
+    y0 = -rmax;
+    x1 = +rmax;
+    y1 = +rmax;
+  } else {
+    x0 = m_xmin;
+    y0 = m_ymin;
+    x1 = m_xmax;
+    y1 = m_ymax;
+  }
   z0 = m_zmin;
-  x1 = m_xmax;
-  y1 = m_ymax;
   z1 = m_zmax;
   return true;
 }
@@ -294,7 +443,7 @@ void ComponentAnalyticField::PrintCell() {
       for (const auto& strip : plane.strips2) {
         std::cout << "      ";
         if (m_polar) {
-          double gap = i == 0 ? exp(strip.gap) - 1. : 1. - exp(-strip.gap);
+          double gap = i == 0 ? expm1(strip.gap) : -expm1(-strip.gap);
           gap *= exp(m_coplan[i]);
           std::cout << RadToDegree * strip.smin << " < phi < "
                     << RadToDegree * strip.smax
@@ -311,7 +460,7 @@ void ComponentAnalyticField::PrintCell() {
       for (const auto& strip : plane.strips1) {
         std::cout << "      " << strip.smin << " < z < " << strip.smax;
         if (m_polar) {
-          double gap = i == 0 ? exp(strip.gap) - 1. : 1. - exp(-strip.gap);
+          double gap = i == 0 ? expm1(strip.gap) : -expm1(-strip.gap);
           gap *= exp(m_coplan[i]);
           std::cout << " cm, gap = " << gap << " cm";
         } else {
@@ -332,7 +481,7 @@ void ComponentAnalyticField::PrintCell() {
         }
         std::cout << pix.zmin << " < z < " << pix.zmax << " cm, gap = ";
         if (m_polar) {
-          double gap = i == 0 ? exp(pix.gap) - 1. : 1. - exp(-pix.gap);
+          double gap = i == 0 ? expm1(pix.gap) : -expm1(-pix.gap);
           gap *= exp(m_coplan[i]);
           std::cout << gap << " cm";
         } else {
@@ -1262,6 +1411,13 @@ void ComponentAnalyticField::AddPixelOnPlanePhi(
   m_planes[iplane].pixels.push_back(std::move(newPixel));
 }
 
+void ComponentAnalyticField::EnableDipoleTerms(const bool on) {
+
+  m_cellset = false;
+  m_sigset = false;
+  m_dipole = on;
+}
+
 void ComponentAnalyticField::SetPeriodicityX(const double s) {
   if (m_polar) {
     std::cerr << m_className << "::SetPeriodicityX:\n"
@@ -1405,7 +1561,7 @@ void ComponentAnalyticField::SetCartesianCoordinates() {
   if (m_polar) {
     std::cout << m_className << "::SetCartesianCoordinates:\n    "
               << "Switching to Cartesian coordinates; resetting the cell.\n";
-    Reset();
+    CellInit();
   }
   m_polar = false;
 }
@@ -1414,7 +1570,7 @@ void ComponentAnalyticField::SetPolarCoordinates() {
   if (!m_polar) {
     std::cout << m_className << "::SetPolarCoordinates:\n    "
               << "Switching to polar coordinates; resetting the cell.\n";
-    Reset();
+    CellInit();
   }
   m_polar = true;
   // Set default phi period.
@@ -2236,23 +2392,23 @@ int ComponentAnalyticField::Field(const double xin, const double yin,
   }
 
   // Add dipole terms if requested
-  if (dipole) {
+  if (m_dipole) {
     double exd = 0., eyd = 0., voltd = 0.;
     switch (m_cellType) {
       case A00:
-        // CALL EMCA00(XPOS,YPOS,EXD,EYD,VOLTD,IOPT)
+        DipoleFieldA00(xpos, ypos, exd, eyd, voltd, opt);
         break;
       case B1X:
-        // CALL EMCB1X(XPOS,YPOS,EXD,EYD,VOLTD,IOPT)
+        DipoleFieldB1X(xpos, ypos, exd, eyd, voltd, opt);
         break;
       case B1Y:
-        // CALL EMCB1Y(XPOS,YPOS,EXD,EYD,VOLTD,IOPT)
+        DipoleFieldB1Y(xpos, ypos, exd, eyd, voltd, opt);
         break;
       case B2X:
-        // CALL EMCB2X(XPOS,YPOS,EXD,EYD,VOLTD,IOPT)
+        DipoleFieldB2X(xpos, ypos, exd, eyd, voltd, opt);
         break;
       case B2Y:
-        // CALL EMCB2Y(XPOS,YPOS,EXD,EYD,VOLTD,IOPT)
+        DipoleFieldB2Y(xpos, ypos, exd, eyd, voltd, opt);
         break;
       default:
         break;
@@ -2317,7 +2473,6 @@ int ComponentAnalyticField::Field(const double xin, const double yin,
 }
 
 void ComponentAnalyticField::CellInit() {
-  m_medium = nullptr;
 
   m_cellset = false;
   m_sigset = false;
@@ -2357,10 +2512,10 @@ void ComponentAnalyticField::CellInit() {
   m_w.clear();
 
   // Dipole settings
-  dipole = false;
-  cosph2.clear();
-  sinph2.clear();
-  amp2.clear();
+  m_dipole = false;
+  m_cosph2.clear();
+  m_sinph2.clear();
+  m_amp2.clear();
 
   // B2 type cells
   m_b2sin.clear();
@@ -2452,6 +2607,15 @@ bool ComponentAnalyticField::Prepare() {
   }
 
   m_cellset = true;
+
+  // Add dipole terms if required
+  if (m_dipole) {
+    if (!SetupDipoleTerms()) {
+      std::cerr << m_className << "::Prepare:\n"
+                << "    Computing the dipole moments failed.\n";
+      m_dipole = false;
+    }
+  }
   return true;
 }
 
@@ -3300,9 +3464,9 @@ bool ComponentAnalyticField::PrepareStrips() {
         strip.gap = gapDef[i];
       } else if (m_polar && i < 2) {
         if (i == 0) {
-          strip.gap = log(1. + strip.gap / exp(m_coplan[i]));
+          strip.gap = log1p(strip.gap / exp(m_coplan[i]));
         } else {
-          strip.gap = -log(1. - strip.gap / exp(m_coplan[i]));
+          strip.gap = -log1p(-strip.gap / exp(m_coplan[i]));
         }
       }
     }
@@ -3317,9 +3481,9 @@ bool ComponentAnalyticField::PrepareStrips() {
         strip.gap = gapDef[i];
       } else if (m_polar && i < 2) {
         if (i == 0) {
-          strip.gap = log(1. + strip.gap / exp(m_coplan[i]));
+          strip.gap = log1p(strip.gap / exp(m_coplan[i]));
         } else {
-          strip.gap = -log(1. - strip.gap / exp(m_coplan[i]));
+          strip.gap = -log1p(-strip.gap / exp(m_coplan[i]));
         }
       }
     }
@@ -3334,9 +3498,9 @@ bool ComponentAnalyticField::PrepareStrips() {
         pixel.gap = gapDef[i];
       } else if (m_polar && i < 2) {
         if (i == 0) {
-          pixel.gap = log(1. + pixel.gap / exp(m_coplan[i]));
+          pixel.gap = log1p(pixel.gap / exp(m_coplan[i]));
         } else {
-          pixel.gap = -log(1. - pixel.gap / exp(m_coplan[i]));
+          pixel.gap = -log1p(-pixel.gap / exp(m_coplan[i]));
         }
       }
     }
@@ -3509,14 +3673,6 @@ bool ComponentAnalyticField::Setup() {
       break;
   }
 
-  // Add dipole terms if required
-  if (ok && dipole) {
-    ok = SetupDipole();
-    if (!ok) {
-      std::cerr << m_className << "::Setup:\n";
-      std::cerr << "    Computing the dipole moments failed.\n";
-    }
-  }
 
   m_a.clear();
 
@@ -4201,8 +4357,6 @@ bool ComponentAnalyticField::Charge() {
   }
 
   bool ok = true;
-  int ifail = 0;
-
   // Force sum charges = 0 in case of absence of equipotential planes.
   if (!(m_ynplan[0] || m_ynplan[1] || m_ynplan[2] || m_ynplan[3] || m_tube)) {
     // Add extra elements to A, acting as constraints.
@@ -4215,10 +4369,8 @@ bool ComponentAnalyticField::Charge() {
     }
     m_a[m_nWires].push_back(0.);
     // Solve equations to yield charges.
-    Numerics::CERNLIB::deqinv(m_nWires + 1, m_a, ifail, b);
-    if (ifail != 0) {
-      std::cerr << m_className << "::Charge:\n";
-      std::cerr << "    Matrix inversion failed.\n";
+    if (Numerics::CERNLIB::deqinv(m_nWires + 1, m_a, b) != 0) {
+      std::cerr << m_className << "::Charge: Matrix inversion failed.\n";
       return false;
     }
     // Modify A to give true inverse of capacitance matrix.
@@ -4230,26 +4382,28 @@ bool ComponentAnalyticField::Charge() {
         }
       }
     } else {
-      std::cerr << m_className << "::Charge:\n";
-      std::cerr << "    True inverse of the capacitance matrix"
+      std::cerr << m_className << "::Charge:\n"
+                << "    True inverse of the capacitance matrix"
                 << " could not be calculated.\n";
-      std::cerr << "    Use of the FACTOR instruction should be avoided.\n";
       ok = false;
     }
     // Store reference potential.
     m_v0 = b[m_nWires];
   } else {
     // Handle the case when the sum of the charges is zero automatically.
-    Numerics::CERNLIB::deqinv(m_nWires, m_a, ifail, b);
+    if (Numerics::CERNLIB::deqinv(m_nWires, m_a, b) != 0) {
+      std::cerr << m_className << "::Charge: Matrix inversion failed.\n";
+      return false;
+    }
     // Reference potential chosen to be zero.
     m_v0 = 0.;
   }
 
   // Check the error condition flag.
   if (!ok) {
-    std::cerr << m_className << "::Charge:\n";
-    std::cerr << "    Failure to solve the capacitance equations.\n";
-    std::cerr << "    No charges are available.\n";
+    std::cerr << m_className << "::Charge:\n"
+              << "    Failure to solve the capacitance equations.\n"
+              << "    No charges are available.\n";
     return false;
   }
 
@@ -6004,9 +6158,7 @@ bool ComponentAnalyticField::SetupWireSignals() {
       }
       // Invert.
       if (m_nWires >= 1) {
-        int ifail = 0;
-        Numerics::CERNLIB::cinv(m_nWires, m_sigmat, ifail);
-        if (ifail != 0) {
+        if (Numerics::CERNLIB::cinv(m_nWires, m_sigmat) != 0) {
           std::cerr << m_className << "::PrepareWireSignals:\n";
           std::cerr << "    Inversion of signal matrix (" << mx << ", " << my
                     << ") failed.\n";
@@ -9039,9 +9191,7 @@ bool ComponentAnalyticField::FindZeroes(
     // Find the correction vector to 0th order.
     std::vector<double> dx = fold;
     bb = b;
-    int ifail = 0;
-    Numerics::CERNLIB::deqn(n, bb, ifail, dx);
-    if (ifail != 0) {
+    if (Numerics::CERNLIB::deqn(n, bb, dx) != 0) {
       std::cerr << m_className << "::FindZeroes: Zero search stopped.\n"
                 << "    Solving the update equation failed.\n";
       break;
@@ -9196,6 +9346,585 @@ bool ComponentAnalyticField::Trace(
       delta[k] = xst[0];
       delta[k + 1] = xst[1];
     }
+  }
+  return true;
+}
+
+bool ComponentAnalyticField::SetupDipoleTerms() {
+
+  //-----------------------------------------------------------------------
+  //   SETDIP - Subroutine computing coefficients for the dipole terms in
+  //            cells without periodicities.
+  //-----------------------------------------------------------------------
+
+  // Parameters.
+  constexpr double epsp = 1.e-3;
+  constexpr double epsa = 1.e-3;
+
+  const unsigned int nWires = m_w.size();
+  // Initial dipole moments.
+  std::vector<double> phi2(nWires, 0.);
+  m_cosph2.assign(nWires, 1.);
+  m_sinph2.assign(nWires, 0.);
+  m_amp2.assign(nWires, 0.);
+
+  // Iterate until the dipole terms have converged.
+  std::vector<double> phit2(nWires, 0.);
+  std::vector<double> ampt2(nWires, 0.);
+  constexpr unsigned int nMaxIter = 10;
+  for (unsigned int iter = 0; iter < nMaxIter; ++iter) {
+    if (m_debug) {
+      std::cout << "Iteration " << iter << "/" << nMaxIter << "\n"
+                << "  Wire  correction angle [deg]  amplitude\n";
+    }
+    // Loop over the wires.
+    for (unsigned int iw = 0; iw < nWires; ++iw) {
+      const double xw = m_w[iw].x;
+      const double yw = m_w[iw].y;
+      const double rw = m_w[iw].r;
+      // Set the radius of the wire to 0.
+      m_w[iw].r = 0.;
+      // Loop around the wire.
+      constexpr unsigned int nAngles = 20;
+      std::vector<double> angle(nAngles, 0.);
+      std::vector<double> volt(nAngles, 0.);
+      constexpr double rmult = 1.;
+      const double r = rw * rmult;
+      int status = 0;
+      for (unsigned int i = 0; i < nAngles; ++i) {
+        angle[i] = TwoPi * (i + 1.) / nAngles;
+        const double x = xw + r * cos(angle[i]);
+        const double y = yw + r * sin(angle[i]);
+        double ex = 0., ey = 0., ez = 0.;
+        status = Field(x, y, 0., ex, ey, ez, volt[i], true);
+        if (status != 0) {
+          std::cerr << "Unexpected status code; computation stopped.\n";
+          break;
+        }
+        volt[i] -= m_w[iw].v;
+      }
+      // Restore wire radius.
+      m_w[iw].r = rw;
+      if (status != 0) continue;
+      // Determine the dipole term.
+      double ampdip = 0., phidip = 0.;
+      FitDipoleMoment(angle, volt, ampdip, phidip, false);
+      // Store the parameters, removing the radial dependence.
+      phit2[iw] = phidip;
+      ampt2[iw] = ampdip * r;
+      if (m_debug) {
+        std::printf(" %3d  %10.3f  %12.5e\n", 
+                    iw, RadToDegree * phit2[iw], ampt2[iw]);
+      }
+    }
+    // Transfer to the arrays where the dipole moments have impact
+    bool reiter = false;
+    if (m_debug) std::cout << "  Wire  new angle [deg]  amplitude\n";
+    for (unsigned int iw = 0; iw < nWires; ++iw) {
+      // See whether we need further refinements.
+      bool converged = true;
+      if (std::abs(phi2[iw]) > epsp * (1. + std::abs(phi2[iw])) || 
+          std::abs(m_amp2[iw]) > epsa * (1. + std::abs(m_amp2[iw]))) {
+        reiter = true;
+        converged = false;
+      }
+      // Add the new term to the existing one.
+      const double s0 = m_sinph2[iw] * m_amp2[iw] + sin(phit2[iw]) * ampt2[iw];
+      const double c0 = m_cosph2[iw] * m_amp2[iw] + cos(phit2[iw]) * ampt2[iw];
+      phi2[iw] = atan2(s0, c0);
+      m_cosph2[iw] = cos(phi2[iw]);
+      m_sinph2[iw] = sin(phi2[iw]);
+      const double s1 = m_sinph2[iw] * m_amp2[iw] + sin(phit2[iw]) * ampt2[iw];
+      const double c1 = m_cosph2[iw] * m_amp2[iw] + cos(phit2[iw]) * ampt2[iw];
+      m_amp2[iw] = sqrt(s1 * s1 + c1 * c1);
+      if (m_debug) {
+        std::printf(" %3d  %10.3f  %12.5e %s\n",
+                    iw, RadToDegree * phi2[iw], m_amp2[iw], 
+                    converged ? "CONVERGED" : "");
+      }
+    }
+    // Next iteration?
+    if (!reiter) return true;
+  }
+  // Maximum number of iterations exceeded.
+  std::cerr << m_className << "::SetupDipoleTerms:\n"
+            << "    Maximum number of dipole iterations exceeded "
+            << "without convergence; abandoned.\n";
+  return false;
+}
+
+void ComponentAnalyticField::DipoleFieldA00(
+    const double xpos, const double ypos, 
+    double& ex, double& ey, double& volt, const bool opt) const {
+
+  //-----------------------------------------------------------------------
+  //   EMCA00 - Subroutine computing dipole terms in a field generated by
+  //            wires without periodicities.
+  //-----------------------------------------------------------------------
+
+  // Initialise the potential and the electric field.
+  ex = 0.;
+  ey = 0.;
+  volt = 0.;
+  // Loop over all wires.
+  double v = 0.;
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    const double dx = xpos - wire.x;
+    const double dy = ypos - wire.y;
+    const double dxm = xpos + wire.x - 2. * m_coplax;
+    const double dym = ypos + wire.y - 2. * m_coplay;
+    // Calculate the field in case there are no planes.
+    const double a = dx * dx - dy * dy;
+    const double b = 2 * dx * dy;
+    const double d2 = dx * dx + dy * dy;
+    const double d4 = d2 * d2;
+    double fx = (a * m_cosph2[i] + b * m_sinph2[i]) / d4;
+    double fy = (b * m_cosph2[i] - a * m_sinph2[i]) / d4;
+    if (opt) v = (dx * m_cosph2[i] + dy * m_sinph2[i]) / d2;
+    // Take care of a plane at constant x.
+    if (m_ynplax) {
+      const double am = dxm * dxm - dy * dy;
+      const double bm = 2 * dxm * dy;
+      const double d2m = dxm * dxm + dy * dy;
+      const double d4m = d2m * d2m;
+      fx -= (am * m_cosph2[i] + bm * m_sinph2[i]) / d4m;
+      fy -= (bm * m_cosph2[i] - am * m_sinph2[i]) / d4m;
+      if (opt) v -= (dxm * m_cosph2[i] + dy * m_sinph2[i]) / d2m;
+    }
+    // Take care of a plane at constant y.
+    if (m_ynplay) {
+      const double am = dx * dx - dym * dym;
+      const double bm = 2 * dx * dym;
+      const double d2m = dx * dx + dym * dym;
+      const double d4m = d2m * d2m;
+      fx -= (am * m_cosph2[i] + bm * m_sinph2[i]) / d4m;
+      fy -= (bm * m_cosph2[i] - am * m_sinph2[i]) / d4m;
+      if (opt) v -= (dx * m_cosph2[i] + dym * m_sinph2[i]) / d2m;
+    }
+    // Take care of pairs of planes.
+    if (m_ynplax && m_ynplay) {
+      const double am = dxm * dxm - dym * dym;
+      const double bm = 2 * dxm * dym;
+      const double d2m = dxm * dxm + dym * dym;
+      const double d4m = d2m * d2m;
+      fx += (am * m_cosph2[i] + bm * m_sinph2[i]) / d4m;
+      fy += (bm * m_cosph2[i] - am * m_sinph2[i]) / d4m;
+      if (opt) v += (dxm * m_cosph2[i] + dym * m_sinph2[i]) / d2m;
+    }
+    // Normalise.
+    volt -= m_amp2[i] * v; 
+    ex -= m_amp2[i] * fx;
+    ey -= m_amp2[i] * fy;
+  }
+}
+
+void ComponentAnalyticField::DipoleFieldB1X(
+    const double xpos, const double ypos, 
+    double& ex, double& ey, double& volt, const bool opt) const {
+
+  //-----------------------------------------------------------------------
+  //   EMCB1X - Subroutine computing dipole terms in a field generated by
+  //            a row of wires along the x-axis.
+  //-----------------------------------------------------------------------
+
+  // Initialise the potential and the electric field.
+  ex = 0.;
+  ey = 0.;
+  volt = 0.;
+  // Shorthand.
+  const double tx = Pi / m_sx;
+  const double tx2 = tx * tx;
+  // Loop over all wires.
+  double v = 0.;
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    // Calculate the field in case there are no planes.
+    const double dx = tx * (xpos - wire.x);
+    const double dy = tx * (ypos - wire.y);
+    const double a = 1 - cos(2 * dx) * cosh(2 * dy);
+    const double b = sin(2 * dx) * sinh(2 * dy);
+    const double sx = sin(dx);
+    const double shy = sinh(dy);
+    const double d2 = sx * sx + shy * shy;
+    const double d4 = d2 * d2;
+    double fx = ( m_cosph2[i] * a + m_sinph2[i] * b) / d4;
+    double fy = (-m_sinph2[i] * a + m_cosph2[i] * b) / d4;
+    if (opt) {
+      v = (m_cosph2[i] * sin(2 * dx) + m_sinph2[i] * sinh(2 * dy)) / d2;
+    }
+    // Take care of a plane at constant y.
+    if (m_ynplay) {
+      const double dym = tx * (ypos + wire.y - 2. * m_coplay);
+      const double am = 1 - cos(2 * dx) * cosh(2 * dym);
+      const double bm = sin(2 * dx) * sinh(2 * dym);
+      const double shym = sinh(dym);
+      const double d2m = sx * sx + shym * shym;
+      const double d4m = d2m * d2m;
+      fx -= (m_cosph2[i] * am - m_sinph2[i] * bm) / d4m;
+      fy -= (m_sinph2[i] * am + m_cosph2[i] * bm) / d4m;
+      if (opt) {
+        v -= (m_cosph2[i] * sin(2 * dx) - m_sinph2[i] * sinh(2 * dym)) / d2m;
+      }
+    }
+    // Calculate the electric field and the potential.
+    ex -= m_amp2[i] * 0.5 * tx2 * fx;
+    ey -= m_amp2[i] * 0.5 * tx2 * fy;
+    if (opt) volt -= 0.5 * tx * m_amp2[i] * v;
+  } 
+}
+
+void ComponentAnalyticField::DipoleFieldB1Y(
+    const double xpos, const double ypos, 
+    double& ex, double& ey, double& volt, const bool opt) const {
+
+  //-----------------------------------------------------------------------
+  //   EMCB1Y - Subroutine computing dipole terms in a field generated by
+  //            a row of wires along the y-axis.
+  //-----------------------------------------------------------------------
+
+  // Initialise the potential and the electric field.
+  ex = 0.;
+  ey = 0.;
+  volt = 0.;
+  // Shorthand.
+  const double ty = Pi / m_sy;
+  const double ty2 = ty * ty;
+  // Loop over all wires.
+  double v = 0.;
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    // Calculate the field in case there are no planes.
+    const double dx = ty * (xpos - wire.x);
+    const double dy = ty * (ypos - wire.y);
+    const double a = 1 - cosh(2 * dx) * cos(2 * dy);
+    const double b = sinh(2 * dx) * sin(2 * dy);
+    const double shx = sinh(dx);
+    const double sy = sin(dy);
+    const double d2 = shx * shx + sy * sy;
+    const double d4 = d2 * d2;
+    double fx = (-m_cosph2[i] * a + m_sinph2[i] * b) / d4;
+    double fy = ( m_sinph2[i] * a + m_cosph2[i] * b) / d4;
+    if (opt) {
+      v = (m_cosph2[i] * sinh(2 * dx) + m_sinph2[i] * sin(2 * dy)) / d2;
+    }
+    // Take care of a plane at constant x.
+    if (m_ynplax) {
+      const double dxm = ty * (xpos + wire.x - 2. * m_coplax);
+      const double am = 1 - cosh(2 * dxm) * cos(2 * dy);
+      const double bm = sinh(2 * dxm) * sin(2 * dy);
+      const double shxm = sinh(dxm);
+      const double d2m = shxm * shxm + sy * sy;
+      const double d4m = d2m * d2m;
+      fx -= (m_cosph2[i] * am + m_sinph2[i] * bm) / d4m;
+      fy -= (m_sinph2[i] * am - m_cosph2[i] * bm) / d4m;
+      if (opt) {
+        v -= (-m_cosph2[i] * sinh(2 * dxm) + m_sinph2[i] * sin(2 * dy)) / d2m;
+      }
+    }
+    // Calculate the electric field and the potential.
+    ex -= m_amp2[i] * 0.5 * ty2 * fx;
+    ey -= m_amp2[i] * 0.5 * ty2 * fy;
+    if (opt) volt -= 0.5 * ty * m_amp2[i] * v;
+  }
+}
+
+void ComponentAnalyticField::DipoleFieldB2X(
+    const double xpos, const double ypos, 
+    double& ex, double& ey, double& volt, const bool opt) const {
+
+  //-----------------------------------------------------------------------
+  //   EMCB2X - Routine calculating the dipole terms for a charge between
+  //            parallel conducting planes.
+  //-----------------------------------------------------------------------
+
+  // Initialise the potential and the electric field.
+  ex = 0.;
+  ey = 0.;
+  volt = 0.;
+  // Shorthand.
+  const double tx = HalfPi / m_sx;
+  const double tx2 = tx * tx;
+  // Loop over all wires.
+  double v = 0.;
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    const double dx = tx * (xpos - wire.x);
+    const double dy = tx * (ypos - wire.y);
+    // Calculate the field in case there are no equipotential planes.
+    const double a = 1 - cos(2 * dx) * cosh(2 * dy);
+    const double b = sin(2 * dx) * sinh(2 * dy);
+    const double sx = sin(dx);
+    const double shy = sinh(dy);
+    const double d2 = sx * sx + shy * shy;
+    const double d4 = d2 * d2;
+    double fx = ( m_cosph2[i] * a + m_sinph2[i] * b) / d4;
+    double fy = (-m_sinph2[i] * a + m_cosph2[i] * b) / d4;
+    const double dxn = tx * (xpos + wire.x - 2. * m_coplax);
+    const double an = 1 - cos(2 * dxn) * cosh(2 * dy);
+    const double bn = sin(2 * dxn) * sinh(2 * dy);
+    const double sxn = sin(dxn);
+    const double d2n = sxn * sxn + shy * shy; 
+    const double d4n = d2n * d2n;
+    fx += (m_cosph2[i] * an - m_sinph2[i] * bn) / d4n;
+    fy += (m_sinph2[i] * an + m_cosph2[i] * bn) / d4n;
+    if (opt) {
+      v = -sin(dx + dxn) * (-2 * m_cosph2[i] * (
+          (1 + shy * shy) * sx * sxn + cos(dx) * cos(dxn) * shy * shy) + 
+          m_sinph2[i] * m_b2sin[i] * sinh(2 * dy)) / (d2 * d2n);
+    }
+    // Take care of planes at constant y.
+    if (m_ynplay) {
+      const double dym = tx * (ypos + wire.y - 2. * m_coplay); 
+      const double am = 1 - cos(2 * dx) * cosh(2 * dym);
+      const double bm = sin(2 * dx) * sinh(2 * dym);
+      const double shym = sinh(dym);
+      const double d2m = sx * sx + shym * shym;
+      const double d4m = d2m * d2m;
+      fx -= (m_cosph2[i] * am - m_sinph2[i] * bm) / d4m;
+      fy -= (m_sinph2[i] * am + m_cosph2[i] * bm) / d4m;
+      const double amn = 1 - cos(2 * dxn) * cosh(2 * dym);
+      const double bmn = sin(2 * dxn) * sinh(2 * dym);
+      const double d2mn = sxn * sxn + shym * shym;
+      const double d4mn = d2mn * d2mn;
+      fx -= ( m_cosph2[i] * amn + m_sinph2[i] * bmn) / d4mn;
+      fy -= (-m_sinph2[i] * amn + m_cosph2[i] * bmn) / d4mn;
+      if (opt) {
+        v += sin(dx + dxn) * (-2 * m_cosph2[i] * (
+            (1 + shym * shym) * sx * sxn + cos(dx) * cos(dxn) * shym * shym) -
+            m_sinph2[i]  * m_b2sin[i] * sinh(2 * dym)) / (d2m * d2mn);
+      }
+    }
+    // Calculate the electric field and the potential.
+    ex -= m_amp2[i] * 0.5 * tx2 * fx;
+    ey -= m_amp2[i] * 0.5 * tx2 * fy;
+    if (opt) volt -= 0.5 * tx * m_amp2[i] * v;
+  }
+}
+
+void ComponentAnalyticField::DipoleFieldB2Y(
+    const double xpos, const double ypos, 
+    double& ex, double& ey, double& volt, const bool opt) const {
+
+  //-----------------------------------------------------------------------
+  //   EMCB2Y - Routine calculating the dipole terms for a charge between
+  //            parallel conducting planes.
+  //-----------------------------------------------------------------------
+
+  // Initialise the potential and the electric field.
+  ex = 0.;
+  ey = 0.;
+  volt = 0.;
+  // Shorthand.
+  const double ty = HalfPi / m_sy;
+  const double ty2 = ty * ty;
+  // Loop over all wires.
+  double v = 0.;
+  for (unsigned int i = 0; i < m_nWires; ++i) {
+    const auto& wire = m_w[i];
+    const double dx = ty * (xpos - wire.x);
+    const double dy = ty * (ypos - wire.y);
+    // Calculate the field in case there are no equipotential planes.
+    const double a = 1 - cosh(2 * dx) * cos(2 * dy);
+    const double b = sinh(2 * dx) * sin(2 * dy);
+    const double shx = sinh(dx);
+    const double sy = sin(dy);
+    const double d2 = shx * shx + sy * sy;
+    const double d4 = d2 * d2;
+    double fx = (-m_cosph2[i] * a + m_sinph2[i] * b) / d4; 
+    double fy = ( m_sinph2[i] * a + m_cosph2[i] * b) / d4; 
+    const double dyn = ty * (ypos + wire.y - 2. * m_coplay);
+    const double an = 1 - cosh(2 * dx) * sin(2 * dyn);
+    const double bn = sinh(2 * dx) * sin(2 * dyn);
+    const double syn = sin(dyn);
+    const double d2n = shx * shx + syn * syn;
+    const double d4n = d2n * d2n; 
+    fx += (m_cosph2[i] * an + m_sinph2[i] * bn) / d4n;
+    fy += (m_sinph2[i] * an - m_cosph2[i] * bn) / d4n;
+    if (opt) {
+      // TODO: check!
+      v = sin(dy + dyn) * (
+          m_sinph2[i] * (-cos(dy + dyn) + cos(dy - dyn) * cosh(2 * dx)) -
+          m_cosph2[i] * sinh(2 * dx) * (cos(dyn) * sy + cos(dy) * syn)) /
+          (d2 * d2n);
+    }
+    // Take care of planes at constant x.
+    if (m_ynplax) {
+      const double dxm = ty * (xpos + wire.x - 2. * m_coplax);
+      const double am = 1 - cosh(2 * dxm) * cos(2 * dy);
+      const double bm = sinh(2 * dxm) * sin(2 * dy);
+      const double shxm = sinh(dxm);
+      const double d2m = shxm * shxm + sy * sy;
+      const double d4m = d2m * d2m;
+      fx -= (m_cosph2[i] * am + m_sinph2[i] * bm) / d4m;
+      fy -= (m_sinph2[i] * am - m_cosph2[i] * bm) / d4m;
+      const double amn = 1 - cosh(2 * dxm) * cos(2 * dyn);
+      const double bmn = sinh(2 * dxm) * sin(2 * dyn);
+      const double d2mn = shxm * shxm + syn * syn;
+      const double d4mn = d2mn * d2mn;
+      fx -= (-m_cosph2[i] * amn + m_sinph2[i] * bmn) / d4mn; 
+      fy -= ( m_sinph2[i] * amn + m_cosph2[i] * bmn) / d4mn;
+      if (opt) {
+        // TODO: check!
+        v -= sin(dy + dyn) * (
+            m_sinph2[i] * (-cos(dy + dyn) + cos(dy - dyn) * cosh(2 * dxm)) +  
+            m_cosph2[i] * sinh(2 * dxm) * (cos(dyn) * sy - cos(dy) * syn)) /
+            (d2m * d2mn);
+
+      }
+    }
+    // Calculate the electric field and the potential.
+    ex -= m_amp2[i] * 0.5 * ty2 * fx;
+    ey -= m_amp2[i] * 0.5 * ty2 * fy;
+    if (opt) volt -= 0.5 * ty * m_amp2[i] * v;
+  }
+}
+
+bool ComponentAnalyticField::MultipoleMoments(const unsigned int iw, 
+    const unsigned int nPoles, const bool print, const bool plot, 
+    const double rmult, const double eps,
+    const unsigned int nMaxIter) {
+
+  //-----------------------------------------------------------------------
+  //   EFMWIR - Computes the dipole moment of a given wire.
+  //-----------------------------------------------------------------------
+  if (!m_cellset && !Prepare()) return false;
+  // Check input parameters.
+  if (iw >= m_nWires) {
+    std::cerr << m_className << "::MultipoleMoments:\n"
+              << "    Wire index out of range.\n";
+    return false;
+  }
+  if (eps <= 0.) {
+    std::cerr << m_className << "::MultipoleMoments:\n"
+              << "    Epsilon must be positive.\n";
+    return false;
+  }
+  if (nPoles == 0) {
+    std::cerr << m_className << "::MultipoleMoments:\n"
+              << "    Multipole order out of range.\n";
+    return false;
+  }
+  if (rmult <= 0.) {
+    std::cerr << m_className << "::MultipoleMoments:\n"
+              << "    Radius multiplication factor out of range.\n";
+    return false;
+  }
+
+  const double xw = m_w[iw].x;
+  const double yw = m_w[iw].y;
+  // Set the radius of the wire to 0.
+  const double rw = m_w[iw].r;
+  m_w[iw].r = 0.;
+
+  // Loop around the wire.
+  constexpr unsigned int nPoints = 20000;
+  std::vector<double> angle(nPoints, 0.);
+  std::vector<double> volt(nPoints, 0.);
+  std::vector<double> weight(nPoints, 1.);
+  for (unsigned int i = 0; i < nPoints; ++i) {
+    // Set angle around wire.
+    angle[i] = TwoPi * (i + 1.) / nPoints;
+    // Compute E field, make sure the point is in a free region.
+    const double x = xw + rmult * rw * cos(angle[i]); 
+    const double y = yw + rmult * rw * sin(angle[i]);
+    double ex = 0., ey = 0., ez = 0., v = 0.;
+    if (Field(x, y, 0., ex, ey, ez, v, true) != 0) { 
+      std::cerr << m_className << "::MultipoleMoments:\n"
+                << "    Unexpected location code. Computation stopped.\n";
+      m_w[iw].r = rw;
+      return false;
+    }
+    // Assign the result to the fitting array.
+    volt[i] = v;
+  } 
+  // Restore the wire diameter.
+  m_w[iw].r = rw;
+
+  // Determine the maximum, minimum and average.
+  double vmin = *std::min_element(volt.cbegin(), volt.cend());
+  double vmax = *std::max_element(volt.cbegin(), volt.cend());
+  double vave = std::accumulate(volt.cbegin(), volt.cend(), 0.) / nPoints;
+  // Subtract the wire potential to centre the data more or less.
+  for (unsigned int i = 0; i < nPoints; ++i) volt[i] -= vave;
+  vmax -= vave;
+  vmin -= vave;
+
+  // Perform the fit.
+  const double vm = 0.5 * fabs(vmin) + fabs(vmax);
+  double chi2 = 1.e-6 * nPoints * vm * vm;
+  const double dist = 1.e-3 * (1. + vm);
+  const unsigned int nPar = 2 * nPoles + 1;
+  std::vector<double> pars(nPar, 0.);
+  std::vector<double> epar(nPar, 0.);
+  pars[0] = 0.5 * (vmax + vmin);
+  for (unsigned int i = 1; i <= nPoles; ++i) {
+    pars[2 * i - 1] = 0.5 * (vmax - vmin);
+    pars[2 * i] = 0.;
+  } 
+
+  auto f = [nPoles](const double x, const std::vector<double>& par) {
+    // EFMFUN
+    // Sum the series, initial value is the monopole term.
+    double sum = par[0];
+    for (unsigned int k = 1; k <= nPoles; ++k) {
+      // Obtain the Legendre polynomial of this order and add to the series.
+      const float cphi = cos(x - par[2 * k]);
+      sum += par[2 * k - 1] * sqrt(k + 0.5) * Numerics::Legendre(k, cphi);
+    }
+    return sum;
+  };
+
+  if (!Numerics::LeastSquaresFit(f, pars, epar, angle, volt, weight, 
+                                 nMaxIter, dist, chi2, eps, m_debug, print)) {
+    std::cerr << m_className << "::MultipoleMoments:\n"
+              << "    Fitting the multipoles failed; computation stopped.\n";
+  }
+  // Plot the result of the fit.
+  if (plot) {
+    TCanvas* cfit = new TCanvas();
+    cfit->SetGridx();
+    cfit->SetGridy();
+    cfit->DrawFrame(0., vmin, TwoPi, vmax,
+                    ";Angle around the wire [rad]; Potential - average [V]");
+    TGraph graph;
+    graph.SetLineWidth(2);
+    graph.SetLineColor(kBlack);
+    graph.DrawGraph(angle.size(), angle.data(), volt.data(), "lsame");
+    // Sum of contributions.
+    constexpr unsigned int nP = 1000;
+    std::array<double, nP> xp;
+    std::array<double, nP> yp;
+    for (unsigned int i = 0; i < nP; ++i) {
+      xp[i] = TwoPi * (i + 1.) / nP;
+      yp[i] = f(xp[i], pars);
+    }
+    graph.SetLineColor(kViolet + 3);
+    graph.DrawGraph(nP, xp.data(), yp.data(), "lsame");
+    // Individual contributions.
+    std::vector<double> parres = pars;
+    for (unsigned int i = 1; i <= nPoles; ++i) parres[2 * i - 1] = 0.;
+    for (unsigned int j = 1; j <= nPoles; ++j) {
+      parres[2 * j - 1] = pars[2 * j - 1];
+      for (unsigned int i = 0; i < nP; ++i) {
+        yp[i] = f(xp[i], parres);
+      }
+      parres[2 * j - 1] = 0.;
+      graph.SetLineColor(kAzure + j);
+      graph.DrawGraph(nP, xp.data(), yp.data(), "lsame"); 
+    }
+  }
+
+  // Print the results.
+  std::cout << m_className << "::MultipoleMoments:\n"
+            << "    Multipole moments for wire " << iw << ":\n"
+            << "  Moment            Value       Angle [degree]\n";
+  std::printf("  %6u  %15.8f        Arbitrary\n", 0, vave);
+  for (unsigned int i = 1; i <= nPoles; ++i) {
+    // Remove radial term from the multipole moment.
+    const double val = pow(rmult * rw, i) * pars[2 * i - 1];
+    const double phi = RadToDegree * fmod(pars[2 * i], Pi);
+    std::printf("  %6u  %15.8f  %15.8f\n", i, val, phi);
   }
   return true;
 }

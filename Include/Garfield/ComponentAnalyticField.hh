@@ -203,6 +203,22 @@ class ComponentAnalyticField : public ComponentBase {
   /// Setup the weighting field for a given group of wires or planes.
   void AddReadout(const std::string& label);
 
+  /** Calculate multipole moments for a given wire.
+    * \param iw Index of the wire.
+    * \param order Order of the highest multipole moment.
+    * \param print Print information about the fitting process.
+    * \param plot Plot the potential and multipole fit around the wire. 
+    * \param rmult Distance in multiples of the wire radius
+    *              at which the decomposition is to be carried out.
+    * \param eps Used in the fit for calculating the covariance matrix.
+    * \param nMaxIter Maximum number of iterations in the fit.
+    **/
+  bool MultipoleMoments(const unsigned int iw, const unsigned int order = 4,
+                        const bool print = false, const bool plot = false,
+                        const double rmult = 1., const double eps = 1.e-4,
+                        const unsigned int nMaxIter = 20); 
+  /// Request dipole terms be included for each of the wires (default: off).
+  void EnableDipoleTerms(const bool on = true);
   /// Check the quality of the capacitance matrix inversion (default: off).
   void EnableChargeCheck(const bool on = true) { m_chargeCheck = on; }
 
@@ -368,11 +384,11 @@ class ComponentAnalyticField : public ComponentBase {
   std::vector<Wire> m_w;
 
   // Option for computation of dipole terms
-  bool dipole;
+  bool m_dipole;
   // Dipole angle and amplitude
-  std::vector<double> cosph2;
-  std::vector<double> sinph2;
-  std::vector<double> amp2;
+  std::vector<double> m_cosph2;
+  std::vector<double> m_sinph2;
+  std::vector<double> m_amp2;
 
   // Parameters for B2 type cells
   std::vector<double> m_b2sin;
@@ -474,7 +490,10 @@ class ComponentAnalyticField : public ComponentBase {
   bool m_extrapolateForces = false;
 
   void UpdatePeriodicity() override;
-  void Reset() override { CellInit(); }
+  void Reset() override { 
+    CellInit(); 
+    m_medium = nullptr;
+  }
 
   void CellInit();
   bool Prepare();
@@ -511,7 +530,7 @@ class ComponentAnalyticField : public ComponentBase {
   bool IprD10();
   bool IprD30();
 
-  bool SetupDipole() { return true; }
+  bool SetupDipoleTerms();
 
   // Inversion of capacitance matrix
   bool Charge();
@@ -642,6 +661,17 @@ class ComponentAnalyticField : public ComponentBase {
                       double& ey, const std::vector<bool>& cnalso) const;
   void FieldAtWireD30(const double xpos, const double ypos, double& ex,
                       double& ey, const std::vector<bool>& cnalso) const;
+ 
+  void DipoleFieldA00(const double xpos, const double ypos, double& ex, 
+                      double& ey, double& volt, const bool opt) const; 
+  void DipoleFieldB1X(const double xpos, const double ypos, double& ex, 
+                      double& ey, double& volt, const bool opt) const; 
+  void DipoleFieldB1Y(const double xpos, const double ypos, double& ex, 
+                      double& ey, double& volt, const bool opt) const; 
+  void DipoleFieldB2X(const double xpos, const double ypos, double& ex, 
+                      double& ey, double& volt, const bool opt) const; 
+  void DipoleFieldB2Y(const double xpos, const double ypos, double& ex, 
+                      double& ey, double& volt, const bool opt) const; 
 
   // Auxiliary functions for C type cells
   double Ph2(const double xpos, const double ypos) const;

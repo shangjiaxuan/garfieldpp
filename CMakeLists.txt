@@ -99,6 +99,13 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+#--- Set default installation prefix
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  if(DEFINED ENV{GARFIELD_HOME})
+    set(CMAKE_INSTALL_PREFIX $ENV{GARFIELD_HOME} CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
+  endif()
+endif()
+
 #--- Add switches used in HEED
 #    -DNOT_INCLUDE_GASLIB_IN_PACSLIB is used in Heed/heed++/code/PhotoAbsCS.c
 set_source_files_properties(${heed_sources} PROPERTIES COMPILE_FLAGS "-DNOT_INCLUDE_GASLIB_IN_PACSLIB -DGARFIELD_HEED_INTERFACE -DUSE_SRANLUX -DEXCLUDE_FUNCTIONS_WITH_HISTDEF -DINS_CRETURN -DFUNNAMESTACK")
@@ -174,7 +181,7 @@ endif()
 export(PACKAGE Garfield)
 include(CMake/GarfieldCreateConfig.cmake)
 
-#--- Installation of all artifacts
+#--- Installation of all artifacts----------------------------------------------
 message(STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "If you want to change this path call cmake -DCMAKE_INSTALL_PREFIX=my_install_path ...")
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})

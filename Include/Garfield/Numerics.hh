@@ -86,14 +86,14 @@ namespace CERNLIB {
 
 /// Replaces b by the solution x of Ax = b, after which A is undefined.
 /// \param n order of the square matrix A.
-/// \param A n by n matrix.
+/// \param a n by n matrix.
 /// \param b right-hand side vector.
-/// \param ifail 0: normal exit, -1: singular matrix.
-void deqn(const int n, std::vector<std::vector<double> >& a,
-          int& ifail, std::vector<double>& b);
+/// \returns 0: normal exit, -1: singular matrix.
+int deqn(const int n, std::vector<std::vector<double> >& a,
+         std::vector<double>& b);
 /// Replaces b by the solution x of Ax = b, and replace A by its inverse.
-void deqinv(const int n, std::vector<std::vector<double> >& a, int& ifail,
-            std::vector<double>& b);
+int deqinv(const int n, std::vector<std::vector<double> >& a, 
+           std::vector<double>& b);
 
 void dfact(const int n, std::vector<std::vector<double> >& a,
            std::vector<int>& ir, int& ifail, double& det, int& jfail);
@@ -101,6 +101,8 @@ void dfeqn(const int n, std::vector<std::vector<double> >& a,
            std::vector<int>& ir, std::vector<double>& b);
 void dfinv(const int n, std::vector<std::vector<double> >& a,
            std::vector<int>& ir);
+/// Replace square matrix A by its inverse.
+int dinv(const int n, std::vector<std::vector<double> >& a);
 
 void cfact(const int n, std::vector<std::vector<std::complex<double> > >& a,
            std::vector<int>& ir, int& ifail, std::complex<double>& det,
@@ -109,9 +111,23 @@ void cfinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
            std::vector<int>& ir);
 
 /// Replace square matrix A by its inverse.
-void cinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
-          int& ifail);
+int cinv(const int n, std::vector<std::vector<std::complex<double> > >& a);
 
+}
+
+/// Legendre polynomials.
+inline double Legendre(const unsigned int n, const double x) {
+
+  if (std::abs(x) > 1.) return 0.;
+  double p0 = 1.;
+  double p1 = x;
+  if (n == 0) return p0;
+  if (n == 1) return p1;
+  for (unsigned int k = 1; k < n; ++k) {
+    p0 = ((2 * k + 1) * x * p1 - k * p0) / (k + 1);
+    std::swap(p0, p1);
+  }
+  return p1;
 }
 
 /// Modified Bessel functions.
@@ -186,8 +202,17 @@ bool Boxin3(const std::vector<std::vector<std::vector<double> > >& value,
             const std::vector<double>& zAxis, const int nx, const int ny,
             const int nz, const double xx, const double yy, const double zz,
             double& f, const int iOrder);
-}
 
+/// Least-squares minimisation.
+bool LeastSquaresFit(
+    std::function<double(double, const std::vector<double>&)> f, 
+    std::vector<double>& par, std::vector<double>& epar,
+    const std::vector<double>& x, const std::vector<double>& y,
+    const std::vector<double>& ey, const unsigned int nMaxIter,
+    const double diff, double& chi2, const double eps, 
+    const bool debug, const bool verbose);
+
+}
 }
 
 #endif

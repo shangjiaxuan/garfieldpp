@@ -431,6 +431,7 @@ void ViewCell::PlotWire(const double x, const double y, const double d,
 
   TEllipse circle;
   circle.SetDrawOption("same");
+  circle.SetFillColor(kWhite);
   circle.DrawEllipse(x, y, 0.5 * d, 0.5 * d, 0, 360, 0);
 }
 
