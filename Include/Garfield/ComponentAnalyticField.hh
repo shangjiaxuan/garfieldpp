@@ -490,7 +490,10 @@ class ComponentAnalyticField : public ComponentBase {
   bool m_extrapolateForces = false;
 
   void UpdatePeriodicity() override;
-  void Reset() override { CellInit(); }
+  void Reset() override { 
+    CellInit(); 
+    m_medium = nullptr;
+  }
 
   void CellInit();
   bool Prepare();

@@ -317,11 +317,20 @@ bool ComponentAnalyticField::GetBoundingBox(double& x0, double& y0, double& z0,
   }
   // Otherwise, return the cell dimensions.
   if (!m_cellset && !Prepare()) return false;
-  x0 = m_xmin;
-  y0 = m_ymin;
+  if (m_polar) {
+    double rmax, thetamax;
+    Internal2Polar(m_xmax, m_ymax, rmax, thetamax);
+    x0 = -rmax;
+    y0 = -rmax;
+    x1 = +rmax;
+    y1 = +rmax;
+  } else {
+    x0 = m_xmin;
+    y0 = m_ymin;
+    x1 = m_xmax;
+    y1 = m_ymax;
+  }
   z0 = m_zmin;
-  x1 = m_xmax;
-  y1 = m_ymax;
   z1 = m_zmax;
   return true;
 }
@@ -434,7 +443,7 @@ void ComponentAnalyticField::PrintCell() {
       for (const auto& strip : plane.strips2) {
         std::cout << "      ";
         if (m_polar) {
-          double gap = i == 0 ? exp(strip.gap) - 1. : 1. - exp(-strip.gap);
+          double gap = i == 0 ? expm1(strip.gap) : -expm1(-strip.gap);
           gap *= exp(m_coplan[i]);
           std::cout << RadToDegree * strip.smin << " < phi < "
                     << RadToDegree * strip.smax
@@ -451,7 +460,7 @@ void ComponentAnalyticField::PrintCell() {
       for (const auto& strip : plane.strips1) {
         std::cout << "      " << strip.smin << " < z < " << strip.smax;
         if (m_polar) {
-          double gap = i == 0 ? exp(strip.gap) - 1. : 1. - exp(-strip.gap);
+          double gap = i == 0 ? expm1(strip.gap) : -expm1(-strip.gap);
           gap *= exp(m_coplan[i]);
           std::cout << " cm, gap = " << gap << " cm";
         } else {
@@ -472,7 +481,7 @@ void ComponentAnalyticField::PrintCell() {
         }
         std::cout << pix.zmin << " < z < " << pix.zmax << " cm, gap = ";
         if (m_polar) {
-          double gap = i == 0 ? exp(pix.gap) - 1. : 1. - exp(-pix.gap);
+          double gap = i == 0 ? expm1(pix.gap) : -expm1(-pix.gap);
           gap *= exp(m_coplan[i]);
           std::cout << gap << " cm";
         } else {
@@ -1552,7 +1561,7 @@ void ComponentAnalyticField::SetCartesianCoordinates() {
   if (m_polar) {
     std::cout << m_className << "::SetCartesianCoordinates:\n    "
               << "Switching to Cartesian coordinates; resetting the cell.\n";
-    Reset();
+    CellInit();
   }
   m_polar = false;
 }
@@ -1561,7 +1570,7 @@ void ComponentAnalyticField::SetPolarCoordinates() {
   if (!m_polar) {
     std::cout << m_className << "::SetPolarCoordinates:\n    "
               << "Switching to polar coordinates; resetting the cell.\n";
-    Reset();
+    CellInit();
   }
   m_polar = true;
   // Set default phi period.
@@ -2464,7 +2473,6 @@ int ComponentAnalyticField::Field(const double xin, const double yin,
 }
 
 void ComponentAnalyticField::CellInit() {
-  m_medium = nullptr;
 
   m_cellset = false;
   m_sigset = false;
@@ -3456,9 +3464,9 @@ bool ComponentAnalyticField::PrepareStrips() {
         strip.gap = gapDef[i];
       } else if (m_polar && i < 2) {
         if (i == 0) {
-          strip.gap = log(1. + strip.gap / exp(m_coplan[i]));
+          strip.gap = log1p(strip.gap / exp(m_coplan[i]));
         } else {
-          strip.gap = -log(1. - strip.gap / exp(m_coplan[i]));
+          strip.gap = -log1p(-strip.gap / exp(m_coplan[i]));
         }
       }
     }
@@ -3473,9 +3481,9 @@ bool ComponentAnalyticField::PrepareStrips() {
         strip.gap = gapDef[i];
       } else if (m_polar && i < 2) {
         if (i == 0) {
-          strip.gap = log(1. + strip.gap / exp(m_coplan[i]));
+          strip.gap = log1p(strip.gap / exp(m_coplan[i]));
         } else {
-          strip.gap = -log(1. - strip.gap / exp(m_coplan[i]));
+          strip.gap = -log1p(-strip.gap / exp(m_coplan[i]));
         }
       }
     }
@@ -3490,9 +3498,9 @@ bool ComponentAnalyticField::PrepareStrips() {
         pixel.gap = gapDef[i];
       } else if (m_polar && i < 2) {
         if (i == 0) {
-          pixel.gap = log(1. + pixel.gap / exp(m_coplan[i]));
+          pixel.gap = log1p(pixel.gap / exp(m_coplan[i]));
         } else {
-          pixel.gap = -log(1. - pixel.gap / exp(m_coplan[i]));
+          pixel.gap = -log1p(-pixel.gap / exp(m_coplan[i]));
         }
       }
     }
