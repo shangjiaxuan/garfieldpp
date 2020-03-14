@@ -347,6 +347,11 @@ void Sensor::Clear() {
   m_tStep = 10.;
   m_nEvents = 0;
   m_hasUserArea = false;
+  m_fTransfer = nullptr;
+  m_shaper = nullptr;
+  m_fTransferTab.clear();
+  m_fTransferSq = -1.;
+  m_fTransferFFT.clear();
 }
 
 bool Sensor::GetVoltageRange(double& vmin, double& vmax) {
@@ -721,6 +726,9 @@ void Sensor::SetTimeWindow(const double tstart, const double tstep,
     electrode.ionsignal.assign(m_nTimeBins, 0.);
   }
   m_nEvents = 0;
+  // Reset the cached FFT of the transfer function 
+  // because it depends on the number of time bins.
+  m_fTransferFFT.clear();
 }
 
 double Sensor::GetElectronSignal(const std::string& label,
@@ -804,8 +812,10 @@ void Sensor::SetTransferFunction(double (*f)(double t)) {
     return;
   }
   m_fTransfer = f;
-  m_hasTransferFunction = true;
+  m_shaper = nullptr;
   m_fTransferTab.clear();
+  m_fTransferSq = -1.;
+  m_fTransferFFT.clear();
 }
 
 void Sensor::SetTransferFunction(const std::vector<double>& times,
@@ -825,14 +835,17 @@ void Sensor::SetTransferFunction(const std::vector<double>& times,
   } 
   std::sort(m_fTransferTab.begin(), m_fTransferTab.end());
   m_fTransfer = nullptr;
-  m_hasTransferFunction = true;
+  m_shaper = nullptr;
+  m_fTransferSq = -1.;
+  m_fTransferFFT.clear();
 }
 
 void Sensor::SetTransferFunction(Shaper &shaper) {
-  m_fTransfer = nullptr;
   m_shaper = &shaper;
-  m_hasTransferFunction = true;
+  m_fTransfer = nullptr;
   m_fTransferTab.clear();
+  m_fTransferSq = -1.;
+  m_fTransferFFT.clear();
 }
 
 double Sensor::InterpolateTransferFunctionTable(const double t) const {
@@ -854,7 +867,6 @@ double Sensor::InterpolateTransferFunctionTable(const double t) const {
 }
 
 double Sensor::GetTransferFunction(const double t) {
-  if (!m_hasTransferFunction) return 0.;
   if (m_fTransfer) {
     return m_fTransfer(t);
   } else if (m_shaper) {
@@ -864,7 +876,7 @@ double Sensor::GetTransferFunction(const double t) {
 }
 
 bool Sensor::ConvoluteSignal(const bool fft) {
-  if (!m_hasTransferFunction) {
+  if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
     std::cerr << m_className << "::ConvoluteSignal: "
               << "Transfer function not set.\n";
     return false;
@@ -919,12 +931,15 @@ bool Sensor::ConvoluteSignalFFT() {
 
   // Number of bins must be a power of 2.
   const unsigned int nn = pow(2, ceil(log(m_nTimeBins) / log(2.)));
-  std::vector<double> f(2 * (nn + 1), 0.);
 
-  for (unsigned int i = 0; i < m_nTimeBins; ++i) {
-    f[2 * i + 1] = GetTransferFunction(i * m_tStep);
+  if (!m_cacheTransferFunction || m_fTransferFFT.size() != 2 * (nn + 1)) {
+    // (Re-)compute the FFT of the transfer function.
+    m_fTransferFFT.assign(2 * (nn + 1), 0.);
+    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+      m_fTransferFFT[2 * i + 1] = GetTransferFunction(i * m_tStep);
+    }
+    FFT(m_fTransferFFT, false, nn);
   }
-  FFT(f, false, nn);
 
   const double scale = m_tStep / nn;
   for (auto& electrode : m_electrodes) {
@@ -934,8 +949,8 @@ bool Sensor::ConvoluteSignalFFT() {
     }
     FFT(g, false, nn);
     for (unsigned int i = 0; i < nn; ++i) {
-      const double fr = f[2 * i + 1];
-      const double fi = f[2 * i + 2];
+      const double fr = m_fTransferFFT[2 * i + 1];
+      const double fi = m_fTransferFFT[2 * i + 2];
       const double gr = g[2 * i + 1];
       const double gi = g[2 * i + 2];
       g[2 * i + 1] = fr * gr - fi * gi;
@@ -1019,7 +1034,7 @@ void Sensor::AddNoise(const bool total, const bool electron, const bool ion) {
 void Sensor::AddWhiteNoise(const double enc, const bool poisson, 
                            const double q0) {
 
-  if (!m_hasTransferFunction) {
+  if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
     std::cerr << m_className << "::AddWhiteNoise: Transfer function not set.\n";
     return;
   }
@@ -1060,22 +1075,26 @@ void Sensor::AddWhiteNoise(const double enc, const bool poisson,
   }
 }
 
-double Sensor::TransferFunctionSq() const {
+double Sensor::TransferFunctionSq() {
 
+  if (m_fTransferSq >= 0.) return m_fTransferSq;
+  double integral = -1.;
   if (m_fTransfer) {
     std::function<double(double)> fsq = [this](double x) {
       const double y = m_fTransfer(x);
       return y * y;
     };
     constexpr double epsrel = 1.e-8;
-    double integral = 0., err = 0.;
+    double err = 0.;
     unsigned int stat = 0;
     Numerics::QUADPACK::qagi(fsq, 0., 1, 0., epsrel, integral, err, stat);
-    return integral;
   } else if (m_shaper) {
-    return m_shaper->TransferFuncSq();
+    integral = m_shaper->TransferFuncSq();
+  } else {
+    integral = Trapezoid2(m_fTransferTab);
   }
-  return Trapezoid2(m_fTransferTab);
+  if (m_cacheTransferFunction) m_fTransferSq = integral;
+  return integral;
 }
 
 bool Sensor::ComputeThresholdCrossings(const double thr,

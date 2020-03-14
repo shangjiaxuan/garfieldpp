@@ -126,10 +126,15 @@ class Sensor {
   /// Set the points to be used for interpolating the transfer function.
   void SetTransferFunction(const std::vector<double>& times,
                            const std::vector<double>& values);
-  // Set the transfer function using Shaper class.
+  /// Set the transfer function using a Shaper object.
   void SetTransferFunction(Shaper &shaper);
   /// Evaluate the transfer function at a given time.
   double GetTransferFunction(const double t);
+  /// Cache integral and FFT of the transfer function 
+  /// instead of recomputing it at every call (default: on).  
+  void EnableTransferFunctionCache(const bool on = true) { 
+    m_cacheTransferFunction = on;
+  } 
   /// Convolute the induced current with the transfer function.
   bool ConvoluteSignal(const bool fft = false);
   /// Replace the current signal curve by its integral.
@@ -232,10 +237,14 @@ class Sensor {
   unsigned int m_nAvgDelayedSignal = 0;
 
   // Transfer function
-  bool m_hasTransferFunction = false;
   double (*m_fTransfer)(double t) = nullptr;
   Shaper* m_shaper = nullptr;
   std::vector<std::pair<double, double> > m_fTransferTab;
+  bool m_cacheTransferFunction = true;
+  // Integral of the transfer function squared.
+  double m_fTransferSq = -1.;
+  /// FFT of the transfer function.
+  std::vector<double> m_fTransferFFT;
 
   // Noise
   double (*m_fNoise)(double t) = nullptr;
@@ -270,7 +279,8 @@ class Sensor {
       if (delayed) electrode.delayedIonSignal[bin] += signal;
     }
   }
-  double TransferFunctionSq() const;
+  // Evaluate the integral over the transfer function squared. 
+  double TransferFunctionSq();
   double InterpolateTransferFunctionTable(const double t) const;
   bool ConvoluteSignalFFT(); 
   void FFT(std::vector<double>& data, const bool inverse, const int nn);
