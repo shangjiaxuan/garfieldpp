@@ -126,14 +126,22 @@ class Sensor {
   /// Set the points to be used for interpolating the transfer function.
   void SetTransferFunction(const std::vector<double>& times,
                            const std::vector<double>& values);
-  // Set the transfer function using Shaper class.
+  /// Set the transfer function using a Shaper object.
   void SetTransferFunction(Shaper &shaper);
   /// Evaluate the transfer function at a given time.
   double GetTransferFunction(const double t);
+  /// Cache integral and FFT of the transfer function 
+  /// instead of recomputing it at every call (default: on).  
+  void EnableTransferFunctionCache(const bool on = true) { 
+    m_cacheTransferFunction = on;
+  } 
   /// Convolute the induced current with the transfer function.
   bool ConvoluteSignal(const bool fft = false);
   /// Replace the current signal curve by its integral.
   bool IntegrateSignal();
+  /// Return whether the signal has been integrated/convoluted.
+  bool IsIntegrated() const { return m_integrated; }
+
   /// Delay the signal and subtract an attenuated copy 
   /// (modelling a constant fraction discriminator).
   /// \f[
@@ -204,11 +212,10 @@ class Sensor {
  private:
   std::string m_className = "Sensor";
 
-  // Components
+  /// Components
   std::vector<ComponentBase*> m_components;
   ComponentBase* m_lastComponent = nullptr;
 
-  // Electrodes
   struct Electrode {
     ComponentBase* comp;
     std::string label;
@@ -219,6 +226,7 @@ class Sensor {
     std::vector<double> delayedIonSignal;
     double charge;
   };
+  /// Electrodes
   std::vector<Electrode> m_electrodes;
 
   // Time window for signals
@@ -226,16 +234,21 @@ class Sensor {
   double m_tStart = 0.;
   double m_tStep = 10.;
   unsigned int m_nEvents = 0;
-  static double m_signalConversion;
   bool m_delayedSignal = false;
   std::vector<double> m_delayedSignalTimes;
   unsigned int m_nAvgDelayedSignal = 0;
 
   // Transfer function
-  bool m_hasTransferFunction = false;
   double (*m_fTransfer)(double t) = nullptr;
   Shaper* m_shaper = nullptr;
   std::vector<std::pair<double, double> > m_fTransferTab;
+  bool m_cacheTransferFunction = true;
+  // Integral of the transfer function squared.
+  double m_fTransferSq = -1.;
+  // FFT of the transfer function.
+  std::vector<double> m_fTransferFFT;
+  // Flag whether the signals have been convoluted/integrated.
+  bool m_integrated = false;
 
   // Noise
   double (*m_fNoise)(double t) = nullptr;
@@ -270,7 +283,8 @@ class Sensor {
       if (delayed) electrode.delayedIonSignal[bin] += signal;
     }
   }
-  double TransferFunctionSq() const;
+  // Evaluate the integral over the transfer function squared. 
+  double TransferFunctionSq();
   double InterpolateTransferFunctionTable(const double t) const;
   bool ConvoluteSignalFFT(); 
   void FFT(std::vector<double>& data, const bool inverse, const int nn);
