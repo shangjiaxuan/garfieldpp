@@ -139,6 +139,9 @@ class Sensor {
   bool ConvoluteSignal(const bool fft = false);
   /// Replace the current signal curve by its integral.
   bool IntegrateSignal();
+  /// Return whether the signal has been integrated/convoluted.
+  bool IsIntegrated() const { return m_integrated; }
+
   /// Delay the signal and subtract an attenuated copy 
   /// (modelling a constant fraction discriminator).
   /// \f[
@@ -209,11 +212,10 @@ class Sensor {
  private:
   std::string m_className = "Sensor";
 
-  // Components
+  /// Components
   std::vector<ComponentBase*> m_components;
   ComponentBase* m_lastComponent = nullptr;
 
-  // Electrodes
   struct Electrode {
     ComponentBase* comp;
     std::string label;
@@ -224,6 +226,7 @@ class Sensor {
     std::vector<double> delayedIonSignal;
     double charge;
   };
+  /// Electrodes
   std::vector<Electrode> m_electrodes;
 
   // Time window for signals
@@ -231,7 +234,6 @@ class Sensor {
   double m_tStart = 0.;
   double m_tStep = 10.;
   unsigned int m_nEvents = 0;
-  static double m_signalConversion;
   bool m_delayedSignal = false;
   std::vector<double> m_delayedSignalTimes;
   unsigned int m_nAvgDelayedSignal = 0;
@@ -243,8 +245,10 @@ class Sensor {
   bool m_cacheTransferFunction = true;
   // Integral of the transfer function squared.
   double m_fTransferSq = -1.;
-  /// FFT of the transfer function.
+  // FFT of the transfer function.
   std::vector<double> m_fTransferFFT;
+  // Flag whether the signals have been convoluted/integrated.
+  bool m_integrated = false;
 
   // Noise
   double (*m_fNoise)(double t) = nullptr;

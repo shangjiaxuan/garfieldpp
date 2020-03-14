@@ -64,8 +64,6 @@ double Trapezoid2(const std::vector<std::pair<double, double> >& f) {
 
 namespace Garfield {
 
-double Sensor::m_signalConversion = ElementaryCharge;
-
 ComponentBase* Sensor::GetComponent(const unsigned int i) {
   if (i >= m_components.size()) {
     std::cerr << m_className << "::GetComponent: Index out of range.\n";
@@ -396,6 +394,7 @@ void Sensor::ClearSignal() {
     electrode.delayedIonSignal.assign(m_nTimeBins, 0.);
   }
   m_nEvents = 0;
+  m_integrated = false;
 }
 
 void Sensor::SetDelayedSignalTimes(const std::vector<double>& ts) {
@@ -739,7 +738,7 @@ double Sensor::GetElectronSignal(const std::string& label,
   for (const auto& electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.electronsignal[bin];
   }
-  return m_signalConversion * sig / (m_nEvents * m_tStep);
+  return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
 double Sensor::GetIonSignal(const std::string& label, const unsigned int bin) {
@@ -749,7 +748,7 @@ double Sensor::GetIonSignal(const std::string& label, const unsigned int bin) {
   for (const auto& electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.ionsignal[bin];
   }
-  return m_signalConversion * sig / (m_nEvents * m_tStep);
+  return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
 double Sensor::GetDelayedElectronSignal(const std::string& label,
@@ -760,7 +759,7 @@ double Sensor::GetDelayedElectronSignal(const std::string& label,
   for (const auto& electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.delayedElectronSignal[bin];
   }
-  return m_signalConversion * sig / (m_nEvents * m_tStep);
+  return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
 double Sensor::GetDelayedIonSignal(const std::string& label,
@@ -771,7 +770,7 @@ double Sensor::GetDelayedIonSignal(const std::string& label,
   for (const auto& electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.delayedIonSignal[bin];
   }
-  return m_signalConversion * sig / (m_nEvents * m_tStep);
+  return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
 void Sensor::SetSignal(const std::string& label, const unsigned int bin,
@@ -780,7 +779,7 @@ void Sensor::SetSignal(const std::string& label, const unsigned int bin,
   if (m_nEvents == 0) m_nEvents = 1;
   for (auto& electrode : m_electrodes) {
     if (electrode.label == label) {
-      electrode.signal[bin] = m_nEvents * m_tStep * signal / m_signalConversion;
+      electrode.signal[bin] = m_nEvents * m_tStep * signal / ElementaryCharge;
       break;
     }
   }
@@ -793,7 +792,7 @@ double Sensor::GetSignal(const std::string& label, const unsigned int bin) {
   for (const auto& electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.signal[bin];
   }
-  return m_signalConversion * sig / (m_nEvents * m_tStep);
+  return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
 double Sensor::GetInducedCharge(const std::string& label) {
@@ -924,6 +923,7 @@ bool Sensor::ConvoluteSignal(const bool fft) {
     }
     electrode.signal.swap(tmpSignal);
   }
+  m_integrated = true;
   return true;
 }
 
@@ -961,6 +961,7 @@ bool Sensor::ConvoluteSignalFFT() {
       electrode.signal[i] = scale * g[2 * i + 1];
     }
   }
+  m_integrated = true;
   return true;
 }
 
@@ -982,6 +983,7 @@ bool Sensor::IntegrateSignal() {
       }
     }
   }
+  m_integrated = true;
   return true;
 }
 
@@ -1111,7 +1113,10 @@ bool Sensor::ComputeThresholdCrossings(const double thr,
               << "No signals present.\n";
     return false;
   }
-
+  if (!m_integrated) {
+    std::cerr << m_className << "::ComputeThresholdCrossings:\n    "
+              << "Warning: signal has not been integrated/convoluted.\n";
+  }
   // Compute the total signal.
   std::vector<double> signal(m_nTimeBins, 0.);
   // Loop over the electrodes.
@@ -1129,7 +1134,7 @@ bool Sensor::ComputeThresholdCrossings(const double thr,
               << label << " not found.\n";
     return false;
   }
-  const double scale = m_signalConversion / (m_nEvents * m_tStep);
+  const double scale = ElementaryCharge / (m_nEvents * m_tStep);
   for (unsigned int i = 0; i < m_nTimeBins; ++i) signal[i] *= scale;
 
   // Establish the range.

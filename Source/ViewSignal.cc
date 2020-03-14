@@ -63,12 +63,17 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
   const double t1 = t0 + nBins * dt;
 
   const auto title = label.c_str();
+  std::string xlabel = "time [ns]"; 
+  std::string ylabel = m_labelY;
+  if (ylabel.empty()) {
+    ylabel = m_sensor->IsIntegrated() ? "signal [fC]" : "signal [fC / ns]";
+  }
   if (total) {
     auto hname = FindUnusedHistogramName("hSignal_").c_str();
     m_hSignal.reset(new TH1D(hname, title, nBins, t0, t1));
     m_hSignal->SetLineColor(plottingEngine.GetRootColorLine1());
-    m_hSignal->GetXaxis()->SetTitle("time [ns]");
-    m_hSignal->GetYaxis()->SetTitle(m_labelY.c_str());
+    m_hSignal->GetXaxis()->SetTitle(xlabel.c_str()),
+    m_hSignal->GetYaxis()->SetTitle(ylabel.c_str());
     m_hSignal->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {
       const double sig = m_sensor->GetSignal(label, i);
@@ -115,8 +120,8 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     auto hname = FindUnusedHistogramName("hSignalElectrons_").c_str();
     m_hSignalElectrons.reset(new TH1D(hname, title, nBins, t0, t1));
     m_hSignalElectrons->SetLineColor(plottingEngine.GetRootColorElectron());
-    m_hSignalElectrons->GetXaxis()->SetTitle("time [ns]");
-    m_hSignalElectrons->GetYaxis()->SetTitle(m_labelY.c_str());
+    m_hSignalElectrons->GetXaxis()->SetTitle(xlabel.c_str());
+    m_hSignalElectrons->GetYaxis()->SetTitle(ylabel.c_str());
     m_hSignalElectrons->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {
       const double sig = m_sensor->GetElectronSignal(label, i);
@@ -145,8 +150,8 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     auto hname = FindUnusedHistogramName("hSignalIons_").c_str();
     m_hSignalIons.reset(new TH1D(hname, title, nBins, t0, t1));
     m_hSignalIons->SetLineColor(plottingEngine.GetRootColorIon());
-    m_hSignalIons->GetXaxis()->SetTitle("time [ns]");
-    m_hSignalIons->GetYaxis()->SetTitle(m_labelY.c_str());
+    m_hSignalIons->GetXaxis()->SetTitle(xlabel.c_str());
+    m_hSignalIons->GetYaxis()->SetTitle(ylabel.c_str());
     m_hSignalIons->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {
       const double sig = m_sensor->GetIonSignal(label, i);

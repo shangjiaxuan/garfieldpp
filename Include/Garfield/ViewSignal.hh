@@ -71,7 +71,7 @@ class ViewSignal : public ViewBase {
   bool m_userRangeY = false;
 
   // Axis label.
-  std::string m_labelY = "signal [fC / ns]";
+  std::string m_labelY = "";
 
   // Histograms.
   std::unique_ptr<TH1D> m_hSignal;
