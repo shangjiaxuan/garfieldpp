@@ -930,7 +930,7 @@ bool Sensor::ConvoluteSignal(const bool fft) {
 bool Sensor::ConvoluteSignalFFT() {
 
   // Number of bins must be a power of 2.
-  const unsigned int nn = pow(2, ceil(log(m_nTimeBins) / log(2.)));
+  const unsigned int nn = exp2(ceil(log2(m_nTimeBins)));
 
   if (!m_cacheTransferFunction || m_fTransferFFT.size() != 2 * (nn + 1)) {
     // (Re-)compute the FFT of the transfer function.
