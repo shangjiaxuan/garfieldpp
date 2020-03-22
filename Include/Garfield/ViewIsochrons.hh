@@ -40,7 +40,24 @@ class ViewIsochrons : public ViewBase {
   void Rotate(const double angle);
 
   void PlotIsochrons(const double tstep,
-                     const std::vector<std::array<double, 3> >& points);
+                     const std::vector<std::array<double, 3> >& points,
+                     const bool colour = true,
+                     const bool markers = false);
+
+  void DriftElectrons(const bool positive = false) { 
+    m_particle = Particle::Electron;
+    m_positive = positive;
+  }
+  void DriftIons(const bool negative = false) { 
+    m_particle = Particle::Ion;
+    m_positive = !negative;
+  }
+
+  void EnableSorting(const bool on = true) { m_sortContours = on; }
+  void CheckCrossings(const bool on = true) { m_checkCrossings = on; }
+  void SetAspectRatioSwitch(const double ar);
+  void SetLoopThreshold(const double thr);
+  void SetConnectionThreshold(const double thr);
 
  private:
   Sensor* m_sensor = nullptr;
@@ -56,12 +73,17 @@ class ViewIsochrons : public ViewBase {
   double m_xmin = -1., m_ymin = -1.;
   double m_xmax = 1., m_ymax = 1.;
 
-  bool m_useMarkers = false;
+  enum class Particle { Electron = 0, Ion };
+  // Type of particle to be used for computing drift lines.
+  Particle m_particle = Particle::Electron;
+  bool m_positive = false;
+
+  short m_markerStyle = 5;
   bool m_sortContours = true;
   double m_aspectRatio = 3.;
   double m_loopThreshold = 0.2;
   double m_connectionThreshold = 0.2;
-  bool m_checkCrossings = false;
+  bool m_checkCrossings = true;
 
   void SetupCanvas();
   bool Range();
@@ -70,6 +92,8 @@ class ViewIsochrons : public ViewBase {
   void ComputeDriftLines(const double tstep,
       const std::vector<std::array<double, 3> >& points,
       std::vector<std::vector<std::array<double, 3> > >& driftLines,
+      std::vector<std::array<double, 3> >& startPoints, 
+      std::vector<std::array<double, 3> >& endPoints, 
       std::vector<int>& IXYT);
   void SortContour(
       std::vector<std::pair<std::array<double, 4>, unsigned int> >& contour,
