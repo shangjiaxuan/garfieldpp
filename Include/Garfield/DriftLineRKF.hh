@@ -211,7 +211,7 @@ class DriftLineRKF {
   bool DriftToWire(const double xw, const double yw, const double rw,
                    const Particle particle, 
                    std::vector<double>& ts,
-                   std::vector<std::array<double, 3> >& xs);
+                   std::vector<std::array<double, 3> >& xs, int& stat);
 
   // Integrate the longitudinal diffusion over a step.
   double IntegrateDiffusion(const std::array<double, 3>& xi,
