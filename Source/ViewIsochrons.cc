@@ -346,27 +346,21 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
         if (m_checkCrossings && !gap) {
           for (unsigned int k = 0; k < nDriftLines; ++k) {
             const auto& dl = driftLines[k];
-            for (unsigned int jc = 0; jc < dl.size() - 1; ++jc) {
+            for (unsigned int jc = 0; jc < dl.size(); ++jc) {
               if ((i0 == k || i1 == k) && (jc == ic || jc + 1 == ic)) {
                 continue;
               }
-              if (Crossing(dl[jc][0], dl[jc][1], dl[jc + 1][0], dl[jc + 1][1],
-                           x0, y0, x1, y1)) {
+              const auto& p0 = dl[jc];
+              const auto& p1 = jc == dl.size() - 1 ? endPoints[k] : dl[jc + 1];
+              if (Crossing(p0[0], p0[1], p1[0], p1[1], x0, y0, x1, y1)) {
                 gap = true;
                 break;
               }
             }
             if (gap) break;
-            continue;
-            if ((i0 == k || i1 == k)) continue;
+            if ((i0 == k || i1 == k) && ic == 0) continue;
             const auto& p0 = startPoints[k];
             if (Crossing(p0[0], p0[1], dl[0][0], dl[0][1], 
-                         x0, y0, x1, y1)) {
-              gap = true;
-              break;
-            }
-            const auto& p1 = endPoints[k];
-            if (Crossing(dl.back()[0], dl.back()[1], p1[0], p1[1], 
                          x0, y0, x1, y1)) {
               gap = true;
               break;
@@ -456,7 +450,11 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
         drift.DriftElectron(point[0], point[1], point[2], 0.);
       }
     } else {
-      drift.DriftIon(point[0], point[1], point[2], 0.);
+      if (m_positive) {
+        drift.DriftIon(point[0], point[1], point[2], 0.);
+      } else {
+        drift.DriftNegativeIon(point[0], point[1], point[2], 0.);
+      }
     }
     const unsigned int nu = drift.GetNumberOfDriftLinePoints();
     // Check that the drift line has enough steps.
