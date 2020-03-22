@@ -41,8 +41,9 @@ class ViewIsochrons : public ViewBase {
 
   void PlotIsochrons(const double tstep,
                      const std::vector<std::array<double, 3> >& points,
-                     const bool colour = true,
-                     const bool markers = false);
+                     const bool rev = false,
+                     const bool colour = false, const bool markers = false,
+                     const bool plotDriftLines = true);
 
   void DriftElectrons(const bool positive = false) { 
     m_particle = Particle::Electron;
@@ -94,7 +95,7 @@ class ViewIsochrons : public ViewBase {
       std::vector<std::vector<std::array<double, 3> > >& driftLines,
       std::vector<std::array<double, 3> >& startPoints, 
       std::vector<std::array<double, 3> >& endPoints, 
-      std::vector<int>& IXYT);
+      std::vector<int>& statusCodes, const bool rev = false);
   void SortContour(
       std::vector<std::pair<std::array<double, 4>, unsigned int> >& contour,
       bool& circle);

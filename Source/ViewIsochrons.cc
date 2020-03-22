@@ -201,8 +201,8 @@ void ViewIsochrons::SetConnectionThreshold(const double thr) {
 }
 
 void ViewIsochrons::PlotIsochrons(const double tstep,
-    const std::vector<std::array<double, 3> >& points,
-    const bool colour, const bool markers) {
+    const std::vector<std::array<double, 3> >& points, const bool rev, 
+    const bool colour, const bool markers, const bool plotDriftLines) {
 
   if (!m_sensor && !m_component) {
     std::cerr << m_className << "::PlotIsochrons:\n"
@@ -219,9 +219,10 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
   std::vector<std::vector<std::array<double, 3> > > driftLines;
   std::vector<std::array<double, 3> > startPoints;  
   std::vector<std::array<double, 3> > endPoints;  
-  std::vector<int> IXYT;
+  std::vector<int> statusCodes;
   // Accumulate drift lines.
-  ComputeDriftLines(tstep, points, driftLines, startPoints, endPoints, IXYT);
+  ComputeDriftLines(tstep, points, driftLines, startPoints, endPoints, 
+                    statusCodes, rev);
   const unsigned int nDriftLines = driftLines.size();
   if (nDriftLines < 2) {
     std::cerr << m_className << "::PlotIsochrons: Too few drift lines.\n";
@@ -238,7 +239,7 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
   }
 
   std::set<int> allStats;
-  for (const auto stat : IXYT) allStats.insert(stat);
+  for (const auto stat : statusCodes) allStats.insert(stat);
 
   // DRFEQP
   if (m_debug) {
@@ -284,7 +285,7 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
       for (unsigned int k = 0; k < nDriftLines; ++k) {
         const auto& dl = driftLines[k]; 
         // Reject any undesirable combinations.
-        if (IXYT[k] != stat || ic >= dl.size()) continue;
+        if (statusCodes[k] != stat || ic >= dl.size()) continue;
         // Add the point to the contour line.
         std::array<double, 4> point = {dl[ic][0], dl[ic][1], dl[ic][2], 0.};
         contour.push_back(std::make_pair(point, k)); 
@@ -395,8 +396,9 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
     }
   }
 
-  // gPad->SetRightMargin(0.15);
   gPad->Update();
+  if (!plotDriftLines) return;
+
   graph.SetLineStyle(1);
   if (m_particle == Particle::Electron) {
     graph.SetLineColor(kOrange - 3);
@@ -432,7 +434,7 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
   std::vector<std::vector<std::array<double, 3> > >& driftLines,
   std::vector<std::array<double, 3> >& startPoints,
   std::vector<std::array<double, 3> >& endPoints,
-  std::vector<int>& IXYT) {
+  std::vector<int>& statusCodes, const bool rev) {
 
   DriftLineRKF drift;
   Sensor sensor;
@@ -469,8 +471,16 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
     for (unsigned int i = 0; i < nu; ++i) {
       drift.GetDriftLinePoint(i, xu[i], yu[i], zu[i], tu[i]);
     }
+    const double tend = tu.back();
+    if (rev) {
+      for (auto& t : tu) t = tend - t;
+      std::reverse(std::begin(xu), std::end(xu)); 
+      std::reverse(std::begin(yu), std::end(yu)); 
+      std::reverse(std::begin(zu), std::end(zu)); 
+      std::reverse(std::begin(tu), std::end(tu)); 
+    }
     // Find the number of points to be stored.
-    const unsigned int nSteps = static_cast<unsigned int>(tu.back() / tstep);
+    const unsigned int nSteps = static_cast<unsigned int>(tend / tstep);
     if (nSteps == 0) continue;
     std::vector<std::array<double, 3> > tab;
     // Interpolate at regular time intervals.
@@ -490,7 +500,11 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
     startPoints.push_back(std::move(start));
     endPoints.push_back(std::move(end));
     // Store the drift line return code.
-    IXYT.push_back(status);
+    if (rev) {
+      statusCodes.push_back(status);
+    } else {
+      statusCodes.push_back(0);
+    }
   }
 }
 
