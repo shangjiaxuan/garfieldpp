@@ -80,6 +80,8 @@ class ViewIsochrons : public ViewBase {
   bool m_positive = false;
 
   short m_markerStyle = 5;
+  short m_lineStyle = 2;
+
   bool m_sortContours = true;
   double m_aspectRatio = 3.;
   double m_loopThreshold = 0.2;
@@ -99,7 +101,6 @@ class ViewIsochrons : public ViewBase {
   void SortContour(
       std::vector<std::pair<std::array<double, 4>, unsigned int> >& contour,
       bool& circle);
-  std::array<double, 3> PLACO3(const double x1, const double y1, const double z1);
 
 };
 }

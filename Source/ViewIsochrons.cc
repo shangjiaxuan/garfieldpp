@@ -209,9 +209,22 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
               << "    Neither sensor nor component are defined.\n";
     return;
   }
+  if (tstep <= 0.) {
+    std::cerr << m_className << "::PlotIsochrons: Time step must be > 0.\n";
+    return;
+  }
+  if (points.empty()) {
+    std::cerr << m_className << "::PlotIsochrons:\n"
+              << "    No starting points provided.\n";
+    return;
+  }
   SetupCanvas();
   if (!Range()) return;
-  m_canvas->DrawFrame(m_xmin, m_ymin, m_xmax, m_ymax, ";x;y");
+  auto frame = m_canvas->DrawFrame(m_xmin, m_ymin, m_xmax, m_ymax);
+  frame->GetXaxis()->SetTitle(m_xLabel);
+  frame->GetYaxis()->SetTitle(m_yLabel);
+  m_canvas->Update();
+
   //-----------------------------------------------------------------------
   //   DRFEQT - The main routine (DRFEQT) accumulates equal drift time data
   //   DRFEQP   which is plotted as a set of contours in the entry DRFEQP.
@@ -270,7 +283,8 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
   TGraph graph;
   graph.SetLineColor(kGray + 2);
   graph.SetMarkerColor(kGray + 2);
-  graph.SetLineStyle(9);
+  graph.SetLineStyle(m_lineStyle);
+  graph.SetMarkerStyle(m_markerStyle);
   const double colRange = double(gStyle->GetNumberOfColors()) / nContours;
   for (unsigned int ic = 0; ic < nContours; ++ic) {
     if (colour) {
@@ -278,7 +292,6 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
       graph.SetLineColor(col);
       graph.SetMarkerColor(col);
     }
-    graph.SetMarkerStyle(m_markerStyle);
     for (int stat : allStats) {
       std::vector<std::pair<std::array<double, 4>, unsigned int> > contour;
       // Loop over the drift lines, picking up the points when OK.
@@ -316,11 +329,8 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
       const double tolx = (m_xmax - m_xmin) * m_connectionThreshold;
       const double toly = (m_ymax - m_ymin) * m_connectionThreshold;
       // Flag to keep track if the segment is interrupted by a drift line
-      // drift line or if it is too long.
+      // or if it is too long.
       bool gap = false;
-      // Flag for the first segment.
-      bool firstgap = false;
-      unsigned int ibegin = 0;
       // Coordinates to be plotted.
       std::vector<double> xp;
       std::vector<double> yp;
@@ -373,24 +383,19 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
           if (xp.size() > 1) {
             // Plot line.
             graph.DrawGraph(xp.size(), xp.data(), yp.data(), "Lsame");
-          } else if (ibegin != 0 || !circle) {
+          } else {
             // Plot markers.
             graph.DrawGraph(xp.size(), xp.data(), yp.data(), "Psame");
-          } else if (ibegin == 0) {
-            // TODO!
-            firstgap = true;
           }
           xp.clear();
           yp.clear();
           zp.clear();
-          ibegin = i + 1;
         }
       }
-      // Plot the remainder; if there is a break, put a * if FRSTBR is on.
-      if (!gap && xp.size() > 1) {
+      // Plot the remainder.
+      if (xp.size() > 1) {
         graph.DrawGraph(xp.size(), xp.data(), yp.data(), "Lsame");
-       } else if ((firstgap || !circle) && ibegin == nP) {
-        // TODO!
+      } else if (!xp.empty()) {
         graph.DrawGraph(xp.size(), xp.data(), yp.data(), "Psame");
       }
     }
@@ -444,6 +449,10 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
     sensor.AddComponent(m_component);
     drift.SetSensor(&sensor);
   }
+  const double lx = 0.1 * fabs(m_xmax - m_xmin);
+  const double ly = 0.1 * fabs(m_ymax - m_ymin);
+  drift.SetMaximumStepSize(std::min(lx, ly));
+
   for (const auto& point : points) {
     if (m_particle == Particle::Electron) {
       if (m_positive) {
@@ -459,11 +468,14 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
       }
     }
     const unsigned int nu = drift.GetNumberOfDriftLinePoints();
-    // Check that the drift line has enough steps.
+    // Check that the drift line has enough points.
     if (nu < 3) continue;
     int status = 0;
     double xf = 0., yf = 0., zf = 0., tf = 0.;
-    drift.GetEndPoint(xf, yf, zf, tf, status); 
+    drift.GetEndPoint(xf, yf, zf, tf, status);
+    // Find the number of points to be stored.
+    const unsigned int nSteps = static_cast<unsigned int>(tf / tstep);
+    if (nSteps == 0) continue;
     std::vector<double> xu(nu, 0.);
     std::vector<double> yu(nu, 0.);
     std::vector<double> zu(nu, 0.);
@@ -471,17 +483,13 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
     for (unsigned int i = 0; i < nu; ++i) {
       drift.GetDriftLinePoint(i, xu[i], yu[i], zu[i], tu[i]);
     }
-    const double tend = tu.back();
     if (rev) {
-      for (auto& t : tu) t = tend - t;
+      for (auto& t : tu) t = tf - t;
       std::reverse(std::begin(xu), std::end(xu)); 
       std::reverse(std::begin(yu), std::end(yu)); 
       std::reverse(std::begin(zu), std::end(zu)); 
       std::reverse(std::begin(tu), std::end(tu)); 
     }
-    // Find the number of points to be stored.
-    const unsigned int nSteps = static_cast<unsigned int>(tend / tstep);
-    if (nSteps == 0) continue;
     std::vector<std::array<double, 3> > tab;
     // Interpolate at regular time intervals.
     for (unsigned int i = 0; i < nSteps; ++i) {
@@ -964,22 +972,5 @@ void ViewIsochrons::SortContour(
     }
   }
 }
-
-std::array<double, 3> ViewIsochrons::PLACO3(const double x1, const double y1, const double z1) {
-
-  //-----------------------------------------------------------------------
-  //   PLACO3 - Determines plane coordinates.
-  //   (Last changed on 29/ 9/98.)
-  //-----------------------------------------------------------------------
-
-  std::vector<double> b = {x1, y1, z1};
-  // Solve the equation.
-  // Numerics::CERNLIB::dfeqn(3, FPRMAT, IPRMAT, b);
-  // Return the solution.
-  const double zcut = m_plane[0] * x1 + m_plane[1] * y1 + m_plane[2] * z1;
-  std::array<double, 3> result = {b[0], b[1], zcut};
-  return result;
-}
-
 
 }
