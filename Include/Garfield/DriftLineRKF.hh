@@ -46,7 +46,7 @@ class DriftLineRKF {
   void UnsetMaximumStepSize() { m_useStepSizeLimit = false; }
   /// Request (or not) the drift line calculation to be aborted if the 
   /// drift line makes a bend sharper than 90 degrees.
-  void EnableRejectKinks(const bool on = true) { m_rejectKinks = on; }
+  void RejectKinks(const bool on = true) { m_rejectKinks = on; }
 
   /// Set multiplication factor for the signal induced by electrons.
   void SetElectronSignalScalingFactor(const double scale) { m_scaleE = scale; }

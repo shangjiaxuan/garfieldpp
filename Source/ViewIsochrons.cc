@@ -183,8 +183,9 @@ void ViewIsochrons::SetAspectRatioSwitch(const double ar) {
 
 void ViewIsochrons::SetLoopThreshold(const double thr) {
 
-  if (thr < 0.) {
-    std::cerr << m_className << "::SetLoopThreshold: Value must be > 0.\n";
+  if (thr < 0. || thr > 1.) {
+    std::cerr << m_className << "::SetLoopThreshold:\n"
+              << "    Value must be between 0 and 1.\n";
     return;
   }
   m_loopThreshold = thr;
@@ -192,9 +193,9 @@ void ViewIsochrons::SetLoopThreshold(const double thr) {
 
 void ViewIsochrons::SetConnectionThreshold(const double thr) {
 
-  if (thr < 0.) {
+  if (thr < 0. || thr > 1.) {
     std::cerr << m_className << "::SetConnectionThreshold:\n"
-              << "    Value must be > 0.\n";
+              << "    Value must be between 0 and 1.\n";
     return;
   }
   m_connectionThreshold = thr;
@@ -452,7 +453,7 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
   const double lx = 0.1 * fabs(m_xmax - m_xmin);
   const double ly = 0.1 * fabs(m_ymax - m_ymin);
   drift.SetMaximumStepSize(std::min(lx, ly));
-
+  drift.EnableSignalCalculation(false);
   for (const auto& point : points) {
     if (m_particle == Particle::Electron) {
       if (m_positive) {

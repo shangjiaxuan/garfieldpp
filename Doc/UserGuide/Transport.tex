@@ -62,12 +62,12 @@ calculates a drift line by iterating over the following steps.
   compute two estimates of the step to the next point on the drift line, 
   \begin{itemize}
     \item
-      $\boldsymbol{\Delta{v}}_{\text{I}} = \sum\limits_{k=0}^{2}C_{\text{I}, k}\mathbf{v}_{d}\left(\mathbf{x}_{k}\right)$, accurate to second order,
+      $\boldsymbol{\Delta{v}}_{\text{I}} = \sum\limits_{k=0}^{2}C_{\text{I}, k}\mathbf{v}_{d}\left(\mathbf{x}_{k}\right)$, accurate to second order, and
     \item
       $\boldsymbol{\Delta{v}}_{\text{II}} = \sum\limits_{k=0}^{3}C_{\text{II}, k}\mathbf{v}_{d}\left(\mathbf{x}_{k}\right)$, accurate to third order.
   \end{itemize}
   These two estimates are based on the drift velocity at the starting point 
-  and the velocity at only three new locations
+  and the velocity at three new locations
   \begin{equation*} 
   \mathbf{x}_{k} = \mathbf{x}_{0} + \Delta{t}\sum\limits_{i = 0}^{k - 1}\beta_{k,i}\mathbf{v}_{d}\left(\mathbf{x}_{i}\right).
   \end{equation*}
@@ -119,7 +119,7 @@ sharper than 90$^{\circ}$. Such bends rarely occur in smooth fields,
 the most common case is a drift line that tries to cross a saddle point. 
 This check can be switched on or off using
 \begin{lstlisting}
-void EnableRejectKinks(const bool on = true);
+void RejectKinks(const bool on = true);
 \end{lstlisting} 
 
 During the evaluation of the velocities $\mathbf{v}_{d}\left(\mathbf{x}_{k}\right)$
@@ -148,8 +148,13 @@ The function
 bool DriftPositron(const double x0, const double y0, const double z0, const double t0);
 \end{lstlisting}
 computes an electron drift line, but assuming that the electron has positive charge 
-(which can be useful for determining isochrons).
-% Note that the drift velocity vector is not anti-symmetric under charge inversion is there is a non-zero E-perpendicular component of the B field.
+(which can be useful for determining isochrons). Analogously, the function
+\begin{lstlisting}
+bool DriftNegativeIon(const double x0, const double y0, const double z0, const double t0);
+\end{lstlisting}
+computes an ion drift line, assuming that the ion has negative charge.
+% Note that the drift velocity vector is not anti-symmetric under charge inversion 
+% if there is a non-zero E-perpendicular component of the B field.
 
 After calculating a drift line, the multiplication and loss factors 
 \begin{equation*}
@@ -380,7 +385,8 @@ void SetTimeWindow(const double t0, const double t1);
   \item[t0] lower limit of the time window
   \item[t1] upper limit of the time window 
 \end{description}
-Only charge carriers with a time coordinate \(t \in \left[t_{0}, t_{1}\right]\) 
+If a time window is set, 
+only charge carriers with a time coordinate \(t \in \left[t_{0}, t_{1}\right]\) 
 are tracked. If the time coordinate of a particle crosses the upper limit, 
 it is stopped and assigned the status code -17.
 Slicing the calculation into time steps can be useful for instance 
@@ -392,7 +398,7 @@ void UnsetTimeWindow();
 \end{lstlisting}
 
 By default, the Townsend and attachment coefficients are integrated over 
-path segments projected on the local drift velocity vector. 
+path segments projected onto the local drift velocity vector. 
 This feature, which can be activated or deactivated by calling the function
 \begin{lstlisting}
 void EnableProjectedPathIntegration(const bool on = true);
@@ -597,8 +603,8 @@ In the function set using \texttt{SetUserHandleCollision}, the energy
 and the direction vector before and after the collision are available 
 in addition. 
 
-In the following example we want 
-all excitations which occur to undergo a special treatment. 
+In the following example we want to retrieve  
+all excitations happening in the avalanche.
 \begin{lstlisting}
 void userHandle(double x, double y, double z, double t,
                 int type, int level, Medium* m) {
@@ -654,3 +660,92 @@ void AvalancheMicroscopic::SetCollisionSteps(const int n);
 \end{description}
 Note that this setting does not affect the transport of the electron as such, 
 the electron is always tracked rigorously through single collisions.
+
+\section{Visualizing isochrons}
+
+For drift chambers, it is useful to determine the contours of equal drift time to a wire.
+These so-called isochrons can be calculated and drawn 
+using the class \texttt{ViewIsochrons}.
+The component or sensor from which to retrieve the field is set using
+\begin{lstlisting}
+void SetComponent(ComponentBase* c);
+\end{lstlisting}
+or
+\begin{lstlisting}
+void SetSensor(Sensor* s);
+\end{lstlisting}
+
+The function
+\begin{lstlisting}
+void DriftElectrons(const bool positive = false);
+\end{lstlisting}
+instructs the class to compute isochrons using electron drift lines.
+If the flag \texttt{positive} is set to \texttt{true}, the electrons 
+are drifted with positive charge,
+which is useful for calculating isochrons of wires that attract electrons.
+
+By calling
+\begin{lstlisting}
+void DriftIons(const bool negative = false);
+\end{lstlisting}
+one requests drift lines of (positive or negative) ions.
+
+The calculation of the drift lines and equal time contours and their visualization is 
+done by the function 
+\begin{lstlisting}
+void PlotIsochrons(const double tstep,
+    const std::vector<std::array<double, 3> >& points, const bool reverse = false,
+    const bool colour = false, const bool markers = false, const bool plotDriftLines = true);
+\end{lstlisting}
+\begin{description}
+  \item[tstep] time interval between isochron lines,
+  \item[points] list of starting points from which to simulate drift lines,
+  \item[reverse] flag to measure the drift time from the end points of the drift lines (\texttt{true}) or from the starting points (\texttt{false}),
+  \item[colour] requests drawing the contour lines using the currently active colour palette,
+  \item[markers] flag to draw markers at the points on the isochrons (\texttt{true}) or draw the isochron as lines (\texttt{false}), 
+  \item[plotDriftLines] requests plotting of the drift lines together with the isochrons. 
+\end{description} 
+The calculation of the drift lines is done using \texttt{DriftLineRKF}.
+
+The appearance of the isochrons is affected by a number of additional parameters.
+By default, the algorithm tries to order the points at equal time such that 
+the isochrons appear as reasonably smooth lines. 
+This sorting step can be switched off or on using
+\begin{lstlisting}
+void EnableSorting(const bool on = true);
+\end{lstlisting} 
+When an isochron appears to be more or less circular, its points 
+are ordered by increasing angle with respect to the centre of gravity. 
+If the isochron, on the other hand, seems to be more or less linear, 
+the points are ordered along the longest principal axis of the distribution.
+Whether the set is circular or linear is decided by computing the RMS 
+in the two principal axes of the point distribution. 
+If the ratio of these two numbers exceeds a threshold
+then the isochron is assumed to be linear, otherwise circular.
+This parameter (which defaults to 3) can be set using
+\begin{lstlisting}
+void SetAspectRatioSwitch(const double ar);
+\end{lstlisting}
+Isochrons that appear to be circular are closed if the largest distance 
+between two points does not exceed a certain fraction of the 
+total length of the isochron. 
+This threshold (initially set to 0.2) can be modified using
+\begin{lstlisting}
+void SetLoopThreshold(const double thr);
+\end{lstlisting}
+
+Points on an isochron are only joined if they are less than a 
+certain fraction away from each other on the screen. 
+Points that can not be connected are shown by a marker. 
+This fraction (initial value: 0.2) can be set using
+\begin{lstlisting}
+void SetConnectionThreshold(const double thr);
+\end{lstlisting}
+By default, points on an isochron are also not joined if their connecting 
+line crosses a drift line.
+This feature can be switched on or off using
+\begin{lstlisting}
+void CheckCrossings(const bool on = true);
+\end{lstlisting}
+
+
