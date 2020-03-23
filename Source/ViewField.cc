@@ -6,6 +6,8 @@
 
 #include <TAxis.h>
 #include <TROOT.h>
+#include <TF1.h>
+#include <TF2.h>
 
 #include "Garfield/ComponentBase.hh"
 #include "Garfield/Plotting.hh"
@@ -46,13 +48,6 @@ namespace Garfield {
 
 ViewField::ViewField() : ViewBase("ViewField") {
   SetDefaultProjection();
-}
-
-ViewField::~ViewField() {
-  if (m_f2d) delete m_f2d;
-  if (m_f2dW) delete m_f2dW;
-  if (m_fProfile) delete m_fProfile;
-  if (m_fProfileW) delete m_fProfileW;
 }
 
 void ViewField::SetSensor(Sensor* s) {
@@ -110,12 +105,7 @@ void ViewField::SetWeightingFieldRange(const double wmin, const double wmax) {
 }
 
 void ViewField::SetNumberOfContours(const unsigned int n) {
-  if (n <= m_nMaxContours) {
-    m_nContours = n;
-  } else {
-    std::cerr << m_className << "::SetNumberOfContours:\n"
-              << "    Max. number of contours is " << m_nMaxContours << ".\n";
-  }
+  if (n > 0) m_nContours = n;
 }
 
 void ViewField::SetNumberOfSamples1d(const unsigned int n) {
@@ -154,48 +144,32 @@ void ViewField::SetNumberOfSamples2d(const unsigned int nx,
 
 void ViewField::PlotContour(const std::string& option) {
   SetupCanvas();
-  if (!SetupFunction(option, m_f2d, true, false)) return;
-  m_f2d->Draw("CONT4Z");
-  gPad->SetRightMargin(0.15);
-  gPad->Update();
+  if (!SetupFunction(option, true, false, "", "CONT4Z")) return;
 }
 
 void ViewField::Plot(const std::string& option, const std::string& drawopt) {
   SetupCanvas();
-  if (!SetupFunction(option, m_f2d, false, false)) return;
-  m_f2d->Draw(drawopt.c_str());
-  gPad->SetRightMargin(0.15);
-  gPad->Update();
+  if (!SetupFunction(option, false, false, "", drawopt)) return;
 }
 
 void ViewField::PlotProfile(const double x0, const double y0, const double z0,
                             const double x1, const double y1, const double z1,
                             const std::string& option) {
   SetupCanvas();
-  if (!SetupProfile(x0, y0, z0, x1, y1, z1, option, m_fProfile, false)) return;
-  m_fProfile->Draw();
-  gPad->Update();
+  if (!SetupProfile(x0, y0, z0, x1, y1, z1, option, false, "")) return;
 }
 
 void ViewField::PlotWeightingField(const std::string& label,
                                    const std::string& option,
                                    const std::string& drawopt) {
-  m_electrode = label;
   SetupCanvas();
-  if (!SetupFunction(option, m_f2dW, false, true)) return;
-  m_f2dW->Draw(drawopt.c_str());
-  gPad->SetRightMargin(0.15);
-  gPad->Update();
+  if (!SetupFunction(option, false, true, label, drawopt)) return;
 }
 
 void ViewField::PlotContourWeightingField(const std::string& label,
                                           const std::string& option) {
-  m_electrode = label;
   SetupCanvas();
-  if (!SetupFunction(option, m_f2dW, true, true)) return;
-  m_f2dW->Draw("CONT4Z");
-  gPad->SetRightMargin(0.15);
-  gPad->Update();
+  if (!SetupFunction(option, true, true, label, "CONT4Z")) return;
 }
 
 void ViewField::PlotProfileWeightingField(const std::string& label,
@@ -203,11 +177,8 @@ void ViewField::PlotProfileWeightingField(const std::string& label,
                                           const double z0, const double x1,
                                           const double y1, const double z1,
                                           const std::string& option) {
-  m_electrode = label;
   SetupCanvas();
-  if (!SetupProfile(x0, y0, z0, x1, y1, z1, option, m_fProfileW, true)) return;
-  m_fProfileW->Draw();
-  gPad->Update();
+  if (!SetupProfile(x0, y0, z0, x1, y1, z1, option, true, label)) return;
 }
 
 
@@ -231,151 +202,6 @@ void ViewField::SetDefaultProjection() {
 
   // Prepare axis labels.
   Labels();
-}
-
-double ViewField::Evaluate2D(double* pos, double* par) {
-  if (!m_sensor && !m_component) return 0.;
-
-  // Transform to global coordinates.
-  const double u = pos[0];
-  const double v = pos[1];
-  const double x = m_project[0][0] * u + m_project[1][0] * v + m_project[2][0];
-  const double y = m_project[0][1] * u + m_project[1][1] * v + m_project[2][1];
-  const double z = m_project[0][2] * u + m_project[1][2] * v + m_project[2][2];
-
-  // Determine which quantity to plot.
-  const PlotType plotType = static_cast<PlotType>(int(fabs(par[0]) / 10.));
-
-  // Compute the field.
-  double ex = 0., ey = 0., ez = 0., volt = 0.;
-  int status = 0;
-  if (par[0] > 0.) {
-    // "Drift" electric field.
-    Medium* medium = nullptr;
-    if (!m_sensor) {
-      m_component->ElectricField(x, y, z, ex, ey, ez, volt, medium, status);
-    } else {
-      m_sensor->ElectricField(x, y, z, ex, ey, ez, volt, medium, status);
-    }
-  } else {
-    // Weighting field.
-    if (!m_sensor) {
-      if (plotType == Potential) {
-        volt = m_component->WeightingPotential(x, y, z, m_electrode);
-      } else {
-        m_component->WeightingField(x, y, z, ex, ey, ez, m_electrode);
-      }
-    } else {
-      if (plotType == Potential) {
-        volt = m_sensor->WeightingPotential(x, y, z, m_electrode);
-      } else {
-        m_sensor->WeightingField(x, y, z, ex, ey, ez, m_electrode);
-      }
-    }
-  }
-
-  if (m_debug) {
-    std::cout << m_className << "::Evaluate2D:\n"
-              << "    At (u, v) = (" << u << ", " << v << "), "
-              << " (x,y,z) = (" << x << "," << y << "," << z << ")\n"
-              << "    E = " << ex << ", " << ey << ", " << ez
-              << "), V = " << volt << ", status = " << status << "\n";
-  }
-  if (m_useStatus && status != 0) return m_vBkg;
-
-  switch (plotType) {
-    case Potential:
-      return volt;
-      break;
-    case Magnitude:
-      return sqrt(ex * ex + ey * ey + ez * ez);
-      break;
-    case Ex:
-      return ex;
-      break;
-    case Ey:
-      return ey;
-      break;
-    case Ez:
-      return ez;
-      break;
-    default:
-      break;
-  }
-  return volt;
-}
-
-double ViewField::EvaluateProfile(double* pos, double* par) {
-  if (!m_sensor && !m_component) return 0.;
-
-  // Get the start and end position.
-  const double x0 = par[0];
-  const double y0 = par[1];
-  const double z0 = par[2];
-  const double x1 = par[3];
-  const double y1 = par[4];
-  const double z1 = par[5];
-  // Compute the direction.
-  const double dx = x1 - x0;
-  const double dy = y1 - y0;
-  const double dz = z1 - z0;
-  // Get the position.
-  const double t = pos[0];
-  const double x = x0 + t * dx;
-  const double y = y0 + t * dy;
-  const double z = z0 + t * dz;
-  // Determine which quantity to plot.
-  const PlotType plotType = static_cast<PlotType>(int(fabs(par[6]) / 10.));
-
-  // Compute the field.
-  double ex = 0., ey = 0., ez = 0., volt = 0.;
-  int status = 0;
-  if (par[6] > 0.) {
-    Medium* medium = nullptr;
-    // "Drift" electric field.
-    if (!m_sensor) {
-      m_component->ElectricField(x, y, z, ex, ey, ez, volt, medium, status);
-    } else {
-      m_sensor->ElectricField(x, y, z, ex, ey, ez, volt, medium, status);
-    }
-  } else {
-    // Weighting field.
-    if (!m_sensor) {
-      if (plotType == Potential) {
-        volt = m_component->WeightingPotential(x, y, z, m_electrode);
-      } else {
-        m_component->WeightingField(x, y, z, ex, ey, ez, m_electrode);
-      }
-    } else {
-      if (plotType == Potential) {
-        volt = m_sensor->WeightingPotential(x, y, z, m_electrode);
-      } else {
-        m_sensor->WeightingField(x, y, z, ex, ey, ez, m_electrode);
-      }
-    }
-  }
-  if (m_useStatus && status != 0) volt = m_vBkg;
-
-  switch (plotType) {
-    case Potential:
-      return volt;
-      break;
-    case Magnitude:
-      return sqrt(ex * ex + ey * ey + ez * ez);
-      break;
-    case Ex:
-      return ex;
-      break;
-    case Ey:
-      return ey;
-      break;
-    case Ez:
-      return ez;
-      break;
-    default:
-      break;
-  }
-  return volt;
 }
 
 void ViewField::Labels() {
@@ -702,8 +528,9 @@ ViewField::PlotType ViewField::GetPlotType(const std::string& option,
   return Potential;
 }
 
-bool ViewField::SetupFunction(const std::string& option, TF2*& f,
-                              const bool contour, const bool wfield) {
+bool ViewField::SetupFunction(const std::string& option, const bool contour, 
+                              const bool wfield, const std::string& electrode,
+                              const std::string& drawopt) {
   if (!m_sensor && !m_component) {
     std::cerr << m_className << "::SetupFunction:\n"
               << "    Neither sensor nor component are defined.\n";
@@ -758,27 +585,31 @@ bool ViewField::SetupFunction(const std::string& option, TF2*& f,
               << m_xmin << " < x < " << m_xmax << ", " << m_ymin << " < y < "
               << m_ymax << ".\n";
   }
-  if (!f) {
-    const std::string fname = FindUnusedFunctionName("f2D");
-    f = new TF2(fname.c_str(), this, &ViewField::Evaluate2D, m_xmin, m_xmax,
-                m_ymin, m_ymax, 1, "ViewField", "Evaluate2D");
-  }
-  // Set the x-y range.
-  f->SetRange(m_xmin, m_ymin, m_xmax, m_ymax);
 
   // Determine the quantity to be plotted.
   std::string title;
   const PlotType plotType = GetPlotType(option, title);
-  const int parPlotType = 10 * int(plotType) + 1;
+
+  auto eval = [this, plotType, wfield, electrode](double* u, double* /*p*/) {
+    // Transform to global coordinates.
+    const double x = m_project[0][0] * u[0] + m_project[1][0] * u[1] + m_project[2][0];
+    const double y = m_project[0][1] * u[0] + m_project[1][1] * u[1] + m_project[2][1];
+    const double z = m_project[0][2] * u[0] + m_project[1][2] * u[1] + m_project[2][2];
+    return wfield ? Wfield(x, y, z, plotType, electrode) : Field(x, y, z, plotType);
+  };
+  const std::string fname = FindUnusedFunctionName("f2D");
+  TF2 f2(fname.c_str(), eval, m_xmin, m_xmax, m_ymin, m_ymax, 0);
+
+  // Set the x-y range.
+  f2.SetRange(m_xmin, m_ymin, m_xmax, m_ymax);
 
   // Set the z-range.
   double zmin = m_vmin;
   double zmax = m_vmax;
   if (wfield) {
     title = "weighting " + title;
-    f->SetParameter(0, -parPlotType);
     if (m_useAutoRange) {
-      SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, f, zmin, zmax);
+      SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, &f2, zmin, zmax);
     } else if (plotType == Potential) {
       zmin = 0.;
       zmax = 1.;
@@ -787,16 +618,15 @@ bool ViewField::SetupFunction(const std::string& option, TF2*& f,
       zmax = m_wmax;
     }
   } else {
-    f->SetParameter(0, parPlotType);
     if (plotType == Potential) {
       if (m_useAutoRange) {
         if (m_component) {
           if (!m_component->GetVoltageRange(zmin, zmax)) {
-            SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, f, zmin, zmax);
+            SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, &f2, zmin, zmax);
           }
         } else if (m_sensor) {
           if (!m_sensor->GetVoltageRange(zmin, zmax)) {
-            SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, f, zmin, zmax);
+            SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, &f2, zmin, zmax);
           }
         }
       } else {
@@ -806,20 +636,20 @@ bool ViewField::SetupFunction(const std::string& option, TF2*& f,
     } else {
       title = "electric " + title;
       if (m_useAutoRange) {
-        SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, f, zmin, zmax);
+        SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, &f2, zmin, zmax);
       } else {
         zmin = m_emin;
         zmax = m_emax;
       }
     }
   }
-  f->SetMinimum(zmin);
-  f->SetMaximum(zmax);
+  f2.SetMinimum(zmin);
+  f2.SetMaximum(zmax);
 
   // Set the contours if requested.
   if (contour) {
     title = "Contours of the " + title;
-    double level[m_nMaxContours];
+    std::vector<double> level(m_nContours, 0.);
     if (m_nContours > 1) {
       const double step = (zmax - zmin) / (m_nContours - 1.);
       for (unsigned int i = 0; i < m_nContours; ++i) {
@@ -835,25 +665,28 @@ bool ViewField::SetupFunction(const std::string& option, TF2*& f,
         std::cout << "        Level " << i << " = " << level[i] << "\n";
       }
     }
-    f->SetContour(m_nContours, level);
+    f2.SetContour(m_nContours, level.data());
   }
 
   // Set the resolution.
-  f->SetNpx(m_nSamples2dX);
-  f->SetNpy(m_nSamples2dY);
+  f2.SetNpx(m_nSamples2dX);
+  f2.SetNpy(m_nSamples2dY);
 
   // Set the labels.
-  f->GetXaxis()->SetTitle(m_xLabel);
-  f->GetYaxis()->SetTitle(m_yLabel);
-  f->SetTitle(title.c_str());
+  f2.GetXaxis()->SetTitle(m_xLabel);
+  f2.GetYaxis()->SetTitle(m_yLabel);
+  f2.SetTitle(title.c_str());
 
+  f2.DrawCopy(drawopt.c_str());
+  gPad->SetRightMargin(0.15);
+  gPad->Update();
   return true;
 }
 
 bool ViewField::SetupProfile(const double x0, const double y0, const double z0,
                              const double x1, const double y1, const double z1,
-                             const std::string& option, TF1*& f,
-                             const bool wfield) {
+                             const std::string& option, 
+                             const bool wfield, const std::string& electrode) {
   if (!m_sensor && !m_component) {
     std::cerr << m_className << "::SetupProfile:\n"
               << "    Neither sensor nor component are defined.\n";
@@ -870,50 +703,47 @@ bool ViewField::SetupProfile(const double x0, const double y0, const double z0,
     return false;
   }
 
-  if (!f) {
-    const std::string fname = FindUnusedFunctionName("fProfile");
-    f = new TF1(fname.c_str(), this, &ViewField::EvaluateProfile, 0., 1., 7,
-                "ViewField", "EvaluateProfile");
-  }
-  f->SetParameter(0, x0);
-  f->SetParameter(1, y0);
-  f->SetParameter(2, z0);
-  f->SetParameter(3, x1);
-  f->SetParameter(4, y1);
-  f->SetParameter(5, z1);
-
   // Determine the quantity to be plotted.
   std::string title;
   const PlotType plotType = GetPlotType(option, title);
-  const int parPlotType = 10 * int(plotType) + 1;
+
+  auto eval = [this, plotType, wfield, electrode, x0, y0, z0, dx, dy, dz](double* u, double* /*p*/) {
+    // Get the position.
+    const double t = u[0];
+    const double x = x0 + t * dx;
+    const double y = y0 + t * dy;
+    const double z = z0 + t * dz;
+    return wfield ? Wfield(x, y, z, plotType, electrode) : Field(x, y, z, plotType);
+  }; 
+
+  const std::string fname = FindUnusedFunctionName("fProfile");
+  TF1 f1(fname.c_str(), eval, 0., 1., 0);
 
   double fmin = m_vmin;
   double fmax = m_vmax;
   if (wfield) {
-    f->SetParameter(6, -parPlotType);
     title = "weighting " + title;
     if (plotType == Potential) {
       fmin = 0.;
       fmax = 1.;
     } else {
       if (m_useAutoRange) {
-        SampleRange(f, fmin, fmax);
+        SampleRange(&f1, fmin, fmax);
       } else {
         fmin = m_wmin;
         fmax = m_wmax;
       }
     }
   } else {
-    f->SetParameter(6, parPlotType);
     if (plotType == Potential) {
       if (m_useAutoRange) {
         if (m_component) {
           if (!m_component->GetVoltageRange(fmin, fmax)) {
-            SampleRange(f, fmin, fmax);
+            SampleRange(&f1, fmin, fmax);
           }
         } else if (m_sensor) {
           if (!m_sensor->GetVoltageRange(fmin, fmax)) {
-            SampleRange(f, fmin, fmax);
+            SampleRange(&f1, fmin, fmax);
           }
         }
       } else {
@@ -923,32 +753,102 @@ bool ViewField::SetupProfile(const double x0, const double y0, const double z0,
     } else {
       title = "electric " + title;
       if (m_useAutoRange) {
-        SampleRange(f, fmin, fmax);
+        SampleRange(&f1, fmin, fmax);
       } else {
         fmin = m_emin;
         fmax = m_emax;
       }
     }
   }
-  f->SetMinimum(fmin);
-  f->SetMaximum(fmax);
-  if (m_debug) {
-    std::cout << m_className << "::SetupProfile:\n"
-              << "    Plotting " << title << " along\n    ("
-              << f->GetParameter(0) << ", " << f->GetParameter(1) << ", "
-              << f->GetParameter(2) << ") - (" << f->GetParameter(3) << ", "
-              << f->GetParameter(4) << ", " << f->GetParameter(5) << ")\n";
-  }
+  f1.SetMinimum(fmin);
+  f1.SetMaximum(fmax);
 
   title = "Profile plot of the " + title;
-  f->SetTitle(title.c_str());
-  f->GetXaxis()->SetTitle("normalised distance");
+  f1.SetTitle(title.c_str());
+  f1.GetXaxis()->SetTitle("normalised distance");
   if (plotType == Potential) {
-    f->GetYaxis()->SetTitle("potential [V]");
+    f1.GetYaxis()->SetTitle("potential [V]");
   } else {
-    f->GetYaxis()->SetTitle("field [V/cm]");
+    f1.GetYaxis()->SetTitle("field [V/cm]");
   }
-  f->SetNpx(m_nSamples1d);
+  f1.SetNpx(m_nSamples1d);
+  f1.DrawCopy();
+  gPad->Update();
   return true;
 }
+
+
+double ViewField::Field(const double x, const double y, const double z,
+                        const PlotType plotType) const {
+
+  // Compute the field.
+  double ex = 0., ey = 0., ez = 0., volt = 0.;
+  int status = 0;
+  Medium* medium = nullptr;
+  if (!m_sensor) {
+    m_component->ElectricField(x, y, z, ex, ey, ez, volt, medium, status);
+  } else {
+    m_sensor->ElectricField(x, y, z, ex, ey, ez, volt, medium, status);
+  }
+  if (m_useStatus && status != 0) return m_vBkg;
+  switch (plotType) {
+    case Potential:
+      return volt;
+      break;
+    case Magnitude:
+      return sqrt(ex * ex + ey * ey + ez * ez);
+      break;
+    case Ex:
+      return ex;
+      break;
+    case Ey:
+      return ey;
+      break;
+    case Ez:
+      return ez;
+      break;
+    default:
+      break;
+  }
+  return volt;
+}
+
+double ViewField::Wfield(const double x, const double y, const double z,
+                         const PlotType plotType, 
+                         const std::string& electrode) const {
+
+  if (plotType == Potential) {
+    if (m_sensor) {
+      return m_sensor->WeightingPotential(x, y, z, electrode);
+    } else {
+      return m_component->WeightingPotential(x, y, z, electrode);
+    }
+  }
+
+  double ex = 0., ey = 0., ez = 0.;
+  if (!m_sensor) {
+    m_component->WeightingField(x, y, z, ex, ey, ez, electrode);
+  } else {
+    m_sensor->WeightingField(x, y, z, ex, ey, ez, electrode);
+  }
+
+  switch (plotType) {
+    case Magnitude:
+      return sqrt(ex * ex + ey * ey + ez * ez);
+      break;
+    case Ex:
+      return ex;
+      break;
+    case Ey:
+      return ey;
+      break;
+    case Ez:
+      return ez;
+      break;
+    default:
+      break;
+  }
+  return 0.;
+} 
+
 }

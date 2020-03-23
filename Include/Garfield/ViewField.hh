@@ -1,9 +1,6 @@
 #ifndef G_VIEW_FIELD
 #define G_VIEW_FIELD
 
-#include <TF1.h>
-#include <TF2.h>
-
 #include "ViewBase.hh"
 
 namespace Garfield {
@@ -18,7 +15,7 @@ class ViewField : public ViewBase {
   /// Constructor.
   ViewField();
   /// Destructor.
-  ~ViewField();
+  ~ViewField() = default;
 
   /// Set the sensor from which to retrieve the field.
   void SetSensor(Sensor* s);
@@ -49,7 +46,7 @@ class ViewField : public ViewBase {
   /// Rotate the viewing plane (angle in radian).
   void Rotate(const double angle);
 
-  /// Set the number of contour levels (at most 50).
+  /// Set the number of contour levels.
   void SetNumberOfContours(const unsigned int n);
   /// Set the number of points used for drawing 1D functions.
   void SetNumberOfSamples1d(const unsigned int n);
@@ -130,18 +127,8 @@ class ViewField : public ViewBase {
   /// Ignore the status flag returned by the sensor/component.
   void DisableAcknowledgeStatus() { m_useStatus = false; }
 
-  friend class TF1;
-  friend class TF2;
-
- protected:
-  // Functions called by TF1/TF2.
-  double Evaluate2D(double* pos, double* par);
-  double EvaluateProfile(double* pos, double* par);
-
  private:
   enum PlotType { Potential = 0, Magnitude, Ex, Ey, Ez, Unknown };
-
-  static const unsigned int m_nMaxContours = 50;
 
   bool m_useAutoRange = true;
   bool m_useStatus = false;
@@ -167,29 +154,27 @@ class ViewField : public ViewBase {
   double m_wmin = 0., m_wmax = 100.;
 
   // Number of contours
-  unsigned int m_nContours = m_nMaxContours;
+  unsigned int m_nContours = 20;
   // Number of points used to draw the functions
   unsigned int m_nSamples1d = 1000;
   unsigned int m_nSamples2dX = 200;
   unsigned int m_nSamples2dY = 200;
-  // Weighting field label
-  std::string m_electrode = "";
-
-  // Potential function
-  TF2* m_f2d = nullptr;
-  TF2* m_f2dW = nullptr;
-  TF1* m_fProfile = nullptr;
-  TF1* m_fProfileW = nullptr;
 
   void Labels();
-  void CreateFunction();
-  bool SetupFunction(const std::string& option, TF2*& f, const bool contour,
-                     const bool wfield = false);
+  bool SetupFunction(const std::string& option, const bool contour,
+                     const bool wfield, const std::string& electrode,
+                     const std::string& drawopt);
   bool SetupProfile(const double x0, const double y0, const double z0,
                     const double x1, const double y1, const double z1,
-                    const std::string& option, TF1*& f, const bool wfield);
+                    const std::string& option, const bool wfield,
+                    const std::string& electrode);
   void SetupCanvas();
   PlotType GetPlotType(const std::string& option, std::string& title) const;
+  double Field(const double x, const double y, const double z,
+               const PlotType plotType) const;
+  double Wfield(const double x, const double y, const double z,
+                const PlotType plotType, const std::string& electrode) const;
+
 };
 }
 #endif

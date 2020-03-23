@@ -203,6 +203,7 @@ int main(int argc, char * argv[]) {
     double ymin = 0., ymax = 0.;
     function(&cmp, xmin, xmax, ymin, ymax);
     cmp.PrintCell();
+    canvas.Clear();
     fieldView.SetSensor(&sensor);
     fieldView.SetArea(xmin, ymin, xmax, ymax);
     fieldView.PlotContour();
