@@ -46,7 +46,7 @@ class DriftLineRKF {
   void UnsetMaximumStepSize() { m_useStepSizeLimit = false; }
   /// Request (or not) the drift line calculation to be aborted if the 
   /// drift line makes a bend sharper than 90 degrees.
-  void EnableRejectKinks(const bool on = true) { m_rejectKinks = on; }
+  void RejectKinks(const bool on = true) { m_rejectKinks = on; }
 
   /// Set multiplication factor for the signal induced by electrons.
   void SetElectronSignalScalingFactor(const double scale) { m_scaleE = scale; }
@@ -78,6 +78,10 @@ class DriftLineRKF {
   /// assuming that it has positive charge.
   bool DriftPositron(const double x0, const double y0, const double z0,
                      const double t0);
+  /// Simulate the drift line of an ion with a given starting point,
+  /// assuming that it has negative charge.
+  bool DriftNegativeIon(const double x0, const double y0, const double z0,
+                        const double t0);
 
   /// Print the trajectory of the most recent drift line.
   void PrintDriftLine() const;
@@ -109,7 +113,7 @@ class DriftLineRKF {
   // Pointer to sensor.
   Sensor* m_sensor = nullptr;
 
-  enum class Particle { Electron = 0, Ion, Hole, Positron };
+  enum class Particle { Electron = 0, Ion, Hole, Positron, NegativeIon };
   // Type of particle (of the most current drift line).
   Particle m_particle = Particle::Electron;
 
@@ -207,7 +211,7 @@ class DriftLineRKF {
   bool DriftToWire(const double xw, const double yw, const double rw,
                    const Particle particle, 
                    std::vector<double>& ts,
-                   std::vector<std::array<double, 3> >& xs);
+                   std::vector<std::array<double, 3> >& xs, int& stat);
 
   // Integrate the longitudinal diffusion over a step.
   double IntegrateDiffusion(const std::array<double, 3>& xi,

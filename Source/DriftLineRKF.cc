@@ -182,7 +182,7 @@ bool DriftLineRKF::DriftPositron(const double x0, const double y0,
   }
   return true;
 }
- 
+
 bool DriftLineRKF::DriftHole(const double x0, const double y0, const double z0,
                              const double t0) {
   m_particle = Particle::Hole;
@@ -200,6 +200,19 @@ bool DriftLineRKF::DriftIon(const double x0, const double y0, const double z0,
     return false;
   }
   if (m_doSignal) ComputeSignal(Particle::Ion, m_scaleI, m_t, m_x, {});
+  return true;
+}
+
+bool DriftLineRKF::DriftNegativeIon(const double x0, const double y0,
+                                    const double z0, const double t0) {
+
+  m_particle = Particle::NegativeIon;
+  if (!DriftLine(x0, y0, z0, t0, Particle::NegativeIon, m_t, m_x, m_status)) {
+    return false;
+  }
+  if (m_doSignal) {
+    ComputeSignal(Particle::NegativeIon, m_scaleI, m_t, m_x, {});
+  }
   return true;
 }
 
@@ -259,7 +272,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
   // Start plotting a new line if requested.
   int iLine = 0;
   if (m_view) {
-    if (particle == Particle::Ion) {
+    if (particle == Particle::Ion || particle == Particle::NegativeIon) {
       m_view->NewIonDriftLine(1, iLine, xi, yi, zi);
     } else if (particle == Particle::Electron ||
                particle == Particle::Positron) {
@@ -324,12 +337,14 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     if (!GetVelocity(x1, particle, v1, stat)) {
       flag = StatusCalculationAbandoned;
       break;
-    } else if (stat < 0) {
+    } else if (stat != 0) {
       if (m_debug) {
         std::cout << m_className << "::DriftLine: Point 1 outside.\n";
       }
       if (!Terminate(x0, x1, particle, ts, xs)) {
         flag = StatusCalculationAbandoned;
+      } else {
+        flag = stat;
       }
       break;
     }
@@ -342,12 +357,14 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     if (!GetVelocity(x2, particle, v2, stat)) {
       flag = StatusCalculationAbandoned;
       break;
-    } else if (stat < 0) {
+    } else if (stat != 0) {
       if (m_debug) {
         std::cout << m_className << "::DriftLine: Point 2 outside.\n";
       }
       if (!Terminate(x0, x2, particle, ts, xs)) {
         flag = StatusCalculationAbandoned;
+      } else {
+        flag = stat;
       }
       break;
     }
@@ -360,12 +377,14 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     if (!GetVelocity(x3, particle, v3, stat)) {
       flag = StatusCalculationAbandoned;
       break;
-    } else if (stat < 0) {
+    } else if (stat != 0) {
       if (m_debug) {
         std::cout << m_className << "::DriftLine: Point 3 outside.\n";
       }
       if (!Terminate(x0, x3, particle, ts, xs)) {
         flag = StatusCalculationAbandoned;
+      } else {
+        flag = stat;
       }
       break;
     }
@@ -380,8 +399,8 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
       if (m_debug) {
         std::cout << m_className << "::DriftLine: Crossed wire.\n";
       }
-      if (DriftToWire(xw, yw, rw, particle, ts, xs)) {
-        flag = StatusLeftDriftMedium;
+      if (DriftToWire(xw, yw, rw, particle, ts, xs, stat)) {
+        flag = stat;
       } else if (h > Small) {
         h *= 0.5;
         continue;
@@ -394,25 +413,19 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     // Check if we are inside the trap radius of a wire.
     if (particle != Particle::Ion) {
       if (m_sensor->IsInTrapRadius(charge, x1[0], x1[1], x1[2], xw, yw, rw)) {
-        if (DriftToWire(xw, yw, rw, particle, ts, xs)) {
-          flag = StatusLeftDriftMedium;
-        } else {
+        if (!DriftToWire(xw, yw, rw, particle, ts, xs, flag)) {
           flag = StatusCalculationAbandoned;
         }
         break;
       }
       if (m_sensor->IsInTrapRadius(charge, x2[0], x2[1], x2[2], xw, yw, rw)) {
-        if (DriftToWire(xw, yw, rw, particle, ts, xs)) {
-          flag = StatusLeftDriftMedium;
-        } else {
+        if (!DriftToWire(xw, yw, rw, particle, ts, xs, flag)) {
           flag = StatusCalculationAbandoned;
         }
         break;
       }
       if (m_sensor->IsInTrapRadius(charge, x3[0], x3[1], x3[2], xw, yw, rw)) {
-        if (DriftToWire(xw, yw, rw, particle, ts, xs)) {
-          flag = StatusLeftDriftMedium;
-        } else {
+        if (!DriftToWire(xw, yw, rw, particle, ts, xs, flag)) {
           flag = StatusCalculationAbandoned;
         }
         break;
@@ -861,6 +874,11 @@ bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
                                              v[0], v[1], v[2]);
     for (unsigned int i = 0; i < 3; ++i) v[i] *= -1;
     return ok;
+  } else if (particle == Particle::NegativeIon) {
+    const bool ok = medium->IonVelocity(ex, ey, ez, bx, by, bz, 
+                                        v[0], v[1], v[2]);
+    for (unsigned int i = 0; i < 3; ++i) v[i] *= -1;
+    return ok;
   } 
   std::cerr << m_className << "::GetVelocity:\n"
             << "    Cannot retrieve drift velocity at " << PrintVec(x) << ".\n";
@@ -884,6 +902,11 @@ bool DriftLineRKF::GetVelocity(const double ex, const double ey,
                                              v[0], v[1], v[2]);
     for (unsigned int i = 0; i < 3; ++i) v[i] *= -1;
     return ok; 
+  } else if (particle == Particle::NegativeIon) {
+    const bool ok = medium->IonVelocity(ex, ey, ez, bx, by, bz, 
+                                        v[0], v[1], v[2]);
+    for (unsigned int i = 0; i < 3; ++i) v[i] *= -1;
+    return ok; 
   }
   return false;
 }
@@ -895,7 +918,7 @@ bool DriftLineRKF::GetDiffusion(const double ex, const double ey,
                                 double& dl, double& dt) const {
   if (particle == Particle::Electron || particle == Particle::Positron) {
     return medium->ElectronDiffusion(ex, ey, ez, bx, by, bz, dl, dt);
-  } else if (particle == Particle::Ion) {
+  } else if (particle == Particle::Ion || particle == Particle::NegativeIon) {
     return medium->IonDiffusion(ex, ey, ez, bx, by, bz, dl, dt);
   } else if (particle == Particle::Hole) {
     return medium->HoleDiffusion(ex, ey, ez, bx, by, bz, dl, dt);
@@ -1014,7 +1037,7 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
 bool DriftLineRKF::DriftToWire(const double xw, const double yw,
                                const double rw, const Particle particle,
                                std::vector<double>& ts, 
-                               std::vector<Vec>& xs) {
+                               std::vector<Vec>& xs, int& stat) {
 
   // -----------------------------------------------------------------------
   //   DLCWIR - Terminates drift line calculation by making some last steps
@@ -1149,6 +1172,10 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
     t0 = t1;
     v0 = v1;
   }
+  // Get the wire index (status code inside the wire).
+  double ex = 0., ey = 0., ez = 0.;
+  Medium* medium = nullptr;
+  m_sensor->ElectricField(xw, yw, 0., ex, ey, ez, medium, stat);
   return true;
 }
 

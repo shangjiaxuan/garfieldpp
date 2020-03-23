@@ -257,6 +257,11 @@ $(OBJDIR)/ViewDrift.o: \
 	$(INCDIR)/Garfield/ViewBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
+$(OBJDIR)/ViewIsochrons.o: \
+	$(SRCDIR)/ViewIsochrons.cc $(INCDIR)/Garfield/ViewIsochrons.hh \
+	$(INCDIR)/Garfield/ViewBase.hh
+	@echo $@
+	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewMedium.o: \
 	$(SRCDIR)/ViewMedium.cc $(INCDIR)/Garfield/ViewMedium.hh \
 	$(INCDIR)/Garfield/ViewBase.hh \
