@@ -62,10 +62,6 @@ class ViewField : public ViewBase {
     * - z-component of the electric field: "ez"
     **/
   void PlotContour(const std::string& option = "v");
-  /** Make a surface plot ("SURF4") of the electric potential or field.
-    * \param option quantity to be plotted (see PlotContour)
-    **/
-  void PlotSurface(const std::string& option = "v") { Plot(option, "SURF4"); }
   /** Make a 2D plot of the electric potential or field.
     * \param option quantity to be plotted (see PlotContour)
     * \param drawopt option string passed to TF2::Draw
@@ -87,14 +83,6 @@ class ViewField : public ViewBase {
     **/
   void PlotContourWeightingField(const std::string& label,
                                  const std::string& option);
-  /** Make a surface plot ("SURF4") of the weighting potential or field.
-    * \param label identifier of the electrode
-    * \param option quantity to be plotted (see PlotContour)
-    **/
-  void PlotSurfaceWeightingField(const std::string& label,
-                                 const std::string& option) {
-    PlotWeightingField(label, option, "SURF4");
-  }
   /** Make a 2D plot of the weighting potential or field.
     * \param label identifier of the electrode
     * \param option quantity to be plotted (see PlotContour)
@@ -114,7 +102,8 @@ class ViewField : public ViewBase {
                                  const double x1, const double y1,
                                  const double z1,
                                  const std::string& option = "v");
-
+  /// Determine the range of the potential/field automatically (true)
+  /// or set it explicitly (false). 
   void EnableAutoRange(const bool on = true) { m_useAutoRange = on; }
 
   /** Make use of the status flag returned by the sensor/component.
@@ -128,7 +117,7 @@ class ViewField : public ViewBase {
   void DisableAcknowledgeStatus() { m_useStatus = false; }
 
  private:
-  enum PlotType { Potential = 0, Magnitude, Ex, Ey, Ez, Unknown };
+  enum class PlotType { Potential = 0, Magnitude, Ex, Ey, Ez, Unknown };
 
   bool m_useAutoRange = true;
   bool m_useStatus = false;
@@ -161,14 +150,15 @@ class ViewField : public ViewBase {
   unsigned int m_nSamples2dY = 200;
 
   void Labels();
-  bool SetupFunction(const std::string& option, const bool contour,
-                     const bool wfield, const std::string& electrode,
-                     const std::string& drawopt);
-  bool SetupProfile(const double x0, const double y0, const double z0,
-                    const double x1, const double y1, const double z1,
-                    const std::string& option, const bool wfield,
-                    const std::string& electrode);
-  void SetupCanvas();
+  bool Range();
+  void Draw2d(const std::string& option, const bool contour,
+              const bool wfield, const std::string& electrode,
+              const std::string& drawopt);
+  void DrawProfile(const double x0, const double y0, const double z0,
+                   const double x1, const double y1, const double z1,
+                   const std::string& option, const bool wfield,
+                   const std::string& electrode);
+  TCanvas* GetCanvas();
   PlotType GetPlotType(const std::string& option, std::string& title) const;
   double Field(const double x, const double y, const double z,
                const PlotType plotType) const;
