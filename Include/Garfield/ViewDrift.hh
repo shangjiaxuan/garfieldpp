@@ -4,10 +4,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <array>
+#include <utility>
 
-#include <TGraph.h>
-#include <TPolyLine3D.h>
-#include <TPolyMarker3D.h>
 #include <TView.h>
 
 #include "ViewBase.hh"
@@ -38,38 +37,33 @@ class ViewDrift : public ViewBase {
   void SetCollisionMarkerSize(const double size);
 
   // Functions used by the transport classes.
-  void NewElectronDriftLine(const unsigned int np, int& id, const double x0,
-                            const double y0, const double z0);
-  void NewHoleDriftLine(const unsigned int np, int& id, const double x0,
-                        const double y0, const double z0);
-  void NewIonDriftLine(const unsigned int np, int& id, const double x0,
-                       const double y0, const double z0);
-  void NewPhotonTrack(const double x0, const double y0, const double z0,
-                      const double x1, const double y1, const double z1);
-  void NewChargedParticleTrack(const unsigned int np, int& id, const double x0,
-                               const double y0, const double z0);
+  void NewElectronDriftLine(const unsigned int np, int& id, const float x0,
+                            const float y0, const float z0);
+  void NewHoleDriftLine(const unsigned int np, int& id, const float x0,
+                        const float y0, const float z0);
+  void NewIonDriftLine(const unsigned int np, int& id, const float x0,
+                       const float y0, const float z0);
+  void NewChargedParticleTrack(const unsigned int np, int& id, const float x0,
+                               const float y0, const float z0);
 
   void SetDriftLinePoint(const unsigned int iL, const unsigned int iP,
-                         const double x, const double y, const double z);
-  void AddDriftLinePoint(const unsigned int iL, const double x, const double y,
-                         const double z);
+                         const float x, const float y, const float z);
+  void AddDriftLinePoint(const unsigned int iL, const float x, const float y,
+                         const float z);
   void SetTrackPoint(const unsigned int iL, const unsigned int iP,
-                     const double x, const double y, const double z);
-  void AddTrackPoint(const unsigned int iL, const double x, const double y,
-                     const double z);
-  void AddExcitationMarker(const double x, const double y, const double z);
-  void AddIonisationMarker(const double x, const double y, const double z);
-  void AddAttachmentMarker(const double x, const double y, const double z);
+                     const float x, const float y, const float z);
+  void AddTrackPoint(const unsigned int iL, const float x, const float y,
+                     const float z);
+  void AddExcitation(const float x, const float y, const float z);
+  void AddIonisation(const float x, const float y, const float z);
+  void AddAttachment(const float x, const float y, const float z);
+
+  void AddPhoton(const float x0, const float y0, const float z0,
+                 const float x1, const float y1, const float z1);
 
   friend class ViewFEMesh;
 
  private:
-
-  struct Marker {
-    double x;
-    double y;
-    double z;
-  };
 
   // Box dimensions
   double m_xMin = -1., m_yMin = -1., m_zMin = -1.;
@@ -78,29 +72,33 @@ class ViewDrift : public ViewBase {
   // View
   std::unique_ptr<TView> m_view;
 
-  struct DriftLine {
-    std::vector<Marker> points;
-    int n;  // what kind of particle?
+  enum class Particle {
+    Electron,
+    Hole,
+    Ion
   };
-  std::vector<DriftLine> m_driftLines;
-  std::vector<TPolyLine3D> m_driftLinePlots;
+  std::vector<std::pair<std::vector<std::array<float, 3> >,
+                        Particle> > m_driftLines;
 
-  std::vector<std::vector<Marker> > m_tracks;
-  std::vector<TPolyMarker3D> m_trackPlots;
-  std::vector<TPolyLine3D> m_trackLinePlots;
+  std::vector<std::vector<std::array<float, 3> > > m_tracks;
+  std::vector<std::array<std::array<float, 3>, 2> > m_photons;
 
-  std::vector<Marker> m_excMarkers;
-  std::unique_ptr<TPolyMarker3D> m_excPlot;
-  std::vector<Marker> m_ionMarkers;
-  std::unique_ptr<TPolyMarker3D> m_ionPlot;
-  std::vector<Marker> m_attMarkers;
-  std::unique_ptr<TPolyMarker3D> m_attPlot;
+  std::vector<std::array<float, 3> > m_exc;
+  std::vector<std::array<float, 3> > m_ion;
+  std::vector<std::array<float, 3> > m_att;
 
   double m_markerSizeCluster = 1.;
-  double m_markerSizeCollision = 1.;
+  double m_markerSizeCollision = 0.5;
 
   void Plot2d(const bool axis);
   void Plot3d(const bool axis);
+  TCanvas* GetCanvas() {
+    if (!m_canvas) { 
+      m_canvas = new TCanvas();
+      if (m_hasExternalCanvas) m_hasExternalCanvas = false;
+    }
+    return m_canvas;
+  }
 };
 }
 #endif

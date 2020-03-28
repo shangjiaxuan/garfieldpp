@@ -521,11 +521,15 @@ void ViewFEMesh::DrawElements() {
     for (const auto& dline : m_viewDrift->m_driftLines) {
       // Create a TPolyLine that is a 2D projection of the original.
       TPolyLine poly;
-      poly.SetLineColor(dline.n);
+      if (dline.second == ViewDrift::Particle::Electron) {
+        poly.SetLineColor(kOrange - 3);
+      } else {
+        poly.SetLineColor(kRed + 1);
+      }
       int polyPts = 0;
-      for (const auto& point : dline.points) {
+      for (const auto& point : dline.first) {
         // Project this point onto the plane.
-        PlaneCoords(point.x, point.y, point.z, projMat, xMat);
+        PlaneCoords(point[0], point[1], point[2], projMat, xMat);
         // Add this point if it is within the view.
         if (InView(xMat(0, 0), xMat(1, 0))) {
           poly.SetPoint(polyPts, xMat(0, 0), xMat(1, 0));
@@ -902,11 +906,15 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     for (const auto& dline : m_viewDrift->m_driftLines) {
       // Create a TPolyLine that is a 2D projection of the original
       TPolyLine poly;
-      poly.SetLineColor(dline.n);
+      if (dline.second == ViewDrift::Particle::Electron) {
+        poly.SetLineColor(kOrange - 3);
+      } else {
+        poly.SetLineColor(kRed + 1);
+      }
       int polyPts = 0;
-      for (const auto& point : dline.points) {
+      for (const auto& point : dline.first) {
         // Project this point onto the plane.
-        PlaneCoords(point.x, point.y, point.z, projMat, xMat);
+        PlaneCoords(point[0], point[1], point[2], projMat, xMat);
         // Add this point if it is within the view
         if (xMat(0, 0) >= uMin && xMat(0, 0) <= uMax && xMat(1, 0) >= vMin &&
             xMat(1, 0) <= vMax) {

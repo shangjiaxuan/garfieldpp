@@ -1014,7 +1014,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           // Ionising collision
           case ElectronCollisionTypeIonisation:
             if (m_viewer && m_plotIonisations) {
-              m_viewer->AddIonisationMarker(x, y, z);
+              m_viewer->AddIonisation(x, y, z);
             }
             if (m_userHandleIonisation) {
               m_userHandleIonisation(x, y, z, t, cstype, level, medium);
@@ -1061,7 +1061,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           // Attachment
           case ElectronCollisionTypeAttachment:
             if (m_viewer && m_plotAttachments) {
-              m_viewer->AddAttachmentMarker(x, y, z);
+              m_viewer->AddAttachment(x, y, z);
             }
             if (m_userHandleAttachment) {
               m_userHandleAttachment(x, y, z, t, cstype, level, medium);
@@ -1086,7 +1086,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           // Excitation
           case ElectronCollisionTypeExcitation:
             if (m_viewer && m_plotExcitations) {
-              m_viewer->AddExcitationMarker(x, y, z);
+              m_viewer->AddExcitation(x, y, z);
             }
             if (m_userHandleInelastic) {
               m_userHandleInelastic(x, y, z, t, cstype, level, medium);
@@ -1254,7 +1254,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
     }
     // Photons
     for (const auto& ph : m_photons) {
-      m_viewer->NewPhotonTrack(ph.x0, ph.y0, ph.z0, ph.x1, ph.y1, ph.z1);
+      m_viewer->AddPhoton(ph.x0, ph.y0, ph.z0, ph.x1, ph.y1, ph.z1);
     }
   }
   return true;
