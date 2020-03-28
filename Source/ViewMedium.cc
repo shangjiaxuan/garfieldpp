@@ -1,8 +1,12 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <algorithm>
+#include <limits>
 
+#include <TH1F.h>
 #include <TAxis.h>
+#include <TGraph.h>
 #include <TLatex.h>
 
 #include "Garfield/GarfieldConstants.hh"
@@ -24,6 +28,12 @@ int FindIndex(const std::vector<double>& fields, const double field,
   }
   return -1;
 } 
+
+bool NonZero(const std::vector<double>& v) {
+ 
+  constexpr double tol = 1.e-10;
+  return std::any_of(v.cbegin(), v.cend(), [](double x){ return fabs(x) > tol; });
+}
 
 }
 
@@ -86,584 +96,753 @@ void ViewMedium::SetRangeY(const double ymin, const double ymax,
   m_logY = logscale;
 }
 
-void ViewMedium::PlotElectronVelocity(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, ElectronVelocityE, xaxis);
-  AddFunction(true, ElectronVelocityB, xaxis);
-  AddFunction(true, ElectronVelocityExB, xaxis);
-}
-
-void ViewMedium::PlotHoleVelocity(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, HoleVelocityE, xaxis);
-  AddFunction(true, HoleVelocityB, xaxis);
-  AddFunction(true, HoleVelocityExB, xaxis);
-}
-
-void ViewMedium::PlotIonVelocity(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, IonVelocity, xaxis);
-}
-
-void ViewMedium::PlotElectronDiffusion(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, ElectronTransverseDiffusion, xaxis);
-  AddFunction(true, ElectronLongitudinalDiffusion, xaxis);
-}
-
-void ViewMedium::PlotHoleDiffusion(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, HoleTransverseDiffusion, xaxis);
-  AddFunction(true, HoleLongitudinalDiffusion, xaxis);
-}
-
-void ViewMedium::PlotIonDiffusion(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, IonTransverseDiffusion, xaxis);
-  AddFunction(true, IonLongitudinalDiffusion, xaxis);
-}
-
-void ViewMedium::PlotElectronTownsend(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, ElectronTownsend, xaxis);
-}
-
-void ViewMedium::PlotHoleTownsend(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, HoleTownsend, xaxis);
-}
-
-void ViewMedium::PlotElectronAttachment(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, ElectronAttachment, xaxis);
-}
-
-void ViewMedium::PlotHoleAttachment(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, HoleAttachment, xaxis);
-}
-
-void ViewMedium::PlotElectronLorentzAngle(const char xaxis, const bool same) {
-  SetupCanvas();
-  AddFunction(same, ElectronLorentzAngle, xaxis);
-}
-
 void ViewMedium::PlotElectronCrossSections() {
   std::cerr << m_className << "::PlotElectronCrossSections: Not implemented.\n";
 }
 
-void ViewMedium::SetupCanvas() {
+TCanvas* ViewMedium::GetCanvas() {
   if (!m_canvas) {
     m_canvas = new TCanvas();
-    m_canvas->SetTitle("Medium View");
     if (m_hasExternalCanvas) m_hasExternalCanvas = false;
   }
-  m_canvas->cd();
-  gPad->SetLeftMargin(0.15);
+  return m_canvas;
 }
 
-void ViewMedium::AddFunction(const bool keep, const Property type,
-                             const char xaxis) {
-  // Make sure the medium is set.
-  if (!m_medium) {
-    std::cerr << m_className << "::AddFunction: Medium is not defined.\n";
+void ViewMedium::Draw() {
+
+  if (m_yPlot.empty()) return;
+  auto canvas = GetCanvas();
+  canvas->cd();
+
+  // Find the x and y ranges.
+  const double xmin = m_xPlot.front();
+  const double xmax = m_xPlot.back();
+  double ymin = m_yMin;
+  double ymax = m_yMax;
+  if (m_autoRangeY) {
+    ymin =  std::numeric_limits<double>::max();
+    ymax = -std::numeric_limits<double>::max();
+    for (const auto& plot : m_yPlot) {
+      ymin = std::min(ymin, *std::min_element(plot.cbegin(), plot.cend()));
+      ymax = std::max(ymax, *std::max_element(plot.cbegin(), plot.cend()));
+    }
+    const double dy = 0.05 * fabs(ymax - ymin);
+    ymin = std::max(0., ymin - dy);
+    ymax += dy;
+  }
+  auto frame = canvas->DrawFrame(xmin, ymin, xmax, ymax);
+  // Set the axis labels.
+  if (m_xaxis == Axis::E) {
+    frame->GetXaxis()->SetTitle("electric field [V/cm]");
+  } else if (m_xaxis == Axis::B) {
+    frame->GetXaxis()->SetTitle("magnetic field [T]");
+  } else if (m_xaxis == Axis::Angle) {
+    frame->GetXaxis()->SetTitle("angle between #bf{E} and #bf{B} [rad]");
+  } else {
+    std::cerr << m_className << "::Draw: Invalid x axis.\n";
     return;
   }
-
-  // Look for an unused function name.
-  std::string fname = FindUnusedFunctionName("fMediumView");
-  if (m_debug) {
-    std::cout << m_className << "::AddFunction: Adding " << fname << "\n";
-  }
-  if (!keep) {
-    m_functions.clear();
-    for (auto graph : m_graphs) delete graph;
-    m_graphs.clear();
-    m_labels.clear();
-  }
-
-  // Get the field grid.
-  std::vector<double> efields;
-  std::vector<double> bfields;
-  std::vector<double> bangles;
-  m_medium->GetFieldGrid(efields, bfields, bangles);
-  double xmin = 0., xmax = 0.;
-  bool logx = false;
-  GetAxisRangeX(efields, bfields, bangles, xaxis, xmin, xmax, logx);
-
-  // Create a TF1 and add it to the list of functions.
-  TF1 fcn(fname.c_str(), this, &ViewMedium::EvaluateFunction,
-          xmin, xmax, 5, "ViewMedium", "EvaluateFunction");
-  fcn.SetNpx(1000);
-  const std::string xlabel = GetLabelX(xaxis);
-  const std::string ylabel = GetLabelY(type);
-  const std::string title = ";" + xlabel + ";" + ylabel;
-  fcn.SetRange(xmin, xmax);
-  if (!m_autoRangeY && (fabs(m_yMax - m_yMin) > 0.)) {
-    fcn.SetMinimum(m_yMin);
-    fcn.SetMaximum(m_yMax);
-  }
-  fcn.GetXaxis()->SetTitle(xlabel.c_str());
-  fcn.GetYaxis()->SetTitle(ylabel.c_str());
-  fcn.SetTitle(title.c_str());
-  fcn.SetParameter(0, type);
-  fcn.SetParameter(1, xaxis);
-  fcn.SetParameter(2, m_efield);
-  fcn.SetParameter(3, m_bfield);
-  fcn.SetParameter(4, m_angle);
-  const auto color = GetColor(type);
-  fcn.SetLineColor(color);
-  m_functions.push_back(std::move(fcn));
-  m_labels.emplace_back(std::make_pair(GetLegend(type), color));
-  const unsigned int nE = efields.size();
-  const unsigned int nB = bfields.size();
-  const unsigned int nA = bangles.size();
-
-  if (!efields.empty() && !bfields.empty() && !bangles.empty()) { 
-    // Add a graph with the values at the grid points.
-    int nPoints = xaxis == 'e' ? nE : xaxis == 'b' ? nB : nA;
-    TGraph* graph = new TGraph(nPoints);
-    graph->SetMarkerStyle(20);
-    graph->SetMarkerColor(color);
-    bool ok = true;
-
-    constexpr double eps = 1.e-3;
-    int ie = FindIndex(efields, m_efield, eps);
-    int ib = FindIndex(bfields, m_bfield, eps);
-    int ia = FindIndex(bangles, m_angle, eps);
-    if ((xaxis == 'e' && (ib < 0 || ia < 0)) ||
-        (xaxis == 'b' && (ie < 0 || ia < 0)) ||
-        (xaxis == 'a' && (ie < 0 || ib < 0))) {
-      ok = false;
-    }
-    bool nonzero = false;
-    for (int j = 0; j < nPoints; ++j) {
-      double value = 0.;
-      if (!ok) break;
-      if (xaxis == 'e') {
-        ie = j;
-      } else if (xaxis == 'b') {
-        ib = j;
-      } else if (xaxis == 'a') {
-        ia = j;
+  auto yaxis = frame->GetYaxis();
+  switch (m_par[0]) {
+    case Parameter::VelocityE:
+    case Parameter::VelocityB:
+    case Parameter::VelocityExB: 
+      yaxis->SetTitle("drift velocity [cm/ns]");
+      canvas->SetTitle("Drift velocity");
+      break;
+    case Parameter::LongitudinalDiffusion:
+    case Parameter::TransverseDiffusion:
+      yaxis->SetTitle("diffusion coefficient [#kern[-0.1]{#sqrt{cm}}#kern[0.1]{]}");
+      canvas->SetTitle("Diffusion");
+      break;
+    case Parameter::Townsend:
+    case Parameter::Attachment:
+      if (std::all_of(m_par.cbegin(), m_par.cend(), [](Parameter p) { 
+                      return p == Parameter::Townsend; })) {
+        yaxis->SetTitle("#it{#alpha} [1/cm]");
+        canvas->SetTitle("Multiplication");
+      } else if (std::all_of(m_par.cbegin(), m_par.cend(), [](Parameter p) {
+                             return p == Parameter::Attachment; })) {
+        yaxis->SetTitle("#it{#eta} [1/cm]");
+        canvas->SetTitle("Attachment");
       } else {
-        std::cerr << m_className << "::AddFunction: Unexpected axis.\n";
-        break;
+        yaxis->SetTitle("#it{#alpha}, #it{#eta} [1/cm]");
+        canvas->SetTitle("Multiplication and attachment");
       }
-      switch (type) {
-        case ElectronVelocityE:
-          ok = m_medium->GetElectronVelocityE(ie, ib, ia, value);
-          value = m_medium->ScaleVelocity(value);
-          break;
-        case ElectronTransverseDiffusion:
-          ok = m_medium->GetElectronTransverseDiffusion(ie, ib, ia, value);
-          value = m_medium->ScaleDiffusion(value);
-          break;
-        case ElectronLongitudinalDiffusion:
-          ok = m_medium->GetElectronLongitudinalDiffusion(ie, ib, ia, value);
-          value = m_medium->ScaleDiffusion(value);
-          break;
-        case ElectronTownsend:
-          ok = m_medium->GetElectronTownsend(ie, ib, ia, value);
-          value = m_medium->ScaleTownsend(exp(value));
-          break;
-        case ElectronAttachment:
-          ok = m_medium->GetElectronAttachment(ie, ib, ia, value);
-          value = m_medium->ScaleAttachment(exp(value));
-          break;
-        case ElectronLorentzAngle:
-          ok = m_medium->GetElectronLorentzAngle(ie, ib, ia, value);
-          value = m_medium->ScaleLorentzAngle(value);
-          break;
-        case HoleVelocityE:
-          ok = m_medium->GetHoleVelocityE(ie, ib, ia, value);
-          value = m_medium->ScaleVelocity(value);
-          break;
-        case HoleTransverseDiffusion:
-          ok = m_medium->GetHoleTransverseDiffusion(ie, ib, ia, value);
-          value = m_medium->ScaleDiffusion(value);
-          break;
-        case HoleLongitudinalDiffusion:
-          ok = m_medium->GetHoleLongitudinalDiffusion(ie, ib, ia, value);
-          value = m_medium->ScaleDiffusion(value);
-          break;
-        case HoleTownsend:
-          ok = m_medium->GetHoleTownsend(ie, ib, ia, value);
-          value = m_medium->ScaleTownsend(exp(value));
-          break;
-        case HoleAttachment:
-          ok = m_medium->GetHoleAttachment(ie, ib, ia, value);
-          value = m_medium->ScaleAttachment(exp(value));
-          break;
-        case IonVelocity:
-          ok = m_medium->GetIonMobility(ie, ib, ia, value);
-          value *= m_medium->UnScaleElectricField(efields[ie]);
-          break;
-        case IonTransverseDiffusion:
-          ok = m_medium->GetIonTransverseDiffusion(ie, ib, ia, value);
-          value = m_medium->ScaleDiffusion(value);
-          break;
-        case IonLongitudinalDiffusion:
-          ok = m_medium->GetIonLongitudinalDiffusion(ie, ib, ia, value);
-          value = m_medium->ScaleDiffusion(value);
-          break;
-        case ElectronVelocityB:
-          ok = m_medium->GetElectronVelocityB(ie, ib, ia, value);
-          value = fabs(m_medium->ScaleVelocity(value));
-          break;
-        case ElectronVelocityExB:
-          ok = m_medium->GetElectronVelocityExB(ie, ib, ia, value);
-          value = fabs(m_medium->ScaleVelocity(value));
-          break;
-        case HoleVelocityB:
-          ok = m_medium->GetHoleVelocityB(ie, ib, ia, value);
-          value = fabs(m_medium->ScaleVelocity(value));
-          break;
-        case HoleVelocityExB:
-          ok = m_medium->GetHoleVelocityExB(ie, ib, ia, value);
-          value = fabs(m_medium->ScaleVelocity(value));
-          break;
-      }
-      if (xaxis == 'e')
-        graph->SetPoint(j, m_medium->UnScaleElectricField(efields[j]), value);
-      else if (xaxis == 'b')
-        graph->SetPoint(j, bfields[j], value);
-      else if (xaxis == 'a')
-        graph->SetPoint(j, bangles[j], value);
-      if (fabs(value) > 1.e-10) nonzero = true;
-    }
-    if (ok && nonzero) {
-      m_graphs.push_back(graph);
-    } else {
-      if (m_debug) {
-        std::cerr << m_className << "::AddFunction:\n    Could not retrieve "
-                  << "table for " << GetLegend(type) << ".\n";
-      }
-      delete graph;
-    }
-  }
-  if (m_functions.empty()) return;
-  TLatex label;
-  const unsigned int nFunctions = m_functions.size();
-  if (keep && nFunctions > 1) {
-    // Determine the y range.
-    double ymin = m_functions[0].GetMinimum();
-    double ymax = m_functions[0].GetMaximum();
-    for (unsigned int i = 1; i < nFunctions; ++i) {
-      const double fmin = m_functions[i].GetMinimum();
-      const double fmax = m_functions[i].GetMaximum();
-      constexpr double tol = 1.e-10;
-      if (fabs(fmin) < tol && fabs(fmax) < tol) continue;
-      ymin = std::min(ymin, fmin);
-      ymax = std::max(ymax, fmax);
-    }
-    if (m_autoRangeY) {
-      const double dy = ymax - ymin;
-      for (unsigned int i = 0; i < nFunctions; ++i) {
-        m_functions[i].SetMinimum(std::max(0., ymin - 0.1 * dy));
-        m_functions[i].SetMaximum(ymax + 0.1 * dy);
-      }
-    }
-    m_functions[0].Draw();
-    m_canvas->Clear();
-    m_functions[0].DrawCopy()->GetYaxis()->SetTitleOffset(0);
-    double xLabel = 1.3 * xmin;
-    double yLabel = 0.9 * ymax;
-    label.SetText(xLabel, yLabel, m_labels[0].first.c_str());
-    xLabel += label.GetXsize(); 
-    label.SetTextColor(m_labels[0].second);
-    label.DrawLatex(xLabel, yLabel, m_labels[0].first.c_str());
-    for (unsigned int i = 1; i < nFunctions; ++i) {
-      // See if the function has non-zero values.
-      const double fmin = m_functions[i].GetMinimum();
-      const double fmax = m_functions[i].GetMaximum();
-      constexpr double tol = 1.e-10;
-      if (fabs(fmin) < tol && fabs(fmax) < tol) continue;
-      m_functions[i].DrawCopy("lsame");
-      yLabel -= 1.5 * label.GetYsize();
-      label.SetTextColor(m_labels[i].second);
-      label.DrawLatex(xLabel, yLabel, m_labels[i].first.c_str());
-    }
-  } else {
-    m_functions.back().DrawCopy()->GetYaxis()->SetTitleOffset(0);
-  }
-  for (auto& graph : m_graphs) {
-    graph->DrawGraph(graph->GetN(), graph->GetX(), graph->GetY(), "p");
-  }
-  if (logx) {
-    m_canvas->SetLogx(1);
-  } else {
-    m_canvas->SetLogx(0);
-  }
-  if (m_logY && !m_autoRangeY) {
-    m_canvas->SetLogy(1);
-  } else {
-    m_canvas->SetLogy(0);
-  }
-  m_canvas->Update();
-}
-
-double ViewMedium::EvaluateFunction(double* pos, double* par) {
-  // to be modified to include B and angle
-
-  if (!m_medium) return 0.;
-  int type = int(par[0]);
-  char xaxis = char(par[1]);
-  const double x = pos[0];
-
-  const double ctheta = xaxis == 'a' ? cos(x) : cos(par[4]);
-  const double stheta = xaxis == 'a' ? sin(x) : sin(par[4]);
-  double ex = xaxis == 'e' ? x : par[2];
-  double ey = 0.;
-  double bx = xaxis == 'b' ? x : par[3];
-  double by = 0.;
-  if (type == ElectronVelocityExB || type == HoleVelocityExB ||
-             type == ElectronVelocityB || type == HoleVelocityB) {
-    ex *= ctheta;
-    ey = xaxis == 'e' ? x * stheta : par[2] * stheta; 
-  } else {
-    bx *= ctheta;
-    by = xaxis == 'b' ? x * stheta : par[3] * stheta;
-  } 
-  // Return value.
-  double y = 0.;
-  // Auxiliary (dummy) variables.
-  double s = 0., t = 0.;
-  switch (type) {
-    case ElectronVelocityE:
-      if (!m_medium->ElectronVelocity(ex, 0, 0, bx, by, 0, y, s, t)) return 0.;
-      y = fabs(y);
       break;
-    case ElectronTransverseDiffusion:
-      if (!m_medium->ElectronDiffusion(ex, 0, 0, bx, by, 0, s, y)) return 0.;
-      break;
-    case ElectronLongitudinalDiffusion:
-      if (!m_medium->ElectronDiffusion(ex, 0, 0, bx, by, 0, y, s)) return 0.;
-      break;
-    case ElectronTownsend:
-      if (!m_medium->ElectronTownsend(ex, 0, 0, bx, by, 0, y)) return 0.;
-      break;
-    case ElectronAttachment:
-      if (!m_medium->ElectronAttachment(ex, 0, 0, bx, by, 0, y)) return 0.;
-      break;
-    case ElectronLorentzAngle:
-      if (!m_medium->ElectronLorentzAngle(ex, 0, 0, bx, by, 0, y)) return 0.;
-      break;
-    case HoleVelocityE:
-      if (!m_medium->HoleVelocity(ex, 0, 0, bx, by, 0, y, s, t)) return 0.;
-      break;
-    case HoleTransverseDiffusion:
-      if (!m_medium->HoleDiffusion(ex, 0, 0, bx, by, 0, s, y)) return 0.;
-      break;
-    case HoleLongitudinalDiffusion:
-      if (!m_medium->HoleDiffusion(ex, 0, 0, bx, by, 0, y, s)) return 0.;
-      break;
-    case HoleTownsend:
-      if (!m_medium->HoleTownsend(ex, 0, 0, bx, by, 0, y)) return 0.;
-      break;
-    case HoleAttachment:
-      if (!m_medium->HoleAttachment(ex, 0, 0, bx, by, 0, y)) return 0.;
-      break;
-    case IonVelocity:
-      if (!m_medium->IonVelocity(ex, 0, 0, bx, by, 0, y, s, t)) return 0.;
-      break;
-    case IonTransverseDiffusion:
-      if (!m_medium->IonDiffusion(ex, 0, 0, bx, by, 0, s, y)) return 0.;
-      break;
-    case IonLongitudinalDiffusion:
-      if (!m_medium->IonDiffusion(ex, 0, 0, bx, by, 0, y, s)) return 0.;
-      break;
-    case ElectronVelocityB:
-      if (!m_medium->ElectronVelocity(ex, ey, 0, bx, 0, 0, y, s, t)) return 0.;
-      y = fabs(y);
-      break;
-    case ElectronVelocityExB:
-      if (!m_medium->ElectronVelocity(ex, ey, 0, bx, 0, 0, s, t, y)) return 0.;
-      y = fabs(y);
-      break;
-    case HoleVelocityB:
-      if (!m_medium->HoleVelocity(ex, ey, 0, bx, 0, 0, y, s, t)) return 0.;
-      y = fabs(y);
-      break;
-    case HoleVelocityExB:
-      if (!m_medium->HoleVelocity(ex, ey, 0, bx, 0, 0, s, t, y)) return 0.;
-      y = fabs(y);
+    case Parameter::LorentzAngle:
+      yaxis->SetTitle( "Angle between #bf{v} and #bf{E} [rad]");
+      canvas->SetTitle("Lorentz angle");
       break;
     default:
-      std::cerr << m_className << "::EvaluateFunction:\n    "
-                << "Unknown type of transport coefficient requested. Bug!\n";
-      return 0.;
+      break;
   }
+  yaxis->SetTitleOffset(0);
+  gPad->SetLeftMargin(0.15);
+  canvas->Update();
 
-  return y;
-}
-
-void ViewMedium::GetAxisRangeX(const std::vector<double>& efields, 
-    const std::vector<double>& bfields, const std::vector<double>& angles,
-    const char xaxis, double& xmin, double& xmax, bool& logx) const {
-
-  if (m_autoRangeX) {
-    bool ok = false;
-    if (xaxis == 'e' && !efields.empty()) {
-      xmin = efields.front();
-      xmax = efields.back();
-      const double dx = xmax - xmin; 
-      if (dx > Small && xmax > Small) {
-        xmax += 0.1 * dx;
-        if (xmin > Small) {
-          xmin *= 0.8;
-          logx = true;
+  const unsigned int nPlots = m_yPlot.size();
+  // Set colours.
+  std::vector<int> cols(nPlots, 0);
+  auto it = std::find(m_q.cbegin(), m_q.cend(), Charge::Electron);
+  if (it != m_q.cend()) {
+    cols[std::distance(m_q.cbegin(), it)] = kOrange - 3; 
+  } 
+  it = std::find(std::next(it), m_q.cend(), Charge::Electron);
+  if (it != m_q.cend()) {
+    cols[std::distance(m_q.cbegin(), it)] = kGreen + 3; 
+  } 
+  it = std::find(m_q.cbegin(), m_q.cend(), Charge::Hole); 
+  if (it != m_q.cend()) {
+    cols[std::distance(m_q.cbegin(), it)] = kRed + 1; 
+  } 
+  it = std::find(m_q.cbegin(), m_q.cend(), Charge::Ion); 
+  if (it != m_q.cend()) {
+    cols[std::distance(m_q.cbegin(), it)] = kRed + 1; 
+  } 
+  // Set legend.
+  std::vector<std::string> labels(nPlots, "");
+  if (nPlots > 1) {
+    bool allEqual = std::equal(m_q.begin() + 1, m_q.end(), m_q.begin());
+    if (!allEqual) {
+      for (unsigned int i = 0; i < nPlots; ++i) {
+        if (m_q[i] == Charge::Electron) {
+          labels[i] = "electrons";
+        } else if (m_q[i] == Charge::Hole) {
+          labels[i] = "holes";
         } else {
-          logx = false;
+          labels[i] = "ions";
         }
-        ok = true; 
-      }
-    } else if (xaxis == 'b' && !bfields.empty()) {
-      logx = false;
-      xmin = bfields.front();
-      xmax = bfields.back();
-      const double dx = xmax - xmin; 
-      if (dx > Small && xmax > Small) {
-        if (xmin > Small) xmin *= 0.8;
-        xmax += 0.1 * dx;
-        ok = true; 
-      }
-    } else if (xaxis == 'a' && !angles.empty()) {
-      logx = false;
-      xmin = angles.front();
-      xmax = angles.back();
-      const double dx = xmax - xmin; 
-      if (dx > Small && xmax > Small) {
-        ok = true; 
+      } 
+    } 
+    allEqual = std::equal(m_par.begin() + 1, m_par.end(), m_par.begin());
+    if (!allEqual) {
+      for (unsigned int i = 0; i < nPlots; ++i) {
+        if (!labels[i].empty()) labels[i] += ", ";
+        switch (m_par[i]) { 
+          case Parameter::VelocityE:
+            labels[i] += "#it{v}_{#it{E}}";
+            break;
+          case Parameter::VelocityB:
+            labels[i] += "#it{v}_{#it{B}}";
+            break;
+          case Parameter::VelocityExB:
+            labels[i] += "#it{v}_{#it{E}#kern[0.05]{#times}#it{B}}";
+            break;
+          case Parameter::LongitudinalDiffusion:
+            labels[i] += "#it{D}_{L}";
+            break; 
+          case Parameter::TransverseDiffusion:
+            labels[i] += "#it{D}_{T}";
+            break; 
+          case Parameter::Townsend:
+            labels[i] += "#alpha";
+            break;
+          case Parameter::Attachment:
+            labels[i] += "#eta";
+            break;
+          case Parameter::LorentzAngle:
+            labels[i] += "Lorentz angle";
+        }
       }
     }
-    if (ok) return;
   }
-  if (xaxis == 'e') {
+  TGraph graph;
+  TLatex latex;
+  double xsize = 0., ysize = 0.;
+  for (const auto& label : labels) {
+    latex.SetText(0, 0, label.c_str());
+    xsize = std::max(xsize, latex.GetXsize());
+    ysize = std::max(ysize, latex.GetYsize());
+  }
+  // Convert to NDC.
+  xsize /= (gPad->GetX2() - gPad->GetX1());
+  ysize /= (gPad->GetY2() - gPad->GetY1());
+
+  const double lm = gPad->GetLeftMargin();
+  const double rm = 1. - gPad->GetRightMargin();
+  const double tm = 1. - gPad->GetTopMargin();
+  const double bm = gPad->GetBottomMargin();
+  double xLabel = lm + 0.1 * (rm - lm);
+  if (m_par[0] == Parameter::LongitudinalDiffusion ||
+      m_par[0] == Parameter::TransverseDiffusion) {
+    xLabel = rm - 0.1 * (rm - lm) - xsize; 
+  }
+  double yLabel = tm - 0.1 * (tm - bm);
+  const double colrange = gStyle->GetNumberOfColors() / double(nPlots);
+  for (unsigned int i = 0; i < nPlots; ++i) {
+    int col = cols[i] > 0 ? cols[i] : gStyle->GetColorPalette(i * colrange);
+    graph.SetLineColor(col);
+    graph.SetMarkerColor(col);
+    graph.DrawGraph(m_xPlot.size(), 
+                    m_xPlot.data(), m_yPlot[i].data(), "L");
+    graph.SetMarkerStyle(20 + i);
+    if (!m_xGraph[i].empty()) {
+      graph.DrawGraph(m_xGraph[i].size(), 
+                      m_xGraph[i].data(), m_yGraph[i].data(), "P");
+
+    }
+    if (labels[i].empty()) continue;
+    latex.SetTextColor(col);
+    latex.DrawLatexNDC(xLabel, yLabel, labels[i].c_str());
+    yLabel -= 1.5 * ysize;
+  }
+  if (m_logX && xmin > 0.) {
+    canvas->SetLogx(1);
+  } else {
+    canvas->SetLogx(0);
+  }
+  if (m_logY && ymin > 0. && !m_autoRangeY) {
+    canvas->SetLogy(1);
+  } else {
+    canvas->SetLogy(0);
+  }
+  gPad->Update();
+}
+
+void ViewMedium::ResetY() {
+  m_yPlot.clear();
+  m_par.clear();
+  m_q.clear();
+  m_xGraph.clear();
+  m_yGraph.clear();
+}
+
+void ViewMedium::ResetX(const Axis xaxis) {
+
+  double xmin = 0., xmax = 0.;
+  bool logx = false;
+  if (xaxis == Axis::E) {
     xmin = m_eMin;
     xmax = m_eMax;
     logx = m_logE;
-  } else if (xaxis == 'b') {
+  } else if (xaxis == Axis::B) {
     xmin = m_bMin;
     xmax = m_bMax;
     logx = m_logB;
-  } else if (xaxis == 'a') {
+  } else if (xaxis == Axis::Angle) {
     xmin = m_aMin;
     xmax = m_aMax;
     logx = m_logA;
+  } else {
+    m_xaxis = Axis::None;
+    return;
   }
+
+  if (m_autoRangeX) {
+    // Get the field grid.
+    std::vector<double> efields;
+    std::vector<double> bfields;
+    std::vector<double> bangles;
+    m_medium->GetFieldGrid(efields, bfields, bangles);
+    if (xaxis == Axis::E && !efields.empty()) {
+      if (efields.front() > 0. && efields.back() > 10. * efields.front()) {
+        logx = true;
+        xmin = efields.front() / 1.5;
+        xmax = efields.back() * 1.5;
+      } else {
+        logx = false;
+        const double dx = 0.05 * fabs(efields.back() - efields.front());
+        xmin = std::max(0., efields.front() - dx);
+        xmax = efields.back() + dx;
+      }
+    } else if (xaxis == Axis::B && !bfields.empty()) {
+      logx = false;
+      const double dx = 0.05 * fabs(bfields.back() - bfields.front());
+      xmin = std::max(0., bfields.front() - dx);
+      xmax = bfields.back() + dx;
+    } else if (xaxis == Axis::Angle && !bangles.empty()) {
+      logx = false;
+      const double dx = 0.05 * fabs(bangles.back() - bangles.front());
+      xmin = std::max(0., bangles.front() - dx);
+      xmax = std::min(TwoPi, bangles.back() + dx);
+    }
+  }
+
+  constexpr unsigned int nX = 1000;
+  m_xPlot.assign(nX, 0.);
+  if (logx) {
+    m_xPlot[0] = xmin;
+    const double r = pow(xmax / xmin, 1. / (nX - 1));
+    for (unsigned int i = 1; i < nX; ++i) {
+      m_xPlot[i] = m_xPlot[i - 1] * r;
+    }
+  } else {
+    const double dx = (xmax - xmin) / (nX - 1);
+    for (unsigned int i = 0; i < nX; ++i) {
+      m_xPlot[i] = xmin + i * dx;
+    }
+  }
+  m_logX = logx;
+  m_xaxis = xaxis;
 }
 
-int ViewMedium::GetColor(const Property prop) const {
-  if (prop == ElectronLongitudinalDiffusion || prop == ElectronAttachment ||
-      prop == ElectronLorentzAngle) {
-    return plottingEngine.GetRootColorLine1();
-  } else if (prop == HoleLongitudinalDiffusion || prop == HoleAttachment ||
-             prop == IonLongitudinalDiffusion) {
-    return plottingEngine.GetRootColorLine2();
-  } else if (prop < HoleVelocityE) {
-    return plottingEngine.GetRootColorElectron();
-  } else if (prop == ElectronVelocityB || prop == HoleVelocityB) {
-    return kGreen + 2;
-  } else if (prop == ElectronVelocityExB || prop == HoleVelocityExB) {
-    return kRed + 1;
-  } else if (prop < IonVelocity) {
-    return plottingEngine.GetRootColorHole();
+void ViewMedium::PlotDiffusion(const Axis xaxis, const Charge charge,
+                               const bool same) {
+
+  if (!m_medium) {
+    std::cerr << m_className << "::PlotDiffusion: Medium is not defined.\n";
+    return;
   }
-  return plottingEngine.GetRootColorIon();
+  if (xaxis != m_xaxis) {
+    ResetX(xaxis);
+    ResetY();
+  } else if (!same) {
+    ResetY();
+  } else if (!m_par.empty()) {
+    if (m_par[0] != Parameter::TransverseDiffusion && 
+        m_par[0] != Parameter::LongitudinalDiffusion) {
+      ResetY();
+    }
+  } 
+  const unsigned int nX = m_xPlot.size();
+  std::array<std::vector<double>, 2> ypl;
+  for (unsigned int i = 0; i < 2; ++i) ypl[i].assign(nX, 0.);
+
+  double ex = m_efield;
+  double ctheta = cos(m_angle);
+  double stheta = sin(m_angle);
+  double bx = m_bfield * ctheta;
+  double by = m_bfield * stheta; 
+  for (unsigned int i = 0; i < nX; ++i) {
+    if (xaxis == Axis::E) {
+      ex = m_xPlot[i];
+    } else if (xaxis == Axis::B) {
+      bx = m_xPlot[i] * ctheta;
+      by = m_xPlot[i] * stheta;
+    } else {
+      bx = m_bfield * cos(m_xPlot[i]);
+      by = m_bfield * sin(m_xPlot[i]);
+    } 
+    double dl = 0., dt = 0.;
+    if (charge == Charge::Electron) {
+      if (!m_medium->ElectronDiffusion(ex, 0, 0, bx, by, 0, dl, dt)) continue;
+    } else if (charge == Charge::Hole) {
+      if (!m_medium->HoleDiffusion(ex, 0, 0, bx, by, 0, dl, dt)) continue;
+    } else {
+      if (!m_medium->IonDiffusion(ex, 0, 0, bx, by, 0, dl, dt)) continue;
+    }
+    ypl[0][i] = dl;
+    ypl[1][i] = dt;
+  }
+
+  std::array<std::vector<double>, 2> xgr;
+  std::array<std::vector<double>, 2> ygr;
+
+  std::array<std::vector<double>, 3> grid;
+  int ie = 0, ib = 0, ia = 0;
+  if (GetGrid(grid, ie, ib, ia, xaxis)) {
+    const auto nPoints = xaxis == Axis::E ? grid[0].size() : 
+                         xaxis == Axis::B ? grid[1].size() : grid[2].size();
+    for (unsigned int j = 0; j < nPoints; ++j) {
+      double x = 0., y = 0.;
+      if (xaxis == Axis::E) {
+        ie = j;
+        x = m_medium->UnScaleElectricField(grid[0][j]);
+      } else if (xaxis == Axis::B) {
+        ib = j;
+        x = grid[1][j];
+      } else if (xaxis == Axis::Angle) {
+        ia = j;
+        x = grid[2][j];
+      }
+      if (charge == Charge::Electron) {
+        if (m_medium->GetElectronTransverseDiffusion(ie, ib, ia, y)) {
+          xgr[1].push_back(x);
+          ygr[1].push_back(m_medium->ScaleDiffusion(y));
+        }
+        if (m_medium->GetElectronLongitudinalDiffusion(ie, ib, ia, y)) {
+          xgr[0].push_back(x);
+          ygr[0].push_back(m_medium->ScaleDiffusion(y));
+        }
+      } else if (charge == Charge::Hole) {
+        if (m_medium->GetHoleTransverseDiffusion(ie, ib, ia, y)) {
+          xgr[1].push_back(x);
+          ygr[1].push_back(m_medium->ScaleDiffusion(y));
+        }
+        if (m_medium->GetHoleLongitudinalDiffusion(ie, ib, ia, y)) {
+          xgr[0].push_back(x);
+          ygr[0].push_back(m_medium->ScaleDiffusion(y));
+        }
+      } else {
+        if (m_medium->GetIonTransverseDiffusion(ie, ib, ia, y)) {
+          xgr[1].push_back(x);
+          ygr[1].push_back(m_medium->ScaleDiffusion(y));
+        }
+        if (m_medium->GetIonLongitudinalDiffusion(ie, ib, ia, y)) {
+          xgr[0].push_back(x);
+          ygr[0].push_back(m_medium->ScaleDiffusion(y));
+        }
+      }
+    }
+  }
+
+  const std::array<Parameter, 2> pars = {Parameter::LongitudinalDiffusion,
+                                         Parameter::TransverseDiffusion};
+  for (unsigned int i = 0; i < 2; ++i) {
+    if (!NonZero(ypl[i])) continue;
+    m_yPlot.push_back(std::move(ypl[i]));
+    m_par.push_back(pars[i]);
+    m_q.push_back(charge);
+    m_xGraph.push_back(std::move(xgr[i]));
+    m_yGraph.push_back(std::move(ygr[i]));
+  }
+  Draw();
 }
 
-std::string ViewMedium::GetLabelX(const char xaxis) const {
+void ViewMedium::PlotVelocity(const Axis xaxis, const Charge charge,
+                              const bool same) {
 
-  if (xaxis == 'e') {
-    return "electric field [V/cm]";
-  } else if (xaxis == 'b') {
-    return "magnetic field [T]";
-  } else if (xaxis == 'a') {
-    return "angle between #bf{E} and #bf{B} [rad]";
+  if (!m_medium) {
+    std::cerr << m_className << "::PlotVelocity: Medium is not defined.\n";
+    return;
   }
-  return "";
-}
+  if (xaxis != m_xaxis) {
+    ResetX(xaxis);
+    ResetY();
+  } else if (!same) {
+    ResetY();
+  } else if (!m_par.empty()) {
+    if (m_par[0] != Parameter::VelocityE && 
+        m_par[0] != Parameter::VelocityB && 
+        m_par[0] != Parameter::VelocityExB) {
+      ResetY();
+    }
+  } 
+  const unsigned int nX = m_xPlot.size();
+  std::array<std::vector<double>, 3> ypl;
+  for (unsigned int i = 0; i < 3; ++i) ypl[i].assign(nX, 0.);
 
-std::string ViewMedium::GetLabelY(const Property prop) const {
-
-  switch (prop) {
-    case ElectronVelocityE:
-    case ElectronVelocityB:
-    case ElectronVelocityExB:
-    case HoleVelocityE:
-    case HoleVelocityB:
-    case HoleVelocityExB:
-    case IonVelocity:
-      return "drift velocity [cm/ns]";
-      break;
-    case ElectronLongitudinalDiffusion:
-    case ElectronTransverseDiffusion:
-    case HoleLongitudinalDiffusion: 
-    case HoleTransverseDiffusion:
-    case IonLongitudinalDiffusion: 
-    case IonTransverseDiffusion:
-      return "diffusion coefficient [#kern[-0.1]{#sqrt{cm}}#kern[0.1]{]}";
-      break;
-    case ElectronTownsend:
-    case HoleTownsend:
-      return "#it{#alpha} [1/cm]";
-      break;
-    case ElectronAttachment:
-    case HoleAttachment:
-      return "#it{#eta} [1/cm]";
-      break;
-    case ElectronLorentzAngle:
-      return "Angle between #bf{v} and #bf{E} [rad]";
-      break;
-    default:
-      return "unknown";
-  }
-  return "";
-}
-
-std::string ViewMedium::GetLegend(const Property prop) const {
+  double e0 = m_efield;
+  double b0 = m_bfield;
+  double ctheta = cos(m_angle);
+  double stheta = sin(m_angle);
   
-  std::string label = "";
-  switch (prop) {
-    case ElectronVelocityE:
-    case HoleVelocityE:
-      label += "velocity #parallel #bf{E}";
-      break;
-    case ElectronVelocityB:
-    case HoleVelocityB:
-      label += "velocity #parallel #bf{B}_{t}";
-      break;
-    case ElectronVelocityExB:
-    case HoleVelocityExB:
-      label += "velocity #parallel #bf{E}#times #bf{B}";
-      break;
-    case IonVelocity:
-      label += "ion velocity";
-      break;
-    case ElectronLongitudinalDiffusion:
-    case HoleLongitudinalDiffusion:
-    case IonLongitudinalDiffusion: 
-      label += "longitudinal diffusion";
-      break; 
-    case ElectronTransverseDiffusion:
-    case HoleTransverseDiffusion:
-    case IonTransverseDiffusion:
-      label += "transverse diffusion";
-      break; 
-    case ElectronTownsend:
-    case HoleTownsend:
-      label += "Townsend";
-      break;
-    case ElectronAttachment:
-    case HoleAttachment:
-      label += "Attachment";
-      break;
-    case ElectronLorentzAngle:
-      label += "Lorenz angle";
-      break;
+  for (unsigned int i = 0; i < nX; ++i) {
+    if (xaxis == Axis::E) {
+      e0 = m_xPlot[i];
+    } else if (xaxis == Axis::B) {
+      b0 = m_xPlot[i];
+    } else { 
+      ctheta = cos(m_xPlot[i]);
+      stheta = sin(m_xPlot[i]);
+    }
+    double vx = 0., vy = 0., vz = 0.;
+    if (charge == Charge::Electron) {
+      if (m_medium->ElectronVelocity(e0, 0, 0, b0 * ctheta, b0 * stheta, 0, 
+                                     vx, vy, vz)) {
+        ypl[0][i] = fabs(vx);
+      }
+      if (m_medium->ElectronVelocity(e0 * ctheta, e0 * stheta, 0, b0, 0, 0,
+                                     vx, vy, vz)) {
+        ypl[1][i] = fabs(vx);
+        ypl[2][i] = fabs(vz);
+      }
+    } else if (charge == Charge::Hole) {
+      if (m_medium->HoleVelocity(e0, 0, 0, b0 * ctheta, b0 * stheta, 0, 
+                                 vx, vy, vz)) {
+        ypl[0][i] = fabs(vx);
+      }
+      if (m_medium->HoleVelocity(e0 * ctheta, e0 * stheta, 0, b0, 0, 0,
+                                 vx, vy, vz)) {
+        ypl[1][i] = fabs(vx);
+        ypl[2][i] = fabs(vz);
+      }
+    } else {
+      if (m_medium->IonVelocity(e0, 0, 0, b0 * ctheta, b0 * stheta, 0, 
+                                vx, vy, vz)) {
+        ypl[0][i] = fabs(vx);
+      }
+    }
   }
-  return label;
+  std::array<std::vector<double>, 3> xgr;
+  std::array<std::vector<double>, 3> ygr;
+
+  std::array<std::vector<double>, 3> grid;
+  int ie = 0, ib = 0, ia = 0;
+  if (GetGrid(grid, ie, ib, ia, xaxis)) {
+    const auto nPoints = xaxis == Axis::E ? grid[0].size() : 
+                         xaxis == Axis::B ? grid[1].size() : grid[2].size();
+    for (unsigned int j = 0; j < nPoints; ++j) {
+      double x = 0., y = 0.;
+      if (xaxis == Axis::E) {
+        ie = j;
+        x = m_medium->UnScaleElectricField(grid[0][j]);
+      } else if (xaxis == Axis::B) {
+        ib = j;
+        x = grid[1][j];
+      } else if (xaxis == Axis::Angle) {
+        ia = j;
+        x = grid[2][j];
+      }
+      if (charge == Charge::Electron) {
+        if (m_medium->GetElectronVelocityE(ie, ib, ia, y)) {
+          xgr[0].push_back(x);
+          ygr[0].push_back(m_medium->ScaleVelocity(y));
+        }
+        if (m_medium->GetElectronVelocityB(ie, ib, ia, y)) {
+          xgr[1].push_back(x);
+          ygr[1].push_back(fabs(m_medium->ScaleVelocity(y)));
+        }
+        if (m_medium->GetElectronVelocityExB(ie, ib, ia, y)) {
+          xgr[2].push_back(x);
+          ygr[2].push_back(fabs(m_medium->ScaleVelocity(y)));
+        }
+      } else if (charge == Charge::Hole) {
+        if (m_medium->GetHoleVelocityE(ie, ib, ia, y)) {
+          xgr[0].push_back(x);
+          ygr[0].push_back(m_medium->ScaleVelocity(y));
+        }
+        if (m_medium->GetHoleVelocityB(ie, ib, ia, y)) {
+          xgr[1].push_back(x);
+          ygr[1].push_back(fabs(m_medium->ScaleVelocity(y)));
+        }
+        if (m_medium->GetHoleVelocityExB(ie, ib, ia, y)) {
+          xgr[2].push_back(x);
+          ygr[2].push_back(fabs(m_medium->ScaleVelocity(y)));
+        }
+      } else {
+        if (m_medium->GetIonMobility(ie, ib, ia, y)) {
+          xgr[0].push_back(x);
+          ygr[0].push_back(y * m_medium->UnScaleElectricField(grid[0][ie]));
+        }
+      }
+    }
+  }
+
+  const std::array<Parameter, 3> pars = {Parameter::VelocityE, 
+                                         Parameter::VelocityB,
+                                         Parameter::VelocityExB};
+  for (unsigned int i = 0; i < 3; ++i) {
+    if (!NonZero(ypl[i])) continue;
+    m_yPlot.push_back(std::move(ypl[i]));
+    m_par.push_back(pars[i]);
+    m_q.push_back(charge);
+    m_xGraph.push_back(std::move(xgr[i]));
+    m_yGraph.push_back(std::move(ygr[i]));
+  }
+  Draw();
+}
+
+void ViewMedium::Plot(const Axis xaxis, const Charge charge,
+                      const Parameter par, const bool same) {
+
+  // Make sure the medium is set.
+  if (!m_medium) {
+    std::cerr << m_className << "::Plot: Medium is not defined.\n";
+    return;
+  }
+  if (xaxis != m_xaxis) {
+    ResetX(xaxis);
+    ResetY();
+  } else if (!same) {
+    ResetY();
+  } else if (!m_par.empty()) {
+    if (m_par[0] != Parameter::Townsend &&
+        m_par[0] != Parameter::Attachment) {
+      ResetY();
+    }
+  } 
+
+  const unsigned int nX = m_xPlot.size();
+  std::vector<double> ypl(nX, 0.);  
+  double ex = m_efield;
+  double ctheta = cos(m_angle);
+  double stheta = sin(m_angle);
+  double bx = m_bfield * ctheta;
+  double by = m_bfield * stheta;
+  for (unsigned int i = 0; i < nX; ++i) {
+    if (xaxis == Axis::E) {
+      ex = m_xPlot[i];
+    } else if (xaxis == Axis::B) {
+      bx = m_xPlot[i] * ctheta;
+      by = m_xPlot[i] * stheta;
+    } else {
+      bx = m_bfield * cos(m_xPlot[i]);
+      by = m_bfield * sin(m_xPlot[i]);
+    }
+    double y = 0.;
+    if (charge == Charge::Electron) {
+      if (par == Parameter::Townsend) {
+        if (!m_medium->ElectronTownsend(ex, 0, 0, bx, by, 0, y)) continue;
+      } else {
+        if (!m_medium->ElectronAttachment(ex, 0, 0, bx, by, 0, y)) continue;
+      }
+    } else {
+      if (par == Parameter::Townsend) {
+        if (!m_medium->HoleTownsend(ex, 0, 0, bx, by, 0, y)) continue;
+      } else {
+        if (!m_medium->ElectronAttachment(ex, 0, 0, bx, by, 0, y)) continue;
+      }
+    }
+    ypl[i] = y;
+  }
+
+  std::vector<double> xgr;
+  std::vector<double> ygr;
+
+  std::array<std::vector<double>, 3> grid;
+  int ie = 0, ib = 0, ia = 0;
+  if (GetGrid(grid, ie, ib, ia, xaxis)) {
+    const auto nPoints = xaxis == Axis::E ? grid[0].size() : 
+                         xaxis == Axis::B ? grid[1].size() : grid[2].size();
+    for (unsigned int j = 0; j < nPoints; ++j) {
+      double x = 0., y = 0.;
+      if (xaxis == Axis::E) {
+        ie = j;
+        x = m_medium->UnScaleElectricField(grid[0][j]);
+      } else if (xaxis == Axis::B) {
+        ib = j;
+        x = grid[1][j];
+      } else if (xaxis == Axis::Angle) {
+        ia = j;
+        x = grid[2][j];
+      }
+      if (charge == Charge::Electron) {
+        if (par == Parameter::Townsend) {
+          if (m_medium->GetElectronTownsend(ie, ib, ia, y)) {
+            xgr.push_back(x);
+            ygr.push_back(m_medium->ScaleTownsend(exp(y)));
+          }
+        } else {
+          if (m_medium->GetElectronAttachment(ie, ib, ia, y)) {
+            xgr.push_back(x);
+            ygr.push_back(m_medium->ScaleAttachment(exp(y)));
+          }
+        }
+      } else if (charge == Charge::Hole) {
+        if (par == Parameter::Townsend) {
+          if (m_medium->GetHoleTownsend(ie, ib, ia, y)) {
+            xgr.push_back(x);
+            ygr.push_back(m_medium->ScaleTownsend(exp(y)));
+          }
+        } else {
+          if (m_medium->GetHoleAttachment(ie, ib, ia, y)) {
+            xgr.push_back(x);
+            ygr.push_back(m_medium->ScaleAttachment(exp(y)));
+          }
+        }
+      }
+    }
+  }
+
+  if (!NonZero(ypl)) return;
+  m_yPlot.push_back(std::move(ypl));
+  m_par.push_back(par);
+  m_q.push_back(charge);
+  m_xGraph.push_back(std::move(xgr));
+  m_yGraph.push_back(std::move(ygr));
+  Draw();
+}
+
+void ViewMedium::PlotLorentzAngle(const Axis xaxis, const Charge charge,
+                                  const bool same) {
+
+  // Make sure the medium is set.
+  if (!m_medium) {
+    std::cerr << m_className << "::PlotLorentzAngle: Medium is not defined.\n";
+    return;
+  }
+  if (xaxis != m_xaxis) {
+    ResetX(xaxis);
+    ResetY();
+  } else if (!same) {
+    ResetY();
+  } else if (!m_par.empty()) {
+    if (m_par[0] != Parameter::LorentzAngle) ResetY();
+  } 
+
+  const unsigned int nX = m_xPlot.size();
+  std::vector<double> ypl(nX, 0.);  
+  double ex = m_efield;
+  double ctheta = cos(m_angle);
+  double stheta = sin(m_angle);
+  double bx = m_bfield * ctheta;
+  double by = m_bfield * stheta;
+  for (unsigned int i = 0; i < nX; ++i) {
+    if (xaxis == Axis::E) {
+      ex = m_xPlot[i];
+    } else if (xaxis == Axis::B) {
+      bx = m_xPlot[i] * ctheta;
+      by = m_xPlot[i] * stheta;
+    } else {
+      bx = m_bfield * cos(m_xPlot[i]);
+      by = m_bfield * sin(m_xPlot[i]);
+    }
+    double y = 0.;
+    if (!m_medium->ElectronLorentzAngle(ex, 0, 0, bx, by, 0, y)) continue;
+    ypl[i] = y;
+  }
+
+  std::vector<double> xgr;
+  std::vector<double> ygr;
+
+  std::array<std::vector<double>, 3> grid;
+  int ie = 0, ib = 0, ia = 0;
+  if (GetGrid(grid, ie, ib, ia, xaxis)) {
+    const auto nPoints = xaxis == Axis::E ? grid[0].size() : 
+                         xaxis == Axis::B ? grid[1].size() : grid[2].size();
+    for (unsigned int j = 0; j < nPoints; ++j) {
+      double x = 0., y = 0.;
+      if (xaxis == Axis::E) {
+        ie = j;
+        x = m_medium->UnScaleElectricField(grid[0][j]);
+      } else if (xaxis == Axis::B) {
+        ib = j;
+        x = grid[1][j];
+      } else if (xaxis == Axis::Angle) {
+        ia = j;
+        x = grid[2][j];
+      }
+      if (m_medium->GetElectronLorentzAngle(ie, ib, ia, y)) {
+        xgr.push_back(x);
+        ygr.push_back(y);
+      }
+    }
+  }
+
+  if (!NonZero(ypl)) return;
+  m_yPlot.push_back(std::move(ypl));
+  m_par.push_back(Parameter::LorentzAngle);
+  m_q.push_back(charge);
+  m_xGraph.push_back(std::move(xgr));
+  m_yGraph.push_back(std::move(ygr));
+  Draw();
+}
+
+ViewMedium::Axis ViewMedium::GetAxis(const char xaxis) const {
+
+  if (std::toupper(xaxis) == 'E') {
+    return Axis::E;
+  } else if (std::toupper(xaxis) == 'B') {
+    return Axis::B;
+  } else if (std::toupper(xaxis) == 'A') {
+    return Axis::Angle;
+  }
+  return Axis::None; 
+}
+
+bool ViewMedium::GetGrid(std::array<std::vector<double>, 3>& grid,
+                         int& ie, int& ib, int& ia,
+                         const Axis xaxis) const { 
+
+  if (!m_medium) return false;
+  m_medium->GetFieldGrid(grid[0], grid[1], grid[2]);
+  if (grid[0].empty() || grid[1].empty() || grid[2].empty()) return false;
+  constexpr double eps = 1.e-3;
+  ie = FindIndex(grid[0], m_efield, eps);
+  ib = FindIndex(grid[1], m_bfield, eps);
+  ia = FindIndex(grid[2], m_angle, eps);
+  if (xaxis == Axis::E) {
+    if (ib < 0 || ia < 0) return false;
+  } else if (xaxis == Axis::B) {
+    if (ie < 0 || ia < 0) return false;
+  } else if (xaxis == Axis::Angle) {
+    if (ie < 0 || ib < 0) return false;
+  } else {
+    return false;
+  }
+  return true;
 }
 
 }

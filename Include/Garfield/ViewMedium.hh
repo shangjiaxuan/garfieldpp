@@ -3,9 +3,7 @@
 
 #include <string>
 #include <vector>
-
-#include <TF1.h>
-#include <TGraph.h>
+#include <array>
 
 #include "ViewBase.hh"
 #include "FundamentalConstants.hh"
@@ -47,54 +45,98 @@ class ViewMedium : public ViewBase {
   /// Set the angle to use when plotting as function of E or B.
   void SetAngle(const double angle) { m_angle = angle; }
 
-  void PlotElectronVelocity(const char xaxis, const bool same = false);
-  void PlotHoleVelocity(const char xaxis, const bool same = false);
-  void PlotIonVelocity(const char xaxis, const bool same = false);
-  void PlotElectronDiffusion(const char xaxis, const bool same = false);
-  void PlotHoleDiffusion(const char xaxis, const bool same = false);
-  void PlotIonDiffusion(const char xaxis, const bool same = false);
-  void PlotElectronTownsend(const char xaxis, const bool same = false);
-  void PlotHoleTownsend(const char xaxis, const bool same = false);
-  void PlotElectronAttachment(const char xaxis, const bool same = false);
-  void PlotHoleAttachment(const char xaxis, const bool same = false);
-  void PlotElectronLorentzAngle(const char xaxis, const bool same = false);
+  /** Plot the drift velocity components of electrons in the medium.
+    * \param[xaxis] abscissa.
+    *   - 'e': electric field, 
+    *   - 'b': magnetic field, 
+    *   - 'a': angle between E and B.
+    * \param same flag to keep existing plots (true) or not.
+    */
+  void PlotElectronVelocity(const char xaxis, const bool same = false) {
+    PlotVelocity(GetAxis(xaxis), Charge::Electron, same);
+  }
+  /// Plot the drift velocity components of holes in the medium.
+  void PlotHoleVelocity(const char xaxis, const bool same = false) {
+    PlotVelocity(GetAxis(xaxis), Charge::Hole, same);
+  }
+  /// Plot the ion drift velocity in the gas.
+  void PlotIonVelocity(const char xaxis, const bool same = false) {
+    PlotVelocity(GetAxis(xaxis), Charge::Ion, same);
+  }
+  /// Plot the diffusion coefficients in the medium.
+  void PlotElectronDiffusion(const char xaxis, const bool same = false) {
+    PlotDiffusion(GetAxis(xaxis), Charge::Electron, same);
+  }
+  /// Plot the diffusion coefficients of holes in the medium.
+  void PlotHoleDiffusion(const char xaxis, const bool same = false) {
+    PlotDiffusion(GetAxis(xaxis), Charge::Hole, same);
+  }
+  /// Plot the diffusion coefficients of ions in the gas.
+  void PlotIonDiffusion(const char xaxis, const bool same = false) {
+    PlotDiffusion(GetAxis(xaxis), Charge::Ion, same);
+  }
+  /// Plot the Townsend coefficient for electrons.
+  void PlotElectronTownsend(const char xaxis, const bool same = false) {
+    Plot(GetAxis(xaxis), Charge::Electron, Parameter::Townsend, same);
+  }
+  /// Plot the Townsend coefficient for holes.
+  void PlotHoleTownsend(const char xaxis, const bool same = false) {
+    Plot(GetAxis(xaxis), Charge::Hole, Parameter::Townsend, same);
+  }
+  /// Plot the attachment coefficient for electrons.
+  void PlotElectronAttachment(const char xaxis, const bool same = false) {
+    Plot(GetAxis(xaxis), Charge::Electron, Parameter::Attachment, same);
+  }
+  /// Plot the attachment coefficient for holes.
+  void PlotHoleAttachment(const char xaxis, const bool same = false) {
+    Plot(GetAxis(xaxis), Charge::Hole, Parameter::Attachment, same);
+  }
+  /// Plot the angle between drift velocity and field.
+  void PlotElectronLorentzAngle(const char xaxis, const bool same = false) {
+    PlotLorentzAngle(GetAxis(xaxis), Charge::Electron, same);
+  }
   void PlotElectronCrossSections();
 
-  double EvaluateFunction(double* pos, double* par);
+ private:
 
-  enum Property {
-    ElectronVelocityE,
-    ElectronTransverseDiffusion,
-    ElectronLongitudinalDiffusion,
-    ElectronTownsend,
-    ElectronAttachment,
-    ElectronLorentzAngle,
-    HoleVelocityE = 10,
-    HoleTransverseDiffusion,
-    HoleLongitudinalDiffusion,
-    HoleTownsend,
-    HoleAttachment,
-    IonVelocity = 20,
-    IonTransverseDiffusion,
-    IonLongitudinalDiffusion,
-    ElectronVelocityB,
-    ElectronVelocityExB,
-    HoleVelocityB,
-    HoleVelocityExB
+  enum class Parameter {
+    VelocityE,
+    VelocityB,
+    VelocityExB,
+    TransverseDiffusion,
+    LongitudinalDiffusion,
+    Townsend,
+    Attachment,
+    LorentzAngle
+  };
+ 
+  enum class Charge {
+    Electron,
+    Hole,
+    Ion
   };
 
- private:
+  enum class Axis {
+    E,
+    B,
+    Angle,
+    None
+  };
+
   Medium* m_medium = nullptr;
 
-  // X-axis ranges
+  // X axis
   double m_eMin = 100., m_eMax = 100000.;
   double m_bMin = 0., m_bMax = 2.;
   double m_aMin = 0., m_aMax = Pi;
   bool m_logE = true;
   bool m_logB = false;
   bool m_logA = false;
+  bool m_logX = true;
   bool m_autoRangeX = true;
-  // Y-axis range
+  Axis m_xaxis = Axis::None;
+
+  // Y axis
   double m_yMin = 0., m_yMax = 1.;
   bool m_logY = false;
   bool m_autoRangeY = true;
@@ -106,23 +148,31 @@ class ViewMedium : public ViewBase {
   // Angle to use when plotting as function of E-field or B-field.
   double m_angle = HalfPi;
 
-  // Functions
-  std::vector<TF1> m_functions;
-  // Graphs
-  std::vector<TGraph*> m_graphs;
-  // Labels
-  std::vector<std::pair<std::string, int> > m_labels;
+  std::vector<double> m_xPlot;
+  std::vector<std::vector<double> > m_yPlot;
+  std::vector<Parameter> m_par;
+  std::vector<Charge> m_q;
 
-  void SetupCanvas();
-  void AddFunction(const bool keep, const Property type, const char xaxis);
-  void GetAxisRangeX(const std::vector<double>& efields,
-                     const std::vector<double>& bfields, 
-                     const std::vector<double>& angles, const char xaxis,
-                     double& xmin, double& max, bool& logx) const;
-  int GetColor(const Property property) const;
-  std::string GetLabelX(const char xaxis) const;
-  std::string GetLabelY(const Property property) const;
-  std::string GetLegend(const Property property) const;
+  std::vector<std::vector<double> > m_xGraph;
+  std::vector<std::vector<double> > m_yGraph;
+
+  TCanvas* GetCanvas();
+  void PlotVelocity(const Axis xaxis, const Charge particle,
+                    const bool same);
+  void PlotDiffusion(const Axis xaxis, const Charge particle,
+                     const bool same);
+  void Plot(const Axis xaxis, const Charge particle,
+            const Parameter par, const bool same);
+  void PlotLorentzAngle(const Axis xaxis, const Charge particle,
+                        const bool same);
+
+  void ResetY();
+  void ResetX(const Axis xaxis);
+  void Draw();
+
+  Axis GetAxis(const char xaxis) const;
+  bool GetGrid(std::array<std::vector<double>, 3>& grid,
+               int& ie, int& ib, int& ia, const Axis xaxis) const;
 };
 }
 #endif
