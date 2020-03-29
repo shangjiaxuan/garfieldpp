@@ -41,8 +41,8 @@ class ViewFEMesh : public ViewBase {
   /// Reset the projection plane.
   void SetDefaultProjection();
   /// Set the projection plane.
-  void SetPlane(double fx, double fy, double fz, double x0, double y0,
-                double z0);
+  void SetPlane(const double fx, const double fy, const double fz, 
+                const double x0, const double y0, const double z0) override;
   /// Set the projection plane specifying hint for in-plane x axis.
   void SetPlane(double fx, double fy, double fz, double x0, double y0,
                 double z0, double hx, double hy, double hz);
@@ -104,6 +104,10 @@ class ViewFEMesh : public ViewBase {
   // Intersection of viewing plane with plotted area in planar coordinates
   bool m_drawViewRegion = false;
   std::vector<TPolyLine> m_viewRegionLines;
+
+  // Matrix used for projections (FPRMAT).
+  double m_pmat[3][3];
+  double m_dist;
 
   // Viewing plane dimensions
   double m_xMinPlot = -1., m_xMaxPlot = 1.;

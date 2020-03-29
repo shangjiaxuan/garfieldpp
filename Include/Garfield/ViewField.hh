@@ -35,17 +35,6 @@ class ViewField : public ViewBase {
   /// Set the viewing area based on the bounding box of the sensor/component.
   void SetArea() { m_userPlotLimits = false; }
 
-  /** Set the projection (viewing plane).
-    * \param fx,fy,fz normal vector
-    * \param x0,y0,z0 in-plane point
-    */
-  void SetPlane(const double fx, const double fy, const double fz,
-                const double x0, const double y0, const double z0);
-  /// Set the default viewing plane (\f$x\f$-\f$y\f$ at \f$z = 0\f$).
-  void SetDefaultProjection();
-  /// Rotate the viewing plane (angle in radian).
-  void Rotate(const double angle);
-
   /// Set the number of contour levels.
   void SetNumberOfContours(const unsigned int n);
   /// Set the number of points used for drawing 1D functions.
@@ -126,9 +115,6 @@ class ViewField : public ViewBase {
   // Sensor
   Sensor* m_sensor = nullptr;
   ComponentBase* m_component = nullptr;
-
-  // Projection for viewing
-  char m_xLabel[50], m_yLabel[50], m_description[50];
 
   // Plot area
   bool m_userPlotLimits = false;
