@@ -22,12 +22,6 @@ class ViewIsochrons : public ViewBase {
   /// Set the component.
   void SetComponent(ComponentBase* c);
 
-  /// Set the viewing area (in local coordinates of the current viewing plane).
-  void SetArea(const double xmin, const double ymin, const double xmax,
-               const double ymax);
-  /// Set the viewing area based on the bounding box of the sensor/component.
-  void SetArea() { m_userPlotLimits = false; }
-
   /** Draw equal time contour lines.
     * \param tstep Time interval. 
     * \param points List of starting points.
@@ -72,11 +66,6 @@ class ViewIsochrons : public ViewBase {
  private:
   Sensor* m_sensor = nullptr;
   ComponentBase* m_component = nullptr;
-
-  // Plot area
-  bool m_userPlotLimits = false;
-  double m_xMinPlot = -1., m_xMaxPlot = 1.;
-  double m_yMinPlot = -1., m_yMaxPlot = 1.;
 
   enum class Particle { Electron = 0, Ion };
   // Type of particle to be used for computing drift lines.

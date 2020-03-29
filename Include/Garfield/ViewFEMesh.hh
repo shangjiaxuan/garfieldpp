@@ -33,11 +33,6 @@ class ViewFEMesh : public ViewBase {
   /// Set the component from which to retrieve the mesh and field.
   void SetComponent(ComponentFieldMap* comp);
 
-  /// Set area to be plotted to the default.
-  void SetArea();
-  /// Set area to be plotted explicitly.
-  void SetArea(const double xmin, const double ymin, const double zmin,
-               const double xmax, const double ymax, const double zmax);
   /// Reset the projection plane.
   void SetDefaultProjection();
   /// Set the projection plane.
@@ -46,6 +41,9 @@ class ViewFEMesh : public ViewBase {
   /// Set the projection plane specifying hint for in-plane x axis.
   void SetPlane(double fx, double fy, double fz, double x0, double y0,
                 double z0, double hx, double hy, double hz);
+
+  void SetArea(const double xmin, const double ymin, const double zmin,
+               const double xmax, const double ymax, const double zmax) override;
 
   // Axes
   void SetXaxis(TGaxis* ax);
@@ -94,12 +92,6 @@ class ViewFEMesh : public ViewBase {
 
   // Options
   bool m_fillMesh = false;
-
-  // Box dimensions
-  bool m_userBox = false;
-  double m_xMinBox = -1., m_xMaxBox = 1.;
-  double m_yMinBox = -1., m_yMaxBox = 1.;
-  double m_zMinBox = -1., m_zMaxBox = 1.;
 
   // Intersection of viewing plane with plotted area in planar coordinates
   bool m_drawViewRegion = false;

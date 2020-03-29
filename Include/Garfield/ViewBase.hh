@@ -24,6 +24,20 @@ class ViewBase {
   /// Retrieve the canvas.
   TCanvas* GetCanvas();
 
+  /// Set the x- and y-axis limits
+  /// (in local coordinates of the current viewing plane, if applicable).
+  void SetArea(const double xmin, const double ymin, const double xmax,
+               const double ymax);
+  /// Set a bounding box (if applicable).
+  virtual void SetArea(const double xmin, const double ymin, const double zmin,
+                       const double xmax, const double ymax, const double zmax);
+  /// Use default x- and y-axis limits
+  /// (based on the bounding box of the sensor/component, if applicable).
+  void SetArea() {
+    m_userBox = false; 
+    m_userPlotLimits = false; 
+  }
+
   /** Set the projection (viewing plane), if applicable.
     * \param fx,fy,fz normal vector
     * \param x0,y0,z0 in-plane point
@@ -42,7 +56,18 @@ class ViewBase {
   // Options
   bool m_debug = false;
 
-  // Viewing plane for field plots (FPROJ).
+  // Plot axis limits. 
+  bool m_userPlotLimits = false;
+  double m_xMinPlot = -1., m_xMaxPlot = 1.;
+  double m_yMinPlot = -1., m_yMaxPlot = 1.;
+
+  // Bounding box.
+  bool m_userBox = false;
+  double m_xMinBox = -1., m_xMaxBox = 1.;
+  double m_yMinBox = -1., m_yMaxBox = 1.; 
+  double m_zMinBox = -1., m_zMaxBox = 1.;
+
+  // Viewing plane (FPROJ).
   // Default projection: x-y at z = 0.
   std::array<std::array<double, 3>, 3> m_proj = {{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 0}

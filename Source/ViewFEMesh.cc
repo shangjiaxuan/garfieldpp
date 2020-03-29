@@ -64,8 +64,6 @@ void ViewFEMesh::SetArea(double xmin, double ymin, double zmin, double xmax,
   IntersectPlaneArea();
 }
 
-void ViewFEMesh::SetArea() { m_userBox = false; }
-
 // The plotting functionality here is ported from Garfield
 //  with some inclusion of code from ViewCell.cc
 bool ViewFEMesh::Plot() {

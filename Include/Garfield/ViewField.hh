@@ -17,9 +17,9 @@ class ViewField : public ViewBase {
   /// Destructor.
   ~ViewField() = default;
 
-  /// Set the sensor from which to retrieve the field.
+  /// Set the sensor for which to plot the field.
   void SetSensor(Sensor* s);
-  /// Set the component from which to retrieve the field.
+  /// Set the component for which to plot the field.
   void SetComponent(ComponentBase* c);
 
   /// Set the plot limits for the potential.
@@ -28,12 +28,6 @@ class ViewField : public ViewBase {
   void SetElectricFieldRange(const double emin, const double emax);
   /// Set the plot limits for the weighting field.
   void SetWeightingFieldRange(const double wmin, const double wmax);
-
-  /// Set the viewing area (in local coordinates of the current viewing plane).
-  void SetArea(const double xmin, const double ymin, const double xmax,
-               const double ymax);
-  /// Set the viewing area based on the bounding box of the sensor/component.
-  void SetArea() { m_userPlotLimits = false; }
 
   /// Set the number of contour levels.
   void SetNumberOfContours(const unsigned int n);
@@ -106,7 +100,7 @@ class ViewField : public ViewBase {
   void DisableAcknowledgeStatus() { m_useStatus = false; }
 
  private:
-  enum class PlotType { Potential = 0, Magnitude, Ex, Ey, Ez, Unknown };
+  enum class Parameter { Potential = 0, Magnitude, Ex, Ey, Ez, Unknown };
 
   bool m_useAutoRange = true;
   bool m_useStatus = false;
@@ -115,11 +109,6 @@ class ViewField : public ViewBase {
   // Sensor
   Sensor* m_sensor = nullptr;
   ComponentBase* m_component = nullptr;
-
-  // Plot area
-  bool m_userPlotLimits = false;
-  double m_xMinPlot = -1., m_xMaxPlot = 1.;
-  double m_yMinPlot = -1., m_yMaxPlot = 1.;
 
   // Function range
   double m_vmin = 0., m_vmax = 100.;
@@ -142,11 +131,11 @@ class ViewField : public ViewBase {
                    const double x1, const double y1, const double z1,
                    const std::string& option, const bool wfield,
                    const std::string& electrode);
-  PlotType GetPlotType(const std::string& option, std::string& title) const;
+  Parameter GetPar(const std::string& option, std::string& title) const;
   double Field(const double x, const double y, const double z,
-               const PlotType plotType) const;
+               const Parameter par) const;
   double Wfield(const double x, const double y, const double z,
-                const PlotType plotType, const std::string& electrode) const;
+                const Parameter par, const std::string& electrode) const;
 
 };
 }

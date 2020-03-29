@@ -34,23 +34,6 @@ void ViewCell::SetComponent(ComponentNeBem2d* comp) {
   m_nebem = comp;
 }
 
-void ViewCell::SetArea(const double xmin, const double ymin, const double zmin,
-                       const double xmax, const double ymax,
-                       const double zmax) {
-  // Check range, assign if non-null
-  if (xmin == xmax || ymin == ymax || zmin == zmax) {
-    std::cerr << m_className << "::SetArea: Null area range not permitted.\n";
-    return;
-  }
-  m_xMinBox = std::min(xmin, xmax);
-  m_yMinBox = std::min(ymin, ymax);
-  m_zMinBox = std::min(zmin, zmax);
-  m_xMaxBox = std::max(xmin, xmax);
-  m_yMaxBox = std::max(ymin, ymax);
-  m_zMaxBox = std::max(zmin, zmax);
-  m_userBox = true;
-}
-
 void ViewCell::Plot2d() {
   if (!Plot(false)) {
     std::cerr << m_className << "::Plot2d: Error creating plot.\n";

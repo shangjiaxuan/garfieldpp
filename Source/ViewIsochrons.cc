@@ -154,22 +154,6 @@ void ViewIsochrons::SetComponent(ComponentBase* c) {
   m_sensor = nullptr;
 }
 
-void ViewIsochrons::SetArea(const double xmin, const double ymin, 
-                            const double xmax, const double ymax) {
-  // Check range, assign if non-null.
-  if (xmin == xmax || ymin == ymax) {
-    std::cerr << m_className << "::SetArea: Null area range is not permitted.\n"
-              << "      " << xmin << " < x < " << xmax << "\n"
-              << "      " << ymin << " < y < " << ymax << "\n";
-    return;
-  }
-  m_xMinPlot = std::min(xmin, xmax);
-  m_yMinPlot = std::min(ymin, ymax);
-  m_xMaxPlot = std::max(xmin, xmax);
-  m_yMaxPlot = std::max(ymin, ymax);
-  m_userPlotLimits = true;
-}
-
 void ViewIsochrons::SetAspectRatioSwitch(const double ar) {
 
   if (ar < 0.) {

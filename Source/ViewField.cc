@@ -67,22 +67,6 @@ void ViewField::SetComponent(ComponentBase* c) {
   m_sensor = nullptr;
 }
 
-void ViewField::SetArea(const double xmin, const double ymin, const double xmax,
-                        const double ymax) {
-  // Check range, assign if non-null.
-  if (xmin == xmax || ymin == ymax) {
-    std::cerr << m_className << "::SetArea: Null area range is not permitted.\n"
-              << "      " << xmin << " < x < " << xmax << "\n"
-              << "      " << ymin << " < y < " << ymax << "\n";
-    return;
-  }
-  m_xMinPlot = std::min(xmin, xmax);
-  m_yMinPlot = std::min(ymin, ymax);
-  m_xMaxPlot = std::max(xmin, xmax);
-  m_yMaxPlot = std::max(ymin, ymax);
-  m_userPlotLimits = true;
-}
-
 void ViewField::SetVoltageRange(const double vmin, const double vmax) {
   m_vmin = std::min(vmin, vmax);
   m_vmax = std::max(vmin, vmax);
@@ -149,8 +133,8 @@ void ViewField::PlotProfileWeightingField(const std::string& label,
 }
 
 
-ViewField::PlotType ViewField::GetPlotType(const std::string& option,
-                                           std::string& title) const {
+ViewField::Parameter ViewField::GetPar(const std::string& option,
+                                       std::string& title) const {
 
   std::string opt;
   std::transform(option.begin(), option.end(), 
@@ -159,25 +143,24 @@ ViewField::PlotType ViewField::GetPlotType(const std::string& option,
       opt.find("VOLT") != std::string::npos ||
       opt.find("POT") != std::string::npos) {
     title = "potential";
-    return PlotType::Potential;
+    return Parameter::Potential;
   } else if (opt == "E" || opt == "FIELD" || opt == "NORM" ||
              opt.find("MAG") != std::string::npos) {
     title = "field";
-    return PlotType::Magnitude;
+    return Parameter::Magnitude;
   } else if (opt.find("X") != std::string::npos) {
     title = "field (x-component)";
-    return PlotType::Ex;
+    return Parameter::Ex;
   } else if (opt.find("Y") != std::string::npos) {
     title = "field (y-component)";
-    return PlotType::Ey;
+    return Parameter::Ey;
   } else if (opt.find("Z") != std::string::npos) {
     title = "field (z-component)";
-    return PlotType::Ez;
+    return Parameter::Ez;
   }
-  std::cerr << m_className << "::GetPlotType:\n    Unknown option (" << option
-            << ").\n";
+  std::cerr << m_className << "::GetPar: Unknown option (" << option << ").\n";
   title = "potential";
-  return PlotType::Potential;
+  return Parameter::Potential;
 }
 
 void ViewField::Draw2d(const std::string& option, const bool contour, 
@@ -194,14 +177,14 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
 
   // Determine the quantity to be plotted.
   std::string title;
-  const PlotType plotType = GetPlotType(option, title);
+  const Parameter par = GetPar(option, title);
 
-  auto eval = [this, plotType, wfield, electrode](double* u, double* /*p*/) {
+  auto eval = [this, par, wfield, electrode](double* u, double* /*p*/) {
     // Transform to global coordinates.
     const double x = m_proj[0][0] * u[0] + m_proj[1][0] * u[1] + m_proj[2][0];
     const double y = m_proj[0][1] * u[0] + m_proj[1][1] * u[1] + m_proj[2][1];
     const double z = m_proj[0][2] * u[0] + m_proj[1][2] * u[1] + m_proj[2][2];
-    return wfield ? Wfield(x, y, z, plotType, electrode) : Field(x, y, z, plotType);
+    return wfield ? Wfield(x, y, z, par, electrode) : Field(x, y, z, par);
   };
   const std::string fname = FindUnusedFunctionName("f2D");
   TF2 f2(fname.c_str(), eval, m_xMinPlot, m_xMaxPlot, m_yMinPlot, m_yMaxPlot, 0);
@@ -221,7 +204,7 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
     if (m_useAutoRange) {
       SampleRange(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot, &f2, 
                   zmin, zmax);
-    } else if (plotType == PlotType::Potential) {
+    } else if (par == Parameter::Potential) {
       zmin = 0.;
       zmax = 1.;
     } else {
@@ -234,7 +217,7 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
     } else {
       title = "Electric " + title;
     }
-    if (plotType == PlotType::Potential) {
+    if (par == Parameter::Potential) {
       if (m_useAutoRange) {
         if (m_component) {
           if (!m_component->GetVoltageRange(zmin, zmax)) {
@@ -323,16 +306,16 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
 
   // Determine the quantity to be plotted.
   std::string title;
-  const PlotType plotType = GetPlotType(option, title);
+  const Parameter par = GetPar(option, title);
 
-  auto eval = [this, plotType, wfield, electrode, 
+  auto eval = [this, par, wfield, electrode, 
                x0, y0, z0, dx, dy, dz](double* u, double* /*p*/) {
     // Get the position.
     const double t = u[0];
     const double x = x0 + t * dx;
     const double y = y0 + t * dy;
     const double z = z0 + t * dz;
-    return wfield ? Wfield(x, y, z, plotType, electrode) : Field(x, y, z, plotType);
+    return wfield ? Wfield(x, y, z, par, electrode) : Field(x, y, z, par);
   };
 
   const std::string fname = FindUnusedFunctionName("fProfile");
@@ -342,7 +325,7 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
   double fmax = m_vmax;
   if (wfield) {
     title = "weighting " + title;
-    if (plotType == PlotType::Potential) {
+    if (par == Parameter::Potential) {
       fmin = 0.;
       fmax = 1.;
     } else {
@@ -355,7 +338,7 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
     }
   } else {
     title = "electric " + title;
-    if (plotType == PlotType::Potential) {
+    if (par == Parameter::Potential) {
       if (m_useAutoRange) {
         if (m_component) {
           if (!m_component->GetVoltageRange(fmin, fmax)) {
@@ -383,7 +366,7 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
   f1.SetMaximum(fmax);
 
   std::string labels = ";normalised distance;";
-  if (plotType == PlotType::Potential) {
+  if (par == Parameter::Potential) {
     labels += "#phi";
     if (wfield) {
       labels += "_w";
@@ -394,18 +377,18 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
     labels += "#it{E}";
     if (wfield) {
       labels += "_{w";
-      if (plotType != PlotType::Magnitude) labels += ",";
-    } else if (plotType != PlotType::Magnitude) {
+      if (par != Parameter::Magnitude) labels += ",";
+    } else if (par != Parameter::Magnitude) {
       labels += "_{";
     }
-    if (plotType == PlotType::Ex) {
+    if (par == Parameter::Ex) {
       labels += "x";
-    } else if (plotType == PlotType::Ey) {
+    } else if (par == Parameter::Ey) {
       labels += "y";
-    } else if (plotType == PlotType::Ez) {
+    } else if (par == Parameter::Ez) {
       labels += "z";
     }
-    if (wfield || plotType != PlotType::Magnitude) labels += "}";
+    if (wfield || par != Parameter::Magnitude) labels += "}";
     if (wfield) {
       labels += " [1/cm]";
     } else {
@@ -475,7 +458,7 @@ bool ViewField::Range() {
 }
 
 double ViewField::Field(const double x, const double y, const double z,
-                        const PlotType plotType) const {
+                        const Parameter par) const {
 
   // Compute the field.
   double ex = 0., ey = 0., ez = 0., volt = 0.;
@@ -487,20 +470,20 @@ double ViewField::Field(const double x, const double y, const double z,
     m_sensor->ElectricField(x, y, z, ex, ey, ez, volt, medium, status);
   }
   if (m_useStatus && status != 0) return m_vBkg;
-  switch (plotType) {
-    case PlotType::Potential:
+  switch (par) {
+    case Parameter::Potential:
       return volt;
       break;
-    case PlotType::Magnitude:
+    case Parameter::Magnitude:
       return sqrt(ex * ex + ey * ey + ez * ez);
       break;
-    case PlotType::Ex:
+    case Parameter::Ex:
       return ex;
       break;
-    case PlotType::Ey:
+    case Parameter::Ey:
       return ey;
       break;
-    case PlotType::Ez:
+    case Parameter::Ez:
       return ez;
       break;
     default:
@@ -510,10 +493,10 @@ double ViewField::Field(const double x, const double y, const double z,
 }
 
 double ViewField::Wfield(const double x, const double y, const double z,
-                         const PlotType plotType, 
+                         const Parameter par, 
                          const std::string& electrode) const {
 
-  if (plotType == PlotType::Potential) {
+  if (par == Parameter::Potential) {
     if (m_sensor) {
       return m_sensor->WeightingPotential(x, y, z, electrode);
     } else {
@@ -528,17 +511,17 @@ double ViewField::Wfield(const double x, const double y, const double z,
     m_sensor->WeightingField(x, y, z, ex, ey, ez, electrode);
   }
 
-  switch (plotType) {
-    case PlotType::Magnitude:
+  switch (par) {
+    case Parameter::Magnitude:
       return sqrt(ex * ex + ey * ey + ez * ez);
       break;
-    case PlotType::Ex:
+    case Parameter::Ex:
       return ex;
       break;
-    case PlotType::Ey:
+    case Parameter::Ey:
       return ey;
       break;
-    case PlotType::Ez:
+    case Parameter::Ez:
       return ez;
       break;
     default:

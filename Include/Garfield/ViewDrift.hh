@@ -22,9 +22,6 @@ class ViewDrift : public ViewBase {
   /// Destructor.
   ~ViewDrift();
 
-  /// Set the region to be plotted.
-  void SetArea(const double xmin, const double ymin, const double zmin,
-               const double xmax, const double ymax, const double zmax);
   /// Delete existing drift lines, tracks and markers.
   void Clear();
 
@@ -64,11 +61,6 @@ class ViewDrift : public ViewBase {
   friend class ViewFEMesh;
 
  private:
-
-  // Box dimensions
-  double m_xMinBox = -1., m_xMaxBox = 1.;
-  double m_yMinBox = -1., m_yMaxBox = 1.; 
-  double m_zMinBox = -1., m_zMaxBox = 1.;
 
   // View
   std::unique_ptr<TView> m_view;

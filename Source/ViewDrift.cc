@@ -24,22 +24,6 @@ ViewDrift::~ViewDrift() {
   Clear();
 }
 
-void ViewDrift::SetArea(const double xmin, const double ymin, const double zmin,
-                        const double xmax, const double ymax,
-                        const double zmax) {
-  // Check range, assign if non-null
-  if (xmin == xmax || ymin == ymax || zmin == zmax) {
-    std::cerr << m_className << "::SetArea: Null area range not permitted.\n";
-    return;
-  }
-  m_xMinBox = std::min(xmin, xmax);
-  m_yMinBox = std::min(ymin, ymax);
-  m_zMinBox = std::min(zmin, zmax);
-  m_xMaxBox = std::max(xmin, xmax);
-  m_yMaxBox = std::max(ymin, ymax);
-  m_zMaxBox = std::max(zmin, zmax);
-}
-
 void ViewDrift::Clear() {
   m_driftLines.clear();
   m_tracks.clear();

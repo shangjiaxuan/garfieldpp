@@ -27,12 +27,6 @@ class ViewCell : public ViewBase {
   void SetComponent(ComponentAnalyticField* comp);
   void SetComponent(ComponentNeBem2d* comp);
 
-  /// Set the plot range explicitly.
-  void SetArea(const double xmin, const double ymin, const double zmin,
-               const double xmax, const double ymax, const double zmax);
-  ///  Take the plot range from the bounding box of the component class.
-  void SetArea() { m_userBox = false; }
-
   /// Make a two-dimensional drawing of the cell geometry.
   void Plot2d();
   /// Make a three-dimensional drawing of the cell geometry (using TGeo).
@@ -46,11 +40,6 @@ class ViewCell : public ViewBase {
  private:
   // Options
   bool m_useWireMarker = true;
-
-  // Box dimensions
-  bool m_userBox = false;
-  double m_xMinBox = -1., m_yMinBox = -1., m_zMinBox = -1.;
-  double m_xMaxBox =  1., m_yMaxBox =  1., m_zMaxBox =  1.;
 
   ComponentAnalyticField* m_component = nullptr;
   ComponentNeBem2d* m_nebem = nullptr;

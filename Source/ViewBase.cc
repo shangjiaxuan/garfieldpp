@@ -36,6 +36,39 @@ TCanvas* ViewBase::GetCanvas() {
   return m_canvas;
 }
 
+void ViewBase::SetArea(const double xmin, const double ymin, 
+                       const double xmax, const double ymax) {
+  // Check range, assign if non-null.
+  if (xmin == xmax || ymin == ymax) {
+    std::cerr << m_className << "::SetArea: Null area is not permitted.\n"
+              << "      " << xmin << " < x < " << xmax << "\n"
+              << "      " << ymin << " < y < " << ymax << "\n";
+    return;
+  }
+  m_xMinPlot = std::min(xmin, xmax);
+  m_yMinPlot = std::min(ymin, ymax);
+  m_xMaxPlot = std::max(xmin, xmax);
+  m_yMaxPlot = std::max(ymin, ymax);
+  m_userPlotLimits = true;
+}
+
+void ViewBase::SetArea(const double xmin, const double ymin, const double zmin,
+                       const double xmax, const double ymax,
+                       const double zmax) {
+  // Check range, assign if non-null
+  if (xmin == xmax || ymin == ymax || zmin == zmax) {
+    std::cerr << m_className << "::SetArea: Null area range not permitted.\n";
+    return;
+  }
+  m_xMinBox = std::min(xmin, xmax);
+  m_yMinBox = std::min(ymin, ymax);
+  m_zMinBox = std::min(zmin, zmax);
+  m_xMaxBox = std::max(xmin, xmax);
+  m_yMaxBox = std::max(ymin, ymax);
+  m_zMaxBox = std::max(zmin, zmax);
+  m_userBox = true;
+}
+
 void ViewBase::SetPlane(const double fx, const double fy, const double fz,
                         const double x0, const double y0, const double z0) {
   // Calculate two in-plane vectors for the normal vector
