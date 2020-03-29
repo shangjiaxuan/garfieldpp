@@ -85,8 +85,6 @@ class ViewIsochrons : public ViewBase {
   ComponentBase* m_component = nullptr;
 
   // Projection for viewing
-  double m_proj[3][3];
-  double m_plane[4];
   char m_xLabel[50], m_yLabel[50], m_description[50];
 
   // Plot area

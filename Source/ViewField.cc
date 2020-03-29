@@ -153,15 +153,15 @@ void ViewField::PlotProfileWeightingField(const std::string& label,
 
 void ViewField::SetDefaultProjection() {
   // Default projection: x-y at z=0
-  m_project[0][0] = 1;
-  m_project[1][0] = 0;
-  m_project[2][0] = 0;
-  m_project[0][1] = 0;
-  m_project[1][1] = 1;
-  m_project[2][1] = 0;
-  m_project[0][2] = 0;
-  m_project[1][2] = 0;
-  m_project[2][2] = 0;
+  m_proj[0][0] = 1;
+  m_proj[1][0] = 0;
+  m_proj[2][0] = 0;
+  m_proj[0][1] = 0;
+  m_proj[1][1] = 1;
+  m_proj[2][1] = 0;
+  m_proj[0][2] = 0;
+  m_proj[1][2] = 0;
+  m_proj[2][2] = 0;
 
   // Plane description
   m_plane[0] = 0;
@@ -180,68 +180,68 @@ void ViewField::Labels() {
 
   const double tol = 1.e-4;
   // x portion
-  if (fabs(m_project[0][0] - 1) < tol) {
+  if (fabs(m_proj[0][0] - 1) < tol) {
     strcat(m_xLabel, "x");
-  } else if (fabs(m_project[0][0] + 1) < tol) {
+  } else if (fabs(m_proj[0][0] + 1) < tol) {
     strcat(m_xLabel, "-x");
-  } else if (m_project[0][0] > tol) {
-    sprintf(buf, "%g x", m_project[0][0]);
+  } else if (m_proj[0][0] > tol) {
+    sprintf(buf, "%g x", m_proj[0][0]);
     strcat(m_xLabel, buf);
-  } else if (m_project[0][0] < -tol) {
-    sprintf(buf, "%g x", m_project[0][0]);
+  } else if (m_proj[0][0] < -tol) {
+    sprintf(buf, "%g x", m_proj[0][0]);
     strcat(m_xLabel, buf);
   }
 
   // y portion
   if (strlen(m_xLabel) > 0) {
-    if (m_project[0][1] < -tol) {
+    if (m_proj[0][1] < -tol) {
       strcat(m_xLabel, " - ");
-    } else if (m_project[0][1] > tol) {
+    } else if (m_proj[0][1] > tol) {
       strcat(m_xLabel, " + ");
     }
-    if (fabs(m_project[0][1] - 1) < tol || fabs(m_project[0][1] + 1) < tol) {
+    if (fabs(m_proj[0][1] - 1) < tol || fabs(m_proj[0][1] + 1) < tol) {
       strcat(m_xLabel, "y");
-    } else if (fabs(m_project[0][1]) > tol) {
-      sprintf(buf, "%g y", fabs(m_project[0][1]));
+    } else if (fabs(m_proj[0][1]) > tol) {
+      sprintf(buf, "%g y", fabs(m_proj[0][1]));
       strcat(m_xLabel, buf);
     }
   } else {
-    if (fabs(m_project[0][1] - 1) < tol) {
+    if (fabs(m_proj[0][1] - 1) < tol) {
       strcat(m_xLabel, "y");
-    } else if (fabs(m_project[0][1] + 1) < tol) {
+    } else if (fabs(m_proj[0][1] + 1) < tol) {
       strcat(m_xLabel, "-y");
-    } else if (m_project[0][1] > tol) {
-      sprintf(buf, "%g y", m_project[0][1]);
+    } else if (m_proj[0][1] > tol) {
+      sprintf(buf, "%g y", m_proj[0][1]);
       strcat(m_xLabel, buf);
-    } else if (m_project[0][1] < -tol) {
-      sprintf(buf, "%g y", m_project[0][1]);
+    } else if (m_proj[0][1] < -tol) {
+      sprintf(buf, "%g y", m_proj[0][1]);
       strcat(m_xLabel, buf);
     }
   }
 
   // z portion
   if (strlen(m_xLabel) > 0) {
-    if (m_project[0][2] < -tol) {
+    if (m_proj[0][2] < -tol) {
       strcat(m_xLabel, " - ");
-    } else if (m_project[0][2] > tol) {
+    } else if (m_proj[0][2] > tol) {
       strcat(m_xLabel, " + ");
     }
-    if (fabs(m_project[0][2] - 1) < tol || fabs(m_project[0][2] + 1) < tol) {
+    if (fabs(m_proj[0][2] - 1) < tol || fabs(m_proj[0][2] + 1) < tol) {
       strcat(m_xLabel, "z");
-    } else if (fabs(m_project[0][2]) > tol) {
-      sprintf(buf, "%g z", fabs(m_project[0][2]));
+    } else if (fabs(m_proj[0][2]) > tol) {
+      sprintf(buf, "%g z", fabs(m_proj[0][2]));
       strcat(m_xLabel, buf);
     }
   } else {
-    if (fabs(m_project[0][2] - 1) < tol) {
+    if (fabs(m_proj[0][2] - 1) < tol) {
       strcat(m_xLabel, "z");
-    } else if (fabs(m_project[0][2] + 1) < tol) {
+    } else if (fabs(m_proj[0][2] + 1) < tol) {
       strcat(m_xLabel, "-z");
-    } else if (m_project[0][2] > tol) {
-      sprintf(buf, "%g z", m_project[0][2]);
+    } else if (m_proj[0][2] > tol) {
+      sprintf(buf, "%g z", m_proj[0][2]);
       strcat(m_xLabel, buf);
-    } else if (m_project[0][2] < -tol) {
-      sprintf(buf, "%g z", m_project[0][2]);
+    } else if (m_proj[0][2] < -tol) {
+      sprintf(buf, "%g z", m_proj[0][2]);
       strcat(m_xLabel, buf);
     }
   }
@@ -253,68 +253,68 @@ void ViewField::Labels() {
   strcpy(m_yLabel, "\0");
 
   // x portion
-  if (fabs(m_project[1][0] - 1) < tol) {
+  if (fabs(m_proj[1][0] - 1) < tol) {
     strcat(m_yLabel, "x");
-  } else if (fabs(m_project[1][0] + 1) < tol) {
+  } else if (fabs(m_proj[1][0] + 1) < tol) {
     strcat(m_yLabel, "-x");
-  } else if (m_project[1][0] > tol) {
-    sprintf(buf, "%g x", m_project[1][0]);
+  } else if (m_proj[1][0] > tol) {
+    sprintf(buf, "%g x", m_proj[1][0]);
     strcat(m_yLabel, buf);
-  } else if (m_project[1][0] < -tol) {
-    sprintf(buf, "%g x", m_project[1][0]);
+  } else if (m_proj[1][0] < -tol) {
+    sprintf(buf, "%g x", m_proj[1][0]);
     strcat(m_yLabel, buf);
   }
 
   // y portion
   if (strlen(m_yLabel) > 0) {
-    if (m_project[1][1] < -tol) {
+    if (m_proj[1][1] < -tol) {
       strcat(m_yLabel, " - ");
-    } else if (m_project[1][1] > tol) {
+    } else if (m_proj[1][1] > tol) {
       strcat(m_yLabel, " + ");
     }
-    if (fabs(m_project[1][1] - 1) < tol || fabs(m_project[1][1] + 1) < tol) {
+    if (fabs(m_proj[1][1] - 1) < tol || fabs(m_proj[1][1] + 1) < tol) {
       strcat(m_yLabel, "y");
-    } else if (fabs(m_project[1][1]) > tol) {
-      sprintf(buf, "%g y", fabs(m_project[1][1]));
+    } else if (fabs(m_proj[1][1]) > tol) {
+      sprintf(buf, "%g y", fabs(m_proj[1][1]));
       strcat(m_yLabel, buf);
     }
   } else {
-    if (fabs(m_project[1][1] - 1) < tol) {
+    if (fabs(m_proj[1][1] - 1) < tol) {
       strcat(m_yLabel, "y");
-    } else if (fabs(m_project[1][1] + 1) < tol) {
+    } else if (fabs(m_proj[1][1] + 1) < tol) {
       strcat(m_yLabel, "-y");
-    } else if (m_project[1][1] > tol) {
-      sprintf(buf, "%g y", m_project[1][1]);
+    } else if (m_proj[1][1] > tol) {
+      sprintf(buf, "%g y", m_proj[1][1]);
       strcat(m_yLabel, buf);
-    } else if (m_project[1][1] < -tol) {
-      sprintf(buf, "%g y", m_project[1][1]);
+    } else if (m_proj[1][1] < -tol) {
+      sprintf(buf, "%g y", m_proj[1][1]);
       strcat(m_yLabel, buf);
     }
   }
 
   // z portion
   if (strlen(m_yLabel) > 0) {
-    if (m_project[1][2] < -tol) {
+    if (m_proj[1][2] < -tol) {
       strcat(m_yLabel, " - ");
-    } else if (m_project[1][2] > tol) {
+    } else if (m_proj[1][2] > tol) {
       strcat(m_yLabel, " + ");
     }
-    if (fabs(m_project[1][2] - 1) < tol || fabs(m_project[1][2] + 1) < tol) {
+    if (fabs(m_proj[1][2] - 1) < tol || fabs(m_proj[1][2] + 1) < tol) {
       strcat(m_yLabel, "z");
-    } else if (fabs(m_project[1][2]) > tol) {
-      sprintf(buf, "%g z", fabs(m_project[1][2]));
+    } else if (fabs(m_proj[1][2]) > tol) {
+      sprintf(buf, "%g z", fabs(m_proj[1][2]));
       strcat(m_yLabel, buf);
     }
   } else {
-    if (fabs(m_project[1][2] - 1) < tol) {
+    if (fabs(m_proj[1][2] - 1) < tol) {
       strcat(m_yLabel, "z");
-    } else if (fabs(m_project[1][2] + 1) < tol) {
+    } else if (fabs(m_proj[1][2] + 1) < tol) {
       strcat(m_yLabel, "-z");
-    } else if (m_project[1][2] > tol) {
-      sprintf(buf, "%g z", m_project[1][2]);
+    } else if (m_proj[1][2] > tol) {
+      sprintf(buf, "%g z", m_proj[1][2]);
       strcat(m_yLabel, buf);
-    } else if (m_project[1][2] < -tol) {
-      sprintf(buf, "%g z", m_project[1][2]);
+    } else if (m_proj[1][2] < -tol) {
+      sprintf(buf, "%g z", m_proj[1][2]);
       strcat(m_yLabel, buf);
     }
   }
@@ -410,26 +410,26 @@ void ViewField::SetPlane(const double fx, const double fy, const double fz,
   const double fnorm = sqrt(fx * fx + fy * fy + fz * fz);
   if (fnorm > 0 && fx * fx + fz * fz > 0) {
     const double fxz = sqrt(fx * fx + fz * fz);
-    m_project[0][0] = fz / fxz;
-    m_project[0][1] = 0;
-    m_project[0][2] = -fx / fxz;
-    m_project[1][0] = -fx * fy / (fxz * fnorm);
-    m_project[1][1] = (fx * fx + fz * fz) / (fxz * fnorm);
-    m_project[1][2] = -fy * fz / (fxz * fnorm);
-    m_project[2][0] = x0;
-    m_project[2][1] = y0;
-    m_project[2][2] = z0;
+    m_proj[0][0] = fz / fxz;
+    m_proj[0][1] = 0;
+    m_proj[0][2] = -fx / fxz;
+    m_proj[1][0] = -fx * fy / (fxz * fnorm);
+    m_proj[1][1] = (fx * fx + fz * fz) / (fxz * fnorm);
+    m_proj[1][2] = -fy * fz / (fxz * fnorm);
+    m_proj[2][0] = x0;
+    m_proj[2][1] = y0;
+    m_proj[2][2] = z0;
   } else if (fnorm > 0 && fy * fy + fz * fz > 0) {
     const double fyz = sqrt(fy * fy + fz * fz);
-    m_project[0][0] = (fy * fy + fz * fz) / (fyz * fnorm);
-    m_project[0][1] = -fx * fz / (fyz * fnorm);
-    m_project[0][2] = -fy * fz / (fyz * fnorm);
-    m_project[1][0] = 0;
-    m_project[1][1] = fz / fyz;
-    m_project[1][2] = -fy / fyz;
-    m_project[2][0] = x0;
-    m_project[2][1] = y0;
-    m_project[2][2] = z0;
+    m_proj[0][0] = (fy * fy + fz * fz) / (fyz * fnorm);
+    m_proj[0][1] = -fx * fz / (fyz * fnorm);
+    m_proj[0][2] = -fy * fz / (fyz * fnorm);
+    m_proj[1][0] = 0;
+    m_proj[1][1] = fz / fyz;
+    m_proj[1][2] = -fy / fyz;
+    m_proj[2][0] = x0;
+    m_proj[2][1] = y0;
+    m_proj[2][2] = z0;
   } else {
     std::cout << m_className << "::SetPlane:\n"
               << "    Normal vector has zero norm. No new projection set.\n";
@@ -451,12 +451,12 @@ void ViewField::Rotate(const double theta) {
   const double ctheta = cos(theta);
   const double stheta = sin(theta);
   for (int i = 0; i < 3; ++i) {
-    auxu[i] = ctheta * m_project[0][i] - stheta * m_project[1][i];
-    auxv[i] = stheta * m_project[0][i] + ctheta * m_project[1][i];
+    auxu[i] = ctheta * m_proj[0][i] - stheta * m_proj[1][i];
+    auxv[i] = stheta * m_proj[0][i] + ctheta * m_proj[1][i];
   }
   for (int i = 0; i < 3; ++i) {
-    m_project[0][i] = auxu[i];
-    m_project[1][i] = auxv[i];
+    m_proj[0][i] = auxu[i];
+    m_proj[1][i] = auxv[i];
   }
 
   // Make labels to be placed along the axes
@@ -512,9 +512,9 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
 
   auto eval = [this, plotType, wfield, electrode](double* u, double* /*p*/) {
     // Transform to global coordinates.
-    const double x = m_project[0][0] * u[0] + m_project[1][0] * u[1] + m_project[2][0];
-    const double y = m_project[0][1] * u[0] + m_project[1][1] * u[1] + m_project[2][1];
-    const double z = m_project[0][2] * u[0] + m_project[1][2] * u[1] + m_project[2][2];
+    const double x = m_proj[0][0] * u[0] + m_proj[1][0] * u[1] + m_proj[2][0];
+    const double y = m_proj[0][1] * u[0] + m_proj[1][1] * u[1] + m_proj[2][1];
+    const double z = m_proj[0][2] * u[0] + m_proj[1][2] * u[1] + m_proj[2][2];
     return wfield ? Wfield(x, y, z, plotType, electrode) : Field(x, y, z, plotType);
   };
   const std::string fname = FindUnusedFunctionName("f2D");
@@ -767,12 +767,12 @@ bool ViewField::Range() {
   double umax[2] = {std::numeric_limits<double>::max(),
                     std::numeric_limits<double>::max()};
   for (unsigned int i = 0; i < 3; ++i) {
-    bbmin[i] -= m_project[2][i];
-    bbmax[i] -= m_project[2][i];
+    bbmin[i] -= m_proj[2][i];
+    bbmax[i] -= m_proj[2][i];
     for (unsigned int j = 0; j < 2; ++j) {
-      if (fabs(m_project[j][i]) < tol) continue;
-      const double t1 = bbmin[i] / m_project[j][i];
-      const double t2 = bbmax[i] / m_project[j][i];
+      if (fabs(m_proj[j][i]) < tol) continue;
+      const double t1 = bbmin[i] / m_proj[j][i];
+      const double t2 = bbmax[i] / m_proj[j][i];
       const double tmin = std::min(t1, t2);
       const double tmax = std::max(t1, t2);
       if (tmin > umin[j] && tmin < umax[j]) umin[j] = tmin;

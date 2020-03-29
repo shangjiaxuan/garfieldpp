@@ -95,10 +95,6 @@ class ViewFEMesh : public ViewBase {
   // Options
   bool m_fillMesh = false;
 
-  // Viewing plane (plane normal is stored in m_proj[2])
-  double m_proj[3][3];
-  double m_dist;
-
   // Box dimensions
   bool m_userBox = false;
   double m_xMinBox = -1., m_xMaxBox = 1.;

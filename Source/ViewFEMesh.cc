@@ -24,15 +24,15 @@ ViewFEMesh::ViewFEMesh() : ViewBase("ViewFEMesh") {
 
 void ViewFEMesh::SetDefaultProjection() {
   // Default projection: x-y at z=0
-  m_proj[0][0] = 1;
-  m_proj[0][1] = 0;
-  m_proj[0][2] = 0;
-  m_proj[1][0] = 0;
-  m_proj[1][1] = 1;
-  m_proj[1][2] = 0;
-  m_proj[2][0] = 0;
-  m_proj[2][1] = 0;
-  m_proj[2][2] = 1;
+  m_pmat[0][0] = 1;
+  m_pmat[0][1] = 0;
+  m_pmat[0][2] = 0;
+  m_pmat[1][0] = 0;
+  m_pmat[1][1] = 1;
+  m_pmat[1][2] = 0;
+  m_pmat[2][0] = 0;
+  m_pmat[2][1] = 0;
+  m_pmat[2][2] = 1;
   // Plane distance to (0,0,0)
   m_dist = 0;
 }
@@ -136,9 +136,9 @@ void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
   }
   double dist = (fx * x0 + fy * y0 + fz * z0) / fnorm;
   // Store the plane description
-  m_proj[2][0] = fx / fnorm;
-  m_proj[2][1] = fy / fnorm;
-  m_proj[2][2] = fz / fnorm;
+  m_pmat[2][0] = fx / fnorm;
+  m_pmat[2][1] = fy / fnorm;
+  m_pmat[2][2] = fz / fnorm;
   m_dist = dist;
 
   double xx = hx, xy = hy, xz = hz;
@@ -160,13 +160,13 @@ void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
     PlaneVector(xx, xy, xz);
     vecx_norm = std::sqrt(xx * xx + xy * xy + xz * xz);
   }
-  m_proj[0][0] = xx / vecx_norm;
-  m_proj[0][1] = xy / vecx_norm;
-  m_proj[0][2] = xz / vecx_norm;
-  // in-plane y === m_proj[1] = cross product [z,x];
-  m_proj[1][0] = m_proj[2][1] * m_proj[0][2] - m_proj[2][2] * m_proj[0][1];
-  m_proj[1][1] = m_proj[2][2] * m_proj[0][0] - m_proj[2][0] * m_proj[0][2];
-  m_proj[1][2] = m_proj[2][0] * m_proj[0][1] - m_proj[2][1] * m_proj[0][0];
+  m_pmat[0][0] = xx / vecx_norm;
+  m_pmat[0][1] = xy / vecx_norm;
+  m_pmat[0][2] = xz / vecx_norm;
+  // in-plane y === m_pmat[1] = cross product [z,x];
+  m_pmat[1][0] = m_pmat[2][1] * m_pmat[0][2] - m_pmat[2][2] * m_pmat[0][1];
+  m_pmat[1][1] = m_pmat[2][2] * m_pmat[0][0] - m_pmat[2][0] * m_pmat[0][2];
+  m_pmat[1][2] = m_pmat[2][0] * m_pmat[0][1] - m_pmat[2][1] * m_pmat[0][0];
 
   IntersectPlaneArea();
 }
@@ -205,10 +205,10 @@ void ViewFEMesh::CreateDefaultAxes() {
 
   // Titles
   m_xaxis->SetTitleSize(0.03);
-  std::string name = CreateAxisTitle(m_proj[0]);
+  std::string name = CreateAxisTitle(m_pmat[0]);
   m_xaxis->SetTitle(name.c_str());
   m_yaxis->SetTitleSize(0.03);
-  name = CreateAxisTitle(m_proj[1]);
+  name = CreateAxisTitle(m_pmat[1]);
   m_yaxis->SetTitle(name.c_str());
 }
 
@@ -273,15 +273,15 @@ void ViewFEMesh::DrawElements() {
   // Prepare the final projection matrix (the transpose of the 2D array
   // "project").
   TArrayD dataProj(9);
-  dataProj[0] = m_proj[0][0];
-  dataProj[1] = m_proj[1][0];
-  dataProj[2] = m_proj[2][0];
-  dataProj[3] = m_proj[0][1];
-  dataProj[4] = m_proj[1][1];
-  dataProj[5] = m_proj[2][1];
-  dataProj[6] = m_proj[0][2];
-  dataProj[7] = m_proj[1][2];
-  dataProj[8] = m_proj[2][2];
+  dataProj[0] = m_pmat[0][0];
+  dataProj[1] = m_pmat[1][0];
+  dataProj[2] = m_pmat[2][0];
+  dataProj[3] = m_pmat[0][1];
+  dataProj[4] = m_pmat[1][1];
+  dataProj[5] = m_pmat[2][1];
+  dataProj[6] = m_pmat[0][2];
+  dataProj[7] = m_pmat[1][2];
+  dataProj[8] = m_pmat[2][2];
   TMatrixD projMat(3, 3, dataProj.GetArray());
 
   // Calculate the determinant of the projection matrix.
@@ -304,9 +304,9 @@ void ViewFEMesh::DrawElements() {
   }
 
   // Get the plane information.
-  double fx = m_proj[2][0];
-  double fy = m_proj[2][1];
-  double fz = m_proj[2][2];
+  double fx = m_pmat[2][0];
+  double fy = m_pmat[2][1];
+  double fz = m_pmat[2][2];
   double dist = m_dist;
 
   // Construct two empty single-column matrices for use as coordinate vectors.
@@ -546,10 +546,10 @@ void ViewFEMesh::DrawElements() {
 
   // Draw default axes by using a blank 2D histogram.
   if (!m_xaxis && !m_yaxis && m_drawAxes) {
-    std::string name = CreateAxisTitle(m_proj[0]);
+    std::string name = CreateAxisTitle(m_pmat[0]);
     m_axes->GetXaxis()->SetTitle(name.c_str());
     m_axes->GetXaxis()->SetLimits(m_xMinPlot, m_xMaxPlot);
-    name = CreateAxisTitle(m_proj[1]);
+    name = CreateAxisTitle(m_pmat[1]);
     m_axes->GetYaxis()->SetTitle(name.c_str());
     m_axes->GetYaxis()->SetTitleOffset(1.6);
     m_axes->GetYaxis()->SetLimits(m_yMinPlot, m_yMaxPlot);
@@ -610,15 +610,15 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   // Prepare the final projection matrix (the transpose of the 2D array
   // "project")
   TArrayD dataProj(9);
-  dataProj[0] = m_proj[0][0];
-  dataProj[1] = m_proj[1][0];
-  dataProj[2] = m_proj[2][0];
-  dataProj[3] = m_proj[0][1];
-  dataProj[4] = m_proj[1][1];
-  dataProj[5] = m_proj[2][1];
-  dataProj[6] = m_proj[0][2];
-  dataProj[7] = m_proj[1][2];
-  dataProj[8] = m_proj[2][2];
+  dataProj[0] = m_pmat[0][0];
+  dataProj[1] = m_pmat[1][0];
+  dataProj[2] = m_pmat[2][0];
+  dataProj[3] = m_pmat[0][1];
+  dataProj[4] = m_pmat[1][1];
+  dataProj[5] = m_pmat[2][1];
+  dataProj[6] = m_pmat[0][2];
+  dataProj[7] = m_pmat[1][2];
+  dataProj[8] = m_pmat[2][2];
   TMatrixD projMat(3, 3, dataProj.GetArray());
 
   // Calculate the determinant of the projection matrix
@@ -662,19 +662,19 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   componentCST->GetNumberOfMeshLines(n_x, n_y, n_z);
   double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
   // xy view
-  if (m_proj[2][0] == 0 && m_proj[2][1] == 0 && m_proj[2][2] == 1) {
+  if (m_pmat[2][0] == 0 && m_pmat[2][1] == 0 && m_pmat[2][2] == 1) {
     std::cout << m_className << "::DrawCST: Creating x-y mesh view.\n";
     ViewFEMesh::SetXaxisTitle("x [cm]");
     ViewFEMesh::SetYaxisTitle("y [cm]");
     // calculate the z position
     unsigned int i, j, z;
-    if (!componentCST->Coordinate2Index(0, 0, m_dist * m_proj[2][2], i, j, z)) {
+    if (!componentCST->Coordinate2Index(0, 0, m_dist * m_pmat[2][2], i, j, z)) {
       std::cerr << "    Could not determine the position of the plane in "
                 << "z direction.\n";
       return;
     }
     std::cout << "    The plane position in z direction is: "
-              << m_dist * m_proj[2][2] << "\n";
+              << m_dist * m_pmat[2][2] << "\n";
     nMinU = nMinX;
     nMaxU = nMaxX;
     nMinV = nMinY;
@@ -712,19 +712,19 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
       }
     }
     // xz-view
-  } else if (m_proj[2][0] == 0 && m_proj[2][1] == -1 && m_proj[2][2] == 0) {
+  } else if (m_pmat[2][0] == 0 && m_pmat[2][1] == -1 && m_pmat[2][2] == 0) {
     std::cout << m_className << "::DrawCST: Creating x-z mesh view.\n";
     ViewFEMesh::SetXaxisTitle("x [cm]");
     ViewFEMesh::SetYaxisTitle("z [cm]");
     // calculate the y position
     unsigned int i = 0, j = 0, y = 0;
-    if (!componentCST->Coordinate2Index(0, m_dist * m_proj[2][1], 0, i, y, j)) {
+    if (!componentCST->Coordinate2Index(0, m_dist * m_pmat[2][1], 0, i, y, j)) {
       std::cerr << "    Could not determine the position of the plane in "
                 << "y direction.\n";
       return;
     }
     std::cout << "    The plane position in y direction is: "
-              << m_dist * m_proj[2][1] << "\n";
+              << m_dist * m_pmat[2][1] << "\n";
 
     nMinU = nMinX;
     nMaxU = nMaxX;
@@ -764,20 +764,20 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     }
 
     // yz-view
-  } else if (m_proj[2][0] == -1 && m_proj[2][1] == 0 && m_proj[2][2] == 0) {
+  } else if (m_pmat[2][0] == -1 && m_pmat[2][1] == 0 && m_pmat[2][2] == 0) {
     std::cout << m_className << "::DrawCST: Creating z-y mesh view.\n";
     ViewFEMesh::SetXaxisTitle("z [cm]");
     ViewFEMesh::SetYaxisTitle("y [cm]");
     // calculate the x position
     unsigned int i, j, x;
-    if (!componentCST->Coordinate2Index(m_dist * m_proj[2][0], 0, 0, x, i,
+    if (!componentCST->Coordinate2Index(m_dist * m_pmat[2][0], 0, 0, x, i,
                                         j)) {
       std::cerr << "    Could not determine the position of the plane in "
                 << "x direction.\n";
       return;
     }
     std::cout << "    The plane position in x direction is: "
-              << m_dist * m_proj[2][0] << "\n";
+              << m_dist * m_pmat[2][0] << "\n";
     nMinU = nMinZ;
     nMaxU = nMaxZ;
     nMinV = nMinY;
@@ -1190,14 +1190,14 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
   // Set up the matrix for cutting edges not in the plane
   TArrayD dataCut(9);
   TMatrixD cutMat(3, 3);
-  dataCut[0] = m_proj[0][0];
-  dataCut[1] = m_proj[1][0];
+  dataCut[0] = m_pmat[0][0];
+  dataCut[1] = m_pmat[1][0];
   dataCut[2] = x1 - x2;
-  dataCut[3] = m_proj[0][1];
-  dataCut[4] = m_proj[1][1];
+  dataCut[3] = m_pmat[0][1];
+  dataCut[4] = m_pmat[1][1];
   dataCut[5] = y1 - y2;
-  dataCut[6] = m_proj[0][2];
-  dataCut[7] = m_proj[1][2];
+  dataCut[6] = m_pmat[0][2];
+  dataCut[7] = m_pmat[1][2];
   dataCut[8] = z1 - z2;
   cutMat.SetMatrixArray(dataCut.GetArray());
 
@@ -1216,9 +1216,9 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
   // Set up a coordinate vector (RHS of equation)
   TArrayD dataCoords(3);
   TMatrixD coordMat(3, 1);
-  dataCoords[0] = x1 - m_dist * m_proj[2][0];
-  dataCoords[1] = y1 - m_dist * m_proj[2][1];
-  dataCoords[2] = z1 - m_dist * m_proj[2][2];
+  dataCoords[0] = x1 - m_dist * m_pmat[2][0];
+  dataCoords[1] = y1 - m_dist * m_pmat[2][1];
+  dataCoords[2] = z1 - m_dist * m_pmat[2][2];
   coordMat.SetMatrixArray(dataCoords.GetArray());
 
   // Invert the cut matrix and multiply to get the solution
@@ -1315,10 +1315,10 @@ bool ViewFEMesh::IntersectPlaneArea(void) {
 // In x,y,z: vector coordinates
 // Out x,y,z: vector parallel to the viewing plane (project[3][3])
 bool ViewFEMesh::PlaneVector(double& x, double& y, double& z) const {
-  double dist = x * m_proj[2][0] + y * m_proj[2][1] + z * m_proj[2][2];
-  x = x - dist * m_proj[2][0];
-  y = y - dist * m_proj[2][1];
-  z = z - dist * m_proj[2][2];
+  double dist = x * m_pmat[2][0] + y * m_pmat[2][1] + z * m_pmat[2][2];
+  x = x - dist * m_pmat[2][0];
+  y = y - dist * m_pmat[2][1];
+  z = z - dist * m_pmat[2][2];
   return true;
 }
 

@@ -30,8 +30,12 @@ class ViewBase {
   // Options
   bool m_debug = false;
 
-  // Viewing plane
+  // Viewing plane for field plots (FPROJ).
   double m_proj[3][3];
+  double m_plane[4];
+  // Matrix used for projections (FPRMAT).
+  double m_pmat[3][3];
+  double m_dist;
 
   // Find an unused function name.
   std::string FindUnusedFunctionName(const std::string& s) const;
