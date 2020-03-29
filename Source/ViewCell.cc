@@ -17,36 +17,35 @@ namespace Garfield {
 
 ViewCell::ViewCell() : ViewBase("ViewCell") {}
 
-void ViewCell::SetComponent(ComponentAnalyticField* comp) {
-  if (!comp) {
+void ViewCell::SetComponent(ComponentAnalyticField* cmp) {
+  if (!cmp) {
     std::cerr << m_className << "::SetComponent: Null pointer.\n";
     return;
   }
-
-  m_component = comp;
+  m_component = cmp;
 }
 
-void ViewCell::SetComponent(ComponentNeBem2d* comp) {
-  if (!comp) {
+void ViewCell::SetComponent(ComponentNeBem2d* cmp) {
+  if (!cmp) {
     std::cerr << m_className << "::SetComponent: Null pointer.\n";
     return;
   }
-  m_nebem = comp;
+  m_nebem = cmp;
 }
 
 void ViewCell::Plot2d() {
-  if (!Plot(false)) {
+  if (!Plot(true)) {
     std::cerr << m_className << "::Plot2d: Error creating plot.\n";
   }
 }
 
 void ViewCell::Plot3d() {
-  if (!Plot(true)) {
+  if (!Plot(false)) {
     std::cerr << m_className << "::Plot3d: Error creating plot.\n";
   }
 }
 
-bool ViewCell::Plot(const bool use3d) {
+bool ViewCell::Plot(const bool twod) {
   if (!m_component && !m_nebem) {
     std::cerr << m_className << "::Plot: Component is not defined.\n";
     return false;
@@ -65,10 +64,15 @@ bool ViewCell::Plot(const bool use3d) {
     }
   }
 
-  // Get the bounding box
+  // Get the bounding box.
   double x0 = m_xMinBox, y0 = m_yMinBox, z0 = m_zMinBox;
   double x1 = m_xMaxBox, y1 = m_yMaxBox, z1 = m_zMaxBox;
-  if (!m_userBox) {
+  if (twod && m_userPlotLimits) {
+    x0 = m_xMinPlot;
+    y0 = m_yMinPlot;
+    x1 = m_xMaxPlot;
+    y1 = m_yMaxPlot;
+  } else if (!m_userBox) {
     if (m_component) {
       if (!m_component->GetBoundingBox(x0, y0, z0, x1, y1, z1)) {
         std::cerr << m_className << "::Plot:\n"
@@ -80,12 +84,11 @@ bool ViewCell::Plot(const bool use3d) {
       if (!m_nebem->GetBoundingBox(x0, y0, z0, x1, y1, z1)) {
         std::cerr << m_className << "::Plot:\n"
                   << "    Bounding box cannot be determined.\n"
-                   << "    Call SetArea first.\n";
+                  << "    Call SetArea first.\n";
         return false;
       }
     }
   }
-  // Get the max. half-length in z.
   const double dx = std::max(fabs(x0), fabs(x1));
   const double dy = std::max(fabs(y0), fabs(y1));
   const double dz = std::max(fabs(z0), fabs(z1));
@@ -94,7 +97,7 @@ bool ViewCell::Plot(const bool use3d) {
   canvas->cd();
   canvas->SetTitle("Cell layout");
 
-  if (!use3d) {
+  if (twod) {
     bool empty = false;
     if (!gPad ||
         (gPad->GetListOfPrimitives()->GetSize() == 0 && gPad->GetX1() == 0 &&
@@ -118,7 +121,7 @@ bool ViewCell::Plot(const bool use3d) {
                 y1 + (y1 - y0) * (tm / (1. - tm - lm)));
   }
 
-  if (m_nebem) return PlotNeBem(use3d);
+  if (m_nebem) return PlotNeBem(twod);
 
   // Get the cell type.
   const std::string cellType = m_component->GetCellType();
@@ -137,7 +140,7 @@ bool ViewCell::Plot(const bool use3d) {
   const bool perPhi = m_component->GetPeriodicityPhi(sphi);
   const int nPhi = perPhi ? int(360. / sphi) : 0;
   sphi *= DegreeToRad; 
-  if (use3d) SetupGeo(dx, dy, dz);
+  if (!twod) SetupGeo(dx, dy, dz);
   const bool polar = m_component->IsPolar();
 
   // Get the number of wires.
@@ -147,36 +150,21 @@ bool ViewCell::Plot(const bool use3d) {
   for (unsigned int i = 0; i < nWires; ++i) {
     double xw = 0., yw = 0., dw = 0., vw = 0., lw = 0., qw = 0.;
     std::string lbl;
-    int type = -1;
     int nTrap;
     m_component->GetWire(i, xw, yw, dw, vw, lbl, lw, qw, nTrap);
-    // Check if other wires with the same label already exist.
-    if (wireTypes.empty()) {
-      wireTypes.push_back(lbl);
-      type = 0;
-    } else {
-      const unsigned int nWireTypes = wireTypes.size();
-      for (unsigned int j = 0; j < nWireTypes; ++j) {
-        if (lbl == wireTypes[j]) {
-          type = j;
-          break;
-        }
-      }
-      if (type < 0) {
-        type = wireTypes.size();
-        wireTypes.push_back(lbl);
-      }
-    }
+    auto it = std::find(wireTypes.begin(), wireTypes.end(), lbl);
+    const int type = std::distance(wireTypes.begin(), it);
+    if (it == wireTypes.end()) wireTypes.push_back(lbl); 
     if (polar) {
       const double r = xw;
       for (int j = 0; j <= nPhi; ++j) {
         const double phi = yw * Garfield::DegreeToRad + j * sphi;
         const double x = r * cos(phi);
         const double y = r * sin(phi);
-        if (use3d) {
-          PlotWire(x, y, dw, type, std::min(0.5 * lw, dz));
-        } else {
+        if (twod) {
           PlotWire(x, y, dw, type);
+        } else {
+          PlotWire(x, y, dw, type, std::min(0.5 * lw, dz));
         }
       }
       continue;
@@ -187,10 +175,10 @@ bool ViewCell::Plot(const bool use3d) {
       for (int ny = nMinY; ny <= nMaxY; ++ny) {
         const double y = yw + ny * sy;
         if (y + 0.5 * dw <= y0 || y - 0.5 * dw >= y1) continue;
-        if (use3d) {
-          PlotWire(x, y, dw, type, std::min(0.5 * lw, dz));
-        } else {
+        if (twod) {
           PlotWire(x, y, dw, type);
+        } else {
+          PlotWire(x, y, dw, type, std::min(0.5 * lw, dz));
         }
       }
     }
@@ -205,11 +193,11 @@ bool ViewCell::Plot(const bool use3d) {
     for (int nx = nMinX; nx <= nMaxX; ++nx) {
       const double x = xp + nx * sx;
       if (x < x0 || x > x1) continue;
-      if (use3d) {
+      if (twod) {
+        PlotPlane(x, y0, x, y1);
+      } else {
         const double width = std::min(0.01 * dx, 0.01 * dy);
         PlotPlane(width, dy, dz, x, 0);
-      } else {
-        PlotPlane(x, y0, x, y1);
       }
     }
   }
@@ -223,11 +211,11 @@ bool ViewCell::Plot(const bool use3d) {
     for (int ny = nMinY; ny <= nMaxY; ++ny) {
       const double y = yp + ny * sy;
       if (y < y0 || y > y1) continue;
-      if (use3d) {
+      if (twod) {
+        PlotPlane(x0, y, x1, y);
+      } else {
         const double width = std::min(0.01 * dx, 0.01 * dy);
         PlotPlane(dx, width, dz, 0, y);
-      } else {
-        PlotPlane(x0, y, x1, y);
       }
     }
   }
@@ -255,20 +243,20 @@ bool ViewCell::Plot(const bool use3d) {
       w = 0.01 * (r[1] - r[0]);
     }
     for (unsigned int i = 0; i < nPlanesR; ++i) {
-      if (use3d) {
-        const auto med = m_geo->GetMedium("Metal");
-        const auto tubs = m_geo->MakeTubs("Plane", med, r[i] - w, r[i] + w,
-                                          dz, phi[0], phi[1]);
-        tubs->SetLineColor(kGreen - 5);
-        tubs->SetTransparency(75);
-        m_geo->GetTopVolume()->AddNode(tubs, 1);
-      } else {
+      if (twod) {
         TEllipse circle;
         circle.SetDrawOption("same");
         circle.SetFillStyle(0);
         circle.SetNoEdges();
         circle.DrawEllipse(0, 0, r[i], r[i], phi[0], phi[1], 0);
+        continue;
       }
+      const auto med = m_geo->GetMedium("Metal");
+      const auto tubs = m_geo->MakeTubs("Plane", med, r[i] - w, r[i] + w,
+                                        dz, phi[0], phi[1]);
+      tubs->SetLineColor(kGreen - 5);
+      tubs->SetTransparency(75);
+      m_geo->GetTopVolume()->AddNode(tubs, 1);
     }
     if (nPlanesR == 1) {
       std::swap(r[0], r[1]);
@@ -278,33 +266,33 @@ bool ViewCell::Plot(const bool use3d) {
     for (unsigned int i = 0; i < nPlanesPhi; ++i) {
       const double cp = cos(phi[i] * DegreeToRad);
       const double sp = sin(phi[i] * DegreeToRad);
-      if (use3d) {
-        const auto med = m_geo->GetMedium("Metal");
-        const double dr = 0.5 * (r[1] - r[0]);
-        TGeoVolume* plane = m_geo->MakeBox("Plane", med, dr, w, dz);
-        plane->SetLineColor(kGreen - 5);
-        plane->SetTransparency(75);
-        TGeoRotation* rot = new TGeoRotation("", phi[i], 0, 0);
-        const double rm = 0.5 * (r[0] + r[1]); 
-        TGeoCombiTrans* tr = new TGeoCombiTrans(cp * rm, sp * rm, 0, rot);
-        m_geo->GetTopVolume()->AddNode(plane, 1, tr);
-      } else {
+      if (twod) {
         PlotPlane(r[0] * cp, r[0] * sp, r[1] * cp, r[1] * sp);
-      }
+        continue;
+      } 
+      const auto med = m_geo->GetMedium("Metal");
+      const double dr = 0.5 * (r[1] - r[0]);
+      TGeoVolume* plane = m_geo->MakeBox("Plane", med, dr, w, dz);
+      plane->SetLineColor(kGreen - 5);
+      plane->SetTransparency(75);
+      TGeoRotation* rot = new TGeoRotation("", phi[i], 0, 0);
+      const double rm = 0.5 * (r[0] + r[1]); 
+      TGeoCombiTrans* tr = new TGeoCombiTrans(cp * rm, sp * rm, 0, rot);
+      m_geo->GetTopVolume()->AddNode(plane, 1, tr);
     } 
   }
   double rt = 0., vt = 0.;
   int nt = 0;
   std::string lbl;
   if (m_component->GetTube(rt, vt, nt, lbl)) {
-    if (use3d) {
-      PlotTube(0.98 * rt, 1.02 * rt, nt, dz);
-    } else {
+    if (twod) {
       PlotTube(0., 0., rt, nt);
+    } else {
+      PlotTube(0.98 * rt, 1.02 * rt, nt, dz);
     }
   }
 
-  if (use3d) {
+  if (!twod) {
     m_geo->CloseGeometry();
     m_geo->GetTopNode()->Draw("ogl");
   } else {
@@ -314,9 +302,9 @@ bool ViewCell::Plot(const bool use3d) {
   return true;
 }
 
-bool ViewCell::PlotNeBem(const bool use3d) {
+bool ViewCell::PlotNeBem(const bool twod) {
 
-  if (use3d) {
+  if (!twod) {
     std::cerr << m_className << "::PlotNeBem: 3D plot not implemented yet.\n";
     return false;
   }

@@ -207,7 +207,7 @@ int main(int argc, char * argv[]) {
     fieldView.SetSensor(&sensor);
     fieldView.SetArea(xmin, ymin, xmax, ymax);
     fieldView.PlotContour();
-    cellView.SetArea(xmin, ymin, -1., xmax, ymax, 1.);
+    cellView.SetArea(xmin, ymin, xmax, ymax);
     cellView.Plot2d();
     gSystem->ProcessEvents();
     std::cout << "Press ENTER to continue.\n";

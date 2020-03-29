@@ -37,7 +37,7 @@ int main(int argc, char * argv[]) {
   cellView.SetCanvas(&canvas);
   cellView.SetComponent(&cmp);
   cellView.EnableWireMarkers(false);
-  cellView.SetArea(-1.1, -1.1, -1.1, 1.1, 1.1, 1.1);
+  cellView.SetArea(-1.1, -1.1, 1.1, 1.1);
   ViewField fieldView;
   fieldView.SetCanvas(&canvas);
   fieldView.SetComponent(&cmp);

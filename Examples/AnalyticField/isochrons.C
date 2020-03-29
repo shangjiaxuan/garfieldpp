@@ -46,7 +46,7 @@ int main(int argc, char * argv[]) {
 
   ViewCell cellView;
   cellView.SetComponent(&cmp);
-  cellView.SetArea(xmin, ymin, -h, xmax, ymax, h); 
+  cellView.SetArea(xmin, ymin, xmax, ymax);
 
   ViewIsochrons isoView;
   isoView.SetComponent(&cmp);

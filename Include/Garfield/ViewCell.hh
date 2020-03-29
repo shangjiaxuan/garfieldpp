@@ -4,7 +4,6 @@
 #include <memory>
 #include <string>
 
-#include <TCanvas.h>
 #include <TGeoManager.h>
 
 #include "ViewBase.hh"
@@ -27,18 +26,17 @@ class ViewCell : public ViewBase {
   void SetComponent(ComponentAnalyticField* comp);
   void SetComponent(ComponentNeBem2d* comp);
 
-  /// Make a two-dimensional drawing of the cell geometry.
+  /// Make a two-dimensional drawing of the cell layout.
   void Plot2d();
-  /// Make a three-dimensional drawing of the cell geometry (using TGeo).
+  /// Make a three-dimensional drawing of the cell layout (using TGeo).
   void Plot3d();
 
-  /// Visualize wirers using markers or as a circle with the actual wire radius.
-  /// The default is markers.
+  /// Visualize wirers using markers (default setting) 
+  /// or as a circle with the actual wire radius.
   void EnableWireMarkers(const bool on = true) { m_useWireMarker = on; }
   void DisableWireMarkers() { EnableWireMarkers(false); }
 
  private:
-  // Options
   bool m_useWireMarker = true;
 
   ComponentAnalyticField* m_component = nullptr;
@@ -47,7 +45,7 @@ class ViewCell : public ViewBase {
   // 3D geometry.
   std::unique_ptr<TGeoManager> m_geo;
 
-  bool Plot(const bool use3d);
+  bool Plot(const bool twod);
   // Draw a wire in 2D.
   void PlotWire(const double x, const double y, const double d, const int type);
   // Draw a wire in 3D.
@@ -66,7 +64,7 @@ class ViewCell : public ViewBase {
   void PlotPlane(const double dx, const double dy, const double dz,
                  const double x0, const double y0);
   // Draw a neBEM 2D layout.
-  bool PlotNeBem(const bool use3d);
+  bool PlotNeBem(const bool twod);
   // Setup the TGeoManager. 
   void SetupGeo(const double dx, const double dy, const double dz);
 
