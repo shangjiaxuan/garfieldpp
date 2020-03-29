@@ -33,7 +33,7 @@ class ViewField : public ViewBase {
   void SetArea(const double xmin, const double ymin, const double xmax,
                const double ymax);
   /// Set the viewing area based on the bounding box of the sensor/component.
-  void SetArea() { m_hasUserArea = false; }
+  void SetArea() { m_userPlotLimits = false; }
 
   /** Set the projection (viewing plane).
     * \param fx,fy,fz normal vector
@@ -133,9 +133,9 @@ class ViewField : public ViewBase {
   char m_xLabel[50], m_yLabel[50], m_description[50];
 
   // Plot area
-  bool m_hasUserArea = false;
-  double m_xmin = -1., m_ymin = -1.;
-  double m_xmax = 1., m_ymax = 1.;
+  bool m_userPlotLimits = false;
+  double m_xMinPlot = -1., m_xMaxPlot = 1.;
+  double m_yMinPlot = -1., m_yMaxPlot = 1.;
 
   // Function range
   double m_vmin = 0., m_vmax = 100.;

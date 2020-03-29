@@ -32,12 +32,12 @@ void ViewDrift::SetArea(const double xmin, const double ymin, const double zmin,
     std::cerr << m_className << "::SetArea: Null area range not permitted.\n";
     return;
   }
-  m_xMin = std::min(xmin, xmax);
-  m_yMin = std::min(ymin, ymax);
-  m_zMin = std::min(zmin, zmax);
-  m_xMax = std::max(xmin, xmax);
-  m_yMax = std::max(ymin, ymax);
-  m_zMax = std::max(zmin, zmax);
+  m_xMinBox = std::min(xmin, xmax);
+  m_yMinBox = std::min(ymin, ymax);
+  m_zMinBox = std::min(zmin, zmax);
+  m_xMaxBox = std::max(xmin, xmax);
+  m_yMaxBox = std::max(ymin, ymax);
+  m_zMaxBox = std::max(zmin, zmax);
 }
 
 void ViewDrift::Clear() {
@@ -184,7 +184,7 @@ void ViewDrift::Plot2d(const bool axis) {
   auto canvas = GetCanvas();
   canvas->cd();
   if (axis) {
-    auto frame = canvas->DrawFrame(m_xMin, m_yMin, m_xMax, m_yMax);
+    auto frame = canvas->DrawFrame(m_xMinBox, m_yMinBox, m_xMaxBox, m_yMaxBox);
     frame->GetXaxis()->SetTitle("x [cm]");
     frame->GetYaxis()->SetTitle("y [cm]");
   }
@@ -238,7 +238,7 @@ void ViewDrift::Plot3d(const bool axis) {
   if (axis) {
     if (!canvas->GetView()) {
       m_view.reset(TView::CreateView(1, 0, 0));
-      m_view->SetRange(m_xMin, m_yMin, m_zMin, m_xMax, m_yMax, m_zMax);
+      m_view->SetRange(m_xMinBox, m_yMinBox, m_zMinBox, m_xMaxBox, m_yMaxBox, m_zMaxBox);
       m_view->ShowAxis();
       m_view->Top();
       canvas->SetView(m_view.get());

@@ -53,18 +53,18 @@ void ViewFEMesh::SetArea(double xmin, double ymin, double zmin, double xmax,
     std::cerr << m_className << "::SetArea: Null area range not permitted.\n";
     return;
   }
-  m_xMin = std::min(xmin, xmax);
-  m_yMin = std::min(ymin, ymax);
-  m_zMin = std::min(zmin, zmax);
-  m_xMax = std::max(xmin, xmax);
-  m_yMax = std::max(ymin, ymax);
-  m_zMax = std::max(zmin, zmax);
+  m_xMinBox = std::min(xmin, xmax);
+  m_yMinBox = std::min(ymin, ymax);
+  m_zMinBox = std::min(zmin, zmax);
+  m_xMaxBox = std::max(xmin, xmax);
+  m_yMaxBox = std::max(ymin, ymax);
+  m_zMaxBox = std::max(zmin, zmax);
 
-  m_hasUserArea = true;
+  m_userBox = true;
   IntersectPlaneArea();
 }
 
-void ViewFEMesh::SetArea() { m_hasUserArea = false; }
+void ViewFEMesh::SetArea() { m_userBox = false; }
 
 // The plotting functionality here is ported from Garfield
 //  with some inclusion of code from ViewCell.cc
@@ -81,7 +81,7 @@ bool ViewFEMesh::Plot() {
   }
 
   // Get the bounding box.
-  if (!m_hasUserArea) {
+  if (!m_userBox) {
     std::cerr << m_className << "::Plot:\n"
               << "    Bounding box cannot be determined. Call SetArea first.\n";
     return false;
@@ -97,7 +97,7 @@ bool ViewFEMesh::Plot() {
   // Set up a canvas if one does not already exist.
   auto canvas = GetCanvas();
   canvas->cd();
-  canvas->Range(m_xPlaneMin, m_yPlaneMin, m_xPlaneMax, m_yPlaneMax);
+  canvas->Range(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
 
   // Plot the elements
   ComponentCST* componentCST = dynamic_cast<ComponentCST*>(m_component);
@@ -190,12 +190,12 @@ void ViewFEMesh::SetYaxisTitle(const char* ytitle) {
 // Create default axes
 void ViewFEMesh::CreateDefaultAxes() {
   // Create a new x and y axis.
-  const double dx = std::abs(m_xPlaneMax - m_xPlaneMin) * 0.1;
-  const double dy = std::abs(m_yPlaneMax - m_yPlaneMin) * 0.1;
-  const double x0 = m_xPlaneMin + dx;
-  const double y0 = m_yPlaneMin + dy;
-  const double x1 = m_xPlaneMax - dx;
-  const double y1 = m_yPlaneMax - dy;
+  const double dx = std::abs(m_xMaxPlot - m_xMinPlot) * 0.1;
+  const double dy = std::abs(m_yMaxPlot - m_yMinPlot) * 0.1;
+  const double x0 = m_xMinPlot + dx;
+  const double y0 = m_yMinPlot + dy;
+  const double x1 = m_xMaxPlot - dx;
+  const double y1 = m_yMaxPlot - dy;
   m_xaxis = new TGaxis(x0, y0, x1, y0, x0, x1, 2405, "x");
   m_yaxis = new TGaxis(x0, y0, x0, y1, y0, y1, 2405, "y");
 
@@ -313,12 +313,12 @@ void ViewFEMesh::DrawElements() {
   TMatrixD xMat(3, 1);
 
   // Determine the number of periods present in the cell.
-  const int nMinX = perX ? int(m_xMin / sx) - 1 : 0;
-  const int nMaxX = perX ? int(m_xMax / sx) + 1 : 0;
-  const int nMinY = perY ? int(m_yMin / sy) - 1 : 0;
-  const int nMaxY = perY ? int(m_yMax / sy) + 1 : 0;
-  const int nMinZ = perZ ? int(m_zMin / sz) - 1 : 0;
-  const int nMaxZ = perZ ? int(m_zMax / sz) + 1 : 0;
+  const int nMinX = perX ? int(m_xMinBox / sx) - 1 : 0;
+  const int nMaxX = perX ? int(m_xMaxBox / sx) + 1 : 0;
+  const int nMinY = perY ? int(m_yMinBox / sy) - 1 : 0;
+  const int nMaxY = perY ? int(m_yMaxBox / sy) + 1 : 0;
+  const int nMinZ = perZ ? int(m_zMinBox / sz) - 1 : 0;
+  const int nMaxZ = perZ ? int(m_zMaxBox / sz) + 1 : 0;
 
   // Loop over all elements.
   for (const auto& element : m_component->elements) {
@@ -548,11 +548,11 @@ void ViewFEMesh::DrawElements() {
   if (!m_xaxis && !m_yaxis && m_drawAxes) {
     std::string name = CreateAxisTitle(m_proj[0]);
     m_axes->GetXaxis()->SetTitle(name.c_str());
-    m_axes->GetXaxis()->SetLimits(m_xPlaneMin, m_xPlaneMax);
+    m_axes->GetXaxis()->SetLimits(m_xMinPlot, m_xMaxPlot);
     name = CreateAxisTitle(m_proj[1]);
     m_axes->GetYaxis()->SetTitle(name.c_str());
     m_axes->GetYaxis()->SetTitleOffset(1.6);
-    m_axes->GetYaxis()->SetLimits(m_yPlaneMin, m_yPlaneMax);
+    m_axes->GetYaxis()->SetLimits(m_yMinPlot, m_yMaxPlot);
     m_axes->Draw();
   }
 
@@ -644,12 +644,12 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   TMatrixD xMat(3, 1);
 
   // Determine the number of periods present in the cell.
-  const int nMinX = perX ? int(m_xMin / sx) - 1 : 0;
-  const int nMaxX = perX ? int(m_xMax / sx) + 1 : 0;
-  const int nMinY = perY ? int(m_yMin / sy) - 1 : 0;
-  const int nMaxY = perY ? int(m_yMax / sy) + 1 : 0;
-  const int nMinZ = perZ ? int(m_zMin / sz) - 1 : 0;
-  const int nMaxZ = perZ ? int(m_zMax / sz) + 1 : 0;
+  const int nMinX = perX ? int(m_xMinBox / sx) - 1 : 0;
+  const int nMaxX = perX ? int(m_xMaxBox / sx) + 1 : 0;
+  const int nMinY = perY ? int(m_yMinBox / sy) - 1 : 0;
+  const int nMaxY = perY ? int(m_yMaxBox / sy) + 1 : 0;
+  const int nMinZ = perZ ? int(m_zMinBox / sz) - 1 : 0;
+  const int nMaxZ = perZ ? int(m_zMaxBox / sz) + 1 : 0;
 
   int elem = 0;
   std::vector<PolygonInfo> elements;
@@ -679,10 +679,10 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     nMaxU = nMaxX;
     nMinV = nMinY;
     nMaxV = nMaxY;
-    uMin = m_xMin;
-    uMax = m_xMax;
-    vMin = m_yMin;
-    vMax = m_yMax;
+    uMin = m_xMinBox;
+    uMax = m_xMaxBox;
+    vMin = m_yMinBox;
+    vMax = m_yMaxBox;
 
     mapumin = mapxmin;
     mapumax = mapxmax;
@@ -730,10 +730,10 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     nMaxU = nMaxX;
     nMinV = nMinZ;
     nMaxV = nMaxZ;
-    uMin = m_xMin;
-    uMax = m_xMax;
-    vMin = m_zMin;
-    vMax = m_zMax;
+    uMin = m_xMinBox;
+    uMax = m_xMaxBox;
+    vMin = m_zMinBox;
+    vMax = m_zMaxBox;
 
     mapumin = mapxmin;
     mapumax = mapxmax;
@@ -782,10 +782,10 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     nMaxU = nMaxZ;
     nMinV = nMinY;
     nMaxV = nMaxY;
-    uMin = m_yMin;
-    uMax = m_yMax;
-    vMin = m_zMin;
-    vMax = m_zMax;
+    uMin = m_yMinBox;
+    uMax = m_yMaxBox;
+    vMin = m_zMinBox;
+    vMax = m_zMaxBox;
 
     mapumin = mapzmin;
     mapumax = mapzmax;
@@ -1246,12 +1246,12 @@ bool ViewFEMesh::IntersectPlaneArea(void) {
           for (int y1 = y0; y1 < 2; ++y1) {
             for (int z1 = z0; z1 < 2; ++z1) {
               if (x1 - x0 + y1 - y0 + z1 - z0 != 1) continue;
-              double X0 = (x0 ? m_xMin : m_xMax);
-              double Y0 = (y0 ? m_yMin : m_yMax);
-              double Z0 = (z0 ? m_zMin : m_zMax);
-              double X1 = (x1 ? m_xMin : m_xMax);
-              double Y1 = (y1 ? m_yMin : m_yMax);
-              double Z1 = (z1 ? m_zMin : m_zMax);
+              double X0 = (x0 ? m_xMinBox : m_xMaxBox);
+              double Y0 = (y0 ? m_yMinBox : m_yMaxBox);
+              double Z0 = (z0 ? m_zMinBox : m_zMaxBox);
+              double X1 = (x1 ? m_xMinBox : m_xMaxBox);
+              double Y1 = (y1 ? m_yMinBox : m_yMaxBox);
+              double Z1 = (z1 ? m_zMinBox : m_zMaxBox);
               TMatrixD xMat(3, 1);
               if (!PlaneCut(X0, Y0, Z0, X1, Y1, Z1, xMat)) continue;
               if (m_debug) {
@@ -1285,8 +1285,8 @@ bool ViewFEMesh::IntersectPlaneArea(void) {
     return false;
   }
   TMatrixD offset = intersect_points[0];
-  m_xPlaneMin = m_xPlaneMax = intersect_points[0](0, 0);
-  m_yPlaneMin = m_yPlaneMax = intersect_points[0](1, 0);
+  m_xMinPlot = m_xMaxPlot = intersect_points[0](0, 0);
+  m_yMinPlot = m_yMaxPlot = intersect_points[0](1, 0);
   // Remove crossings in resulting polyline by sorting points rotation-wise.
   for (auto& p : intersect_points) p -= offset;
   std::sort(intersect_points.begin(), intersect_points.end(),
@@ -1301,10 +1301,10 @@ bool ViewFEMesh::IntersectPlaneArea(void) {
   for (auto& p : intersect_points) {
     p += offset;
     poly.SetPoint(pn, p(0, 0), p(1, 0));
-    m_xPlaneMin = std::min(p(0, 0), m_xPlaneMin);
-    m_yPlaneMin = std::min(p(1, 0), m_yPlaneMin);
-    m_xPlaneMax = std::max(p(0, 0), m_xPlaneMax);
-    m_yPlaneMax = std::max(p(1, 0), m_yPlaneMax);
+    m_xMinPlot = std::min(p(0, 0), m_xMinPlot);
+    m_yMinPlot = std::min(p(1, 0), m_yMinPlot);
+    m_xMaxPlot = std::max(p(0, 0), m_xMaxPlot);
+    m_yMaxPlot = std::max(p(1, 0), m_yMaxPlot);
     ++pn;
   }
   poly.SetPoint(pn, offset(0, 0), offset(1, 0));

@@ -42,13 +42,13 @@ void ViewCell::SetArea(const double xmin, const double ymin, const double zmin,
     std::cerr << m_className << "::SetArea: Null area range not permitted.\n";
     return;
   }
-  m_xMin = std::min(xmin, xmax);
-  m_yMin = std::min(ymin, ymax);
-  m_zMin = std::min(zmin, zmax);
-  m_xMax = std::max(xmin, xmax);
-  m_yMax = std::max(ymin, ymax);
-  m_zMax = std::max(zmin, zmax);
-  m_hasUserArea = true;
+  m_xMinBox = std::min(xmin, xmax);
+  m_yMinBox = std::min(ymin, ymax);
+  m_zMinBox = std::min(zmin, zmax);
+  m_xMaxBox = std::max(xmin, xmax);
+  m_yMaxBox = std::max(ymin, ymax);
+  m_zMaxBox = std::max(zmin, zmax);
+  m_userBox = true;
 }
 
 void ViewCell::Plot2d() {
@@ -83,9 +83,9 @@ bool ViewCell::Plot(const bool use3d) {
   }
 
   // Get the bounding box
-  double x0 = m_xMin, y0 = m_yMin, z0 = m_zMin;
-  double x1 = m_xMax, y1 = m_yMax, z1 = m_zMax;
-  if (!m_hasUserArea) {
+  double x0 = m_xMinBox, y0 = m_yMinBox, z0 = m_zMinBox;
+  double x1 = m_xMaxBox, y1 = m_yMaxBox, z1 = m_zMaxBox;
+  if (!m_userBox) {
     if (m_component) {
       if (!m_component->GetBoundingBox(x0, y0, z0, x1, y1, z1)) {
         std::cerr << m_className << "::Plot:\n"
@@ -109,7 +109,7 @@ bool ViewCell::Plot(const bool use3d) {
 
   auto canvas = GetCanvas();
   canvas->cd();
-  canvas->SetTitle(m_label.c_str());
+  canvas->SetTitle("Cell layout");
 
   if (!use3d) {
     bool empty = false;
@@ -386,7 +386,7 @@ void ViewCell::SetupGeo(const double dx, const double dy, const double dz) {
 
   if (!m_geo) {
     gGeoManager = nullptr;
-    m_geo.reset(new TGeoManager("ViewCellGeoManager", m_label.c_str()));
+    m_geo.reset(new TGeoManager("ViewCellGeoManager", "Cell layout"));
     TGeoMaterial* matVacuum = new TGeoMaterial("Vacuum", 0., 0., 0.);
     TGeoMaterial* matMetal = new TGeoMaterial("Metal", 63.546, 29., 8.92);
     TGeoMedium* medVacuum = new TGeoMedium("Vacuum", 0, matVacuum);

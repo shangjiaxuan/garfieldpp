@@ -165,11 +165,11 @@ void ViewIsochrons::SetArea(const double xmin, const double ymin,
               << "      " << ymin << " < y < " << ymax << "\n";
     return;
   }
-  m_xmin = std::min(xmin, xmax);
-  m_ymin = std::min(ymin, ymax);
-  m_xmax = std::max(xmin, xmax);
-  m_ymax = std::max(ymin, ymax);
-  m_hasUserArea = true;
+  m_xMinPlot = std::min(xmin, xmax);
+  m_yMinPlot = std::min(ymin, ymax);
+  m_xMaxPlot = std::max(xmin, xmax);
+  m_yMaxPlot = std::max(ymin, ymax);
+  m_userPlotLimits = true;
 }
 
 void ViewIsochrons::SetAspectRatioSwitch(const double ar) {
@@ -223,7 +223,8 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
   auto canvas = GetCanvas();
   canvas->cd();
   canvas->SetTitle("Isochrons");
-  auto frame = canvas->DrawFrame(m_xmin, m_ymin, m_xmax, m_ymax);
+  auto frame = canvas->DrawFrame(m_xMinPlot, m_yMinPlot, 
+                                 m_xMaxPlot, m_yMaxPlot);
   frame->GetXaxis()->SetTitle(m_xLabel);
   frame->GetYaxis()->SetTitle(m_yLabel);
   canvas->Update();
@@ -329,8 +330,8 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
         continue;
       }
       // Regular plotting.
-      const double tolx = (m_xmax - m_xmin) * m_connectionThreshold;
-      const double toly = (m_ymax - m_ymin) * m_connectionThreshold;
+      const double tolx = (m_xMaxPlot - m_xMinPlot) * m_connectionThreshold;
+      const double toly = (m_yMaxPlot - m_yMinPlot) * m_connectionThreshold;
       // Flag to keep track if the segment is interrupted by a drift line
       // or if it is too long.
       bool gap = false;
@@ -452,8 +453,8 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
     sensor.AddComponent(m_component);
     drift.SetSensor(&sensor);
   }
-  const double lx = 0.1 * fabs(m_xmax - m_xmin);
-  const double ly = 0.1 * fabs(m_ymax - m_ymin);
+  const double lx = 0.1 * fabs(m_xMaxPlot - m_xMinPlot);
+  const double ly = 0.1 * fabs(m_yMaxPlot - m_yMinPlot);
   drift.SetMaximumStepSize(std::min(lx, ly));
   drift.EnableSignalCalculation(false);
   for (const auto& point : points) {
@@ -833,7 +834,7 @@ void ViewIsochrons::Rotate(const double theta) {
 
 bool ViewIsochrons::Range() {
 
-  if (m_hasUserArea) return true;
+  if (m_userPlotLimits) return true;
   // Try to get the area/bounding box from the sensor/component.
   double bbmin[3];
   double bbmax[3];
@@ -872,10 +873,10 @@ bool ViewIsochrons::Range() {
       if (tmax < umax[j] && tmax > umin[j]) umax[j] = tmax;
     }
   }
-  m_xmin = umin[0];
-  m_xmax = umax[0];
-  m_ymin = umin[1];
-  m_ymax = umax[1];
+  m_xMinPlot = umin[0];
+  m_xMaxPlot = umax[0];
+  m_yMinPlot = umin[1];
+  m_yMaxPlot = umax[1];
   return true; 
 }
 

@@ -78,11 +78,11 @@ void ViewField::SetArea(const double xmin, const double ymin, const double xmax,
               << "      " << ymin << " < y < " << ymax << "\n";
     return;
   }
-  m_xmin = std::min(xmin, xmax);
-  m_ymin = std::min(ymin, ymax);
-  m_xmax = std::max(xmin, xmax);
-  m_ymax = std::max(ymin, ymax);
-  m_hasUserArea = true;
+  m_xMinPlot = std::min(xmin, xmax);
+  m_yMinPlot = std::min(ymin, ymax);
+  m_xMaxPlot = std::max(xmin, xmax);
+  m_yMaxPlot = std::max(ymin, ymax);
+  m_userPlotLimits = true;
 }
 
 void ViewField::SetVoltageRange(const double vmin, const double vmax) {
@@ -518,10 +518,10 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
     return wfield ? Wfield(x, y, z, plotType, electrode) : Field(x, y, z, plotType);
   };
   const std::string fname = FindUnusedFunctionName("f2D");
-  TF2 f2(fname.c_str(), eval, m_xmin, m_xmax, m_ymin, m_ymax, 0);
+  TF2 f2(fname.c_str(), eval, m_xMinPlot, m_xMaxPlot, m_yMinPlot, m_yMaxPlot, 0);
 
   // Set the x-y range.
-  f2.SetRange(m_xmin, m_ymin, m_xmax, m_ymax);
+  f2.SetRange(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
 
   // Set the z-range.
   double zmin = m_vmin;
@@ -533,7 +533,8 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
       title = "Weighting " + title;
     }
     if (m_useAutoRange) {
-      SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, &f2, zmin, zmax);
+      SampleRange(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot, &f2, 
+                  zmin, zmax);
     } else if (plotType == PlotType::Potential) {
       zmin = 0.;
       zmax = 1.;
@@ -551,11 +552,13 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
       if (m_useAutoRange) {
         if (m_component) {
           if (!m_component->GetVoltageRange(zmin, zmax)) {
-            SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, &f2, zmin, zmax);
+            SampleRange(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot, 
+                        &f2, zmin, zmax);
           }
         } else if (m_sensor) {
           if (!m_sensor->GetVoltageRange(zmin, zmax)) {
-            SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, &f2, zmin, zmax);
+            SampleRange(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot, 
+                        &f2, zmin, zmax);
           }
         }
       } else {
@@ -564,7 +567,8 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
       }
     } else {
       if (m_useAutoRange) {
-        SampleRange(m_xmin, m_ymin, m_xmax, m_ymax, &f2, zmin, zmax);
+        SampleRange(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot, 
+                    &f2, zmin, zmax);
       } else {
         zmin = m_emin;
         zmax = m_emax;
@@ -736,7 +740,7 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
 
 bool ViewField::Range() {
 
-  if (m_hasUserArea) return true;
+  if (m_userPlotLimits) return true;
   // Try to get the area/bounding box from the sensor/component.
   double bbmin[3];
   double bbmax[3];
@@ -775,13 +779,13 @@ bool ViewField::Range() {
       if (tmax < umax[j] && tmax > umin[j]) umax[j] = tmax;
     }
   }
-  m_xmin = umin[0];
-  m_xmax = umax[0];
-  m_ymin = umin[1];
-  m_ymax = umax[1];
+  m_xMinPlot = umin[0];
+  m_xMaxPlot = umax[0];
+  m_yMinPlot = umin[1];
+  m_yMaxPlot = umax[1];
   std::cout << m_className << "::Range: Setting plot range to "
-            << m_xmin << " < x < " << m_xmax << ", " << m_ymin << " < y < "
-            << m_ymax << ".\n";
+            << m_xMinPlot << " < x < " << m_xMaxPlot << ", " 
+            << m_yMinPlot << " < y < " << m_yMaxPlot << ".\n";
   return true;
 }
 

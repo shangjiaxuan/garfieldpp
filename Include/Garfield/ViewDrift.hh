@@ -66,8 +66,9 @@ class ViewDrift : public ViewBase {
  private:
 
   // Box dimensions
-  double m_xMin = -1., m_yMin = -1., m_zMin = -1.;
-  double m_xMax = 1., m_yMax = 1., m_zMax = 1.;
+  double m_xMinBox = -1., m_xMaxBox = 1.;
+  double m_yMinBox = -1., m_yMaxBox = 1.; 
+  double m_zMinBox = -1., m_zMaxBox = 1.;
 
   // View
   std::unique_ptr<TView> m_view;

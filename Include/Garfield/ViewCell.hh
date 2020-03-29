@@ -31,7 +31,7 @@ class ViewCell : public ViewBase {
   void SetArea(const double xmin, const double ymin, const double zmin,
                const double xmax, const double ymax, const double zmax);
   ///  Take the plot range from the bounding box of the component class.
-  void SetArea() { m_hasUserArea = false; }
+  void SetArea() { m_userBox = false; }
 
   /// Make a two-dimensional drawing of the cell geometry.
   void Plot2d();
@@ -47,12 +47,10 @@ class ViewCell : public ViewBase {
   // Options
   bool m_useWireMarker = true;
 
-  std::string m_label = "Cell Layout";
-
   // Box dimensions
-  bool m_hasUserArea = false;
-  double m_xMin = -1., m_yMin = -1., m_zMin = -1.;
-  double m_xMax = 1., m_yMax = 1., m_zMax = 1.;
+  bool m_userBox = false;
+  double m_xMinBox = -1., m_yMinBox = -1., m_zMinBox = -1.;
+  double m_xMaxBox =  1., m_yMaxBox =  1., m_zMaxBox =  1.;
 
   ComponentAnalyticField* m_component = nullptr;
   ComponentNeBem2d* m_nebem = nullptr;

@@ -100,17 +100,18 @@ class ViewFEMesh : public ViewBase {
   double m_dist;
 
   // Box dimensions
-  bool m_hasUserArea = false;
-  double m_xMin = -1., m_yMin = -1., m_zMin = -1.;
-  double m_xMax = 1., m_yMax = 1., m_zMax = 1.;
+  bool m_userBox = false;
+  double m_xMinBox = -1., m_xMaxBox = 1.;
+  double m_yMinBox = -1., m_yMaxBox = 1.;
+  double m_zMinBox = -1., m_zMaxBox = 1.;
 
   // Intersection of viewing plane with plotted area in planar coordinates
   bool m_drawViewRegion = false;
   std::vector<TPolyLine> m_viewRegionLines;
 
   // Viewing plane dimensions
-  double m_xPlaneMin = -1., m_xPlaneMax = 1.;
-  double m_yPlaneMin = -1., m_yPlaneMax = 1.;
+  double m_xMinPlot = -1., m_xMaxPlot = 1.;
+  double m_yMinPlot = -1., m_yMaxPlot = 1.;
 
   // The field map object
   ComponentFieldMap* m_component = nullptr;
