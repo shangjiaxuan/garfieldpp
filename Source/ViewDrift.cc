@@ -220,6 +220,13 @@ void ViewDrift::Plot2d(const bool axis) {
     gr.SetLineWidth(2);
     gr.DrawGraph(nP, xp.data(), yp.data(), "Lsame");
   }
+  for (const auto& photon : m_photons) {
+    std::vector<float> xp = {photon[0][0], photon[1][0]};
+    std::vector<float> yp = {photon[0][1], photon[1][1]};
+    gr.SetLineColor(kBlue + 1);
+    gr.SetLineStyle(2);
+    gr.DrawGraph(2, xp.data(), yp.data(), "Lsame"); 
+  }
   gPad->Update();
 }
 
