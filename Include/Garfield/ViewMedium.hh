@@ -156,7 +156,6 @@ class ViewMedium : public ViewBase {
   std::vector<std::vector<double> > m_xGraph;
   std::vector<std::vector<double> > m_yGraph;
 
-  TCanvas* GetCanvas();
   void PlotVelocity(const Axis xaxis, const Charge particle,
                     const bool same);
   void PlotDiffusion(const Axis xaxis, const Charge particle,

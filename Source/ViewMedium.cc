@@ -100,14 +100,6 @@ void ViewMedium::PlotElectronCrossSections() {
   std::cerr << m_className << "::PlotElectronCrossSections: Not implemented.\n";
 }
 
-TCanvas* ViewMedium::GetCanvas() {
-  if (!m_canvas) {
-    m_canvas = new TCanvas();
-    if (m_hasExternalCanvas) m_hasExternalCanvas = false;
-  }
-  return m_canvas;
-}
-
 void ViewMedium::Draw() {
 
   if (m_yPlot.empty()) return;

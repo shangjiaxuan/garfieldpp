@@ -158,7 +158,6 @@ class ViewField : public ViewBase {
                    const double x1, const double y1, const double z1,
                    const std::string& option, const bool wfield,
                    const std::string& electrode);
-  TCanvas* GetCanvas();
   PlotType GetPlotType(const std::string& option, std::string& title) const;
   double Field(const double x, const double y, const double z,
                const PlotType plotType) const;

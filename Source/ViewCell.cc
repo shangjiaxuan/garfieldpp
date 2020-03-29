@@ -107,12 +107,9 @@ bool ViewCell::Plot(const bool use3d) {
   const double dy = std::max(fabs(y0), fabs(y1));
   const double dz = std::max(fabs(z0), fabs(z1));
 
-  if (!m_canvas) {
-    m_canvas = new TCanvas();
-    if (!use3d) m_canvas->SetTitle(m_label.c_str());
-    if (m_hasExternalCanvas) m_hasExternalCanvas = false;
-  }
-  m_canvas->cd();
+  auto canvas = GetCanvas();
+  canvas->cd();
+  canvas->SetTitle(m_label.c_str());
 
   if (!use3d) {
     bool empty = false;
@@ -121,10 +118,10 @@ bool ViewCell::Plot(const bool use3d) {
          gPad->GetX2() == 1 && gPad->GetY1() == 0 && gPad->GetY2() == 1)) {
       empty = true;
     }
-    const double bm = m_canvas->GetBottomMargin();
-    const double lm = m_canvas->GetLeftMargin();
-    const double rm = m_canvas->GetRightMargin();
-    const double tm = m_canvas->GetTopMargin();
+    const double bm = canvas->GetBottomMargin();
+    const double lm = canvas->GetLeftMargin();
+    const double rm = canvas->GetRightMargin();
+    const double tm = canvas->GetTopMargin();
     if (!empty) {
       TPad* pad = new TPad("cell", "", 0, 0, 1, 1);
       pad->SetFillStyle(0);
@@ -328,7 +325,7 @@ bool ViewCell::Plot(const bool use3d) {
     m_geo->CloseGeometry();
     m_geo->GetTopNode()->Draw("ogl");
   } else {
-    m_canvas->Update();
+    gPad->Update();
   }
 
   return true;
@@ -381,7 +378,7 @@ bool ViewCell::PlotNeBem(const bool use3d) {
     PlotPlane(x0, y0, x1, y1);
   }
 
-  m_canvas->Update();
+  gPad->Update();
   return true;
 }
 
@@ -470,8 +467,8 @@ void ViewCell::PlotTube(const double x0, const double y0, const double r,
     return;
   }
 
-  double* x = new double[n + 1];
-  double* y = new double[n + 1];
+  std::vector<double> x(n + 1);
+  std::vector<double> y(n + 1);
   for (int i = 0; i <= n; ++i) {
     const double phi = i * TwoPi / double(n);
     x[i] = x0 + r * cos(phi);
@@ -479,9 +476,7 @@ void ViewCell::PlotTube(const double x0, const double y0, const double r,
   }
   TPolyLine pline;
   pline.SetDrawOption("same");
-  pline.DrawPolyLine(n + 1, x, y);
-  delete[] x;
-  delete[] y;
+  pline.DrawPolyLine(n + 1, x.data(), y.data());
 }
 
 void ViewCell::PlotTube(const double x0, const double y0, 

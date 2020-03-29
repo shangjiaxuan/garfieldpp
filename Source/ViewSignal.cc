@@ -49,13 +49,9 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     return;
   }
 
-  // Setup the canvas
-  if (!m_canvas) {
-    m_canvas = new TCanvas();
-    m_canvas->SetTitle("Signal");
-    if (m_hasExternalCanvas) m_hasExternalCanvas = false;
-  }
-  m_canvas->cd();
+  auto canvas = GetCanvas();
+  canvas->cd();
+  canvas->SetTitle("Signal");  
 
   unsigned int nBins = 100;
   double t0 = 0., dt = 1.;
@@ -112,7 +108,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       }
       m_hDelayedSignal->Draw("same");
     }
-    m_canvas->Update();
+    gPad->Update();
   }
 
   // Plot the electron and ion signals if requested.
@@ -144,7 +140,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       }
       m_hDelayedSignalElectrons->Draw("same");
     }
-    m_canvas->Update();
+    gPad->Update();
   }
   if (ion) {
     auto hname = FindUnusedHistogramName("hSignalIons_").c_str();
@@ -174,7 +170,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       }
       m_hDelayedSignalIons->Draw("same");
     }
-    m_canvas->Update();
+    gPad->Update();
   }
 }
 

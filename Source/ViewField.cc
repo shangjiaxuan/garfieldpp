@@ -463,15 +463,6 @@ void ViewField::Rotate(const double theta) {
   Labels();
 }
 
-TCanvas* ViewField::GetCanvas() {
-  if (!m_canvas) {
-    m_canvas = new TCanvas();
-    m_canvas->SetTitle("Field View");
-    m_hasExternalCanvas = false;
-  }
-  return m_canvas;
-}
-
 ViewField::PlotType ViewField::GetPlotType(const std::string& option,
                                            std::string& title) const {
 

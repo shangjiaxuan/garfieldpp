@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include <TCanvas.h>
 #include <TGeoManager.h>
 
 #include "ViewBase.hh"
@@ -81,6 +82,7 @@ class ViewCell : public ViewBase {
   bool PlotNeBem(const bool use3d);
   // Setup the TGeoManager. 
   void SetupGeo(const double dx, const double dy, const double dz);
+
 };
 }
 #endif

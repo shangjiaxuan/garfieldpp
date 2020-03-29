@@ -219,12 +219,14 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
               << "    No starting points provided.\n";
     return;
   }
-  SetupCanvas();
   if (!Range()) return;
-  auto frame = m_canvas->DrawFrame(m_xmin, m_ymin, m_xmax, m_ymax);
+  auto canvas = GetCanvas();
+  canvas->cd();
+  canvas->SetTitle("Isochrons");
+  auto frame = canvas->DrawFrame(m_xmin, m_ymin, m_xmax, m_ymax);
   frame->GetXaxis()->SetTitle(m_xLabel);
   frame->GetYaxis()->SetTitle(m_yLabel);
-  m_canvas->Update();
+  canvas->Update();
 
   //-----------------------------------------------------------------------
   //   DRFEQT - The main routine (DRFEQT) accumulates equal drift time data
@@ -827,15 +829,6 @@ void ViewIsochrons::Rotate(const double theta) {
 
   // Make labels to be placed along the axes
   Labels();
-}
-
-void ViewIsochrons::SetupCanvas() {
-  if (!m_canvas) {
-    m_canvas = new TCanvas();
-    m_canvas->SetTitle("Isochrons");
-    m_hasExternalCanvas = false;
-  }
-  m_canvas->cd();
 }
 
 bool ViewIsochrons::Range() {

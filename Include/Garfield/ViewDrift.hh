@@ -92,13 +92,6 @@ class ViewDrift : public ViewBase {
 
   void Plot2d(const bool axis);
   void Plot3d(const bool axis);
-  TCanvas* GetCanvas() {
-    if (!m_canvas) { 
-      m_canvas = new TCanvas();
-      if (m_hasExternalCanvas) m_hasExternalCanvas = false;
-    }
-    return m_canvas;
-  }
 };
 }
 #endif

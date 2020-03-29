@@ -27,6 +27,14 @@ void ViewBase::SetCanvas(TCanvas* c) {
   m_hasExternalCanvas = true;
 }
 
+TCanvas* ViewBase::GetCanvas() {
+  if (!m_canvas) {
+    m_canvas = new TCanvas();
+    if (m_hasExternalCanvas) m_hasExternalCanvas = false;
+  }
+  return m_canvas;
+}
+
 std::string ViewBase::FindUnusedFunctionName(const std::string& s) const {
   int idx = 0;
   std::string fname = s + "_0";

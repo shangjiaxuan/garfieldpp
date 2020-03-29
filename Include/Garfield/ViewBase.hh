@@ -19,7 +19,7 @@ class ViewBase {
   /// Set the canvas to be painted on.
   void SetCanvas(TCanvas* c);
   /// Retrieve the canvas.
-  TCanvas* GetCanvas() { return m_canvas; }
+  TCanvas* GetCanvas();
 
   /// Switch on/off debugging output.
   void EnableDebugging(const bool on = true) { m_debug = on; }
@@ -30,10 +30,6 @@ class ViewBase {
   // Options
   bool m_debug = false;
 
-  // Canvas
-  TCanvas* m_canvas = nullptr;
-  bool m_hasExternalCanvas = false;
-
   // Viewing plane
   double m_proj[3][3];
 
@@ -41,6 +37,11 @@ class ViewBase {
   std::string FindUnusedFunctionName(const std::string& s) const;
   // Find an unused histogram name.
   std::string FindUnusedHistogramName(const std::string& s) const;
+ private:
+  // Canvas
+  TCanvas* m_canvas = nullptr;
+  bool m_hasExternalCanvas = false;
+
 };
 }
 #endif

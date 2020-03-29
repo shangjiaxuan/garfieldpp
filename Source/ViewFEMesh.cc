@@ -95,12 +95,9 @@ bool ViewFEMesh::Plot() {
   }
 
   // Set up a canvas if one does not already exist.
-  if (!m_canvas) {
-    m_canvas = new TCanvas();
-    m_canvas->SetTitle(m_label.c_str());
-    if (m_hasExternalCanvas) m_hasExternalCanvas = false;
-  }
-  m_canvas->Range(m_xPlaneMin, m_yPlaneMin, m_xPlaneMax, m_yPlaneMax);
+  auto canvas = GetCanvas();
+  canvas->cd();
+  canvas->Range(m_xPlaneMin, m_yPlaneMin, m_xPlaneMax, m_yPlaneMax);
 
   // Plot the elements
   ComponentCST* componentCST = dynamic_cast<ComponentCST*>(m_component);
@@ -110,7 +107,7 @@ bool ViewFEMesh::Plot() {
   } else {
     DrawElements();
   }
-  m_canvas->Update();
+  gPad->Update();
 
   return true;
 }
@@ -544,7 +541,8 @@ void ViewFEMesh::DrawElements() {
   }    // end if(m_viewDrift != 0)
 
   // Call the ROOT draw methods to plot the elements.
-  m_canvas->cd();
+  auto canvas = GetCanvas();
+  canvas->cd();
 
   // Draw default axes by using a blank 2D histogram.
   if (!m_xaxis && !m_yaxis && m_drawAxes) {
@@ -928,7 +926,8 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   }    // end if(m_viewDrift != 0)
 
   // Call the ROOT draw methods to plot the elements
-  m_canvas->cd();
+  auto canvas = GetCanvas();
+  canvas->cd();
   // Draw default axes by using a blank 2D histogram.
   if (!m_xaxis && !m_yaxis && m_drawAxes) {
     m_axes->GetXaxis()->SetLimits(uMin, uMax);

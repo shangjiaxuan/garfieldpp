@@ -39,12 +39,6 @@ void ViewGeometry::Plot() {
     return;
   }
 
-  if (!m_canvas) {
-    m_canvas = new TCanvas();
-    if (m_hasExternalCanvas) m_hasExternalCanvas = false;
-  }
-  m_canvas->cd();
-
   const unsigned int nSolids = m_geometry->GetNumberOfSolids();
   if (nSolids == 0) {
     std::cerr << m_className << "::Plot: Geometry is empty.\n";
@@ -58,6 +52,8 @@ void ViewGeometry::Plot() {
     std::cerr << m_className << "::Plot: Cannot retrieve bounding box.\n";
     return;
   }
+  auto canvas = GetCanvas();
+  canvas->cd();
   gGeoManager = nullptr;
   m_geoManager.reset(new TGeoManager("ViewGeometryGeoManager", ""));
   TGeoMaterial* matVacuum = new TGeoMaterial("Vacuum", 0., 0., 0.);
