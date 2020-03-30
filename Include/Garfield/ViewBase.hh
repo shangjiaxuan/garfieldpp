@@ -46,6 +46,12 @@ class ViewBase {
                         const double x0, const double y0, const double z0);
   /// Rotate the viewing plane (angle in radian).
   void Rotate(const double angle);
+  /// Set the viewing plane to x-y. 
+  void SetPlaneXY();
+  /// Set the viewing plane to x-z. 
+  void SetPlaneXZ();
+  /// Set the viewing plane to y-z. 
+  void SetPlaneYZ();
 
   /// Switch on/off debugging output.
   void EnableDebugging(const bool on = true) { m_debug = on; }

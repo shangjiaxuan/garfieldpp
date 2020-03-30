@@ -167,6 +167,7 @@ void ViewDrift::Plot2d(const bool axis) {
   }
   auto canvas = GetCanvas();
   canvas->cd();
+  canvas->SetTitle("Drift lines");
   if (axis) {
     auto frame = canvas->DrawFrame(m_xMinBox, m_yMinBox, m_xMaxBox, m_yMaxBox);
     frame->GetXaxis()->SetTitle(LabelX().c_str());

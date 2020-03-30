@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cstring>
 #include <cmath>
 
 #include <TROOT.h>
@@ -172,6 +171,23 @@ void ViewBase::Rotate(const double theta) {
   UpdateProjectionMatrix();
 }
 
+void ViewBase::SetPlaneXY() {
+  m_proj = {{{1, 0, 0}, {0, 1, 0}, {0, 0, 0}}};
+  m_plane = {0, 0, 1, 0};
+  m_prmat = {{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}};
+}
+
+void ViewBase::SetPlaneXZ() {
+  m_proj = {{{1, 0, 0}, {0, 0, 1}, {0, 0, 0}}};
+  m_plane = {0, 1, 0, 0};
+  UpdateProjectionMatrix();
+}
+
+void ViewBase::SetPlaneYZ() {
+  m_proj = {{{0, 1, 0}, {0, 0, 1}, {0, 0, 0}}};
+  m_plane = {1, 0, 0, 0};
+  UpdateProjectionMatrix();
+}
 
 std::string ViewBase::FindUnusedFunctionName(const std::string& s) const {
   int idx = 0;
@@ -206,8 +222,8 @@ void ViewBase::UpdateProjectionMatrix() {
                             m_plane[2] * m_plane[2]);
   if (vnorm <= 0.) {
     std::cerr << m_className << "::UpdateProjectionMatrix:\n"
-              << "    Zero norm vector.\n";
-    // TODO! Reset to default.
+              << "    Zero norm vector; reset to default.\n";
+    SetPlaneXY();
     return;
   }
   m_prmat[0][2] = m_plane[0] / vnorm;
@@ -215,7 +231,8 @@ void ViewBase::UpdateProjectionMatrix() {
   m_prmat[2][2] = m_plane[2] / vnorm;
   if (!Invert(m_prmat)) {
     std::cerr << m_className << "::UpdateProjectionMatrix:\n"
-              << "    Inversion failed.\n";
+              << "    Inversion failed; reset to default.\n";
+    SetPlaneXY();
   }
 }
 
@@ -226,244 +243,191 @@ void ViewBase::ToPlane(const double x, const double y, const double z,
 }
 
 std::string ViewBase::LabelX() {
-  // Initialisation of the x-axis label.
-  char xLabel[50];
-  strcpy(xLabel, "\0");
-  char buf[100];
 
+  std::string xLabel = "";
   constexpr double tol = 1.e-4;
   // x portion
   if (fabs(m_proj[0][0] - 1) < tol) {
-    strcat(xLabel, "x");
+    xLabel = "#it{x}";
   } else if (fabs(m_proj[0][0] + 1) < tol) {
-    strcat(xLabel, "-x");
-  } else if (m_proj[0][0] > tol) {
-    sprintf(buf, "%g x", m_proj[0][0]);
-    strcat(xLabel, buf);
-  } else if (m_proj[0][0] < -tol) {
-    sprintf(buf, "%g x", m_proj[0][0]);
-    strcat(xLabel, buf);
+    xLabel = "#minus#it{x}";
+  } else if (fabs(m_proj[0][0]) > tol) {
+    xLabel = std::to_string(m_proj[0][0]) + " #it{x}";
   }
 
   // y portion
-  if (strlen(xLabel) > 0) {
+  if (!xLabel.empty()) {
     if (m_proj[0][1] < -tol) {
-      strcat(xLabel, " - ");
+      xLabel += " #minus ";
     } else if (m_proj[0][1] > tol) {
-      strcat(xLabel, " + ");
+      xLabel += " #plus ";
     }
     if (fabs(m_proj[0][1] - 1) < tol || fabs(m_proj[0][1] + 1) < tol) {
-      strcat(xLabel, "y");
+      xLabel += "#it{y}";
     } else if (fabs(m_proj[0][1]) > tol) {
-      sprintf(buf, "%g y", fabs(m_proj[0][1]));
-      strcat(xLabel, buf);
+      xLabel += std::to_string(fabs(m_proj[0][1])) + " #it{y}";
     }
   } else {
     if (fabs(m_proj[0][1] - 1) < tol) {
-      strcat(xLabel, "y");
+      xLabel = "#it{y}";
     } else if (fabs(m_proj[0][1] + 1) < tol) {
-      strcat(xLabel, "-y");
-    } else if (m_proj[0][1] > tol) {
-      sprintf(buf, "%g y", m_proj[0][1]);
-      strcat(xLabel, buf);
-    } else if (m_proj[0][1] < -tol) {
-      sprintf(buf, "%g y", m_proj[0][1]);
-      strcat(xLabel, buf);
+      xLabel = "#minus#it{y}";
+    } else if (fabs(m_proj[0][1]) > tol) {
+      xLabel = std::to_string(m_proj[0][1]) + " #it{y}";
     }
   }
 
   // z portion
-  if (strlen(xLabel) > 0) {
+  if (!xLabel.empty()) {
     if (m_proj[0][2] < -tol) {
-      strcat(xLabel, " - ");
+      xLabel += " #minus ";
     } else if (m_proj[0][2] > tol) {
-      strcat(xLabel, " + ");
+      xLabel += " #plus ";
     }
     if (fabs(m_proj[0][2] - 1) < tol || fabs(m_proj[0][2] + 1) < tol) {
-      strcat(xLabel, "z");
+      xLabel += "#it{z}";
     } else if (fabs(m_proj[0][2]) > tol) {
-      sprintf(buf, "%g z", fabs(m_proj[0][2]));
-      strcat(xLabel, buf);
+      xLabel += std::to_string(fabs(m_proj[0][2])) + " #it{z}";
     }
   } else {
     if (fabs(m_proj[0][2] - 1) < tol) {
-      strcat(xLabel, "z");
+      xLabel = "#it{z}";
     } else if (fabs(m_proj[0][2] + 1) < tol) {
-      strcat(xLabel, "-z");
-    } else if (m_proj[0][2] > tol) {
-      sprintf(buf, "%g z", m_proj[0][2]);
-      strcat(xLabel, buf);
-    } else if (m_proj[0][2] < -tol) {
-      sprintf(buf, "%g z", m_proj[0][2]);
-      strcat(xLabel, buf);
+      xLabel = "#minus#it{z}";
+    } else if (fabs(m_proj[0][2]) > tol) {
+      xLabel = std::to_string(m_proj[0][2]) + " #it{z}";
     }
   }
 
   // Unit
-  strcat(xLabel, " [cm]");
-  return std::string(xLabel);
+  xLabel += " [cm]";
+  return xLabel;
 
 }
 
 std::string ViewBase::LabelY() {
 
-  char yLabel[50];
-  // Initialisation of the y-axis label
-  strcpy(yLabel, "\0");
-  char buf[100];
-
+  std::string yLabel = "";
   constexpr double tol = 1.e-4;
   // x portion
   if (fabs(m_proj[1][0] - 1) < tol) {
-    strcat(yLabel, "x");
+    yLabel = "#it{x}";
   } else if (fabs(m_proj[1][0] + 1) < tol) {
-    strcat(yLabel, "-x");
-  } else if (m_proj[1][0] > tol) {
-    sprintf(buf, "%g x", m_proj[1][0]);
-    strcat(yLabel, buf);
-  } else if (m_proj[1][0] < -tol) {
-    sprintf(buf, "%g x", m_proj[1][0]);
-    strcat(yLabel, buf);
+    yLabel = "#minus#it{x}";
+  } else if (fabs(m_proj[1][0]) > tol) {
+    yLabel = std::to_string(m_proj[1][0]) + " #it{x}";
   }
 
   // y portion
-  if (strlen(yLabel) > 0) {
+  if (!yLabel.empty()) {
     if (m_proj[1][1] < -tol) {
-      strcat(yLabel, " - ");
+      yLabel += " #minus ";
     } else if (m_proj[1][1] > tol) {
-      strcat(yLabel, " + ");
+      yLabel += " #plus ";
     }
     if (fabs(m_proj[1][1] - 1) < tol || fabs(m_proj[1][1] + 1) < tol) {
-      strcat(yLabel, "y");
+      yLabel += "#it{y}";
     } else if (fabs(m_proj[1][1]) > tol) {
-      sprintf(buf, "%g y", fabs(m_proj[1][1]));
-      strcat(yLabel, buf);
+      yLabel += std::to_string(fabs(m_proj[1][1])) + " #it{y}";
     }
   } else {
     if (fabs(m_proj[1][1] - 1) < tol) {
-      strcat(yLabel, "y");
+      yLabel = "#it{y}";
     } else if (fabs(m_proj[1][1] + 1) < tol) {
-      strcat(yLabel, "-y");
-    } else if (m_proj[1][1] > tol) {
-      sprintf(buf, "%g y", m_proj[1][1]);
-      strcat(yLabel, buf);
-    } else if (m_proj[1][1] < -tol) {
-      sprintf(buf, "%g y", m_proj[1][1]);
-      strcat(yLabel, buf);
+      yLabel = "#minus#it{y}";
+    } else if (fabs(m_proj[1][1]) > tol) {
+      yLabel = std::to_string(m_proj[1][1]) + " #it{y}";
     }
   }
 
   // z portion
-  if (strlen(yLabel) > 0) {
+  if (!yLabel.empty()) {
     if (m_proj[1][2] < -tol) {
-      strcat(yLabel, " - ");
+      yLabel += " #minus ";
     } else if (m_proj[1][2] > tol) {
-      strcat(yLabel, " + ");
+      yLabel += " #plus ";
     }
     if (fabs(m_proj[1][2] - 1) < tol || fabs(m_proj[1][2] + 1) < tol) {
-      strcat(yLabel, "z");
+      yLabel += "#it{z}";
     } else if (fabs(m_proj[1][2]) > tol) {
-      sprintf(buf, "%g z", fabs(m_proj[1][2]));
-      strcat(yLabel, buf);
+      yLabel += std::to_string(fabs(m_proj[1][2])) + " #it{z}";
     }
   } else {
     if (fabs(m_proj[1][2] - 1) < tol) {
-      strcat(yLabel, "z");
+      yLabel = "#it{z}";
     } else if (fabs(m_proj[1][2] + 1) < tol) {
-      strcat(yLabel, "-z");
-    } else if (m_proj[1][2] > tol) {
-      sprintf(buf, "%g z", m_proj[1][2]);
-      strcat(yLabel, buf);
-    } else if (m_proj[1][2] < -tol) {
-      sprintf(buf, "%g z", m_proj[1][2]);
-      strcat(yLabel, buf);
+      yLabel = "#minus#it{z}";
+    } else if (fabs(m_proj[1][2]) > tol) {
+      yLabel = std::to_string(m_proj[1][2]) + " #it{z}";
     }
   }
 
   // Unit
-  strcat(yLabel, " [cm]");
-  return std::string(yLabel);
+  yLabel += " [cm]";
+  return yLabel;
 }
 
 std::string ViewBase::PlaneDescription() {
 
-  char description[50];
-  // Initialisation of the plane label
-  strcpy(description, "\0");
-  char buf[100];
+  std::string description;
 
   constexpr double tol = 1.e-4;
   // x portion
   if (fabs(m_plane[0] - 1) < tol) {
-    strcat(description, "x");
+    description = "x";
   } else if (fabs(m_plane[0] + 1) < tol) {
-    strcat(description, "-x");
-  } else if (m_plane[0] > tol) {
-    sprintf(buf, "%g x", m_plane[0]);
-    strcat(description, buf);
-  } else if (m_plane[0] < -tol) {
-    sprintf(buf, "%g x", m_plane[0]);
-    strcat(description, buf);
+    description = "-x";
+  } else if (fabs(m_plane[0]) > tol) {
+    description = std::to_string(m_plane[0]) + " x";
   }
 
   // y portion
-  if (strlen(description) > 0) {
+  if (!description.empty()) {
     if (m_plane[1] < -tol) {
-      strcat(description, " - ");
+      description += " - ";
     } else if (m_plane[1] > tol) {
-      strcat(description, " + ");
+      description += " + ";
     }
     if (fabs(m_plane[1] - 1) < tol || fabs(m_plane[1] + 1) < tol) {
-      strcat(description, "y");
+      description += "y";
     } else if (fabs(m_plane[1]) > tol) {
-      sprintf(buf, "%g y", fabs(m_plane[1]));
-      strcat(description, buf);
+      description += std::to_string(fabs(m_plane[1])) + " y";
     }
   } else {
     if (fabs(m_plane[1] - 1) < tol) {
-      strcat(description, "y");
+      description = "y";
     } else if (fabs(m_plane[1] + 1) < tol) {
-      strcat(description, "-y");
-    } else if (m_plane[1] > tol) {
-      sprintf(buf, "%g y", m_plane[1]);
-      strcat(description, buf);
-    } else if (m_plane[1] < -tol) {
-      sprintf(buf, "%g y", m_plane[1]);
-      strcat(description, buf);
+      description = "-y";
+    } else if (fabs(m_plane[1]) > tol) {
+      description = std::to_string(m_plane[1]) + " y";
     }
   }
 
   // z portion
-  if (strlen(description) > 0) {
+  if (!description.empty()) {
     if (m_plane[2] < -tol) {
-      strcat(description, " - ");
+      description += " - ";
     } else if (m_plane[2] > tol) {
-      strcat(description, " + ");
+      description += " + ";
     }
     if (fabs(m_plane[2] - 1) < tol || fabs(m_plane[2] + 1) < tol) {
-      strcat(description, "z");
+      description += "z";
     } else if (fabs(m_plane[2]) > tol) {
-      sprintf(buf, "%g z", fabs(m_plane[2]));
-      strcat(description, buf);
+      description += std::to_string(fabs(m_plane[2])) + " z";
     }
   } else {
     if (fabs(m_plane[2] - 1) < tol) {
-      strcat(description, "z");
+      description = "z";
     } else if (fabs(m_plane[2] + 1) < tol) {
-      strcat(description, "-z");
-    } else if (m_plane[2] > tol) {
-      sprintf(buf, "%g z", m_plane[2]);
-      strcat(description, buf);
-    } else if (m_plane[2] < -tol) {
-      sprintf(buf, "%g z", m_plane[2]);
-      strcat(description, buf);
+      description = "-z";
+    } else if (fabs(m_plane[2]) > tol) {
+      description = std::to_string(m_plane[2]) + " z";
     }
   }
 
   // Constant
-  sprintf(buf, " = %g", m_plane[3]);
-  strcat(description, buf);
-  return std::string(description);
+  description += " = " + std::to_string(m_plane[3]);
+  return description;
 }
 
 }
