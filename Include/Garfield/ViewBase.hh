@@ -73,12 +73,21 @@ class ViewBase {
     {1, 0, 0}, {0, 1, 0}, {0, 0, 0}
   }};
   std::array<double, 4> m_plane = {0, 0, 1, 0};
+  // Matrix used for projections (FPRMAT).
+  std::array<std::array<double, 3>, 3> m_prmat = {{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}
+  }};
 
   // Find an unused function name.
   std::string FindUnusedFunctionName(const std::string& s) const;
   // Find an unused histogram name.
   std::string FindUnusedHistogramName(const std::string& s) const;
 
+  // Update and invert the projection matrix.
+  void UpdateProjectionMatrix();
+  // Determine plane coordinates.
+  void ToPlane(const double x, const double y, const double z,
+               double& xp, double& yp) const;
   // X-axis label for the current viewing plane.
   std::string LabelX();
   // Y-axis label for the current viewing plane.

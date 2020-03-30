@@ -1,10 +1,56 @@
 #include <iostream>
 #include <cstring>
+#include <cmath>
 
 #include <TROOT.h>
 
 #include "Garfield/Plotting.hh"
 #include "Garfield/ViewBase.hh"
+
+namespace {
+
+bool Invert(std::array<std::array<double, 3>, 3>& a) {
+
+  // Compute cofactors.
+  const double c11 = a[1][1] * a[2][2] - a[1][2] * a[2][1];
+  const double c12 = a[1][2] * a[2][0] - a[1][0] * a[2][2];
+  const double c13 = a[1][0] * a[2][1] - a[1][1] * a[2][0];
+  const double c21 = a[2][1] * a[0][2] - a[2][2] * a[0][1];
+  const double c22 = a[2][2] * a[0][0] - a[2][0] * a[0][2];
+  const double c23 = a[2][0] * a[0][1] - a[2][1] * a[0][0];
+  const double c31 = a[0][1] * a[1][2] - a[0][2] * a[1][1];
+  const double c32 = a[0][2] * a[1][0] - a[0][0] * a[1][2];
+  const double c33 = a[0][0] * a[1][1] - a[0][1] * a[1][0];
+  const double t1 = fabs(a[0][0]);
+  const double t2 = fabs(a[1][0]);
+  const double t3 = fabs(a[2][0]);
+  double det = 0.;
+  double pivot = 0.;
+  if (t2 < t1 && t3 < t1) {
+    pivot = a[0][0];
+    det = c22 * c33 - c23 * c32;
+  } else if (t1 < t2 && t3 < t2) {
+    pivot = a[1][0];
+    det = c13 * c32 - c12 * c33;
+  } else {
+    pivot = a[2][0];
+    det = c23 * c12 - c22 * c13;
+  }
+  if (det == 0.) return false;
+  const double s = pivot / det;
+  a[0][0] = s * c11;
+  a[0][1] = s * c21;
+  a[0][2] = s * c31;
+  a[1][0] = s * c12;
+  a[1][1] = s * c22;
+  a[1][2] = s * c32;
+  a[2][0] = s * c13;
+  a[2][1] = s * c23;
+  a[2][2] = s * c33;
+  return true;
+}
+
+}
 
 namespace Garfield {
 
@@ -106,9 +152,7 @@ void ViewBase::SetPlane(const double fx, const double fy, const double fz,
   m_plane[2] = fz;
   m_plane[3] = fx * x0 + fy * y0 + fz * z0;
 
-  // Make labels to be placed along the axes
-  // TODO!
-  // Labels();
+  UpdateProjectionMatrix();
 }
 
 void ViewBase::Rotate(const double theta) {
@@ -125,8 +169,7 @@ void ViewBase::Rotate(const double theta) {
     m_proj[1][i] = auxv[i];
   }
 
-  // Make labels to be placed along the axes
-  // Labels();
+  UpdateProjectionMatrix();
 }
 
 
@@ -148,6 +191,38 @@ std::string ViewBase::FindUnusedHistogramName(const std::string& s) const {
     hname = s + "_" + std::to_string(idx);
   }
   return hname;
+}
+
+void ViewBase::UpdateProjectionMatrix() {
+
+  m_prmat[0][0] = m_proj[0][0];
+  m_prmat[1][0] = m_proj[0][1];
+  m_prmat[2][0] = m_proj[0][2];
+  m_prmat[0][1] = m_proj[1][0];
+  m_prmat[1][1] = m_proj[1][1];
+  m_prmat[2][1] = m_proj[1][2];
+  const double vnorm = sqrt(m_plane[0] * m_plane[0] +
+                            m_plane[1] * m_plane[1] +
+                            m_plane[2] * m_plane[2]);
+  if (vnorm <= 0.) {
+    std::cerr << m_className << "::UpdateProjectionMatrix:\n"
+              << "    Zero norm vector.\n";
+    // TODO! Reset to default.
+    return;
+  }
+  m_prmat[0][2] = m_plane[0] / vnorm;
+  m_prmat[1][2] = m_plane[1] / vnorm;
+  m_prmat[2][2] = m_plane[2] / vnorm;
+  if (!Invert(m_prmat)) {
+    std::cerr << m_className << "::UpdateProjectionMatrix:\n"
+              << "    Inversion failed.\n";
+  }
+}
+
+void ViewBase::ToPlane(const double x, const double y, const double z,
+                       double& xp, double& yp) const {
+  xp = m_prmat[0][0] * x + m_prmat[0][1] * y + m_prmat[0][2] * z;
+  yp = m_prmat[1][0] * x + m_prmat[1][1] * y + m_prmat[1][2] * z;
 }
 
 std::string ViewBase::LabelX() {

@@ -97,7 +97,7 @@ class ViewFEMesh : public ViewBase {
   bool m_drawViewRegion = false;
   std::vector<TPolyLine> m_viewRegionLines;
 
-  // Matrix used for projections (FPRMAT).
+  // Viewing plane (plane normal is stored in m_proj[2])
   double m_pmat[3][3];
   double m_dist;
 
