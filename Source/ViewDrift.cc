@@ -175,22 +175,50 @@ void ViewDrift::Plot2d(const bool axis) {
   TGraph gr;
   gr.SetLineWidth(1);
   for (const auto& driftLine : m_driftLines) {
+    const unsigned int nP = driftLine.first.size();
+    if (nP < 2) continue;
     if (driftLine.second == Particle::Electron) {
       gr.SetLineColor(kOrange - 3);
     } else {
       gr.SetLineColor(kRed + 1);
     }
-    const unsigned int nP = driftLine.first.size();
     std::vector<float> xgr;
     std::vector<float> ygr;
-    for (unsigned int j = 0; j < nP; ++j) {
-      const auto& x0 = driftLine.first[j];
+    auto x0 = driftLine.first[0];
+    bool in0 = InBox(x0);
+    if (in0) {
       double xp = 0., yp = 0.;
       ToPlane(x0[0], x0[1], x0[2], xp, yp);
       xgr.push_back(xp);
       ygr.push_back(yp);
     }
-    gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
+    for (unsigned int j = 1; j < nP; ++j) {
+      auto x1 = driftLine.first[j];
+      bool in1 = InBox(x1);
+      if (in1 != in0) {
+        double xp = 0., yp = 0.;
+        std::array<float, 3> xc;
+        Clip(x0, x1, xc);
+        ToPlane(xc[0], xc[1], xc[2], xp, yp);
+        xgr.push_back(xp);
+        ygr.push_back(yp);
+      } 
+      if (in1) {
+        double xp = 0., yp = 0.;
+        ToPlane(x1[0], x1[1], x1[2], xp, yp);
+        xgr.push_back(xp);
+        ygr.push_back(yp);
+      } else if (!xgr.empty()) {
+        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
+        xgr.clear();
+        ygr.clear();
+      }
+      x0 = x1;
+      in0 = in1;
+    }
+    if (!xgr.empty()) {
+      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
+    }
   }
   gPad->Update();
 
@@ -198,15 +226,44 @@ void ViewDrift::Plot2d(const bool axis) {
   gr.SetLineColor(kGreen + 3);
   for (const auto& track : m_tracks) {
     const auto nP = track.size();
+    if (nP < 2) continue;
     std::vector<float> xgr;
     std::vector<float> ygr;
-    for (unsigned int j = 0; j < nP; ++j) {
+    auto x0 = track[0];
+    bool in0 = InBox(x0);
+    if (in0) {
       double xp = 0., yp = 0.;
-      ToPlane(track[j][0], track[j][1], track[j][2], xp, yp);
+      ToPlane(x0[0], x0[1], x0[2], xp, yp);
       xgr.push_back(xp);
       ygr.push_back(yp);
     }
-    gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
+    for (unsigned int j = 1; j < nP; ++j) {
+      auto x1 = track[j];
+      bool in1 = InBox(x1);
+      if (in1 != in0) {
+        double xp = 0., yp = 0.;
+        std::array<float, 3> xc;
+        Clip(x0, x1, xc);
+        ToPlane(xc[0], xc[1], xc[2], xp, yp);
+        xgr.push_back(xp);
+        ygr.push_back(yp);
+      } 
+      if (in1) {
+        double xp = 0., yp = 0.;
+        ToPlane(x1[0], x1[1], x1[2], xp, yp);
+        xgr.push_back(xp);
+        ygr.push_back(yp);
+      } else if (!xgr.empty()) {
+        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
+        xgr.clear();
+        ygr.clear();
+      }
+      x0 = x1;
+      in0 = in1;
+    }
+    if (!xgr.empty()) {
+      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
+    }
   }
 
   gr.SetLineColor(kBlue + 1);
@@ -221,6 +278,42 @@ void ViewDrift::Plot2d(const bool axis) {
     gr.DrawGraph(2, xgr.data(), ygr.data(), "Lsame"); 
   }
   gPad->Update();
+}
+
+void ViewDrift::Clip(const std::array<float, 3>& x0, 
+                     const std::array<float, 3>& x1,
+                     std::array<float, 3>& xc) const {
+
+  xc.fill(0.);
+  const bool in0 = InBox(x0);
+  const bool in1 = InBox(x1);
+  if (in0 == in1) return;
+  xc = in0 ? x1 : x0;
+  const std::array<float, 3> dx = {x1[0] - x0[0], x1[1] - x0[1], 
+                                   x1[2] - x0[2]};
+  // Adjust x.
+  if (dx[0] != 0. && (xc[0] < m_xMinBox || xc[0] > m_xMaxBox)) {
+    const double b = xc[0] < m_xMinBox ? m_xMinBox : m_xMaxBox;
+    const double s = (b - xc[0]) / dx[0];
+    xc[0] = b;
+    xc[1] += dx[1] * s;
+    xc[2] += dx[2] * s;
+  }
+  if (dx[1] != 0. && (xc[1] < m_yMinBox || xc[1] > m_yMaxBox)) {
+    const double b = xc[1] < m_yMinBox ? m_yMinBox : m_yMaxBox;
+    const double s = (b - xc[1]) / dx[1];
+    xc[0] += dx[0] * s;
+    xc[1] = b;
+    xc[2] += dx[2] * s;
+  }
+  // Adjust z.
+  if (dx[2] != 0. && (xc[2] < m_zMinBox || xc[2] > m_zMaxBox)) {
+    const double b = xc[2] < m_zMinBox ? m_zMinBox : m_zMaxBox;
+    const double s = (b - xc[2]) / dx[2];
+    xc[0] += dx[0] * s;
+    xc[1] += dx[1] * s;
+    xc[2] = b;
+  }
 }
 
 void ViewDrift::Plot3d(const bool axis) {
