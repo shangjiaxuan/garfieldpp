@@ -178,9 +178,11 @@ void ViewDrift::Plot2d(const bool axis) {
     const unsigned int nP = driftLine.first.size();
     if (nP < 2) continue;
     if (driftLine.second == Particle::Electron) {
-      gr.SetLineColor(kOrange - 3);
+      gr.SetLineColor(m_colElectron);
+    } else if (driftLine.second == Particle::Hole) {
+      gr.SetLineColor(m_colHole);
     } else {
-      gr.SetLineColor(kRed + 1);
+      gr.SetLineColor(m_colIon);
     }
     std::vector<float> xgr;
     std::vector<float> ygr;
@@ -223,7 +225,7 @@ void ViewDrift::Plot2d(const bool axis) {
   gPad->Update();
 
   gr.SetLineWidth(2);
-  gr.SetLineColor(kGreen + 3);
+  gr.SetLineColor(m_colTrack);
   for (const auto& track : m_tracks) {
     const auto nP = track.size();
     if (nP < 2) continue;
@@ -266,7 +268,7 @@ void ViewDrift::Plot2d(const bool axis) {
     }
   }
 
-  gr.SetLineColor(kBlue + 1);
+  gr.SetLineColor(m_colPhoton);
   gr.SetLineStyle(2);
   for (const auto& photon : m_photons) {
     double xp0 = 0., yp0 = 0.;
@@ -277,6 +279,55 @@ void ViewDrift::Plot2d(const bool axis) {
     std::vector<float> ygr = {float(yp0), float(yp1)};
     gr.DrawGraph(2, xgr.data(), ygr.data(), "Lsame"); 
   }
+
+  gr.SetMarkerSize(m_markerSizeCollision);
+  gr.SetMarkerStyle(20);
+  if (!m_exc.empty()) {
+    gr.SetMarkerColor(m_colExcitation);
+    std::vector<float> xgr;
+    std::vector<float> ygr;
+    for (const auto& p : m_exc) {
+      if (!InBox(p)) continue;
+      double xp = 0., yp = 0.;
+      ToPlane(p[0], p[1], p[2], xp, yp);
+      xgr.push_back(xp);
+      ygr.push_back(yp); 
+    }
+    if (!xgr.empty()) {
+      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Psame");
+    }
+  } 
+  if (!m_ion.empty()) {
+    gr.SetMarkerColor(m_colIonisation);
+    std::vector<float> xgr;
+    std::vector<float> ygr;
+    for (const auto& p : m_ion) {
+      if (!InBox(p)) continue;
+      double xp = 0., yp = 0.;
+      ToPlane(p[0], p[1], p[2], xp, yp);
+      xgr.push_back(xp);
+      ygr.push_back(yp); 
+    }
+    if (!xgr.empty()) {
+      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Psame");
+    }
+  }
+  if (!m_att.empty()) {
+    gr.SetMarkerColor(m_colAttachment);
+    std::vector<float> xgr;
+    std::vector<float> ygr;
+    for (const auto& p : m_att) {
+      if (!InBox(p)) continue;
+      double xp = 0., yp = 0.;
+      ToPlane(p[0], p[1], p[2], xp, yp);
+      xgr.push_back(xp);
+      ygr.push_back(yp); 
+    }
+    if (!xgr.empty()) {
+      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Psame");
+    }
+  }
+ 
   gPad->Update();
 }
 
@@ -336,9 +387,11 @@ void ViewDrift::Plot3d(const bool axis) {
       pl->SetNextPoint(p[0], p[1], p[2]);
     }
     if (driftLine.second == Particle::Electron) {
-      pl->SetLineColor(kOrange - 3);
+      pl->SetLineColor(m_colElectron);
+    } else if (driftLine.second == Particle::Hole) {
+      pl->SetLineColor(m_colHole);
     } else {
-      pl->SetLineColor(kRed - 1);
+      pl->SetLineColor(m_colIon);
     }
     pl->SetLineWidth(1);
     pl->SetBit(kCanDelete);
@@ -346,7 +399,6 @@ void ViewDrift::Plot3d(const bool axis) {
   }
 
   for (const auto& track : m_tracks) {
-    const int col = kGreen + 3;
     const unsigned int nPoints = track.size();
     TPolyMarker3D* pm = new TPolyMarker3D(nPoints, 20);
     TPolyLine3D* pl = new TPolyLine3D(nPoints);
@@ -354,11 +406,11 @@ void ViewDrift::Plot3d(const bool axis) {
       pm->SetNextPoint(p[0], p[1], p[2]);
       pl->SetNextPoint(p[0], p[1], p[2]);
     }
-    pm->SetMarkerColor(col);
+    pm->SetMarkerColor(m_colTrack);
     pm->SetMarkerSize(m_markerSizeCluster);
     pm->SetBit(kCanDelete);
     pm->Draw("same");
-    pl->SetLineColor(col);
+    pl->SetLineColor(m_colTrack);
     pl->SetLineWidth(1);
     pl->SetBit(kCanDelete);
     pl->Draw("same");
@@ -369,7 +421,7 @@ void ViewDrift::Plot3d(const bool axis) {
     for (unsigned int i = 0; i < nP; ++i) {
       pm->SetPoint(i, m_exc[i][0], m_exc[i][1], m_exc[i][2]);
     }
-    pm->SetMarkerColor(kGreen + 3);
+    pm->SetMarkerColor(m_colExcitation);
     pm->SetMarkerSize(m_markerSizeCollision);
     pm->SetBit(kCanDelete);
     pm->Draw("same");
@@ -381,7 +433,7 @@ void ViewDrift::Plot3d(const bool axis) {
     for (unsigned int i = 0; i < nP; ++i) {
       pm->SetPoint(i, m_ion[i][0], m_ion[i][1], m_ion[i][2]);
     }
-    pm->SetMarkerColor(kOrange - 3);
+    pm->SetMarkerColor(m_colIonisation);
     pm->SetMarkerSize(m_markerSizeCollision);
     pm->SetBit(kCanDelete);
     pm->Draw("same");
@@ -393,7 +445,7 @@ void ViewDrift::Plot3d(const bool axis) {
     for (unsigned int i = 0; i < nP; ++i) {
       pm->SetPoint(i, m_att[i][0], m_att[i][1], m_att[i][2]);
     }
-    pm->SetMarkerColor(kCyan + 3);
+    pm->SetMarkerColor(m_colAttachment);
     pm->SetMarkerSize(m_markerSizeCollision);
     pm->SetBit(kCanDelete);
     pm->Draw("same");

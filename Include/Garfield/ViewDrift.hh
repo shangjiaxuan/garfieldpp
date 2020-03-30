@@ -7,6 +7,7 @@
 #include <array>
 #include <utility>
 
+#include <Rtypes.h>
 #include <TView.h>
 
 #include "ViewBase.hh"
@@ -32,6 +33,23 @@ class ViewDrift : public ViewBase {
   void SetClusterMarkerSize(const double size);
   /// Set the size of the collision markers (see TAttMarker).
   void SetCollisionMarkerSize(const double size);
+
+  /// Set the colour with which to draw electron drift lines.
+  void SetColourElectrons(const short col) { m_colElectron = col; } 
+  /// Set the colour with which to draw hole drift lines.
+  void SetColourHoles(const short col) { m_colHole = col; } 
+  /// Set the colour with which to draw ion drift lines.
+  void SetColourIons(const short col) { m_colIon = col; } 
+  /// Set the colour with which to draw charged particle tracks.
+  void SetColourTracks(const short col) { m_colTrack = col; } 
+  /// Set the colour with which to draw photons.
+  void SetColourPhotons(const short col) { m_colPhoton = col; } 
+  /// Set the colour with which to draw excitation markers.
+  void SetColourExcitations(const short col) { m_colExcitation = col; } 
+  /// Set the colour with which to draw ionisation markers.
+  void SetColourIonisations(const short col) { m_colIonisation = col; } 
+  /// Set the colour with which to draw attachment markers.
+  void SetColourAttachments(const short col) { m_colIonisation = col; } 
 
   // Functions used by the transport classes.
   void NewElectronDriftLine(const unsigned int np, int& id, const float x0,
@@ -82,6 +100,15 @@ class ViewDrift : public ViewBase {
 
   double m_markerSizeCluster = 1.;
   double m_markerSizeCollision = 0.5;
+  
+  short m_colTrack = kGreen + 3;
+  short m_colPhoton = kBlue + 1;
+  short m_colElectron = kOrange - 3;
+  short m_colHole = kRed + 1;
+  short m_colIon = kRed + 1;
+  short m_colExcitation = kGreen + 3;
+  short m_colIonisation = kOrange - 3;
+  short m_colAttachment = kCyan + 3;
 
   void Plot2d(const bool axis);
   void Plot3d(const bool axis);
