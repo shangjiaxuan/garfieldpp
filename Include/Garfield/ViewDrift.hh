@@ -85,6 +85,13 @@ class ViewDrift : public ViewBase {
 
   void Plot2d(const bool axis);
   void Plot3d(const bool axis);
+  bool InBox(const std::array<float, 3>& x) {
+    if (!m_userBox) return true;
+    if (x[0] < m_xMinBox || x[0] > m_xMaxBox || 
+        x[1] < m_yMinBox || x[1] > m_yMaxBox ||
+        x[2] < m_yMinBox || x[2] > m_zMaxBox) return false;
+    return true; 
+  }
 };
 }
 #endif

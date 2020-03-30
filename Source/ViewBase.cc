@@ -225,6 +225,12 @@ void ViewBase::ToPlane(const double x, const double y, const double z,
   yp = m_prmat[1][0] * x + m_prmat[1][1] * y + m_prmat[1][2] * z;
 }
 
+void ViewBase::ToPlane(const float x, const float y, const float z,
+                       float& xp, float& yp) const {
+  xp = m_prmat[0][0] * x + m_prmat[0][1] * y + m_prmat[0][2] * z;
+  yp = m_prmat[1][0] * x + m_prmat[1][1] * y + m_prmat[1][2] * z;
+}
+
 std::string ViewBase::LabelX() {
   // Initialisation of the x-axis label.
   char xLabel[50];

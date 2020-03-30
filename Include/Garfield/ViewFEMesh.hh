@@ -101,10 +101,6 @@ class ViewFEMesh : public ViewBase {
   double m_pmat[3][3];
   double m_dist;
 
-  // Viewing plane dimensions
-  double m_xMinPlot = -1., m_xMaxPlot = 1.;
-  double m_yMinPlot = -1., m_yMaxPlot = 1.;
-
   // The field map object
   ComponentFieldMap* m_component = nullptr;
 

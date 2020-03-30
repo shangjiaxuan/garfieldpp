@@ -88,6 +88,8 @@ class ViewBase {
   // Determine plane coordinates.
   void ToPlane(const double x, const double y, const double z,
                double& xp, double& yp) const;
+  void ToPlane(const float x, const float y, const float z,
+               float& xp, float& yp) const;
   // X-axis label for the current viewing plane.
   std::string LabelX();
   // Y-axis label for the current viewing plane.

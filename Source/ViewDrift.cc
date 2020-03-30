@@ -169,47 +169,56 @@ void ViewDrift::Plot2d(const bool axis) {
   canvas->cd();
   if (axis) {
     auto frame = canvas->DrawFrame(m_xMinBox, m_yMinBox, m_xMaxBox, m_yMaxBox);
-    frame->GetXaxis()->SetTitle("x [cm]");
-    frame->GetYaxis()->SetTitle("y [cm]");
+    frame->GetXaxis()->SetTitle(LabelX().c_str());
+    frame->GetYaxis()->SetTitle(LabelY().c_str());
   }
   TGraph gr;
+  gr.SetLineWidth(1);
   for (const auto& driftLine : m_driftLines) {
-    const auto nP = driftLine.first.size();
-    std::vector<float> xp(nP, 0.);
-    std::vector<float> yp(nP, 0.);
-    for (unsigned int j = 0; j < nP; ++j) {
-      xp[j] = driftLine.first[j][0];
-      yp[j] = driftLine.first[j][1];
-    }
     if (driftLine.second == Particle::Electron) {
       gr.SetLineColor(kOrange - 3);
     } else {
       gr.SetLineColor(kRed + 1);
     }
-    gr.SetLineWidth(1);
-    gr.DrawGraph(nP, xp.data(), yp.data(), "Lsame");
+    const unsigned int nP = driftLine.first.size();
+    std::vector<float> xgr;
+    std::vector<float> ygr;
+    for (unsigned int j = 0; j < nP; ++j) {
+      const auto& x0 = driftLine.first[j];
+      double xp = 0., yp = 0.;
+      ToPlane(x0[0], x0[1], x0[2], xp, yp);
+      xgr.push_back(xp);
+      ygr.push_back(yp);
+    }
+    gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
   }
   gPad->Update();
 
+  gr.SetLineWidth(2);
+  gr.SetLineColor(kGreen + 3);
   for (const auto& track : m_tracks) {
-    const int col = kGreen + 3;
     const auto nP = track.size();
-    std::vector<float> xp(nP, 0.);
-    std::vector<float> yp(nP, 0.);
+    std::vector<float> xgr;
+    std::vector<float> ygr;
     for (unsigned int j = 0; j < nP; ++j) {
-      xp[j] = track[j][0];
-      yp[j] = track[j][1];
+      double xp = 0., yp = 0.;
+      ToPlane(track[j][0], track[j][1], track[j][2], xp, yp);
+      xgr.push_back(xp);
+      ygr.push_back(yp);
     }
-    gr.SetLineColor(col);
-    gr.SetLineWidth(2);
-    gr.DrawGraph(nP, xp.data(), yp.data(), "Lsame");
+    gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
   }
+
+  gr.SetLineColor(kBlue + 1);
+  gr.SetLineStyle(2);
   for (const auto& photon : m_photons) {
-    std::vector<float> xp = {photon[0][0], photon[1][0]};
-    std::vector<float> yp = {photon[0][1], photon[1][1]};
-    gr.SetLineColor(kBlue + 1);
-    gr.SetLineStyle(2);
-    gr.DrawGraph(2, xp.data(), yp.data(), "Lsame"); 
+    double xp0 = 0., yp0 = 0.;
+    double xp1 = 0., yp1 = 0.;
+    ToPlane(photon[0][0], photon[0][1], photon[0][2], xp0, yp0);
+    ToPlane(photon[1][0], photon[1][1], photon[1][2], xp1, yp1);
+    std::vector<float> xgr = {float(xp0), float(xp1)};
+    std::vector<float> ygr = {float(yp0), float(yp1)};
+    gr.DrawGraph(2, xgr.data(), ygr.data(), "Lsame"); 
   }
   gPad->Update();
 }
