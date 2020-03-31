@@ -22,23 +22,6 @@ class ViewIsochrons : public ViewBase {
   /// Set the component.
   void SetComponent(ComponentBase* c);
 
-  /// Set the viewing area (in local coordinates of the current viewing plane).
-  void SetArea(const double xmin, const double ymin, const double xmax,
-               const double ymax);
-  /// Set the viewing area based on the bounding box of the sensor/component.
-  void SetArea() { m_hasUserArea = false; }
-
-  /** Set the projection (viewing plane).
-    * \param fx,fy,fz normal vector
-    * \param x0,y0,z0 in-plane point
-    */
-  void SetPlane(const double fx, const double fy, const double fz,
-                const double x0, const double y0, const double z0);
-  /// Set the default viewing plane (\f$x\f$-\f$y\f$ at \f$z = 0\f$).
-  void SetDefaultProjection();
-  /// Rotate the viewing plane (angle in radian).
-  void Rotate(const double angle);
-
   /** Draw equal time contour lines.
     * \param tstep Time interval. 
     * \param points List of starting points.
@@ -84,16 +67,6 @@ class ViewIsochrons : public ViewBase {
   Sensor* m_sensor = nullptr;
   ComponentBase* m_component = nullptr;
 
-  // Projection for viewing
-  double m_proj[3][3];
-  double m_plane[4];
-  char m_xLabel[50], m_yLabel[50], m_description[50];
-
-  // Plot area
-  bool m_hasUserArea = false;
-  double m_xmin = -1., m_ymin = -1.;
-  double m_xmax = 1., m_ymax = 1.;
-
   enum class Particle { Electron = 0, Ion };
   // Type of particle to be used for computing drift lines.
   Particle m_particle = Particle::Electron;
@@ -110,7 +83,6 @@ class ViewIsochrons : public ViewBase {
 
   void SetupCanvas();
   bool Range();
-  void Labels();
 
   void ComputeDriftLines(const double tstep,
       const std::vector<std::array<double, 3> >& points,

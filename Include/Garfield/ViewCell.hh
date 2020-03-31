@@ -26,32 +26,18 @@ class ViewCell : public ViewBase {
   void SetComponent(ComponentAnalyticField* comp);
   void SetComponent(ComponentNeBem2d* comp);
 
-  /// Set the plot range explicitly.
-  void SetArea(const double xmin, const double ymin, const double zmin,
-               const double xmax, const double ymax, const double zmax);
-  ///  Take the plot range from the bounding box of the component class.
-  void SetArea() { m_hasUserArea = false; }
-
-  /// Make a two-dimensional drawing of the cell geometry.
+  /// Make a two-dimensional drawing of the cell layout.
   void Plot2d();
-  /// Make a three-dimensional drawing of the cell geometry (using TGeo).
+  /// Make a three-dimensional drawing of the cell layout (using TGeo).
   void Plot3d();
 
-  /// Visualize wirers using markers or as a circle with the actual wire radius.
-  /// The default is markers.
+  /// Visualize wirers using markers (default setting) 
+  /// or as a circle with the actual wire radius.
   void EnableWireMarkers(const bool on = true) { m_useWireMarker = on; }
   void DisableWireMarkers() { EnableWireMarkers(false); }
 
  private:
-  // Options
   bool m_useWireMarker = true;
-
-  std::string m_label = "Cell Layout";
-
-  // Box dimensions
-  bool m_hasUserArea = false;
-  double m_xMin = -1., m_yMin = -1., m_zMin = -1.;
-  double m_xMax = 1., m_yMax = 1., m_zMax = 1.;
 
   ComponentAnalyticField* m_component = nullptr;
   ComponentNeBem2d* m_nebem = nullptr;
@@ -59,7 +45,7 @@ class ViewCell : public ViewBase {
   // 3D geometry.
   std::unique_ptr<TGeoManager> m_geo;
 
-  bool Plot(const bool use3d);
+  bool Plot(const bool twod);
   // Draw a wire in 2D.
   void PlotWire(const double x, const double y, const double d, const int type);
   // Draw a wire in 3D.
@@ -78,9 +64,10 @@ class ViewCell : public ViewBase {
   void PlotPlane(const double dx, const double dy, const double dz,
                  const double x0, const double y0);
   // Draw a neBEM 2D layout.
-  bool PlotNeBem(const bool use3d);
+  bool PlotNeBem(const bool twod);
   // Setup the TGeoManager. 
   void SetupGeo(const double dx, const double dy, const double dz);
+
 };
 }
 #endif

@@ -33,19 +33,17 @@ class ViewFEMesh : public ViewBase {
   /// Set the component from which to retrieve the mesh and field.
   void SetComponent(ComponentFieldMap* comp);
 
-  /// Set area to be plotted to the default.
-  void SetArea();
-  /// Set area to be plotted explicitly.
-  void SetArea(const double xmin, const double ymin, const double zmin,
-               const double xmax, const double ymax, const double zmax);
   /// Reset the projection plane.
   void SetDefaultProjection();
   /// Set the projection plane.
-  void SetPlane(double fx, double fy, double fz, double x0, double y0,
-                double z0);
+  void SetPlane(const double fx, const double fy, const double fz, 
+                const double x0, const double y0, const double z0) override;
   /// Set the projection plane specifying hint for in-plane x axis.
   void SetPlane(double fx, double fy, double fz, double x0, double y0,
                 double z0, double hx, double hy, double hz);
+
+  void SetArea(const double xmin, const double ymin, const double zmin,
+               const double xmax, const double ymax, const double zmax) override;
 
   // Axes
   void SetXaxis(TGaxis* ax);
@@ -95,22 +93,13 @@ class ViewFEMesh : public ViewBase {
   // Options
   bool m_fillMesh = false;
 
-  // Viewing plane (plane normal is stored in m_proj[2])
-  double m_proj[3][3];
-  double m_dist;
-
-  // Box dimensions
-  bool m_hasUserArea = false;
-  double m_xMin = -1., m_yMin = -1., m_zMin = -1.;
-  double m_xMax = 1., m_yMax = 1., m_zMax = 1.;
-
   // Intersection of viewing plane with plotted area in planar coordinates
   bool m_drawViewRegion = false;
   std::vector<TPolyLine> m_viewRegionLines;
 
-  // Viewing plane dimensions
-  double m_xPlaneMin = -1., m_xPlaneMax = 1.;
-  double m_yPlaneMin = -1., m_yPlaneMax = 1.;
+  // Viewing plane (plane normal is stored in m_proj[2])
+  double m_pmat[3][3];
+  double m_dist;
 
   // The field map object
   ComponentFieldMap* m_component = nullptr;

@@ -44,7 +44,7 @@ int main(int argc, char * argv[]) {
   ViewCell cellView;
   cellView.SetCanvas(&canvas);
   cellView.SetComponent(&cmp);
-  cellView.SetArea(-1.1 * r, -1.1 * r, -1., 1.1 * r, 1.1 * r, 1.);
+  cellView.SetArea(-1.1 * r, -1.1 * r, 1.1 * r, 1.1 * r);
   cellView.Plot2d();
   app.Run(true);
 }

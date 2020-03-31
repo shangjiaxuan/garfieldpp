@@ -132,9 +132,7 @@ bool Crossing(const double x1, const double y1, const double x2,
 
 namespace Garfield {
 
-ViewIsochrons::ViewIsochrons() : ViewBase("ViewIsochrons") {
-  SetDefaultProjection();
-}
+ViewIsochrons::ViewIsochrons() : ViewBase("ViewIsochrons") { }
 
 void ViewIsochrons::SetSensor(Sensor* s) {
   if (!s) {
@@ -154,22 +152,6 @@ void ViewIsochrons::SetComponent(ComponentBase* c) {
 
   m_component = c;
   m_sensor = nullptr;
-}
-
-void ViewIsochrons::SetArea(const double xmin, const double ymin, 
-                            const double xmax, const double ymax) {
-  // Check range, assign if non-null.
-  if (xmin == xmax || ymin == ymax) {
-    std::cerr << m_className << "::SetArea: Null area range is not permitted.\n"
-              << "      " << xmin << " < x < " << xmax << "\n"
-              << "      " << ymin << " < y < " << ymax << "\n";
-    return;
-  }
-  m_xmin = std::min(xmin, xmax);
-  m_ymin = std::min(ymin, ymax);
-  m_xmax = std::max(xmin, xmax);
-  m_ymax = std::max(ymin, ymax);
-  m_hasUserArea = true;
 }
 
 void ViewIsochrons::SetAspectRatioSwitch(const double ar) {
@@ -219,12 +201,15 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
               << "    No starting points provided.\n";
     return;
   }
-  SetupCanvas();
   if (!Range()) return;
-  auto frame = m_canvas->DrawFrame(m_xmin, m_ymin, m_xmax, m_ymax);
-  frame->GetXaxis()->SetTitle(m_xLabel);
-  frame->GetYaxis()->SetTitle(m_yLabel);
-  m_canvas->Update();
+  auto canvas = GetCanvas();
+  canvas->cd();
+  canvas->SetTitle("Isochrons");
+  auto frame = canvas->DrawFrame(m_xMinPlot, m_yMinPlot, 
+                                 m_xMaxPlot, m_yMaxPlot);
+  frame->GetXaxis()->SetTitle(LabelX().c_str());
+  frame->GetYaxis()->SetTitle(LabelY().c_str());
+  canvas->Update();
 
   //-----------------------------------------------------------------------
   //   DRFEQT - The main routine (DRFEQT) accumulates equal drift time data
@@ -327,8 +312,8 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
         continue;
       }
       // Regular plotting.
-      const double tolx = (m_xmax - m_xmin) * m_connectionThreshold;
-      const double toly = (m_ymax - m_ymin) * m_connectionThreshold;
+      const double tolx = (m_xMaxPlot - m_xMinPlot) * m_connectionThreshold;
+      const double toly = (m_yMaxPlot - m_yMinPlot) * m_connectionThreshold;
       // Flag to keep track if the segment is interrupted by a drift line
       // or if it is too long.
       bool gap = false;
@@ -450,8 +435,8 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
     sensor.AddComponent(m_component);
     drift.SetSensor(&sensor);
   }
-  const double lx = 0.1 * fabs(m_xmax - m_xmin);
-  const double ly = 0.1 * fabs(m_ymax - m_ymin);
+  const double lx = 0.1 * fabs(m_xMaxPlot - m_xMinPlot);
+  const double ly = 0.1 * fabs(m_yMaxPlot - m_yMinPlot);
   drift.SetMaximumStepSize(std::min(lx, ly));
   drift.EnableSignalCalculation(false);
   for (const auto& point : points) {
@@ -517,330 +502,9 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
   }
 }
 
-void ViewIsochrons::SetDefaultProjection() {
-  // Default projection: x-y at z=0
-  m_proj[0][0] = 1;
-  m_proj[1][0] = 0;
-  m_proj[2][0] = 0;
-  m_proj[0][1] = 0;
-  m_proj[1][1] = 1;
-  m_proj[2][1] = 0;
-  m_proj[0][2] = 0;
-  m_proj[1][2] = 0;
-  m_proj[2][2] = 0;
-
-  // Plane description
-  m_plane[0] = 0;
-  m_plane[1] = 0;
-  m_plane[2] = 1;
-  m_plane[3] = 0;
-
-  // Prepare axis labels.
-  Labels();
-}
-
-void ViewIsochrons::Labels() {
-  // Initialisation of the x-axis label
-  strcpy(m_xLabel, "\0");
-  char buf[100];
-
-  const double tol = 1.e-4;
-  // x portion
-  if (fabs(m_proj[0][0] - 1) < tol) {
-    strcat(m_xLabel, "x");
-  } else if (fabs(m_proj[0][0] + 1) < tol) {
-    strcat(m_xLabel, "-x");
-  } else if (m_proj[0][0] > tol) {
-    sprintf(buf, "%g x", m_proj[0][0]);
-    strcat(m_xLabel, buf);
-  } else if (m_proj[0][0] < -tol) {
-    sprintf(buf, "%g x", m_proj[0][0]);
-    strcat(m_xLabel, buf);
-  }
-
-  // y portion
-  if (strlen(m_xLabel) > 0) {
-    if (m_proj[0][1] < -tol) {
-      strcat(m_xLabel, " - ");
-    } else if (m_proj[0][1] > tol) {
-      strcat(m_xLabel, " + ");
-    }
-    if (fabs(m_proj[0][1] - 1) < tol || fabs(m_proj[0][1] + 1) < tol) {
-      strcat(m_xLabel, "y");
-    } else if (fabs(m_proj[0][1]) > tol) {
-      sprintf(buf, "%g y", fabs(m_proj[0][1]));
-      strcat(m_xLabel, buf);
-    }
-  } else {
-    if (fabs(m_proj[0][1] - 1) < tol) {
-      strcat(m_xLabel, "y");
-    } else if (fabs(m_proj[0][1] + 1) < tol) {
-      strcat(m_xLabel, "-y");
-    } else if (m_proj[0][1] > tol) {
-      sprintf(buf, "%g y", m_proj[0][1]);
-      strcat(m_xLabel, buf);
-    } else if (m_proj[0][1] < -tol) {
-      sprintf(buf, "%g y", m_proj[0][1]);
-      strcat(m_xLabel, buf);
-    }
-  }
-
-  // z portion
-  if (strlen(m_xLabel) > 0) {
-    if (m_proj[0][2] < -tol) {
-      strcat(m_xLabel, " - ");
-    } else if (m_proj[0][2] > tol) {
-      strcat(m_xLabel, " + ");
-    }
-    if (fabs(m_proj[0][2] - 1) < tol || fabs(m_proj[0][2] + 1) < tol) {
-      strcat(m_xLabel, "z");
-    } else if (fabs(m_proj[0][2]) > tol) {
-      sprintf(buf, "%g z", fabs(m_proj[0][2]));
-      strcat(m_xLabel, buf);
-    }
-  } else {
-    if (fabs(m_proj[0][2] - 1) < tol) {
-      strcat(m_xLabel, "z");
-    } else if (fabs(m_proj[0][2] + 1) < tol) {
-      strcat(m_xLabel, "-z");
-    } else if (m_proj[0][2] > tol) {
-      sprintf(buf, "%g z", m_proj[0][2]);
-      strcat(m_xLabel, buf);
-    } else if (m_proj[0][2] < -tol) {
-      sprintf(buf, "%g z", m_proj[0][2]);
-      strcat(m_xLabel, buf);
-    }
-  }
-
-  // Unit
-  strcat(m_xLabel, " [cm]");
-
-  // Initialisation of the y-axis label
-  strcpy(m_yLabel, "\0");
-
-  // x portion
-  if (fabs(m_proj[1][0] - 1) < tol) {
-    strcat(m_yLabel, "x");
-  } else if (fabs(m_proj[1][0] + 1) < tol) {
-    strcat(m_yLabel, "-x");
-  } else if (m_proj[1][0] > tol) {
-    sprintf(buf, "%g x", m_proj[1][0]);
-    strcat(m_yLabel, buf);
-  } else if (m_proj[1][0] < -tol) {
-    sprintf(buf, "%g x", m_proj[1][0]);
-    strcat(m_yLabel, buf);
-  }
-
-  // y portion
-  if (strlen(m_yLabel) > 0) {
-    if (m_proj[1][1] < -tol) {
-      strcat(m_yLabel, " - ");
-    } else if (m_proj[1][1] > tol) {
-      strcat(m_yLabel, " + ");
-    }
-    if (fabs(m_proj[1][1] - 1) < tol || fabs(m_proj[1][1] + 1) < tol) {
-      strcat(m_yLabel, "y");
-    } else if (fabs(m_proj[1][1]) > tol) {
-      sprintf(buf, "%g y", fabs(m_proj[1][1]));
-      strcat(m_yLabel, buf);
-    }
-  } else {
-    if (fabs(m_proj[1][1] - 1) < tol) {
-      strcat(m_yLabel, "y");
-    } else if (fabs(m_proj[1][1] + 1) < tol) {
-      strcat(m_yLabel, "-y");
-    } else if (m_proj[1][1] > tol) {
-      sprintf(buf, "%g y", m_proj[1][1]);
-      strcat(m_yLabel, buf);
-    } else if (m_proj[1][1] < -tol) {
-      sprintf(buf, "%g y", m_proj[1][1]);
-      strcat(m_yLabel, buf);
-    }
-  }
-
-  // z portion
-  if (strlen(m_yLabel) > 0) {
-    if (m_proj[1][2] < -tol) {
-      strcat(m_yLabel, " - ");
-    } else if (m_proj[1][2] > tol) {
-      strcat(m_yLabel, " + ");
-    }
-    if (fabs(m_proj[1][2] - 1) < tol || fabs(m_proj[1][2] + 1) < tol) {
-      strcat(m_yLabel, "z");
-    } else if (fabs(m_proj[1][2]) > tol) {
-      sprintf(buf, "%g z", fabs(m_proj[1][2]));
-      strcat(m_yLabel, buf);
-    }
-  } else {
-    if (fabs(m_proj[1][2] - 1) < tol) {
-      strcat(m_yLabel, "z");
-    } else if (fabs(m_proj[1][2] + 1) < tol) {
-      strcat(m_yLabel, "-z");
-    } else if (m_proj[1][2] > tol) {
-      sprintf(buf, "%g z", m_proj[1][2]);
-      strcat(m_yLabel, buf);
-    } else if (m_proj[1][2] < -tol) {
-      sprintf(buf, "%g z", m_proj[1][2]);
-      strcat(m_yLabel, buf);
-    }
-  }
-
-  // Unit
-  strcat(m_yLabel, " [cm]");
-
-  // Initialisation of the plane label
-  strcpy(m_description, "\0");
-
-  // x portion
-  if (fabs(m_plane[0] - 1) < tol) {
-    strcat(m_description, "x");
-  } else if (fabs(m_plane[0] + 1) < tol) {
-    strcat(m_description, "-x");
-  } else if (m_plane[0] > tol) {
-    sprintf(buf, "%g x", m_plane[0]);
-    strcat(m_description, buf);
-  } else if (m_plane[0] < -tol) {
-    sprintf(buf, "%g x", m_plane[0]);
-    strcat(m_description, buf);
-  }
-
-  // y portion
-  if (strlen(m_description) > 0) {
-    if (m_plane[1] < -tol) {
-      strcat(m_description, " - ");
-    } else if (m_plane[1] > tol) {
-      strcat(m_description, " + ");
-    }
-    if (fabs(m_plane[1] - 1) < tol || fabs(m_plane[1] + 1) < tol) {
-      strcat(m_description, "y");
-    } else if (fabs(m_plane[1]) > tol) {
-      sprintf(buf, "%g y", fabs(m_plane[1]));
-      strcat(m_description, buf);
-    }
-  } else {
-    if (fabs(m_plane[1] - 1) < tol) {
-      strcat(m_description, "y");
-    } else if (fabs(m_plane[1] + 1) < tol) {
-      strcat(m_description, "-y");
-    } else if (m_plane[1] > tol) {
-      sprintf(buf, "%g y", m_plane[1]);
-      strcat(m_description, buf);
-    } else if (m_plane[1] < -tol) {
-      sprintf(buf, "%g y", m_plane[1]);
-      strcat(m_description, buf);
-    }
-  }
-
-  // z portion
-  if (strlen(m_description) > 0) {
-    if (m_plane[2] < -tol) {
-      strcat(m_description, " - ");
-    } else if (m_plane[2] > tol) {
-      strcat(m_description, " + ");
-    }
-    if (fabs(m_plane[2] - 1) < tol || fabs(m_plane[2] + 1) < tol) {
-      strcat(m_description, "z");
-    } else if (fabs(m_plane[2]) > tol) {
-      sprintf(buf, "%g z", fabs(m_plane[2]));
-      strcat(m_description, buf);
-    }
-  } else {
-    if (fabs(m_plane[2] - 1) < tol) {
-      strcat(m_description, "z");
-    } else if (fabs(m_plane[2] + 1) < tol) {
-      strcat(m_description, "-z");
-    } else if (m_plane[2] > tol) {
-      sprintf(buf, "%g z", m_plane[2]);
-      strcat(m_description, buf);
-    } else if (m_plane[2] < -tol) {
-      sprintf(buf, "%g z", m_plane[2]);
-      strcat(m_description, buf);
-    }
-  }
-
-  // Constant
-  sprintf(buf, " = %g", m_plane[3]);
-  strcat(m_description, buf);
-
-  if (m_debug) {
-    std::cout << m_className << "::Labels:\n"
-              << "    x label: |" << m_xLabel << "|\n"
-              << "    y label: |" << m_yLabel << "|\n"
-              << "    plane:   |" << m_description << "|\n";
-  }
-}
-
-void ViewIsochrons::SetPlane(const double fx, const double fy, const double fz,
-                         const double x0, const double y0, const double z0) {
-  // Calculate two in-plane vectors for the normal vector
-  const double fnorm = sqrt(fx * fx + fy * fy + fz * fz);
-  if (fnorm > 0 && fx * fx + fz * fz > 0) {
-    const double fxz = sqrt(fx * fx + fz * fz);
-    m_proj[0][0] = fz / fxz;
-    m_proj[0][1] = 0;
-    m_proj[0][2] = -fx / fxz;
-    m_proj[1][0] = -fx * fy / (fxz * fnorm);
-    m_proj[1][1] = (fx * fx + fz * fz) / (fxz * fnorm);
-    m_proj[1][2] = -fy * fz / (fxz * fnorm);
-    m_proj[2][0] = x0;
-    m_proj[2][1] = y0;
-    m_proj[2][2] = z0;
-  } else if (fnorm > 0 && fy * fy + fz * fz > 0) {
-    const double fyz = sqrt(fy * fy + fz * fz);
-    m_proj[0][0] = (fy * fy + fz * fz) / (fyz * fnorm);
-    m_proj[0][1] = -fx * fz / (fyz * fnorm);
-    m_proj[0][2] = -fy * fz / (fyz * fnorm);
-    m_proj[1][0] = 0;
-    m_proj[1][1] = fz / fyz;
-    m_proj[1][2] = -fy / fyz;
-    m_proj[2][0] = x0;
-    m_proj[2][1] = y0;
-    m_proj[2][2] = z0;
-  } else {
-    std::cout << m_className << "::SetPlane:\n"
-              << "    Normal vector has zero norm. No new projection set.\n";
-  }
-
-  // Store the plane description
-  m_plane[0] = fx;
-  m_plane[1] = fy;
-  m_plane[2] = fz;
-  m_plane[3] = fx * x0 + fy * y0 + fz * z0;
-
-  // Make labels to be placed along the axes
-  Labels();
-}
-
-void ViewIsochrons::Rotate(const double theta) {
-  // Rotate the axes
-  double auxu[3], auxv[3];
-  const double ctheta = cos(theta);
-  const double stheta = sin(theta);
-  for (int i = 0; i < 3; ++i) {
-    auxu[i] = ctheta * m_proj[0][i] - stheta * m_proj[1][i];
-    auxv[i] = stheta * m_proj[0][i] + ctheta * m_proj[1][i];
-  }
-  for (int i = 0; i < 3; ++i) {
-    m_proj[0][i] = auxu[i];
-    m_proj[1][i] = auxv[i];
-  }
-
-  // Make labels to be placed along the axes
-  Labels();
-}
-
-void ViewIsochrons::SetupCanvas() {
-  if (!m_canvas) {
-    m_canvas = new TCanvas();
-    m_canvas->SetTitle("Isochrons");
-    m_hasExternalCanvas = false;
-  }
-  m_canvas->cd();
-}
-
 bool ViewIsochrons::Range() {
 
-  if (m_hasUserArea) return true;
+  if (m_userPlotLimits) return true;
   // Try to get the area/bounding box from the sensor/component.
   double bbmin[3];
   double bbmax[3];
@@ -879,10 +543,10 @@ bool ViewIsochrons::Range() {
       if (tmax < umax[j] && tmax > umin[j]) umax[j] = tmax;
     }
   }
-  m_xmin = umin[0];
-  m_xmax = umax[0];
-  m_ymin = umin[1];
-  m_ymax = umax[1];
+  m_xMinPlot = umin[0];
+  m_xMaxPlot = umax[0];
+  m_yMinPlot = umin[1];
+  m_yMaxPlot = umax[1];
   return true; 
 }
 
