@@ -13,6 +13,7 @@
 #include "Garfield/Numerics.hh"
 #include "Garfield/Random.hh"
 #include "Garfield/Sensor.hh"
+#include "Garfield/ViewBase.hh"
 #include "Garfield/TrackSrim.hh"
 
 namespace {
@@ -319,15 +320,16 @@ void TrackSrim::PlotEnergyLoss() {
   const double xmin = *std::min_element(std::begin(m_ekin), std::end(m_ekin));
   const double xmax = *std::max_element(std::begin(m_ekin), std::end(m_ekin));
   const double ymax = *std::max_element(std::begin(yT), std::end(yT));  
-  // Prepare a plot frame
-  TCanvas* celoss = new TCanvas();
+  // Prepare a plot frame.
+  const std::string name = ViewBase::FindUnusedCanvasName("cSRIM"); 
+  TCanvas* celoss = new TCanvas(name.c_str(), "Energy loss");
   celoss->SetLogx();
   celoss->SetGridx();
   celoss->SetGridy();
   celoss->DrawFrame(xmin, 0., xmax, 1.05 * ymax, ";Ion energy [MeV];Energy loss [MeV/cm]");
 
-  // Make a graph for the 3 curves to plot
-  TGraph gr(nPoints);
+  // Make a graph for the 3 curves to plot.
+  TGraph gr;
   gr.SetLineStyle(kSolid);
   gr.SetLineWidth(2);
   gr.SetMarkerStyle(21);
@@ -364,21 +366,21 @@ void TrackSrim::PlotRange() {
   const double xmax = *std::max_element(std::begin(m_ekin), std::end(m_ekin));
   const double ymax = *std::max_element(std::begin(m_range), std::end(m_range));
 
-  // Prepare a plot frame
-  TCanvas* crange = new TCanvas();
+  // Prepare a plot frame.
+  const std::string name = ViewBase::FindUnusedCanvasName("cSRIM");
+  TCanvas* crange = new TCanvas(name.c_str(), "Range");
   crange->SetLogx();
   crange->SetGridx();
   crange->SetGridy();
   crange->DrawFrame(xmin, 0., xmax, 1.05 * ymax, ";Ion energy [MeV];Projected range [cm]");
-  // Make a graph
-  const unsigned int nPoints = m_ekin.size();
-  TGraph gr(nPoints);
+  // Make a graph.
+  TGraph gr;
   gr.SetLineColor(kOrange - 3);
   gr.SetMarkerColor(kOrange - 3);
   gr.SetLineStyle(kSolid);
   gr.SetLineWidth(2);
   gr.SetMarkerStyle(21);
-  gr.DrawGraph(nPoints, m_ekin.data(), m_range.data(), "plsame");
+  gr.DrawGraph(m_ekin.size(), m_ekin.data(), m_range.data(), "plsame");
   crange->Update();
 }
 
@@ -390,16 +392,17 @@ void TrackSrim::PlotStraggling() {
                                                  std::end(m_longstraggle)),
                                 *std::max_element(std::begin(m_transstraggle),
                                                   std::end(m_transstraggle)));
-  // Prepare a plot frame
-  TCanvas* cstraggle = new TCanvas();
+  // Prepare a plot frame.
+  const std::string name = ViewBase::FindUnusedCanvasName("cSRIM");
+  TCanvas* cstraggle = new TCanvas(name.c_str(), "Straggling");
   cstraggle->SetLogx();
   cstraggle->SetGridx();
   cstraggle->SetGridy();
   cstraggle->DrawFrame(xmin, 0., xmax, 1.05 * ymax, ";Ion energy [MeV];Straggling [cm]");
 
-  // Make a graph for the 2 curves to plot
+  // Make a graph for the 2 curves to plot.
   const unsigned int nPoints = m_ekin.size();
-  TGraph gr(nPoints);
+  TGraph gr;
   gr.SetLineStyle(kSolid);
   gr.SetLineWidth(2);
   gr.SetMarkerStyle(21);
