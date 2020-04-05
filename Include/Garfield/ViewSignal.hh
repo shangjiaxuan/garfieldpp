@@ -4,7 +4,6 @@
 #include <memory>
 #include <string>
 
-#include <TGraph.h>
 #include <TH1D.h>
 
 #include "ViewBase.hh"
@@ -81,8 +80,6 @@ class ViewSignal : public ViewBase {
   std::unique_ptr<TH1D> m_hDelayedSignalElectrons;
   std::unique_ptr<TH1D> m_hDelayedSignalIons;
 
-  // Threshold crossings.
-  std::unique_ptr<TGraph> m_gCrossings;
 };
 }
 #endif

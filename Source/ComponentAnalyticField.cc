@@ -11,6 +11,7 @@
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Numerics.hh"
+#include "Garfield/ViewBase.hh"
 
 namespace {
 
@@ -9882,7 +9883,8 @@ bool ComponentAnalyticField::MultipoleMoments(const unsigned int iw,
   }
   // Plot the result of the fit.
   if (plot) {
-    TCanvas* cfit = new TCanvas();
+    const std::string name = ViewBase::FindUnusedCanvasName("cMultipole");
+    TCanvas* cfit = new TCanvas(name.c_str(), "Multipoles");
     cfit->SetGridx();
     cfit->SetGridy();
     cfit->DrawFrame(0., vmin, TwoPi, vmax,
@@ -9913,6 +9915,7 @@ bool ComponentAnalyticField::MultipoleMoments(const unsigned int iw,
       graph.SetLineColor(kAzure + j);
       graph.DrawGraph(nP, xp.data(), yp.data(), "lsame"); 
     }
+    gPad->Update();
   }
 
   // Print the results.

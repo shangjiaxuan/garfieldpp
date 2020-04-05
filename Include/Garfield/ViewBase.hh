@@ -56,6 +56,13 @@ class ViewBase {
   /// Switch on/off debugging output.
   void EnableDebugging(const bool on = true) { m_debug = on; }
 
+  /// Find an unused function name.
+  static std::string FindUnusedFunctionName(const std::string& s);
+  /// Find an unused histogram name.
+  static std::string FindUnusedHistogramName(const std::string& s);
+  /// Find an unused canvas name.
+  static std::string FindUnusedCanvasName(const std::string& s);
+
  protected:
   std::string m_className = "ViewBase";
 
@@ -83,11 +90,6 @@ class ViewBase {
   std::array<std::array<double, 3>, 3> m_prmat = {{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}
   }};
-
-  // Find an unused function name.
-  std::string FindUnusedFunctionName(const std::string& s) const;
-  // Find an unused histogram name.
-  std::string FindUnusedHistogramName(const std::string& s) const;
 
   // Update and invert the projection matrix.
   void UpdateProjectionMatrix();
