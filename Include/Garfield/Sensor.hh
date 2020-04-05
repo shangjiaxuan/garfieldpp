@@ -24,6 +24,8 @@ class Sensor {
   unsigned int GetNumberOfComponents() const { return m_components.size(); }
   /// Retrieve the pointer to a given component.
   ComponentBase* GetComponent(const unsigned int i);
+  /// Activate/deactivate a given component. 
+  void EnableComponent(const unsigned int i, const bool on);
 
   /// Add an electrode.
   void AddElectrode(ComponentBase* comp, const std::string& label);
@@ -213,7 +215,7 @@ class Sensor {
   std::string m_className = "Sensor";
 
   /// Components
-  std::vector<ComponentBase*> m_components;
+  std::vector<std::pair<ComponentBase*, bool> > m_components;
   ComponentBase* m_lastComponent = nullptr;
 
   struct Electrode {

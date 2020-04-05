@@ -1252,6 +1252,14 @@ of the electric and magnetic field,
 \texttt{AddElectrode} requests the weighting field named \texttt{label} 
 to be used for computing the corresponding signal.
 
+To deactivate (or activate) a component after having added it, the 
+function
+\begin{lstlisting}
+void EnableComponent(const unsigned int i, const bool on);
+\end{lstlisting}
+can be used. Components that have been deactivated are not taken into 
+account when calculating the field but are not removed from the list.
+
 To reset the sensor, thereby removing all components and electrodes, use
 \begin{lstlisting}
 void Clear();

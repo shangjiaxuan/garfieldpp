@@ -64,14 +64,6 @@ double Trapezoid2(const std::vector<std::pair<double, double> >& f) {
 
 namespace Garfield {
 
-ComponentBase* Sensor::GetComponent(const unsigned int i) {
-  if (i >= m_components.size()) {
-    std::cerr << m_className << "::GetComponent: Index out of range.\n";
-    return nullptr;
-  };
-  return m_components[i];
-}
-
 void Sensor::ElectricField(const double x, const double y, const double z,
                            double& ex, double& ey, double& ez, double& v,
                            Medium*& medium, int& status) {
@@ -82,8 +74,9 @@ void Sensor::ElectricField(const double x, const double y, const double z,
   Medium* med = nullptr;
   int stat = 0;
   // Add up electric field contributions from all components.
-  for (auto component : m_components) {
-    component->ElectricField(x, y, z, fx, fy, fz, p, med, stat);
+  for (const auto& cmp : m_components) {
+    if (!cmp.second) continue;
+    cmp.first->ElectricField(x, y, z, fx, fy, fz, p, med, stat);
     if (status != 0) {
       status = stat;
       medium = med;
@@ -107,8 +100,9 @@ void Sensor::ElectricField(const double x, const double y, const double z,
   Medium* med = nullptr;
   int stat = 0;
   // Add up electric field contributions from all components.
-  for (auto component : m_components) {
-    component->ElectricField(x, y, z, fx, fy, fz, med, stat);
+  for (const auto& cmp : m_components) {
+    if (!cmp.second) continue; 
+    cmp.first->ElectricField(x, y, z, fx, fy, fz, med, stat);
     if (status != 0) {
       status = stat;
       medium = med;
@@ -126,8 +120,9 @@ void Sensor::MagneticField(const double x, const double y, const double z,
   bx = by = bz = 0.;
   double fx = 0., fy = 0., fz = 0.;
   // Add up contributions.
-  for (auto component : m_components) {
-    component->MagneticField(x, y, z, fx, fy, fz, status);
+  for (const auto& cmp : m_components) {
+    if (!cmp.second) continue;
+    cmp.first->MagneticField(x, y, z, fx, fy, fz, status);
     if (status != 0) continue;
     bx += fx;
     by += fy;
@@ -176,10 +171,11 @@ bool Sensor::GetMedium(const double x, const double y, const double z,
     if (m) return true;
   }
 
-  for (auto component : m_components) {
-    m = component->GetMedium(x, y, z);
+  for (const auto& cmp : m_components) {
+    if (!cmp.second) continue;
+    m = cmp.first->GetMedium(x, y, z);
     if (m) {
-      m_lastComponent = component;
+      m_lastComponent = cmp.first;
       return true;
     }
   }
@@ -281,8 +277,9 @@ bool Sensor::IsWireCrossed(const double x0, const double y0, const double z0,
                            const double x1, const double y1, const double z1,
                            double& xc, double& yc, double& zc, 
                            const bool centre, double& rc) {
-  for (auto component : m_components) {
-    if (component->IsWireCrossed(x0, y0, z0, x1, y1, z1, 
+  for (const auto& cmp : m_components) {
+    if (!cmp.second) continue;
+    if (cmp.first->IsWireCrossed(x0, y0, z0, x1, y1, z1, 
                                  xc, yc, zc, centre, rc)) {
       return true;
     }
@@ -292,23 +289,40 @@ bool Sensor::IsWireCrossed(const double x0, const double y0, const double z0,
 
 bool Sensor::IsInTrapRadius(const double q0, const double x0, const double y0,
                             double z0, double& xw, double& yw, double& rw) {
-  for (auto component : m_components) {
-    if (component->IsInTrapRadius(q0, x0, y0, z0, xw, yw, rw)) return true;
+  for (const auto& cmp : m_components) {
+    if (!cmp.second) continue;
+    if (cmp.first->IsInTrapRadius(q0, x0, y0, z0, xw, yw, rw)) return true;
   }
   return false;
 }
 
-void Sensor::AddComponent(ComponentBase* comp) {
-  if (!comp) {
+void Sensor::AddComponent(ComponentBase* cmp) {
+  if (!cmp) {
     std::cerr << m_className << "::AddComponent: Null pointer.\n";
     return;
   }
 
-  m_components.push_back(comp);
+  m_components.push_back(std::make_pair(cmp, true));
 }
 
-void Sensor::AddElectrode(ComponentBase* comp, const std::string& label) {
-  if (!comp) {
+ComponentBase* Sensor::GetComponent(const unsigned int i) {
+  if (i >= m_components.size()) {
+    std::cerr << m_className << "::GetComponent: Index out of range.\n";
+    return nullptr;
+  };
+  return m_components[i].first;
+}
+
+void Sensor::EnableComponent(const unsigned int i, const bool on) {
+  if (i >= m_components.size()) {
+    std::cerr << m_className << "::EnableComponent: Index out of range.\n";
+    return;
+  };
+  m_components[i].second = on;
+}
+
+void Sensor::AddElectrode(ComponentBase* cmp, const std::string& label) {
+  if (!cmp) {
     std::cerr << m_className << "::AddElectrode: Null pointer.\n";
     return;
   }
@@ -322,7 +336,7 @@ void Sensor::AddElectrode(ComponentBase* comp, const std::string& label) {
   }
 
   Electrode electrode;
-  electrode.comp = comp;
+  electrode.comp = cmp;
   electrode.label = label;
   electrode.signal.assign(m_nTimeBins, 0.);
   electrode.electronsignal.assign(m_nTimeBins, 0.);
@@ -356,9 +370,10 @@ bool Sensor::GetVoltageRange(double& vmin, double& vmax) {
   // We don't know the range yet.
   bool set = false;
   // Loop over the components.
-  for (auto component : m_components) {
+  for (const auto& cmp : m_components) {
+    if (!cmp.second) continue;
     double umin = 0., umax = 0.;
-    if (!component->GetVoltageRange(umin, umax)) continue;
+    if (!cmp.first->GetVoltageRange(umin, umax)) continue;
     if (set) {
       vmin = std::min(umin, vmin);
       vmax = std::max(umax, vmax);
@@ -1234,8 +1249,9 @@ bool Sensor::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   bool set = false;
   // Loop over the fields
   double x0, y0, z0, x1, y1, z1;
-  for (auto component : m_components) {
-    if (!component->GetBoundingBox(x0, y0, z0, x1, y1, z1)) continue;
+  for (const auto& cmp : m_components) {
+    if (!cmp.second) continue;
+    if (!cmp.first->GetBoundingBox(x0, y0, z0, x1, y1, z1)) continue;
     if (set) {
       if (x0 < xmin) xmin = x0;
       if (y0 < ymin) ymin = y0;
