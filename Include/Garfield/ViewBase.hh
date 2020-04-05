@@ -88,6 +88,8 @@ class ViewBase {
   std::string FindUnusedFunctionName(const std::string& s) const;
   // Find an unused histogram name.
   std::string FindUnusedHistogramName(const std::string& s) const;
+  // Find an unused canvas name.
+  std::string FindUnusedCanvasName(const std::string& s) const;
 
   // Update and invert the projection matrix.
   void UpdateProjectionMatrix();

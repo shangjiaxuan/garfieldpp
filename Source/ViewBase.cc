@@ -75,7 +75,8 @@ void ViewBase::SetCanvas(TCanvas* c) {
 
 TCanvas* ViewBase::GetCanvas() {
   if (!m_canvas) {
-    m_canvas = new TCanvas();
+    std::string name = FindUnusedCanvasName("c" + m_className);
+    m_canvas = new TCanvas(name.c_str(), "");
     if (m_hasExternalCanvas) m_hasExternalCanvas = false;
   }
   return m_canvas;
@@ -203,6 +204,16 @@ std::string ViewBase::FindUnusedHistogramName(const std::string& s) const {
   int idx = 0;
   std::string hname = s + "_0";
   while (gDirectory->GetList()->FindObject(hname.c_str())) {
+    ++idx;
+    hname = s + "_" + std::to_string(idx);
+  }
+  return hname;
+}
+
+std::string ViewBase::FindUnusedCanvasName(const std::string& s) const {
+  int idx = 0;
+  std::string hname = s + "_0";
+  while (gROOT->GetListOfCanvases()->FindObject(hname.c_str())) {
     ++idx;
     hname = s + "_" + std::to_string(idx);
   }
