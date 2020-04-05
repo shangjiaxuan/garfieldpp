@@ -524,20 +524,14 @@ void ViewMedium::PlotVelocity(const Axis xaxis, const Charge charge,
       if (m_medium->ElectronVelocity(e0, 0, 0, b0 * ctheta, b0 * stheta, 0, 
                                      vx, vy, vz)) {
         ypl[0][i] = fabs(vx);
-      }
-      if (m_medium->ElectronVelocity(e0 * ctheta, e0 * stheta, 0, b0, 0, 0,
-                                     vx, vy, vz)) {
-        ypl[1][i] = fabs(vx);
+        ypl[1][i] = fabs(vy);
         ypl[2][i] = fabs(vz);
       }
     } else if (charge == Charge::Hole) {
       if (m_medium->HoleVelocity(e0, 0, 0, b0 * ctheta, b0 * stheta, 0, 
                                  vx, vy, vz)) {
         ypl[0][i] = fabs(vx);
-      }
-      if (m_medium->HoleVelocity(e0 * ctheta, e0 * stheta, 0, b0, 0, 0,
-                                 vx, vy, vz)) {
-        ypl[1][i] = fabs(vx);
+        ypl[1][i] = fabs(vy);
         ypl[2][i] = fabs(vz);
       }
     } else {
