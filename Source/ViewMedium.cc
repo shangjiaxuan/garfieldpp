@@ -216,7 +216,7 @@ void ViewMedium::Draw() {
             labels[i] += "#it{v}_{#it{E}}";
             break;
           case Parameter::VelocityB:
-            labels[i] += "#it{v}_{#it{B}}";
+            labels[i] += "#it{v}_{#it{B}#kern[0.1]{t}}";
             break;
           case Parameter::VelocityExB:
             labels[i] += "#it{v}_{#it{E}#kern[0.05]{#times}#it{B}}";
