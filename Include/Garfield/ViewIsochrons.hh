@@ -81,8 +81,7 @@ class ViewIsochrons : public ViewBase {
   double m_connectionThreshold = 0.2;
   bool m_checkCrossings = true;
 
-  void SetupCanvas();
-  bool Range();
+  bool SetPlotLimits();
 
   void ComputeDriftLines(const double tstep,
       const std::vector<std::array<double, 3> >& points,

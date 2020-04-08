@@ -8,6 +8,9 @@
 
 namespace Garfield {
 
+class Sensor;
+class ComponentBase;
+
 /// Base class for visualization classes.
 
 class ViewBase {
@@ -103,6 +106,16 @@ class ViewBase {
   // Description of the current viewing plane.
   std::string PlaneDescription();
 
+  bool PlotLimits(Sensor* sensor, double& xmin, double& ymin,
+                  double& xmax, double& ymax) const;
+  bool PlotLimits(ComponentBase* cmp, double& xmin, double& ymin,
+                  double& xmax, double& ymax) const;
+  bool PlotLimitsFromUserBox(double& xmin, double& ymin, 
+                             double& xmax, double& ymax) const;
+  bool PlotLimits(std::array<double, 3>& bbmin,
+                  std::array<double, 3>& bbmax,
+                  double& xmin, double& ymin,
+                  double& xmax, double& ymax) const;
  private:
   // Canvas
   TCanvas* m_canvas = nullptr;

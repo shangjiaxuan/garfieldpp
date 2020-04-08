@@ -236,7 +236,8 @@ $(OBJDIR)/GeometryRoot.o: \
 	@$(CXX) $(CFLAGS) $< -o $@    
 
 $(OBJDIR)/ViewBase.o: \
-	$(SRCDIR)/ViewBase.cc $(INCDIR)/Garfield/ViewBase.hh
+	$(SRCDIR)/ViewBase.cc $(INCDIR)/Garfield/ViewBase.hh \
+  $(INCDIR)/Garfield/Sensor.hh $(INCDIR)/Garfield/ComponentBase.hh
 	@echo $@
 	@$(CXX) $(CFLAGS) $< -o $@
 $(OBJDIR)/ViewFEMesh.o: \

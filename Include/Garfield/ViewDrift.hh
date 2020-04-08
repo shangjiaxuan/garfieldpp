@@ -112,6 +112,7 @@ class ViewDrift : public ViewBase {
 
   void Plot2d(const bool axis);
   void Plot3d(const bool axis);
+  bool SetPlotLimits();
   bool InBox(const std::array<float, 3>& x) const {
     if (!m_userBox) return true;
     if (x[0] < m_xMinBox || x[0] > m_xMaxBox || 

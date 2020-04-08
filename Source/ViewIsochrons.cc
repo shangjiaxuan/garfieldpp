@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
-#include <limits>
 #include <set>
 
 #include <TAxis.h>
@@ -202,7 +201,7 @@ void ViewIsochrons::PlotIsochrons(const double tstep,
               << "    No starting points provided.\n";
     return;
   }
-  if (!Range()) return;
+  if (!SetPlotLimits()) return;
   auto canvas = GetCanvas();
   canvas->cd();
   canvas->SetTitle("Isochrons");
@@ -503,52 +502,33 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
   }
 }
 
-bool ViewIsochrons::Range() {
+bool ViewIsochrons::SetPlotLimits() {
 
   if (m_userPlotLimits) return true;
+  double xmin = 0., ymin = 0., xmax = 0., ymax = 0.;
+  if (m_userBox) {
+    if (PlotLimitsFromUserBox(xmin, ymin, xmax, ymax)) {
+      m_xMinPlot = xmin;
+      m_xMaxPlot = xmax;
+      m_yMinPlot = ymin;
+      m_yMaxPlot = ymax;
+      return true;
+    } 
+  }
   // Try to get the area/bounding box from the sensor/component.
-  double bbmin[3];
-  double bbmax[3];
+  bool ok = false;
   if (m_sensor) {
-    if (!m_sensor->GetArea(bbmin[0], bbmin[1], bbmin[2], bbmax[0], bbmax[1],
-                           bbmax[2])) {
-      std::cerr << m_className << "::Range:\n"
-                << "    Sensor area is not defined.\n"
-                << "    Please set the plot range explicitly (SetArea).\n";
-      return false;
-    }
+    ok = PlotLimits(m_sensor, xmin, ymin, xmax, ymax);
   } else {
-    if (!m_component->GetBoundingBox(bbmin[0], bbmin[1], bbmin[2], bbmax[0],
-                                     bbmax[1], bbmax[2])) {
-      std::cerr << m_className << "::Range:\n"
-                << "    Bounding box of the component is not defined.\n"
-                << "    Please set the plot range explicitly (SetArea).\n";
-      return false;
-    }
+    ok = PlotLimits(m_component, xmin, ymin, xmax, ymax);
+  } 
+  if (ok) {
+    m_xMinPlot = xmin;
+    m_xMaxPlot = xmax;
+    m_yMinPlot = ymin;
+    m_yMaxPlot = ymax;
   }
-  const double tol = 1.e-4;
-  double umin[2] = {-std::numeric_limits<double>::max(),
-                    -std::numeric_limits<double>::max()};
-  double umax[2] = {std::numeric_limits<double>::max(),
-                    std::numeric_limits<double>::max()};
-  for (unsigned int i = 0; i < 3; ++i) {
-    bbmin[i] -= m_proj[2][i];
-    bbmax[i] -= m_proj[2][i];
-    for (unsigned int j = 0; j < 2; ++j) {
-      if (fabs(m_proj[j][i]) < tol) continue;
-      const double t1 = bbmin[i] / m_proj[j][i];
-      const double t2 = bbmax[i] / m_proj[j][i];
-      const double tmin = std::min(t1, t2);
-      const double tmax = std::max(t1, t2);
-      if (tmin > umin[j] && tmin < umax[j]) umin[j] = tmin;
-      if (tmax < umax[j] && tmax > umin[j]) umax[j] = tmax;
-    }
-  }
-  m_xMinPlot = umin[0];
-  m_xMaxPlot = umax[0];
-  m_yMinPlot = umin[1];
-  m_yMaxPlot = umax[1];
-  return true; 
+  return ok;
 }
 
 void ViewIsochrons::SortContour(
