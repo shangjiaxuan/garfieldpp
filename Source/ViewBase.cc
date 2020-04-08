@@ -1,8 +1,11 @@
 #include <iostream>
 #include <cmath>
+#include <limits>
 
 #include <TROOT.h>
 
+#include "Garfield/Sensor.hh"
+#include "Garfield/ComponentBase.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/ViewBase.hh"
 
@@ -439,6 +442,79 @@ std::string ViewBase::PlaneDescription() {
   // Constant
   description += " = " + std::to_string(m_plane[3]);
   return description;
+}
+
+bool ViewBase::PlotLimits(Sensor* sensor, 
+                          double& xmin, double& ymin, 
+                          double& xmax, double& ymax) const {
+
+  if (!sensor) return false;
+  // Try to get the area/bounding box from the sensor/component.
+  std::array<double, 3> bbmin;
+  std::array<double, 3> bbmax;
+  if (!sensor->GetArea(bbmin[0], bbmin[1], bbmin[2], 
+                       bbmax[0], bbmax[1], bbmax[2])) {
+    std::cerr << m_className << "::PlotLimits:\n"
+              << "    Sensor area is not defined.\n"
+              << "    Please set the plot limits explicitly (SetArea).\n";
+    return false;
+  }
+  return PlotLimits(bbmin, bbmax, xmin, ymin, xmax, ymax);
+}
+
+bool ViewBase::PlotLimits(ComponentBase* cmp, 
+                          double& xmin, double& ymin, 
+                          double& xmax, double& ymax) const {
+
+  if (!cmp) return false;
+  // Try to get the area/bounding box from the sensor/component.
+  std::array<double, 3> bbmin;
+  std::array<double, 3> bbmax;
+  if (!cmp->GetBoundingBox(bbmin[0], bbmin[1], bbmin[2], 
+                           bbmax[0], bbmax[1], bbmax[2])) {
+    std::cerr << m_className << "::PlotLimits:\n"
+              << "    Bounding box of the component is not defined.\n"
+              << "    Please set the plot limits explicitly (SetArea).\n";
+    return false;
+  }
+  return PlotLimits(bbmin, bbmax, xmin, ymin, xmax, ymax);
+}
+
+bool ViewBase::PlotLimitsFromUserBox(double& xmin, double& ymin,
+                                     double& xmax, double& ymax) const {
+
+  std::array<double, 3> bbmin = {m_xMinBox, m_yMinBox, m_zMinBox};
+  std::array<double, 3> bbmax = {m_xMaxBox, m_yMaxBox, m_zMaxBox};
+  return PlotLimits(bbmin, bbmax, xmin, ymin, xmax, ymax);
+}
+
+bool ViewBase::PlotLimits(std::array<double, 3>& bbmin,
+                          std::array<double, 3>& bbmax,
+                          double& xmin, double& ymin,
+                          double& xmax, double& ymax) const {
+  constexpr double tol = 1.e-4;
+  double umin[2] = {-std::numeric_limits<double>::max(),
+                    -std::numeric_limits<double>::max()};
+  double umax[2] = {std::numeric_limits<double>::max(),
+                    std::numeric_limits<double>::max()};
+  for (unsigned int i = 0; i < 3; ++i) {
+    bbmin[i] -= m_proj[2][i];
+    bbmax[i] -= m_proj[2][i];
+    for (unsigned int j = 0; j < 2; ++j) {
+      if (fabs(m_proj[j][i]) < tol) continue;
+      const double t1 = bbmin[i] / m_proj[j][i];
+      const double t2 = bbmax[i] / m_proj[j][i];
+      const double tmin = std::min(t1, t2);
+      const double tmax = std::max(t1, t2);
+      if (tmin > umin[j] && tmin < umax[j]) umin[j] = tmin;
+      if (tmax < umax[j] && tmax > umin[j]) umax[j] = tmax;
+    }
+  }
+  xmin = umin[0];
+  xmax = umax[0];
+  ymin = umin[1];
+  ymax = umax[1];
+  return true;
 }
 
 }

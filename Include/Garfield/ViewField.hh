@@ -122,7 +122,7 @@ class ViewField : public ViewBase {
   unsigned int m_nSamples2dX = 200;
   unsigned int m_nSamples2dY = 200;
 
-  bool Range();
+  bool SetPlotLimits();
   void Draw2d(const std::string& option, const bool contour,
               const bool wfield, const std::string& electrode,
               const std::string& drawopt);
