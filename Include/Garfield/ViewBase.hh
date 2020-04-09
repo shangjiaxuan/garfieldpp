@@ -85,12 +85,12 @@ class ViewBase {
 
   // Viewing plane (FPROJ).
   // Default projection: x-y at z = 0.
-  std::array<std::array<double, 3>, 3> m_proj = {{
+  std::array<std::array<double, 3>, 3> m_proj{{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 0}
   }};
-  std::array<double, 4> m_plane = {0, 0, 1, 0};
+  std::array<double, 4> m_plane{{0, 0, 1, 0}};
   // Matrix used for projections (FPRMAT).
-  std::array<std::array<double, 3>, 3> m_prmat = {{
+  std::array<std::array<double, 3>, 3> m_prmat{{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}
   }};
 
