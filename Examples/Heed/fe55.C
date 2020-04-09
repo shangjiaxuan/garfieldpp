@@ -35,21 +35,21 @@ int main(int argc, char * argv[]) {
   plottingEngine.SetDefaultStyle();
 
   // Make a gas medium.
-  MediumMagboltz* gas = new MediumMagboltz();
-  gas->SetComposition("Ar", 70., "CO2", 30.);
-  gas->SetTemperature(293.15);
-  gas->SetPressure(AtmosphericPressure);
+  MediumMagboltz gas;
+  gas.SetComposition("Ar", 70., "CO2", 30.);
+  gas.SetTemperature(293.15);
+  gas.SetPressure(AtmosphericPressure);
   
   // Create a cylinder in which the x-rays can convert.
   // Diameter [cm]
-  const double diameter = 7.8;
+  constexpr double diameter = 7.8;
   // Half-length of the cylinder [cm].
-  const double length = 10.;
-  SolidTube tube(0.0, 0.0, 0., 0., 0.5 * diameter, length);
+  constexpr double length = 10.;
+  SolidTube tube(0, 0, 0, 0, 0.5 * diameter, length);
 
   // Combine gas and box to a simple geometry.
   GeometrySimple geo;
-  geo.AddSolid(&tube, gas);
+  geo.AddSolid(&tube, &gas);
 
   // Make a component with constant electric field.
   ComponentConstant field;
@@ -89,5 +89,6 @@ int main(int argc, char * argv[]) {
   hElectrons.SetFillColor(kBlue + 2);
   hElectrons.SetLineColor(kBlue + 2);
   hElectrons.Draw();
+  c.Update();
   app.Run(true);
 }

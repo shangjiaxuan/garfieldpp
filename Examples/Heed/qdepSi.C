@@ -24,29 +24,28 @@ int main(int argc, char * argv[]) {
   TApplication app("app", &argc, argv);
   plottingEngine.SetDefaultStyle();
 
-  MediumSilicon* si = new MediumSilicon();
-  const double chamberWidth = 50.e-4;
+  MediumSilicon si;
 
-  SolidBox* box = new SolidBox(0., 0., 0., 2., 2., chamberWidth);
-  GeometrySimple* geo = new GeometrySimple();
-  geo->AddSolid(box, si);
+  constexpr double width = 50.e-4;
+  SolidBox box(0, 0, 0, 2, 2, width);
+  GeometrySimple geo;
+  geo.AddSolid(&box, &si);
 
   // Make a component
-  ComponentConstant* comp = new ComponentConstant();
-  comp->SetGeometry(geo);
-  comp->SetElectricField(0., 0., 20.);
+  ComponentConstant cmp;
+  cmp.SetGeometry(&geo);
+  cmp.SetElectricField(0., 0., 20.);
 
   // Make a sensor
-  Sensor* sensor = new Sensor();
-  sensor->AddComponent(comp);
+  Sensor sensor;
+  sensor.AddComponent(&cmp);
 
-  TH1F* hNe = new TH1F("hNe", "", 150, 0., 15000.);
-  hNe->StatOverflows();
-  TH1F* hNc = new TH1F("hNc", "", 350, -0.5, 349.5);
-  // Track class
+  TH1::StatOverflows(true);
+  TH1F hNe("hNe", ";deposited charge [electrons];entries", 150, 0., 15000.);
+  TH1F hNc("hNc", ";number of clusters;entries", 350, -0.5, 349.5);
+
   TrackHeed track;
-
-  track.SetSensor(sensor);
+  track.SetSensor(&sensor);
   track.SetParticle("pion");
   track.SetBetaGamma(10.);
   const unsigned int nTracks = 10000;
@@ -62,16 +61,16 @@ int main(int argc, char * argv[]) {
       nsum += n;
       ++ncls;
     }
-    hNe->Fill(nsum);
-    hNc->Fill(ncls);
+    hNe.Fill(nsum);
+    hNc.Fill(ncls);
   }
 
-  TCanvas* cNe = new TCanvas("cNe", "", 600, 600);
-  cNe->cd();
-  hNe->Draw("hist");
-  TCanvas* cNc = new TCanvas("cNc", "", 600, 600);
-  cNc->cd();
-  hNc->Draw("hist");
-  app.Run(kTRUE);
+  TCanvas cNe("cNe", "", 600, 600);
+  hNe.Draw();
+  cNe.Update();
+  TCanvas cNc("cNc", "", 600, 600);
+  hNc.Draw();
+  cNc.Update();
+  app.Run(true);
 
 }
