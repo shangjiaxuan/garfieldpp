@@ -36,57 +36,56 @@ void checkhwf() {
 void track() {
 
   // Define the medium.
-  MediumMagboltz* gas = new MediumMagboltz();
-  gas->SetComposition("ar", 70., "co2", 30.);
+  MediumMagboltz gas;
+  gas.SetComposition("ar", 70., "co2", 30.);
   // Set temperature [K] and pressure [Torr].
-  gas->SetPressure(760.0);
-  gas->SetTemperature(293.15);
+  gas.SetPressure(760.0);
+  gas.SetTemperature(293.15);
 
   // Define the geometry.
-  const double width = 10.;
-  const double length = 0.0150;
-  SolidBox* box = new SolidBox(length / 2., 0., 0., 
-                               length / 2., width / 2., width / 2.);
-  GeometrySimple* geo = new GeometrySimple();
-  geo->AddSolid(box, gas);
+  constexpr double width = 10.;
+  constexpr double length = 0.0150;
+  SolidBox box(0.5 * length, 0, 0, 0.5 * length, 0.5 * width, 0.5 * width);
+  GeometrySimple geo;
+  geo.AddSolid(&box, &gas);
 
   // Make a component (with constant electric field).
-  ComponentConstant* comp = new ComponentConstant();
-  comp->SetGeometry(geo);
-  comp->SetElectricField(1000., 0., 0.);
+  ComponentConstant cmp;
+  cmp.SetGeometry(&geo);
+  cmp.SetElectricField(1000., 0., 0.);
   
   // Make a sensor.
-  Sensor* sensor = new Sensor();
-  sensor->AddComponent(comp);
+  Sensor sensor;
+  sensor.AddComponent(&cmp);
   
   // Create a track class.
-  TrackSrim* tr = new TrackSrim();
+  TrackSrim tr;
   // Connect the track to a sensor.
-  tr->SetSensor(sensor);
+  tr.SetSensor(&sensor);
   // Read SRIM output from file.
   const std::string file = "alpha_ArCO2_70_30.txt";
-  if (!tr->ReadFile(file)) {
+  if (!tr.ReadFile(file)) {
     std::cerr << "Reading SRIM file failed.\n";
     return;
   }
   // Set the initial kinetic energy of the particle (in eV).
-  tr->SetKineticEnergy(1.47e6);
+  tr.SetKineticEnergy(1.47e6);
   // Set the W value and Fano factor of the gas.
-  tr->SetWorkFunction(30.0);
-  tr->SetFanoFactor(0.3);
+  tr.SetWorkFunction(30.0);
+  tr.SetFanoFactor(0.3);
   // Set A and Z of the gas (not sure what's the correct mixing law).
   const double za = 0.7 * (18. / 40.) + 0.3 * (22. / 44.);
-  tr->SetAtomicMassNumbers(22. / za, 22);
+  tr.SetAtomicMassNumbers(22. / za, 22);
   // Specify how many electrons we want to be grouped to a cluster.
-  tr->SetTargetClusterSize(500);
-  // tr->SetClustersMaximum(1000);
+  tr.SetTargetClusterSize(500);
+  // tr.SetClustersMaximum(1000);
 
   // Make some plots of the SRIM data.
-  tr->PlotEnergyLoss();
-  tr->PlotRange();
-  tr->PlotStraggling();
+  tr.PlotEnergyLoss();
+  tr.PlotRange();
+  tr.PlotStraggling();
   // Print a table of the SRIM data.
-  tr->Print();
+  tr.Print();
 
   // Setup histograms.
   TH1F* hX = new TH1F("hX", "x-end", 100, 0, 0.01);
@@ -97,7 +96,7 @@ void track() {
   // Generate tracks.
   const unsigned int nTracks = 1000;
   for (unsigned int i = 0; i < nTracks; ++i) {
-    if (!tr->NewTrack(0., 0., 0., 0., 1., 0., 0.)) {
+    if (!tr.NewTrack(0., 0., 0., 0., 1., 0., 0.)) {
       std::cerr << "Generating clusters failed; skipping this track.\n";
       continue;
     }
@@ -106,7 +105,7 @@ void track() {
     double xc, yc, zc, tc, ec, ekin;
     while (true) {
       int ne = 0;
-      const bool done = !tr->GetCluster(xc, yc, zc, tc, ne, ec, ekin);
+      const bool done = !tr.GetCluster(xc, yc, zc, tc, ne, ec, ekin);
       if (done) {
         hX->Fill(xc);
         hY->Fill(yc);
