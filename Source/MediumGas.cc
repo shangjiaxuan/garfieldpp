@@ -18,7 +18,7 @@
 namespace {
 
 std::string FmtFloat(const double x, const unsigned int width = 15,
-                        const unsigned int precision = 8) {
+                     const unsigned int precision = 8) {
   char buffer[256];
   std::snprintf(buffer, width + 1, "%*.*E", width, precision, x);
   return std::string(buffer);
@@ -256,27 +256,27 @@ void MediumGas::GetComponent(const unsigned int i, std::string& label,
   f = m_fraction[i];
 }
 
-void MediumGas::SetAtomicNumber(const double z) {
+void MediumGas::SetAtomicNumber(const double /*z*/) {
   std::cerr << m_className << "::SetAtomicNumber:\n"
-            << "    Effective Z cannot be changed directly to " << z << ".\n"
+            << "    Effective Z cannot be changed directly.\n"
             << "    Use SetComposition to define the gas mixture.\n";
 }
 
-void MediumGas::SetAtomicWeight(const double a) {
+void MediumGas::SetAtomicWeight(const double /*a*/) {
   std::cerr << m_className << "::SetAtomicWeight:\n"
-            << "    Effective A cannot be changed directly to " << a << ".\n"
+            << "    Effective A cannot be changed directly.\n"
             << "    Use SetComposition to define the gas mixture.\n";
 }
 
-void MediumGas::SetNumberDensity(const double n) {
+void MediumGas::SetNumberDensity(const double /*n*/) {
   std::cerr << m_className << "::SetNumberDensity:\n"
-            << "    Density cannot directly be changed to " << n << ".\n"
+            << "    Density cannot be changed directly.\n"
             << "    Use SetTemperature and SetPressure.\n";
 }
 
-void MediumGas::SetMassDensity(const double rho) {
+void MediumGas::SetMassDensity(const double /*rho*/) {
   std::cerr << m_className << "::SetMassDensity:\n"
-            << "    Density cannot directly be changed to " << rho << ".\n"
+            << "    Density cannot be changed directly.\n"
             << "    Use SetTemperature, SetPressure and SetComposition.\n";
 }
 
@@ -849,25 +849,17 @@ void MediumGas::ReadFooter(std::ifstream& gasfile,
           if (token != NULL) interp[i] = atoi(token);
         }
       } else if (strcmp(token, "A") == 0) {
+        // Parameter for energy loss distribution, not used in Garfield++.
         token = strtok(NULL, " :,%=\t");
-        // Parameter for energy loss distribution, currently not used
-        // double a;
-        // if (token != NULL) a = atof(token);
       } else if (strcmp(token, "Z") == 0) {
-        // Parameter for energy loss distribution, currently not used
+        // Parameter for energy loss distribution, not used in Garfield++.
         token = strtok(NULL, " :,%=\t");
-        // double z;
-        // if (token != NULL) z = atof(token);
       } else if (strcmp(token, "EMPROB") == 0) {
-        // Parameter for energy loss distribution, currently not used
+        // Parameter for energy loss distribution, not used in Garfield++.
         token = strtok(NULL, " :,%=\t");
-        // double emprob;
-        // if (token != NULL) emprob = atof(token);
       } else if (strcmp(token, "EPAIR") == 0) {
-        // Parameter for energy loss distribution, currently not used
+        // Parameter for energy loss distribution, not used in Garfield++.
         token = strtok(NULL, " :,%=\t");
-        // double epair;
-        // if (token != NULL) epair = atof(token);
       } else if (strcmp(token, "Ion") == 0) {
         // Ion diffusion coefficients
         token = strtok(NULL, " :,%=\t");
@@ -876,15 +868,11 @@ void MediumGas::ReadFooter(std::ifstream& gasfile,
         token = strtok(NULL, " :,%=\t");
         if (token != NULL) ionDiffT = atof(token);
       } else if (strcmp(token, "CMEAN") == 0) {
-        // Cluster parameter, currently not used
+        // Clusters per cm, not used in Garfield..
         token = strtok(NULL, " :,%=\t");
-        // double clsPerCm;
-        // if (token != NULL) clsPerCm = atof(token);
       } else if (strcmp(token, "RHO") == 0) {
-        // Parameter for energy loss distribution, currently not used
+        // Parameter for energy loss distribution, not used in Garfield++.
         token = strtok(NULL, " :,%=\t");
-        // double rho;
-        // if (token != NULL) rho = atof(token);
       } else if (strcmp(token, "PGAS") == 0) {
         // Pressure [Torr]
         token = strtok(NULL, " :,%=\t");
@@ -963,7 +951,7 @@ bool MediumGas::MergeGasFile(const std::string& filename,
 
   int version = 12;
   std::bitset<20> gasok;
-  bool is3d = false;
+  bool new3d = false;
   constexpr int nMagboltzGases = 60;
   std::vector<double> mixture(nMagboltzGases, 0.);
   std::vector<double> efields;
@@ -971,7 +959,7 @@ bool MediumGas::MergeGasFile(const std::string& filename,
   std::vector<double> angles;
   std::vector<ExcLevel> excLevels;
   std::vector<IonLevel> ionLevels;
-  if (!ReadHeader(gasfile, version, gasok, is3d, mixture, efields, bfields,
+  if (!ReadHeader(gasfile, version, gasok, new3d, mixture, efields, bfields,
                   angles, excLevels, ionLevels)) {
     std::cerr << m_className << "::MergeGasFile: Error reading header.\n",
     gasfile.close();
@@ -1061,7 +1049,7 @@ bool MediumGas::MergeGasFile(const std::string& filename,
   for (unsigned int i = 0; i < nNewE; i++) {
     for (unsigned int j = 0; j < nNewA; j++) {
       for (unsigned int k = 0; k < nNewB; k++) {
-        if (m_tab2d) {
+        if (new3d) {
           ReadRecord3D(gasfile, ve, vb, vx, dl, dt, alpha, alpha0, eta, mu, 
                        lor, dis, diff, rexc, rion);
         } else {
@@ -1107,7 +1095,7 @@ bool MediumGas::MergeGasFile(const std::string& filename,
   // Go back to the start and re-read the header to get to the gas tables.
   gasfile.clear();
   gasfile.seekg(0);
-  if (!ReadHeader(gasfile, version, gasok, is3d, mixture, efields, bfields,
+  if (!ReadHeader(gasfile, version, gasok, new3d, mixture, efields, bfields,
                   angles, excLevels, ionLevels)) {
     std::cerr << m_className << "::MergeGasFile: Error re-reading header.\n",
     gasfile.close();
@@ -1120,7 +1108,7 @@ bool MediumGas::MergeGasFile(const std::string& filename,
   if (m_debug) {
     std::cout << m_className << "::MergeGasFile:\n    "
               << "Dataset to be merged has the following dimensions:\n    "
-              << "3D = " << is3d << " nE = " << nNewE << ", nB = " << nNewB 
+              << "3D = " << new3d << " nE = " << nNewE << ", nB = " << nNewB 
               << ", nA = " << nNewA << ", nExc = "
               << excLevels.size() << ", nIon = " << ionLevels.size() << "\n";
   } 
@@ -1151,7 +1139,8 @@ bool MediumGas::MergeGasFile(const std::string& filename,
     return false;
   }
   // Decide whether we have to produce a 3D table or a 1D table.
-  if ((is3d || ibmode * iamode == 0) && !m_tab2d) {
+  const bool old3d = m_tab2d;
+  if ((new3d || ibmode * iamode == 0) && !m_tab2d) {
     if (m_debug) std::cout << "    Expanding existing table to 3D mode.\n";
     m_tab2d = true;
   }
@@ -1251,20 +1240,38 @@ bool MediumGas::MergeGasFile(const std::string& filename,
       PrintAbsentInExisting("attachment coefficient");
     }
     if (!existing[6] && gasok[6]) {
-      gasok.reset(6);
-      PrintAbsentInExisting("Lorentz angle");
+      if (old3d) {
+        gasok.reset(6);
+        PrintAbsentInExisting("Lorentz angle");
+      } else {
+        // Existing dataset is for B = 0 (no Lorentz angle).
+        Init(nE, nB, nA, m_eLor, -30.);
+        existing.set(6);
+      }
     }
     if (!existing[7] && gasok[7]) {
       gasok.reset(7);
       PrintAbsentInExisting("transverse diffusion");
     }
     if (!existing[8] && gasok[8]) {
-      gasok.reset(8);
-      PrintAbsentInExisting("velocity along Bt");
+      if (old3d) {
+        gasok.reset(8);
+        PrintAbsentInExisting("velocity along Bt");
+      } else {
+        // Existing dataset is for B = 0 (no velocity component || Bt).
+        Init(nE, nB, nA, m_eVelB, 0.);
+        existing.set(8);
+      }
     }
     if (!existing[9] && gasok[9]) {
-      gasok.reset(9);
-      PrintAbsentInExisting("velocity along ExB");
+      if (old3d) {
+        gasok.reset(9);
+        PrintAbsentInExisting("velocity along ExB");
+      } else {
+        // Existing dataset is for B = 0 (no velocity component || ExB).
+        Init(nE, nB, nA, m_eVelX, 0.);
+        existing.set(9);
+      }
     }
     if (!existing[10] && gasok[10]) {
       gasok.reset(10);
@@ -1298,8 +1305,6 @@ bool MediumGas::MergeGasFile(const std::string& filename,
       existing.reset(15);
       gasok.reset(15);
     }
-    // TODO: if the existing dataset is 1D (B = 0), then there's no need 
-    // to reset the Lorentz angle and the drift velocities || Bt and || ExB.
   } else {
     // If the grids are identical, initialise the tables that are only present 
     // in the new dataset but not in existing one.
@@ -1490,7 +1495,7 @@ bool MediumGas::MergeGasFile(const std::string& filename,
       const int inda = FindIndex(angle, m_bAngles, eps);
       for (const auto bfield : bfields) {
         // Read the record.
-        if (is3d) {
+        if (new3d) {
           ReadRecord3D(gasfile, ve, vb, vx, dl, dt, alpha, alpha0, eta, mu, 
                        lor, dis, diff, rexc, rion);
         } else {

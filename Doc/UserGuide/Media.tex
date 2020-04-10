@@ -499,6 +499,28 @@ bool LoadGasFile(const std::string& filename);
 The format of the gas file used in Garfield++ is compatible with the 
 one used in Garfield 9. 
 
+Gas files for the same gas composition and the same temperature and pressure
+can be merged using
+\begin{lstlisting}
+bool MergeGasFile(const std::string& filename, const bool replaceOld);
+\end{lstlisting}
+\begin{description}
+  \item[filename] name of the gas file to be loaded and merged with the 
+present gas table,
+  \item[replaceOld] flag indicating whether new (\texttt{replaceOld = true}) or existing values should be used in case of overlaps between the 
+two tables. 
+\end{description}
+Suppose we have two gas files for Ar/CO$_{2}$, one for a $B$ field of 1\,T
+and one for $B = 2$\,T. We can combine the two tables 
+with the following piece of code.
+\begin{lstlisting}
+MediumMagboltz gas;
+gas.LoadGasFile("ar_co2_1T.gas");
+gas.MergeGasFile("ar_co2_2T.gas");
+// Save the merged table.
+gas.WriteGasFile("ar_co2_merged.gas");
+\end{lstlisting} 
+
 \subsubsection{Scattering rates}
 
 As a prerequisite for ``microscopic tracking'' a 
