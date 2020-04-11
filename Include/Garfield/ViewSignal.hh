@@ -2,8 +2,10 @@
 #define G_VIEW_SIGNAL
 
 #include <memory>
+#include <array>
 #include <string>
 
+#include <Rtypes.h>
 #include <TH1D.h>
 
 #include "ViewBase.hh"
@@ -57,6 +59,22 @@ class ViewSignal : public ViewBase {
   /// Override the default y-axis label.
   void SetLabelY(const std::string& label) { m_labelY = label; }
 
+  /// Set the (ROOT) colour with which to draw the total signal.
+  void SetColourTotal(const short col) { m_colTotal = col; }
+  /// Set the (ROOT) colour with which to draw the electron component.
+  void SetColourElectrons(const short col) { m_colElectrons = col; }
+  /// Set the (ROOT) colour with hich to draw the hole/ion component.
+  void SetColourIons(const short col) { m_colIons = col; }
+  /// Set the (ROOT) colour with hich to draw the hole/ion component.
+  void SetColourHoles(const short col) { m_colIons = col; }
+  
+  /// Set the (ROOT) colours with which to draw the delayed signal(s).
+  void SetColourDelayed(const short colTotal, 
+                        const short colElectrons = kYellow - 7, 
+                        const short colIons = kRed - 9) {
+    m_colDelayed = {colTotal, colElectrons, colIons};
+  }
+
  private:
   // Sensor.
   Sensor* m_sensor = nullptr;
@@ -80,6 +98,11 @@ class ViewSignal : public ViewBase {
   std::unique_ptr<TH1D> m_hDelayedSignalElectrons;
   std::unique_ptr<TH1D> m_hDelayedSignalIons;
 
+  // Colours.
+  short m_colTotal = kBlue + 3;
+  short m_colElectrons = kOrange - 3;
+  short m_colIons = kRed + 1; 
+  std::array<short, 3> m_colDelayed{{kCyan + 2, kYellow - 7, kRed - 9}};
 };
 }
 #endif
