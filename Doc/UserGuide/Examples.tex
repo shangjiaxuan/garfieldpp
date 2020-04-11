@@ -364,7 +364,6 @@ const unsigned int nMaterials = fm->GetNumberOfMaterials();
 for (unsigned int i = 0; i < nMaterials; ++i) {
   const double eps = fm.GetPermittivity(i);
   if (fabs(eps - 1.) < 1.e-3) fm.SetMedium(i, gas);
-
 }
 // Print a list of the field map materials (for information).
 fm.PrintMaterials();

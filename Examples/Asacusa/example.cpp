@@ -154,12 +154,12 @@ int main(int argc, char * argv[]){
   driftView.SetArea(0.0, 0.0, 0.2, yDrift);
   driftView.SetClusterMarkerSize(0.1);
   driftView.SetCollisionMarkerSize(0.5);
-  driftView.SetCanvas((TCanvas*)c1->cd(1));
+  driftView.SetCanvas((TPad*)c1->cd(1));
   driftView.Plot(true);
   // Plot the potential.
   ViewField fieldView;
   fieldView.SetSensor(&sensor);
-  fieldView.SetCanvas((TCanvas*)c1->cd(2));
+  fieldView.SetCanvas((TPad*)c1->cd(2));
   fieldView.Plot("v", "cont1z");
 
   c1->SaveAs("plot.pdf");

@@ -21,7 +21,7 @@ class ViewDrift : public ViewBase {
   /// Constructor.
   ViewDrift();
   /// Destructor.
-  ~ViewDrift();
+  ~ViewDrift() = default;
 
   /// Delete existing drift lines, tracks and markers.
   void Clear();

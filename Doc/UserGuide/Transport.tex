@@ -181,7 +181,7 @@ The points along the most recent drift line are accessible through the functions
 \begin{lstlisting}
 unsigned int GetNumberOfDriftLinePoints() const;
 void GetDriftLinePoint(const unsigned int i, 
-                          double& x, double& y, double& z, double& t) const;
+                       double& x, double& y, double& z, double& t) const;
 \end{lstlisting}
 \begin{description}
   \item[i] index of the point.
@@ -335,11 +335,11 @@ The calculation of an avalanche initiated by an electron,
 a hole or an electron-hole pair is done using
 \begin{lstlisting}
 bool AvalancheElectron(const double x0, const double y0, const double z0,
-                          const double t0, const bool hole = false);
+                       const double t0, const bool hole = false);
 bool AvalancheHole(const double x0, const double y0, const double z0,
-                     const double t0, const bool electron = false);
+                   const double t0, const bool electron = false);
 bool AvalancheElectronHole(const double x0, const double y0, const double z0, 
-                              const double t0);
+                           const double t0);
 \end{lstlisting}
 The flags \texttt{hole} and \texttt{electron} specify whether 
 multiplication of holes and electrons, respectively, should be 
@@ -352,8 +352,8 @@ retrieved using
 \begin{lstlisting}
 unsigned int GetNumberOfElectronEndpoints() const;
 void GetElectronEndpoint(const unsigned int i, 
-                            double& x0, double& y0, double& z0, double& t0,
-                            double& x1, double& y1, double& z1, double& t1, int& status) const;
+                         double& x0, double& y0, double& z0, double& t0,
+                         double& x1, double& y1, double& z1, double& t1, int& status) const;
 \end{lstlisting}
 \begin{description}
   \item[i] index of the electron
@@ -435,8 +435,8 @@ In Garfield++, the microscopic tracking method is implemented in the class
 \texttt{AvalancheMicroscopic}. A calculation is started by means of
 \begin{lstlisting}
 void AvalancheElectron(const double x0, const double y0, const double z0,
-                          const double t0, const double e0,
-                          const double dx0 = 0., const double dy0 = 0., const double dz0 = 0.);
+                       const double t0, const double e0,
+                       const double dx0 = 0., const double dy0 = 0., const double dz0 = 0.);
 \end{lstlisting}
 \begin{description}
   \item[x0, y0, z0, t0] initial position and time
@@ -457,9 +457,9 @@ retrieved by
 \begin{lstlisting}
 unsigned int GetNumberOfElectronEndpoints() const;
 void GetElectronEndpoint(const unsigned int i, 
-                          double& x0, double& y0, double& z0, double& t0, double& e0,
-                          double& x1, double& y1, double& z1, double& t1, double& e1,
-                          int& status); 
+                         double& x0, double& y0, double& z0, double& t0, double& e0,
+                         double& x1, double& y1, double& z1, double& t1, double& e1,
+                         int& status); 
 \end{lstlisting}
 \begin{description}
   \item[i] index of the electron
@@ -472,7 +472,7 @@ A list of status codes is given in Table~\ref{Tab:DriftLineStatusCodes}.
 The function
 \begin{lstlisting}
 bool DriftElectron(const double x0, const double y0, const double z0, const double t0,
-                     const double e0, const double dx0, const double dy0, const double dz0);
+                   const double e0, const double dx0, const double dy0, const double dz0);
 \end{lstlisting}
 traces only the initial electron but not the secondaries 
 produced along its drift path 
@@ -499,11 +499,11 @@ produced along its drift path
 
 The electron energy distribution can be extracted in the following way:
 \begin{lstlisting}
-AvalancheMicroscopic* aval = new AvalancheMicroscopic();
+AvalancheMicroscopic aval;
 // Make a histogram (100 bins between 0 and 100 eV).
-TH1F* hEnergy = new TH1F("hEnergy", "Electron energy", 100, 0., 100.);
+TH1F hEnergy("hEnergy", "Electron energy", 100, 0., 100.);
 // Pass the histogram to the avalanche class.
-aval->EnableElectronEnergyHistogramming(hEnergy);
+aval.EnableElectronEnergyHistogramming(&hEnergy);
 \end{lstlisting} 
 After each collision, 
 the histogram is filled with the current electron energy. 

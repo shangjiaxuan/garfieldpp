@@ -1,9 +1,11 @@
 #ifndef G_VIEW_BASE
 #define G_VIEW_BASE
 
+#include <memory>
 #include <array>
 #include <string>
 
+#include <TPad.h>
 #include <TCanvas.h>
 
 namespace Garfield {
@@ -20,12 +22,14 @@ class ViewBase {
   /// Constructor.
   ViewBase(const std::string& name);
   /// Destructor.
-  virtual ~ViewBase();
+  virtual ~ViewBase() = default;
 
   /// Set the canvas to be painted on.
-  void SetCanvas(TCanvas* c);
+  void SetCanvas(TPad* pad) { m_pad = pad; }
+  /// Unset an external canvas.
+  void SetCanvas() { m_pad = nullptr; }
   /// Retrieve the canvas.
-  TCanvas* GetCanvas();
+  TPad* GetCanvas();
 
   /// Set the x- and y-axis limits
   /// (in local coordinates of the current viewing plane, if applicable).
@@ -117,10 +121,9 @@ class ViewBase {
                   double& xmin, double& ymin,
                   double& xmax, double& ymax) const;
  private:
-  // Canvas
-  TCanvas* m_canvas = nullptr;
-  bool m_hasExternalCanvas = false;
-
+  // Current pad.
+  TPad* m_pad = nullptr;
+  std::unique_ptr<TCanvas> m_canvas;
 };
 }
 #endif

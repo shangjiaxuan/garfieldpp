@@ -67,7 +67,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
   if (total) {
     auto hname = FindUnusedHistogramName("hSignal_").c_str();
     m_hSignal.reset(new TH1D(hname, "", nBins, t0, t1));
-    m_hSignal->SetLineColor(plottingEngine.GetRootColorLine1());
+    m_hSignal->SetLineColor(m_colTotal);
     m_hSignal->GetXaxis()->SetTitle(xlabel.c_str()),
     m_hSignal->GetYaxis()->SetTitle(ylabel.c_str());
     m_hSignal->SetStats(0);
@@ -84,7 +84,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     if (nCrossings > 0) {
       TGraph gCrossings;
       gCrossings.SetMarkerStyle(20);
-      gCrossings.SetMarkerColor(plottingEngine.GetRootColorLine1());
+      gCrossings.SetMarkerColor(m_colTotal);
       std::vector<double> xp;
       std::vector<double> yp;
       double time = 0., level = 0.;
@@ -101,7 +101,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     if (delayed) {
       hname = FindUnusedHistogramName("hDelayedSignal_").c_str();
       m_hDelayedSignal.reset(new TH1D(hname, "", nBins, t0, t1));
-      m_hDelayedSignal->SetLineColor(kCyan + 2);
+      m_hDelayedSignal->SetLineColor(m_colDelayed[0]);
       m_hDelayedSignal->SetLineStyle(2);
       m_hDelayedSignal->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
@@ -118,7 +118,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
   if (electron) {
     auto hname = FindUnusedHistogramName("hSignalElectrons_").c_str();
     m_hSignalElectrons.reset(new TH1D(hname, "", nBins, t0, t1));
-    m_hSignalElectrons->SetLineColor(plottingEngine.GetRootColorElectron());
+    m_hSignalElectrons->SetLineColor(m_colElectrons);
     m_hSignalElectrons->GetXaxis()->SetTitle(xlabel.c_str());
     m_hSignalElectrons->GetYaxis()->SetTitle(ylabel.c_str());
     m_hSignalElectrons->SetStats(0);
@@ -134,7 +134,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     if (delayed) {
       hname = FindUnusedHistogramName("hDelayedSignalElectrons_").c_str();
       m_hDelayedSignalElectrons.reset(new TH1D(hname, "", nBins, t0, t1));
-      m_hDelayedSignalElectrons->SetLineColor(kYellow - 7);
+      m_hDelayedSignalElectrons->SetLineColor(m_colDelayed[1]);
       m_hDelayedSignalElectrons->SetLineStyle(2);
       m_hDelayedSignalElectrons->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
@@ -148,7 +148,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
   if (ion) {
     auto hname = FindUnusedHistogramName("hSignalIons_").c_str();
     m_hSignalIons.reset(new TH1D(hname, "", nBins, t0, t1));
-    m_hSignalIons->SetLineColor(plottingEngine.GetRootColorIon());
+    m_hSignalIons->SetLineColor(m_colIons);
     m_hSignalIons->GetXaxis()->SetTitle(xlabel.c_str());
     m_hSignalIons->GetYaxis()->SetTitle(ylabel.c_str());
     m_hSignalIons->SetStats(0);
@@ -164,7 +164,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     if (delayed) {
       hname = FindUnusedHistogramName("hDelayedSignalIons_").c_str();
       m_hDelayedSignalIons.reset(new TH1D(hname, "", nBins, t0, t1));
-      m_hDelayedSignalIons->SetLineColor(kRed - 9);
+      m_hDelayedSignalIons->SetLineColor(m_colDelayed[2]);
       m_hDelayedSignalIons->SetLineStyle(2);
       m_hDelayedSignalIons->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
