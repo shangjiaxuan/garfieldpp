@@ -62,27 +62,13 @@ ViewBase::ViewBase(const std::string& name) :
   plottingEngine.SetDefaultStyle();
 }
 
-ViewBase::~ViewBase() {
-  if (!m_hasExternalCanvas && m_canvas) delete m_canvas;
-}
-
-void ViewBase::SetCanvas(TCanvas* c) {
-  if (!c) return;
-  if (!m_hasExternalCanvas && m_canvas) {
-    delete m_canvas;
-    m_canvas = nullptr;
-  }
-  m_canvas = c;
-  m_hasExternalCanvas = true;
-}
-
-TCanvas* ViewBase::GetCanvas() {
-  if (!m_canvas) {
+TPad* ViewBase::GetCanvas() {
+  if (!m_pad) {
     std::string name = FindUnusedCanvasName("c" + m_className);
-    m_canvas = new TCanvas(name.c_str(), "");
-    if (m_hasExternalCanvas) m_hasExternalCanvas = false;
+    if (!m_canvas) m_canvas.reset(new TCanvas(name.c_str(), ""));
+    m_pad = m_canvas.get();
   }
-  return m_canvas;
+  return m_pad;
 }
 
 void ViewBase::SetArea(const double xmin, const double ymin, 
