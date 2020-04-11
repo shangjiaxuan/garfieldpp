@@ -1293,7 +1293,7 @@ bool ViewFEMesh::IntersectPlaneArea(void) {
               return cross_z < 0;
             });
   TPolyLine poly;
-  poly.SetLineColor(plottingEngine.GetRootColorLine2());
+  poly.SetLineColor(kSpring + 4);
   poly.SetLineWidth(3);
   std::size_t pn = 0;
   for (auto& p : intersect_points) {

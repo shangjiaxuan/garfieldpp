@@ -7,7 +7,7 @@
 
 namespace Garfield {
 
-/// Definition of styles and color schemes.
+/// Definition of styles.
 
 class PlottingEngineRoot : public PlottingEngine {
  public:
@@ -19,26 +19,8 @@ class PlottingEngineRoot : public PlottingEngine {
   /// Apply the default Garfield ROOT style.
   void SetDefaultStyle();
 
-  int GetRootColorLine1();
-  int GetRootColorLine2();
-  int GetRootColorElectron();
-  int GetRootColorHole();
-  int GetRootColorIon();
-  int GetRootColorPhoton();
-  int GetRootColorChargedParticle();
-
-  bool GetRootColor(std::string color, int& rootcol);
-
  private:
   TStyle m_garfieldStyle;
-
-  std::string m_colorLine1Default = "dark-blue";
-  std::string m_colorLine2Default = "olive";
-  std::string m_colorElectronDefault = "orange";
-  std::string m_colorHoleDefault = "red";
-  std::string m_colorIonDefault = "dark-red";
-  std::string m_colorPhotonDefault = "blue";
-  std::string m_colorChargedParticleDefault = "dark-green";
 };
 }
 
