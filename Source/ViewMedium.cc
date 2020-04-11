@@ -175,22 +175,28 @@ void ViewMedium::Draw() {
 
   const unsigned int nPlots = m_yPlot.size();
   // Set colours.
-  std::vector<int> cols(nPlots, 0);
-  auto it = std::find(m_q.cbegin(), m_q.cend(), Charge::Electron);
-  if (it != m_q.cend()) {
-    cols[std::distance(m_q.cbegin(), it)] = kOrange - 3; 
-  } 
-  it = std::find(std::next(it), m_q.cend(), Charge::Electron);
-  if (it != m_q.cend()) {
-    cols[std::distance(m_q.cbegin(), it)] = kGreen + 3; 
-  } 
-  it = std::find(m_q.cbegin(), m_q.cend(), Charge::Hole); 
-  if (it != m_q.cend()) {
-    cols[std::distance(m_q.cbegin(), it)] = kRed + 1; 
-  } 
-  it = std::find(m_q.cbegin(), m_q.cend(), Charge::Ion); 
-  if (it != m_q.cend()) {
-    cols[std::distance(m_q.cbegin(), it)] = kRed + 1; 
+  std::vector<short> cols(nPlots, 0);
+  if (m_colours.empty()) {
+    auto it = std::find(m_q.cbegin(), m_q.cend(), Charge::Electron);
+    if (it != m_q.cend()) {
+      cols[std::distance(m_q.cbegin(), it)] = kOrange - 3; 
+    } 
+    it = std::find(std::next(it), m_q.cend(), Charge::Electron);
+    if (it != m_q.cend()) {
+      cols[std::distance(m_q.cbegin(), it)] = kGreen + 3; 
+    } 
+    it = std::find(m_q.cbegin(), m_q.cend(), Charge::Hole); 
+    if (it != m_q.cend()) {
+      cols[std::distance(m_q.cbegin(), it)] = kRed + 1; 
+    } 
+    it = std::find(m_q.cbegin(), m_q.cend(), Charge::Ion); 
+    if (it != m_q.cend()) {
+      cols[std::distance(m_q.cbegin(), it)] = kRed + 1; 
+    }
+  } else {
+    for (unsigned int i = 0; i < nPlots; ++i) {
+      cols[i] = m_colours[i % m_colours.size()];  
+    }
   } 
   // Set legend.
   std::vector<std::string> labels(nPlots, "");

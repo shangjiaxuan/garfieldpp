@@ -97,6 +97,9 @@ class ViewMedium : public ViewBase {
   }
   void PlotElectronCrossSections();
 
+  /// Set the (ROOT) colours to be used in the plots.
+  void SetColours(const std::vector<short>& cols) { m_colours = cols; }
+
  private:
 
   enum class Parameter {
@@ -155,6 +158,8 @@ class ViewMedium : public ViewBase {
 
   std::vector<std::vector<double> > m_xGraph;
   std::vector<std::vector<double> > m_yGraph;
+
+  std::vector<short> m_colours;
 
   void PlotVelocity(const Axis xaxis, const Charge particle,
                     const bool same);
