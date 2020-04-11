@@ -63,9 +63,8 @@ void SetBetaGamma(const double bg);
 
 A track is initialized by means of
 \begin{lstlisting}
-void NewTrack(const double x0, const double y0, const double z0,
-               const double t0,
-               const double dx0, const double dy0, const double dz0);
+void NewTrack(const double x0, const double y0, const double z0, const double t0,
+              const double dx0, const double dy0, const double dz0);
 \end{lstlisting}
 \begin{description}
   \item[x0, y0, z0] initial position (in cm)
@@ -111,11 +110,10 @@ one can retrieve details about the
 electrons in the present cluster using
 \begin{lstlisting}
 bool GetElectron(const unsigned int i, double& x, double& y, double& z,
-                 double& t, double& e, 
-                 double& dx, double& dy, double& dz);
+                 double& t, double& e, double& dx, double& dy, double& dz);
 \end{lstlisting}
 
-\subsection{Delta Electron Transport}
+\subsection{Delta electron Transport}
 
 Heed simulates the energy degradation of \(\delta\) electrons and 
 the production of secondary (``conduction'') electrons 
@@ -152,9 +150,9 @@ Since this method does not provide the energy and direction of the
 secondary electrons, the corresponding parameters in 
 \texttt{GetElectron} are not meaningful in this case. 
 
-\subsection{Photon Transport}
+\subsection{Photon transport}
 
-Heed can also be used for the simulation of x-ray photoabsorption. 
+Heed can also be used for simulating x-ray photoabsorption. 
 \begin{lstlisting}
 void TransportPhoton(const double x0, const double y0, const double z0,
                      const double t0, const double e0,

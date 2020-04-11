@@ -580,8 +580,9 @@ the individual levels are sampled in \texttt{GetElectronCollision}.
 These counters are accessible through the functions
 \begin{lstlisting}
 unsigned int GetNumberOfElectronCollisions();
-unsigned int GetNumberOfElectronCollisions(int& nElastic, int& nIonising, int& nAttachment,
-                                  int& nInelastic, int& nExcitation, int& nSuperelastic);
+unsigned int GetNumberOfElectronCollisions(int& nElastic, int& nIonising, 
+                                           int& nAttachment, int& nInelastic, 
+                                           int& nExcitation, int& nSuperelastic);
 unsigned int GetNumberOfElectronCollisions(const unsigned int level);
 \end{lstlisting}
 The first function returns total number of electron collisions (\textit{i.\,e.} calls 
@@ -709,12 +710,12 @@ the following options are available:
   \item
   The method for calculating the high-field saturation velocities 
   can be set using
-  \begin{lstlisting}
+\begin{lstlisting}
 void SetSaturationVelocity(const double vsate, const double vsath);
 void SetSaturationVelocityModelMinimos();
 void SetSaturationVelocityModelCanali();
 void SetSaturationVelocityModelReggiani();
-  \end{lstlisting}
+\end{lstlisting}
   The first function sets user-defined saturation velocities (in cm/ns) for 
   electrons and holes. The other functions activate different parameterizations 
   for the saturation velocity as function of temperature. In the Canali model 
@@ -728,12 +729,12 @@ void SetSaturationVelocityModelReggiani();
   \item
   The parameterization of the mobility as function of the electric field 
   to be used can be selected using
-  \begin{lstlisting}
+\begin{lstlisting}
 void SetHighFieldMobilityModelMinimos();
 void SetHighFieldMobilityModelCanali();
 void SetHighFieldMobilityModelReggiani();
 void SetHighFieldMobilityModelConstant();
-  \end{lstlisting}
+\end{lstlisting}
   The last function requests a constant mobility (\textit{i.\,e.} linear dependence of the 
   velocity on the electric field). 
   The models activated by the other functions used the following expressions

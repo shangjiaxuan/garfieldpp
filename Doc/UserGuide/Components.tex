@@ -74,14 +74,14 @@ As an example, we consider a gas-filled tube with a diameter of 1\,cm and
 a length of 20\,cm (along the \(z\)-axis), centred at the origin:
 \begin{lstlisting}
 // Create the medium.
-MediumMagboltz* gas = new MediumMagboltz();
+MediumMagboltz gas;
 // Create the geometry.
-GeometrySimple* geo = new GeometrySimple();
+GeometrySimple geo;
 // Dimensions of the tube
 double rMin = 0., rMax = 0.5, halfLength = 10.;
-SolidTube* tube = new SolidTube(0., 0., 0., rMin, rMax, halfLength);
+SolidTube tube(0., 0., 0., rMin, rMax, halfLength);
 // Add the solid to the geometry, together with the gas inside.
-geo->AddSolid(tube, gas);
+geo.AddSolid(&tube, &gas);
 \end{lstlisting}
 
 Solids may overlap. 
@@ -147,14 +147,14 @@ defined in \texttt{ComponentAnalyticField}
 can be inspected using the class \texttt{ViewCell}.
 \begin{lstlisting}
 // Create and setup the component.
-ComponentAnalyticField* cmp = new ComponentAnalyticField();
+ComponentAnalyticField cmp;
 ... 
 // Create a viewer.
-ViewCell* view = new ViewCell();
+ViewCell view;
 // Set the pointer to the component.
-view->SetComponent(cmp);
+view.SetComponent(&cmp);
 // Make a two-dimensional plot of the cell layout.
-view->Plot2d();
+view.Plot2d();
 \end{lstlisting}
 Similarly, the function \texttt{ViewCell::Plot3d()} paints
 a three-dimensional view of the cell layout.
@@ -179,8 +179,7 @@ with quadric curved tetrahedra (known as ``solid123'' in Ansys).
 The field map is imported with the function
 \begin{lstlisting}
 bool Initialise(std::string elist, std::string nlist,
-                std::string mplist, std::string prnsol,
-                std::string unit);
+                std::string mplist, std::string prnsol, std::string unit);
 \end{lstlisting}
 \begin{description}
   \item[elist]
@@ -277,11 +276,14 @@ integral fraction of \(2\pi\).
 
 Periodicities can be set and unset using
 \begin{lstlisting}
-void EnablePeriodicityX();       void DisablePeriodicityX();
-void EnableMirrorPeriodicityX(); void DisableMirrorPeriodicityX();
-void EnableAxialPeriodicityX();  void DisableAxialPeriodicityX();
-void EnableRotationSymmetryX();  void DisableRotationSymmetryX();
+void EnablePeriodicityX(const bool on);
+void EnableMirrorPeriodicityX(const bool on);
+void EnableAxialPeriodicityX(const bool on);
+void EnableRotationSymmetryX(const bool on);
 \end{lstlisting}
+\begin{description}
+\item[on] flag to enable (\texttt{true}) or disable (\texttt{false}) periodicity. 
+\end{description}
 Analogous functions are available for \(y\) and \(z\).
 
 In order to assess the quality of the mesh, 
@@ -887,8 +889,9 @@ To investigate whether dipole and higher order terms are significant,
 one can use the function
 \begin{lstlisting}
 bool MultipoleMoments(const unsigned int iw, const unsigned int order = 4,
-  const bool print = false, const bool plot = false, const double rmult = 1.,
-  const double eps = 1.e-4, const unsigned int nMaxIter = 20);
+                      const bool print = false, const bool plot = false, 
+                      const double rmult = 1.,
+                      const double eps = 1.e-4, const unsigned int nMaxIter = 20);
 \end{lstlisting} 
 \begin{description}
   \item[iw] index of the wire for which the multipole decomposition should be done,
@@ -987,8 +990,7 @@ As the name implies, it provides a uniform electric field.
 The electric field and potential can be specified using
 \begin{lstlisting}
 void SetElectricField(const double ex, const double ey, const double ez);
-void SetPotential(const double x, const double p, const double z,
-                  const double v);
+void SetPotential(const double x, const double p, const double z, const double v);
 \end{lstlisting}
 \begin{description}
   \item[ex, ey, ez]
@@ -1075,6 +1077,7 @@ create a contour plot or another two-dimensional plot in the chosen viewing plan
 The quantity to be plotted is set using the parameter \texttt{option} 
 (see Table~\ref{Tab:ViewFieldOptionStrings}).
 \begin{table}
+  \centering
   \caption{\texttt{ViewField} option strings and corresponding quantities.}
   \label{Tab:ViewFieldOptionStrings}
   \begin{tabular}{l l} 
