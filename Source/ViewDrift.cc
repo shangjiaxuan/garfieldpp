@@ -22,10 +22,6 @@ ViewDrift::ViewDrift() : ViewBase("ViewDrift") {
   m_ion.reserve(1000);
 }
 
-ViewDrift::~ViewDrift() {
-  Clear();
-}
-
 void ViewDrift::Clear() {
   m_driftLines.clear();
   m_tracks.clear();
