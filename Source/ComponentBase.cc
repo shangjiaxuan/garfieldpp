@@ -111,7 +111,7 @@ double ComponentBase::IntegrateFluxCircle(const double xc, const double yc,
                                           const unsigned int nI) {
   // FLDIN2, FCHK3
   if (nI == 0) {
-    std::cerr << m_className << "::IntegrateFlux:\n"
+    std::cerr << m_className << "::IntegrateFluxCircle:\n"
               << "    Number of intervals must be > 0.\n";
     return 0.;
   }
@@ -151,7 +151,7 @@ double ComponentBase::IntegrateFluxSphere(const double xc, const double yc,
                                           const unsigned int nI) {
   // FLDIN3, FCHK2, FCHK1
   if (nI == 0) {
-    std::cerr << m_className << "::IntegrateFlux:\n"
+    std::cerr << m_className << "::IntegrateFluxSphere:\n"
               << "    Number of intervals must be > 0.\n";
     return 0.;
   }
@@ -205,7 +205,7 @@ double ComponentBase::IntegrateFluxSphere(const double xc, const double yc,
   return ht * s2 * VacuumPermittivity;
 }
 
-double ComponentBase::IntegrateFlux(
+double ComponentBase::IntegrateFluxParallelogram(
     const double x0, const double y0, const double z0,
     const double dx1, const double dy1, const double dz1,
     const double dx2, const double dy2, const double dz2,
@@ -213,7 +213,7 @@ double ComponentBase::IntegrateFlux(
 
   // FLDIN4, FCHK4, FCHK5
   if (nU <= 1 || nV <= 1) {
-    std::cerr << m_className << "::IntegrateFlux:\n"
+    std::cerr << m_className << "::IntegrateFluxParallelogram:\n"
               << "    Number of points to integrate over must be > 1.\n";
     return 0.;
   }
@@ -275,6 +275,80 @@ double ComponentBase::IntegrateFlux(
     }
   }
   return hv * s2;
+}
+
+double ComponentBase::IntegrateFluxLine(
+    const double x0, const double y0, const double z0,
+    const double x1, const double y1, const double z1,
+    const double xp, const double yp, const double zp,
+    const unsigned int nI, const int isign) { 
+
+  // FLDIN5
+  // Normalise the norm vector.
+  const double pmag2 = xp * xp + yp * yp + zp * zp;
+  if (pmag2 <= 0.) {
+    std::cerr << " Normal vector has zero length; flux set to 0.\n";
+    return 0.;
+  }
+  const double pmag = sqrt(pmag2);
+  const double xn = xp / pmag;
+  const double yn = yp / pmag;
+  const double zn = zp / pmag;
+
+  // Check integration points.
+  if (nI <= 1) {
+    std::cerr << " Number of points to integrate over must be > 1.\n";
+    return 0.;
+  }
+  // Ensure the segment has non-zero length.
+  const double vx = x1 - x0;
+  const double vy = y1 - y0;
+  const double vz = z1 - z0;
+  const double vmag2 = vx * vx + vy * vy + vz * vz;
+  if (vmag2 <= 0.) {
+    std::cerr << " Segment has zero length; flux set to 0.\n";
+    return 0.;
+  }
+  const double vmag = sqrt(vmag2);
+  // Segment should be perpendicular to the norm vector.
+  if (fabs(vx * xn + vy * yn + vz * zn) > 1.e-4 * vmag) {
+    std::cerr << " Segment is not perpendicular to norm vector.\n";
+    return 0.;
+  }
+
+  // Perform the integration.
+  constexpr unsigned int nG = 6;
+  constexpr std::array<double, nG> t = { 
+     -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
+      0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
+  constexpr std::array<double, nG> w = {
+     0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
+     0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+
+  const double d = 1. / nI;
+  const double h = 0.5 * d;
+  // Arguments of ElectricField.
+  double ex = 0., ey = 0., ez = 0.;
+  Medium* m = nullptr;
+  int status = 0;
+  double s = 0.;
+  for (unsigned int i = 0; i < nG; ++i) {
+    const double u0 = h * (1. + t[i]);
+    for (unsigned int k = 0; k < nI; ++k) {
+      const double u = u0 + k * d;
+      const double x = x0 + u * vx;
+      const double y = y0 + u * vy;
+      const double z = z0 + u * vz;
+      ElectricField(x, y, z, ex, ey, ez, m, status);
+      double fn = ex * xn + ey * yn + ez * zn;
+      if (isign != 0) {
+        // TODO: -1?
+        fn = isign * fn > 0 ? fabs(fn) : -1.;
+      }
+      s += w[i] * fn;
+    }
+  }
+  return s * vmag;
 }
 
 }
