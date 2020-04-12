@@ -42,6 +42,21 @@ void SampleRange(TF1* f, double& ymin, double& ymax) {
     if (y > ymax) ymax = y;
   }
 }
+
+double Interpolate(const std::array<double, 1000>& y,
+                   const std::array<double, 1000>& x, const double xx) {
+
+  const double tol = 1.e-6 * fabs(x.back() - x.front());
+  if (xx < x[0]) return y[0];
+  const auto it1 = std::upper_bound(x.cbegin(), x.cend(), xx);
+  if (it1 == x.cend()) return y.back();
+  const auto it0 = std::prev(it1);
+  const double dx = (*it1 - *it0);
+  if (dx < tol) return y[it0 - x.cbegin()];
+  const double f = (xx - *it0) / dx;
+  return y[it0 - x.cbegin()] * (1. - f) + f * y[it1 - x.cbegin()];
+}
+
 }
 
 namespace Garfield {
@@ -508,4 +523,189 @@ double ViewField::Wfield(const double x, const double y, const double z,
   return 0.;
 } 
 
+bool ViewField::EqualFluxIntervals(
+    const double x0, const double y0, const double z0,
+    const double x1, const double y1, const double z1,
+    std::vector<double>& xf, std::vector<double>& yf,
+    std::vector<double>& zf,
+    const unsigned int nPoints) const {
+
+  if (nPoints < 2) {
+    std::cerr << m_className << "::EqualFluxIntervals:\n"
+              << "    Number of flux lines must be > 1.\n";
+    return false;
+  }
+
+  // Set integration intervals.
+  constexpr unsigned int nV = 5;
+  // Compute the inplane vector normal to the track.
+  const double xp = (y1 - y0) * m_plane[2] - (z1 - z0) * m_plane[1];
+  const double yp = (z1 - z0) * m_plane[0] - (x1 - x0) * m_plane[2];
+  const double zp = (x1 - x0) * m_plane[1] - (y1 - y0) * m_plane[0];
+  // Compute the total flux, accepting positive and negative parts.
+  double q = 0.;
+  if (m_component) {
+    q = m_component->IntegrateFluxLine(x0, y0, z0, x1, y1, z1, 
+                                       xp, yp, zp, 20 * nV, 0);
+  } else {
+    q = m_sensor->IntegrateFluxLine(x0, y0, z0, x1, y1, z1, 
+                                    xp, yp, zp, 20 * nV, 0);
+  }
+  const int isign = q > 0 ? +1 : -1;
+  if (m_debug) {
+    std::cout << m_className << "::EqualFluxIntervals:\n";
+    std::printf("    Total flux: %15.e8\n", q);
+  }
+  // Compute the 1-sided flux in a number of steps.
+  double fsum = 0.;
+  unsigned int nOtherSign = 0;
+  double s0 = -1.;
+  double s1 = -1.;
+  constexpr size_t nSteps = 1000;
+  std::array<double, nSteps> sTab;
+  std::array<double, nSteps> fTab;
+  constexpr double ds = 1. / nSteps;
+  const double dx = (x1 - x0) * ds;
+  const double dy = (y1 - y0) * ds;
+  const double dz = (z1 - z0) * ds;
+  for (size_t i = 0; i < nSteps; ++i) {
+    const double x = x0 + i * dx;
+    const double y = y0 + i * dy;
+    const double z = z0 + i * dz;
+    if (m_component) {
+      q = m_component->IntegrateFluxLine(x, y, z, x + dx, y + dy, z + dz, 
+                                         xp, yp, zp, nV, isign);
+    } else {
+      q = m_sensor->IntegrateFluxLine(x, y, z, x + dx, y + dy, z + dz, 
+                                      xp, yp, zp, nV, isign);
+    }
+    sTab[i] = (i + 1) * ds;
+    if (q > 0) {
+      fsum += q;
+      if (s0 < -0.5) s0 = i * ds;
+      s1 = (i + 1) * ds;
+    }
+    if (q < 0) ++nOtherSign;
+    fTab[i] = fsum;
+  }
+  if (m_debug) {
+    std::printf("    Used flux: %15.8e V. Start: %10.3f End: %10.3f\n",
+                fsum, s0, s1);
+  }
+  // Make sure that the sum is positive.
+  if (fsum <= 0) {
+    std::cerr << m_className << "::EqualFluxIntervals:\n"
+              << "    1-Sided flux integral is not > 0.\n";
+    return false;
+  } else if (s0 < -0.5 || s1 < -0.5 || s1 <= s0) {
+    std::cerr << m_className << "::EqualFluxIntervals:\n"
+              << "    No flux interval without sign change found.\n";
+    return false;
+  } else if (nOtherSign > 0) {
+    std::cerr << m_className << "::EqualFluxIntervals:\n"
+              << " The flux changes sign over the line.\n";
+  }
+  // Normalise the flux.
+  const double scale = (nPoints - 1) / fsum;
+  for (size_t i = 0; i < nSteps; ++i) fTab[i] *= scale;
+
+  // Compute new cluster position.
+  for (size_t i = 0; i < nPoints; ++i) {
+    double s = std::min(s1, std::max(s0, Interpolate(sTab, fTab, i)));
+    xf.push_back(x0 + s * (x1 - x0));
+    yf.push_back(y0 + s * (y1 - y0));
+    zf.push_back(z0 + s * (z1 - z0));
+  }
+  return true;
+}
+
+bool ViewField::FixedFluxIntervals(
+    const double x0, const double y0, const double z0,
+    const double x1, const double y1, const double z1,
+    std::vector<double>& xf, std::vector<double>& yf,
+    std::vector<double>& zf, const double interval) const {
+
+  if (interval <= 0.) {
+    std::cerr << m_className << "::FixedFluxIntervals:\n"
+              << "    Flux interval must be > 0.\n";
+    return false;
+  }
+
+  // Set integration intervals.
+  constexpr unsigned int nV = 5;
+  // Compute the inplane vector normal to the track.
+  const double xp = (y1 - y0) * m_plane[2] - (z1 - z0) * m_plane[1];
+  const double yp = (z1 - z0) * m_plane[0] - (x1 - x0) * m_plane[2];
+  const double zp = (x1 - x0) * m_plane[1] - (y1 - y0) * m_plane[0];
+  // Compute the total flux, accepting positive and negative parts.
+  double q = 0.;
+  if (m_component) {
+    q = m_component->IntegrateFluxLine(x0, y0, z0, x1, y1, z1, 
+                                       xp, yp, zp, 20 * nV, 0);
+  } else {
+    q = m_sensor->IntegrateFluxLine(x0, y0, z0, x1, y1, z1, 
+                                    xp, yp, zp, 20 * nV, 0);
+  }
+  const int isign = q > 0 ? +1 : -1;
+  if (m_debug) {
+    std::cout << m_className << "::FixedFluxIntervals:\n";
+    std::printf("    Total flux: %15.8e V\n", q);
+  }
+  // Compute the 1-sided flux in a number of steps.
+  double fsum = 0.;
+  unsigned int nOtherSign = 0;
+  double s0 = -1.;
+  constexpr size_t nSteps = 1000;
+  std::array<double, nSteps> sTab;
+  std::array<double, nSteps> fTab;
+  constexpr double ds = 1. / nSteps;
+  const double dx = (x1 - x0) * ds;
+  const double dy = (y1 - y0) * ds;
+  const double dz = (z1 - z0) * ds;
+  for (size_t i = 0; i < nSteps; ++i) {
+    const double x = x0 + i * dx;
+    const double y = y0 + i * dy;
+    const double z = z0 + i * dz;
+    if (m_component) {
+      q = m_component->IntegrateFluxLine(x, y, z, x + dx, y + dy, z + dz, 
+                                         xp, yp, zp, nV, isign);
+    } else {
+      q = m_sensor->IntegrateFluxLine(x, y, z, x + dx, y + dy, z + dz, 
+                                      xp, yp, zp, nV, isign);
+    }
+    sTab[i] = (i + 1) * ds;
+    if (q > 0) {
+      fsum += q;
+      if (s0 < -0.5) s0 = i * ds;
+    }
+    if (q < 0) ++nOtherSign;
+    fTab[i] = fsum;
+  }
+  // Make sure that the sum is positive.
+  if (m_debug) {
+    std::printf("    Used flux: %15.8e V. Start offset: %10.3f\n", fsum, s0);
+  }
+  if (fsum <= 0) {
+    std::cerr << m_className << "::FixedFluxIntervals:\n"
+              << "    1-Sided flux integral is not > 0.\n";
+    return false;
+  } else if (s0 < -0.5) {
+    std::cerr << m_className << "::FixedFluxIntervals:\n"
+              << "    No flux interval without sign change found.\n";
+    return false;
+  } else if (nOtherSign > 0) {
+    std::cerr << m_className << "::FixedFluxIntervals:\n"
+              << "    Warning: The flux changes sign over the line.\n";
+  }
+
+  double f = 0.;
+  while (f < fsum) {
+    const double s = Interpolate(sTab, fTab, f);
+    f += interval;
+    xf.push_back(x0 + s * (x1 - x0));
+    yf.push_back(y0 + s * (y1 - y0));
+    zf.push_back(z0 + s * (z1 - z0));
+  }
+  return true;
+}
 }
