@@ -101,8 +101,27 @@ class ViewBase {
   // Update and invert the projection matrix.
   void UpdateProjectionMatrix();
   // Determine plane coordinates.
-  void ToPlane(const double x, const double y, const double z,
-               double& xp, double& yp) const;
+  template<typename T> 
+  void ToPlane(const T x, const T y, const T z, T& xp, T& yp) const {
+    xp = m_prmat[0][0] * x + m_prmat[0][1] * y + m_prmat[0][2] * z;
+    yp = m_prmat[1][0] * x + m_prmat[1][1] * y + m_prmat[1][2] * z;
+  }
+  // Determine whether a point is inside the bounding box.
+  template<typename T> 
+  bool InBox(const std::array<T, 3>& x) const {
+    if (!m_userBox) return true;
+    if (x[0] < m_xMinBox || x[0] > m_xMaxBox || 
+        x[1] < m_yMinBox || x[1] > m_yMaxBox ||
+        x[2] < m_yMinBox || x[2] > m_zMaxBox) return false;
+    return true; 
+  }
+  // Clip the line x0 - x1 to the extent of the bounding box.
+  void Clip(const std::array<float, 3>& x0,
+            const std::array<float, 3>& x1, std::array<float, 3>& xc) const;
+  // Draw the projection of a line onto the current viewing plane.
+  void DrawLine(const std::vector<std::array<float, 3> >& xl,
+                const short col, const short lw);
+
   // X-axis label for the current viewing plane.
   std::string LabelX();
   // Y-axis label for the current viewing plane.

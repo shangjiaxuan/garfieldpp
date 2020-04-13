@@ -196,111 +196,32 @@ void ViewDrift::Plot2d(const bool axis) {
                   m_yMaxPlot + dy * (tm / (1. - tm - lm)));
   } 
 
-  TGraph gr;
-  gr.SetLineWidth(1);
   for (const auto& driftLine : m_driftLines) {
-    const unsigned int nP = driftLine.first.size();
-    if (nP < 2) continue;
+    const short lw = 1;
     if (driftLine.second == Particle::Electron) {
-      gr.SetLineColor(m_colElectron);
+      DrawLine(driftLine.first, m_colElectron, lw);
     } else if (driftLine.second == Particle::Hole) {
-      gr.SetLineColor(m_colHole);
+      DrawLine(driftLine.first, m_colHole, lw);
     } else {
-      gr.SetLineColor(m_colIon);
-    }
-    std::vector<float> xgr;
-    std::vector<float> ygr;
-    auto x0 = driftLine.first[0];
-    bool in0 = InBox(x0);
-    if (in0) {
-      double xp = 0., yp = 0.;
-      ToPlane(x0[0], x0[1], x0[2], xp, yp);
-      xgr.push_back(xp);
-      ygr.push_back(yp);
-    }
-    for (unsigned int j = 1; j < nP; ++j) {
-      auto x1 = driftLine.first[j];
-      bool in1 = InBox(x1);
-      if (in1 != in0) {
-        double xp = 0., yp = 0.;
-        std::array<float, 3> xc;
-        Clip(x0, x1, xc);
-        ToPlane(xc[0], xc[1], xc[2], xp, yp);
-        xgr.push_back(xp);
-        ygr.push_back(yp);
-      } 
-      if (in1) {
-        double xp = 0., yp = 0.;
-        ToPlane(x1[0], x1[1], x1[2], xp, yp);
-        xgr.push_back(xp);
-        ygr.push_back(yp);
-      } else if (!xgr.empty()) {
-        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
-        xgr.clear();
-        ygr.clear();
-      }
-      x0 = x1;
-      in0 = in1;
-    }
-    if (!xgr.empty()) {
-      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
+      DrawLine(driftLine.first, m_colIon, lw);
     }
   }
   gPad->Update();
 
-  gr.SetLineWidth(2);
-  gr.SetLineColor(m_colTrack);
   for (const auto& track : m_tracks) {
-    const auto nP = track.size();
-    if (nP < 2) continue;
-    std::vector<float> xgr;
-    std::vector<float> ygr;
-    auto x0 = track[0];
-    bool in0 = InBox(x0);
-    if (in0) {
-      double xp = 0., yp = 0.;
-      ToPlane(x0[0], x0[1], x0[2], xp, yp);
-      xgr.push_back(xp);
-      ygr.push_back(yp);
-    }
-    for (unsigned int j = 1; j < nP; ++j) {
-      auto x1 = track[j];
-      bool in1 = InBox(x1);
-      if (in1 != in0) {
-        double xp = 0., yp = 0.;
-        std::array<float, 3> xc;
-        Clip(x0, x1, xc);
-        ToPlane(xc[0], xc[1], xc[2], xp, yp);
-        xgr.push_back(xp);
-        ygr.push_back(yp);
-      } 
-      if (in1) {
-        double xp = 0., yp = 0.;
-        ToPlane(x1[0], x1[1], x1[2], xp, yp);
-        xgr.push_back(xp);
-        ygr.push_back(yp);
-      } else if (!xgr.empty()) {
-        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
-        xgr.clear();
-        ygr.clear();
-      }
-      x0 = x1;
-      in0 = in1;
-    }
-    if (!xgr.empty()) {
-      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
-    }
+    DrawLine(track, m_colTrack, 2);
   }
 
+  TGraph gr;
   gr.SetLineColor(m_colPhoton);
   gr.SetLineStyle(2);
   for (const auto& photon : m_photons) {
-    double xp0 = 0., yp0 = 0.;
-    double xp1 = 0., yp1 = 0.;
+    float xp0 = 0., yp0 = 0.;
+    float xp1 = 0., yp1 = 0.;
     ToPlane(photon[0][0], photon[0][1], photon[0][2], xp0, yp0);
     ToPlane(photon[1][0], photon[1][1], photon[1][2], xp1, yp1);
-    std::vector<float> xgr = {float(xp0), float(xp1)};
-    std::vector<float> ygr = {float(yp0), float(yp1)};
+    std::vector<float> xgr = {xp0, xp1};
+    std::vector<float> ygr = {yp0, yp1};
     gr.DrawGraph(2, xgr.data(), ygr.data(), "Lsame"); 
   }
 
@@ -312,7 +233,7 @@ void ViewDrift::Plot2d(const bool axis) {
     std::vector<float> ygr;
     for (const auto& p : m_exc) {
       if (!InBox(p)) continue;
-      double xp = 0., yp = 0.;
+      float xp = 0., yp = 0.;
       ToPlane(p[0], p[1], p[2], xp, yp);
       xgr.push_back(xp);
       ygr.push_back(yp); 
@@ -327,7 +248,7 @@ void ViewDrift::Plot2d(const bool axis) {
     std::vector<float> ygr;
     for (const auto& p : m_ion) {
       if (!InBox(p)) continue;
-      double xp = 0., yp = 0.;
+      float xp = 0., yp = 0.;
       ToPlane(p[0], p[1], p[2], xp, yp);
       xgr.push_back(xp);
       ygr.push_back(yp); 
@@ -342,7 +263,7 @@ void ViewDrift::Plot2d(const bool axis) {
     std::vector<float> ygr;
     for (const auto& p : m_att) {
       if (!InBox(p)) continue;
-      double xp = 0., yp = 0.;
+      float xp = 0., yp = 0.;
       ToPlane(p[0], p[1], p[2], xp, yp);
       xgr.push_back(xp);
       ygr.push_back(yp); 
@@ -353,42 +274,6 @@ void ViewDrift::Plot2d(const bool axis) {
   }
  
   gPad->Update();
-}
-
-void ViewDrift::Clip(const std::array<float, 3>& x0, 
-                     const std::array<float, 3>& x1,
-                     std::array<float, 3>& xc) const {
-
-  xc.fill(0.);
-  const bool in0 = InBox(x0);
-  const bool in1 = InBox(x1);
-  if (in0 == in1) return;
-  xc = in0 ? x1 : x0;
-  const std::array<float, 3> dx = {x1[0] - x0[0], x1[1] - x0[1], 
-                                   x1[2] - x0[2]};
-  // Adjust x.
-  if (dx[0] != 0. && (xc[0] < m_xMinBox || xc[0] > m_xMaxBox)) {
-    const double b = xc[0] < m_xMinBox ? m_xMinBox : m_xMaxBox;
-    const double s = (b - xc[0]) / dx[0];
-    xc[0] = b;
-    xc[1] += dx[1] * s;
-    xc[2] += dx[2] * s;
-  }
-  if (dx[1] != 0. && (xc[1] < m_yMinBox || xc[1] > m_yMaxBox)) {
-    const double b = xc[1] < m_yMinBox ? m_yMinBox : m_yMaxBox;
-    const double s = (b - xc[1]) / dx[1];
-    xc[0] += dx[0] * s;
-    xc[1] = b;
-    xc[2] += dx[2] * s;
-  }
-  // Adjust z.
-  if (dx[2] != 0. && (xc[2] < m_zMinBox || xc[2] > m_zMaxBox)) {
-    const double b = xc[2] < m_zMinBox ? m_zMinBox : m_zMaxBox;
-    const double s = (b - xc[2]) / dx[2];
-    xc[0] += dx[0] * s;
-    xc[1] += dx[1] * s;
-    xc[2] = b;
-  }
 }
 
 void ViewDrift::Plot3d(const bool axis) {

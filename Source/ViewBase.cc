@@ -3,6 +3,7 @@
 #include <limits>
 
 #include <TROOT.h>
+#include <TGraph.h>
 
 #include "Garfield/Sensor.hh"
 #include "Garfield/ComponentBase.hh"
@@ -236,10 +237,89 @@ void ViewBase::UpdateProjectionMatrix() {
   }
 }
 
-void ViewBase::ToPlane(const double x, const double y, const double z,
-                       double& xp, double& yp) const {
-  xp = m_prmat[0][0] * x + m_prmat[0][1] * y + m_prmat[0][2] * z;
-  yp = m_prmat[1][0] * x + m_prmat[1][1] * y + m_prmat[1][2] * z;
+void ViewBase::Clip(const std::array<float, 3>& x0, 
+                    const std::array<float, 3>& x1,
+                    std::array<float, 3>& xc) const {
+
+  xc.fill(0.);
+  const bool in0 = InBox(x0);
+  const bool in1 = InBox(x1);
+  if (in0 == in1) return;
+  xc = in0 ? x1 : x0;
+  const std::array<float, 3> dx = {x1[0] - x0[0], x1[1] - x0[1], 
+                                   x1[2] - x0[2]};
+  // Adjust x.
+  if (dx[0] != 0. && (xc[0] < m_xMinBox || xc[0] > m_xMaxBox)) {
+    const double b = xc[0] < m_xMinBox ? m_xMinBox : m_xMaxBox;
+    const double s = (b - xc[0]) / dx[0];
+    xc[0] = b;
+    xc[1] += dx[1] * s;
+    xc[2] += dx[2] * s;
+  }
+  if (dx[1] != 0. && (xc[1] < m_yMinBox || xc[1] > m_yMaxBox)) {
+    const double b = xc[1] < m_yMinBox ? m_yMinBox : m_yMaxBox;
+    const double s = (b - xc[1]) / dx[1];
+    xc[0] += dx[0] * s;
+    xc[1] = b;
+    xc[2] += dx[2] * s;
+  }
+  // Adjust z.
+  if (dx[2] != 0. && (xc[2] < m_zMinBox || xc[2] > m_zMaxBox)) {
+    const double b = xc[2] < m_zMinBox ? m_zMinBox : m_zMaxBox;
+    const double s = (b - xc[2]) / dx[2];
+    xc[0] += dx[0] * s;
+    xc[1] += dx[1] * s;
+    xc[2] = b;
+  }
+}
+
+void ViewBase::DrawLine(const std::vector<std::array<float, 3> >& xl,
+                        const short col, const short lw) {
+
+  const size_t nP = xl.size();
+  if (nP < 2) return;
+
+  TGraph gr;
+  gr.SetLineColor(col);
+  gr.SetLineWidth(lw);
+ 
+  std::vector<float> xgr;
+  std::vector<float> ygr;
+  auto x0 = xl[0];
+  bool in0 = InBox(x0);
+  if (in0) {
+    float xp = 0., yp = 0.;
+    ToPlane(x0[0], x0[1], x0[2], xp, yp);
+    xgr.push_back(xp);
+    ygr.push_back(yp);
+  }
+  for (unsigned int j = 1; j < nP; ++j) {
+    auto x1 = xl[j];
+    bool in1 = InBox(x1);
+    if (in1 != in0) {
+      float xp = 0., yp = 0.;
+      std::array<float, 3> xc;
+      Clip(x0, x1, xc);
+      ToPlane(xc[0], xc[1], xc[2], xp, yp);
+      xgr.push_back(xp);
+      ygr.push_back(yp);
+    } 
+    if (in1) {
+      float xp = 0., yp = 0.;
+      ToPlane(x1[0], x1[1], x1[2], xp, yp);
+      xgr.push_back(xp);
+      ygr.push_back(yp);
+    } else if (!xgr.empty()) {
+      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
+      xgr.clear();
+      ygr.clear();
+    }
+    x0 = x1;
+    in0 = in1;
+  }
+  if (!xgr.empty()) {
+    gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
+  }
 }
 
 std::string ViewBase::LabelX() {
