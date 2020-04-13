@@ -1609,9 +1609,10 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
 }
 
 bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
-                             std::vector<Vec>& xs, const bool electron) {
+                             std::vector<std::array<float, 3> >& xl, 
+                             const bool electron) {
 
-  xs.clear();
+  xl.clear();
 
   // Check if the sensor is defined.
   if (!m_sensor) {
@@ -1666,7 +1667,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
   double hprev = h;
 
   // Set the initial point.
-  xs.push_back(x0);
+  xl.push_back({float(x0[0]), float(x0[1]), float(x0[2])});
 
   int initCycle = 3;
   bool ok = true;
@@ -1681,7 +1682,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
       if (m_debug) {
         std::cout << m_className << "::FieldLine: Point 1 outside.\n";
       }
-      Terminate(x0, x1, xs);
+      Terminate(x0, x1, xl);
       return true;
     }
     Vec f1 = {ex, ey, ez};
@@ -1696,7 +1697,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
       if (m_debug) {
         std::cout << m_className << "::FieldLine: Point 2 outside.\n";
       }
-      Terminate(x0, x2, xs);
+      Terminate(x0, x2, xl);
       return true;
     }
     Vec f2 = {ex, ey, ez};
@@ -1711,7 +1712,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
       if (m_debug) {
         std::cout << m_className << "::FieldLine: Point 3 outside.\n";
       }
-      Terminate(x0, x3, xs);
+      Terminate(x0, x3, xl);
       return true;
     }
     Vec f3 = {ex, ey, ez};
@@ -1725,7 +1726,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
         m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
                                 x3[0], x3[1], x3[2], xw, yw, zw, false, rw)) {
       // TODO!
-      xs.push_back({xw, yw, zw});
+      xl.push_back({float(xw), float(yw), float(zw)});
       return true;
       // Drift to wire.
       if (h > Small) {
@@ -1778,11 +1779,12 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
       if (m_debug) {
         std::cout << m_className << "::FieldLine: Point outside. Terminate.\n";
       }
-      Terminate(xs.back(), x0, xs);
+      std::array<double, 3> xp = {xl.back()[0], xl.back()[1], xl.back()[2]};
+      Terminate(xp, x0, xl);
       return true;
     }
     // Add the new point to the drift line.
-    xs.push_back(x0);
+    xl.push_back({float(x0[0]), float(x0[1]), float(x0[2])});
     // Adjust the step size according to the accuracy of the two estimates.
     hprev = h;
     const double dphi = fabs(phi1[0] - phi2[0]) + fabs(phi1[1] - phi2[1]) +
@@ -1810,7 +1812,8 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
       }
       --initCycle;
       x0 = {xi, yi, zi};
-      xs = {x0};
+      xl.clear();
+      xl.push_back({float(xi), float(yi), float(zi)});
       continue;
     }
     initCycle = 0;
@@ -1836,7 +1839,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
 
 void DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
                              const std::array<double, 3>& xx1,
-                             std::vector<Vec>& xs) {
+                             std::vector<std::array<float, 3> >& xs) {
 
   // Final point just inside the medium.
   Vec x0 = xx0;
@@ -1874,6 +1877,6 @@ void DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
     }
   }
 
-  xs.push_back(x0);
+  xs.push_back({float(x0[0]), float(x0[1]), float(x0[2])});
 }
 }

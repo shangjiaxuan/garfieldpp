@@ -9,7 +9,6 @@
 #include <TF1.h>
 #include <TF2.h>
 #include <TH1F.h>
-#include <TGraph.h>
 
 #include "Garfield/ComponentBase.hh"
 #include "Garfield/Plotting.hh"
@@ -567,22 +566,10 @@ void ViewField::PlotFieldLines(const std::vector<double>& x0,
   const double lx = 0.1 * fabs(m_xMaxPlot - m_xMinPlot);
   const double ly = 0.1 * fabs(m_yMaxPlot - m_yMinPlot);
   drift.SetMaximumStepSize(std::min(lx, ly));
-  TGraph gr;
-  gr.SetLineWidth(1);
   for (size_t i = 0; i < nLines; ++i) {
-    std::vector<std::array<double, 3> > xl;
+    std::vector<std::array<float, 3> > xl;
     if (!drift.FieldLine(x0[i], y0[i], z0[i], xl, electron)) continue;
-    std::vector<float> xgr;
-    std::vector<float> ygr;
-    for (const auto& p : xl) {
-      double xp = 0., yp = 0.;
-      ToPlane(p[0], p[1], p[2], xp, yp);
-      xgr.push_back(xp);
-      ygr.push_back(yp);
-    }
-    if (!xgr.empty()) {
-      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
-    }
+    DrawLine(xl, kOrange - 3, 1);
   }
 }
 

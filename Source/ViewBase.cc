@@ -248,28 +248,16 @@ void ViewBase::Clip(const std::array<float, 3>& x0,
   xc = in0 ? x1 : x0;
   const std::array<float, 3> dx = {x1[0] - x0[0], x1[1] - x0[1], 
                                    x1[2] - x0[2]};
-  // Adjust x.
-  if (dx[0] != 0. && (xc[0] < m_xMinBox || xc[0] > m_xMaxBox)) {
-    const double b = xc[0] < m_xMinBox ? m_xMinBox : m_xMaxBox;
-    const double s = (b - xc[0]) / dx[0];
-    xc[0] = b;
-    xc[1] += dx[1] * s;
-    xc[2] += dx[2] * s;
-  }
-  if (dx[1] != 0. && (xc[1] < m_yMinBox || xc[1] > m_yMaxBox)) {
-    const double b = xc[1] < m_yMinBox ? m_yMinBox : m_yMaxBox;
-    const double s = (b - xc[1]) / dx[1];
-    xc[0] += dx[0] * s;
-    xc[1] = b;
-    xc[2] += dx[2] * s;
-  }
-  // Adjust z.
-  if (dx[2] != 0. && (xc[2] < m_zMinBox || xc[2] > m_zMaxBox)) {
-    const double b = xc[2] < m_zMinBox ? m_zMinBox : m_zMaxBox;
-    const double s = (b - xc[2]) / dx[2];
-    xc[0] += dx[0] * s;
-    xc[1] += dx[1] * s;
-    xc[2] = b;
+  std::array<double, 3> bmin = {m_xMinBox, m_yMinBox, m_zMinBox};
+  std::array<double, 3> bmax = {m_xMaxBox, m_yMaxBox, m_zMaxBox};
+  for (size_t i = 0; i < 3; ++i) {
+    if (dx[i] == 0. || (xc[i] >= bmin[i] && xc[i] <= bmax[i])) continue;
+    const double b = xc[i] < bmin[i] ? bmin[i] : bmax[i];
+    const double s = (b - xc[i]) / dx[i];
+    xc[i] = b;
+    for (size_t j = 0; j < 3; ++j) {
+      if (j != i) xc[j] += dx[j] * s;
+    }
   }
 }
 

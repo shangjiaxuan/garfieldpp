@@ -110,7 +110,7 @@ class DriftLineRKF {
     * \param electron flag to set the direction in which to follow the field
     */ 
   bool FieldLine(const double xi, const double yi, const double zi,
-                 std::vector<std::array<double, 3> >& xf,
+                 std::vector<std::array<float, 3> >& xl,
                  const bool electron = true);
 
   void EnableDebugging() { m_debug = true; }
@@ -244,7 +244,7 @@ class DriftLineRKF {
   // Terminate a field line.
   void Terminate(const std::array<double, 3>& xx0,
                  const std::array<double, 3>& xx1,
-                 std::vector<std::array<double, 3> >& xs);
+                 std::vector<std::array<float, 3> >& xs);
 };
 }
 
