@@ -8,11 +8,14 @@
 #include <TROOT.h>
 #include <TF1.h>
 #include <TF2.h>
+#include <TH1F.h>
+#include <TGraph.h>
 
 #include "Garfield/ComponentBase.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/Random.hh"
 #include "Garfield/Sensor.hh"
+#include "Garfield/DriftLineRKF.hh"
 #include "Garfield/ViewField.hh"
 
 namespace {
@@ -522,6 +525,66 @@ double ViewField::Wfield(const double x, const double y, const double z,
   }
   return 0.;
 } 
+
+void ViewField::PlotFieldLines(const std::vector<double>& x0,
+                               const std::vector<double>& y0,
+                               const std::vector<double>& z0,
+                               const bool electron) {
+  
+  if (x0.empty() || y0.empty() || z0.empty()) return;
+  const size_t nLines = x0.size();
+  if (y0.size() != nLines || x0.size() != nLines) {
+    std::cerr << m_className << "::PlotLines:\n"
+              << "    Mismatch in number of x/y/z coordinates.\n";
+    return;
+  }
+
+  if (!m_sensor && !m_component) {
+    std::cerr << m_className << "::PlotFieldLines:\n"
+              << "    Neither sensor nor component are defined.\n";
+    return;
+  }
+
+  // Determine the x-y range.
+  if (!SetPlotLimits()) return;
+  auto canvas = GetCanvas();
+  canvas->cd();
+  canvas->SetTitle("Field lines");
+  auto frame = canvas->DrawFrame(m_xMinPlot, m_yMinPlot,
+                                 m_xMaxPlot, m_yMaxPlot);
+  frame->GetXaxis()->SetTitle(LabelX().c_str());
+  frame->GetYaxis()->SetTitle(LabelY().c_str());
+  canvas->Update(); 
+
+  DriftLineRKF drift;
+  Sensor sensor;
+  if (m_sensor) {
+    drift.SetSensor(m_sensor);
+  } else {
+    sensor.AddComponent(m_component);
+    drift.SetSensor(&sensor);
+  }
+  const double lx = 0.1 * fabs(m_xMaxPlot - m_xMinPlot);
+  const double ly = 0.1 * fabs(m_yMaxPlot - m_yMinPlot);
+  drift.SetMaximumStepSize(std::min(lx, ly));
+  TGraph gr;
+  gr.SetLineWidth(1);
+  for (size_t i = 0; i < nLines; ++i) {
+    std::vector<std::array<double, 3> > xl;
+    if (!drift.FieldLine(x0[i], y0[i], z0[i], xl, electron)) continue;
+    std::vector<float> xgr;
+    std::vector<float> ygr;
+    for (const auto& p : xl) {
+      double xp = 0., yp = 0.;
+      ToPlane(p[0], p[1], p[2], xp, yp);
+      xgr.push_back(xp);
+      ygr.push_back(yp);
+    }
+    if (!xgr.empty()) {
+      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Lsame");
+    }
+  }
+}
 
 bool ViewField::EqualFluxIntervals(
     const double x0, const double y0, const double z0,
