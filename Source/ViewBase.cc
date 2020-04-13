@@ -72,6 +72,32 @@ TPad* ViewBase::GetCanvas() {
   return m_pad;
 }
 
+bool ViewBase::RangeSet(TPad* pad) {
+
+  if (pad->GetListOfPrimitives()->GetSize() == 0 && 
+      pad->GetX1() == 0 && pad->GetX2() == 1 && 
+      pad->GetY1() == 0 && pad->GetY2() == 1) {
+    return false;
+  }
+  return true;
+}
+
+void ViewBase::SetRange(TPad* pad, const double x0, const double y0,
+                        const double x1, const double y1) {
+  if (!pad) return;
+  const double bm = pad->GetBottomMargin();
+  const double lm = pad->GetLeftMargin();
+  const double rm = pad->GetRightMargin();
+  const double tm = pad->GetTopMargin();
+  const double dx = x1 - x0;
+  const double dy = y1 - y0;
+  pad->Range(x0 - dx * (lm / (1. - rm - lm)),
+             y0 - dy * (bm / (1. - tm - lm)),
+             x1 + dx * (rm / (1. - rm - lm)),
+             y1 + dy * (tm / (1. - tm - lm)));
+
+}
+
 void ViewBase::SetArea(const double xmin, const double ymin, 
                        const double xmax, const double ymax) {
   // Check range, assign if non-null.

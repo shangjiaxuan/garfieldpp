@@ -292,9 +292,9 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
   std::string labels = ";" + LabelX() + ";" + LabelY();
   f2.SetTitle(labels.c_str());
 
-  auto canvas = GetCanvas();
-  canvas->cd();
-  canvas->SetTitle(title.c_str());
+  auto pad = GetCanvas();
+  pad->cd();
+  pad->SetTitle(title.c_str());
   f2.DrawCopy(drawopt.c_str());
   gPad->SetRightMargin(0.15);
   gPad->Update();
@@ -414,10 +414,10 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
   f1.SetTitle(labels.c_str());
   f1.SetNpx(m_nSamples1d);
 
-  auto canvas = GetCanvas();
-  canvas->cd();
+  auto pad = GetCanvas();
+  pad->cd();
   title = "Profile plot of the " + title;
-  canvas->SetTitle(title.c_str());
+  pad->SetTitle(title.c_str());
   f1.DrawCopy();
   gPad->Update();
 }
@@ -528,7 +528,8 @@ double ViewField::Wfield(const double x, const double y, const double z,
 void ViewField::PlotFieldLines(const std::vector<double>& x0,
                                const std::vector<double>& y0,
                                const std::vector<double>& z0,
-                               const bool electron) {
+                               const bool electron, const bool axis,
+                               const short col) {
   
   if (x0.empty() || y0.empty() || z0.empty()) return;
   const size_t nLines = x0.size();
@@ -544,22 +545,42 @@ void ViewField::PlotFieldLines(const std::vector<double>& x0,
     return;
   }
 
+  auto pad = GetCanvas();
+  pad->cd();
+  pad->SetTitle("Field lines");
   // Determine the x-y range.
-  if (!SetPlotLimits()) return;
-  auto canvas = GetCanvas();
-  canvas->cd();
-  canvas->SetTitle("Field lines");
-  auto frame = canvas->DrawFrame(m_xMinPlot, m_yMinPlot,
-                                 m_xMaxPlot, m_yMaxPlot);
-  frame->GetXaxis()->SetTitle(LabelX().c_str());
-  frame->GetYaxis()->SetTitle(LabelY().c_str());
-  canvas->Update(); 
+  const bool rangeSet = RangeSet(pad);
+  if (axis || !rangeSet) {
+    // Determine the plot limits.
+    if (!SetPlotLimits()) {
+      std::cerr << m_className << "::PlotFieldLines:\n"
+                << "     Could not determine the plot limits.\n";
+      return;
+    }
+  }
+  if (axis) {
+    auto frame = pad->DrawFrame(m_xMinPlot, m_yMinPlot,
+                                m_xMaxPlot, m_yMaxPlot);
+    frame->GetXaxis()->SetTitle(LabelX().c_str());
+    frame->GetYaxis()->SetTitle(LabelY().c_str());
+    pad->Update();
+  } else if (!rangeSet) {
+    SetRange(pad, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
+  } 
 
   DriftLineRKF drift;
   Sensor sensor;
   if (m_sensor) {
     drift.SetSensor(m_sensor);
   } else {
+    double xmin = 0., ymin = 0., zmin = 0.;
+    double xmax = 0., ymax = 0., zmax = 0.;
+    if (!m_component->GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax)) {
+      if (m_userBox) {
+        sensor.SetArea(m_xMinBox, m_yMinBox, m_zMinBox, 
+                       m_xMaxBox, m_yMaxBox, m_zMaxBox);
+      }
+    }
     sensor.AddComponent(m_component);
     drift.SetSensor(&sensor);
   }
@@ -569,8 +590,9 @@ void ViewField::PlotFieldLines(const std::vector<double>& x0,
   for (size_t i = 0; i < nLines; ++i) {
     std::vector<std::array<float, 3> > xl;
     if (!drift.FieldLine(x0[i], y0[i], z0[i], xl, electron)) continue;
-    DrawLine(xl, kOrange - 3, 1);
+    DrawLine(xl, col, 1);
   }
+  pad->Update();
 }
 
 bool ViewField::EqualFluxIntervals(

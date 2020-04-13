@@ -164,12 +164,7 @@ void ViewDrift::Plot2d(const bool axis) {
   canvas->cd();
   canvas->SetTitle("Drift lines");
   // Check if the canvas range has already been set.
-  bool rangeSet = true;
-  if (canvas->GetListOfPrimitives()->GetSize() == 0 && 
-      canvas->GetX1() == 0 && canvas->GetX2() == 1 && 
-      canvas->GetY1() == 0 && canvas->GetY2() == 1) {
-    rangeSet = false;
-  }
+  const bool rangeSet = RangeSet(canvas);
   if (axis || !rangeSet) {
     // Determine the plot limits.
     if (!SetPlotLimits()) {
@@ -184,16 +179,7 @@ void ViewDrift::Plot2d(const bool axis) {
     frame->GetXaxis()->SetTitle(LabelX().c_str());
     frame->GetYaxis()->SetTitle(LabelY().c_str());
   } else if (!rangeSet) {
-    const double bm = canvas->GetBottomMargin();
-    const double lm = canvas->GetLeftMargin();
-    const double rm = canvas->GetRightMargin();
-    const double tm = canvas->GetTopMargin();
-    const double dx = m_xMaxPlot - m_xMinPlot;
-    const double dy = m_yMaxPlot - m_yMinPlot;
-    canvas->Range(m_xMinPlot - dx * (lm / (1. - rm - lm)),
-                  m_yMinPlot - dy * (bm / (1. - tm - lm)),
-                  m_xMaxPlot + dx * (rm / (1. - rm - lm)),
-                  m_yMaxPlot + dy * (tm / (1. - tm - lm)));
+    SetRange(canvas, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
   } 
 
   for (const auto& driftLine : m_driftLines) {

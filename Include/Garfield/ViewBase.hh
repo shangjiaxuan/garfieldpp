@@ -139,6 +139,10 @@ class ViewBase {
                   std::array<double, 3>& bbmax,
                   double& xmin, double& ymin,
                   double& xmax, double& ymax) const;
+
+  bool RangeSet(TPad*);
+  void SetRange(TPad* pad, const double x0, const double y0,
+                const double x1, const double y1);
  private:
   // Current pad.
   TPad* m_pad = nullptr;
