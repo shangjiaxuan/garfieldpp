@@ -1608,4 +1608,272 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
   m_sensor->AddSignal(q, ts, xs, vs, ne, m_navg);
 }
 
+bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
+                             std::vector<Vec>& xs, const bool electron) {
+
+  xs.clear();
+
+  // Check if the sensor is defined.
+  if (!m_sensor) {
+    std::cerr << m_className << "::FieldLine: Sensor is not defined.\n";
+    return false;
+  }
+
+  // Get the sensor's bounding box.
+  double xmin = 0., xmax = 0.;
+  double ymin = 0., ymax = 0.;
+  double zmin = 0., zmax = 0.;
+  bool bbox = m_sensor->GetArea(xmin, ymin, zmin, xmax, ymax, zmax);
+
+  // Make sure the initial position is at a valid location.
+  double ex = 0., ey = 0., ez = 0.;
+  Medium* medium = nullptr;
+  int stat = 0;
+  m_sensor->ElectricField(xi, xi, zi, ex, ey, ez, medium, stat);
+  if (!medium || stat != 0) {
+    std::cerr << m_className << "::FieldLine:\n"
+              << "    No valid field at initial position.\n";
+    return false;
+  }
+  Vec x0 = {xi, yi, zi};
+  Vec f0 = {ex, ey, ez};
+  if (electron) for (auto& f : f0) f *= -1; 
+
+  // Set the numerical constants for the RKF integration.
+  constexpr double c10 = 214. / 891.;
+  constexpr double c11 = 1. / 33.;
+  constexpr double c12 = 650. / 891.;
+  constexpr double c20 = 533. / 2106.;
+  constexpr double c22 = 800. / 1053.;
+  constexpr double c23 = -1. / 78.;
+
+  constexpr double b10 = 1. / 4.;
+  constexpr double b20 = -189. / 800.;
+  constexpr double b21 = 729. / 800.;
+  constexpr double b30 = 214. / 891.;
+  constexpr double b31 = 1. / 33.;
+  constexpr double b32 = 650. / 891.;
+
+  const double fmag0 = Mag(f0);
+  if (fmag0 < Small) {
+    std::cerr << m_className << "::FieldLine:\n"
+              << "    Zero field at initial position.\n";
+    return false;
+  }
+
+  // Initialise time step and previous time step.
+  double h = m_accuracy / fmag0;
+  double hprev = h;
+
+  // Set the initial point.
+  xs.push_back(x0);
+
+  int initCycle = 3;
+  bool ok = true;
+  while (ok) {
+    // Get the field at the first probe point.
+    Vec x1 = x0;
+    for (unsigned int i = 0; i < 3; ++i) {
+      x1[i] += h * b10 * f0[i];
+    }
+    m_sensor->ElectricField(x1[0], x1[1], x1[2], ex, ey, ez, medium, stat);
+    if (stat != 0) {
+      if (m_debug) {
+        std::cout << m_className << "::FieldLine: Point 1 outside.\n";
+      }
+      Terminate(x0, x1, xs);
+      return true;
+    }
+    Vec f1 = {ex, ey, ez};
+    if (electron) for (auto& f : f1) f *= -1;
+    // Get the field at the second probe point.
+    Vec x2 = x0;
+    for (unsigned int i = 0; i < 3; ++i) {
+      x2[i] += h * (b20 * f0[i] + b21 * f1[i]);
+    }
+    m_sensor->ElectricField(x2[0], x2[1], x2[2], ex, ey, ez, medium, stat);
+    if (stat != 0) {
+      if (m_debug) {
+        std::cout << m_className << "::FieldLine: Point 2 outside.\n";
+      }
+      Terminate(x0, x2, xs);
+      return true;
+    }
+    Vec f2 = {ex, ey, ez};
+    if (electron) for (auto& f : f2) f *= -1;
+    // Get the field at the third probe point.
+    Vec x3 = x0;
+    for (unsigned int i = 0; i < 3; ++i) {
+      x3[i] += h * (b30 * f0[i] + b31 * f1[i] + b32 * f2[i]);
+    }
+    m_sensor->ElectricField(x3[0], x3[1], x3[2], ex, ey, ez, medium, stat);
+    if (stat != 0) {
+      if (m_debug) {
+        std::cout << m_className << "::FieldLine: Point 3 outside.\n";
+      }
+      Terminate(x0, x3, xs);
+      return true;
+    }
+    Vec f3 = {ex, ey, ez};
+    if (electron) for (auto& f : f3) f *= -1;
+    // Check if we crossed a wire.
+    double xw = 0., yw = 0., zw = 0., rw = 0.;
+    if (m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
+                                x1[0], x1[1], x1[2], xw, yw, zw, false, rw) ||
+        m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
+                                x2[0], x2[1], x2[2], xw, yw, zw, false, rw) ||
+        m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
+                                x3[0], x3[1], x3[2], xw, yw, zw, false, rw)) {
+      // TODO!
+      xs.push_back({xw, yw, zw});
+      return true;
+      // Drift to wire.
+      if (h > Small) {
+        h *= 0.5;
+        continue;
+      } else {
+        std::cerr << m_className << "::FieldLine: Step size too small. Stop.\n";
+        return false;
+      }
+    }
+    // Calculate the correction terms.
+    Vec phi1 = {0., 0., 0.};
+    Vec phi2 = {0., 0., 0.};
+    for (unsigned int i = 0; i < 3; ++i) {
+      phi1[i] = c10 * f0[i] + c11 * f1[i] + c12 * f2[i];
+      phi2[i] = c20 * f0[i] + c22 * f2[i] + c23 * f3[i];
+    }
+    // Check if the step length is valid.
+    const double phi1mag = Mag(phi1);
+    if (phi1mag < Small) {
+      std::cerr << m_className << "::FieldLine: Step has zero length. Stop.\n";
+      break;
+    } else if (m_useStepSizeLimit && h * phi1mag > m_maxStepSize) {
+      if (m_debug) {
+        std::cout << m_className << "::FieldLine: Step is considered too long. "
+                  << "H is reduced.\n";
+      }
+      h = 0.5 * m_maxStepSize / phi1mag;
+      continue;
+    } else if (bbox) {
+      // Don't allow h to become too large.
+      if (h * fabs(phi1[0]) > 0.1 * fabs(xmax - xmin) ||
+          h * fabs(phi1[1]) > 0.1 * fabs(ymax - ymin)) {
+        h *= 0.5;
+        if (m_debug) {
+          std::cout << m_className << "::FieldLine: Step is considered too long. "
+                    << "H is divided by two.\n";
+        }
+        continue;
+      }
+    }
+    if (m_debug) std::cout << m_className << "::FieldLine: Step size ok.\n";
+    // Update the position.
+    for (unsigned int i = 0; i < 3; ++i) x0[i] += h * phi1[i];
+    // Check the new position.
+    m_sensor->ElectricField(x0[0], x0[1], x0[2], ex, ey, ez, medium, stat);
+    if (stat != 0) {
+      // The new position is not inside a valid drift medium.
+      // Terminate the drift line.
+      if (m_debug) {
+        std::cout << m_className << "::FieldLine: Point outside. Terminate.\n";
+      }
+      Terminate(xs.back(), x0, xs);
+      return true;
+    }
+    // Add the new point to the drift line.
+    xs.push_back(x0);
+    // Adjust the step size according to the accuracy of the two estimates.
+    hprev = h;
+    const double dphi = fabs(phi1[0] - phi2[0]) + fabs(phi1[1] - phi2[1]) +
+                        fabs(phi1[2] - phi2[2]);
+    if (dphi > 0) {
+      h = sqrt(h * m_accuracy / dphi);
+      if (m_debug) {
+        std::cout << m_className << "::FieldLine: Adapting H to " << h << ".\n";
+      }
+    } else {
+      h *= 2;
+      if (m_debug) {
+        std::cout << m_className << "::FieldLine: H increased by factor two.\n";
+      }
+    }
+    // Make sure that H is different from zero; this should always be ok.
+    if (h < Small) {
+      std::cerr << m_className << "::FieldLine: Step size is zero. Stop.\n";
+      return false;
+    }
+    // Check the initial step size.
+    if (initCycle > 0 && h < 0.2 * hprev) {
+      if (m_debug) {
+        std::cout << m_className << "::FieldLine: Reinitialise step size.\n";
+      }
+      --initCycle;
+      x0 = {xi, yi, zi};
+      xs = {x0};
+      continue;
+    }
+    initCycle = 0;
+    // Don't allow H to grow too quickly
+    if (h > 10 * hprev) {
+      h = 10 * hprev;
+      if (m_debug) {
+        std::cout << m_className << "::FieldLine: H restricted to 10 times "
+                  << "the previous value.\n";
+      }
+    }
+    // Stop in case H tends to become too small.
+    if (h * (fabs(phi1[0]) + fabs(phi1[1]) + fabs(phi1[2])) < m_accuracy) {
+      std::cerr << m_className << "::FieldLine: Step size has become smaller "
+                << "than int. accuracy. Stop.\n";
+      return false;
+    }
+    // Update the field.
+    f0 = f3;
+  }
+  return true;
+}
+
+void DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
+                             const std::array<double, 3>& xx1,
+                             std::vector<Vec>& xs) {
+
+  // Final point just inside the medium.
+  Vec x0 = xx0;
+  // Final point just outside the medium.
+  Vec x1 = xx1;
+  // Perform some bisections.
+  const unsigned int nBisections = 20;
+  for (unsigned int i = 0; i < nBisections; ++i) {
+    // Quit bisection when interval becomes too small.
+    bool small = true;
+    for (unsigned int j = 0; j < 3; ++j) {
+      if (fabs(x1[j] - x0[j]) > 1.e-6 * (fabs(x0[j]) + fabs(x1[j]))) {
+        small = false;
+        break;
+      }
+    } 
+    if (small) {
+      if (m_debug) {
+        std::cout << m_className << "::Terminate:\n"
+                  << "    Bisection ended at cycle " << i << ".\n";
+      }
+      break; 
+    }
+    // Calculate the mid point and evaluate the field.
+    Vec xm;
+    for (unsigned int j = 0; j < 3; ++j) xm[j] = 0.5 * (x0[j] + x1[j]);
+    double ex = 0., ey = 0., ez = 0.;
+    Medium* medium = nullptr;
+    int status = 0;
+    m_sensor->ElectricField(xm[0], xm[1], xm[2], ex, ey, ez, medium, status);
+    if (status == 0) {
+      x0 = xm;
+    } else {
+      x1 = xm;
+    }
+  }
+
+  xs.push_back(x0);
+}
 }

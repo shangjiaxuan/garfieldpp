@@ -104,6 +104,15 @@ class DriftLineRKF {
 
   void GetAvalancheSize(double& ne, double& ni) const { ne = m_nE; ni = m_nI; }
 
+  /** Compute an electric field line.
+    * \param xi,yi,zi starting point
+    * \param xf points along the field line
+    * \param electron flag to set the direction in which to follow the field
+    */ 
+  bool FieldLine(const double xi, const double yi, const double zi,
+                 std::vector<std::array<double, 3> >& xf,
+                 const bool electron = true);
+
   void EnableDebugging() { m_debug = true; }
   void DisableDebugging() { m_debug = false; }
 
@@ -231,6 +240,11 @@ class DriftLineRKF {
                      const std::vector<double>& ts,
                      const std::vector<std::array<double, 3> >& xs,
                      const std::vector<double>& ne) const;
+
+  // Terminate a field line.
+  void Terminate(const std::array<double, 3>& xx0,
+                 const std::array<double, 3>& xx1,
+                 std::vector<std::array<double, 3> >& xs);
 };
 }
 
