@@ -211,6 +211,14 @@ class Sensor {
   bool IsInTrapRadius(const double q0, const double x0, const double y0,
                       const double z0, double& xw, double& yw, double& rw);
 
+  /// Integrate the electric field flux through a line from
+  /// (x0,y0,z0) to (x1,y1,z1) along a direction (xp,yp,zp).
+  double IntegrateFluxLine(
+    const double x0, const double y0, const double z0,
+    const double x1, const double y1, const double z1,
+    const double xp, const double yp, const double zp,
+    const unsigned int nI, const int isign = 0);
+
  private:
   std::string m_className = "Sensor";
 

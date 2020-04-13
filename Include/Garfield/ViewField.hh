@@ -1,6 +1,8 @@
 #ifndef G_VIEW_FIELD
 #define G_VIEW_FIELD
 
+#include <Rtypes.h>
+
 #include "ViewBase.hh"
 
 namespace Garfield {
@@ -98,6 +100,25 @@ class ViewField : public ViewBase {
   }
   /// Ignore the status flag returned by the sensor/component.
   void DisableAcknowledgeStatus() { m_useStatus = false; }
+
+  /// Draw electric field lines from a set of starting points. 
+  void PlotFieldLines(const std::vector<double>& x0,
+                      const std::vector<double>& y0,
+                      const std::vector<double>& z0, 
+                      const bool electron = true, const bool axis = true,
+                      const short col = kOrange - 3);
+  /// Generates point along a line, spaced by equal flux intervals. 
+  bool EqualFluxIntervals(const double x0, const double y0, const double z0,
+                          const double x1, const double y1, const double z1,
+                          std::vector<double>& xf, std::vector<double>& yf,
+                          std::vector<double>& zf, 
+                          const unsigned int nPoints = 20) const;
+  /// Generate points along a line, spaced by a given flux interval.
+  bool FixedFluxIntervals(const double x0, const double y0, const double z0,
+                          const double x1, const double y1, const double z1,
+                          std::vector<double>& xf, std::vector<double>& yf,
+                          std::vector<double>& zf, 
+                          const double interval = 10.) const;
 
  private:
   enum class Parameter { Potential = 0, Magnitude, Ex, Ey, Ez, Unknown };

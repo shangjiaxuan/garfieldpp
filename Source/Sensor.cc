@@ -296,6 +296,21 @@ bool Sensor::IsInTrapRadius(const double q0, const double x0, const double y0,
   return false;
 }
 
+double Sensor::IntegrateFluxLine(
+    const double x0, const double y0, const double z0,
+    const double x1, const double y1, const double z1,
+    const double xp, const double yp, const double zp,
+    const unsigned int nI, const int isign) {
+
+  double q = 0.;
+  for (const auto& cmp : m_components) {
+    if (!cmp.second) continue;
+    q += cmp.first->IntegrateFluxLine(x0, y0, z0, x1, y1, z1,
+                                      xp, yp, zp, nI, isign);
+  }
+  return q;
+}
+
 void Sensor::AddComponent(ComponentBase* cmp) {
   if (!cmp) {
     std::cerr << m_className << "::AddComponent: Null pointer.\n";
