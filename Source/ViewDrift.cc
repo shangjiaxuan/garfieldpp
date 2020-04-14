@@ -157,7 +157,7 @@ void ViewDrift::Plot(const bool twod, const bool axis) {
   if (twod) {
     Plot2d(axis);
   } else {
-    Plot3d(axis);
+    Plot3d(axis, false);
   }
 }
 
@@ -196,11 +196,24 @@ void ViewDrift::Plot2d(const bool axis) {
   }
   gPad->Update();
 
+  TGraph gr;
+  gr.SetMarkerColor(m_colTrack);
+  gr.SetMarkerSize(m_markerSizeCluster);
   for (const auto& track : m_tracks) {
     DrawLine(track, m_colTrack, 2);
+    if (!m_drawClusters) continue;
+    std::vector<float> xgr;
+    std::vector<float> ygr;
+    for (const auto& p : track) {
+      if (!InBox(p)) continue;
+      float xp = 0., yp = 0.;
+      ToPlane(p[0], p[1], p[2], xp, yp);
+      xgr.push_back(xp);
+      ygr.push_back(yp);
+    }
+    gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Psame");
   }
 
-  TGraph gr;
   gr.SetLineColor(m_colPhoton);
   gr.SetLineStyle(2);
   for (const auto& photon : m_photons) {
@@ -264,7 +277,7 @@ void ViewDrift::Plot2d(const bool axis) {
   gPad->Update();
 }
 
-void ViewDrift::Plot3d(const bool axis) {
+void ViewDrift::Plot3d(const bool axis, const bool ogl) {
   auto pad = GetCanvas();
   pad->cd();
   pad->SetTitle("Drift lines");
@@ -278,7 +291,7 @@ void ViewDrift::Plot3d(const bool axis) {
                    m_xMaxBox, m_yMaxBox, m_zMaxBox);
     if (axis) view->ShowAxis();
     pad->SetView(view);
-    // pad->GetViewer3D("ogl");
+    if (ogl) pad->GetViewer3D("ogl");
   }
   for (const auto& driftLine : m_driftLines) {
     TPolyLine3D* pl = new TPolyLine3D(driftLine.first.size());
@@ -299,20 +312,23 @@ void ViewDrift::Plot3d(const bool axis) {
 
   for (const auto& track : m_tracks) {
     const unsigned int nPoints = track.size();
-    TPolyMarker3D* pm = new TPolyMarker3D(nPoints, 20);
     TPolyLine3D* pl = new TPolyLine3D(nPoints);
     for (const auto& p : track) {
-      pm->SetNextPoint(p[0], p[1], p[2]);
       pl->SetNextPoint(p[0], p[1], p[2]);
+    }
+    pl->SetLineColor(m_colTrack);
+    pl->SetLineWidth(1);
+    pl->SetBit(kCanDelete);
+    pl->Draw("same");
+    if (!m_drawClusters) continue;
+    TPolyMarker3D* pm = new TPolyMarker3D(nPoints, 20);
+    for (const auto& p : track) {
+      pm->SetNextPoint(p[0], p[1], p[2]);
     }
     pm->SetMarkerColor(m_colTrack);
     pm->SetMarkerSize(m_markerSizeCluster);
     pm->SetBit(kCanDelete);
     pm->Draw("same");
-    pl->SetLineColor(m_colTrack);
-    pl->SetLineWidth(1);
-    pl->SetBit(kCanDelete);
-    pl->Draw("same");
   }
 
   if (!m_exc.empty()) {

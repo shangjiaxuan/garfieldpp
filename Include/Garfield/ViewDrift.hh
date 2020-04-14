@@ -26,7 +26,13 @@ class ViewDrift : public ViewBase {
 
   /// Draw the drift lines.
   void Plot(const bool twod = false, const bool axis = true);
+  /// Make a 2D plot of the drift lines in the current viewing plane.
+  void Plot2d(const bool axis);
+  /// Make a 3D plot of the drift lines.
+  void Plot3d(const bool axis, const bool ogl);
 
+  /// Draw markers (or not) at every collision along a track.
+  void EnableClusterMarkers(const bool on = true) { m_drawClusters = on; }
   /// Set the size of the cluster markers (see TAttMarker).
   void SetClusterMarkerSize(const double size);
   /// Set the size of the collision markers (see TAttMarker).
@@ -105,8 +111,8 @@ class ViewDrift : public ViewBase {
   short m_colIonisation = kOrange - 3;
   short m_colAttachment = kCyan + 3;
 
-  void Plot2d(const bool axis);
-  void Plot3d(const bool axis);
+  bool m_drawClusters = false;
+
   bool SetPlotLimits2d();
   bool SetPlotLimits3d();
 };
