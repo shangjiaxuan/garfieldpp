@@ -1,14 +1,12 @@
 #ifndef G_VIEW_DRIFT
 #define G_VIEW_DRIFT
 
-#include <memory>
 #include <string>
 #include <vector>
 #include <array>
 #include <utility>
 
 #include <Rtypes.h>
-#include <TView.h>
 
 #include "ViewBase.hh"
 
@@ -80,9 +78,6 @@ class ViewDrift : public ViewBase {
 
  private:
 
-  // View
-  std::unique_ptr<TView> m_view;
-
   enum class Particle {
     Electron,
     Hole,
@@ -98,7 +93,7 @@ class ViewDrift : public ViewBase {
   std::vector<std::array<float, 3> > m_ion;
   std::vector<std::array<float, 3> > m_att;
 
-  double m_markerSizeCluster = 1.;
+  double m_markerSizeCluster = 0.01;
   double m_markerSizeCollision = 0.5;
   
   short m_colTrack = kGreen + 3;
@@ -112,7 +107,8 @@ class ViewDrift : public ViewBase {
 
   void Plot2d(const bool axis);
   void Plot3d(const bool axis);
-  bool SetPlotLimits();
+  bool SetPlotLimits2d();
+  bool SetPlotLimits3d();
 };
 }
 #endif

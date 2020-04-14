@@ -8,6 +8,8 @@
 #include <TAxis.h>
 #include <TAxis3D.h>
 #include <TH1F.h>
+#include <TView3D.h>
+#include <TVirtualViewer3D.h>
 
 #include "Garfield/Plotting.hh"
 #include "Garfield/ViewDrift.hh"
@@ -160,26 +162,26 @@ void ViewDrift::Plot(const bool twod, const bool axis) {
 }
 
 void ViewDrift::Plot2d(const bool axis) {
-  auto canvas = GetCanvas();
-  canvas->cd();
-  canvas->SetTitle("Drift lines");
+  auto pad = GetCanvas();
+  pad->cd();
+  pad->SetTitle("Drift lines");
   // Check if the canvas range has already been set.
-  const bool rangeSet = RangeSet(canvas);
+  const bool rangeSet = RangeSet(pad);
   if (axis || !rangeSet) {
     // Determine the plot limits.
-    if (!SetPlotLimits()) {
+    if (!SetPlotLimits2d()) {
       std::cerr << m_className << "::Plot2d:\n"
                 << "     Could not determine the plot limits.\n";
       return;
     }
   }
   if (axis) {
-    auto frame = canvas->DrawFrame(m_xMinPlot, m_yMinPlot, 
+    auto frame = pad->DrawFrame(m_xMinPlot, m_yMinPlot, 
                                    m_xMaxPlot, m_yMaxPlot);
     frame->GetXaxis()->SetTitle(LabelX().c_str());
     frame->GetYaxis()->SetTitle(LabelY().c_str());
   } else if (!rangeSet) {
-    SetRange(canvas, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
+    SetRange(pad, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
   } 
 
   for (const auto& driftLine : m_driftLines) {
@@ -263,16 +265,20 @@ void ViewDrift::Plot2d(const bool axis) {
 }
 
 void ViewDrift::Plot3d(const bool axis) {
-  if (m_debug) std::cout << m_className << "::Plot: Plotting in 3D.\n";
-  auto canvas = GetCanvas();
-  if (axis) {
-    if (!canvas->GetView()) {
-      m_view.reset(TView::CreateView(1, 0, 0));
-      m_view->SetRange(m_xMinBox, m_yMinBox, m_zMinBox, m_xMaxBox, m_yMaxBox, m_zMaxBox);
-      m_view->ShowAxis();
-      m_view->Top();
-      canvas->SetView(m_view.get());
+  auto pad = GetCanvas();
+  pad->cd();
+  pad->SetTitle("Drift lines");
+  if (!pad->GetView()) {
+    if (!SetPlotLimits3d()) {
+      std::cerr << m_className << "::Plot3d:\n"
+                << "     Could not determine the plot limits.\n";
     }
+    auto view = TView::CreateView(1, 0, 0);
+    view->SetRange(m_xMinBox, m_yMinBox, m_zMinBox, 
+                   m_xMaxBox, m_yMaxBox, m_zMaxBox);
+    if (axis) view->ShowAxis();
+    pad->SetView(view);
+    // pad->GetViewer3D("ogl");
   }
   for (const auto& driftLine : m_driftLines) {
     TPolyLine3D* pl = new TPolyLine3D(driftLine.first.size());
@@ -308,6 +314,7 @@ void ViewDrift::Plot3d(const bool axis) {
     pl->SetBit(kCanDelete);
     pl->Draw("same");
   }
+
   if (!m_exc.empty()) {
     const unsigned int nP = m_exc.size();
     TPolyMarker3D* pm = new TPolyMarker3D(nP, 20);
@@ -343,20 +350,22 @@ void ViewDrift::Plot3d(const bool axis) {
     pm->SetBit(kCanDelete);
     pm->Draw("same");
   }
+  pad->Update();
 
-  canvas->Update();
   if (axis) {
     TAxis3D* ax3d = TAxis3D::GetPadAxis();
-    ax3d->SetLabelColor(kGray + 2);
-    ax3d->SetAxisColor(kGray + 2);
-    ax3d->SetXTitle("x");
-    ax3d->SetYTitle("y");
-    ax3d->SetZTitle("z");
-    canvas->Update();
+    if (ax3d) {
+      ax3d->SetLabelColor(kGray + 2);
+      ax3d->SetAxisColor(kGray + 2);
+      ax3d->SetXTitle("x");
+      ax3d->SetYTitle("y");
+      ax3d->SetZTitle("z");
+    }
+    pad->Update();
   }
 }
 
-bool ViewDrift::SetPlotLimits() {
+bool ViewDrift::SetPlotLimits2d() {
 
   if (m_userPlotLimits) return true;
   double xmin = 0., ymin = 0., xmax = 0., ymax = 0.;
@@ -393,6 +402,54 @@ bool ViewDrift::SetPlotLimits() {
   }
   return PlotLimits(bbmin, bbmax, 
                     m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
+}
+
+bool ViewDrift::SetPlotLimits3d() {
+
+  if (m_userBox) return true;
+  if (m_driftLines.empty() && m_tracks.empty()) return false;
+  // Try to determine the limits from the drift lines themselves.
+  std::array<double, 3> bbmin;
+  std::array<double, 3> bbmax;
+  bbmin.fill(std::numeric_limits<double>::max());
+  bbmax.fill(-std::numeric_limits<double>::max());
+  for (const auto& driftLine : m_driftLines) {
+    for (const auto& p : driftLine.first) {
+      for (unsigned int i = 0; i < 3; ++i) {
+        bbmin[i] = std::min(bbmin[i], double(p[i])); 
+        bbmax[i] = std::max(bbmax[i], double(p[i]));
+      }
+    }
+  }
+  for (const auto& track : m_tracks) {
+    for (const auto& p : track) {
+      for (unsigned int i = 0; i < 3; ++i) {
+        bbmin[i] = std::min(bbmin[i], double(p[i])); 
+        bbmax[i] = std::max(bbmax[i], double(p[i]));
+      }
+    }
+  }
+  double r = 0.;
+  for (size_t i = 0; i < 3; ++i) r += fabs(bbmax[i] - bbmin[i]);
+  m_xMinBox = bbmin[0];
+  m_yMinBox = bbmin[1];
+  m_zMinBox = bbmin[2];
+  m_xMaxBox = bbmax[0];
+  m_yMaxBox = bbmax[1];
+  m_zMaxBox = bbmax[2];
+  if (fabs(m_xMaxBox - m_xMinBox) < 0.1 * r) {
+    m_xMinBox -= 0.1 * r;
+    m_xMaxBox += 0.1 * r;
+  }
+  if (fabs(m_yMaxBox - m_yMinBox) < 0.1 * r) {
+    m_yMinBox -= 0.1 * r;
+    m_yMaxBox += 0.1 * r;
+  }
+  if (fabs(m_zMaxBox - m_zMinBox) < 0.1 * r) {
+    m_zMinBox -= 0.1 * r;
+    m_zMaxBox += 0.1 * r;
+  }
+  return true;
 }
 
 }
