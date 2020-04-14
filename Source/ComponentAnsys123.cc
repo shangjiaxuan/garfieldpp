@@ -751,6 +751,16 @@ bool ComponentAnsys123::SetWeightingField(std::string prnsol,
       il++;
       continue;
     }
+    // Skip page feed (Ansys > v15.x).
+    if (strstr(line, "***") != NULL) {
+      fprnsol.getline(line, size, '\n');
+      il++;
+      fprnsol.getline(line, size, '\n');
+      il++;
+      fprnsol.getline(line, size, '\n');
+      il++;
+      continue;
+    }
     // Split the line in tokens.
     char* token = NULL;
     token = strtok(line, " ");
