@@ -269,19 +269,6 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     return false;
   }
 
-  // Start plotting a new line if requested.
-  int iLine = 0;
-  if (m_view) {
-    if (particle == Particle::Ion || particle == Particle::NegativeIon) {
-      m_view->NewIonDriftLine(1, iLine, xi, yi, zi);
-    } else if (particle == Particle::Electron ||
-               particle == Particle::Positron) {
-      m_view->NewElectronDriftLine(1, iLine, xi, yi, zi);
-    } else if (particle == Particle::Hole) {
-      m_view->NewHoleDriftLine(1, iLine, xi, yi, zi);
-    }
-  }
-
   // Set the numerical constants for the RKF integration.
   constexpr double c10 = 214. / 891.;
   constexpr double c11 = 1. / 33.;
@@ -546,8 +533,20 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     v0 = v3;
   }
   if (m_view) {
-    for (const auto& x : m_x) {
-      m_view->AddDriftLinePoint(iLine, x[0], x[1], x[2]);
+    // If requested, add the drift line to a plot.
+    int id = 0;
+    const unsigned int nPoints = m_x.size();
+    if (particle == Particle::Ion || particle == Particle::NegativeIon) {
+      m_view->NewIonDriftLine(nPoints, id, xi, yi, zi);
+    } else if (particle == Particle::Electron ||
+               particle == Particle::Positron) {
+      m_view->NewElectronDriftLine(nPoints, id, xi, yi, zi);
+    } else if (particle == Particle::Hole) {
+      m_view->NewHoleDriftLine(nPoints, id, xi, yi, zi);
+    }
+    for (unsigned int i = 0; i < nPoints; ++i) {
+      const auto& x = m_x[i];
+      m_view->SetDriftLinePoint(id, i, x[0], x[1], x[2]);
     }
   }
   if (flag == StatusCalculationAbandoned) return false;
