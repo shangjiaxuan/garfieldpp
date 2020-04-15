@@ -104,8 +104,9 @@ void ViewGeometry::Plot() {
       const double dz = solid->GetHalfLengthZ();
       volume = m_geoManager->MakeBox("Box", medDefault, dx, dy, dz);
     } else if (solid->IsSphere()) {
-      const double r = solid->GetRadius();
-      volume = m_geoManager->MakeSphere("Sphere", medDefault, 0, r);
+      const double rmin = std::max(solid->GetInnerRadius(), 0.);
+      const double rmax = solid->GetOuterRadius();
+      volume = m_geoManager->MakeSphere("Sphere", medDefault, rmin, rmax);
     } else if (solid->IsHole()) {
       const double r1 = solid->GetLowerRadius();
       const double r2 = solid->GetUpperRadius();

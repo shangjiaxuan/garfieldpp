@@ -9,9 +9,12 @@ namespace Garfield {
 
 class SolidSphere : public Solid {
  public:
-  /// Constructor
+  /// Constructor from centre and outer radius.
   SolidSphere(const double cx, const double cy, const double cz,
               const double r);
+  /// Constructor from centre and inner/outer radii.
+  SolidSphere(const double cx, const double cy, const double cz,
+              const double rmin, const double rmax);
   /// Destructor
   ~SolidSphere() {}
 
@@ -22,8 +25,12 @@ class SolidSphere : public Solid {
 
   /// Set the radius of the sphere.
   void SetRadius(const double r);
+  /// Set the inner and outer radius of the sphere.
+  void SetRadii(const double rmin, const double rmax);
 
-  double GetRadius() const override { return m_r; }
+  double GetRadius() const override { return m_rMax; }
+  double GetInnerRadius() const override { return m_rMin; }
+  double GetOuterRadius() const override { return m_rMax; }
 
   /// When calculating surface panels, the sphere is approximated by a set of
   /// parallelograms, much the same way maps are drawn. N specifies the number
@@ -34,14 +41,17 @@ class SolidSphere : public Solid {
   double GetDiscretisationLevel(const Panel& panel) override;
 
  private:
-  /// Radius
-  double m_r = 1.;
+  /// Inner and outer radii.
+  double m_rMin = 0., m_rMax = 1.;
 
   /// Number of meridians.
   unsigned int m_n = 10;
 
   /// Discretisation level.
   double m_dis = -1.;
+
+  void MakePanels(const int vol, const double r, const bool out,
+                  std::vector<Panel>& panels) const; 
 };
 }
 
