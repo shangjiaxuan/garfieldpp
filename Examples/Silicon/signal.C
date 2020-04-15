@@ -29,19 +29,6 @@
 
 using namespace Garfield;
 
-// Thickness of silicon [cm]
-constexpr double d = 100.e-4;
-// Bias voltage [V]
-constexpr double vbias = -50.;
-
-void eLinear(const double /*x*/, const double y, const double /*z*/,
-             double& ex, double& ey, double& ez) {
-
-  // Depletion voltage [V]
-  constexpr double vdep = -20.;
-  ex = ez = 0.;
-  ey = (vbias - vdep) / d + 2 * y * vdep / (d * d);  
-}
 
 int main(int argc, char * argv[]) {
 
@@ -59,19 +46,31 @@ int main(int argc, char * argv[]) {
   }
 
   // Build the geometry.
+  // Thickness of silicon [cm]
+  constexpr double d = 100.e-4;
   SolidBox box(0, 0.5 * d, 0, 2 * d, 0.5 * d, 2 * d);
   GeometrySimple geo;
   geo.AddSolid(&box, &si);
 
   // Make a component with constant drift field and weighting field.
+  // Bias voltage [V]
+  constexpr double vbias = -50.;
   ComponentConstant uniformField;
   uniformField.SetGeometry(&geo);
   uniformField.SetElectricField(0, vbias / d, 0);
   uniformField.SetWeightingField(0, -1. / d, 0, "pad");
 
   // Make a component with linear drift field.
+  auto eLinear = [](const double /*x*/, const double y, const double /*z*/,
+                    double& ex, double& ey, double& ez) {
+    // Depletion voltage [V]
+    constexpr double vdep = -20.;
+    ex = ez = 0.;
+    ey = (vbias - vdep) / d + 2 * y * vdep / (d * d);  
+  };
   ComponentUser linearField;
   linearField.SetGeometry(&geo);
+  
   linearField.SetElectricField(eLinear);
 
   // Make a component with analytic weighting field for a strip or pixel.
