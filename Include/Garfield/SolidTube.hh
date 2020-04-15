@@ -38,7 +38,7 @@ class SolidTube : public Solid {
   double GetHalfLengthZ() const override { return m_lZ; }
   double GetInnerRadius() const override { return m_rMin; }
   double GetOuterRadius() const override { return m_rMax; }
-  double GetRadius() const override { return m_r; }
+  double GetRadius() const override { return m_rMax; }
 
   /// When calculating the surface panels, the cylinder is
   /// approximated as a polygon with a finite number of panels.
@@ -60,17 +60,19 @@ class SolidTube : public Solid {
   /// Request the cylinder to be closed with a (polygonal) lid at -z.
   void SetBottomlid(const bool bottomlid) { m_bottomlid = bottomlid; }
 
+  /// Return the number of sectors.
   unsigned int GetSectors() const { return m_n; }
+  /// Return the current rotation angle.
   double GetRotation() const { return m_rot; }
+  /// Return the status of the "average-radius" flag.
   bool GetAverage() const { return m_average; }
 
   bool SolidPanels(std::vector<Panel>& panels) override;
   double GetDiscretisationLevel(const Panel& panel) override;
 
  private:
-  // Inner and outer radius
+  /// Inner and outer radius.
   double m_rMin, m_rMax;
-  double m_r;
   /// Half-length
   double m_lZ;
 
