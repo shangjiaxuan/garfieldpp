@@ -104,62 +104,63 @@ void ComponentUser::DelayedWeightingField(const double x, const double y,
   if (m_dwfield) m_dwfield(x, y, z, t, wx, wy, wz, label);
 }
 
-void ComponentUser::SetElectricField(void (*f)(const double, const double,
-                                               const double, double&, double&,
-                                               double&)) {
+void ComponentUser::SetElectricField(
+    std::function<void(const double, const double, const double, 
+                       double&, double&, double&)> f) {
   if (!f) {
-    std::cerr << m_className << "::SetElectricField: Null pointer.\n";
+    std::cerr << m_className << "::SetElectricField: Function is empty.\n";
     return;
   }
   m_efield = f;
   m_ready = true;
 }
 
-void ComponentUser::SetPotential(void (*f)(const double, const double,
-                                           const double, double&)) {
+void ComponentUser::SetPotential(
+    std::function<void(const double, const double, const double, 
+                       double&)> f) {
   if (!f) {
-    std::cerr << m_className << "::SetPotential: Null pointer.\n";
+    std::cerr << m_className << "::SetPotential: Function is empty.\n";
     return;
   }
   m_potential = f;
 }
 
-void ComponentUser::SetWeightingField(void (*f)(const double, const double,
-                                                const double, double&, double&,
-                                                double&, const std::string)) {
+void ComponentUser::SetWeightingField(
+    std::function<void(const double, const double, const double, 
+                       double&, double&, double&, const std::string&)> f) {
   if (!f) {
-    std::cerr << m_className << "::SetWeightingField: Null pointer.\n";
+    std::cerr << m_className << "::SetWeightingField: Function is empty.\n";
     return;
   }
   m_wfield = f;
 }
 
-void ComponentUser::SetWeightingPotential(void (*f)(const double, const double,
-                                                    const double, double&,
-                                                    const std::string)) {
+void ComponentUser::SetWeightingPotential(
+    std::function<void(const double, const double, const double, 
+                       double&, const std::string&)> f) {
   if (!f) {
-    std::cerr << m_className << "::SetWeightingPotential: Null pointer.\n";
+    std::cerr << m_className << "::SetWeightingPotential: Function is empty.\n";
     return;
   }
   m_wpot = f;
 }
 
 void ComponentUser::SetDelayedWeightingField(
-    void (*f)(const double, const double, const double, const double,
-              double&, double&, double&, const std::string)) {
+    std::function<void(const double, const double, const double, const double,
+                       double&, double&, double&, const std::string&)> f) {
 
   if (!f) {
-    std::cerr << m_className << "::SetDelayedWeightingField: Null pointer.\n";
+    std::cerr << m_className << "::SetDelayedWeightingField: Function is empty.\n";
     return;
   }
   m_dwfield = f;
 }
 
-void ComponentUser::SetMagneticField(void (*f)(const double, const double,
-                                               const double, double&, double&,
-                                               double&)) {
+void ComponentUser::SetMagneticField(
+    std::function<void(const double, const double, const double, 
+                       double&, double&, double&)> f) {
   if (!f) {
-    std::cerr << m_className << "::SetMagneticField: Null pointer.\n";
+    std::cerr << m_className << "::SetMagneticField: Function is empty.\n";
     return;
   }
   m_bfield = f;
@@ -170,6 +171,7 @@ void ComponentUser::Reset() {
   m_potential = nullptr;
   m_wfield = nullptr;
   m_wpot = nullptr;
+  m_dwfield = nullptr;
   m_bfield = nullptr;
   m_ready = false;
 }
