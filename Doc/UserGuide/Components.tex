@@ -1017,17 +1017,19 @@ void SetWeightingPotential(const double x, const double y, const double z,
 The class \texttt{ComponentUser} takes the electric field and potential
 from a user-defined function.
 \begin{lstlisting}
-void SetElectricField(void (*f)(const double, const double, const double, 
-                                double& double&, double&));
-void SetPotential(void (*f)(const double, const double, const double, 
-                            double&));
+void SetElectricField(std::function<void(const double, const double, const double, 
+                                         double& double&, double&)>);
+void SetPotential(std::function<void(const double, const double, const double, 
+                                     double&)>);
 \end{lstlisting}
 \begin{description}
-  \item[f] pointer to the user function
+  \item[f] user function
 \end{description}
+Similar functions are available to set the weighting field and potential,
+and the magnetic field.
 
-As an example, let us consider the field in the bulk of an overdepleted 
-planar silicon sensor, given by
+As an example, let us consider the electric field in the bulk 
+of an overdepleted planar silicon sensor, given by
 \begin{equation*}
 E\left(x\right) = \frac{V - V_{\text{dep}}}{d} + 
                     2x \frac{V_{\text{dep}}}{d^{2}},
@@ -1035,8 +1037,8 @@ E\left(x\right) = \frac{V - V_{\text{dep}}}{d} +
 where \(V\) is the applied bias voltage, \(V_{\text{dep}}\) is 
 the depletion voltage, and \(d\) is the thickness of the diode.
 \begin{lstlisting}
-void efield(const double x, const double y, const double z,
-            double& ex, double& ey, double& ez) {
+auto efield = [](const double x, const double y, const double z,
+                 double& ex, double& ey, double& ez) { 
 
   // Depletion voltage
   const double vdep = 160.;
@@ -1047,20 +1049,9 @@ void efield(const double x, const double y, const double z,
 
   ey = ez = 0.;
   ex = (v - vdep) / d + 2 * x * vdep / (d * d);
-
-}
-
-ComponentUser* component = new ComponentUser();
-component->SetElectricField(efield);
-
-\end{lstlisting}
-
-A user-defined weighting field and potential can be set using
-\begin{lstlisting}
-void SetWeightingField(void (*f)(const double, const double, const double,
-                                 double&, double&, double&, const std::string));
-void SetWeightingPotential(void (*f)(const double, const double, const double,
-                                     double&, const std::string));
+};
+ComponentUser cmp;
+cmp.SetElectricField(efield);
 \end{lstlisting}
 
 \section{Visualizing the field}
