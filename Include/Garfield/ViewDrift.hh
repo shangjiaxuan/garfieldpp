@@ -1,14 +1,12 @@
 #ifndef G_VIEW_DRIFT
 #define G_VIEW_DRIFT
 
-#include <memory>
 #include <string>
 #include <vector>
 #include <array>
 #include <utility>
 
 #include <Rtypes.h>
-#include <TView.h>
 
 #include "ViewBase.hh"
 
@@ -28,7 +26,13 @@ class ViewDrift : public ViewBase {
 
   /// Draw the drift lines.
   void Plot(const bool twod = false, const bool axis = true);
+  /// Make a 2D plot of the drift lines in the current viewing plane.
+  void Plot2d(const bool axis);
+  /// Make a 3D plot of the drift lines.
+  void Plot3d(const bool axis, const bool ogl);
 
+  /// Draw markers (or not) at every collision along a track.
+  void EnableClusterMarkers(const bool on = true) { m_drawClusters = on; }
   /// Set the size of the cluster markers (see TAttMarker).
   void SetClusterMarkerSize(const double size);
   /// Set the size of the collision markers (see TAttMarker).
@@ -80,9 +84,6 @@ class ViewDrift : public ViewBase {
 
  private:
 
-  // View
-  std::unique_ptr<TView> m_view;
-
   enum class Particle {
     Electron,
     Hole,
@@ -98,7 +99,7 @@ class ViewDrift : public ViewBase {
   std::vector<std::array<float, 3> > m_ion;
   std::vector<std::array<float, 3> > m_att;
 
-  double m_markerSizeCluster = 1.;
+  double m_markerSizeCluster = 0.01;
   double m_markerSizeCollision = 0.5;
   
   short m_colTrack = kGreen + 3;
@@ -110,9 +111,10 @@ class ViewDrift : public ViewBase {
   short m_colIonisation = kOrange - 3;
   short m_colAttachment = kCyan + 3;
 
-  void Plot2d(const bool axis);
-  void Plot3d(const bool axis);
-  bool SetPlotLimits();
+  bool m_drawClusters = false;
+
+  bool SetPlotLimits2d();
+  bool SetPlotLimits3d();
 };
 }
 #endif

@@ -288,7 +288,7 @@ bool ViewCell::Plot(const bool twod) {
     if (twod) {
       PlotTube(0., 0., rt, nt);
     } else {
-      PlotTube(0.98 * rt, 1.02 * rt, nt, dz);
+      PlotTube(0., 0., 0.98 * rt, 1.02 * rt, nt, dz);
     }
   }
 
