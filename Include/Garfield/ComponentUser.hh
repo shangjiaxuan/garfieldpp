@@ -1,6 +1,8 @@
 #ifndef G_COMPONENT_USER_H
 #define G_COMPONENT_USER_H
 
+#include <functional>
+
 #include "ComponentBase.hh"
 
 namespace Garfield {
@@ -32,51 +34,52 @@ class ComponentUser : public ComponentBase {
                              const std::string& label) override;
 
   /// Set the function to be called for calculating the electric field.
-  void SetElectricField(void (*f)(const double, const double, const double,
-                                  double&, double&, double&));
+  void SetElectricField(
+    std::function<void(const double, const double, const double,
+                       double&, double&, double&)>);
   /// Set the function to be called for calculating the potential.
-  void SetPotential(void (*f)(const double, const double, const double,
-                              double&));
+  void SetPotential(
+    std::function<void(const double, const double, const double, double&)>);
   /// Set the function to be called for calculating the weighting field.
-  void SetWeightingField(void (*f)(const double, const double, const double,
-                                   double&, double&, double&,
-                                   const std::string));
+  void SetWeightingField(
+    std::function<void(const double, const double, const double,
+                       double&, double&, double&, const std::string&)>);
   /// Set the function to be called for calculating the weighting potential.
-  void SetWeightingPotential(void (*f)(const double, const double, const double,
-                                       double&, const std::string));
+  void SetWeightingPotential(
+    std::function<void(const double, const double, const double, 
+                       double&, const std::string&)>);
   /// Set the function to be called for calculating the delayed weighting field.
-  void SetDelayedWeightingField(void (*f)(const double, const double, 
-                                          const double, const double,
-                                          double&, double&, double&,
-                                          const std::string));
+  void SetDelayedWeightingField(
+    std::function<void(const double, const double, const double, const double,
+                       double&, double&, double&, const std::string&)>);
   /// Set the function to be called for calculating the magnetic field.
-  void SetMagneticField(void (*f)(const double, const double, const double,
-                                  double&, double&, double&));
+  void SetMagneticField(
+    std::function<void(const double, const double, const double,
+                       double&, double&, double&)>);
 
  private:
   /// Electric field function
-  void (*m_efield)(const double, const double, const double, double&, double&,
-                   double&) = nullptr;
-
+  std::function<void(const double, const double, const double,
+                     double&, double&, double&)> m_efield;
   /// Potential function
-  void (*m_potential)(const double, const double, const double,
-                      double&) = nullptr;
+  std::function<void(const double, const double, const double,
+                     double&)> m_potential;
 
   /// Weighting field function
-  void (*m_wfield)(const double, const double, const double, double&, double&,
-                   double&, const std::string) = nullptr;
+  std::function<void(const double, const double, const double, 
+                     double&, double&, double&, const std::string&)> m_wfield;
 
   /// Weighting potential function
-  void (*m_wpot)(const double, const double, const double, double&,
-                 const std::string) = nullptr;
+  std::function<void(const double, const double, const double, 
+                     double&, const std::string&)> m_wpot;
 
   /// Delayed weighting field function
-  void (*m_dwfield)(const double, const double, const double, const double,
-                    double&, double&, double&, const std::string) = nullptr;
+  std::function<void(const double, const double, const double, const double,
+                     double&, double&, double&, const std::string&)> m_dwfield;
 
   /// Magnetic field function
-  void (*m_bfield)(const double, const double, const double, double&, double&,
-                   double&) = nullptr;
+  std::function<void(const double, const double, const double, 
+                     double&, double&, double&)> m_bfield;
 
   /// Reset the component
   void Reset() override;
