@@ -11,7 +11,6 @@ SolidTube::SolidTube(const double cx, const double cy, const double cz,
     : Solid(cx, cy, cz, "SolidTube"),
       m_rMin(rmin),
       m_rMax(rmax),
-      m_r(rmax),
       m_lZ(lz) {}
 
 SolidTube::SolidTube(const double cx, const double cy, const double cz,
@@ -35,28 +34,11 @@ bool SolidTube::IsInside(const double x, const double y, const double z) const {
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);
 
-  if (fabs(w) > m_lZ) {
-    if (m_debug) {
-      std::cout << "SolidTube::IsInside: (" << x << ", " << y << ", " << z
-                << ") is outside.\n";
-    }
-    return false;
-  }
+  if (fabs(w) > m_lZ) return false;
 
   const double r = sqrt(u * u + v * v);
-  if (r >= m_rMin && r <= m_rMax) {
-    if (m_debug) {
-      std::cout << "SolidTube::IsInside: (" << x << ", " << y << ", " << z
-                << ") is inside.\n";
-    }
-    return true;
-  }
-
-  if (m_debug) {
-    std::cout << "SolidTube::IsInside: (" << x << ", " << y << ", " << z
-              << ") is outside.\n";
-  }
-  return false;
+  if (r < m_rMin || r > m_rMax) return false;
+  return true;
 }
 
 bool SolidTube::GetBoundingBox(double& xmin, double& ymin, double& zmin,
@@ -87,8 +69,8 @@ void SolidTube::SetInnerRadius(const double rmin) {
     return;
   }
   if (rmin >= m_rMax) {
-    std::cerr << "SolidTube::SetInnerRadius:\n";
-    std::cerr << "    Inner radius must be smaller than outer radius.\n";
+    std::cerr << "SolidTube::SetInnerRadius:\n"
+              << "    Inner radius must be smaller than outer radius.\n";
     return;
   }
   m_rMin = rmin;
@@ -100,8 +82,8 @@ void SolidTube::SetOuterRadius(const double rmax) {
     return;
   }
   if (rmax <= m_rMin) {
-    std::cerr << "SolidTube::SetOuterRadius:\n";
-    std::cerr << "    Outer radius must be greater than inner radius.\n";
+    std::cerr << "SolidTube::SetOuterRadius:\n"
+              << "    Outer radius must be greater than inner radius.\n";
     return;
   }
   m_rMax = rmax;
@@ -112,7 +94,8 @@ void SolidTube::SetRadius(const double r) {
     std::cerr << "SolidTube::SetRadius: Radius must be > 0.\n";
     return;
   }
-  m_r = r;
+  m_rMax = r;
+  m_rMin = 0.;
 }
 
 void SolidTube::SetHalfLength(const double lz) {
@@ -154,10 +137,10 @@ bool SolidTube::SolidPanels(std::vector<Panel>& panels) {
   }
 
   // Set the mean or the outer radius.
-  double r = m_r;
+  double r = m_rMax;
   if (m_average) {
     const double alpha = Pi / (4. * (m_n - 1.));
-    r = 2 * m_r / (1. + asinh(tan(alpha)) * cos(alpha) / tan(alpha));
+    r = 2 * m_rMax / (1. + asinh(tan(alpha)) * cos(alpha) / tan(alpha));
   }
 
   const unsigned int nPoints = 4 * (m_n - 1);

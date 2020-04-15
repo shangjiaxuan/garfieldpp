@@ -127,8 +127,9 @@ can be used.
 \end{figure}
 
 \section{Sphere}
-The constructor of \texttt{SolidSphere} takes the location of the 
-centre and the radius of the sphere.
+\texttt{SolidSphere} has two constructors.
+The first one takes the location of the 
+centre and the outer radius of the sphere.
 \begin{lstlisting}
 SolidSphere(const double cx, const double cy, const double cz,
             const double r);
@@ -137,6 +138,13 @@ SolidSphere(const double cx, const double cy, const double cz,
 \item[cx,cy,cz] Coordinates of the centre of the sphere.
 \item[r] Radius of the sphere.
 \end{description}
+The second one takes the coordinates of the centre and the inner and 
+outer radii.
+\begin{lstlisting}
+SolidSphere(const double cx, const double cy, const double cz,
+            const double rmin, const double rmax);
+\end{lstlisting}
+
 \begin{figure}
 \centering
 \tdplotsetmaincoords{60}{120}
