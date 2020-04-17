@@ -199,8 +199,9 @@ void ViewMedium::Draw() {
     }
   } 
   // Set legend.
-  std::vector<std::string> labels(nPlots, "");
-  if (nPlots > 1) {
+  std::vector<std::string> labels = m_labels;
+  labels.resize(nPlots, "");
+  if (nPlots > 1 && m_labels.empty()) {
     bool allEqual = std::equal(m_q.begin() + 1, m_q.end(), m_q.begin());
     if (!allEqual) {
       for (unsigned int i = 0; i < nPlots; ++i) {

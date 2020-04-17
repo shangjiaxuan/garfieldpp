@@ -99,6 +99,8 @@ class ViewMedium : public ViewBase {
 
   /// Set the (ROOT) colours to be used in the plots.
   void SetColours(const std::vector<short>& cols) { m_colours = cols; }
+  /// Set user-defined plot labels.
+  void SetLabels(const std::vector<std::string>& labels) { m_labels = labels; }
 
  private:
 
@@ -160,6 +162,7 @@ class ViewMedium : public ViewBase {
   std::vector<std::vector<double> > m_yGraph;
 
   std::vector<short> m_colours;
+  std::vector<std::string> m_labels;
 
   void PlotVelocity(const Axis xaxis, const Charge particle,
                     const bool same);
