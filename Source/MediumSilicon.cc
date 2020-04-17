@@ -1753,7 +1753,7 @@ bool MediumSilicon::HoleImpactIonisationMassey(const double e,
   // - D. J. Massey, J. P. R. David, and G. J. Rees,
   //   IEEE Trans. Electron Devices 53 (2006), 2328 - 2334
   constexpr double a = 1.13e6;
-  constexpr double c = 1.17e6;
+  constexpr double c = 1.71e6;
   constexpr double d = 1.09e3;
   const double b = c + d * m_temperature;
   if (e < Small) {
