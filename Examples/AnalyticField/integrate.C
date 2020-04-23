@@ -27,6 +27,6 @@ int main() {
   cmp.Clear();
   cmp.AddPlaneX(-1., -1000., "p1");
   cmp.AddPlaneX(+1., +1000., "p2");
-  std::cout << "Flux = " << cmp.IntegrateFlux(0, -1, -1, 0, 2, 0, 0, 0, 2)
+  std::cout << "Flux = " << cmp.IntegrateFluxParallelogram(0, -1, -1, 0, 2, 0, 0, 0, 2)
             << " [V.cm]\n"; 
 }
