@@ -1,0 +1,9 @@
+# installion location
+install
+
+# MacOS metadata
+.DS_Store
+
+# Visual Code
+.vscode
+.build
