@@ -1,8 +1,8 @@
 ########################################################
 # @author Klaus Zenker
-CMAKE_MINIMUM_REQUIRED(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
 ########################################################
-PROJECT(GarfieldExamples)
+project(GarfieldExamples)
 
 #### AnalyticField         #############################
 add_subdirectory(AnalyticField)

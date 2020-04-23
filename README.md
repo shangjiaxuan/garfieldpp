@@ -44,7 +44,7 @@ cd Examples/Gem
 ## Building and running examples using an installed version of Garfield
 The user can copy one example in his/her local disk, modify it, build it against an installed version of Garfield and run it.
 ```
-cp -r $GARFILED_HOME/Examples/Gem .
+cp -r $GARFIELD_HOME/Examples/Gem .
 mkdir Gem/build; cd Gem/build
 cmake ..
 make
