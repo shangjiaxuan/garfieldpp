@@ -1,5 +1,5 @@
-# installion location
-install
+# installation location
+install/*
 
 # MacOS metadata
 .DS_Store
