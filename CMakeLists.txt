@@ -126,17 +126,6 @@ if(BUILD_WITH_VERSION_NUMBER)
                         SOVERSION ${Garfield_SOVERSION} )
 endif()
 
-#--- Build the examples --------------------------------------------------------
-option(WITH_EXAMPLES "Build Garfield++ examples" ON)
-if(WITH_EXAMPLES)
-  message(STATUS "Garfield++ examples will be built. In order disable this option use -DWITH_EXAMPLES=OFF")
-  add_subdirectory(Examples)
-else()
-  message(STATUS "Building of examples is switched off.")
-endif()
-configure_file(${CMAKE_SOURCE_DIR}/CMake/setup.sh.in
-               ${CMAKE_BINARY_DIR}/setup.sh @ONLY)
-
 #--- target for Doxygen documentation ------------------------------------------
 option(WITH_DOC "Whether or not to create doxygen doc target." OFF)
 if(WITH_DOC)
@@ -146,6 +135,20 @@ endif()
 #--- add CMake infrastructure --------------------------------------------------
 export(PACKAGE Garfield)
 include(CMake/GarfieldCreateConfig.cmake)
+
+configure_file(${CMAKE_SOURCE_DIR}/CMake/setup.sh.in
+               ${CMAKE_BINARY_DIR}/setup.sh @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/CMake/GarfieldConfig.dummy.in
+               ${CMAKE_BINARY_DIR}/GarfieldConfig.cmake @ONLY)
+
+#--- Build the examples --------------------------------------------------------
+option(WITH_EXAMPLES "Build Garfield++ examples" ON)
+if(WITH_EXAMPLES)
+  message(STATUS "Garfield++ examples will be built. In order disable this option use -DWITH_EXAMPLES=OFF")
+  add_subdirectory(Examples)
+else()
+  message(STATUS "Building of examples is switched off.")
+endif()
 
 #--- Installation of all artifacts----------------------------------------------
 message(STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
