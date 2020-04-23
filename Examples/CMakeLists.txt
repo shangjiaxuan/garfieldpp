@@ -5,94 +5,23 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.3 FATAL_ERROR)
 PROJECT(GarfieldExamples)
 
 #### AnalyticField         #############################
-add_executable(gallery AnalyticField/gallery.C)
-target_link_libraries(gallery Garfield)
+add_subdirectory(AnalyticField)
 
 #### Voxel                 #############################
-add_executable(plotfield Voxel/plotfield.C)
-target_link_libraries(plotfield Garfield)
-
-add_executable(savefield Voxel/savefield.C)
-target_link_libraries(savefield Garfield)
+add_subdirectory(Voxel)
 
 #### GEM                   #############################
-add_executable(gem Gem/gem.C)
-target_link_libraries(gem Garfield)
+add_subdirectory(Gem)
 
 #### GasFile               #############################
-add_executable(generate GasFile/generate.C)
-target_link_libraries(generate Garfield)
-
-add_executable(read GasFile/read.C)
-target_link_libraries(read Garfield)
+add_subdirectory(GasFile)
 
 #### Heed                   ############################
-add_executable(edep Heed/edep.C)
-target_link_libraries(edep Garfield)
+add_subdirectory(Heed)
 
 #### SRIM                   ############################
-add_executable(srim Srim/srim.C)
-target_link_libraries(srim Garfield)
+add_subdirectory(Srim)
 
-#### Geat4GarfieldInterface ############################
-option(G4ANALYSIS_USE "use ROOT" ON)
-SET(CMAKE_MODULE_PATH /afs/cern.ch/sw/lcg/external/geant4/10.1/share/cmake/Modules)
+#### Geant4GarfieldInterface ###########################
+add_subdirectory(Geant4GarfieldInterface)
 
-#----------------------------------------------------------------------------
-# Find Geant4 package, activating all available UI and Vis drivers by default
-# You can set WITH_GEANT4_UIVIS to OFF via the command line or ccmake/cmake-gui
-# to build a batch mode only executable
-#
-option(WITH_GEANT4_UIVIS "Build example with Geant4 UI and Vis drivers" ON)
-if(WITH_GEANT4_UIVIS)
-  find_package(Geant4 COMPONENTS ui_all vis_all)
-else()
-  find_package(Geant4 )
-endif()
-if(Geant4_FOUND)
-#----------------------------------------------------------------------------
-# Setup Geant4 include directories and compile definitions
-# Setup include directory for this project
-#
-include(${Geant4_USE_FILE})
-SET(G4_DIR Geant4GarfieldInterface )
-include_directories( ${G4_DIR}/include )
-file(GLOB sources ${G4_DIR}/src/*.cc)
-file(GLOB headers ${G4_DIR}/include/*.hh)
-file(GLOB headers ${garfield_SOURCE_DIR}/Include/*.hh)
-
-#----------------------------------------------------------------------------
-# Add the executable, and link it to the Geant4 libraries
-#
-add_executable(exampleGeant4Interface ${G4_DIR}/exampleGarfield.cc ${sources} ${headers})
-target_link_libraries(exampleGeant4Interface ${Geant4_LIBRARIES} Garfield)
-
-#----------------------------------------------------------------------------
-# Copy all scripts to the build directory, i.e. the directory in which we
-# build exampleGarfield. This is so that we can run the executable directly because it
-# relies on these scripts being in the current working directory.
-#
-set(EXAMPLEGARFIELD_SCRIPTS
-  icons.mac
-  gui.mac
-  physics.mac
-  init_vis.mac
-  run.mac
-  vis.mac
-  ar_70_co2_30_1000mbar.gas
-  )
-foreach(_script ${EXAMPLEGARFIELD_SCRIPTS})
-  configure_file(
-    ${G4_DIR}/${_script}
-    ${PROJECT_BINARY_DIR}/../bin/${_script}
-    COPYONLY
-    )
-  INSTALL(FILES ${G4_DIR}/${_script} DESTINATION ${CMAKE_INSTALL_PREFIX}/examples/)
-endforeach()
-endif(Geant4_FOUND)
-#### Install                ############################
-if(Geant4_FOUND)
-  install(TARGETS generate read edep srim exampleGeant4Interface DESTINATION examples)
-else()
-  install(TARGETS generate read edep srim DESTINATION examples)
-endif(Geant4_FOUND)
