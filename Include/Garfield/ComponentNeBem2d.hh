@@ -64,6 +64,9 @@ class ComponentNeBem2d : public ComponentBase {
                  const std::vector<double>& yp, Medium* medium,
                  const unsigned int bctype = 4, const double v = 0.,
                  const int ndiv = -1);
+  void AddChargeDistribution(const double x, const double y,
+                             const double a, const double b, 
+                             const double rho); 
   /// Set the extent of the drift region along z.
   void SetRangeZ(const double zmin, const double zmax);
  
@@ -171,6 +174,14 @@ class ComponentNeBem2d : public ComponentBase {
   /// Straight-line boundary elements.
   std::vector<Element> m_elements;
 
+  struct ChargeBox {
+    double x, y; //< Coordinates of the centre.
+    double a, b; //< Half-lengths.
+    double q;    //< Charge density.
+    double v0;   //< Offset.
+  };
+  std::vector<ChargeBox> m_chargeBoxes;
+
   /// Split/merge overlapping segments.
   void EliminateOverlaps(std::vector<Segment>& segments);
   /// Create elements from a straight-line segment.
@@ -196,11 +207,19 @@ class ComponentNeBem2d : public ComponentBase {
   /// Potential of a thin wire with radius r0.
   double WirePotential(const double r0, const double x, const double y) const;
   /// Field of a line segment (half-width a) in local coordinates.
-  void LineFlux(const double a, const double x, const double y, double& ex,
-                double& ey) const;
+  void LineField(const double a, const double x, const double y, double& ex,
+                 double& ey) const;
   /// Field of a thin wire with radius r0.
-  void WireFlux(const double r0, const double x, const double y, double& ex,
-                double& ey) const;
+  void WireField(const double r0, const double x, const double y, double& ex,
+                 double& ey) const;
+
+  /// Potential of a uniformly charged rectangle.
+  double BoxPotential(const double a, const double b, 
+                      const double x, const double y, const double v0) const;
+  /// Field of a uniformly charged rectangle.
+  void BoxField(const double a, const double b, 
+                const double x, const double y,
+                double& ex, double& ey) const;
 
   void Reset() override;
   void UpdatePeriodicity() override;

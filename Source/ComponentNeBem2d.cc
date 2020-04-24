@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <numeric>
+#include <complex>
 
 #include "Garfield/ComponentNeBem2d.hh"
 #include "Garfield/FundamentalConstants.hh"
@@ -244,6 +245,7 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
     return;
   }
 
+  /*
   if (!m_ready) {
     if (!Initialise()) {
       std::cerr << m_className << "::ElectricField: Initialisation failed.\n";
@@ -251,6 +253,7 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
       return;
     }
   }
+  */
   
   // See whether we are inside a wire.
   const unsigned int nWires = m_wires.size();
@@ -275,7 +278,7 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
     v += LinePotential(element.a, xL, yL) * element.q;
     // Compute the field in local coordinates.
     double fx = 0., fy = 0.;
-    LineFlux(element.a, xL, yL, fx, fy);
+    LineField(element.a, xL, yL, fx, fy);
     // Rotate to the global frame.
     ToGlobal(fx, fy, cphi, sphi, fx, fy);
     ex += fx * element.q;
@@ -288,11 +291,18 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
     v += WirePotential(wire.r, x - wire.x, y - wire.y) * wire.q;
     // Compute the field.
     double fx = 0., fy = 0.;
-    WireFlux(wire.x, x - wire.x, y - wire.y, fx, fy);
+    WireField(wire.x, x - wire.x, y - wire.y, fx, fy);
     ex += fx * wire.q;
     ey += fy * wire.q;
   }
 
+  for (const auto& box : m_chargeBoxes) {
+    v += BoxPotential(box.a, box.b, x - box.x, y - box.y, box.v0) * box.q;
+    double fx = 0., fy = 0.;
+    BoxField(box.a, box.b, x - box.x, y - box.y, fx, fy);
+    ex += fx * box.q;
+    ey += fy * box.q;
+  }
 }
 
 void ComponentNeBem2d::ElectricField(const double x, const double y,
@@ -641,6 +651,28 @@ bool ComponentNeBem2d::AddRegion(const std::vector<double>& xp,
   region.ndiv = ndiv;
   m_regions.push_back(std::move(region));
   return true;
+}
+
+void ComponentNeBem2d::AddChargeDistribution(const double x, const double y,
+                                             const double a, const double b,
+                                             const double rho) {
+  if (a < Small || b < Small) {
+    std::cerr << m_className << "::AddChargeDistribution:\n"
+              << "    Lengths must be > 0.\n";
+    return;
+  }
+  const double a2 = a * a;
+  const double b2 = b * b;
+  const double c = sqrt(a2 + b2);
+  const double v0 = 4 * a * b * log(c) + Pi * b2 + 2 * atan(b / a) * (a2 - b2);
+  ChargeBox box;
+  box.x = x;
+  box.y = y;
+  box.a = a;
+  box.b = b;
+  box.q = rho;
+  box.v0 = v0;
+  m_chargeBoxes.push_back(std::move(box));
 }
 
 void ComponentNeBem2d::SetNumberOfDivisions(const unsigned int ndiv) {
@@ -1120,7 +1152,7 @@ bool ComponentNeBem2d::ComputeInfluenceMatrix(
           } else {
             // Compute flux at the collocation point.
             double fx = 0., fy = 0.;
-            LineFlux(src.a, xL, yL, fx, fy);
+            LineField(src.a, xL, yL, fx, fy);
             // Rotate to the global frame.
             ToGlobal(fx, fy, src.cphi, src.sphi, fx, fy);
             // Rotate to the local frame of the target element.
@@ -1135,7 +1167,7 @@ bool ComponentNeBem2d::ComputeInfluenceMatrix(
           infCoeff = WirePotential(src.r, xF - src.x, yF - src.y);
         } else if (bcF == Dielectric) {
           double fx = 0., fy = 0.;
-          WireFlux(src.r, xF - src.x, yF - src.y, fx, fy);
+          WireField(src.r, xF - src.x, yF - src.y, fx, fy);
           ToLocal(fx, fy, cphiF, sphiF, fx, fy);
           infCoeff = fy;
         }
@@ -1385,7 +1417,7 @@ bool ComponentNeBem2d::CheckConvergence(const double tol,
         v[k] += LinePotential(src.a, xL, yL) * src.q;
         // Compute the field.
         double fx = 0., fy = 0.;
-        LineFlux(src.a, xL, yL, fx, fy);
+        LineField(src.a, xL, yL, fx, fy);
         // Rotate to the global frame.
         ToGlobal(fx, fy, src.cphi, src.sphi, fx, fy);
         // Rotate to the local frame of the test element.
@@ -1398,7 +1430,7 @@ bool ComponentNeBem2d::CheckConvergence(const double tol,
         v[k] += WirePotential(src.r, xG - src.x, yG - src.y) * src.q;
         // Compute the field.
         double fx = 0., fy = 0.;
-        WireFlux(src.r, xG - src.x, yG - src.y, fx, fy);
+        WireField(src.r, xG - src.x, yG - src.y, fx, fy);
         // Rotate to the local frame of the test element.
         ToLocal(fx, fy, tgt.cphi, tgt.sphi, fx, fy);
         n[k] += fy * src.q;
@@ -1483,8 +1515,9 @@ double ComponentNeBem2d::WirePotential(const double r0, const double x,
   return -log(r0) * r0 * InvEpsilon0;
 }
 
-void ComponentNeBem2d::LineFlux(const double a, const double x, const double y,
-                                double& ex, double& ey) const {
+void ComponentNeBem2d::LineField(const double a, 
+                                 const double x, const double y,
+                                 double& ex, double& ey) const {
   const double amx = a - x;
   const double apx = a + x;
   if (fabs(y) > 0.) {
@@ -1504,8 +1537,9 @@ void ComponentNeBem2d::LineFlux(const double a, const double x, const double y,
   ey *= InvTwoPiEpsilon0;
 }
 
-void ComponentNeBem2d::WireFlux(const double r0, const double x, const double y,
-                                double& ex, double& ey) const {
+void ComponentNeBem2d::WireField(const double r0, 
+                                 const double x, const double y,
+                                 double& ex, double& ey) const {
   const double r02 = r0 * r0;
   const double r2 = x * x + y * y;
   if (r2 > r02) {
@@ -1523,11 +1557,86 @@ void ComponentNeBem2d::WireFlux(const double r0, const double x, const double y,
   ey *= InvEpsilon0;
 }
 
+double ComponentNeBem2d::BoxPotential(const double a, const double b, 
+                                      const double x, const double y,
+                                      const double v0) const {
+
+  double v1 = 0., v2 = 0.;
+  if (fabs(x) > a || fabs(y) > b) {
+    // Outside the rectangle.
+    const std::array<double, 2> dx = {x - a, x + a};
+    const std::array<double, 2> dy = {y - b, y + b};
+    const std::array<double, 2> dx2 = {dx[0] * dx[0], dx[1] * dx[1]};
+    const std::array<double, 2> dy2 = {dy[0] * dy[0], dy[1] * dy[1]};
+    std::array<double, 4> alpha = {atan2(dy[0], dx[0]), atan2(dy[0], dx[1]),
+                                   atan2(dy[1], dx[1]), atan2(dy[1], dx[0])};
+    if (x < 0.) {
+      for (size_t i = 0; i < 4; ++i) if (alpha[i] < 0.) alpha[i] += TwoPi;
+    }
+    v1 = dx[0] * dy[0] * log(dx2[0] + dy2[0])  
+       - dx[1] * dy[0] * log(dx2[1] + dy2[0])
+       + dx[1] * dy[1] * log(dx2[1] + dy2[1]) 
+       - dx[0] * dy[1] * log(dx2[0] + dy2[1]);
+    v2 = dx2[0] * (alpha[0] - alpha[3]) + dx2[1] * (alpha[2] - alpha[1]) +
+         dy2[0] * (alpha[1] - alpha[0]) + dy2[1] * (alpha[3] - alpha[2]);
+  } else {
+    // Inside the rectangle.
+    const std::array<double, 2> dx = {a - x, a + x};
+    const std::array<double, 2> dy = {b - y, b + y};
+    const std::array<double, 2> dx2 = {dx[0] * dx[0], dx[1] * dx[1]};
+    const std::array<double, 2> dy2 = {dy[0] * dy[0], dy[1] * dy[1]};
+    const double beta1 = atan2(dy[0], dx[0]);
+    const double beta2 = atan2(dx[1], dy[0]);
+    const double beta3 = atan2(dy[1], dx[1]);
+    const double beta4 = atan2(dx[0], dy[1]); 
+    v1 = dx[0] * dy[0] * log(dx2[0] + dy2[0]) +
+         dy[0] * dx[1] * log(dx2[1] + dy2[0]) +
+         dx[1] * dy[1] * log(dx2[1] + dy2[1]) + 
+         dy[1] * dx[0] * log(dx2[0] + dy2[1]);
+    v2 = dx2[0] * (beta1 - beta4) + dy2[0] * (beta2 - beta1) +
+         dx2[1] * (beta3 - beta2) + dy2[1] * (beta4 - beta3);
+    v2 += HalfPi * (dx2[0] + dy2[0] + dx2[1] + dy2[1]); 
+  }
+  return InvTwoPiEpsilon0 * 0.5 * (-2 * v0 + v1 + v2);
+}  
+
+void ComponentNeBem2d::BoxField(const double a, const double b,
+                                const double x, const double y,
+                                double& ex, double& ey) const {
+  ex = ey = 0.;
+  const std::array<double, 2> dx = {x - a, x + a};
+  const std::array<double, 2> dy = {y - b, y + b};
+  const std::array<double, 2> dx2 = {dx[0] * dx[0], dx[1] * dx[1]};
+  const std::array<double, 2> dy2 = {dy[0] * dy[0], dy[1] * dy[1]};
+  const double r1 = dx2[0] + dy2[0];
+  const double r2 = dx2[1] + dy2[0];
+  const double r3 = dx2[1] + dy2[1];
+  const double r4 = dx2[0] + dy2[1];
+  ex = 0.5 * (dy[0] * log(r1 / r2) + dy[1] * log(r3 / r4));
+  ey = 0.5 * (dx[0] * log(r1 / r4) + dx[1] * log(r3 / r2));
+  if (fabs(x) > a || fabs(y) > b) {
+    std::array<double, 4> alpha = {atan2(dy[0], dx[0]), atan2(dy[0], dx[1]),
+                                   atan2(dy[1], dx[1]), atan2(dy[1], dx[0])};
+    ex += dx[0] * (alpha[0] - alpha[3]) + dx[1] * (alpha[2] - alpha[1]);
+    ey -= dy[0] * (alpha[0] - alpha[1]) + dy[1] * (alpha[2] - alpha[3]);
+  } else {
+    const double beta1 = atan2(-dy[0], -dx[0]);
+    const double beta2 = atan2( dx[1], -dy[0]);
+    const double beta3 = atan2( dy[1],  dx[1]);
+    const double beta4 = atan2(-dx[0],  dy[1]); 
+    ex += dx[0] * (HalfPi + beta1 - beta4) + dx[1] * (HalfPi + beta3 - beta2);
+    ey -= dy[0] * (beta1 - beta2 - HalfPi) + dy[1] * (beta3 - beta4 - HalfPi);
+  }
+  ex *= InvTwoPiEpsilon0;
+  ey *= InvTwoPiEpsilon0;
+}
+
 void ComponentNeBem2d::Reset() {
   m_regions.clear();
   m_segments.clear();
   m_wires.clear();
   m_elements.clear();
+  m_chargeBoxes.clear();
   m_ready = false;
 }
 
