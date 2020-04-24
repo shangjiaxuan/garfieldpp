@@ -11,13 +11,13 @@ find_package(Garfield REQUIRED)
 
 option(WITH_GEANT4_UIVIS "Build example with Geant4 UI and Vis drivers" ON)
 if(WITH_GEANT4_UIVIS)
-  find_package(Geant4 REQUIRED ui_all vis_all)
+  find_package(Geant4 COMPONENTS ui_all vis_all)
 else()
-  find_package(Geant4 REQUIRED)
+  find_package(Geant4)
 endif()
 
 if(NOT Geant4_FOUND)
-  message("Geant4 is not found example cannot be build")
+  message("Geant4 is not found. Example cannot be built.")
   return()
 endif()
 
