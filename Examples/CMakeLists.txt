@@ -4,24 +4,27 @@ cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
 ########################################################
 project(GarfieldExamples)
 
-#### AnalyticField         #############################
-add_subdirectory(AnalyticField)
-
-#### Voxel                 #############################
-add_subdirectory(Voxel)
-
-#### GEM                   #############################
+#--- GEM
 add_subdirectory(Gem)
 
-#### GasFile               #############################
+#--- Drift tube 
+add_subdirectory(DriftTube)
+
+#--- Gas files
 add_subdirectory(GasFile)
 
-#### Heed                   ############################
+#--- Analytic fields
+add_subdirectory(AnalyticField)
+
+#--- Regular grid
+add_subdirectory(Grid)
+
+#--- Heed
 add_subdirectory(Heed)
 
-#### SRIM                   ############################
+#--- SRIM
 add_subdirectory(Srim)
 
-#### Geant4GarfieldInterface ###########################
+#--- Geant4-Garfield interface
 add_subdirectory(Geant4GarfieldInterface)
 
