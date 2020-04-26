@@ -216,23 +216,30 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
                                      const double z, double& ex, double& ey,
                                      double& ez, double& v, Medium*& m,
                                      int& status) {
-  ex = ey = ez = v = 0.;
-  status = 0;
+  status = Field(x, y, z, ex, ey, ez, v, m, false);
+}
+
+void ComponentNeBem2d::ElectricField(const double x, const double y,
+                                     const double z, double& ex, double& ey,
+                                     double& ez, Medium*& m, int& status) {
+  double v = 0.;
+  status = Field(x, y, z, ex, ey, ez, v, m, true);
+}
+
+int ComponentNeBem2d::Field(const double x, const double y, const double z,                            double& ex, double& ey, double& ez, double& v,
+                            Medium*& m, const bool opt) {
+
+  ex = ey = ez = 0.;
   // Check if the requested point is inside the z-range.
-  if (m_useRangeZ && (z < m_zmin || z > m_zmax)) {
-    status = -6;
-    return;
-  }
+  if (m_useRangeZ && (z < m_zmin || z > m_zmax)) return -6;
 
   // Check if the requested point is inside a medium.
   m = GetMedium(x, y, z);
-  if (!m) {
-    status = -6;
-    return;
-  }
+  if (!m) return -6;
+
   // Inside a conductor?
   if (m->IsConductor()) {
-    status = -5;
+    if (!opt) return -5;
     // Find the potential.
     for (const auto& region : m_regions) {
       bool inside = false, edge = false;
@@ -242,14 +249,13 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
         break;
       }
     }
-    return;
+    return -5;
   }
 
   if (!m_ready) {
     if (!Initialise()) {
       std::cerr << m_className << "::ElectricField: Initialisation failed.\n";
-      status = -11;
-      return;
+      return -11;
     }
   }
   
@@ -260,8 +266,7 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
     const double dy = y - m_wires[i].y;
     if (dx * dx + dy * dy < m_wires[i].r * m_wires[i].r) {
       v = m_wires[i].v;
-      status = i + 1;
-      return;
+      return i + 1;
     }
   }
 
@@ -272,8 +277,10 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
     // Transform to local coordinates.
     double xL = 0., yL = 0.;
     ToLocal(x - element.x, y - element.y, cphi, sphi, xL, yL);
-    // Compute the potential.
-    v += LinePotential(element.a, xL, yL) * element.q;
+    if (opt) {
+      // Compute the potential.
+      v += LinePotential(element.a, xL, yL) * element.q;
+    }
     // Compute the field in local coordinates.
     double fx = 0., fy = 0.;
     LineField(element.a, xL, yL, fx, fy);
@@ -285,8 +292,10 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
 
   // Add the contributions from the wires.
   for (const auto& wire : m_wires) {
-    // Compute the potential.
-    v += WirePotential(wire.r, x - wire.x, y - wire.y) * wire.q;
+    if (opt) {
+      // Compute the potential.
+      v += WirePotential(wire.r, x - wire.x, y - wire.y) * wire.q;
+    }
     // Compute the field.
     double fx = 0., fy = 0.;
     WireField(wire.x, x - wire.x, y - wire.y, fx, fy);
@@ -295,19 +304,15 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
   }
 
   for (const auto& box : m_spaceCharge) {
-    v += BoxPotential(box.a, box.b, x - box.x, y - box.y, box.v0) * box.q;
+    if (opt) {
+      v += BoxPotential(box.a, box.b, x - box.x, y - box.y, box.v0) * box.q;
+    }
     double fx = 0., fy = 0.;
     BoxField(box.a, box.b, x - box.x, y - box.y, fx, fy);
     ex += fx * box.q;
     ey += fy * box.q;
   }
-}
-
-void ComponentNeBem2d::ElectricField(const double x, const double y,
-                                     const double z, double& ex, double& ey,
-                                     double& ez, Medium*& m, int& status) {
-  double v = 0.;
-  ElectricField(x, y, z, ex, ey, ez, v, m, status);
+  return 0;
 }
 
 bool ComponentNeBem2d::GetVoltageRange(double& vmin, double& vmax) {

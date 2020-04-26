@@ -232,6 +232,9 @@ class ComponentNeBem2d : public ComponentBase {
                 const double cphi, const double sphi,
                 double& xOut, double& yOut) const;
 
+  /// Evaluation of the electric field (and optionally potential).
+  int Field(const double x, const double y, const double z, double& ex,
+            double& ey, double& ez, double& v, Medium*& m, const bool opt);
 };
 }
 
