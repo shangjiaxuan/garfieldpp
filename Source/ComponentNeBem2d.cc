@@ -216,14 +216,14 @@ void ComponentNeBem2d::ElectricField(const double x, const double y,
                                      const double z, double& ex, double& ey,
                                      double& ez, double& v, Medium*& m,
                                      int& status) {
-  status = Field(x, y, z, ex, ey, ez, v, m, false);
+  status = Field(x, y, z, ex, ey, ez, v, m, true);
 }
 
 void ComponentNeBem2d::ElectricField(const double x, const double y,
                                      const double z, double& ex, double& ey,
                                      double& ez, Medium*& m, int& status) {
   double v = 0.;
-  status = Field(x, y, z, ex, ey, ez, v, m, true);
+  status = Field(x, y, z, ex, ey, ez, v, m, false);
 }
 
 int ComponentNeBem2d::Field(const double x, const double y, const double z,                            double& ex, double& ey, double& ez, double& v,
