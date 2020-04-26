@@ -947,13 +947,24 @@ bool ComponentNeBem2d::Initialise() {
     // Compute the right hand side vector (boundary conditions).
     std::vector<double> boundaryConditions(nEntries, 0.);
     for (unsigned int i = 0; i < nElements; ++i) {
-      if (m_elements[i].bc.first != Voltage) continue;
-      boundaryConditions[i] = m_elements[i].bc.second;
-      for (const auto& box : m_spaceCharge) {
-        const double x = m_elements[i].x - box.x;
-        const double y = m_elements[i].y - box.y;
-        const double vs = BoxPotential(box.a, box.b, x, y, box.v0) * box.q;
-        boundaryConditions[i] -= vs;
+      if (m_elements[i].bc.first == Voltage) {
+        boundaryConditions[i] = m_elements[i].bc.second;
+        for (const auto& box : m_spaceCharge) {
+          const double x = m_elements[i].x - box.x;
+          const double y = m_elements[i].y - box.y;
+          const double vs = BoxPotential(box.a, box.b, x, y, box.v0) * box.q;
+          boundaryConditions[i] -= vs;
+        }
+      } else {
+        for (const auto& box : m_spaceCharge) {
+          const double x = m_elements[i].x - box.x;
+          const double y = m_elements[i].y - box.y;
+          double fx = 0., fy = 0.;
+          BoxField(box.a, box.b, x, y, fx, fy);
+          // Rotate to the local frame of the target element.
+          ToLocal(fx, fy, m_elements[i].cphi, m_elements[i].sphi, fx, fy);
+          boundaryConditions[i] -= box.q * fy;
+        }
       }
     }
     const unsigned int nWires = m_wires.size();
