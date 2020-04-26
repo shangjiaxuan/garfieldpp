@@ -174,13 +174,13 @@ class ComponentNeBem2d : public ComponentBase {
   /// Straight-line boundary elements.
   std::vector<Element> m_elements;
 
-  struct ChargeBox {
+  struct SpaceCharge {
     double x, y; //< Coordinates of the centre.
     double a, b; //< Half-lengths.
     double q;    //< Charge density.
     double v0;   //< Offset.
   };
-  std::vector<ChargeBox> m_chargeBoxes;
+  std::vector<SpaceCharge> m_spaceCharge;
 
   /// Split/merge overlapping segments.
   void EliminateOverlaps(std::vector<Segment>& segments);
