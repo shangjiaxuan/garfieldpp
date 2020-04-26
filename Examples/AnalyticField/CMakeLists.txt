@@ -14,3 +14,10 @@ target_link_libraries(integrate Garfield)
 
 add_executable(dipole dipole.C)
 target_link_libraries(dipole Garfield)
+
+add_executable(isochrons isochrons.C)
+target_link_libraries(isochrons Garfield)
+
+foreach(_file ar_50_c2h6_50_B_angle.gas)
+  configure_file(${_file} ${_file} COPYONLY)
+endforeach()
