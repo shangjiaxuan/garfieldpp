@@ -264,9 +264,24 @@ void ViewFEMesh::DrawElements() {
   const bool perZ =
       m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
 
-  // Clear the meshes and drift line lists.
-  m_mesh.clear();
-  m_driftLines.clear();
+  auto pad = GetCanvas();
+  pad->cd();
+
+  // Draw default axes by using a blank 2D histogram.
+  if (!m_xaxis && !m_yaxis && m_drawAxes) {
+    std::string name = CreateAxisTitle(m_pmat[0]);
+    m_axes->GetXaxis()->SetTitle(name.c_str());
+    m_axes->GetXaxis()->SetLimits(m_xMinPlot, m_xMaxPlot);
+    name = CreateAxisTitle(m_pmat[1]);
+    m_axes->GetYaxis()->SetTitle(name.c_str());
+    m_axes->GetYaxis()->SetTitleOffset(1.6);
+    m_axes->GetYaxis()->SetLimits(m_yMinPlot, m_yMaxPlot);
+    m_axes->Draw();
+  }
+
+  // Draw custom axes.
+  if (m_xaxis && m_drawAxes) m_xaxis->Draw();
+  if (m_yaxis && m_drawAxes) m_yaxis->Draw();
 
   // Prepare the final projection matrix (the transpose of the 2D array
   // "project").
@@ -474,7 +489,6 @@ void ViewFEMesh::DrawElements() {
             }
           }
           if (vX.size() < 3) continue;
-          // Create a convex TPolyLine object connecting the points.
 
           // Eliminate crossings of the polygon lines
           // (known as "butterflies" in Garfield).
@@ -498,14 +512,12 @@ void ViewFEMesh::DrawElements() {
           poly.SetLineColor(colorID);
           poly.SetFillColor(colorID_fill);
           poly.SetLineWidth(3);
-          // Add all of the points.
-          const auto nPoints = cX.size();
-          for (size_t pt = 0; pt < nPoints; ++pt) {
-            poly.SetPoint(pt, cX[pt], cY[pt]);
+          if (m_plotMeshBorders || !m_fillMesh) {
+            poly.DrawPolyLine(cX.size(), cX.data(), cY.data(), "same");
           }
-
-          // Add the polygon to the mesh.
-          m_mesh.push_back(std::move(poly));
+          if (m_fillMesh) {
+            poly.DrawPolyLine(cX.size(), cX.data(), cY.data(), "f:same");
+          }
         }  // end z-periodicity loop
       }    // end y-periodicity loop
     }      // end x-periodicity loop
@@ -521,50 +533,23 @@ void ViewFEMesh::DrawElements() {
       } else {
         poly.SetLineColor(kRed + 1);
       }
-      int polyPts = 0;
+      std::vector<double> xpl;
+      std::vector<double> ypl;
+      // Loop over the points.
       for (const auto& point : dline.first) {
         // Project this point onto the plane.
         PlaneCoords(point[0], point[1], point[2], projMat, xMat);
         // Add this point if it is within the view.
         if (InView(xMat(0, 0), xMat(1, 0))) {
-          poly.SetPoint(polyPts, xMat(0, 0), xMat(1, 0));
-          polyPts++;
+          xpl.push_back(xMat(0, 0));
+          ypl.push_back(xMat(1, 0));
         }
-      }  // end loop over points
-
-      // Add the drift line to the list.
-      m_driftLines.push_back(std::move(poly));
-
+      }
+      if (!xpl.empty()) {
+        poly.DrawPolyLine(xpl.size(), xpl.data(), ypl.data(), "same");
+      }
     }  // end loop over drift lines
   }    // end if(m_viewDrift != 0)
-
-  // Call the ROOT draw methods to plot the elements.
-  auto canvas = GetCanvas();
-  canvas->cd();
-
-  // Draw default axes by using a blank 2D histogram.
-  if (!m_xaxis && !m_yaxis && m_drawAxes) {
-    std::string name = CreateAxisTitle(m_pmat[0]);
-    m_axes->GetXaxis()->SetTitle(name.c_str());
-    m_axes->GetXaxis()->SetLimits(m_xMinPlot, m_xMaxPlot);
-    name = CreateAxisTitle(m_pmat[1]);
-    m_axes->GetYaxis()->SetTitle(name.c_str());
-    m_axes->GetYaxis()->SetTitleOffset(1.6);
-    m_axes->GetYaxis()->SetLimits(m_yMinPlot, m_yMaxPlot);
-    m_axes->Draw();
-  }
-
-  // Draw custom axes.
-  if (m_xaxis && m_drawAxes) m_xaxis->Draw();
-  if (m_yaxis && m_drawAxes) m_yaxis->Draw();
-
-  // Draw the mesh on the canvas.
-  for (auto& m : m_mesh) {
-    if (m_plotMeshBorders || !m_fillMesh) m.Draw("same");
-    if (m_fillMesh) m.Draw("f:same");
-  }
-  // Draw the drift lines on the view.
-  for (auto& dline : m_driftLines) dline.Draw("same");
 
   if (m_drawViewRegion)
     for (auto& m : m_viewRegionLines) m.Draw("same");
@@ -600,10 +585,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
       m_component->m_periodic[1] || m_component->m_mirrorPeriodic[1];
   const bool perZ =
       m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
-
-  // Clear the meshes and drift line lists
-  m_mesh.clear();
-  m_driftLines.clear();
 
   // Prepare the final projection matrix (the transpose of the 2D array
   // "project")
@@ -819,6 +800,19 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     std::cerr << "    Please choose one of the following: xy, xz, yz.\n";
     return;
   }
+
+  auto pad = GetCanvas();
+  pad->cd();
+  // Draw default axes by using a blank 2D histogram.
+  if (!m_xaxis && !m_yaxis && m_drawAxes) {
+    m_axes->GetXaxis()->SetLimits(uMin, uMax);
+    m_axes->GetYaxis()->SetLimits(vMin, vMax);
+    m_axes->Draw();
+  }
+  // Draw custom axes.
+  if (m_xaxis && m_drawAxes) m_xaxis->Draw("");
+  if (m_yaxis && m_drawAxes) m_yaxis->Draw("");
+
   std::cout << m_className << "::DrawCST:\n";
   std::cout << "    Number of elements in the projection of the unit cell:"
             << elements.size() << std::endl;
@@ -885,18 +879,16 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
           it++;
           continue;
         }
-        poly.SetPoint(0, tmp_u[0], tmp_v[0]);
-        poly.SetPoint(1, tmp_u[1], tmp_v[1]);
-        poly.SetPoint(2, tmp_u[2], tmp_v[2]);
-        poly.SetPoint(3, tmp_u[3], tmp_v[3]);
-        // Add the polygon to the mesh
-        m_mesh.push_back(std::move(poly));
+        if (m_plotMeshBorders || !m_fillMesh) {
+          poly.DrawPolyLine(4, tmp_u, tmp_v, "same");
+        }
+        if (m_fillMesh) {
+          poly.DrawPolyLine(4, tmp_u, tmp_v, "f:same");
+        }
         it++;
       }  // end element loop
     }    // end v-periodicity loop
   }      // end u-periodicity loop
-  std::cout << m_className << "::PlotCST:\n"
-            << "    Number of polygons to be drawn:" << m_mesh.size() << "\n";
   // If we have an associated ViewDrift, plot projections of the drift lines
   if (m_viewDrift) {
     for (const auto& dline : m_viewDrift->m_driftLines) {
@@ -907,44 +899,25 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
       } else {
         poly.SetLineColor(kRed + 1);
       }
-      int polyPts = 0;
+      std::vector<double> xpl;
+      std::vector<double> ypl;
+      // Loop over the points.
       for (const auto& point : dline.first) {
         // Project this point onto the plane.
         PlaneCoords(point[0], point[1], point[2], projMat, xMat);
         // Add this point if it is within the view
         if (xMat(0, 0) >= uMin && xMat(0, 0) <= uMax && xMat(1, 0) >= vMin &&
             xMat(1, 0) <= vMax) {
-          poly.SetPoint(polyPts, xMat(0, 0), xMat(1, 0));
-          polyPts++;
+          xpl.push_back(xMat(0, 0));
+          ypl.push_back(xMat(1, 0));
         }
-      }  // end loop over points
-      // Add the drift line to the list
-      m_driftLines.push_back(std::move(poly));
+      }
+      if (!xpl.empty()) {
+        poly.DrawPolyLine(xpl.size(), xpl.data(), ypl.data(), "same");
+      }
     }  // end loop over drift lines
   }    // end if(m_viewDrift != 0)
 
-  // Call the ROOT draw methods to plot the elements
-  auto canvas = GetCanvas();
-  canvas->cd();
-  // Draw default axes by using a blank 2D histogram.
-  if (!m_xaxis && !m_yaxis && m_drawAxes) {
-    m_axes->GetXaxis()->SetLimits(uMin, uMax);
-    m_axes->GetYaxis()->SetLimits(vMin, vMax);
-    m_axes->Draw();
-  }
-  // Draw custom axes.
-  if (m_xaxis && m_drawAxes) m_xaxis->Draw("");
-  if (m_yaxis && m_drawAxes) m_yaxis->Draw("");
-  // Draw the mesh on the canvas
-  for (auto& m : m_mesh) {
-    if (m_plotMeshBorders || !m_fillMesh) m.Draw("same");
-    if (m_fillMesh) m.Draw("f:sames");
-  }
-
-  // Draw the drift lines on the view
-  for (auto& dline : m_driftLines) {
-    dline.Draw("sames");
-  }
   // Draw axes again so they are on top
   gPad->RedrawAxis("g");
 }

@@ -114,11 +114,7 @@ class ViewFEMesh : public ViewBase {
   std::unique_ptr<TH2D> m_axes;
   bool m_drawAxes = false;
 
-  // The mesh, stored as a vector of TPolyLine(3D) objects
-  std::vector<TPolyLine> m_mesh;
-  std::vector<TPolyLine> m_driftLines;
-
-// The color map
+  // The color map
 #ifndef __CINT__
   std::map<int, int> m_colorMap;
   std::map<int, int> m_colorMap_fill;
@@ -151,8 +147,6 @@ class ViewFEMesh : public ViewBase {
   bool IsInPolygon(double x, double y, std::vector<double>& px,
                    std::vector<double>& py, bool& edge) const;
 
-  // Plot method to be called by Plot() for CST cubic elements
-  // available are "xy", "yz" and "xz"
 };
 }  // namespace Garfield
 #endif
