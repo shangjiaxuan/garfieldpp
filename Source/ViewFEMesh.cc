@@ -3,6 +3,8 @@
 #include <iostream>
 #include <sstream>
 
+#include <TPolyLine.h>
+
 #include "Garfield/ComponentCST.hh"
 #include "Garfield/ComponentFieldMap.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -85,7 +87,7 @@ bool ViewFEMesh::Plot() {
     return false;
   }
 
-  if (m_viewRegionLines.empty()) {
+  if (m_viewRegionX.empty()) {
     std::cerr << m_className << "::Plot:\n"
               << "    Empty view. Make sure the viewing plane (SetPlane)\n"
               << "    intersects with the bounding box.\n";
@@ -551,8 +553,17 @@ void ViewFEMesh::DrawElements() {
     }  // end loop over drift lines
   }    // end if(m_viewDrift != 0)
 
-  if (m_drawViewRegion)
-    for (auto& m : m_viewRegionLines) m.Draw("same");
+  if (m_drawViewRegion && !m_viewRegionX.empty()) {
+    TPolyLine poly;
+    poly.SetLineColor(kSpring + 4);
+    poly.SetLineWidth(3);
+    std::vector<double> xv = m_viewRegionX;
+    std::vector<double> yv = m_viewRegionY;
+    // Close the polygon.
+    xv.push_back(m_viewRegionX[0]);
+    yv.push_back(m_viewRegionY[0]);
+    poly.DrawPolyLine(xv.size(), xv.data(), yv.data(), "same");
+  }
 
   // Draw axes again so they are on top
   gPad->RedrawAxis("g");
@@ -1012,14 +1023,9 @@ void ViewFEMesh::RemoveCrossings(std::vector<double>& x,
 
 /// Return true if the specified point is in the view region.
 bool ViewFEMesh::InView(const double x, const double y) const {
-  // Set up the view vertices.
-  int vN = m_viewRegionLines[0].GetN() - 1;
-  std::vector<double> vx(vN), vy(vN);
-  vx.assign(m_viewRegionLines[0].GetX(), m_viewRegionLines[0].GetX() + vN);
-  vy.assign(m_viewRegionLines[0].GetY(), m_viewRegionLines[0].GetY() + vN);
   // Test whether this vertex is inside the view.
   bool edge = false;
-  return IsInPolygon(x, y, vx, vy, edge);
+  return IsInPolygon(x, y, m_viewRegionX, m_viewRegionY, edge);
 }
 
 //
@@ -1204,11 +1210,12 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
   return true;
 }
 
-// Calculates m_viewRegionLines and canvas dimensions based on projection plane
+// Calculates view region and canvas dimensions based on projection plane
 // and view area
 bool ViewFEMesh::IntersectPlaneArea(void) {
   std::vector<TMatrixD> intersect_points;
-  m_viewRegionLines.clear();
+  m_viewRegionX.clear();
+  m_viewRegionY.clear();
   // Loop over box edges
   for (int x0 = 0; x0 < 2; ++x0) {
     for (int y0 = 0; y0 < 2; ++y0) {
@@ -1265,21 +1272,15 @@ bool ViewFEMesh::IntersectPlaneArea(void) {
               double cross_z = a(0, 0) * b(1, 0) - a(1, 0) * b(0, 0);
               return cross_z < 0;
             });
-  TPolyLine poly;
-  poly.SetLineColor(kSpring + 4);
-  poly.SetLineWidth(3);
-  std::size_t pn = 0;
   for (auto& p : intersect_points) {
     p += offset;
-    poly.SetPoint(pn, p(0, 0), p(1, 0));
+    m_viewRegionX.push_back(p(0, 0));
+    m_viewRegionY.push_back(p(1, 0));
     m_xMinPlot = std::min(p(0, 0), m_xMinPlot);
     m_yMinPlot = std::min(p(1, 0), m_yMinPlot);
     m_xMaxPlot = std::max(p(0, 0), m_xMaxPlot);
     m_yMaxPlot = std::max(p(1, 0), m_yMaxPlot);
-    ++pn;
   }
-  poly.SetPoint(pn, offset(0, 0), offset(1, 0));
-  m_viewRegionLines.push_back(poly);
   return true;
 }
 
@@ -1318,8 +1319,9 @@ bool ViewFEMesh::PlaneCoords(double x, double y, double z,
 // px: the x-vertices of the polygon
 // py: the y-vertices of the polygon
 // edge: a variable set to true if the point is located on the polygon edge
-bool ViewFEMesh::IsInPolygon(double x, double y, std::vector<double>& px,
-                             std::vector<double>& py, bool& edge) const {
+bool ViewFEMesh::IsInPolygon(double x, double y, 
+                             const std::vector<double>& px,
+                             const std::vector<double>& py, bool& edge) const {
   // Get the number and coordinates of the polygon vertices.
   int pN = (int)px.size();
 
@@ -1428,10 +1430,9 @@ void ViewFEMesh::ClipToView(std::vector<double>& px, std::vector<double>& py,
   cy.clear();
 
   // Set up the view vertices.
-  int vN = m_viewRegionLines[0].GetN() - 1;
-  std::vector<double> vx(vN), vy(vN);
-  vx.assign(m_viewRegionLines[0].GetX(), m_viewRegionLines[0].GetX() + vN);
-  vy.assign(m_viewRegionLines[0].GetY(), m_viewRegionLines[0].GetY() + vN);
+  const auto& vx = m_viewRegionX;
+  const auto& vy = m_viewRegionY;
+  const int vN = m_viewRegionX.size();
 
   // Do nothing if we have less than 2 points.
   if (pN < 2) return;

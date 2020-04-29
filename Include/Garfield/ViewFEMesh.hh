@@ -3,16 +3,12 @@
 
 #include <memory>
 #include <string>
-#ifndef __CINT__
 #include <map>
-#endif
 
 #include <TArrayD.h>
 #include <TGaxis.h>
 #include <TH2D.h>
 #include <TMatrixD.h>
-#include <TPolyLine.h>
-#include <TPolyLine3D.h>
 
 #include "ComponentCST.hh"
 #include "ComponentFieldMap.hh"
@@ -95,7 +91,8 @@ class ViewFEMesh : public ViewBase {
 
   // Intersection of viewing plane with plotted area in planar coordinates
   bool m_drawViewRegion = false;
-  std::vector<TPolyLine> m_viewRegionLines;
+  std::vector<double> m_viewRegionX;
+  std::vector<double> m_viewRegionY;
 
   // Viewing plane (plane normal is stored in m_proj[2])
   double m_pmat[3][3];
@@ -144,8 +141,8 @@ class ViewFEMesh : public ViewBase {
                    TMatrixD& xMat);
   void ClipToView(std::vector<double>& px, std::vector<double>& py,
                   std::vector<double>& cx, std::vector<double>& cy);
-  bool IsInPolygon(double x, double y, std::vector<double>& px,
-                   std::vector<double>& py, bool& edge) const;
+  bool IsInPolygon(double x, double y, const std::vector<double>& px,
+                   const std::vector<double>& py, bool& edge) const;
 
 };
 }  // namespace Garfield
