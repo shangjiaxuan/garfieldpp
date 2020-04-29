@@ -7,7 +7,6 @@
 
 #include <TArrayD.h>
 #include <TGaxis.h>
-#include <TH2D.h>
 #include <TMatrixD.h>
 
 #include "ComponentCST.hh"
@@ -44,8 +43,8 @@ class ViewFEMesh : public ViewBase {
   // Axes
   void SetXaxis(TGaxis* ax);
   void SetYaxis(TGaxis* ay);
-  void SetXaxisTitle(const char* xtitle);
-  void SetYaxisTitle(const char* ytitle);
+  void SetXaxisTitle(const std::string& xtitle) { m_xaxisTitle = xtitle; }
+  void SetYaxisTitle(const std::string& ytitle) { m_yaxisTitle = ytitle; }
   void EnableAxes() { m_drawAxes = true; }
   void DisableAxes() { m_drawAxes = false; }
 
@@ -108,17 +107,17 @@ class ViewFEMesh : public ViewBase {
   // Axes
   TGaxis* m_xaxis = nullptr;
   TGaxis* m_yaxis = nullptr;
-  std::unique_ptr<TH2D> m_axes;
+  std::string m_xaxisTitle = "";
+  std::string m_yaxisTitle = "";
   bool m_drawAxes = false;
 
   // The color map
-#ifndef __CINT__
   std::map<int, int> m_colorMap;
   std::map<int, int> m_colorMap_fill;
 
   // Disabled materials -> not shown in the mesh view
   std::map<int, bool> m_disabledMaterial;
-#endif
+
   // Element plotting methods
   void DrawElements();
   void DrawCST(ComponentCST* componentCST);

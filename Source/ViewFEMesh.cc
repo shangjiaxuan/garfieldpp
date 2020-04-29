@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 
+#include <TH1F.h>
 #include <TPolyLine.h>
 
 #include "Garfield/ComponentCST.hh"
@@ -17,11 +18,6 @@ namespace Garfield {
 ViewFEMesh::ViewFEMesh() : ViewBase("ViewFEMesh") {
   SetDefaultProjection();
 
-  // Create a blank histogram for the axes.
-  m_axes.reset(new TH2D());
-  m_axes->SetStats(false);
-  m_axes->GetXaxis()->SetTitle("x");
-  m_axes->GetYaxis()->SetTitle("y");
 }
 
 void ViewFEMesh::SetDefaultProjection() {
@@ -177,16 +173,6 @@ void ViewFEMesh::SetXaxis(TGaxis* ax) { m_xaxis = ax; }
 // Set the y-axis.
 void ViewFEMesh::SetYaxis(TGaxis* ay) { m_yaxis = ay; }
 
-// Set the x-axis title.
-void ViewFEMesh::SetXaxisTitle(const char* xtitle) {
-  if (m_axes) m_axes->GetXaxis()->SetTitle(xtitle);
-}
-
-// Set the y-axis title.
-void ViewFEMesh::SetYaxisTitle(const char* ytitle) {
-  if (m_axes) m_axes->GetYaxis()->SetTitle(ytitle);
-}
-
 // Create default axes
 void ViewFEMesh::CreateDefaultAxes() {
   // Create a new x and y axis.
@@ -269,21 +255,29 @@ void ViewFEMesh::DrawElements() {
   auto pad = GetCanvas();
   pad->cd();
 
-  // Draw default axes by using a blank 2D histogram.
-  if (!m_xaxis && !m_yaxis && m_drawAxes) {
-    std::string name = CreateAxisTitle(m_pmat[0]);
-    m_axes->GetXaxis()->SetTitle(name.c_str());
-    m_axes->GetXaxis()->SetLimits(m_xMinPlot, m_xMaxPlot);
-    name = CreateAxisTitle(m_pmat[1]);
-    m_axes->GetYaxis()->SetTitle(name.c_str());
-    m_axes->GetYaxis()->SetTitleOffset(1.6);
-    m_axes->GetYaxis()->SetLimits(m_yMinPlot, m_yMaxPlot);
-    m_axes->Draw();
+  if (m_drawAxes) {
+    if (!m_xaxis && !m_yaxis) {
+      // Draw default axes.
+      auto frame = pad->DrawFrame(m_xMinPlot, m_yMinPlot,
+                                  m_xMaxPlot, m_yMaxPlot);
+      if (m_xaxisTitle.empty()) {
+        const std::string name = CreateAxisTitle(m_pmat[0]);
+        frame->GetXaxis()->SetTitle(name.c_str());
+      } else { 
+        frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
+      }
+      if (m_yaxisTitle.empty()) {
+        const std::string name = CreateAxisTitle(m_pmat[1]);
+        frame->GetYaxis()->SetTitle(name.c_str());
+      } else {
+        frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
+      }
+    } else {
+      // Draw custom axes.
+      if (m_xaxis) m_xaxis->Draw();
+      if (m_yaxis) m_yaxis->Draw();
+    }
   }
-
-  // Draw custom axes.
-  if (m_xaxis && m_drawAxes) m_xaxis->Draw();
-  if (m_yaxis && m_drawAxes) m_yaxis->Draw();
 
   // Prepare the final projection matrix (the transpose of the 2D array
   // "project").
@@ -814,18 +808,32 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
 
   auto pad = GetCanvas();
   pad->cd();
-  // Draw default axes by using a blank 2D histogram.
-  if (!m_xaxis && !m_yaxis && m_drawAxes) {
-    m_axes->GetXaxis()->SetLimits(uMin, uMax);
-    m_axes->GetYaxis()->SetLimits(vMin, vMax);
-    m_axes->Draw();
-  }
-  // Draw custom axes.
-  if (m_xaxis && m_drawAxes) m_xaxis->Draw("");
-  if (m_yaxis && m_drawAxes) m_yaxis->Draw("");
 
-  std::cout << m_className << "::DrawCST:\n";
-  std::cout << "    Number of elements in the projection of the unit cell:"
+  if (m_drawAxes) {
+    if (!m_xaxis && !m_yaxis) {
+      // Draw default axes.
+      auto frame = pad->DrawFrame(uMin, vMin, uMax, vMax);
+      if (m_xaxisTitle.empty()) {
+        const std::string name = CreateAxisTitle(m_pmat[0]);
+        frame->GetXaxis()->SetTitle(name.c_str());
+      } else { 
+        frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
+      }
+      if (m_yaxisTitle.empty()) {
+        const std::string name = CreateAxisTitle(m_pmat[1]);
+        frame->GetYaxis()->SetTitle(name.c_str());
+      } else {
+        frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
+      }
+    } else {
+      // Draw custom axes.
+      if (m_xaxis) m_xaxis->Draw();
+      if (m_yaxis) m_yaxis->Draw();
+    }
+  }
+
+  std::cout << m_className << "::DrawCST:\n"
+            << "    Number of elements in the projection of the unit cell:"
             << elements.size() << std::endl;
   std::vector<PolygonInfo>::iterator it;
   std::vector<PolygonInfo>::iterator itend = elements.end();

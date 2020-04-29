@@ -177,7 +177,7 @@ void ViewDrift::Plot2d(const bool axis) {
   }
   if (axis) {
     auto frame = pad->DrawFrame(m_xMinPlot, m_yMinPlot, 
-                                   m_xMaxPlot, m_yMaxPlot);
+                                m_xMaxPlot, m_yMaxPlot);
     frame->GetXaxis()->SetTitle(LabelX().c_str());
     frame->GetYaxis()->SetTitle(LabelY().c_str());
   } else if (!rangeSet) {
