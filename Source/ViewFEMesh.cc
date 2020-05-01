@@ -164,6 +164,7 @@ void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
   m_pmat[1][1] = m_pmat[2][2] * m_pmat[0][0] - m_pmat[2][0] * m_pmat[0][2];
   m_pmat[1][2] = m_pmat[2][0] * m_pmat[0][1] - m_pmat[2][1] * m_pmat[0][0];
 
+  ViewBase::SetPlane(fx, fy, fz, x0, y0, z0, hx, hy, hz); 
   IntersectPlaneArea();
 }
 
@@ -426,25 +427,26 @@ void ViewFEMesh::DrawElements() {
 
           // Calculate the planar coordinates for those edges that are in the
           // plane.
+          double xp = 0., yp = 0.;
           if (in1) {
-            PlaneCoords(vx1, vy1, vz1, projMat, xMat);
-            vX.push_back(xMat(0, 0));
-            vY.push_back(xMat(1, 0));
+            ToPlane(vx1, vy1, vz1, xp, yp);
+            vX.push_back(xp);
+            vY.push_back(yp);
           }
           if (in2) {
-            PlaneCoords(vx2, vy2, vz2, projMat, xMat);
-            vX.push_back(xMat(0, 0));
-            vY.push_back(xMat(1, 0));
+            ToPlane(vx2, vy2, vz2, xp, yp);
+            vX.push_back(xp);
+            vY.push_back(yp);
           }
           if (in3) {
-            PlaneCoords(vx3, vy3, vz3, projMat, xMat);
-            vX.push_back(xMat(0, 0));
-            vY.push_back(xMat(1, 0));
+            ToPlane(vx3, vy3, vz3, xp, yp);
+            vX.push_back(xp);
+            vY.push_back(yp);
           }
           if (in4) {
-            PlaneCoords(vx4, vy4, vz4, projMat, xMat);
-            vX.push_back(xMat(0, 0));
-            vY.push_back(xMat(1, 0));
+            ToPlane(vx4, vy4, vz4, xp, yp);
+            vX.push_back(xp);
+            vY.push_back(yp);
           }
 
           // Cut the sides that are not in the plane.
@@ -534,11 +536,12 @@ void ViewFEMesh::DrawElements() {
       // Loop over the points.
       for (const auto& point : dline.first) {
         // Project this point onto the plane.
-        PlaneCoords(point[0], point[1], point[2], projMat, xMat);
+        float xp = 0., yp = 0.;
+        ToPlane(point[0], point[1], point[2], xp, yp);
         // Add this point if it is within the view.
-        if (InView(xMat(0, 0), xMat(1, 0))) {
-          xpl.push_back(xMat(0, 0));
-          ypl.push_back(xMat(1, 0));
+        if (InView(xp, yp)) {
+          xpl.push_back(xp);
+          ypl.push_back(yp);
         }
       }
       if (!xpl.empty()) {
@@ -923,12 +926,12 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
       // Loop over the points.
       for (const auto& point : dline.first) {
         // Project this point onto the plane.
-        PlaneCoords(point[0], point[1], point[2], projMat, xMat);
+        float xp = 0., yp = 0.;
+        ToPlane(point[0], point[1], point[2], xp, yp);
         // Add this point if it is within the view
-        if (xMat(0, 0) >= uMin && xMat(0, 0) <= uMax && xMat(1, 0) >= vMin &&
-            xMat(1, 0) <= vMax) {
-          xpl.push_back(xMat(0, 0));
-          ypl.push_back(xMat(1, 0));
+        if (xp >= uMin && xp <= uMax && yp >= vMin && yp <= vMax) {
+          xpl.push_back(xp);
+          ypl.push_back(yp);
         }
       }
       if (!xpl.empty()) {
@@ -1175,14 +1178,14 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
   // Set up the matrix for cutting edges not in the plane
   TArrayD dataCut(9);
   TMatrixD cutMat(3, 3);
-  dataCut[0] = m_pmat[0][0];
-  dataCut[1] = m_pmat[1][0];
+  dataCut[0] = m_proj[0][0];
+  dataCut[1] = m_proj[1][0];
   dataCut[2] = x1 - x2;
-  dataCut[3] = m_pmat[0][1];
-  dataCut[4] = m_pmat[1][1];
+  dataCut[3] = m_proj[0][1];
+  dataCut[4] = m_proj[1][1];
   dataCut[5] = y1 - y2;
-  dataCut[6] = m_pmat[0][2];
-  dataCut[7] = m_pmat[1][2];
+  dataCut[6] = m_proj[0][2];
+  dataCut[7] = m_proj[1][2];
   dataCut[8] = z1 - z2;
   cutMat.SetMatrixArray(dataCut.GetArray());
 
@@ -1201,9 +1204,9 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
   // Set up a coordinate vector (RHS of equation)
   TArrayD dataCoords(3);
   TMatrixD coordMat(3, 1);
-  dataCoords[0] = x1 - m_dist * m_pmat[2][0];
-  dataCoords[1] = y1 - m_dist * m_pmat[2][1];
-  dataCoords[2] = z1 - m_dist * m_pmat[2][2];
+  dataCoords[0] = x1 - m_plane[3] * m_plane[0];
+  dataCoords[1] = y1 - m_plane[3] * m_plane[1];
+  dataCoords[2] = z1 - m_plane[3] * m_plane[2];
   coordMat.SetMatrixArray(dataCoords.GetArray());
 
   // Invert the cut matrix and multiply to get the solution

@@ -8,6 +8,7 @@
 #include "Garfield/Sensor.hh"
 #include "Garfield/ComponentBase.hh"
 #include "Garfield/Plotting.hh"
+#include "Garfield/GarfieldConstants.hh"
 #include "Garfield/ViewBase.hh"
 
 namespace {
@@ -169,6 +170,79 @@ void ViewBase::SetPlane(const double fx, const double fy, const double fz,
   m_plane[3] = fx * x0 + fy * y0 + fz * z0;
 
   UpdateProjectionMatrix();
+}
+
+void ViewBase::SetPlane(const double fx, const double fy, const double fz,
+                        const double x0, const double y0, const double z0,
+                        const double hx, const double hy, const double hz) {
+
+  const double fnorm = sqrt(fx * fx + fy * fy + fz * fz);
+  if (fnorm < Small) {
+    std::cout << m_className << "::SetPlane:\n"
+              << "    Normal vector has zero norm. No new projection set.\n";
+    return;
+  }
+  // Normalise the vector.
+  const double wx = fx / fnorm;
+  const double wy = fy / fnorm;
+  const double wz = fz / fnorm;
+  // Store the plane description.
+  m_plane[0] = wx;
+  m_plane[1] = wy;
+  m_plane[2] = wz;
+  m_plane[3] = wx * x0 + wy * y0 + wz * z0;
+
+  double d = hx * wx + hy * wy + hz * wz;
+  double ux = hx - d * wx;
+  double uy = hy - d * wy;
+  double uz = hz - d * wz;
+  double unorm = std::sqrt(ux * ux + uy * uy + uz * uz);
+  if (unorm < 1.e-10) {  
+    // Wrong in-plane x hint (close to norm).
+    if (fy * fy + fz * fz > 0) {
+      // Taking global x as in-plane x hint.
+      ux = 1;
+      uy = 0;
+      uz = 0;  
+    } else {
+      // Taking global y as in-plane x hint.
+      ux = 0;
+      uy = 1;
+      uz = 0;  
+    }
+    d = ux * wx + uy * wy + uz * wz;
+    ux -= d * wx;
+    uy -= d * wy;
+    uz -= d * wz;
+    unorm = std::sqrt(ux * ux + uy * uy + uz * uz);
+  }
+  ux /= unorm;
+  uy /= unorm;
+  uz /= unorm;
+
+  m_prmat[0][0] = ux;
+  m_prmat[1][0] = uy;
+  m_prmat[2][0] = uz;
+  // In-plane y = cross product [z,x]
+  m_prmat[0][1] = wy * uz - wz * uy;
+  m_prmat[1][1] = wz * ux - wx * uz;
+  m_prmat[2][1] = wx * uy - wy * ux;
+  m_prmat[0][2] = wx;
+  m_prmat[1][2] = wy;
+  m_prmat[2][2] = wz;
+
+  for (unsigned int i = 0; i < 3; ++i) {
+    m_proj[0][i] = m_prmat[i][0];
+    m_proj[1][i] = m_prmat[i][1];
+  }
+  m_proj[2][0] = x0;
+  m_proj[2][1] = y0;
+  m_proj[2][2] = z0;
+  if (!Invert(m_prmat)) {
+    std::cerr << m_className << "::SetPlane:\n"
+              << "    Inversion failed; reset to default.\n";
+    SetPlaneXY();
+  }
 }
 
 void ViewBase::Rotate(const double theta) {

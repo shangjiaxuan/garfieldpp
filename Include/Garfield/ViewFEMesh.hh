@@ -28,14 +28,12 @@ class ViewFEMesh : public ViewBase {
   /// Set the component from which to retrieve the mesh and field.
   void SetComponent(ComponentFieldMap* comp);
 
-  /// Reset the projection plane.
-  void SetDefaultProjection();
   /// Set the projection plane.
   void SetPlane(const double fx, const double fy, const double fz, 
                 const double x0, const double y0, const double z0) override;
   /// Set the projection plane specifying hint for in-plane x axis.
   void SetPlane(double fx, double fy, double fz, double x0, double y0,
-                double z0, double hx, double hy, double hz);
+                double z0, double hx, double hy, double hz) override;
 
   void SetArea(const double xmin, const double ymin, const double zmin,
                const double xmax, const double ymax, const double zmax) override;
