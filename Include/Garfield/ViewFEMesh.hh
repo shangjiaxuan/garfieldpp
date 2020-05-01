@@ -26,17 +26,13 @@ class ViewFEMesh : public ViewBase {
   ~ViewFEMesh() = default;
 
   /// Set the component from which to retrieve the mesh and field.
-  void SetComponent(ComponentFieldMap* comp);
+  void SetComponent(ComponentFieldMap* cmp);
 
-  /// Set the projection plane.
   void SetPlane(const double fx, const double fy, const double fz, 
                 const double x0, const double y0, const double z0) override;
-  /// Set the projection plane specifying hint for in-plane x axis.
-  void SetPlane(double fx, double fy, double fz, double x0, double y0,
-                double z0, double hx, double hy, double hz) override;
-
-  void SetArea(const double xmin, const double ymin, const double zmin,
-               const double xmax, const double ymax, const double zmax) override;
+  void SetPlane(const double fx, const double fy, const double fz, 
+                const double x0, const double y0, const double z0,
+                const double hx, const double hy, const double hz) override;
 
   // Axes
   void SetXaxis(TGaxis* ax);
@@ -81,8 +77,6 @@ class ViewFEMesh : public ViewBase {
   }
 
  private:
-  std::string m_label = "Mesh";
-
   // Options
   bool m_fillMesh = false;
 
@@ -116,13 +110,16 @@ class ViewFEMesh : public ViewBase {
   void DrawElements();
   void DrawCST(ComponentCST* componentCST);
 
+  bool GetPlotLimits();
+
   /// Return true if the specified point is in the view region.
   bool InView(const double x, const double y) const;
 
   bool LinesCrossed(double x1, double y1, double x2, double y2, double u1,
                     double v1, double u2, double v2, double& xc,
                     double& yc) const;
-  bool IntersectPlaneArea();
+  bool IntersectPlaneArea(double& xmin, double& ymin,
+                          double& xmax, double& ymax);
   bool OnLine(double x1, double y1, double x2, double y2, double u,
               double v) const;
   void RemoveCrossings(std::vector<double>& x, std::vector<double>& y);

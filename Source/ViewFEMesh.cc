@@ -17,31 +17,13 @@ namespace Garfield {
 
 ViewFEMesh::ViewFEMesh() : ViewBase("ViewFEMesh") {}
 
-void ViewFEMesh::SetComponent(ComponentFieldMap* comp) {
-  if (!comp) {
+void ViewFEMesh::SetComponent(ComponentFieldMap* cmp) {
+  if (!cmp) {
     std::cerr << m_className << "::SetComponent: Null pointer.\n";
     return;
   }
 
-  m_component = comp;
-}
-
-void ViewFEMesh::SetArea(double xmin, double ymin, double zmin, double xmax,
-                         double ymax, double zmax) {
-  // Check range, assign if non-null
-  if (xmin == xmax || ymin == ymax || zmin == zmax) {
-    std::cerr << m_className << "::SetArea: Null area range not permitted.\n";
-    return;
-  }
-  m_xMinBox = std::min(xmin, xmax);
-  m_yMinBox = std::min(ymin, ymax);
-  m_zMinBox = std::min(zmin, zmax);
-  m_xMaxBox = std::max(xmin, xmax);
-  m_yMaxBox = std::max(ymin, ymax);
-  m_zMaxBox = std::max(zmin, zmax);
-
-  m_userBox = true;
-  IntersectPlaneArea();
+  m_component = cmp;
 }
 
 // The plotting functionality here is ported from Garfield
@@ -58,24 +40,13 @@ bool ViewFEMesh::Plot() {
     return false;
   }
 
-  // Get the bounding box.
-  if (!m_userBox) {
-    std::cerr << m_className << "::Plot:\n"
-              << "    Bounding box cannot be determined. Call SetArea first.\n";
-    return false;
-  }
+  if (!GetPlotLimits()) return false;
 
-  if (m_viewRegionX.empty()) {
-    std::cerr << m_className << "::Plot:\n"
-              << "    Empty view. Make sure the viewing plane (SetPlane)\n"
-              << "    intersects with the bounding box.\n";
-    return false;
+  auto pad = GetCanvas();
+  pad->cd();
+  if (!RangeSet(pad)) {
+    SetRange(pad, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
   }
-
-  // Set up a canvas if one does not already exist.
-  auto canvas = GetCanvas();
-  canvas->cd();
-  canvas->Range(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
 
   // Plot the elements
   ComponentCST* componentCST = dynamic_cast<ComponentCST*>(m_component);
@@ -87,6 +58,41 @@ bool ViewFEMesh::Plot() {
   }
   gPad->Update();
 
+  return true;
+}
+
+bool ViewFEMesh::GetPlotLimits() {
+
+  if (!m_userBox) {
+    // If not set by the user, get the bounding box of the component.
+    if (!m_component) {
+      if (!m_userPlotLimits) return false;
+    } else {
+      if (!m_component->GetBoundingBox(m_xMinBox, m_yMinBox, m_zMinBox,
+                                       m_xMaxBox, m_yMaxBox, m_zMaxBox) &&
+          !m_userPlotLimits) {
+        std::cerr << m_className << "::GetPlotLimits:\n"
+                  << "    Bounding box of the component is not defined.\n"
+                  << "    Please set the limits explicitly (SetArea).\n";
+        return false;
+      }
+    }
+  }
+  // Determine the intersection of the viewing plane and the box.
+  double xmin = 0., xmax = 0., ymin = 0., ymax = 0.;
+  IntersectPlaneArea(xmin, ymin, xmax, ymax);
+  if (!m_userPlotLimits) {
+    if (m_viewRegionX.empty()) {
+      std::cerr << m_className << "::GetPlotLimits: Empty view.\n"
+                << "    Make sure the viewing plane (SetPlane)\n"
+                << "    intersects with the bounding box.\n";
+      return false;
+    }
+    m_xMinPlot = xmin;
+    m_xMaxPlot = xmax;
+    m_yMinPlot = ymin;
+    m_yMaxPlot = ymax;
+  }
   return true;
 }
 
@@ -102,8 +108,7 @@ void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
 void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
                           const double x0, const double y0, const double z0,
                           const double hx, const double hy, const double hz) {
-  ViewBase::SetPlane(fx, fy, fz, x0, y0, z0, hx, hy, hz); 
-  IntersectPlaneArea();
+  ViewBase::SetPlane(fx, fy, fz, x0, y0, z0, hx, hy, hz);
 }
 
 // Set the x-axis.
@@ -115,6 +120,11 @@ void ViewFEMesh::SetYaxis(TGaxis* ay) { m_yaxis = ay; }
 // Create default axes
 void ViewFEMesh::CreateDefaultAxes() {
   // Create a new x and y axis.
+  if (!GetPlotLimits()) {
+    std::cerr << m_className << "::CreateDefaultAxes:\n"
+              << "    Cannot determine the axis limits.\n";
+    return;
+  } 
   const double dx = std::abs(m_xMaxPlot - m_xMinPlot) * 0.1;
   const double dy = std::abs(m_yMaxPlot - m_yMinPlot) * 0.1;
   const double x0 = m_xMinPlot + dx;
@@ -188,7 +198,7 @@ void ViewFEMesh::DrawElements() {
   const double fz = m_plane[2];
   const double dist = m_plane[3];
 
-  // Construct two empty single-column matrices for use as coordinate vectors.
+  // Construct single-column matrix for use as coordinate vector.
   TMatrixD xMat(3, 1);
 
   // Determine the number of periods present in the cell.
@@ -206,7 +216,7 @@ void ViewFEMesh::DrawElements() {
     if (m_component->materials[mat].driftmedium && !(m_plotMeshBorders)) {
       continue;
     }
-    // Do not create Polygons for disabled materials
+    // Do not create polygons for disabled materials.
     if (m_disabledMaterial[mat]) continue;
     // -- Tetrahedral elements
 
@@ -217,18 +227,10 @@ void ViewFEMesh::DrawElements() {
     double vx4, vy4, vz4;
 
     // Get the color for this element (default to 1).
-    int colorID = m_colorMap.count(mat);
-    if (colorID != 0)
-      colorID = m_colorMap[mat];
-    else
-      colorID = 1;
-
-    // Get the fill color for this element (default colorID).
-    int colorID_fill = m_colorMap_fill.count(mat);
-    if (colorID_fill != 0)
-      colorID_fill = m_colorMap_fill[mat];
-    else
-      colorID_fill = colorID;
+    const short col = m_colorMap.count(mat) != 0 ? m_colorMap[mat] : 1;
+    // Get the fill color for this element.
+    short colFill = col;
+    if (m_colorMap_fill.count(mat) != 0) colFill = m_colorMap_fill[mat];
 
     const auto& n0 = m_component->nodes[element.emap[0]];
     const auto& n1 = m_component->nodes[element.emap[1]];
@@ -294,7 +296,7 @@ void ViewFEMesh::DrawElements() {
           bool in3 = (std::abs(fx * vx3 + fy * vy3 + fz * vz3 - dist) < tol);
           bool in4 = (std::abs(fx * vx4 + fy * vy4 + fz * vz4 - dist) < tol);
 
-          // Calculate the planar coordinates for those edges that are in the
+          // Calculate the planar coordinates for the points that are in the
           // plane.
           double xp = 0., yp = 0.;
           if (in1) {
@@ -376,8 +378,8 @@ void ViewFEMesh::DrawElements() {
 
           // Create the TPolyLine.
           TPolyLine poly;
-          poly.SetLineColor(colorID);
-          poly.SetFillColor(colorID_fill);
+          poly.SetLineColor(col);
+          poly.SetFillColor(colFill);
           poly.SetLineWidth(3);
           if (m_plotMeshBorders || !m_fillMesh) {
             poly.DrawPolyLine(cX.size(), cX.data(), cY.data(), "same");
@@ -463,7 +465,7 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   const bool perZ =
       m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
 
-  // Construct two empty single-column matrices for use as coordinate vectors
+  // Construct single-column matrix for use as coordinate vector.
   TMatrixD xMat(3, 1);
 
   // Determine the number of periods present in the cell.
@@ -871,6 +873,10 @@ void ViewFEMesh::RemoveCrossings(std::vector<double>& x,
 /// Return true if the specified point is in the view region.
 bool ViewFEMesh::InView(const double x, const double y) const {
   // Test whether this vertex is inside the view.
+  if (m_userPlotLimits) {
+    return (x >= m_xMinPlot && x <= m_xMaxPlot && 
+            y >= m_yMinPlot && y <= m_yMaxPlot);
+  }
   bool edge = false;
   return IsInPolygon(x, y, m_viewRegionX, m_viewRegionY, edge);
 }
@@ -1059,33 +1065,34 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
 
 // Calculates view region and canvas dimensions based on projection plane
 // and view area
-bool ViewFEMesh::IntersectPlaneArea() {
+bool ViewFEMesh::IntersectPlaneArea(double& xmin, double& ymin,
+                                    double& xmax, double& ymax) {
   std::vector<TMatrixD> intersect_points;
   m_viewRegionX.clear();
   m_viewRegionY.clear();
   // Loop over box edges
-  for (int x0 = 0; x0 < 2; ++x0) {
-    for (int y0 = 0; y0 < 2; ++y0) {
-      for (int z0 = 0; z0 < 2; ++z0) {
-        for (int x1 = x0; x1 < 2; ++x1) {
-          for (int y1 = y0; y1 < 2; ++y1) {
-            for (int z1 = z0; z1 < 2; ++z1) {
-              if (x1 - x0 + y1 - y0 + z1 - z0 != 1) continue;
-              double X0 = (x0 ? m_xMinBox : m_xMaxBox);
-              double Y0 = (y0 ? m_yMinBox : m_yMaxBox);
-              double Z0 = (z0 ? m_zMinBox : m_zMaxBox);
-              double X1 = (x1 ? m_xMinBox : m_xMaxBox);
-              double Y1 = (y1 ? m_yMinBox : m_yMaxBox);
-              double Z1 = (z1 ? m_zMinBox : m_zMaxBox);
+  for (int i0 = 0; i0 < 2; ++i0) {
+    for (int j0 = 0; j0 < 2; ++j0) {
+      for (int k0 = 0; k0 < 2; ++k0) {
+        for (int i1 = i0; i1 < 2; ++i1) {
+          for (int j1 = j0; j1 < 2; ++j1) {
+            for (int k1 = k0; k1 < 2; ++k1) {
+              if (i1 - i0 + j1 - j0 + k1 - k0 != 1) continue;
+              const double x0 = i0 ? m_xMinBox : m_xMaxBox;
+              const double y0 = j0 ? m_yMinBox : m_yMaxBox;
+              const double z0 = k0 ? m_zMinBox : m_zMaxBox;
+              const double x1 = i1 ? m_xMinBox : m_xMaxBox;
+              const double y1 = j1 ? m_yMinBox : m_yMaxBox;
+              const double z1 = k1 ? m_zMinBox : m_zMaxBox;
               TMatrixD xMat(3, 1);
-              if (!PlaneCut(X0, Y0, Z0, X1, Y1, Z1, xMat)) continue;
+              if (!PlaneCut(x0, y0, z0, x1, y1, z1, xMat)) continue;
               if (m_debug) {
                 std::cout << m_className << "::IntersectPlaneArea:\n"
                           << "    Intersection of plane at (" << xMat(0, 0) 
                           << ", " << xMat(1, 0) << ", " << xMat(2, 0) 
                           << ") with edge\n    (" 
-                          << X0 << ", " << Y0 << ", " << Z0 << ")-(" 
-                          << X1 << ", " << Y1 << ", " << Z1 << ")\n";
+                          << x0 << ", " << y0 << ", " << z0 << ")-(" 
+                          << x1 << ", " << y1 << ", " << z1 << ")\n";
               }
               // Do not add same points (the case when plane contains an edge)
               bool skip = false;
@@ -1105,14 +1112,14 @@ bool ViewFEMesh::IntersectPlaneArea() {
     }
   }
   if (intersect_points.size() < 3) {
-    std::cerr << m_className << "::IntersectPlaneArea:\n";
-    std::cerr << "    WARNING: Empty intersection of view plane with area.\n";
+    std::cerr << m_className << "::IntersectPlaneArea:\n"
+              << "    WARNING: Empty intersection of view plane with area.\n";
     return false;
   }
   TMatrixD offset = intersect_points[0];
-  m_xMinPlot = m_xMaxPlot = intersect_points[0](0, 0);
-  m_yMinPlot = m_yMaxPlot = intersect_points[0](1, 0);
-  // Remove crossings in resulting polyline by sorting points rotation-wise.
+  xmin = xmax = intersect_points[0](0, 0);
+  ymin = ymax = intersect_points[0](1, 0);
+  // Remove crossings by sorting points rotation-wise.
   for (auto& p : intersect_points) p -= offset;
   std::sort(intersect_points.begin(), intersect_points.end(),
             [](const TMatrixD& a, const TMatrixD& b) -> bool {
@@ -1123,10 +1130,10 @@ bool ViewFEMesh::IntersectPlaneArea() {
     p += offset;
     m_viewRegionX.push_back(p(0, 0));
     m_viewRegionY.push_back(p(1, 0));
-    m_xMinPlot = std::min(p(0, 0), m_xMinPlot);
-    m_yMinPlot = std::min(p(1, 0), m_yMinPlot);
-    m_xMaxPlot = std::max(p(0, 0), m_xMaxPlot);
-    m_yMaxPlot = std::max(p(1, 0), m_yMaxPlot);
+    xmin = std::min(p(0, 0), xmin);
+    ymin = std::min(p(1, 0), ymin);
+    xmax = std::max(p(0, 0), xmax);
+    ymax = std::max(p(1, 0), ymax);
   }
   return true;
 }
@@ -1142,7 +1149,7 @@ bool ViewFEMesh::IsInPolygon(double x, double y,
                              const std::vector<double>& px,
                              const std::vector<double>& py, bool& edge) const {
   // Get the number and coordinates of the polygon vertices.
-  int pN = (int)px.size();
+  const size_t pN = px.size();
 
   // Handle the special case of less than 2 vertices.
   if (pN < 2) return false;
@@ -1152,7 +1159,7 @@ bool ViewFEMesh::IsInPolygon(double x, double y,
   // Set the minimum and maximum coordinates of all polygon vertices.
   double px_min = px[0], py_min = py[0];
   double px_max = px[0], py_max = py[0];
-  for (int i = 0; i < pN; i++) {
+  for (size_t i = 0; i < pN; i++) {
     px_min = std::min(px_min, px[i]);
     py_min = std::min(py_min, py[i]);
     px_max = std::max(px_max, px[i]);
@@ -1194,7 +1201,7 @@ bool ViewFEMesh::IsInPolygon(double x, double y,
     // Loop over all edges, counting the number of edges crossed by a line
     // extending from (x, y) to (xinf, yinf).
     ncross = 0;
-    for (int i = 0; (done && i < pN); i++) {
+    for (size_t i = 0; (done && i < pN); i++) {
       // Determine whether the point lies on the edge.
       if (OnLine(px[i % pN], py[i % pN], px[(i + 1) % pN], py[(i + 1) % pN], x,
                  y)) {
