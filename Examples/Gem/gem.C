@@ -132,8 +132,6 @@ int main(int argc, char * argv[]) {
       // Set the color of the kapton.
       meshView->SetColor(2, kYellow + 3);
       meshView->EnableAxes();
-      meshView->SetXaxisTitle("x [cm]");
-      meshView->SetYaxisTitle("z [cm]");
       meshView->SetViewDrift(&driftView);
       meshView->Plot();
     } else {
