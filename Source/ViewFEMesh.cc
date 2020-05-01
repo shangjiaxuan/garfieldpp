@@ -278,10 +278,10 @@ void ViewFEMesh::DrawElements() {
   }
 
   // Get the plane information.
-  double fx = m_pmat[2][0];
-  double fy = m_pmat[2][1];
-  double fz = m_pmat[2][2];
-  double dist = m_dist;
+  const double fx = m_plane[0];
+  const double fy = m_plane[1];
+  const double fz = m_plane[2];
+  const double dist = m_plane[3];
 
   // Construct two empty single-column matrices for use as coordinate vectors.
   TMatrixD xMat(3, 1);
@@ -612,20 +612,23 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   unsigned int n_x, n_y, n_z;
   componentCST->GetNumberOfMeshLines(n_x, n_y, n_z);
   double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
+  const double fx = m_plane[0];
+  const double fy = m_plane[1];
+  const double fz = m_plane[2];
   // xy view
-  if (m_pmat[2][0] == 0 && m_pmat[2][1] == 0 && m_pmat[2][2] == 1) {
+  if (fx == 0 && fy == 0 && fz == 1) {
     std::cout << m_className << "::DrawCST: Creating x-y mesh view.\n";
     ViewFEMesh::SetXaxisTitle("x [cm]");
     ViewFEMesh::SetYaxisTitle("y [cm]");
     // calculate the z position
     unsigned int i, j, z;
-    if (!componentCST->Coordinate2Index(0, 0, m_dist * m_pmat[2][2], i, j, z)) {
+    const double z0 = m_plane[3] * fz;
+    if (!componentCST->Coordinate2Index(0, 0, z0, i, j, z)) {
       std::cerr << "    Could not determine the position of the plane in "
                 << "z direction.\n";
       return;
     }
-    std::cout << "    The plane position in z direction is: "
-              << m_dist * m_pmat[2][2] << "\n";
+    std::cout << "    The plane position in z direction is: " << z0 << "\n";
     nMinU = nMinX;
     nMaxU = nMaxX;
     nMinV = nMinY;
@@ -663,19 +666,19 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
       }
     }
     // xz-view
-  } else if (m_pmat[2][0] == 0 && m_pmat[2][1] == -1 && m_pmat[2][2] == 0) {
+  } else if (fx == 0 && fy == -1 && fz == 0) {
     std::cout << m_className << "::DrawCST: Creating x-z mesh view.\n";
     ViewFEMesh::SetXaxisTitle("x [cm]");
     ViewFEMesh::SetYaxisTitle("z [cm]");
     // calculate the y position
     unsigned int i = 0, j = 0, y = 0;
-    if (!componentCST->Coordinate2Index(0, m_dist * m_pmat[2][1], 0, i, y, j)) {
+    const double y0 = m_plane[3] * fy;
+    if (!componentCST->Coordinate2Index(0, y0, 0, i, y, j)) {
       std::cerr << "    Could not determine the position of the plane in "
                 << "y direction.\n";
       return;
     }
-    std::cout << "    The plane position in y direction is: "
-              << m_dist * m_pmat[2][1] << "\n";
+    std::cout << "    The plane position in y direction is: " << y0 << "\n";
 
     nMinU = nMinX;
     nMaxU = nMaxX;
@@ -715,20 +718,19 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     }
 
     // yz-view
-  } else if (m_pmat[2][0] == -1 && m_pmat[2][1] == 0 && m_pmat[2][2] == 0) {
+  } else if (fx == -1 && fy == 0 && fz == 0) {
     std::cout << m_className << "::DrawCST: Creating z-y mesh view.\n";
     ViewFEMesh::SetXaxisTitle("z [cm]");
     ViewFEMesh::SetYaxisTitle("y [cm]");
     // calculate the x position
     unsigned int i, j, x;
-    if (!componentCST->Coordinate2Index(m_dist * m_pmat[2][0], 0, 0, x, i,
-                                        j)) {
+    const double x0 = m_plane[3] * fx;
+    if (!componentCST->Coordinate2Index(x0, 0, 0, x, i, j)) {
       std::cerr << "    Could not determine the position of the plane in "
                 << "x direction.\n";
       return;
     }
-    std::cout << "    The plane position in x direction is: "
-              << m_dist * m_pmat[2][0] << "\n";
+    std::cout << "    The plane position in x direction is: " << x0 << "\n";
     nMinU = nMinZ;
     nMaxU = nMaxZ;
     nMinV = nMinY;
@@ -1264,24 +1266,6 @@ bool ViewFEMesh::PlaneVector(double& x, double& y, double& z) const {
   x = x - dist * m_pmat[2][0];
   y = y - dist * m_pmat[2][1];
   z = z - dist * m_pmat[2][2];
-  return true;
-}
-
-// Ported from Garfield: calculates the planar coordinates
-// x,y,z: original world coordinates
-// projMat: the projection matrix
-// xMat: the resulting planar coordinates in single-column (vector) form
-bool ViewFEMesh::PlaneCoords(double x, double y, double z,
-                             const TMatrixD& projMat, TMatrixD& xMat) {
-  // Set up the coordinate vector
-  TArrayD dataCoords(3);
-  TMatrixD coordMat(3, 1);
-  dataCoords[0] = x;
-  dataCoords[1] = y;
-  dataCoords[2] = z;
-  coordMat.SetMatrixArray(dataCoords.GetArray());
-  xMat = projMat * coordMat;
-
   return true;
 }
 

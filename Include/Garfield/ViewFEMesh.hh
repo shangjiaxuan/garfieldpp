@@ -134,8 +134,6 @@ class ViewFEMesh : public ViewBase {
   void RemoveCrossings(std::vector<double>& x, std::vector<double>& y);
   bool PlaneCut(double x1, double y1, double z1, double x2, double y2,
                 double z2, TMatrixD& xMat);
-  bool PlaneCoords(double x, double y, double z, const TMatrixD& projMat,
-                   TMatrixD& xMat);
   void ClipToView(std::vector<double>& px, std::vector<double>& py,
                   std::vector<double>& cx, std::vector<double>& cy);
   bool IsInPolygon(double x, double y, const std::vector<double>& px,
