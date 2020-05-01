@@ -28,6 +28,7 @@ class ViewFEMesh : public ViewBase {
   /// Set the component from which to retrieve the mesh and field.
   void SetComponent(ComponentFieldMap* comp);
 
+  void SetDefaultProjection();
   /// Set the projection plane.
   void SetPlane(const double fx, const double fy, const double fz, 
                 const double x0, const double y0, const double z0) override;
@@ -126,7 +127,6 @@ class ViewFEMesh : public ViewBase {
   bool LinesCrossed(double x1, double y1, double x2, double y2, double u1,
                     double v1, double u2, double v2, double& xc,
                     double& yc) const;
-  std::string CreateAxisTitle(const double* norm) const;
   bool IntersectPlaneArea(void);
   bool PlaneVector(double& x, double& y, double& z) const;
   bool OnLine(double x1, double y1, double x2, double y2, double u,

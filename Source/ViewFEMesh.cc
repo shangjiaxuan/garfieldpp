@@ -192,43 +192,9 @@ void ViewFEMesh::CreateDefaultAxes() {
 
   // Titles
   m_xaxis->SetTitleSize(0.03);
-  std::string name = CreateAxisTitle(m_pmat[0]);
-  m_xaxis->SetTitle(name.c_str());
+  m_xaxis->SetTitle(LabelX().c_str());
   m_yaxis->SetTitleSize(0.03);
-  name = CreateAxisTitle(m_pmat[1]);
-  m_yaxis->SetTitle(name.c_str());
-}
-
-std::string ViewFEMesh::CreateAxisTitle(const double* norm) const {
-  std::string name;
-  for (int i = 0; i < 3; ++i) {
-    std::stringstream num;
-    num << std::setprecision(6);
-    double value = std::abs(norm[i]);
-    if (value > 1.0e-10) num << value;
-    std::string temp = num.str();
-    if (temp.empty()) continue;
-    if (norm[i] > 0) {
-      name += (name.empty() ? "" : " + ");
-    } else {
-      name += (name.empty() ? "#minus" : " #minus ");
-    } 
-    // No need to write "1.00000*y [cm], use "y [cm]"
-    name += (temp == "1" ? "" : temp + " ");  
-    switch (i) {
-      case 0: 
-        name += "x";
-        break;
-      case 1: 
-        name += "y";
-        break;
-      case 2: 
-        name += "z";
-        break;
-    }
-  }
-  name += " [cm]";
-  return name;
+  m_yaxis->SetTitle(LabelY().c_str());
 }
 
 // Use ROOT plotting functions to draw the mesh elements on the canvas.
@@ -262,14 +228,12 @@ void ViewFEMesh::DrawElements() {
       auto frame = pad->DrawFrame(m_xMinPlot, m_yMinPlot,
                                   m_xMaxPlot, m_yMaxPlot);
       if (m_xaxisTitle.empty()) {
-        const std::string name = CreateAxisTitle(m_pmat[0]);
-        frame->GetXaxis()->SetTitle(name.c_str());
+        frame->GetXaxis()->SetTitle(LabelX().c_str());
       } else { 
         frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
       }
       if (m_yaxisTitle.empty()) {
-        const std::string name = CreateAxisTitle(m_pmat[1]);
-        frame->GetYaxis()->SetTitle(name.c_str());
+        frame->GetYaxis()->SetTitle(LabelY().c_str());
       } else {
         frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
       }
@@ -817,14 +781,12 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
       // Draw default axes.
       auto frame = pad->DrawFrame(uMin, vMin, uMax, vMax);
       if (m_xaxisTitle.empty()) {
-        const std::string name = CreateAxisTitle(m_pmat[0]);
-        frame->GetXaxis()->SetTitle(name.c_str());
+        frame->GetXaxis()->SetTitle(LabelX().c_str());
       } else { 
         frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
       }
       if (m_yaxisTitle.empty()) {
-        const std::string name = CreateAxisTitle(m_pmat[1]);
-        frame->GetYaxis()->SetTitle(name.c_str());
+        frame->GetYaxis()->SetTitle(LabelY().c_str());
       } else {
         frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
       }
