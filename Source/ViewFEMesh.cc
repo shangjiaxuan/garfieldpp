@@ -5,6 +5,7 @@
 
 #include <TH1F.h>
 #include <TPolyLine.h>
+#include <TGraph.h>
 
 #include "Garfield/ComponentCST.hh"
 #include "Garfield/ComponentFieldMap.hh"
@@ -213,7 +214,7 @@ void ViewFEMesh::DrawElements() {
   for (const auto& element : m_component->elements) {
     const auto mat = element.matmap;
     // Do not plot the drift medium.
-    if (m_component->materials[mat].driftmedium && !(m_plotMeshBorders)) {
+    if (m_component->materials[mat].driftmedium && !m_plotMeshBorders) {
       continue;
     }
     // Do not create polygons for disabled materials.
@@ -375,35 +376,36 @@ void ViewFEMesh::DrawElements() {
 
           // Again eliminate crossings of the polygon lines.
           RemoveCrossings(cX, cY);
-
-          // Create the TPolyLine.
-          TPolyLine poly;
-          poly.SetLineColor(col);
-          poly.SetFillColor(colFill);
-          poly.SetLineWidth(3);
-          if (m_plotMeshBorders || !m_fillMesh) {
-            poly.DrawPolyLine(cX.size(), cX.data(), cY.data(), "same");
-          }
-          if (m_fillMesh) {
-            poly.DrawPolyLine(cX.size(), cX.data(), cY.data(), "f:same");
-          }
+  
+          // Draw the polygon.
+          std::vector<float> xgr(cX.begin(), cX.end());
+          std::vector<float> ygr(cY.begin(), cY.end());
+          TGraph gr;
+          gr.SetLineColor(col);
+          gr.SetFillColor(colFill);
+          gr.SetLineWidth(3);
+          std::string opt = "";
+          if (m_plotMeshBorders || !m_fillMesh) opt += "l";
+          if (m_fillMesh) opt += "f";
+          opt += "same";
+          gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), opt.c_str());
         }  // end z-periodicity loop
       }    // end y-periodicity loop
     }      // end x-periodicity loop
   }        // end loop over elements
 
-  // If we have an associated ViewDrift, plot projections of the drift lines.
+  // If we have an associated ViewDrift object, plot the drift lines.
   if (m_viewDrift) {
+    // Plot a 2D projection of the drift line.
     for (const auto& dline : m_viewDrift->m_driftLines) {
-      // Create a TPolyLine that is a 2D projection of the original.
-      TPolyLine poly;
+      TGraph gr;
       if (dline.second == ViewDrift::Particle::Electron) {
-        poly.SetLineColor(kOrange - 3);
+        gr.SetLineColor(kOrange - 3);
       } else {
-        poly.SetLineColor(kRed + 1);
+        gr.SetLineColor(kRed + 1);
       }
-      std::vector<double> xpl;
-      std::vector<double> ypl;
+      std::vector<float> xgr;
+      std::vector<float> ygr;
       // Loop over the points.
       for (const auto& point : dline.first) {
         // Project this point onto the plane.
@@ -411,12 +413,12 @@ void ViewFEMesh::DrawElements() {
         ToPlane(point[0], point[1], point[2], xp, yp);
         // Add this point if it is within the view.
         if (InView(xp, yp)) {
-          xpl.push_back(xp);
-          ypl.push_back(yp);
+          xgr.push_back(xp);
+          ygr.push_back(yp);
         }
       }
-      if (!xpl.empty()) {
-        poly.DrawPolyLine(xpl.size(), xpl.data(), ypl.data(), "same");
+      if (!xgr.empty()) {
+        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
       }
     }  // end loop over drift lines
   }    // end if(m_viewDrift != 0)
@@ -701,15 +703,15 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         else
           colorID_fill = colorID;
 
-        TPolyLine poly;
-        poly.SetLineColor(colorID);
-        poly.SetFillColor(colorID_fill);
+        TGraph gr;
+        gr.SetLineColor(colorID);
+        gr.SetFillColor(colorID_fill);
         if (m_plotMeshBorders)
-          poly.SetLineWidth(3);
+          gr.SetLineWidth(3);
         else
-          poly.SetLineWidth(1);
+          gr.SetLineWidth(1);
         // Add 4 points of the square
-        Double_t tmp_u[4], tmp_v[4];
+        float tmp_u[4], tmp_v[4];
         if (mirroru && nu != 2 * (nu / 2)) {
           // nu is odd
           tmp_u[0] = mapumin + (mapumax - (*it).p1[0]) + su * nu;
@@ -739,28 +741,27 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
           it++;
           continue;
         }
-        if (m_plotMeshBorders || !m_fillMesh) {
-          poly.DrawPolyLine(4, tmp_u, tmp_v, "same");
-        }
-        if (m_fillMesh) {
-          poly.DrawPolyLine(4, tmp_u, tmp_v, "f:same");
-        }
+        std::string opt = "";
+        if (m_plotMeshBorders || !m_fillMesh) opt += "l";
+        if (m_fillMesh) opt += "f";
+        opt += "same";
+        gr.DrawGraph(4, tmp_u, tmp_v, opt.c_str());
         it++;
       }  // end element loop
     }    // end v-periodicity loop
   }      // end u-periodicity loop
-  // If we have an associated ViewDrift, plot projections of the drift lines
+
   if (m_viewDrift) {
     for (const auto& dline : m_viewDrift->m_driftLines) {
-      // Create a TPolyLine that is a 2D projection of the original
-      TPolyLine poly;
+      // Plot a 2D projection of the drift line.
+      TGraph gr;
       if (dline.second == ViewDrift::Particle::Electron) {
-        poly.SetLineColor(kOrange - 3);
+        gr.SetLineColor(kOrange - 3);
       } else {
-        poly.SetLineColor(kRed + 1);
+        gr.SetLineColor(kRed + 1);
       }
-      std::vector<double> xpl;
-      std::vector<double> ypl;
+      std::vector<float> xgr;
+      std::vector<float> ygr;
       // Loop over the points.
       for (const auto& point : dline.first) {
         // Project this point onto the plane.
@@ -768,12 +769,12 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         ToPlane(point[0], point[1], point[2], u, v);
         // Add this point if it is within the view
         if (u >= uMin && u <= uMax && v >= vMin && v <= vMax) {
-          xpl.push_back(u);
-          ypl.push_back(v);
+          xgr.push_back(u);
+          ygr.push_back(v);
         }
       }
-      if (!xpl.empty()) {
-        poly.DrawPolyLine(xpl.size(), xpl.data(), ypl.data(), "same");
+      if (!xgr.empty()) {
+        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
       }
     }  // end loop over drift lines
   }    // end if(m_viewDrift != 0)
