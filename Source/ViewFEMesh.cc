@@ -15,25 +15,7 @@
 
 namespace Garfield {
 
-ViewFEMesh::ViewFEMesh() : ViewBase("ViewFEMesh") {
-  SetDefaultProjection();
-
-}
-
-void ViewFEMesh::SetDefaultProjection() {
-  // Default projection: x-y at z=0
-  m_pmat[0][0] = 1;
-  m_pmat[0][1] = 0;
-  m_pmat[0][2] = 0;
-  m_pmat[1][0] = 0;
-  m_pmat[1][1] = 1;
-  m_pmat[1][2] = 0;
-  m_pmat[2][0] = 0;
-  m_pmat[2][1] = 0;
-  m_pmat[2][2] = 1;
-  // Plane distance to (0,0,0)
-  m_dist = 0;
-}
+ViewFEMesh::ViewFEMesh() : ViewBase("ViewFEMesh") {}
 
 void ViewFEMesh::SetComponent(ComponentFieldMap* comp) {
   if (!comp) {
@@ -108,8 +90,6 @@ bool ViewFEMesh::Plot() {
   return true;
 }
 
-// Set the projection plane: modified from ViewField.cc
-// to match functionality of Garfield
 void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
                           const double x0, const double y0, const double z0) {
   if (fy * fy + fz * fz > 0) {
@@ -119,51 +99,9 @@ void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
   }
 }
 
-// Set the projection plane specifying hint for in-plane x axis.
 void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
                           const double x0, const double y0, const double z0,
                           const double hx, const double hy, const double hz) {
-  // Calculate 2 in-plane vectors for the normal vector
-  double fnorm = sqrt(fx * fx + fy * fy + fz * fz);
-  if (fnorm < Small) {
-    std::cout << m_className << "::SetPlane:\n"
-              << "    Normal vector has zero norm. No new projection set.\n";
-    return;
-  }
-  double dist = (fx * x0 + fy * y0 + fz * z0) / fnorm;
-  // Store the plane description
-  m_pmat[2][0] = fx / fnorm;
-  m_pmat[2][1] = fy / fnorm;
-  m_pmat[2][2] = fz / fnorm;
-  m_dist = dist;
-
-  double xx = hx, xy = hy, xz = hz;
-  PlaneVector(xx, xy, xz);
-  double vecx_norm = std::sqrt(xx * xx + xy * xy + xz * xz);
-  if (vecx_norm < 1.0e-10) {  
-    // Wrong in-plane x hint (close to norm).
-    if (fy * fy + fz * fz > 0) {
-      // Taking global x as in-plane x hint.
-      xx = 1;
-      xy = 0;
-      xz = 0;  
-    } else {
-      // Taking global y as in-plane x hint.
-      xx = 0;
-      xy = 1;
-      xz = 0;  
-    }
-    PlaneVector(xx, xy, xz);
-    vecx_norm = std::sqrt(xx * xx + xy * xy + xz * xz);
-  }
-  m_pmat[0][0] = xx / vecx_norm;
-  m_pmat[0][1] = xy / vecx_norm;
-  m_pmat[0][2] = xz / vecx_norm;
-  // in-plane y === m_pmat[1] = cross product [z,x];
-  m_pmat[1][0] = m_pmat[2][1] * m_pmat[0][2] - m_pmat[2][2] * m_pmat[0][1];
-  m_pmat[1][1] = m_pmat[2][2] * m_pmat[0][0] - m_pmat[2][0] * m_pmat[0][2];
-  m_pmat[1][2] = m_pmat[2][0] * m_pmat[0][1] - m_pmat[2][1] * m_pmat[0][0];
-
   ViewBase::SetPlane(fx, fy, fz, x0, y0, z0, hx, hy, hz); 
   IntersectPlaneArea();
 }
@@ -242,39 +180,6 @@ void ViewFEMesh::DrawElements() {
       if (m_xaxis) m_xaxis->Draw();
       if (m_yaxis) m_yaxis->Draw();
     }
-  }
-
-  // Prepare the final projection matrix (the transpose of the 2D array
-  // "project").
-  TArrayD dataProj(9);
-  dataProj[0] = m_pmat[0][0];
-  dataProj[1] = m_pmat[1][0];
-  dataProj[2] = m_pmat[2][0];
-  dataProj[3] = m_pmat[0][1];
-  dataProj[4] = m_pmat[1][1];
-  dataProj[5] = m_pmat[2][1];
-  dataProj[6] = m_pmat[0][2];
-  dataProj[7] = m_pmat[1][2];
-  dataProj[8] = m_pmat[2][2];
-  TMatrixD projMat(3, 3, dataProj.GetArray());
-
-  // Calculate the determinant of the projection matrix.
-  double projDet =
-      projMat(0, 0) *
-          (projMat(1, 1) * projMat(2, 2) - projMat(1, 2) * projMat(2, 1)) -
-      projMat(0, 1) *
-          (projMat(1, 0) * projMat(2, 2) - projMat(1, 2) * projMat(2, 0)) +
-      projMat(0, 2) *
-          (projMat(1, 0) * projMat(2, 1) - projMat(1, 1) * projMat(2, 0));
-
-  // Calculate the inverse of the projection matrix for
-  // calculating coordinates in the viewing plane.
-  if (projDet != 0) {
-    projMat.Invert();
-  } else {
-    std::cerr << m_className << "::DrawElements:\n";
-    std::cerr << "    Projection matrix is not invertible.\n";
-    std::cerr << "    Finite element mesh will not be drawn.\n";
   }
 
   // Get the plane information.
@@ -557,39 +462,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
       m_component->m_periodic[1] || m_component->m_mirrorPeriodic[1];
   const bool perZ =
       m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
-
-  // Prepare the final projection matrix (the transpose of the 2D array
-  // "project")
-  TArrayD dataProj(9);
-  dataProj[0] = m_pmat[0][0];
-  dataProj[1] = m_pmat[1][0];
-  dataProj[2] = m_pmat[2][0];
-  dataProj[3] = m_pmat[0][1];
-  dataProj[4] = m_pmat[1][1];
-  dataProj[5] = m_pmat[2][1];
-  dataProj[6] = m_pmat[0][2];
-  dataProj[7] = m_pmat[1][2];
-  dataProj[8] = m_pmat[2][2];
-  TMatrixD projMat(3, 3, dataProj.GetArray());
-
-  // Calculate the determinant of the projection matrix
-  double projDet =
-      projMat(0, 0) *
-          (projMat(1, 1) * projMat(2, 2) - projMat(1, 2) * projMat(2, 1)) -
-      projMat(0, 1) *
-          (projMat(1, 0) * projMat(2, 2) - projMat(1, 2) * projMat(2, 0)) +
-      projMat(0, 2) *
-          (projMat(1, 0) * projMat(2, 1) - projMat(1, 1) * projMat(2, 0));
-
-  // Calculate the inverse of the projection matrix for
-  // calculating coordinates in the viewing plane
-  if (projDet != 0) {
-    projMat.Invert();
-  } else {
-    std::cerr << m_className << "::DrawCST:\n";
-    std::cerr << "    Projection matrix is not invertible.\n";
-    std::cerr << "    Finite element mesh will not be drawn.\n";
-  }
 
   // Construct two empty single-column matrices for use as coordinate vectors
   TMatrixD xMat(3, 1);
@@ -890,12 +762,12 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
       // Loop over the points.
       for (const auto& point : dline.first) {
         // Project this point onto the plane.
-        float xp = 0., yp = 0.;
-        ToPlane(point[0], point[1], point[2], xp, yp);
+        float u = 0., v = 0.;
+        ToPlane(point[0], point[1], point[2], u, v);
         // Add this point if it is within the view
-        if (xp >= uMin && xp <= uMax && yp >= vMin && yp <= vMax) {
-          xpl.push_back(xp);
-          ypl.push_back(yp);
+        if (u >= uMin && u <= uMax && v >= vMin && v <= vMax) {
+          xpl.push_back(u);
+          ypl.push_back(v);
         }
       }
       if (!xpl.empty()) {
@@ -1187,7 +1059,7 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
 
 // Calculates view region and canvas dimensions based on projection plane
 // and view area
-bool ViewFEMesh::IntersectPlaneArea(void) {
+bool ViewFEMesh::IntersectPlaneArea() {
   std::vector<TMatrixD> intersect_points;
   m_viewRegionX.clear();
   m_viewRegionY.clear();
@@ -1256,16 +1128,6 @@ bool ViewFEMesh::IntersectPlaneArea(void) {
     m_xMaxPlot = std::max(p(0, 0), m_xMaxPlot);
     m_yMaxPlot = std::max(p(1, 0), m_yMaxPlot);
   }
-  return true;
-}
-
-// In x,y,z: vector coordinates
-// Out x,y,z: vector parallel to the viewing plane (project[3][3])
-bool ViewFEMesh::PlaneVector(double& x, double& y, double& z) const {
-  double dist = x * m_pmat[2][0] + y * m_pmat[2][1] + z * m_pmat[2][2];
-  x = x - dist * m_pmat[2][0];
-  y = y - dist * m_pmat[2][1];
-  z = z - dist * m_pmat[2][2];
   return true;
 }
 
