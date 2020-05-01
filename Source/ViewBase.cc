@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdio>
 #include <cmath>
 #include <limits>
 
@@ -52,6 +53,12 @@ bool Invert(std::array<std::array<double, 3>, 3>& a) {
   a[2][1] = s * c23;
   a[2][2] = s * c33;
   return true;
+}
+
+std::string Fmt(const double x) {
+  char buf[100];
+  sprintf(buf, "%g", x);
+  return std::string(buf);
 }
 
 }
@@ -420,7 +427,7 @@ std::string ViewBase::LabelX() {
   } else if (fabs(m_proj[0][0] + 1) < tol) {
     xLabel = "#minus#it{x}";
   } else if (fabs(m_proj[0][0]) > tol) {
-    xLabel = std::to_string(m_proj[0][0]) + " #it{x}";
+    xLabel = Fmt(m_proj[0][0]) + " #it{x}";
   }
 
   // y portion
@@ -433,7 +440,7 @@ std::string ViewBase::LabelX() {
     if (fabs(m_proj[0][1] - 1) < tol || fabs(m_proj[0][1] + 1) < tol) {
       xLabel += "#it{y}";
     } else if (fabs(m_proj[0][1]) > tol) {
-      xLabel += std::to_string(fabs(m_proj[0][1])) + " #it{y}";
+      xLabel += Fmt(fabs(m_proj[0][1])) + " #it{y}";
     }
   } else {
     if (fabs(m_proj[0][1] - 1) < tol) {
@@ -441,7 +448,7 @@ std::string ViewBase::LabelX() {
     } else if (fabs(m_proj[0][1] + 1) < tol) {
       xLabel = "#minus#it{y}";
     } else if (fabs(m_proj[0][1]) > tol) {
-      xLabel = std::to_string(m_proj[0][1]) + " #it{y}";
+      xLabel = Fmt(m_proj[0][1]) + " #it{y}";
     }
   }
 
@@ -455,7 +462,7 @@ std::string ViewBase::LabelX() {
     if (fabs(m_proj[0][2] - 1) < tol || fabs(m_proj[0][2] + 1) < tol) {
       xLabel += "#it{z}";
     } else if (fabs(m_proj[0][2]) > tol) {
-      xLabel += std::to_string(fabs(m_proj[0][2])) + " #it{z}";
+      xLabel += Fmt(fabs(m_proj[0][2])) + " #it{z}";
     }
   } else {
     if (fabs(m_proj[0][2] - 1) < tol) {
@@ -463,7 +470,7 @@ std::string ViewBase::LabelX() {
     } else if (fabs(m_proj[0][2] + 1) < tol) {
       xLabel = "#minus#it{z}";
     } else if (fabs(m_proj[0][2]) > tol) {
-      xLabel = std::to_string(m_proj[0][2]) + " #it{z}";
+      xLabel = Fmt(m_proj[0][2]) + " #it{z}";
     }
   }
 
@@ -483,7 +490,7 @@ std::string ViewBase::LabelY() {
   } else if (fabs(m_proj[1][0] + 1) < tol) {
     yLabel = "#minus#it{x}";
   } else if (fabs(m_proj[1][0]) > tol) {
-    yLabel = std::to_string(m_proj[1][0]) + " #it{x}";
+    yLabel = Fmt(m_proj[1][0]) + " #it{x}";
   }
 
   // y portion
@@ -496,7 +503,7 @@ std::string ViewBase::LabelY() {
     if (fabs(m_proj[1][1] - 1) < tol || fabs(m_proj[1][1] + 1) < tol) {
       yLabel += "#it{y}";
     } else if (fabs(m_proj[1][1]) > tol) {
-      yLabel += std::to_string(fabs(m_proj[1][1])) + " #it{y}";
+      yLabel += Fmt(fabs(m_proj[1][1])) + " #it{y}";
     }
   } else {
     if (fabs(m_proj[1][1] - 1) < tol) {
@@ -504,7 +511,7 @@ std::string ViewBase::LabelY() {
     } else if (fabs(m_proj[1][1] + 1) < tol) {
       yLabel = "#minus#it{y}";
     } else if (fabs(m_proj[1][1]) > tol) {
-      yLabel = std::to_string(m_proj[1][1]) + " #it{y}";
+      yLabel = Fmt(m_proj[1][1]) + " #it{y}";
     }
   }
 
@@ -518,7 +525,7 @@ std::string ViewBase::LabelY() {
     if (fabs(m_proj[1][2] - 1) < tol || fabs(m_proj[1][2] + 1) < tol) {
       yLabel += "#it{z}";
     } else if (fabs(m_proj[1][2]) > tol) {
-      yLabel += std::to_string(fabs(m_proj[1][2])) + " #it{z}";
+      yLabel += Fmt(fabs(m_proj[1][2])) + " #it{z}";
     }
   } else {
     if (fabs(m_proj[1][2] - 1) < tol) {
@@ -526,7 +533,7 @@ std::string ViewBase::LabelY() {
     } else if (fabs(m_proj[1][2] + 1) < tol) {
       yLabel = "#minus#it{z}";
     } else if (fabs(m_proj[1][2]) > tol) {
-      yLabel = std::to_string(m_proj[1][2]) + " #it{z}";
+      yLabel = Fmt(m_proj[1][2]) + " #it{z}";
     }
   }
 
@@ -546,7 +553,7 @@ std::string ViewBase::PlaneDescription() {
   } else if (fabs(m_plane[0] + 1) < tol) {
     description = "-x";
   } else if (fabs(m_plane[0]) > tol) {
-    description = std::to_string(m_plane[0]) + " x";
+    description = Fmt(m_plane[0]) + " x";
   }
 
   // y portion
@@ -559,7 +566,7 @@ std::string ViewBase::PlaneDescription() {
     if (fabs(m_plane[1] - 1) < tol || fabs(m_plane[1] + 1) < tol) {
       description += "y";
     } else if (fabs(m_plane[1]) > tol) {
-      description += std::to_string(fabs(m_plane[1])) + " y";
+      description += Fmt(fabs(m_plane[1])) + " y";
     }
   } else {
     if (fabs(m_plane[1] - 1) < tol) {
@@ -567,7 +574,7 @@ std::string ViewBase::PlaneDescription() {
     } else if (fabs(m_plane[1] + 1) < tol) {
       description = "-y";
     } else if (fabs(m_plane[1]) > tol) {
-      description = std::to_string(m_plane[1]) + " y";
+      description = Fmt(m_plane[1]) + " y";
     }
   }
 
@@ -581,7 +588,7 @@ std::string ViewBase::PlaneDescription() {
     if (fabs(m_plane[2] - 1) < tol || fabs(m_plane[2] + 1) < tol) {
       description += "z";
     } else if (fabs(m_plane[2]) > tol) {
-      description += std::to_string(fabs(m_plane[2])) + " z";
+      description += Fmt(fabs(m_plane[2])) + " z";
     }
   } else {
     if (fabs(m_plane[2] - 1) < tol) {
@@ -589,12 +596,12 @@ std::string ViewBase::PlaneDescription() {
     } else if (fabs(m_plane[2] + 1) < tol) {
       description = "-z";
     } else if (fabs(m_plane[2]) > tol) {
-      description = std::to_string(m_plane[2]) + " z";
+      description = Fmt(m_plane[2]) + " z";
     }
   }
 
   // Constant
-  description += " = " + std::to_string(m_plane[3]);
+  description += " = " + Fmt(m_plane[3]);
   return description;
 }
 
