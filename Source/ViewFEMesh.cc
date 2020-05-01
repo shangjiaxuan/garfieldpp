@@ -227,11 +227,19 @@ void ViewFEMesh::DrawElements() {
     double vx3, vy3, vz3;
     double vx4, vy4, vz4;
 
-    // Get the color for this element (default to 1).
+    TGraph gr;
     const short col = m_colorMap.count(mat) != 0 ? m_colorMap[mat] : 1;
-    // Get the fill color for this element.
-    short colFill = col;
-    if (m_colorMap_fill.count(mat) != 0) colFill = m_colorMap_fill[mat];
+    gr.SetLineColor(col);
+    if (m_colorMap_fill.count(mat) != 0) {
+      gr.SetFillColor(m_colorMap_fill[mat]);
+    } else {
+      gr.SetFillColor(col);
+    }
+    gr.SetLineWidth(3);
+    std::string opt = "";
+    if (m_plotMeshBorders || !m_fillMesh) opt += "l";
+    if (m_fillMesh) opt += "f";
+    opt += "same";
 
     const auto& n0 = m_component->nodes[element.emap[0]];
     const auto& n1 = m_component->nodes[element.emap[1]];
@@ -380,14 +388,6 @@ void ViewFEMesh::DrawElements() {
           // Draw the polygon.
           std::vector<float> xgr(cX.begin(), cX.end());
           std::vector<float> ygr(cY.begin(), cY.end());
-          TGraph gr;
-          gr.SetLineColor(col);
-          gr.SetFillColor(colFill);
-          gr.SetLineWidth(3);
-          std::string opt = "";
-          if (m_plotMeshBorders || !m_fillMesh) opt += "l";
-          if (m_fillMesh) opt += "f";
-          opt += "same";
           gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), opt.c_str());
         }  // end z-periodicity loop
       }    // end y-periodicity loop
@@ -678,67 +678,56 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   std::cout << m_className << "::DrawCST:\n"
             << "    Number of elements in the projection of the unit cell:"
             << elements.size() << std::endl;
-  std::vector<PolygonInfo>::iterator it;
-  std::vector<PolygonInfo>::iterator itend = elements.end();
 
   for (int nu = nMinU; nu <= nMaxU; nu++) {
     for (int nv = nMinV; nv <= nMaxV; nv++) {
-      it = elements.begin();
-      while (it != itend) {
-        if (m_disabledMaterial[(*it).material]) {
-          // do not create Polygons for disabled materials
-          it++;
+      for (const auto& element : elements) {
+        const auto mat = element.material;
+        if (m_disabledMaterial[mat]) {
+          // Do not create polygons for disabled materials.
           continue;
         }
-        int colorID = m_colorMap.count((*it).material);
-        if (colorID != 0)
-          colorID = m_colorMap[(*it).material];
-        else
-          colorID = 1;
-
-        // Get the fill color for this element (default colorID)
-        int colorID_fill = m_colorMap_fill.count((*it).material);
-        if (colorID_fill != 0)
-          colorID_fill = m_colorMap_fill[(*it).material];
-        else
-          colorID_fill = colorID;
-
         TGraph gr;
-        gr.SetLineColor(colorID);
-        gr.SetFillColor(colorID_fill);
+        const short col = m_colorMap.count(mat) > 0 ? m_colorMap[mat] : 1;
+        gr.SetLineColor(col);
+        if (m_colorMap_fill.count(mat) > 0) {
+          gr.SetFillColor(m_colorMap_fill[mat]);
+        } else {
+          gr.SetFillColor(col);
+        }
         if (m_plotMeshBorders)
           gr.SetLineWidth(3);
         else
           gr.SetLineWidth(1);
+
         // Add 4 points of the square
         float tmp_u[4], tmp_v[4];
         if (mirroru && nu != 2 * (nu / 2)) {
           // nu is odd
-          tmp_u[0] = mapumin + (mapumax - (*it).p1[0]) + su * nu;
-          tmp_u[1] = mapumin + (mapumax - (*it).p2[0]) + su * nu;
-          tmp_u[2] = mapumin + (mapumax - (*it).p3[0]) + su * nu;
-          tmp_u[3] = mapumin + (mapumax - (*it).p4[0]) + su * nu;
+          tmp_u[0] = mapumin + (mapumax - element.p1[0]) + su * nu;
+          tmp_u[1] = mapumin + (mapumax - element.p2[0]) + su * nu;
+          tmp_u[2] = mapumin + (mapumax - element.p3[0]) + su * nu;
+          tmp_u[3] = mapumin + (mapumax - element.p4[0]) + su * nu;
         } else {
           // nu is even
-          tmp_u[0] = (*it).p1[0] + su * nu;
-          tmp_u[1] = (*it).p2[0] + su * nu;
-          tmp_u[2] = (*it).p3[0] + su * nu;
-          tmp_u[3] = (*it).p4[0] + su * nu;
+          tmp_u[0] = element.p1[0] + su * nu;
+          tmp_u[1] = element.p2[0] + su * nu;
+          tmp_u[2] = element.p3[0] + su * nu;
+          tmp_u[3] = element.p4[0] + su * nu;
         }
         if (mirrorv && nv != 2 * (nv / 2)) {
-          tmp_v[0] = mapvmin + (mapvmax - (*it).p1[1]) + sv * nv;
-          tmp_v[1] = mapvmin + (mapvmax - (*it).p2[1]) + sv * nv;
-          tmp_v[2] = mapvmin + (mapvmax - (*it).p3[1]) + sv * nv;
-          tmp_v[3] = mapvmin + (mapvmax - (*it).p4[1]) + sv * nv;
+          tmp_v[0] = mapvmin + (mapvmax - element.p1[1]) + sv * nv;
+          tmp_v[1] = mapvmin + (mapvmax - element.p2[1]) + sv * nv;
+          tmp_v[2] = mapvmin + (mapvmax - element.p3[1]) + sv * nv;
+          tmp_v[3] = mapvmin + (mapvmax - element.p4[1]) + sv * nv;
         } else {
-          tmp_v[0] = (*it).p1[1] + sv * nv;
-          tmp_v[1] = (*it).p2[1] + sv * nv;
-          tmp_v[2] = (*it).p3[1] + sv * nv;
-          tmp_v[3] = (*it).p4[1] + sv * nv;
+          tmp_v[0] = element.p1[1] + sv * nv;
+          tmp_v[1] = element.p2[1] + sv * nv;
+          tmp_v[2] = element.p3[1] + sv * nv;
+          tmp_v[3] = element.p4[1] + sv * nv;
         }
         if (tmp_u[0] < uMin || tmp_u[1] > uMax || tmp_v[0] < vMin ||
             tmp_v[2] > vMax) {
-          it++;
           continue;
         }
         std::string opt = "";
@@ -746,7 +735,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         if (m_fillMesh) opt += "f";
         opt += "same";
         gr.DrawGraph(4, tmp_u, tmp_v, opt.c_str());
-        it++;
       }  // end element loop
     }    // end v-periodicity loop
   }      // end u-periodicity loop
