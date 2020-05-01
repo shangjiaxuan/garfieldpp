@@ -51,6 +51,10 @@ class ViewBase {
     */
   virtual void SetPlane(const double fx, const double fy, const double fz,
                         const double x0, const double y0, const double z0);
+  /// Set the projection plane specifying a hint for the in-plane x axis. 
+  virtual void SetPlane(const double fx, const double fy, const double fz,
+                        const double x0, const double y0, const double z0,
+                        const double hx, const double hy, const double hz); 
   /// Rotate the viewing plane (angle in radian).
   void Rotate(const double angle);
   /// Set the viewing plane to x-y. 

@@ -3,16 +3,11 @@
 
 #include <memory>
 #include <string>
-#ifndef __CINT__
 #include <map>
-#endif
 
 #include <TArrayD.h>
 #include <TGaxis.h>
-#include <TH2D.h>
 #include <TMatrixD.h>
-#include <TPolyLine.h>
-#include <TPolyLine3D.h>
 
 #include "ComponentCST.hh"
 #include "ComponentFieldMap.hh"
@@ -31,25 +26,19 @@ class ViewFEMesh : public ViewBase {
   ~ViewFEMesh() = default;
 
   /// Set the component from which to retrieve the mesh and field.
-  void SetComponent(ComponentFieldMap* comp);
+  void SetComponent(ComponentFieldMap* cmp);
 
-  /// Reset the projection plane.
-  void SetDefaultProjection();
-  /// Set the projection plane.
   void SetPlane(const double fx, const double fy, const double fz, 
                 const double x0, const double y0, const double z0) override;
-  /// Set the projection plane specifying hint for in-plane x axis.
-  void SetPlane(double fx, double fy, double fz, double x0, double y0,
-                double z0, double hx, double hy, double hz);
-
-  void SetArea(const double xmin, const double ymin, const double zmin,
-               const double xmax, const double ymax, const double zmax) override;
+  void SetPlane(const double fx, const double fy, const double fz, 
+                const double x0, const double y0, const double z0,
+                const double hx, const double hy, const double hz) override;
 
   // Axes
   void SetXaxis(TGaxis* ax);
   void SetYaxis(TGaxis* ay);
-  void SetXaxisTitle(const char* xtitle);
-  void SetYaxisTitle(const char* ytitle);
+  void SetXaxisTitle(const std::string& xtitle) { m_xaxisTitle = xtitle; }
+  void SetYaxisTitle(const std::string& ytitle) { m_yaxisTitle = ytitle; }
   void EnableAxes() { m_drawAxes = true; }
   void DisableAxes() { m_drawAxes = false; }
 
@@ -88,18 +77,13 @@ class ViewFEMesh : public ViewBase {
   }
 
  private:
-  std::string m_label = "Mesh";
-
   // Options
   bool m_fillMesh = false;
 
   // Intersection of viewing plane with plotted area in planar coordinates
   bool m_drawViewRegion = false;
-  std::vector<TPolyLine> m_viewRegionLines;
-
-  // Viewing plane (plane normal is stored in m_proj[2])
-  double m_pmat[3][3];
-  double m_dist;
+  std::vector<double> m_viewRegionX;
+  std::vector<double> m_viewRegionY;
 
   // The field map object
   ComponentFieldMap* m_component = nullptr;
@@ -111,24 +95,22 @@ class ViewFEMesh : public ViewBase {
   // Axes
   TGaxis* m_xaxis = nullptr;
   TGaxis* m_yaxis = nullptr;
-  std::unique_ptr<TH2D> m_axes;
+  std::string m_xaxisTitle = "";
+  std::string m_yaxisTitle = "";
   bool m_drawAxes = false;
 
-  // The mesh, stored as a vector of TPolyLine(3D) objects
-  std::vector<TPolyLine> m_mesh;
-  std::vector<TPolyLine> m_driftLines;
-
-// The color map
-#ifndef __CINT__
+  // The color map
   std::map<int, int> m_colorMap;
   std::map<int, int> m_colorMap_fill;
 
   // Disabled materials -> not shown in the mesh view
   std::map<int, bool> m_disabledMaterial;
-#endif
+
   // Element plotting methods
   void DrawElements();
   void DrawCST(ComponentCST* componentCST);
+
+  bool GetPlotLimits();
 
   /// Return true if the specified point is in the view region.
   bool InView(const double x, const double y) const;
@@ -136,23 +118,18 @@ class ViewFEMesh : public ViewBase {
   bool LinesCrossed(double x1, double y1, double x2, double y2, double u1,
                     double v1, double u2, double v2, double& xc,
                     double& yc) const;
-  std::string CreateAxisTitle(const double* norm) const;
-  bool IntersectPlaneArea(void);
-  bool PlaneVector(double& x, double& y, double& z) const;
+  bool IntersectPlaneArea(double& xmin, double& ymin,
+                          double& xmax, double& ymax);
   bool OnLine(double x1, double y1, double x2, double y2, double u,
               double v) const;
   void RemoveCrossings(std::vector<double>& x, std::vector<double>& y);
   bool PlaneCut(double x1, double y1, double z1, double x2, double y2,
                 double z2, TMatrixD& xMat);
-  bool PlaneCoords(double x, double y, double z, const TMatrixD& projMat,
-                   TMatrixD& xMat);
   void ClipToView(std::vector<double>& px, std::vector<double>& py,
                   std::vector<double>& cx, std::vector<double>& cy);
-  bool IsInPolygon(double x, double y, std::vector<double>& px,
-                   std::vector<double>& py, bool& edge) const;
+  bool IsInPolygon(double x, double y, const std::vector<double>& px,
+                   const std::vector<double>& py, bool& edge) const;
 
-  // Plot method to be called by Plot() for CST cubic elements
-  // available are "xy", "yz" and "xz"
 };
 }  // namespace Garfield
 #endif

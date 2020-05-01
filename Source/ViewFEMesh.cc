@@ -3,6 +3,10 @@
 #include <iostream>
 #include <sstream>
 
+#include <TH1F.h>
+#include <TPolyLine.h>
+#include <TGraph.h>
+
 #include "Garfield/ComponentCST.hh"
 #include "Garfield/ComponentFieldMap.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -12,56 +16,15 @@
 
 namespace Garfield {
 
-ViewFEMesh::ViewFEMesh() : ViewBase("ViewFEMesh") {
-  SetDefaultProjection();
+ViewFEMesh::ViewFEMesh() : ViewBase("ViewFEMesh") {}
 
-  // Create a blank histogram for the axes.
-  m_axes.reset(new TH2D());
-  m_axes->SetStats(false);
-  m_axes->GetXaxis()->SetTitle("x");
-  m_axes->GetYaxis()->SetTitle("y");
-}
-
-void ViewFEMesh::SetDefaultProjection() {
-  // Default projection: x-y at z=0
-  m_pmat[0][0] = 1;
-  m_pmat[0][1] = 0;
-  m_pmat[0][2] = 0;
-  m_pmat[1][0] = 0;
-  m_pmat[1][1] = 1;
-  m_pmat[1][2] = 0;
-  m_pmat[2][0] = 0;
-  m_pmat[2][1] = 0;
-  m_pmat[2][2] = 1;
-  // Plane distance to (0,0,0)
-  m_dist = 0;
-}
-
-void ViewFEMesh::SetComponent(ComponentFieldMap* comp) {
-  if (!comp) {
+void ViewFEMesh::SetComponent(ComponentFieldMap* cmp) {
+  if (!cmp) {
     std::cerr << m_className << "::SetComponent: Null pointer.\n";
     return;
   }
 
-  m_component = comp;
-}
-
-void ViewFEMesh::SetArea(double xmin, double ymin, double zmin, double xmax,
-                         double ymax, double zmax) {
-  // Check range, assign if non-null
-  if (xmin == xmax || ymin == ymax || zmin == zmax) {
-    std::cerr << m_className << "::SetArea: Null area range not permitted.\n";
-    return;
-  }
-  m_xMinBox = std::min(xmin, xmax);
-  m_yMinBox = std::min(ymin, ymax);
-  m_zMinBox = std::min(zmin, zmax);
-  m_xMaxBox = std::max(xmin, xmax);
-  m_yMaxBox = std::max(ymin, ymax);
-  m_zMaxBox = std::max(zmin, zmax);
-
-  m_userBox = true;
-  IntersectPlaneArea();
+  m_component = cmp;
 }
 
 // The plotting functionality here is ported from Garfield
@@ -78,24 +41,13 @@ bool ViewFEMesh::Plot() {
     return false;
   }
 
-  // Get the bounding box.
-  if (!m_userBox) {
-    std::cerr << m_className << "::Plot:\n"
-              << "    Bounding box cannot be determined. Call SetArea first.\n";
-    return false;
-  }
+  if (!GetPlotLimits()) return false;
 
-  if (m_viewRegionLines.empty()) {
-    std::cerr << m_className << "::Plot:\n"
-              << "    Empty view. Make sure the viewing plane (SetPlane)\n"
-              << "    intersects with the bounding box.\n";
-    return false;
+  auto pad = GetCanvas();
+  pad->cd();
+  if (!RangeSet(pad)) {
+    SetRange(pad, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
   }
-
-  // Set up a canvas if one does not already exist.
-  auto canvas = GetCanvas();
-  canvas->cd();
-  canvas->Range(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
 
   // Plot the elements
   ComponentCST* componentCST = dynamic_cast<ComponentCST*>(m_component);
@@ -110,8 +62,41 @@ bool ViewFEMesh::Plot() {
   return true;
 }
 
-// Set the projection plane: modified from ViewField.cc
-// to match functionality of Garfield
+bool ViewFEMesh::GetPlotLimits() {
+
+  if (!m_userBox) {
+    // If not set by the user, get the bounding box of the component.
+    if (!m_component) {
+      if (!m_userPlotLimits) return false;
+    } else {
+      if (!m_component->GetBoundingBox(m_xMinBox, m_yMinBox, m_zMinBox,
+                                       m_xMaxBox, m_yMaxBox, m_zMaxBox) &&
+          !m_userPlotLimits) {
+        std::cerr << m_className << "::GetPlotLimits:\n"
+                  << "    Bounding box of the component is not defined.\n"
+                  << "    Please set the limits explicitly (SetArea).\n";
+        return false;
+      }
+    }
+  }
+  // Determine the intersection of the viewing plane and the box.
+  double xmin = 0., xmax = 0., ymin = 0., ymax = 0.;
+  IntersectPlaneArea(xmin, ymin, xmax, ymax);
+  if (!m_userPlotLimits) {
+    if (m_viewRegionX.empty()) {
+      std::cerr << m_className << "::GetPlotLimits: Empty view.\n"
+                << "    Make sure the viewing plane (SetPlane)\n"
+                << "    intersects with the bounding box.\n";
+      return false;
+    }
+    m_xMinPlot = xmin;
+    m_xMaxPlot = xmax;
+    m_yMinPlot = ymin;
+    m_yMaxPlot = ymax;
+  }
+  return true;
+}
+
 void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
                           const double x0, const double y0, const double z0) {
   if (fy * fy + fz * fz > 0) {
@@ -121,52 +106,10 @@ void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
   }
 }
 
-// Set the projection plane specifying hint for in-plane x axis.
 void ViewFEMesh::SetPlane(const double fx, const double fy, const double fz,
                           const double x0, const double y0, const double z0,
                           const double hx, const double hy, const double hz) {
-  // Calculate 2 in-plane vectors for the normal vector
-  double fnorm = sqrt(fx * fx + fy * fy + fz * fz);
-  if (fnorm < Small) {
-    std::cout << m_className << "::SetPlane:\n"
-              << "    Normal vector has zero norm. No new projection set.\n";
-    return;
-  }
-  double dist = (fx * x0 + fy * y0 + fz * z0) / fnorm;
-  // Store the plane description
-  m_pmat[2][0] = fx / fnorm;
-  m_pmat[2][1] = fy / fnorm;
-  m_pmat[2][2] = fz / fnorm;
-  m_dist = dist;
-
-  double xx = hx, xy = hy, xz = hz;
-  PlaneVector(xx, xy, xz);
-  double vecx_norm = std::sqrt(xx * xx + xy * xy + xz * xz);
-  if (vecx_norm < 1.0e-10) {  
-    // Wrong in-plane x hint (close to norm).
-    if (fy * fy + fz * fz > 0) {
-      // Taking global x as in-plane x hint.
-      xx = 1;
-      xy = 0;
-      xz = 0;  
-    } else {
-      // Taking global y as in-plane x hint.
-      xx = 0;
-      xy = 1;
-      xz = 0;  
-    }
-    PlaneVector(xx, xy, xz);
-    vecx_norm = std::sqrt(xx * xx + xy * xy + xz * xz);
-  }
-  m_pmat[0][0] = xx / vecx_norm;
-  m_pmat[0][1] = xy / vecx_norm;
-  m_pmat[0][2] = xz / vecx_norm;
-  // in-plane y === m_pmat[1] = cross product [z,x];
-  m_pmat[1][0] = m_pmat[2][1] * m_pmat[0][2] - m_pmat[2][2] * m_pmat[0][1];
-  m_pmat[1][1] = m_pmat[2][2] * m_pmat[0][0] - m_pmat[2][0] * m_pmat[0][2];
-  m_pmat[1][2] = m_pmat[2][0] * m_pmat[0][1] - m_pmat[2][1] * m_pmat[0][0];
-
-  IntersectPlaneArea();
+  ViewBase::SetPlane(fx, fy, fz, x0, y0, z0, hx, hy, hz);
 }
 
 // Set the x-axis.
@@ -175,19 +118,14 @@ void ViewFEMesh::SetXaxis(TGaxis* ax) { m_xaxis = ax; }
 // Set the y-axis.
 void ViewFEMesh::SetYaxis(TGaxis* ay) { m_yaxis = ay; }
 
-// Set the x-axis title.
-void ViewFEMesh::SetXaxisTitle(const char* xtitle) {
-  if (m_axes) m_axes->GetXaxis()->SetTitle(xtitle);
-}
-
-// Set the y-axis title.
-void ViewFEMesh::SetYaxisTitle(const char* ytitle) {
-  if (m_axes) m_axes->GetYaxis()->SetTitle(ytitle);
-}
-
 // Create default axes
 void ViewFEMesh::CreateDefaultAxes() {
   // Create a new x and y axis.
+  if (!GetPlotLimits()) {
+    std::cerr << m_className << "::CreateDefaultAxes:\n"
+              << "    Cannot determine the axis limits.\n";
+    return;
+  } 
   const double dx = std::abs(m_xMaxPlot - m_xMinPlot) * 0.1;
   const double dy = std::abs(m_yMaxPlot - m_yMinPlot) * 0.1;
   const double x0 = m_xMinPlot + dx;
@@ -203,43 +141,9 @@ void ViewFEMesh::CreateDefaultAxes() {
 
   // Titles
   m_xaxis->SetTitleSize(0.03);
-  std::string name = CreateAxisTitle(m_pmat[0]);
-  m_xaxis->SetTitle(name.c_str());
+  m_xaxis->SetTitle(LabelX().c_str());
   m_yaxis->SetTitleSize(0.03);
-  name = CreateAxisTitle(m_pmat[1]);
-  m_yaxis->SetTitle(name.c_str());
-}
-
-std::string ViewFEMesh::CreateAxisTitle(const double* norm) const {
-  std::string name;
-  for (int i = 0; i < 3; ++i) {
-    std::stringstream num;
-    num << std::setprecision(6);
-    double value = std::abs(norm[i]);
-    if (value > 1.0e-10) num << value;
-    std::string temp = num.str();
-    if (temp.empty()) continue;
-    if (norm[i] > 0) {
-      name += (name.empty() ? "" : " + ");
-    } else {
-      name += (name.empty() ? "#minus" : " #minus ");
-    } 
-    // No need to write "1.00000*y [cm], use "y [cm]"
-    name += (temp == "1" ? "" : temp + " ");  
-    switch (i) {
-      case 0: 
-        name += "x";
-        break;
-      case 1: 
-        name += "y";
-        break;
-      case 2: 
-        name += "z";
-        break;
-    }
-  }
-  name += " [cm]";
-  return name;
+  m_yaxis->SetTitle(LabelY().c_str());
 }
 
 // Use ROOT plotting functions to draw the mesh elements on the canvas.
@@ -264,50 +168,38 @@ void ViewFEMesh::DrawElements() {
   const bool perZ =
       m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
 
-  // Clear the meshes and drift line lists.
-  m_mesh.clear();
-  m_driftLines.clear();
+  auto pad = GetCanvas();
+  pad->cd();
 
-  // Prepare the final projection matrix (the transpose of the 2D array
-  // "project").
-  TArrayD dataProj(9);
-  dataProj[0] = m_pmat[0][0];
-  dataProj[1] = m_pmat[1][0];
-  dataProj[2] = m_pmat[2][0];
-  dataProj[3] = m_pmat[0][1];
-  dataProj[4] = m_pmat[1][1];
-  dataProj[5] = m_pmat[2][1];
-  dataProj[6] = m_pmat[0][2];
-  dataProj[7] = m_pmat[1][2];
-  dataProj[8] = m_pmat[2][2];
-  TMatrixD projMat(3, 3, dataProj.GetArray());
-
-  // Calculate the determinant of the projection matrix.
-  double projDet =
-      projMat(0, 0) *
-          (projMat(1, 1) * projMat(2, 2) - projMat(1, 2) * projMat(2, 1)) -
-      projMat(0, 1) *
-          (projMat(1, 0) * projMat(2, 2) - projMat(1, 2) * projMat(2, 0)) +
-      projMat(0, 2) *
-          (projMat(1, 0) * projMat(2, 1) - projMat(1, 1) * projMat(2, 0));
-
-  // Calculate the inverse of the projection matrix for
-  // calculating coordinates in the viewing plane.
-  if (projDet != 0) {
-    projMat.Invert();
-  } else {
-    std::cerr << m_className << "::DrawElements:\n";
-    std::cerr << "    Projection matrix is not invertible.\n";
-    std::cerr << "    Finite element mesh will not be drawn.\n";
+  if (m_drawAxes) {
+    if (!m_xaxis && !m_yaxis) {
+      // Draw default axes.
+      auto frame = pad->DrawFrame(m_xMinPlot, m_yMinPlot,
+                                  m_xMaxPlot, m_yMaxPlot);
+      if (m_xaxisTitle.empty()) {
+        frame->GetXaxis()->SetTitle(LabelX().c_str());
+      } else { 
+        frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
+      }
+      if (m_yaxisTitle.empty()) {
+        frame->GetYaxis()->SetTitle(LabelY().c_str());
+      } else {
+        frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
+      }
+    } else {
+      // Draw custom axes.
+      if (m_xaxis) m_xaxis->Draw();
+      if (m_yaxis) m_yaxis->Draw();
+    }
   }
 
   // Get the plane information.
-  double fx = m_pmat[2][0];
-  double fy = m_pmat[2][1];
-  double fz = m_pmat[2][2];
-  double dist = m_dist;
+  const double fx = m_plane[0];
+  const double fy = m_plane[1];
+  const double fz = m_plane[2];
+  const double dist = m_plane[3];
 
-  // Construct two empty single-column matrices for use as coordinate vectors.
+  // Construct single-column matrix for use as coordinate vector.
   TMatrixD xMat(3, 1);
 
   // Determine the number of periods present in the cell.
@@ -322,10 +214,10 @@ void ViewFEMesh::DrawElements() {
   for (const auto& element : m_component->elements) {
     const auto mat = element.matmap;
     // Do not plot the drift medium.
-    if (m_component->materials[mat].driftmedium && !(m_plotMeshBorders)) {
+    if (m_component->materials[mat].driftmedium && !m_plotMeshBorders) {
       continue;
     }
-    // Do not create Polygons for disabled materials
+    // Do not create polygons for disabled materials.
     if (m_disabledMaterial[mat]) continue;
     // -- Tetrahedral elements
 
@@ -335,19 +227,19 @@ void ViewFEMesh::DrawElements() {
     double vx3, vy3, vz3;
     double vx4, vy4, vz4;
 
-    // Get the color for this element (default to 1).
-    int colorID = m_colorMap.count(mat);
-    if (colorID != 0)
-      colorID = m_colorMap[mat];
-    else
-      colorID = 1;
-
-    // Get the fill color for this element (default colorID).
-    int colorID_fill = m_colorMap_fill.count(mat);
-    if (colorID_fill != 0)
-      colorID_fill = m_colorMap_fill[mat];
-    else
-      colorID_fill = colorID;
+    TGraph gr;
+    const short col = m_colorMap.count(mat) != 0 ? m_colorMap[mat] : 1;
+    gr.SetLineColor(col);
+    if (m_colorMap_fill.count(mat) != 0) {
+      gr.SetFillColor(m_colorMap_fill[mat]);
+    } else {
+      gr.SetFillColor(col);
+    }
+    gr.SetLineWidth(3);
+    std::string opt = "";
+    if (m_plotMeshBorders || !m_fillMesh) opt += "l";
+    if (m_fillMesh) opt += "f";
+    opt += "same";
 
     const auto& n0 = m_component->nodes[element.emap[0]];
     const auto& n1 = m_component->nodes[element.emap[1]];
@@ -413,27 +305,28 @@ void ViewFEMesh::DrawElements() {
           bool in3 = (std::abs(fx * vx3 + fy * vy3 + fz * vz3 - dist) < tol);
           bool in4 = (std::abs(fx * vx4 + fy * vy4 + fz * vz4 - dist) < tol);
 
-          // Calculate the planar coordinates for those edges that are in the
+          // Calculate the planar coordinates for the points that are in the
           // plane.
+          double xp = 0., yp = 0.;
           if (in1) {
-            PlaneCoords(vx1, vy1, vz1, projMat, xMat);
-            vX.push_back(xMat(0, 0));
-            vY.push_back(xMat(1, 0));
+            ToPlane(vx1, vy1, vz1, xp, yp);
+            vX.push_back(xp);
+            vY.push_back(yp);
           }
           if (in2) {
-            PlaneCoords(vx2, vy2, vz2, projMat, xMat);
-            vX.push_back(xMat(0, 0));
-            vY.push_back(xMat(1, 0));
+            ToPlane(vx2, vy2, vz2, xp, yp);
+            vX.push_back(xp);
+            vY.push_back(yp);
           }
           if (in3) {
-            PlaneCoords(vx3, vy3, vz3, projMat, xMat);
-            vX.push_back(xMat(0, 0));
-            vY.push_back(xMat(1, 0));
+            ToPlane(vx3, vy3, vz3, xp, yp);
+            vX.push_back(xp);
+            vY.push_back(yp);
           }
           if (in4) {
-            PlaneCoords(vx4, vy4, vz4, projMat, xMat);
-            vX.push_back(xMat(0, 0));
-            vY.push_back(xMat(1, 0));
+            ToPlane(vx4, vy4, vz4, xp, yp);
+            vX.push_back(xp);
+            vY.push_back(yp);
           }
 
           // Cut the sides that are not in the plane.
@@ -474,7 +367,6 @@ void ViewFEMesh::DrawElements() {
             }
           }
           if (vX.size() < 3) continue;
-          // Create a convex TPolyLine object connecting the points.
 
           // Eliminate crossings of the polygon lines
           // (known as "butterflies" in Garfield).
@@ -492,82 +384,56 @@ void ViewFEMesh::DrawElements() {
 
           // Again eliminate crossings of the polygon lines.
           RemoveCrossings(cX, cY);
-
-          // Create the TPolyLine.
-          TPolyLine poly;
-          poly.SetLineColor(colorID);
-          poly.SetFillColor(colorID_fill);
-          poly.SetLineWidth(3);
-          // Add all of the points.
-          const auto nPoints = cX.size();
-          for (size_t pt = 0; pt < nPoints; ++pt) {
-            poly.SetPoint(pt, cX[pt], cY[pt]);
-          }
-
-          // Add the polygon to the mesh.
-          m_mesh.push_back(std::move(poly));
+  
+          // Draw the polygon.
+          std::vector<float> xgr(cX.begin(), cX.end());
+          std::vector<float> ygr(cY.begin(), cY.end());
+          gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), opt.c_str());
         }  // end z-periodicity loop
       }    // end y-periodicity loop
     }      // end x-periodicity loop
   }        // end loop over elements
 
-  // If we have an associated ViewDrift, plot projections of the drift lines.
+  // If we have an associated ViewDrift object, plot the drift lines.
   if (m_viewDrift) {
+    // Plot a 2D projection of the drift line.
     for (const auto& dline : m_viewDrift->m_driftLines) {
-      // Create a TPolyLine that is a 2D projection of the original.
-      TPolyLine poly;
+      TGraph gr;
       if (dline.second == ViewDrift::Particle::Electron) {
-        poly.SetLineColor(kOrange - 3);
+        gr.SetLineColor(kOrange - 3);
       } else {
-        poly.SetLineColor(kRed + 1);
+        gr.SetLineColor(kRed + 1);
       }
-      int polyPts = 0;
+      std::vector<float> xgr;
+      std::vector<float> ygr;
+      // Loop over the points.
       for (const auto& point : dline.first) {
         // Project this point onto the plane.
-        PlaneCoords(point[0], point[1], point[2], projMat, xMat);
+        float xp = 0., yp = 0.;
+        ToPlane(point[0], point[1], point[2], xp, yp);
         // Add this point if it is within the view.
-        if (InView(xMat(0, 0), xMat(1, 0))) {
-          poly.SetPoint(polyPts, xMat(0, 0), xMat(1, 0));
-          polyPts++;
+        if (InView(xp, yp)) {
+          xgr.push_back(xp);
+          ygr.push_back(yp);
         }
-      }  // end loop over points
-
-      // Add the drift line to the list.
-      m_driftLines.push_back(std::move(poly));
-
+      }
+      if (!xgr.empty()) {
+        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
+      }
     }  // end loop over drift lines
   }    // end if(m_viewDrift != 0)
 
-  // Call the ROOT draw methods to plot the elements.
-  auto canvas = GetCanvas();
-  canvas->cd();
-
-  // Draw default axes by using a blank 2D histogram.
-  if (!m_xaxis && !m_yaxis && m_drawAxes) {
-    std::string name = CreateAxisTitle(m_pmat[0]);
-    m_axes->GetXaxis()->SetTitle(name.c_str());
-    m_axes->GetXaxis()->SetLimits(m_xMinPlot, m_xMaxPlot);
-    name = CreateAxisTitle(m_pmat[1]);
-    m_axes->GetYaxis()->SetTitle(name.c_str());
-    m_axes->GetYaxis()->SetTitleOffset(1.6);
-    m_axes->GetYaxis()->SetLimits(m_yMinPlot, m_yMaxPlot);
-    m_axes->Draw();
+  if (m_drawViewRegion && !m_viewRegionX.empty()) {
+    TPolyLine poly;
+    poly.SetLineColor(kSpring + 4);
+    poly.SetLineWidth(3);
+    std::vector<double> xv = m_viewRegionX;
+    std::vector<double> yv = m_viewRegionY;
+    // Close the polygon.
+    xv.push_back(m_viewRegionX[0]);
+    yv.push_back(m_viewRegionY[0]);
+    poly.DrawPolyLine(xv.size(), xv.data(), yv.data(), "same");
   }
-
-  // Draw custom axes.
-  if (m_xaxis && m_drawAxes) m_xaxis->Draw();
-  if (m_yaxis && m_drawAxes) m_yaxis->Draw();
-
-  // Draw the mesh on the canvas.
-  for (auto& m : m_mesh) {
-    if (m_plotMeshBorders || !m_fillMesh) m.Draw("same");
-    if (m_fillMesh) m.Draw("f:same");
-  }
-  // Draw the drift lines on the view.
-  for (auto& dline : m_driftLines) dline.Draw("same");
-
-  if (m_drawViewRegion)
-    for (auto& m : m_viewRegionLines) m.Draw("same");
 
   // Draw axes again so they are on top
   gPad->RedrawAxis("g");
@@ -601,44 +467,7 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   const bool perZ =
       m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
 
-  // Clear the meshes and drift line lists
-  m_mesh.clear();
-  m_driftLines.clear();
-
-  // Prepare the final projection matrix (the transpose of the 2D array
-  // "project")
-  TArrayD dataProj(9);
-  dataProj[0] = m_pmat[0][0];
-  dataProj[1] = m_pmat[1][0];
-  dataProj[2] = m_pmat[2][0];
-  dataProj[3] = m_pmat[0][1];
-  dataProj[4] = m_pmat[1][1];
-  dataProj[5] = m_pmat[2][1];
-  dataProj[6] = m_pmat[0][2];
-  dataProj[7] = m_pmat[1][2];
-  dataProj[8] = m_pmat[2][2];
-  TMatrixD projMat(3, 3, dataProj.GetArray());
-
-  // Calculate the determinant of the projection matrix
-  double projDet =
-      projMat(0, 0) *
-          (projMat(1, 1) * projMat(2, 2) - projMat(1, 2) * projMat(2, 1)) -
-      projMat(0, 1) *
-          (projMat(1, 0) * projMat(2, 2) - projMat(1, 2) * projMat(2, 0)) +
-      projMat(0, 2) *
-          (projMat(1, 0) * projMat(2, 1) - projMat(1, 1) * projMat(2, 0));
-
-  // Calculate the inverse of the projection matrix for
-  // calculating coordinates in the viewing plane
-  if (projDet != 0) {
-    projMat.Invert();
-  } else {
-    std::cerr << m_className << "::DrawCST:\n";
-    std::cerr << "    Projection matrix is not invertible.\n";
-    std::cerr << "    Finite element mesh will not be drawn.\n";
-  }
-
-  // Construct two empty single-column matrices for use as coordinate vectors
+  // Construct single-column matrix for use as coordinate vector.
   TMatrixD xMat(3, 1);
 
   // Determine the number of periods present in the cell.
@@ -659,20 +488,23 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   unsigned int n_x, n_y, n_z;
   componentCST->GetNumberOfMeshLines(n_x, n_y, n_z);
   double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
+  const double fx = m_plane[0];
+  const double fy = m_plane[1];
+  const double fz = m_plane[2];
   // xy view
-  if (m_pmat[2][0] == 0 && m_pmat[2][1] == 0 && m_pmat[2][2] == 1) {
+  if (fx == 0 && fy == 0 && fz == 1) {
     std::cout << m_className << "::DrawCST: Creating x-y mesh view.\n";
     ViewFEMesh::SetXaxisTitle("x [cm]");
     ViewFEMesh::SetYaxisTitle("y [cm]");
     // calculate the z position
     unsigned int i, j, z;
-    if (!componentCST->Coordinate2Index(0, 0, m_dist * m_pmat[2][2], i, j, z)) {
+    const double z0 = m_plane[3] * fz;
+    if (!componentCST->Coordinate2Index(0, 0, z0, i, j, z)) {
       std::cerr << "    Could not determine the position of the plane in "
                 << "z direction.\n";
       return;
     }
-    std::cout << "    The plane position in z direction is: "
-              << m_dist * m_pmat[2][2] << "\n";
+    std::cout << "    The plane position in z direction is: " << z0 << "\n";
     nMinU = nMinX;
     nMaxU = nMaxX;
     nMinV = nMinY;
@@ -710,19 +542,19 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
       }
     }
     // xz-view
-  } else if (m_pmat[2][0] == 0 && m_pmat[2][1] == -1 && m_pmat[2][2] == 0) {
+  } else if (fx == 0 && fy == -1 && fz == 0) {
     std::cout << m_className << "::DrawCST: Creating x-z mesh view.\n";
     ViewFEMesh::SetXaxisTitle("x [cm]");
     ViewFEMesh::SetYaxisTitle("z [cm]");
     // calculate the y position
     unsigned int i = 0, j = 0, y = 0;
-    if (!componentCST->Coordinate2Index(0, m_dist * m_pmat[2][1], 0, i, y, j)) {
+    const double y0 = m_plane[3] * fy;
+    if (!componentCST->Coordinate2Index(0, y0, 0, i, y, j)) {
       std::cerr << "    Could not determine the position of the plane in "
                 << "y direction.\n";
       return;
     }
-    std::cout << "    The plane position in y direction is: "
-              << m_dist * m_pmat[2][1] << "\n";
+    std::cout << "    The plane position in y direction is: " << y0 << "\n";
 
     nMinU = nMinX;
     nMaxU = nMaxX;
@@ -762,20 +594,19 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     }
 
     // yz-view
-  } else if (m_pmat[2][0] == -1 && m_pmat[2][1] == 0 && m_pmat[2][2] == 0) {
+  } else if (fx == -1 && fy == 0 && fz == 0) {
     std::cout << m_className << "::DrawCST: Creating z-y mesh view.\n";
     ViewFEMesh::SetXaxisTitle("z [cm]");
     ViewFEMesh::SetYaxisTitle("y [cm]");
     // calculate the x position
     unsigned int i, j, x;
-    if (!componentCST->Coordinate2Index(m_dist * m_pmat[2][0], 0, 0, x, i,
-                                        j)) {
+    const double x0 = m_plane[3] * fx;
+    if (!componentCST->Coordinate2Index(x0, 0, 0, x, i, j)) {
       std::cerr << "    Could not determine the position of the plane in "
                 << "x direction.\n";
       return;
     }
-    std::cout << "    The plane position in x direction is: "
-              << m_dist * m_pmat[2][0] << "\n";
+    std::cout << "    The plane position in x direction is: " << x0 << "\n";
     nMinU = nMinZ;
     nMaxU = nMaxZ;
     nMinV = nMinY;
@@ -819,132 +650,123 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     std::cerr << "    Please choose one of the following: xy, xz, yz.\n";
     return;
   }
-  std::cout << m_className << "::DrawCST:\n";
-  std::cout << "    Number of elements in the projection of the unit cell:"
+
+  auto pad = GetCanvas();
+  pad->cd();
+
+  if (m_drawAxes) {
+    if (!m_xaxis && !m_yaxis) {
+      // Draw default axes.
+      auto frame = pad->DrawFrame(uMin, vMin, uMax, vMax);
+      if (m_xaxisTitle.empty()) {
+        frame->GetXaxis()->SetTitle(LabelX().c_str());
+      } else { 
+        frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
+      }
+      if (m_yaxisTitle.empty()) {
+        frame->GetYaxis()->SetTitle(LabelY().c_str());
+      } else {
+        frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
+      }
+    } else {
+      // Draw custom axes.
+      if (m_xaxis) m_xaxis->Draw();
+      if (m_yaxis) m_yaxis->Draw();
+    }
+  }
+
+  std::cout << m_className << "::DrawCST:\n"
+            << "    Number of elements in the projection of the unit cell:"
             << elements.size() << std::endl;
-  std::vector<PolygonInfo>::iterator it;
-  std::vector<PolygonInfo>::iterator itend = elements.end();
 
   for (int nu = nMinU; nu <= nMaxU; nu++) {
     for (int nv = nMinV; nv <= nMaxV; nv++) {
-      it = elements.begin();
-      while (it != itend) {
-        if (m_disabledMaterial[(*it).material]) {
-          // do not create Polygons for disabled materials
-          it++;
+      for (const auto& element : elements) {
+        const auto mat = element.material;
+        if (m_disabledMaterial[mat]) {
+          // Do not create polygons for disabled materials.
           continue;
         }
-        int colorID = m_colorMap.count((*it).material);
-        if (colorID != 0)
-          colorID = m_colorMap[(*it).material];
-        else
-          colorID = 1;
-
-        // Get the fill color for this element (default colorID)
-        int colorID_fill = m_colorMap_fill.count((*it).material);
-        if (colorID_fill != 0)
-          colorID_fill = m_colorMap_fill[(*it).material];
-        else
-          colorID_fill = colorID;
-
-        TPolyLine poly;
-        poly.SetLineColor(colorID);
-        poly.SetFillColor(colorID_fill);
+        TGraph gr;
+        const short col = m_colorMap.count(mat) > 0 ? m_colorMap[mat] : 1;
+        gr.SetLineColor(col);
+        if (m_colorMap_fill.count(mat) > 0) {
+          gr.SetFillColor(m_colorMap_fill[mat]);
+        } else {
+          gr.SetFillColor(col);
+        }
         if (m_plotMeshBorders)
-          poly.SetLineWidth(3);
+          gr.SetLineWidth(3);
         else
-          poly.SetLineWidth(1);
+          gr.SetLineWidth(1);
+
         // Add 4 points of the square
-        Double_t tmp_u[4], tmp_v[4];
+        float tmp_u[4], tmp_v[4];
         if (mirroru && nu != 2 * (nu / 2)) {
           // nu is odd
-          tmp_u[0] = mapumin + (mapumax - (*it).p1[0]) + su * nu;
-          tmp_u[1] = mapumin + (mapumax - (*it).p2[0]) + su * nu;
-          tmp_u[2] = mapumin + (mapumax - (*it).p3[0]) + su * nu;
-          tmp_u[3] = mapumin + (mapumax - (*it).p4[0]) + su * nu;
+          tmp_u[0] = mapumin + (mapumax - element.p1[0]) + su * nu;
+          tmp_u[1] = mapumin + (mapumax - element.p2[0]) + su * nu;
+          tmp_u[2] = mapumin + (mapumax - element.p3[0]) + su * nu;
+          tmp_u[3] = mapumin + (mapumax - element.p4[0]) + su * nu;
         } else {
           // nu is even
-          tmp_u[0] = (*it).p1[0] + su * nu;
-          tmp_u[1] = (*it).p2[0] + su * nu;
-          tmp_u[2] = (*it).p3[0] + su * nu;
-          tmp_u[3] = (*it).p4[0] + su * nu;
+          tmp_u[0] = element.p1[0] + su * nu;
+          tmp_u[1] = element.p2[0] + su * nu;
+          tmp_u[2] = element.p3[0] + su * nu;
+          tmp_u[3] = element.p4[0] + su * nu;
         }
         if (mirrorv && nv != 2 * (nv / 2)) {
-          tmp_v[0] = mapvmin + (mapvmax - (*it).p1[1]) + sv * nv;
-          tmp_v[1] = mapvmin + (mapvmax - (*it).p2[1]) + sv * nv;
-          tmp_v[2] = mapvmin + (mapvmax - (*it).p3[1]) + sv * nv;
-          tmp_v[3] = mapvmin + (mapvmax - (*it).p4[1]) + sv * nv;
+          tmp_v[0] = mapvmin + (mapvmax - element.p1[1]) + sv * nv;
+          tmp_v[1] = mapvmin + (mapvmax - element.p2[1]) + sv * nv;
+          tmp_v[2] = mapvmin + (mapvmax - element.p3[1]) + sv * nv;
+          tmp_v[3] = mapvmin + (mapvmax - element.p4[1]) + sv * nv;
         } else {
-          tmp_v[0] = (*it).p1[1] + sv * nv;
-          tmp_v[1] = (*it).p2[1] + sv * nv;
-          tmp_v[2] = (*it).p3[1] + sv * nv;
-          tmp_v[3] = (*it).p4[1] + sv * nv;
+          tmp_v[0] = element.p1[1] + sv * nv;
+          tmp_v[1] = element.p2[1] + sv * nv;
+          tmp_v[2] = element.p3[1] + sv * nv;
+          tmp_v[3] = element.p4[1] + sv * nv;
         }
         if (tmp_u[0] < uMin || tmp_u[1] > uMax || tmp_v[0] < vMin ||
             tmp_v[2] > vMax) {
-          it++;
           continue;
         }
-        poly.SetPoint(0, tmp_u[0], tmp_v[0]);
-        poly.SetPoint(1, tmp_u[1], tmp_v[1]);
-        poly.SetPoint(2, tmp_u[2], tmp_v[2]);
-        poly.SetPoint(3, tmp_u[3], tmp_v[3]);
-        // Add the polygon to the mesh
-        m_mesh.push_back(std::move(poly));
-        it++;
+        std::string opt = "";
+        if (m_plotMeshBorders || !m_fillMesh) opt += "l";
+        if (m_fillMesh) opt += "f";
+        opt += "same";
+        gr.DrawGraph(4, tmp_u, tmp_v, opt.c_str());
       }  // end element loop
     }    // end v-periodicity loop
   }      // end u-periodicity loop
-  std::cout << m_className << "::PlotCST:\n"
-            << "    Number of polygons to be drawn:" << m_mesh.size() << "\n";
-  // If we have an associated ViewDrift, plot projections of the drift lines
+
   if (m_viewDrift) {
     for (const auto& dline : m_viewDrift->m_driftLines) {
-      // Create a TPolyLine that is a 2D projection of the original
-      TPolyLine poly;
+      // Plot a 2D projection of the drift line.
+      TGraph gr;
       if (dline.second == ViewDrift::Particle::Electron) {
-        poly.SetLineColor(kOrange - 3);
+        gr.SetLineColor(kOrange - 3);
       } else {
-        poly.SetLineColor(kRed + 1);
+        gr.SetLineColor(kRed + 1);
       }
-      int polyPts = 0;
+      std::vector<float> xgr;
+      std::vector<float> ygr;
+      // Loop over the points.
       for (const auto& point : dline.first) {
         // Project this point onto the plane.
-        PlaneCoords(point[0], point[1], point[2], projMat, xMat);
+        float u = 0., v = 0.;
+        ToPlane(point[0], point[1], point[2], u, v);
         // Add this point if it is within the view
-        if (xMat(0, 0) >= uMin && xMat(0, 0) <= uMax && xMat(1, 0) >= vMin &&
-            xMat(1, 0) <= vMax) {
-          poly.SetPoint(polyPts, xMat(0, 0), xMat(1, 0));
-          polyPts++;
+        if (u >= uMin && u <= uMax && v >= vMin && v <= vMax) {
+          xgr.push_back(u);
+          ygr.push_back(v);
         }
-      }  // end loop over points
-      // Add the drift line to the list
-      m_driftLines.push_back(std::move(poly));
+      }
+      if (!xgr.empty()) {
+        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
+      }
     }  // end loop over drift lines
   }    // end if(m_viewDrift != 0)
 
-  // Call the ROOT draw methods to plot the elements
-  auto canvas = GetCanvas();
-  canvas->cd();
-  // Draw default axes by using a blank 2D histogram.
-  if (!m_xaxis && !m_yaxis && m_drawAxes) {
-    m_axes->GetXaxis()->SetLimits(uMin, uMax);
-    m_axes->GetYaxis()->SetLimits(vMin, vMax);
-    m_axes->Draw();
-  }
-  // Draw custom axes.
-  if (m_xaxis && m_drawAxes) m_xaxis->Draw("");
-  if (m_yaxis && m_drawAxes) m_yaxis->Draw("");
-  // Draw the mesh on the canvas
-  for (auto& m : m_mesh) {
-    if (m_plotMeshBorders || !m_fillMesh) m.Draw("same");
-    if (m_fillMesh) m.Draw("f:sames");
-  }
-
-  // Draw the drift lines on the view
-  for (auto& dline : m_driftLines) {
-    dline.Draw("sames");
-  }
   // Draw axes again so they are on top
   gPad->RedrawAxis("g");
 }
@@ -1039,14 +861,13 @@ void ViewFEMesh::RemoveCrossings(std::vector<double>& x,
 
 /// Return true if the specified point is in the view region.
 bool ViewFEMesh::InView(const double x, const double y) const {
-  // Set up the view vertices.
-  int vN = m_viewRegionLines[0].GetN() - 1;
-  std::vector<double> vx(vN), vy(vN);
-  vx.assign(m_viewRegionLines[0].GetX(), m_viewRegionLines[0].GetX() + vN);
-  vy.assign(m_viewRegionLines[0].GetY(), m_viewRegionLines[0].GetY() + vN);
   // Test whether this vertex is inside the view.
+  if (m_userPlotLimits) {
+    return (x >= m_xMinPlot && x <= m_xMaxPlot && 
+            y >= m_yMinPlot && y <= m_yMaxPlot);
+  }
   bool edge = false;
-  return IsInPolygon(x, y, vx, vy, edge);
+  return IsInPolygon(x, y, m_viewRegionX, m_viewRegionY, edge);
 }
 
 //
@@ -1188,14 +1009,14 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
   // Set up the matrix for cutting edges not in the plane
   TArrayD dataCut(9);
   TMatrixD cutMat(3, 3);
-  dataCut[0] = m_pmat[0][0];
-  dataCut[1] = m_pmat[1][0];
+  dataCut[0] = m_proj[0][0];
+  dataCut[1] = m_proj[1][0];
   dataCut[2] = x1 - x2;
-  dataCut[3] = m_pmat[0][1];
-  dataCut[4] = m_pmat[1][1];
+  dataCut[3] = m_proj[0][1];
+  dataCut[4] = m_proj[1][1];
   dataCut[5] = y1 - y2;
-  dataCut[6] = m_pmat[0][2];
-  dataCut[7] = m_pmat[1][2];
+  dataCut[6] = m_proj[0][2];
+  dataCut[7] = m_proj[1][2];
   dataCut[8] = z1 - z2;
   cutMat.SetMatrixArray(dataCut.GetArray());
 
@@ -1214,9 +1035,9 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
   // Set up a coordinate vector (RHS of equation)
   TArrayD dataCoords(3);
   TMatrixD coordMat(3, 1);
-  dataCoords[0] = x1 - m_dist * m_pmat[2][0];
-  dataCoords[1] = y1 - m_dist * m_pmat[2][1];
-  dataCoords[2] = z1 - m_dist * m_pmat[2][2];
+  dataCoords[0] = x1 - m_plane[3] * m_plane[0];
+  dataCoords[1] = y1 - m_plane[3] * m_plane[1];
+  dataCoords[2] = z1 - m_plane[3] * m_plane[2];
   coordMat.SetMatrixArray(dataCoords.GetArray());
 
   // Invert the cut matrix and multiply to get the solution
@@ -1231,34 +1052,36 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
   return true;
 }
 
-// Calculates m_viewRegionLines and canvas dimensions based on projection plane
+// Calculates view region and canvas dimensions based on projection plane
 // and view area
-bool ViewFEMesh::IntersectPlaneArea(void) {
+bool ViewFEMesh::IntersectPlaneArea(double& xmin, double& ymin,
+                                    double& xmax, double& ymax) {
   std::vector<TMatrixD> intersect_points;
-  m_viewRegionLines.clear();
+  m_viewRegionX.clear();
+  m_viewRegionY.clear();
   // Loop over box edges
-  for (int x0 = 0; x0 < 2; ++x0) {
-    for (int y0 = 0; y0 < 2; ++y0) {
-      for (int z0 = 0; z0 < 2; ++z0) {
-        for (int x1 = x0; x1 < 2; ++x1) {
-          for (int y1 = y0; y1 < 2; ++y1) {
-            for (int z1 = z0; z1 < 2; ++z1) {
-              if (x1 - x0 + y1 - y0 + z1 - z0 != 1) continue;
-              double X0 = (x0 ? m_xMinBox : m_xMaxBox);
-              double Y0 = (y0 ? m_yMinBox : m_yMaxBox);
-              double Z0 = (z0 ? m_zMinBox : m_zMaxBox);
-              double X1 = (x1 ? m_xMinBox : m_xMaxBox);
-              double Y1 = (y1 ? m_yMinBox : m_yMaxBox);
-              double Z1 = (z1 ? m_zMinBox : m_zMaxBox);
+  for (int i0 = 0; i0 < 2; ++i0) {
+    for (int j0 = 0; j0 < 2; ++j0) {
+      for (int k0 = 0; k0 < 2; ++k0) {
+        for (int i1 = i0; i1 < 2; ++i1) {
+          for (int j1 = j0; j1 < 2; ++j1) {
+            for (int k1 = k0; k1 < 2; ++k1) {
+              if (i1 - i0 + j1 - j0 + k1 - k0 != 1) continue;
+              const double x0 = i0 ? m_xMinBox : m_xMaxBox;
+              const double y0 = j0 ? m_yMinBox : m_yMaxBox;
+              const double z0 = k0 ? m_zMinBox : m_zMaxBox;
+              const double x1 = i1 ? m_xMinBox : m_xMaxBox;
+              const double y1 = j1 ? m_yMinBox : m_yMaxBox;
+              const double z1 = k1 ? m_zMinBox : m_zMaxBox;
               TMatrixD xMat(3, 1);
-              if (!PlaneCut(X0, Y0, Z0, X1, Y1, Z1, xMat)) continue;
+              if (!PlaneCut(x0, y0, z0, x1, y1, z1, xMat)) continue;
               if (m_debug) {
                 std::cout << m_className << "::IntersectPlaneArea:\n"
                           << "    Intersection of plane at (" << xMat(0, 0) 
                           << ", " << xMat(1, 0) << ", " << xMat(2, 0) 
                           << ") with edge\n    (" 
-                          << X0 << ", " << Y0 << ", " << Z0 << ")-(" 
-                          << X1 << ", " << Y1 << ", " << Z1 << ")\n";
+                          << x0 << ", " << y0 << ", " << z0 << ")-(" 
+                          << x1 << ", " << y1 << ", " << z1 << ")\n";
               }
               // Do not add same points (the case when plane contains an edge)
               bool skip = false;
@@ -1278,63 +1101,29 @@ bool ViewFEMesh::IntersectPlaneArea(void) {
     }
   }
   if (intersect_points.size() < 3) {
-    std::cerr << m_className << "::IntersectPlaneArea:\n";
-    std::cerr << "    WARNING: Empty intersection of view plane with area.\n";
+    std::cerr << m_className << "::IntersectPlaneArea:\n"
+              << "    WARNING: Empty intersection of view plane with area.\n";
     return false;
   }
   TMatrixD offset = intersect_points[0];
-  m_xMinPlot = m_xMaxPlot = intersect_points[0](0, 0);
-  m_yMinPlot = m_yMaxPlot = intersect_points[0](1, 0);
-  // Remove crossings in resulting polyline by sorting points rotation-wise.
+  xmin = xmax = intersect_points[0](0, 0);
+  ymin = ymax = intersect_points[0](1, 0);
+  // Remove crossings by sorting points rotation-wise.
   for (auto& p : intersect_points) p -= offset;
   std::sort(intersect_points.begin(), intersect_points.end(),
             [](const TMatrixD& a, const TMatrixD& b) -> bool {
               double cross_z = a(0, 0) * b(1, 0) - a(1, 0) * b(0, 0);
               return cross_z < 0;
             });
-  TPolyLine poly;
-  poly.SetLineColor(kSpring + 4);
-  poly.SetLineWidth(3);
-  std::size_t pn = 0;
   for (auto& p : intersect_points) {
     p += offset;
-    poly.SetPoint(pn, p(0, 0), p(1, 0));
-    m_xMinPlot = std::min(p(0, 0), m_xMinPlot);
-    m_yMinPlot = std::min(p(1, 0), m_yMinPlot);
-    m_xMaxPlot = std::max(p(0, 0), m_xMaxPlot);
-    m_yMaxPlot = std::max(p(1, 0), m_yMaxPlot);
-    ++pn;
+    m_viewRegionX.push_back(p(0, 0));
+    m_viewRegionY.push_back(p(1, 0));
+    xmin = std::min(p(0, 0), xmin);
+    ymin = std::min(p(1, 0), ymin);
+    xmax = std::max(p(0, 0), xmax);
+    ymax = std::max(p(1, 0), ymax);
   }
-  poly.SetPoint(pn, offset(0, 0), offset(1, 0));
-  m_viewRegionLines.push_back(poly);
-  return true;
-}
-
-// In x,y,z: vector coordinates
-// Out x,y,z: vector parallel to the viewing plane (project[3][3])
-bool ViewFEMesh::PlaneVector(double& x, double& y, double& z) const {
-  double dist = x * m_pmat[2][0] + y * m_pmat[2][1] + z * m_pmat[2][2];
-  x = x - dist * m_pmat[2][0];
-  y = y - dist * m_pmat[2][1];
-  z = z - dist * m_pmat[2][2];
-  return true;
-}
-
-// Ported from Garfield: calculates the planar coordinates
-// x,y,z: original world coordinates
-// projMat: the projection matrix
-// xMat: the resulting planar coordinates in single-column (vector) form
-bool ViewFEMesh::PlaneCoords(double x, double y, double z,
-                             const TMatrixD& projMat, TMatrixD& xMat) {
-  // Set up the coordinate vector
-  TArrayD dataCoords(3);
-  TMatrixD coordMat(3, 1);
-  dataCoords[0] = x;
-  dataCoords[1] = y;
-  dataCoords[2] = z;
-  coordMat.SetMatrixArray(dataCoords.GetArray());
-  xMat = projMat * coordMat;
-
   return true;
 }
 
@@ -1345,10 +1134,11 @@ bool ViewFEMesh::PlaneCoords(double x, double y, double z,
 // px: the x-vertices of the polygon
 // py: the y-vertices of the polygon
 // edge: a variable set to true if the point is located on the polygon edge
-bool ViewFEMesh::IsInPolygon(double x, double y, std::vector<double>& px,
-                             std::vector<double>& py, bool& edge) const {
+bool ViewFEMesh::IsInPolygon(double x, double y, 
+                             const std::vector<double>& px,
+                             const std::vector<double>& py, bool& edge) const {
   // Get the number and coordinates of the polygon vertices.
-  int pN = (int)px.size();
+  const size_t pN = px.size();
 
   // Handle the special case of less than 2 vertices.
   if (pN < 2) return false;
@@ -1358,7 +1148,7 @@ bool ViewFEMesh::IsInPolygon(double x, double y, std::vector<double>& px,
   // Set the minimum and maximum coordinates of all polygon vertices.
   double px_min = px[0], py_min = py[0];
   double px_max = px[0], py_max = py[0];
-  for (int i = 0; i < pN; i++) {
+  for (size_t i = 0; i < pN; i++) {
     px_min = std::min(px_min, px[i]);
     py_min = std::min(py_min, py[i]);
     px_max = std::max(px_max, px[i]);
@@ -1400,7 +1190,7 @@ bool ViewFEMesh::IsInPolygon(double x, double y, std::vector<double>& px,
     // Loop over all edges, counting the number of edges crossed by a line
     // extending from (x, y) to (xinf, yinf).
     ncross = 0;
-    for (int i = 0; (done && i < pN); i++) {
+    for (size_t i = 0; (done && i < pN); i++) {
       // Determine whether the point lies on the edge.
       if (OnLine(px[i % pN], py[i % pN], px[(i + 1) % pN], py[(i + 1) % pN], x,
                  y)) {
@@ -1455,10 +1245,9 @@ void ViewFEMesh::ClipToView(std::vector<double>& px, std::vector<double>& py,
   cy.clear();
 
   // Set up the view vertices.
-  int vN = m_viewRegionLines[0].GetN() - 1;
-  std::vector<double> vx(vN), vy(vN);
-  vx.assign(m_viewRegionLines[0].GetX(), m_viewRegionLines[0].GetX() + vN);
-  vy.assign(m_viewRegionLines[0].GetY(), m_viewRegionLines[0].GetY() + vN);
+  const auto& vx = m_viewRegionX;
+  const auto& vy = m_viewRegionY;
+  const int vN = m_viewRegionX.size();
 
   // Do nothing if we have less than 2 points.
   if (pN < 2) return;
