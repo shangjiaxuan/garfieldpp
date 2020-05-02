@@ -26,6 +26,9 @@ find_package(ROOT 6.0 REQUIRED COMPONENTS Geom Gdml)
 #--- Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
 include(${ROOT_USE_FILE})
 
+find_package(GSL REQUIRED)
+include_directories(${GSL_INCLUDE_DIR})
+
 #--- If you cannot create symbolic links turn FALSE the library version
 set(BUILD_WITH_VERSION_NUMBER TRUE)
 if(BUILD_WITH_VERSION_NUMBER)
@@ -57,7 +60,11 @@ set( heed_dirs
 foreach(heed_dir ${heed_dirs})
   aux_source_directory(${heed_dir} heed_sources)
 endforeach()
-set_source_files_properties( ${heed_sources} PROPERTIES LANGUAGE CXX)
+set_source_files_properties(${heed_sources} PROPERTIES LANGUAGE CXX)
+
+#--- Add neBEM------------------------------------------------------------------
+aux_source_directory(NeBem nebem_sources)
+set_source_files_properties(${nebem_sources} PROPERTIES LANGUAGE CXX)
 
 #--- Flags to pass to the compiler----------------------------------------------
 if(APPLE)
@@ -114,8 +121,8 @@ message(STATUS "Directory used to find root dict files: ${ROOT_DICT_INCLUDE_DIRS
 message(STATUS "-----------------------------------------------------------" )
 
 #--- build the Garfield library
-add_library(Garfield SHARED ${garfield_sources} ${magboltz_sources} ${heed_sources})
-target_link_libraries(Garfield ROOT::Geom ROOT::Gdml ROOT::Graf3d)
+add_library(Garfield SHARED ${garfield_sources} ${magboltz_sources} ${heed_sources} ${nebem_sources})
+target_link_libraries(Garfield ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES})
 target_compile_features(Garfield INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
