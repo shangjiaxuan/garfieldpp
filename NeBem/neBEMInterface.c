@@ -1157,12 +1157,12 @@ int neBEMReadGeometry(void) {
     work!
     // int **Overlap;
     // Overlap = imatrix(1, NbPrimitives, 1, NbPrimitives);
-    for(register unsigned int prim = 1; prim <= NbPrimitives; ++prim)
-            for(register unsigned int chkprim = 1;
+    for(unsigned int prim = 1; prim <= NbPrimitives; ++prim)
+            for(unsigned int chkprim = 1;
                                                                                                                     chkprim <= NbPrimitives; ++chkprim)
                     Overlap[prim][chkprim] = 0;
 
-    for(register unsigned int prim = 1; prim <= NbPrimitives; ++prim)
+    for(unsigned int prim = 1; prim <= NbPrimitives; ++prim)
             {
             if(dbgFn)
                     printf("\nNew XNorm[%d]: %lg: ", prim, XNorm[prim]);
@@ -1170,7 +1170,7 @@ int neBEMReadGeometry(void) {
             if(fabs(fabs(XNorm[prim]) - 1.0) >= 1.0e-12)	// primitive || to
     YZ plane continue;
 
-            for(register unsigned int chkprim = prim+1;
+            for(unsigned int chkprim = prim+1;
                                                                                                                     chkprim <= NbPrimitives; ++chkprim)
                     {
                     if(dbgFn)
@@ -1183,7 +1183,7 @@ int neBEMReadGeometry(void) {
                             {	// same plane; check YZ vertices for full /
     partial overlap double smallY = YVertex[prim][0]; double bigY =
     YVertex[prim][0]; double smallZ = ZVertex[prim][0]; double bigZ =
-    ZVertex[prim][0]; for(register unsigned int vert = 1; vert<=
+    ZVertex[prim][0]; for(unsigned int vert = 1; vert<=
     NbVertices[prim]; ++vert)
                                     {
                                     if(smallY > YVertex[prim][vert])
@@ -1200,7 +1200,7 @@ int neBEMReadGeometry(void) {
                             double bigcY = YVertex[chkprim][0];
                             double smallcZ = ZVertex[chkprim][0];
                             double bigcZ = ZVertex[chkprim][0];
-                            for(register unsigned int vert = 1;
+                            for(unsigned int vert = 1;
                                                                                                                                     vert<= NbVertices[chkprim]; ++vert)
                                     {
                                     if(smallcY > YVertex[chkprim][vert])
@@ -1489,15 +1489,15 @@ int neBEMReadGeometry(void) {
             }	// loop over primitives
 
     if(dbgFn) printf("\n");
-    for(register unsigned int prim = 1; prim <= NbPrimitives; ++prim)
-            for(register unsigned int chkprim = prim+1;
+    for(unsigned int prim = 1; prim <= NbPrimitives; ++prim)
+            for(unsigned int chkprim = prim+1;
                                                                                                                     chkprim <= NbPrimitives; ++chkprim)
                     {
                     printf("prim: %d, XNorm: %lg, chkprim: %d, XNorm: %lg,
     Overlap: %d\n", prim, XNorm[prim], chkprim, XNorm[chkprim],
     Overlap[prim][chkprim]);
                     }
-    }	// look for overlappped primitives
+    }	// look for overlapped primitives
     */
 
     {  // remove primitives, as specified in a user supplied input file
@@ -2310,7 +2310,7 @@ int neBEMKnownCharges(void) {
           PointKnChArr =
               (PointKnCh *)malloc((NbPointsKnCh + 1) * sizeof(PointKnCh));
 
-          for (register int point = 0; point <= NbPointsKnCh;
+          for (int point = 0; point <= NbPointsKnCh;
                ++point) {  // CHECK!!! ele limits start from 0, but all else
                            // from 1 to ...
             PointKnChArr[point].Nb = 0;
@@ -2349,7 +2349,7 @@ int neBEMKnownCharges(void) {
           LineKnChArr =
               (LineKnCh *)malloc((NbLinesKnCh + 1) * sizeof(LineKnCh));
 
-          for (register int line = 0; line <= NbLinesKnCh;
+          for (int line = 0; line <= NbLinesKnCh;
                ++line) {  // CHECK!!! ele limits start from 0, but all else from
                           // 1 to ...
             LineKnChArr[line].Nb = 0;
@@ -2393,7 +2393,7 @@ int neBEMKnownCharges(void) {
           AreaKnChArr =
               (AreaKnCh *)malloc((NbAreasKnCh + 1) * sizeof(AreaKnCh));
 
-          for (register int area = 0; area <= NbAreasKnCh;
+          for (int area = 0; area <= NbAreasKnCh;
                ++area) {  // CHECK!!! ele limits start from 0, but all else from
                           // 1 to ...
             AreaKnChArr[area].Nb = 0;
@@ -2442,7 +2442,7 @@ int neBEMKnownCharges(void) {
           VolumeKnChArr =
               (VolumeKnCh *)malloc((NbVolumesKnCh + 1) * sizeof(VolumeKnCh));
 
-          for (register int volume = 0; volume <= NbVolumesKnCh;
+          for (int volume = 0; volume <= NbVolumesKnCh;
                ++volume) {  // CHECK!!! ele limits start from 0, but all else
                             // from 1 to ...
             VolumeKnChArr[volume].Nb = 0;
@@ -2499,7 +2499,7 @@ int neBEMChargingUp(int InfluenceMatrixFlag) {
 
   // status of elements before being charged up
   if (debugFn) {
-    for (register int ele = 1; ele <= NbElements; ++ele) {
+    for (int ele = 1; ele <= NbElements; ++ele) {
       printf("ele, Assigned charge: %d, %lg\n", ele,
              (EleArr + ele - 1)->Assigned);
     }
@@ -2549,7 +2549,7 @@ int neBEMChargingUp(int InfluenceMatrixFlag) {
             return -11;
           } else {  // initialize
             NbChUpEonEle = (int *)malloc((NbElements + 1) * sizeof(int));
-            for (register int ele = 0; ele <= NbElements;
+            for (int ele = 0; ele <= NbElements;
                  ++ele) {  // CHECK!!! ele limits start from 0, but all else
                            // from 1 to ...
               NbChUpEonEle[ele] = 0;
@@ -3307,7 +3307,7 @@ int neBEMChargingUp(int InfluenceMatrixFlag) {
             return -11;
           } else {  // initialize
             NbChUpIonEle = (int *)malloc((NbElements + 1) * sizeof(int));
-            for (register int ele = 0; ele <= NbElements;
+            for (int ele = 0; ele <= NbElements;
                  ++ele) {  // CHECK!!! ele limit starts from 0 but all other
                            // from 1 to ...
               NbChUpIonEle[ele] = 0;

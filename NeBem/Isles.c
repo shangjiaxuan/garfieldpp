@@ -2473,7 +2473,7 @@ int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
 
   Pot = XFlux = YFlux = ZFlux = 0.0;
 
-  for (register int i = 1; i <= nbxseg; ++i) {
+  for (int i = 1; i <= nbxseg; ++i) {
     xi = zk = 0.0;  // in order to avoid warnings related to initializations
     xbgn = 0.0 + (double)(i - 1) * dx;
     zlimit_xbgn = zMax - grad * (xbgn - 0.0);
@@ -2483,7 +2483,7 @@ int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
       printf("i: %d, xbgn: %lg, zlimit_xbgn: %lg, xend: %lg, zlimit_xend:%lg\n",
              i, xbgn, zlimit_xbgn, xend, zlimit_xend);
 
-    for (register int k = 1; k <= nbzseg; ++k)  // Chk with the figure
+    for (int k = 1; k <= nbzseg; ++k)  // Chk with the figure
     {
       zbgn = 0.0 + (double)(k - 1) * dz;
       zend = 0.0 + (double)(k)*dz;

@@ -818,8 +818,8 @@ int LHMatrix(void) {
     fclose(fInf);
     printf("Nb of items successfully read in raw mode from %s is %d\n",
                                   InflFile, rfw);
-    for(register int unknown = 1; unknown <= NbUnknowns; ++unknown)
-          for(register int eqn = 1; eqn <= NbEqns; ++eqn)
+    for(int unknown = 1; unknown <= NbUnknowns; ++unknown)
+          for(int eqn = 1; eqn <= NbEqns; ++eqn)
                   printf("Unknown:%d, Eqn:%d => diff Inf: %lg, RawInf: %lg is
     %lg\n", unknown, eqn, Inf[unknown][eqn], RawInf[unknown][eqn],
                                                   fabs(Inf[unknown][eqn] -
@@ -1294,8 +1294,8 @@ MeshOutDir); strcat(InflFile, "/RawInfl.out"); fInf = fopen(InflFile, "rb");
   fclose(fInf);
   printf("Nb of items successfully read in raw mode from %s is %d\n",
                                 InflFile, rfw);
-  for(register int unknown = 1; unknown <= NbUnknowns; ++unknown)
-        for(register int eqn = 1; eqn <= NbEqns; ++eqn)
+  for(int unknown = 1; unknown <= NbUnknowns; ++unknown)
+        for(int eqn = 1; eqn <= NbEqns; ++eqn)
                 printf("Unknown:%d, Eqn:%d => diff Inf: %lg, RawInf: %lg is
 %lg\n", unknown, eqn, Inf[unknown][eqn], RawInf[unknown][eqn],
                                                 fabs(Inf[unknown][eqn] -
@@ -3359,7 +3359,7 @@ int Solve(void) {
             if ((prim == 91) && (ele == 337))  // debug switches are turned on
             {
               double TotalInfl = 0.0;
-              for (register int elesrc = 1; elesrc <= NbElements; ++elesrc) {
+              for (int elesrc = 1; elesrc <= NbElements; ++elesrc) {
                 TotalInfl += Inf[ele][elesrc] * (EleArr + elesrc - 1)->Solution;
               }
               printf("TotalInfl: %lg\n", TotalInfl);

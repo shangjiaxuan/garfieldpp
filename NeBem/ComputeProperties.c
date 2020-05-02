@@ -368,7 +368,7 @@ double xpsrc, ypsrc, zpsrc;	// source point as a primitive
 double tmpPot;
 Vector3D localF, tmpF;
 
-for(register unsigned int primsrc = 1; primsrc <= NbPrimitives; ++primsrc)
+for(unsigned int primsrc = 1; primsrc <= NbPrimitives; ++primsrc)
         {
   xpsrc = PrimOriginX[primsrc]; // helps faster execution - not for primitives?
   ypsrc = PrimOriginY[primsrc];
@@ -403,10 +403,10 @@ for
   InitialVector[0] = xfld - xpsrc; InitialVector[1] = yfld - ypsrc;
   InitialVector[2] = zfld - zpsrc; InitialVector[3] = 1.0;
 
-  for(register int i = 0; i < 4; ++i)
+  for(int i = 0; i < 4; ++i)
     {
     FinalVector[i] = 0.0;
-    for(register int j = 0 ; j < 4; ++j)
+    for(int j = 0 ; j < 4; ++j)
       {
       FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
       }
@@ -445,7 +445,7 @@ for
                 Point3D localPE;	// point element
                 double xsrc, ysrc, zsrc;
 
-                for(register unsigned int ele = ElementBgn[primsrc];
+                for(unsigned int ele = ElementBgn[primsrc];
                                                                                                                         ele <= ElementEnd[primsrc];
                                                                                                                         ++ele)
                         {
@@ -458,10 +458,10 @@ matrix as for primitive double InitialVector[4]; double FinalVector[4];
                         InitialVector[0] = xfld - xsrc; InitialVector[1] = yfld
 - ysrc; InitialVector[2] = zfld - zsrc; InitialVector[3] = 1.0;
 
-                        for(register int i = 0; i < 4; ++i)
+                        for(int i = 0; i < 4; ++i)
                                 {
                                 FinalVector[i] = 0.0;
-                                for(register int j = 0 ; j < 4; ++j)
+                                for(int j = 0 ; j < 4; ++j)
                                 {
                                 FinalVector[i] += TransformationMatrix[i][j] *
 InitialVector[j];
@@ -558,7 +558,7 @@ srcptp, fldpt, MirrorDistXFromOrigin[primsrc], &DirCos);
                                 Point3D localPEM;	// point element
 mirrored double xsrc, ysrc, zsrc; Point3D srcpte;
 
-                                for(register unsigned int ele =
+                                for(unsigned int ele =
 ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
                                                                                                                                         ++ele)
                                         {
@@ -659,7 +659,7 @@ primsrc primitive }	// else element representation }	// MirrorTypeX
                                 double xsrc, ysrc, zsrc;
                                 Point3D srcpte;
 
-                                for(register unsigned int ele =
+                                for(unsigned int ele =
 ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
                                                                                                                                         ++ele)
                                         {
@@ -758,7 +758,7 @@ primsrc primitive }	// else element representations }	// MirrorTypeY
                                 double xsrc, ysrc, zsrc;
                                 Point3D srcpte;
 
-                                for(register unsigned int ele =
+                                for(unsigned int ele =
 ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
                                                                                                                                         ++ele)
                                         {
@@ -815,17 +815,17 @@ MirrorTypeZ }	// Mirror effect ends
       {
       double XPOfRpt, YPOfRpt, ZPOfRpt;
 
-      for(register int xrpt = -PeriodicInX[primsrc];
+      for(int xrpt = -PeriodicInX[primsrc];
             xrpt <= PeriodicInX[primsrc]; ++xrpt)
         {
         XPOfRpt = xpsrc + XPeriod[primsrc] * (double)xrpt;
 
-        for(register int yrpt = -PeriodicInY[primsrc];
+        for(int yrpt = -PeriodicInY[primsrc];
               yrpt <= PeriodicInY[primsrc]; ++yrpt)
           {
           YPOfRpt = ypsrc + YPeriod[primsrc] * (double)yrpt;
 
-          for(register int zrpt = -PeriodicInZ[primsrc];
+          for(int zrpt = -PeriodicInZ[primsrc];
                 zrpt <= PeriodicInZ[primsrc]; ++zrpt)
             {
             ZPOfRpt = zpsrc + ZPeriod[primsrc] * (double)zrpt;
@@ -843,11 +843,11 @@ global to local system double InitialVector[4]; double FinalVector[4];
 XPOfRpt; InitialVector[1] = yfld - YPOfRpt; InitialVector[2] = zfld - ZPOfRpt;
 InitialVector[3] = 1.0;
 
-                                                for(register int i = 0; i < 4;
+                                                for(int i = 0; i < 4;
 ++i)
                                                         {
                                                         FinalVector[i] = 0.0;
-                                                        for(register int j = 0 ;
+                                                        for(int j = 0 ;
 j < 4; ++j)
                                                         {
                                                         FinalVector[i] +=
@@ -921,11 +921,11 @@ FinalVector[4];
 = xfld - XOfRpt; InitialVector[1] = yfld - YOfRpt; InitialVector[2] = zfld -
 ZOfRpt; InitialVector[3] = 1.0;
 
-                                                                for(register int
+                                                                for(int
 i = 0; i < 4; ++i)
                                                                         {
                                                                         FinalVector[i]
-= 0.0; for(register int j = 0 ; j < 4; ++j)
+= 0.0; for(int j = 0 ; j < 4; ++j)
                                                                         {
                                                                         FinalVector[i]
 += TransformationMatrix[i][j]
@@ -1297,7 +1297,7 @@ repetitions
 // Similarly for area and volume element related functions
 // since there is no intermediate function that interfaces ExactPointP etc
 // division by MyFACTOR is necessary
-for(register unsigned int point = 1; point <= NbPtsKnCh; ++point)
+for(unsigned int point = 1; point <= NbPtsKnCh; ++point)
         {
         tmpPot = ExactPointP(&(PtKnChArr+point-1)->P, globalP);
         (*Potential) += (PtKnChArr+point-1)->Assigned * tmpPot / MyFACTOR;
@@ -1307,7 +1307,7 @@ for(register unsigned int point = 1; point <= NbPtsKnCh; ++point)
         globalF->Z += (PtKnChArr+point-1)->Assigned * tmpF.Z / MyFACTOR;
         }
 
-for(register unsigned int line = 1; line <= NbLinesKnCh; ++line)
+for(unsigned int line = 1; line <= NbLinesKnCh; ++line)
         {
         (*Potential) += 0.0;
         globalF->X += 0.0;
@@ -1315,7 +1315,7 @@ for(register unsigned int line = 1; line <= NbLinesKnCh; ++line)
         globalF->Z += 0.0;
         }
 
-for(register unsigned int area = 1; area <= NbAreasKnCh; ++area)
+for(unsigned int area = 1; area <= NbAreasKnCh; ++area)
         {
         (*Potential) += 0.0;
         globalF->X += 0.0;
@@ -1323,7 +1323,7 @@ for(register unsigned int area = 1; area <= NbAreasKnCh; ++area)
         globalF->Z += 0.0;
         }
 
-for(register unsigned int vol = 1; vol <= NbVolsKnCh; ++vol)
+for(unsigned int vol = 1; vol <= NbVolsKnCh; ++vol)
         {
         (*Potential) += 0.0;
         globalF->X += 0.0;
@@ -4215,7 +4215,7 @@ int FastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
 
   /*
   // Check whether the point falls within a volume that is omitted
-  for(register int omit = 1; omit <= FastVol.NbOmitVols; ++omit)
+  for(int omit = 1; omit <= FastVol.NbOmitVols; ++omit)
     {
           if((dx >= (OmitVolCrnrX[omit]-FastVol.CrnrX))
                           && (dx <=
@@ -4239,7 +4239,7 @@ int FastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   int thisBlock = 1;
   if(FastVol.NbBlocks > 1)
           {
-          for(register int block = 1; block <= FastVol.NbBlocks; ++block)
+          for(int block = 1; block <= FastVol.NbBlocks; ++block)
                   {
                   if(dbgFn)
                           {
@@ -4259,7 +4259,7 @@ int FastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   */
 
   int thisBlock = 0;
-  for (register int block = 1; block <= FastVol.NbBlocks; ++block) {
+  for (int block = 1; block <= FastVol.NbBlocks; ++block) {
     double blkBtmZ = BlkCrnrZ[block] - CornerZ;  // since CornerZ has been
     double blkTopZ = blkBtmZ + BlkLZ[block];     // subtracted from dz already
     if (dbgFn) {
@@ -4719,7 +4719,7 @@ int FastKnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
 
   /*
   // Check whether the point falls within a volume that is omitted
-  for(register int omit = 1; omit <= FastVol.NbOmitVols; ++omit)
+  for(int omit = 1; omit <= FastVol.NbOmitVols; ++omit)
     {
           if((dx >= (OmitVolCrnrX[omit]-FastVol.CrnrX))
                           && (dx <=
@@ -4741,7 +4741,7 @@ int FastKnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   int thisBlock = 1;
   if(FastVol.NbBlocks > 1)
           {
-          for(register int block = 1; block <= FastVol.NbBlocks; ++block)
+          for(int block = 1; block <= FastVol.NbBlocks; ++block)
                   {
                   if(dbgFn)
                           {
@@ -4761,7 +4761,7 @@ int FastKnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   */
 
   int thisBlock = 0;
-  for (register int block = 1; block <= FastVol.NbBlocks; ++block) {
+  for (int block = 1; block <= FastVol.NbBlocks; ++block) {
     double blkBtmZ = BlkCrnrZ[block] - CornerZ;  // since CornerZ has been
     double blkTopZ = blkBtmZ + BlkLZ[block];     // subtracted from dz already
     if (dbgFn) {
@@ -5220,7 +5220,7 @@ int WtFldFastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
 
   /*
   // Check whether the point falls within a volume that is omitted
-  for(register int omit = 1; omit <= WtFldFastVol.NbOmitVols; ++omit)
+  for(int omit = 1; omit <= WtFldFastVol.NbOmitVols; ++omit)
     {
           if((dx >= (WtFldOmitVolCrnrX[omit]-WtFldFastVol.CrnrX))
                           && (dx <=
@@ -5246,7 +5246,7 @@ int WtFldFastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   int thisBlock = 1;
   if(WtFldFastVol.NbBlocks > 1)
           {
-          for(register int block = 1; block <= WtFldFastVol.NbBlocks; ++block)
+          for(int block = 1; block <= WtFldFastVol.NbBlocks; ++block)
                   {
                   if(dbgFn)
                           {
@@ -5266,7 +5266,7 @@ int WtFldFastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   */
 
   int thisBlock = 0;
-  for (register int block = 1; block <= WtFldFastVol.NbBlocks; ++block) {
+  for (int block = 1; block <= WtFldFastVol.NbBlocks; ++block) {
     double blkBtmZ = WtFldBlkCrnrZ[block] - CornerZ;  // since CornerZ has been
     double blkTopZ = blkBtmZ + WtFldBlkLZ[block];  // subtracted from dz already
     if (dbgFn) {
@@ -5869,7 +5869,7 @@ double yfld = globalP->Y;
 double zfld = globalP->Z;
 fldpt.X = xfld; fldpt.Y = yfld; fldpt.Z = zfld;
 
-for(register unsigned int ele = 1; ele <= NbElements; ++ele)
+for(unsigned int ele = 1; ele <= NbElements; ++ele)
         {
         localF.X = localF.Y = localF.Z = 0.0;
 
@@ -5900,10 +5900,10 @@ for(register unsigned int ele = 1; ele <= NbElements; ++ele)
   TransformationMatrix[2][1] = DirCos->ZUnit.Y;
   TransformationMatrix[2][2] = DirCos->ZUnit.Z;
 
-        for(register int i = 0; i < 4; ++i)
+        for(int i = 0; i < 4; ++i)
                 {
                 FinalVector[i] = 0.0;
-                for(register int j = 0 ; j < 4; ++j)
+                for(int j = 0 ; j < 4; ++j)
                 {
                 FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
                 }
@@ -6007,16 +6007,16 @@ for(register unsigned int ele = 1; ele <= NbElements; ++ele)
       {
       double XOfRpt, YOfRpt, ZOfRpt;
 
-      for(register int xrpt = -PeriodicInX[prim];
+      for(int xrpt = -PeriodicInX[prim];
             xrpt <= PeriodicInX[prim]; ++xrpt)
         {
         XOfRpt = xsrc + XPeriod[prim] * (double)xrpt;
-        for(register int yrpt = -PeriodicInY[prim];
+        for(int yrpt = -PeriodicInY[prim];
               yrpt <= PeriodicInY[prim]; ++yrpt)
           {
           YOfRpt = ysrc + YPeriod[prim] * (double)yrpt;
 
-          for(register int zrpt = -PeriodicInZ[prim];
+          for(int zrpt = -PeriodicInZ[prim];
                 zrpt <= PeriodicInZ[prim]; ++zrpt)
             {
             ZOfRpt = zsrc + ZPeriod[prim] * (double)zrpt;
@@ -6045,11 +6045,11 @@ DirCos->ZUnit.X; TransformationMatrix[2][1] = DirCos->ZUnit.Y;
                                         TransformationMatrix[2][2] =
 DirCos->ZUnit.Z;
 
-                                                for(register int i = 0; i < 4;
+                                                for(int i = 0; i < 4;
 ++i)
                                                         {
                                                         FinalVector[i] = 0.0;
-                                                        for(register int j = 0 ;
+                                                        for(int j = 0 ;
 j < 4; ++j)
                                                         {
                                                         FinalVector[i] +=

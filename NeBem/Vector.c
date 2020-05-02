@@ -310,9 +310,9 @@ Point3D TranslatePoint3D(Point3D *A, Point3D *Origin, int Sense) {
       exit(-1);
   }
 
-  for (register int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 4; ++i) {
     FinalVector[i] = 0.0;
-    for (register int j = 0; j < 4; ++j) {
+    for (int j = 0; j < 4; ++j) {
       FinalVector[i] += TranslationMatrix[i][j] * InitialVector[j];
     }
   }
@@ -376,9 +376,9 @@ Point3D RotatePoint3D(Point3D *A, DirnCosn3D *DC, int Sense) {
       exit(-1);
   }
 
-  for (register int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 4; ++i) {
     FinalVector[i] = 0.0;
-    for (register int j = 0; j < 4; ++j) {
+    for (int j = 0; j < 4; ++j) {
       FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
     }
   }
@@ -442,9 +442,9 @@ Vector3D RotateVector3D(Vector3D *A, DirnCosn3D *DC, int Sense) {
       exit(-1);
   }
 
-  for (register int i = 0; i < 4; ++i) {
+  for (int i = 0; i < 4; ++i) {
     FinalVector[i] = 0.0;
-    for (register int j = 0; j < 4; ++j) {
+    for (int j = 0; j < 4; ++j) {
       FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
     }
   }

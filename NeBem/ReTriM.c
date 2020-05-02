@@ -439,7 +439,7 @@ int DiscretizeWire(int prim, int nvertex, double xvert[], double yvert[],
 
   if (OptPrintVertexAndNormal) {
     printf("nvertex: %d\n", nvertex);
-    for (register int vert = 0; vert < nvertex; ++vert) {
+    for (int vert = 0; vert < nvertex; ++vert) {
       printf("vert: %d, x: %lg, y: %lg, z: %lg\n", vert, xvert[vert],
              yvert[vert], zvert[vert]);
     }
@@ -657,7 +657,7 @@ int DiscretizeWire(int prim, int nvertex, double xvert[], double yvert[],
 
   ElementBgn[prim] = EleCntr + 1;
   double xv0, yv0, zv0, xv1, yv1, zv1;
-  for (register int seg = 1; seg <= NbSegs; ++seg) {
+  for (int seg = 1; seg <= NbSegs; ++seg) {
     xv0 = xvert[0] + ((double)seg - 1.0) * xincr;
     yv0 = yvert[0] + ((double)seg - 1.0) * yincr;
     zv0 = zvert[0] + ((double)seg - 1.0) * zincr;
@@ -806,7 +806,7 @@ int DiscretizeTriangle(int prim, int nvertex, double xvert[], double yvert[],
 
   if (OptPrintVertexAndNormal) {
     printf("nvertex: %d\n", nvertex);
-    for (register int vert = 0; vert < nvertex; ++vert) {
+    for (int vert = 0; vert < nvertex; ++vert) {
       printf("vert: %d, x: %lg, y: %lg, z: %lg\n", vert, xvert[vert],
              yvert[vert], zvert[vert]);
     }
@@ -1125,7 +1125,7 @@ int DiscretizeTriangle(int prim, int nvertex, double xvert[], double yvert[],
   // rectangular ones.
   double xv0, yv0, zv0, xv1, yv1, zv1, xv2, yv2, zv2;
   ElementBgn[prim] = EleCntr + 1;
-  for (register int k = 1; k <= NbSegZ; ++k)  // consider the k-th row
+  for (int k = 1; k <= NbSegZ; ++k)  // consider the k-th row
   {
     double grad = (SurfLZ / SurfLX);
     double zlopt = (k - 1) * SurfElLZ;
@@ -1348,7 +1348,7 @@ int DiscretizeTriangle(int prim, int nvertex, double xvert[], double yvert[],
       ElLXOnThisRow = RowLX / NbSegXOnThisRow;
     }
     double x0, y0, z0, x1, y1, z1, x2, y2, z2, x3, y3, z3;
-    for (register int i = 1; i <= NbSegXOnThisRow; ++i) {
+    for (int i = 1; i <= NbSegXOnThisRow; ++i) {
       double xorigin = (i - 1) * ElLXOnThisRow + 0.5 * ElLXOnThisRow;  // PCS
       double yorigin = 0.0;  // centroid of the rectagnular element
       double zorigin = 0.5 * (zlopt + zhipt);
@@ -1611,7 +1611,7 @@ int DiscretizeRectangle(int prim, int nvertex, double xvert[], double yvert[],
 
   if (OptPrintVertexAndNormal) {
     printf("nvertex: %d\n", nvertex);
-    for (register int vert = 0; vert < nvertex; ++vert) {
+    for (int vert = 0; vert < nvertex; ++vert) {
       printf("vert: %d, x: %lg, y: %lg, z: %lg\n", vert, xvert[vert],
              yvert[vert], zvert[vert]);
     }
@@ -1870,13 +1870,13 @@ int DiscretizeRectangle(int prim, int nvertex, double xvert[], double yvert[],
 
   double x0, y0, z0, x1, y1, z1, x2, y2, z2, x3, y3, z3, xav, zav;
   ElementBgn[prim] = EleCntr + 1;
-  for (register int i = 1; i <= NbSegX; ++i) {
+  for (int i = 1; i <= NbSegX; ++i) {
     x1 = -SurfLX / 2.0 +
          (double)(i - 1) * SurfElLX;  // assuming centroid at 0,0,0
     x2 = -SurfLX / 2.0 + (double)(i)*SurfElLX;
     xav = 0.5 * (x1 + x2);
 
-    for (register int k = 1; k <= NbSegZ; ++k) {
+    for (int k = 1; k <= NbSegZ; ++k) {
       z1 = -SurfLZ / 2.0 + (double)(k - 1) * SurfElLZ;
       z2 = -SurfLZ / 2.0 + (double)(k)*SurfElLZ;
       zav = 0.5 * (z1 + z2);
@@ -2128,7 +2128,7 @@ int BoundaryConditions(void) {
   // The RHS will also need to be modified to accommodate the presence of
   // floating conductors and charged (known) substances.
   // Looping on primitives (rather than elements) can save precious time!
-  for (register unsigned int ele = 1; ele <= NbElements; ++ele) {
+  for (unsigned int ele = 1; ele <= NbElements; ++ele) {
     int prim = (EleArr + ele - 1)->PrimitiveNb;
 
     switch (
