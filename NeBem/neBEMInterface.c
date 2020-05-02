@@ -2562,7 +2562,7 @@ int neBEMChargingUp(int InfluenceMatrixFlag) {
 
           --NbOfE;  // one line was for the header
           if (debugFn) printf("No. of electrons: %d\n", NbOfE);
-          char *tmpEFile = "/tmp/ElectronTempFile.out";
+          const char *tmpEFile = "/tmp/ElectronTempFile.out";
           FILE *ftmpEF = fopen(tmpEFile, "w");
           if (ftmpEF == NULL) {
             printf("cannot open temporary output file ... returning ...\n");
@@ -3320,7 +3320,7 @@ int neBEMChargingUp(int InfluenceMatrixFlag) {
 
           --NbOfI;  // one line was for the header
           if (debugFn) printf("No. of ions: %d\n", NbOfI);
-          char *tmpIFile = "/tmp/IonTempFile.out";
+          const char *tmpIFile = "/tmp/IonTempFile.out";
           FILE *ftmpIF = fopen(tmpIFile, "w");
           if (ftmpIF == NULL) {
             printf("cannot open temporary ion output file ... returning ...\n");

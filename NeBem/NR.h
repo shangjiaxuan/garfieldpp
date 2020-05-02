@@ -51,7 +51,7 @@ static int iminarg1,iminarg2;
 
 #if defined(__STDC__) || defined(ANSI) || defined(NRANSI) /* ANSI */
 
-NRGLOBAL void nrerror(char error_text[]);
+NRGLOBAL void nrerror(const char error_text[]);
 
 NRGLOBAL float *fvector(long nl, long nh);
 
