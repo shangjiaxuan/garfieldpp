@@ -6,10 +6,10 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
-#include <Interface.h>
-#include <Vector.h>
-#include <neBEM.h>
-#include <NR.h>
+#include "Interface.h"
+#include "Vector.h"
+#include "neBEM.h"
+#include "NR.h"
 
 // -------------------------------------------------------------------
 

@@ -17,12 +17,12 @@
 #include <unistd.h>
 #include <sys/stat.h>	// use of stat function
 
-#include <omp.h>
+// #include <omp.h>
 
-#include <Interface.h>
-#include <NR.h>
-#include <Isles.h>
-#include <neBEM.h>
+#include "Interface.h"
+#include "NR.h"
+#include "Isles.h"
+#include "neBEM.h"
 
 // Called from a code requesting neBEM services
 int neBEMInitialize(void)
@@ -105,36 +105,36 @@ else
 	fclose(processFile);
 	}
 
-int MaxProcessors = omp_get_num_procs();
+// TODO! Commented out Open MP stuff for the time being (HS). 
+// int MaxProcessors = omp_get_num_procs();
+int MaxProcessors = 1;
 
 if(RqstdThreads > 1)	// else keep things unchanged => work with one thread
 	{
 	if(RqstdThreads < MaxProcessors)	// one processor left alone
 		{
-		omp_set_num_threads(RqstdThreads);
+		// omp_set_num_threads(RqstdThreads);
 		}
 	else
 		{
 		printf("RqstdThreads: %d\n", RqstdThreads);
 		RqstdThreads = MaxProcessors - 1;
-		omp_set_num_threads(RqstdThreads);
+		// omp_set_num_threads(RqstdThreads);
 		printf("Adjusted RqstdThreads: %d\n", RqstdThreads);
 		}
 	}	// if RqstThreads > 1
 else
 	{
 	RqstdThreads = 1;	// cannot be zero or negative!
-	omp_set_num_threads(RqstdThreads);
+	// omp_set_num_threads(RqstdThreads);
 	printf("RqstdThreads: %d => No Multi-threading ...\n", RqstdThreads);
 	}
 
 // OpenMP related information
 printf("PrimAfter: %d\n", PrimAfter);
 printf("RqstdThreads: %d, MaxProcessors: %d\n", RqstdThreads, MaxProcessors);
-printf("Maximum number of threads to be used for parallelization: %d\n",
-				omp_get_max_threads());
-printf("Number of threads used for neBEMInitialize: %d\n",
-				omp_get_num_threads());
+// printf("Maximum number of threads to be used for parallelization: %d\n", omp_get_max_threads());
+// printf("Number of threads used for neBEMInitialize: %d\n", omp_get_num_threads());
 
 // Set up parameters related to voxelized data export for Garfield++
 FILE *voxelInpFile = fopen("neBEMVoxel.inp", "r");

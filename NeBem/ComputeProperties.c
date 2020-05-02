@@ -7,14 +7,13 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <omp.h>
+// #include <omp.h>
 
-#include <Vector.h>
-#include <Isles.h>
-#include <NR.h>
-
-#include <neBEM.h>
-#include <Interface.h>
+#include "Vector.h"
+#include "Isles.h"
+#include "NR.h"
+#include "neBEM.h"
+#include "Interface.h"
 
 // Weighting field function (WtPFAtPoint) has not been modified!
 // Should be merged with PFAtPoint function.
@@ -1401,10 +1400,10 @@ Vector3D erF;
 
 if(dbgFn)
 	{
-	tid = omp_get_thread_num();
+	// tid = omp_get_thread_num();
 	if (tid == 0)
 		{
- 		nthreads = omp_get_num_threads();
+ 		// nthreads = omp_get_num_threads();
  		printf("PFAtPoint computation with %d threads\n",nthreads);
  		}
  	}
@@ -2566,10 +2565,10 @@ for(int i = 1; i <= nbXCells+1; ++i)
 		{
 		if(dbgFn)
 			{
-			tid = omp_get_thread_num();
+			// tid = omp_get_thread_num();
 			if (tid == 0)
  				{
- 				nthreads = omp_get_num_threads();
+ 				// nthreads = omp_get_num_threads();
  				printf("Starting voxel computation with %d threads\n",
 								nthreads);
  				}
@@ -2778,10 +2777,10 @@ for(int i = 1; i <= nbXCells+1; ++i)
 		{
 		if(dbgFn)
 			{
-			tid = omp_get_thread_num();
+			// tid = omp_get_thread_num();
 			if (tid == 0)
  				{
- 				nthreads = omp_get_num_threads();
+ 				// nthreads = omp_get_num_threads();
  				printf("Starting voxel computation with %d threads\n",
 								nthreads);
  				}
@@ -2950,10 +2949,10 @@ if(OptStaggerMap)
 			{
 			if(dbgFn)
 				{
-				tid = omp_get_thread_num();
+				// tid = omp_get_thread_num();
 				if (tid == 0)
  					{
- 					nthreads = omp_get_num_threads();
+ 					// nthreads = omp_get_num_threads();
  					printf("Starting voxel computation with %d threads\n",
 									nthreads);
  					}
@@ -3217,10 +3216,10 @@ for(int block = 1+bskip; block <= FastVol.NbBlocks; ++block)
 			{
 			if(dbgFn)
 				{
-				tid = omp_get_thread_num();
+				// tid = omp_get_thread_num();
 				if (tid == 0)
   				{
-  				nthreads = omp_get_num_threads();
+  				// nthreads = omp_get_num_threads();
   				printf("Starting fast volume computation with %d threads\n",
 									nthreads);
   				}
@@ -3420,10 +3419,10 @@ if(OptStaggerFastVol)
 				{
 				if(dbgFn)
 					{	
-					tid = omp_get_thread_num();
+					// tid = omp_get_thread_num();
 					if (tid == 0)
   					{
-  					nthreads = omp_get_num_threads();
+  					// nthreads = omp_get_num_threads();
   					printf(
 								"Starting staggered fast volume computation with %d threads\n",
 										nthreads);
@@ -6264,10 +6263,10 @@ Vector3D erF;
 
 if(dbgFn)
 	{
-	tid = omp_get_thread_num();
+	// tid = omp_get_thread_num();
 	if (tid == 0)
 		{
- 		nthreads = omp_get_num_threads();
+ 		// nthreads = omp_get_num_threads();
  		printf("PFAtPoint computation with %d threads\n",nthreads);
  		}
  	}

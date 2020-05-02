@@ -8,18 +8,18 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <omp.h>
+// #include <omp.h>
 
-#include <Vector.h>
-#include <Isles.h>
-#include <NR.h>
+#include "Vector.h"
+#include "Isles.h"
+#include "NR.h"
 
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_cblas.h>
   
-#include <Interface.h>
-#include <neBEM.h>
+#include "Interface.h"
+#include "neBEM.h"
 
 int InfluenceMatrixFlag;
 
@@ -118,9 +118,9 @@ if(TimeStep == 1)
 		{
 		startClock = clock();
 		printf("ComputeSolution: LHMatrix ... "); fflush(stdout);
-		time_begin = omp_get_wtime();
+		// time_begin = omp_get_wtime();
 		int fstatus = LHMatrix();
-		time_end = omp_get_wtime();
+		// time_end = omp_get_wtime();
 		printf("Elapsed time: %lg\n", time_end - time_begin);
 		if(fstatus != 0)
 			{
@@ -224,9 +224,9 @@ printf("to set up RH vector.\n");
 // multiplication of inverted matrix and the current RHVector.
 startClock = clock();
 printf("ComputeSolution: Solve ... "); fflush(stdout);
-time_begin = omp_get_wtime();
+// time_begin = omp_get_wtime();
 fstatus = Solve();
-time_end = omp_get_wtime();
+// time_end = omp_get_wtime();
 printf("Elapsed time: %lg\n", time_end - time_begin);
 if(fstatus != 0)
 	{
@@ -306,10 +306,10 @@ int nthreads, tid;
 {
 if(dbgFn)
 	{
-	tid = omp_get_thread_num();
+	// tid = omp_get_thread_num();
 	if (tid == 0)
   	{
-  	nthreads = omp_get_num_threads();
+  	// nthreads = omp_get_num_threads();
   	printf("Starting influence matrix computation with %d threads\n",nthreads);
   	}
 	}

@@ -8,7 +8,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <complex.h>
-#include <Isles.h>
+
+#include "Isles.h"
 
 #define SHIFT 2.0
 

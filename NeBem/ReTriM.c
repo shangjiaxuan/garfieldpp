@@ -6,12 +6,11 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <Vector.h>
-#include <Isles.h>
-#include <NR.h>
-  
-#include <Interface.h>
-#include <neBEM.h>
+#include "Vector.h"
+#include "Isles.h"
+#include "NR.h"
+#include "Interface.h"
+#include "neBEM.h"
 
 
 // GCS: global coordinate system

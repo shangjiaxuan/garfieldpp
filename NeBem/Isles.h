@@ -14,7 +14,7 @@
 #include <gsl/gsl_complex.h>
 #include <gsl/gsl_complex_math.h>
 
-#include <Vector.h>
+#include "Vector.h"
 
 #define MINDIST 1.0e-8
 #define MINDIST2 1.0e-16
@@ -111,6 +111,9 @@ ISLESGLOBAL double ExactThinFX_W(double rW, double lW, double X, double Y, doubl
 ISLESGLOBAL double ExactThinFY_W(double rW, double lW, double X, double Y, double Z);
 
 ISLESGLOBAL double ExactThinFZ_W(double rW, double lW, double X, double Y, double Z);
+
+ISLESGLOBAL int ExactThinWire(double rW, double lW, double X, double Y, double Z,
+                              double *potential, Vector3D *Flux);
 
 // All coordiantes and vectors are in the global co-ordinate system.
 // In case of area (both triangular and rectangular), it is assumed that

@@ -6,7 +6,7 @@
    smaller, then 'a' should be fitted upto square with zero rows */
 
 #include <math.h>
-#include <NR.h>
+#include "NR.h"
 
 static	double	at, bt, ct;
 static	double	maxarg1, maxarg2;

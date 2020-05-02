@@ -1,7 +1,7 @@
 /* get the inverse of a matrix using LU decomposition */
 #include <stdio.h>
 #include <math.h>
-#include <NR.h>
+#include "NR.h"
 
 #define	TINY	1.0e-20
 

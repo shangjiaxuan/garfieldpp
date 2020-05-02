@@ -9,7 +9,8 @@
 
 #include <stdio.h>
 #include <time.h>
-#include <Vector.h>
+
+#include "Vector.h"
 
 INTFACEGLOBAL clock_t startClock, stopClock;		// time related variables
 
