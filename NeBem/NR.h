@@ -35,7 +35,8 @@ static long lmaxarg1,lmaxarg2;
                   (lmaxarg1):(lmaxarg2))
 
 static long lminarg1,lminarg2;
-#define LMIN(a,b)(lminarg1=(a),lminarg2=(b),(lminarg1)>(lminarg2) ?\                              (lminarg1):(lminarg2))
+#define LMIN(a,b)(lminarg1=(a),lminarg2=(b),(lminarg1)>(lminarg2) ?\
+(lminarg1):(lminarg2))
 
 static int imaxarg1,imaxarg2;
 #define IMAX(a,b) (imaxarg1=(a),imaxarg2=(b),(imaxarg1)>(imaxarg2) ?\
@@ -66,18 +67,23 @@ NRGLOBAL double **dmatrix(long nrl, long nrh, long ncl, long nch);
 
 NRGLOBAL int **imatrix(long nrl, long nrh, long ncl, long nch);
 
-NRGLOBAL float **submatrix(float **a, long oldrl, long oldrh, long oldcl, long oldch,
-                  long newrl, long newcl);
+NRGLOBAL float **submatrix(float **a, long oldrl, long oldrh, long oldcl,
+                           long oldch, long newrl, long newcl);
 
-NRGLOBAL float **convert_matrix(float *a, long nrl, long nrh, long ncl, long nch);
+NRGLOBAL float **convert_matrix(float *a, long nrl, long nrh, long ncl,
+                                long nch);
 
-NRGLOBAL int ***i3tensor(long nrl, long nrh, long ncl, long nch, long ndl, long ndh);
+NRGLOBAL int ***i3tensor(long nrl, long nrh, long ncl, long nch, long ndl,
+                         long ndh);
 
-NRGLOBAL float ***f3tensor(long nrl, long nrh, long ncl, long nch, long ndl, long ndh);
+NRGLOBAL float ***f3tensor(long nrl, long nrh, long ncl, long nch, long ndl,
+                           long ndh);
 
-NRGLOBAL double ***d3tensor(long nrl, long nrh, long ncl, long nch, long ndl, long ndh);
+NRGLOBAL double ***d3tensor(long nrl, long nrh, long ncl, long nch, long ndl,
+                            long ndh);
 
-NRGLOBAL double ****d4tensor(long nrl, long nrh, long ncl, long nch, long ndl, long ndh, long nd4l, long nd4h);
+NRGLOBAL double ****d4tensor(long nrl, long nrh, long ncl, long nch, long ndl,
+                             long ndh, long nd4l, long nd4h);
 
 NRGLOBAL void free_fvector(float *v, long nl, long nh);
 
@@ -89,35 +95,35 @@ NRGLOBAL void free_lvector(unsigned long *v, long nl, long nh);
 
 NRGLOBAL void free_dvector(double *v, long nl, long nh);
 
-NRGLOBAL void free_fmatrix(float **m,long nrl, long nrh, long ncl, long nch);
+NRGLOBAL void free_fmatrix(float **m, long nrl, long nrh, long ncl, long nch);
 
-NRGLOBAL void free_dmatrix(double **m,long nrl, long nrh, long ncl, long nch);
+NRGLOBAL void free_dmatrix(double **m, long nrl, long nrh, long ncl, long nch);
 
-NRGLOBAL void free_imatrix(int **m,long nrl, long nrh, long ncl, long nch);
+NRGLOBAL void free_imatrix(int **m, long nrl, long nrh, long ncl, long nch);
 
-NRGLOBAL void free_submatrix(float **b,long nrl, long nrh, long ncl, long nch);
+NRGLOBAL void free_submatrix(float **b, long nrl, long nrh, long ncl, long nch);
 
-NRGLOBAL void free_convert_matrix(float **b,long nrl, long nrh, long ncl, long nch);
+NRGLOBAL void free_convert_matrix(float **b, long nrl, long nrh, long ncl,
+                                  long nch);
 
-NRGLOBAL void free_i3tensor(int ***t,long nrl, long nrh, long ncl, long nch,
-                   long ndl, long ndh);
+NRGLOBAL void free_i3tensor(int ***t, long nrl, long nrh, long ncl, long nch,
+                            long ndl, long ndh);
 
-NRGLOBAL void free_f3tensor(float ***t,long nrl, long nrh, long ncl, long nch,
-                   long ndl, long ndh);
+NRGLOBAL void free_f3tensor(float ***t, long nrl, long nrh, long ncl, long nch,
+                            long ndl, long ndh);
 
-NRGLOBAL void free_d3tensor(double ***t,long nrl, long nrh, long ncl, long nch,
-                   long ndl, long ndh);
+NRGLOBAL void free_d3tensor(double ***t, long nrl, long nrh, long ncl, long nch,
+                            long ndl, long ndh);
 
-NRGLOBAL void free_d4tensor(double ****t,long nrl, long nrh, long ncl, long nch,
-                   long ndl, long ndh, long nd4l, long nd4h);
+NRGLOBAL void free_d4tensor(double ****t, long nrl, long nrh, long ncl,
+                            long nch, long ndl, long ndh, long nd4l, long nd4h);
 
-
-#else/*ANSI*/
+#else /*ANSI*/
 /* traditional - K&R */
 
 NRGLOBAL void nrerror();
 NRGLOBAL float *vector();
-   
+
 #endif /* ANSI */
 
 #endif /* _NR_UTILS_H_ */
@@ -134,6 +140,6 @@ NRGLOBAL void lubksb(double **a, int matsize, int *b, double *c);
 NRGLOBAL void svdcmp(double **a, int matrow, int matcol, double *w, double **v);
 
 NRGLOBAL void svbksb(double **a, double *w, double **v, int matrow, int matcol,
-                double *V, double *ChDen);
+                     double *V, double *ChDen);
 
 #endif /* NR */

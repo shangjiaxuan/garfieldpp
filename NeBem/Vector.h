@@ -14,28 +14,25 @@
 #define local2global -1
 
 // three coordinates
-typedef struct
-	{
-	double X;
-	double Y;
-	double Z;
-	} Point3D;
+typedef struct {
+  double X;
+  double Y;
+  double Z;
+} Point3D;
 
 // three vector components
-typedef struct
-	{
-	double X;
-	double Y;
-	double Z;
-	} Vector3D;
+typedef struct {
+  double X;
+  double Y;
+  double Z;
+} Vector3D;
 
 // direction cosine
-typedef struct
-	{
-	Vector3D XUnit;
-	Vector3D YUnit;
-	Vector3D ZUnit;
-	} DirnCosn3D;
+typedef struct {
+  Vector3D XUnit;
+  Vector3D YUnit;
+  Vector3D ZUnit;
+} DirnCosn3D;
 
 // Creates a 3D point {x,y,z} - note sequence
 VGLOBAL Point3D CreatePoint3D(double x, double y, double z);
@@ -63,15 +60,15 @@ VGLOBAL int PrintDirnCosn3D(DirnCosn3D A);
 
 // Rotates a vector
 VGLOBAL void VectorRotate_Rect3D(double Xin, double Yin, double Zin,
-													double RotX, double RotY, double RotZ,
-                          int Opt,   // 1 forward, -1 backward
-                          double *Xout, double *Yout, double *Zout);
+                                 double RotX, double RotY, double RotZ,
+                                 int Opt,  // 1 forward, -1 backward
+                                 double *Xout, double *Yout, double *Zout);
 
 // Transforms a point
-VGLOBAL void CoordRotate_Rect3D(double Xin, double Yin, double Zin,
-                        double RotX, double RotY, double RotZ,
-                        int Opt,   // 1 forward, -1 backward
-                        double *Xout, double *Yout, double *Zout);
+VGLOBAL void CoordRotate_Rect3D(double Xin, double Yin, double Zin, double RotX,
+                                double RotY, double RotZ,
+                                int Opt,  // 1 forward, -1 backward
+                                double *Xout, double *Yout, double *Zout);
 
 // Carries out a vector dot-product
 VGLOBAL double Vector3DDotProduct(Vector3D *, Vector3D *);
@@ -90,7 +87,9 @@ VGLOBAL Point3D RotatePoint3D(Point3D *A, DirnCosn3D *Origin, int Sense);
 // in terms of the existing system
 VGLOBAL Vector3D RotateVector3D(Vector3D *A, DirnCosn3D *Origin, int Sense);
 
-// Transform point: Get the new coordinates of a point described in the original//                  coordinate system. The new system of coordinates is also
+// Transform point: Get the new coordinates of a point described in the
+// original//                  coordinate system. The new system of coordinates
+// is also
 //                  described in terms of the original coordiate system, the
 //                  origin being NewOrigin and new direction cosines being
 //                  termed as NewDirns.
@@ -98,14 +97,14 @@ VGLOBAL Vector3D RotateVector3D(Vector3D *A, DirnCosn3D *Origin, int Sense);
 // Inputs: point in the original coordinate system, origin of the new system
 //         w.r.t the original coord system, direction cosines of the new
 //         system w.r.t the original coord system
-VGLOBAL Point3D TransformPoint3D(Point3D *initial,
-                            Point3D *NewOrigin, DirnCosn3D *NewDirns);
+VGLOBAL Point3D TransformPoint3D(Point3D *initial, Point3D *NewOrigin,
+                                 DirnCosn3D *NewDirns);
 
-// Reflect a point using a mirror passing through the origin 
+// Reflect a point using a mirror passing through the origin
 VGLOBAL Point3D ReflectPoint3DByMirrorAtOrigin(Point3D *p1, Vector3D *n);
 
 // Product of two matrices
 VGLOBAL double **MatrixProduct(int NbRows1, int NbCols1, double **Matrix1,
-                        int NbRows2, int NbCols2, double **Matrix2);
+                               int NbRows2, int NbCols2, double **Matrix2);
 
 #endif
