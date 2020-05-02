@@ -290,30 +290,35 @@ void bemgeo_(int* ifail) {
 // -------------------------------------------------------------------
 
 // Garfield procedure for counting the primitives
-extern int bemnpr_();
+// TODO!
+// extern int bemnpr_();
 
 int neBEMGetNbPrimitives() {
   // Number of panels
-  return bemnpr_();
+  // TODO!
+  // return bemnpr_();
+  return 0;
 }
 
 // -------------------------------------------------------------------
 
 // Garfield procedure that returns one primitive at the time
+// TODO!
+/*
 extern void bempri_(int* elem, int* nvertex,
 		   double* xvert, double* yvert, double* zvert,
 		   double* xnorm, double* ynorm, double* znorm,
 		   int* volref1, int* volref2, int* ifail);
-
+*/
 int neBEMGetPrimitive(int prim, int* nvertex,
 		      double xvert[], double yvert[], double zvert[],
 		      double* xnorm, double* ynorm, double* znorm,
 		      int* volref1, int* volref2) {
-  int ifail, ee = prim, ivertex;	// why +1? - changed by supratik here
-  bempri_(&ee, nvertex,				// and in neBEMInterface call
-	  xvert, yvert, zvert,
-	  xnorm, ynorm, znorm,
-	  volref1, volref2, &ifail);
+  int ifail, ee = prim, ivertex;	
+  // why +1? - changed by supratik here and in neBEMInterface call 
+  // TODO!
+  // bempri_(&ee, nvertex, xvert, yvert, zvert, xnorm, ynorm, znorm, 
+  //         volref1, volref2, &ifail);
   // Convert from cm to m.
   for (ivertex=0; ivertex<*nvertex; ivertex++) {
     xvert[ivertex] *= 0.01;
@@ -339,17 +344,22 @@ int neBEMGetPrimitive(int prim, int* nvertex,
 //     3 = axial periodicity around x with sector angle sx,
 //     4 = rotational symmetry around x
 // jx: number of periodic copies internally in neBEM
+// TODO!
+/*
 extern int bemper_(int* ivol,
 		   int* ix, int* jx, double* sx,
 		   int* iy, int* jy, double* sy,
 		   int* iz, int* jz, double* sz);
+*/
 
 int neBEMGetPeriodicities(int prim, 
 			  int* ix, int* jx, double* sx,
 			  int* iy, int* jy, double* sy,
 			  int* iz, int* jz, double* sz) {
   // Obtain the periodicities
-  int ifail = bemper_(&prim, ix, jx, sx, iy, jy, sy, iz, jz, sz);
+  // TODO!
+  // int ifail = bemper_(&prim, ix, jx, sx, iy, jy, sy, iz, jz, sz);
+  int ifail = 0;
 
   // Convert from cm to m.
   *sx *= 0.01;
@@ -368,17 +378,21 @@ int neBEMGetPeriodicities(int prim,
 //     2 = producing charge density of same sign
 // jx: not used at present
 // sx: x distance of the mirror from origin
+// TODO!
+/*
 extern int bemper_(int* ivol,
 		   int* ix, int* jx, double* sx,
 		   int* iy, int* jy, double* sy,
 		   int* iz, int* jz, double* sz);
+*/
 
 int neBEMGetMirror(int prim, 
 			  int* ix, int* jx, double* sx,
 			  int* iy, int* jy, double* sy,
 			  int* iz, int* jz, double* sz) {
   // Obtain mirror information
-  int ifail = bemper_(&prim, ix, jx, sx, iy, jy, sy, iz, jz, sz);
+  // int ifail = bemper_(&prim, ix, jx, sx, iy, jy, sy, iz, jz, sz);
+  int ifail = 0;
 
 	*jx = *jy = *jz = 0;		// not used at present
 	*sx = *sy = *sz = 0.0;	// mirror assumed to be passing through the origin
@@ -414,12 +428,14 @@ else if (*iy == 2)
 // cxmin: coordinate of lower x-plane
 // vxmin: potential of lower x-plane
 // Similar for ixmax, iymin, iymax, izmin, izmax
+/*
 extern int bempla_(int* ixmin, double* cxmin, double* vxmin,
 		   int* ixmax, double* cxmax, double* vxmax,
 		   int* iymin, double* cymin, double* vymin,
 		   int* iymax, double* cymax, double* vymax,
 		   int* izmin, double* czmin, double* vzmin,
 		   int* izmax, double* czmax, double* vzmax);
+*/
 
 int neBEMGetBoundingPlanes(int* ixmin, double* cxmin, double* vxmin,
 			   int* ixmax, double* cxmax, double* vxmax,
@@ -428,12 +444,11 @@ int neBEMGetBoundingPlanes(int* ixmin, double* cxmin, double* vxmin,
 			   int* izmin, double* czmin, double* vzmin,
 			   int* izmax, double* czmax, double* vzmax) {
   // Obtain the periodicities
-  int ifail = bempla_(ixmin, cxmin, vxmin,
-		      ixmax, cxmax, vxmax,
-		      iymin, cymin, vymin,
-		      iymax, cymax, vymax,
-		      izmin, czmin, vzmin,
-		      izmax, czmax, vzmax);
+  // TODO!
+  // int ifail = bempla_(ixmin, cxmin, vxmin, ixmax, cxmax, vxmax,
+  //                     iymin, cymin, vymin, iymax, cymax, vymax,
+  //                     izmin, czmin, vzmin, izmax, czmax, vzmax);
+  int ifail = 0;
 
   // Convert from cm to m.
   *cxmin *= 0.01;
@@ -452,7 +467,8 @@ int neBEMGetBoundingPlanes(int* ixmin, double* cxmin, double* vxmin,
 // -------------------------------------------------------------------
 
 // Garfield procedure that works out the target size for elements
-extern void bemszd_(int* prim, double* size, int* ifail);
+// TODO!
+// extern void bemszd_(int* prim, double* size, int* ifail);
 
 void bemdis_(int* ifail) {
   int **elementNbs;
@@ -463,7 +479,8 @@ void bemdis_(int* ifail) {
 
   for (int prim = 1; prim <= NbPrimitives; ++prim) {
     // Try and identify the element
-    bemszd_(&prim, &size, &ifail1);
+    // TODO!
+    // bemszd_(&prim, &size, &ifail1);
     if (size<=0 || ifail1!=0) {
       printf("bemdis: Primitive %d discretisation size set to target element size (%g m).\n",
 	     prim, ElementLengthRqstd);
@@ -527,18 +544,22 @@ void bembnd_(int* ifail) {
 // -------------------------------------------------------------------
 
 // Garfield procedure providing information on a volume
+// TODO
+/*
 extern void bemvol_(int* volref, int* shape,
 		    int* material, double* epsilon,
 		    double* potential, double* charge,
 		    int* boundarytype,
 		    int* ifail);
+*/
 
 int neBEMVolumeDescription(int volref, int* shape,
 			   int* material, double* epsilon,
 			   double* potential, double* charge, 
 			   int* boundarytype) {
-  int ifail, vv = volref+1;
-  bemvol_(&vv, shape, material, epsilon, potential, charge, boundarytype, &ifail);
+  int ifail = 0, vv = volref+1;
+  // TODO!
+  // bemvol_(&vv, shape, material, epsilon, potential, charge, boundarytype, &ifail);
   return ifail;
 }
 
@@ -558,30 +579,33 @@ void bemsol_(int *ifail) {
 // -------------------------------------------------------------------
 
 // Garfield procedure that tells in which volume a point is located
-extern void celvpt_(double* x, double* y, double* z, int* volref);
+// TODO!
+// extern void celvpt_(double* x, double* y, double* z, int* volref);
 
 int neBEMVolumePoint(double x, double y, double z) {
   // Work out in which volume the point is located
   int volref;
   double xx = x*100.0, yy = y*100.0, zz = z*100.0;
-  celvpt_(&xx, &yy, &zz, &volref);
+  // celvpt_(&xx, &yy, &zz, &volref);
   return volref-1;
 }
 
 // -------------------------------------------------------------------
 
 // Garfield procedure returning the primitives for a volume
-extern void bemvpr_(int* volume, int* nprim, int* primlist);
+// TODO!
+// extern void bemvpr_(int* volume, int* nprim, int* primlist);
 void neBEMVolumePrimitives(int volume, int* nprim, int primlist[]) {
-  bemvpr_(&volume, nprim, primlist);
+  // bemvpr_(&volume, nprim, primlist);
 }
 
 // -------------------------------------------------------------------
 
 // Garfield procedure returning the primitives with the same boundaries
-extern void bemsbc_(int* prim1, int* nprim, int* primlist);
+// TODO!
+// extern void bemsbc_(int* prim1, int* nprim, int* primlist);
 void neBEMSameBoundaryConditions(int prim1, int* nprim, int primlist[]) {
-  bemsbc_(&prim1, nprim, primlist);
+  // bemsbc_(&prim1, nprim, primlist);
 }
 
 // -------------------------------------------------------------------
