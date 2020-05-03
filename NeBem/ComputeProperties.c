@@ -1343,12 +1343,10 @@ PFAtPoint borrowed from V1.8.15 ends here */
 // coordinate system due to all the interface elements and all known charges.
 // It may be interesting to inspect the relative influence of these two factors.
 int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
-  int dbgFn = 0;
-  int fstatus;
   double ElePot, KnChPot;
   Vector3D EleglobalF, KnChglobalF;
 
-  fstatus = ElePFAtPoint(globalP, &ElePot, &EleglobalF);
+  int fstatus = ElePFAtPoint(globalP, &ElePot, &EleglobalF);
   if (fstatus) {
     printf(
         "Problem in ElePFAtPoint being called from PFAtPoint ... returning\n");
@@ -1444,7 +1442,7 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   SumePot = SumerPot = 0.0;
   SumeF.X = SumeF.Y = SumeF.Z = SumerF.X = SumerF.Y = SumerF.Z = 0.0;
 
-  int tid, nthreads;
+  int tid = 0, nthreads = 1;
 #pragma omp parallel private(tid, nthreads)
   {
     int primsrc;
@@ -2652,7 +2650,7 @@ int VoxelFPR(void) {
       }
 
       Point3D point;
-      int nthreads, tid;
+      int nthreads = 1, tid = 0;
 #pragma omp parallel private(nthreads, tid)
       {
         if (dbgFn) {
@@ -2854,7 +2852,7 @@ int MapFPR(void) {
       }
 
       Point3D point;
-      int nthreads, tid;
+      int nthreads = 1, tid = 0;
 #pragma omp parallel private(nthreads, tid)
       {
         if (dbgFn) {
@@ -3016,7 +3014,7 @@ printf("q: %d,  type: %d\n", vq, vtype);
         }
 
         Point3D point;
-        int nthreads, tid;
+        int nthreads = 1, tid = 0;
 #pragma omp parallel private(nthreads, tid)
         {
           if (dbgFn) {
@@ -3123,13 +3121,11 @@ printf("q: %d,  type: %d\n", vq, vtype);
 
 // Compute potential and field in a mesh within the Fast Volume
 int FastVolPF(void) {
-  int dbgFn = 0;
-  int fstatus;
 
   // The following may be necessary only during the first time step / iteration
   // At present, FastVolElePF() considers both element and KnCh effects
   // and create one combined fast volume.
-  fstatus = FastVolElePF();
+  int fstatus = FastVolElePF();
   if (fstatus) {
     printf(
         "Problem in FastVolElePF being called from FastVolPF ... returning\n");
@@ -3140,16 +3136,13 @@ int FastVolPF(void) {
   // The following is likely to change throughout the computation and necessary
   // at all time steps. However, in order to achieve computational economy, it
   // may be prudent to carry out the following only after several time steps.
-  if(OptKnCh)
-          {
-          fstatus = FastVolKnChPF();
-          if(fstatus)
-                  {
-                  printf(
-                          "Problem in FastVolKnChPF being called from FastVolPF
-  ... returning\n"); return -1;
-                  }
-          }
+  if (OptKnCh) {
+    fstatus = FastVolKnChPF();
+    if (fstatus) {
+      printf("Problem in FastVolKnChPF being called from FastVolPF... returning\n"); 
+      return -1;
+    }
+  }
   */
 
   return 0;
@@ -3263,7 +3256,7 @@ int FastVolElePF(void) {
         fflush(stdout);
 
         Point3D point;
-        int nthreads, tid;
+        int nthreads = 1, tid = 0;
 #pragma omp parallel private(nthreads, tid)
         {
           if (dbgFn) {
@@ -3453,7 +3446,7 @@ int FastVolElePF(void) {
           fflush(stdout);
 
           Point3D point;
-          int nthreads, tid;
+          int nthreads = 1, tid = 0;
 #pragma omp parallel private(nthreads, tid)
           {
             if (dbgFn) {
@@ -3679,7 +3672,7 @@ startY, startZ); printf("delX, delY, delZ: %le, %le, %le\n", delX, delY, delZ);
 block, i, j); fflush(stdout);
 
                         Point3D point;
-                        int nthreads, tid;
+                        int nthreads = 1, tid = 0;
                         #pragma omp parallel private(nthreads, tid)
                         {
                         if(dbgFn)
@@ -6257,7 +6250,7 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
   SumePot = SumerPot = 0.0;
   SumeF.X = SumeF.Y = SumeF.Z = SumerF.X = SumerF.Y = SumerF.Z = 0.0;
 
-  int tid, nthreads;
+  int tid = 0, nthreads = 1;
 #pragma omp parallel private(tid, nthreads)
   {
     int primsrc;
