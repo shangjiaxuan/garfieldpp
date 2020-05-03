@@ -126,7 +126,8 @@ target_link_libraries(Garfield ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIE
 target_compile_features(Garfield INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
-                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>)
+                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>
+                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/NeBem>)
 if(BUILD_WITH_VERSION_NUMBER)
   set_target_properties(Garfield PROPERTIES
                         VERSION ${Garfield_VERSION}
