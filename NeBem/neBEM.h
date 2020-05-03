@@ -15,6 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "Vector.h"
+
 #define MyPI 3.14159265358979323846
 
 #define EPS0 8.854187817e-12       // in C2/Nm2 (SI) equivalent to pF/m

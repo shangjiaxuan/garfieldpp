@@ -31,7 +31,7 @@ int ComputeSolution(void) {
   int LHMatrix(void), RHVector(void), Solve(void);
   int InvertMatrix(void);
   int ReadInvertedMatrix(void);
-  double time_begin, time_end;
+  double time_begin = 0., time_end = 0.;
 
   printf(
       "----------------------------------------------------------------\n\n");
@@ -314,7 +314,7 @@ int LHMatrix(void) {
   // printf("field point: ");	// do not remove
   printf("Computing influence coefficient matrix ... will take time ...\n");
 
-  int nthreads, tid;
+  int nthreads = 1, tid = 0;
 #pragma omp parallel private(nthreads, tid)
   {
     if (dbgFn) {
@@ -856,7 +856,7 @@ summed up.
 // The source elements are followed using elesrc (source counter)
 printf("Computing influence coefficient vector ... will take some time ...\n");
 
-int nthreads, tid;
+int nthreads = 1, tid = 0;
 #pragma omp parallel private(nthreads, tid)
 {
 if(dbgFn)
