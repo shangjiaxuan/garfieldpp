@@ -850,11 +850,12 @@ int neBEMReadGeometry(void) {
                jz);
         printf("\tXPeriod: %lg, YPeriod: %lg, ZPeriod: %lg\n", sx, sy, sz);
       }
-      if (ix >
-          0)  // These checks need to be done separately. Otherwise, there is
-      {       // a possibility that non-zero values of PeriodicIn* and *Period
-        PeriodicInX[prim] = jx;  // are used throughout the code despite
-        XPeriod[prim] = sx;      // PeriodicType* is 0
+      if (ix > 0) {
+        // These checks need to be done separately. Otherwise, there is
+        // a possibility that non-zero values of PeriodicIn* and *Period
+        // are used throughout the code despite PeriodicType* is 0
+        PeriodicInX[prim] = jx;  
+        XPeriod[prim] = sx;
       } else {
         PeriodicInX[prim] = 0;
         XPeriod[prim] = 0.0;
@@ -911,8 +912,7 @@ int neBEMReadGeometry(void) {
         // printf("neBEMReadGeometry: Mirror have been requested.\n");
         MirrorDistXFromOrigin[prim] = sx;  // assumed to pass through the origin
       } else {
-        MirrorDistXFromOrigin[prim] =
-            0.0;  // assumed to pass through the origin
+        MirrorDistXFromOrigin[prim] = 0.0;  // pass through the origin
       }
       if (iy > 0) {
         // printf("neBEMReadGeometry: Mirror have been requested.\n");
@@ -1015,7 +1015,7 @@ int neBEMReadGeometry(void) {
     }
   }
 
-  // Ignore unnecessary primtives from the final count
+  // Ignore unnecessary primitives from the final count
   // Ideally, all the removal conditions for a primitive should be checked in
   // one loop and the list should be updated in one single go.
   {
@@ -1033,7 +1033,7 @@ int neBEMReadGeometry(void) {
       for (int prim = 1; prim <= NbPrimitives; ++prim) {
         effprim = prim - NbSkipped;
 
-        // Check dimensions of the primtive
+        // Check dimensions of the primitive
         for (int vert = 0; vert < NbVertices[prim] - 1; ++vert) {
           DVertex[vert] =
               sqrt(((XVertex[prim][vert + 1] - XVertex[prim][vert]) *
@@ -1733,7 +1733,7 @@ int neBEMReadGeometry(void) {
   }  // Ignore unnecessary primitives from the final count
 
   // Reduced-Order Modelling information
-  printf("ROM: switch to primtive representation after %d repetitions.\n",
+  printf("ROM: switch to primitive representation after %d repetitions.\n",
          PrimAfter);
 
   // Store model data in native neBEM format
@@ -1875,7 +1875,7 @@ int neBEMReadGeometry(void) {
     }  // unformatted file
   }    // store primitives
 
-  printf("neBEMReadGeometry: Geomerty read!\n");
+  printf("neBEMReadGeometry: Geometry read!\n");
 
   neBEMState = 3;  // info about primitives read in after initialization and Nbs
 
@@ -2977,9 +2977,11 @@ int neBEMChargingUp(int InfluenceMatrixFlag) {
                 }  // if InPrim
               }    // if intersection and no extrasection
 
-              if ((InPrim) && (intersect) && (!extrasect) &&
-                  (InEle))  // all satisfied
-                break;  // do not check any further primtive for this electron
+              if ((InPrim) && (intersect) && (!extrasect) && (InEle)) {
+                // all satisfied
+                // do not check any further primitive for this electron
+                break;  
+              }
 
               // If, after checking all the primitives, no interstion is found
               // valid
@@ -3727,9 +3729,11 @@ int neBEMChargingUp(int InfluenceMatrixFlag) {
                 }
               }  // if proper intersection and no extrasection
 
-              if ((InPrim) && (intersect) && (!extrasect) &&
-                  (InEle))  // all satisfied
-                break;  // do not check any further primtive for this electron
+              if ((InPrim) && (intersect) && (!extrasect) && (InEle)) {
+                // all satisfied
+                // do not check any further primitive for this electron
+                break;  
+              }
 
               // If, after checking all the primitives, no interstion is found
               // valid
