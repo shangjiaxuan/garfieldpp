@@ -25,6 +25,13 @@ class ComponentNeBem3d : public ComponentBase {
                     std::vector<double>& xv, std::vector<double>& yv,
                     std::vector<double>& zv, int& interface, double& v,
                     double& q, double& lambda) const;
+  bool GetPrimitive(const unsigned int i, double& a, double& b, double& c,
+                    std::vector<double>& xv, std::vector<double>& yv,
+                    std::vector<double>& zv, int& vol1, int& vol2) const;
+  bool GetVolume(const unsigned int vol, int& shape, int& material, 
+                 double& eps, double& potential, double& charge, int& bc);
+  int GetVolume(const double x, const double y, const double z);
+
   unsigned int GetNumberOfElements() const { return m_elements.size(); }
   bool GetElement(const unsigned int i, 
                   std::vector<double>& xv, std::vector<double>& yv,
@@ -62,6 +69,8 @@ class ComponentNeBem3d : public ComponentBase {
     double lambda;
     /// Target element size.
     double elementSize;
+    /// Volumes.
+    int vol1, vol2;
   };
   /// List of primitives.
   std::vector<Primitive> m_primitives;
@@ -152,6 +161,9 @@ class ComponentNeBem3d : public ComponentBase {
                            std::vector<Element>& elements) const;
   int InterfaceType(const Solid::BoundaryCondition bc) const;
 };
+
+extern ComponentNeBem3d* gComponentNeBem3d;
+
 }
 
 #endif

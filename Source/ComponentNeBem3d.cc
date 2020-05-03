@@ -7,6 +7,10 @@
 #include <numeric>
 #include <vector>
 
+#include "Interface.h"
+#include "NR.h"
+#include "neBEM.h"
+
 #include "Garfield/ComponentNeBem3d.hh"
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -374,6 +378,8 @@ bool Equal(const Garfield::Panel& panel1, const Garfield::Panel& panel2,
 
 namespace Garfield {
 
+ComponentNeBem3d* gComponentNeBem3d = nullptr;
+
 ComponentNeBem3d::ComponentNeBem3d() : ComponentBase() {
   m_className = "ComponentNeBem3d";
 }
@@ -399,6 +405,22 @@ void ComponentNeBem3d::ElectricField(const double x, const double y,
     }
     m_ready = true;
   }
+  
+  // Construct a point.
+  Point3D point;
+  point.X = 0.01 * x;
+  point.Y = 0.01 * y;
+  point.Z = 0.01 * z;
+
+  // Compute the field.
+  Vector3D field;
+  if (neBEMField(&point, &v, &field) != 0) {
+    status = -10;
+    return;
+  }
+  ex = 0.01 * field.X;
+  ey = 0.01 * field.Y;
+  ez = 0.01 * field.Z;
 }
 
 void ComponentNeBem3d::ElectricField(const double x, const double y,
@@ -788,6 +810,8 @@ bool ComponentNeBem3d::Initialise() {
             primitive.elementSize = solid->GetDiscretisationLevel(panel);
           }
         }
+        primitive.vol1 = vol1[j];
+        primitive.vol2 = vol2[j];
         m_primitives.push_back(std::move(primitive));
       }
     }
@@ -824,6 +848,125 @@ bool ComponentNeBem3d::Initialise() {
                       std::make_move_iterator(elements.begin()),
                       std::make_move_iterator(elements.end()));
   }
+  if (neBEMInitialize() != 0) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Initialising neBEM failed.\n";
+    return false;
+  }
+  gComponentNeBem3d = this;
+  // Set the user options.
+  MinNbElementsOnLength = m_minNbElementsOnLength;
+  MaxNbElementsOnLength = m_maxNbElementsOnLength;
+  ElementLengthRqstd = m_targetElementSize * 0.01;
+
+  // New model / reuse existing model flag.
+  // TODO!
+  NewModel = 1;
+  NewMesh = 1;
+  NewBC = 1;
+  NewPP = 1;
+  // Pass debug level.
+  DebugLevel = m_debug ? 10 : 0;
+  // Store inverted matrix or not.
+  // TODO!
+  OptStoreInvMatrix = 0;
+  OptFormattedFile = 0;
+  // Matrix inversion method (LU or SVD).
+  // TODO!
+  OptInvMatProc = 0;
+
+  if (neBEMReadGeometry() != 0) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Transferring the geometry to neBEM failed.\n";
+    return false;
+  }
+
+  // Discretization.
+  int** elementNbs = imatrix(1, NbPrimitives, 1, 2);
+  for (int i = 1; i <= NbPrimitives; ++i) {
+    const int vol1 = VolRef1[i];
+    double size1 = -1.;
+    if (solids.find(vol1) != solids.end()) {
+      const auto solid = solids[vol1];
+      if (solid) {
+        Panel panel;
+        panel.a = XNorm[i];
+        panel.b = YNorm[i];
+        panel.c = ZNorm[i];
+        size1 = solid->GetDiscretisationLevel(panel);
+      }
+    }
+    int vol2 = VolRef2[i];
+    double size2 = -1.;
+    if (solids.find(vol2) != solids.end()) {
+      const auto solid = solids[vol2];
+      if (solid) {
+        Panel panel;
+        panel.a = -XNorm[i];
+        panel.b = -YNorm[i];
+        panel.c = -ZNorm[i];
+        size2 = solid->GetDiscretisationLevel(panel);
+      }
+    }
+    double size = m_targetElementSize;
+    if (size1 > 0. && size2 > 0.) {
+      size = std::min(size1, size2);
+    } else if (size1 > 0.) {
+      size = size1;
+    } else if (size2 > 0.) {
+      size = size2;
+    }
+    // Convert from cm to m.
+    size *= 0.01;
+
+    // Work out the element dimensions.
+    const double dx1 = XVertex[i][0] - XVertex[i][1];
+    const double dy1 = YVertex[i][0] - YVertex[i][1];
+    const double dz1 = ZVertex[i][0] - ZVertex[i][1];
+    const double l1 = dx1 * dx1 + dy1 * dy1 + dz1 * dz1;
+    int nb1 = (int)(sqrt(l1) / size);
+    // Truncate to desired range.
+    if (nb1 < MinNbElementsOnLength) {
+      nb1 = MinNbElementsOnLength;
+    } else if (nb1 > MaxNbElementsOnLength) {
+      nb1 = MaxNbElementsOnLength;
+    }
+    int nb2 = 0;
+    if (NbVertices[i] > 2) {
+      const double dx2 = XVertex[i][2] - XVertex[i][1];
+      const double dy2 = YVertex[i][2] - YVertex[i][1];
+      const double dz2 = ZVertex[i][2] - ZVertex[i][1];
+      const double l2 = dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
+      nb2 = (int)(sqrt(l2) / size);
+      if (nb2 < MinNbElementsOnLength) {
+        nb2 = MinNbElementsOnLength;
+      } else if (nb2 > MaxNbElementsOnLength) {
+        nb2 = MaxNbElementsOnLength;
+      }
+    }
+    elementNbs[i][1] = nb1;
+    elementNbs[i][2] = nb2;
+  }
+
+  if (neBEMDiscretize(elementNbs) != 0) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Discretization failed.\n";
+    free_imatrix(elementNbs, 1, NbPrimitives, 1, 2); 
+    return false;
+  }
+  free_imatrix(elementNbs, 1, NbPrimitives, 1, 2);
+  if (neBEMBoundaryConditions() != 0) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Setting the boundary conditions failed.\n";
+    return false;
+  }
+  if (neBEMSolve() != 0) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Solution failed.\n";
+    return false;
+  }
+  // TODO! Not sure if we should call this here.
+  neBEMEnd();
   return true;
 }
 
@@ -2494,6 +2637,75 @@ bool ComponentNeBem3d::GetPrimitive(const unsigned int i, double& a, double& b,
   q = primitive.q;
   lambda = primitive.lambda;
   return true;
+}
+
+bool ComponentNeBem3d::GetPrimitive(const unsigned int i, double& a, double& b,
+                                    double& c, std::vector<double>& xv,
+                                    std::vector<double>& yv,
+                                    std::vector<double>& zv, int& vol1, int& vol2) const {
+  if (i >= m_primitives.size()) {
+    std::cerr << m_className << "::GetPrimitive: Index out of range.\n";
+    return false;
+  }
+  const auto& primitive = m_primitives[i];
+  a = primitive.a;
+  b = primitive.b;
+  c = primitive.c;
+  xv = primitive.xv;
+  yv = primitive.yv;
+  zv = primitive.zv;
+  vol1 = primitive.vol1;
+  vol2 = primitive.vol2;
+  return true;
+}
+
+bool ComponentNeBem3d::GetVolume(const unsigned int vol, int& shape,
+                                 int& material, double& epsilon, 
+                                 double& potential, double& charge,
+                                 int& bc) {
+
+  if (!m_geometry) return false;
+  const unsigned int nSolids = m_geometry->GetNumberOfSolids();
+  for (unsigned int i = 0; i < nSolids; ++i) {
+    Medium* medium = nullptr;
+    const auto solid = m_geometry->GetSolid(i, medium);
+    if (!solid) continue;
+    if (solid->GetId() != vol) continue;
+    if (solid->IsTube()) {
+      shape = 1;
+    } else if (solid->IsHole()) {
+      shape = 2;
+    } else if (solid->IsBox()) {
+      shape = 3;
+    } else if (solid->IsSphere()) {
+      shape = 4;
+    } else if (solid->IsRidge()) {
+      shape = 5;
+    } else {
+      std::cerr << m_className << "::GetVolume: Unknown solid shape.\n";
+      return false;
+    }
+    material = medium ? medium->GetId() : 11;
+    epsilon = medium ? medium->GetDielectricConstant() : 1.;
+    potential = solid->GetBoundaryPotential();
+    charge = solid->GetBoundaryChargeDensity();
+    bc = solid->GetBoundaryConditionType();
+    return true;
+  }
+  return false;
+}
+
+int ComponentNeBem3d::GetVolume(const double x, const double y, 
+                                const double z) {
+  if (!m_geometry) return -1;
+  const unsigned int nSolids = m_geometry->GetNumberOfSolids();
+  for (unsigned int i = 0; i < nSolids; ++i) {
+    Medium* medium = nullptr;
+    const auto solid = m_geometry->GetSolid(i, medium);
+    if (!solid) continue;
+    if (solid->IsInside(x, y, z)) return solid->GetId();
+  }
+  return -1;
 }
 
 bool ComponentNeBem3d::GetElement(const unsigned int i, 
