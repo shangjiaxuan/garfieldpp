@@ -26,7 +26,6 @@
 
 // Called from a code requesting neBEM services
 int neBEMInitialize(void) {
-  int fstatus;  // function status return value
 
   // Version information
   strcpy(neBEMVersion, "1.9.07");
@@ -38,7 +37,7 @@ int neBEMInitialize(void) {
   // user by setting default values of some of the important variable. Please
   // take a look at the src/Interface/ExampleDev2neBEM.c to find out what values
   // are being set, and what they mean.
-  fstatus = neBEMSetDefaults();
+  int fstatus = neBEMSetDefaults();
   if (fstatus != 0) {
     neBEMMessage("neBEMInitialize - neBEMSetDefaults");
     return -1;
@@ -102,10 +101,9 @@ int neBEMInitialize(void) {
   // int MaxProcessors = omp_get_num_procs();
   int MaxProcessors = 1;
 
-  if (RqstdThreads > 1)  // else keep things unchanged => work with one thread
-  {
-    if (RqstdThreads < MaxProcessors)  // one processor left alone
-    {
+  if (RqstdThreads > 1) {
+    if (RqstdThreads < MaxProcessors) {
+      // one processor left alone
       // omp_set_num_threads(RqstdThreads);
     } else {
       printf("RqstdThreads: %d\n", RqstdThreads);
@@ -113,8 +111,8 @@ int neBEMInitialize(void) {
       // omp_set_num_threads(RqstdThreads);
       printf("Adjusted RqstdThreads: %d\n", RqstdThreads);
     }
-  }  // if RqstThreads > 1
-  else {
+  } else {
+    // Work with one thread
     RqstdThreads = 1;  // cannot be zero or negative!
     // omp_set_num_threads(RqstdThreads);
     printf("RqstdThreads: %d => No Multi-threading ...\n", RqstdThreads);
@@ -124,8 +122,8 @@ int neBEMInitialize(void) {
   printf("PrimAfter: %d\n", PrimAfter);
   printf("RqstdThreads: %d, MaxProcessors: %d\n", RqstdThreads, MaxProcessors);
   // printf("Maximum number of threads to be used for parallelization: %d\n",
-  // omp_get_max_threads()); printf("Number of threads used for neBEMInitialize:
-  // %d\n", omp_get_num_threads());
+  // omp_get_max_threads()); 
+  // printf("Number of threads used for neBEMInitialize: %d\n", omp_get_num_threads());
 
   // Set up parameters related to voxelized data export for Garfield++
   FILE *voxelInpFile = fopen("neBEMVoxel.inp", "r");
@@ -157,9 +155,9 @@ int neBEMInitialize(void) {
     printf("neBEMMap.inp absent ... assuming OptMap = 0 ...\n");
     OptMap = 0;
     OptStaggerMap = 0;
-  } else  // while reading the input, OptMap and OptStaggerMap have to be read
-  {       // read first since that will decide whether there is a map and its
-          // version.
+  } else {
+    // While reading the input, OptMap and OptStaggerMap have to be read
+    // first since that will decide whether there is a map and its version.
     fscanf(mapInpFile, "OptMap: %d\n", &OptMap);
     fscanf(mapInpFile, "OptStaggerMap: %d\n", &OptStaggerMap);
     fscanf(mapInpFile, "MapVersion: %s\n", MapVersion);
@@ -390,7 +388,7 @@ int neBEMInitialize(void) {
 }  // neBEMInitialize ends
 
 // Reads geometry details
-// Note that reflection and periodicity (reflection) informatio is gathered
+// Note that reflection and periodicity (reflection) information is gathered
 // using the neBEMGetPeriodicities() function, called from here.
 // Repetition variables were introduced to facilitate GarfieldInterface.
 // Now Garfield can pass parameters directly to neBEM and, hence, these
@@ -421,8 +419,8 @@ int neBEMReadGeometry(void) {
 
   NbPrimitives = neBEMGetNbPrimitives();
   OrgnlNbPrimitives = NbPrimitives;
-  if (NbPrimitives == 0)  // nothing to do - return control to calling routine
-  {
+  if (NbPrimitives == 0) {
+    // nothing to do - return control to calling routine
     neBEMMessage("neBEMReadGeometry - no primitive.\n");
     return (-1);  // for the time being
   }
@@ -437,8 +435,8 @@ int neBEMReadGeometry(void) {
   // necessary if the elements are created immediately after a primitive is read
   // in.
   // MaxNbVertices = 4;	// value specified through SetDefaults or init files
-  if (neBEMState == 2)  // implies neBEM has been initialized, NbPrimitives set
-  {
+  if (neBEMState == 2) {
+    // neBEM has been initialized, NbPrimitives set
     PrimType = ivector(1, NbPrimitives);
     NbVertices = ivector(1, NbPrimitives);
     OrgnlToEffPrim = imatrix(1, NbPrimitives, 0, 2);  // 0 init, 1 intrfc, 2 rmv
@@ -541,8 +539,8 @@ int neBEMReadGeometry(void) {
       YVertex[prim][vert] = yvert[vert];
       ZVertex[prim][vert] = zvert[vert];
     }
-    if (PrimType[prim] == 2)  // wire
-    {
+    if (PrimType[prim] == 2) {
+      // wire
       XNorm[prim] = 0.0;  // modulus not 1 - an absurd trio!
       YNorm[prim] = 0.0;
       ZNorm[prim] = 0.0;
@@ -578,8 +576,8 @@ int neBEMReadGeometry(void) {
     // dielectrics
     int shape1, material1, boundarytype1;
     double epsilon1, potential1, charge1;
-    if (volref1 == -1)  // Must be in error, since no device is made of vacuum
-    {
+    if (volref1 == -1) {
+      // Must be an error, since no device is made of vacuum
       neBEMMessage("neBEMReadGeometry - volref1 = -1!");
       return -1;
     } else {
@@ -654,24 +652,24 @@ int neBEMReadGeometry(void) {
 
     switch (boundarytype1) {  // the volume itself is volref1
       case 1:                 // conductor at specified potential
-        if (boundarytype2 == 0 || boundarytype2 == 4)  // dielectric-conductor
-        {
+        if (boundarytype2 == 0 || boundarytype2 == 4) {
+          // dielectric-conductor
           InterfaceType[prim] = 1;
           ApplPot[prim] = potential1;
-        } else if (boundarytype2 == 1)  // conductor-conductor
-        {
+        } else if (boundarytype2 == 1) {
+          // conductor-conductor
           if (fabs(potential1 - potential2)  // same potential
               < 1e-6 * (1 + fabs(potential1) + fabs(potential2))) {
             printf("neBEMReadGeometry: identical potentials; skipped.\n");
             printf("Primitive skipped: #%d\n", prim);
             InterfaceType[prim] = 0;
-          } else  // different potentials
-          {
+          } else {
+            // different potentials
             printf("neBEMReadGeometry: different potentials; rejected.\n");
             return -1;
           }
-        } else  // conductor-unknown
-        {
+        } else {
+          // conductor-unknown
           printf(
               "neBEMReadGeometry: conductor at given potential; rejected.\n");
           return -1;
@@ -679,9 +677,8 @@ int neBEMReadGeometry(void) {
         break;
 
       case 2:  // conductor with a specified charge
-        if ((boundarytype2 == 0) ||
-            (boundarytype2 == 4))  // conductor-dielectric
-        {
+        if ((boundarytype2 == 0) || (boundarytype2 == 4)) {
+          // conductor-dielectric
           InterfaceType[prim] = 2;
           ApplCh[prim] = charge1;
         } else {
@@ -691,9 +688,8 @@ int neBEMReadGeometry(void) {
         break;
 
       case 3:  // floating conductor (zero charge, perpendicular E)
-        if ((boundarytype2 == 0) ||
-            (boundarytype2 == 4))  // conductor-dielectric
-        {
+        if ((boundarytype2 == 0) || (boundarytype2 == 4)) {
+          // conductor-dielectric
           InterfaceType[prim] = 3;
           if (!NbFloatingConductors)   // assuming only one floating conductor
             NbFloatingConductors = 1;  // in the system
@@ -703,46 +699,51 @@ int neBEMReadGeometry(void) {
         }
         break;
 
-      case 4:  // dielectric intrface (plastic-plastic) without "manual" charge
-        if (boundarytype2 == 0)     // dielectric-vacuum
-        {                           // epsilon1 is self dielectric-constant
-          InterfaceType[prim] = 4;  // epsilon2 is towards positive normal
+      case 4:  // dielectric interface (plastic-plastic) without "manual" charge
+        if (boundarytype2 == 0) {
+          // dielectric-vacuum
+          // epsilon1 is self dielectric-constant
+          // epsilon2 is towards positive normal
+          InterfaceType[prim] = 4;  
           Lambda[prim] = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
-        }  // consistent with Bardhan's eqn 16 where (1 / (2*Lambda)) is used
-        else if (boundarytype2 == 1)  // dielectric-conductor
-        {
+          // consistent with Bardhan's eqn 16 where (1 / (2*Lambda)) is used
+        } else if (boundarytype2 == 1) {
+          // dielectric-conductor
           InterfaceType[prim] = 1;  // conductor at known potential
           ApplPot[prim] = potential2;
-        } else if (boundarytype2 == 2)  // dielectric-conductor
-        {
+        } else if (boundarytype2 == 2) {
+          // dielectric-conductor
           InterfaceType[prim] = 2;  // conductor with known charge
           ApplCh[prim] = charge2;
-        } else if (boundarytype2 == 3)  // dielectric-conductor
-        {
+        } else if (boundarytype2 == 3) {
+          // dielectric-conductor
           InterfaceType[prim] = 3;      // conductor at floating potential
-        } else if (boundarytype2 == 4)  // dielectric-dielectric
-        {
-          if (fabs(epsilon1 - epsilon2)  // identical dielectrica
-              < 1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
+        } else if (boundarytype2 == 4) {
+          // dielectric-dielectric
+          if (fabs(epsilon1 - epsilon2) < 1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
+            // identical dielectrica
             printf(
                 "neBEMReadGeometry: between identical dielectrica; skipd.\n");
             printf("Primitive skipped: #%d\n", prim);
             InterfaceType[prim] = 0;
-          } else                      // distinctly different dielectrica
-          {                           // epsilon1 is self dielectric-constant
-            InterfaceType[prim] = 4;  // epsilon2 towards positive normal
+          } else {
+            // distinctly different dielectrica
+            // epsilon1 is self dielectric-constant
+            // epsilon2 towards positive normal
+            InterfaceType[prim] = 4;  
             Lambda[prim] = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
-          }  // consistent with Bardhan's paper (1 / Lambda)
-        } else if (boundarytype2 == 5)  // dielectric-dielectric with charge
-        {
+            // consistent with Bardhan's paper (1 / Lambda)
+          }  
+        } else if (boundarytype2 == 5) {
+          // dielectric-dielectric with charge
           if (fabs(epsilon1 - epsilon2)  // identical dielectrica
               < 1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
             printf(
                 "neBEMReadGeometry: between identical dielectrica; skipd.\n");
             printf("Primitive skipped: #%d\n", prim);
             InterfaceType[prim] = 0;
-          } else  // distinctly different dielectrica
-          {
+          } else {
+            // distinctly different dielectrica
             InterfaceType[prim] = 5;  // epsilon2 towards positive normal
             ApplCh[prim] = charge2;
             Lambda[prim] = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
@@ -755,26 +756,25 @@ int neBEMReadGeometry(void) {
         break;
 
       case 5:  // dielectric with surface charge (plastic-gas, typically)
-        if (boundarytype2 == 0)  // dielectric-vacuum
-        {
+        if (boundarytype2 == 0) { // dielectric-vacuum
           InterfaceType[prim] = 5;  // epsilon2 is towards +ve normal
           ApplCh[prim] = charge1;
           Lambda[prim] = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
-        }  // consistent with Bardhan's paper (1 / Lambda)
-        else if (boundarytype2 == 4)  // dielectric-dielectric
-        {
-          if (fabs(epsilon1 - epsilon2)  // identical dielectrica
-              < 1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
+          // consistent with Bardhan's paper (1 / Lambda)
+        } else if (boundarytype2 == 4) { // dielectric-dielectric
+          if (fabs(epsilon1 - epsilon2) < 1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
+            // identical dielectrica
             printf(
                 "neBEMReadGeometry: between identical dielectrica; skipd.\n");
             printf("Primitive skipped: #%d\n", prim);
             InterfaceType[prim] = 0;
-          } else  // distinctly different dielectrica
-          {
+          } else {
+            // distinctly different dielectrica
             InterfaceType[prim] = 5;  // epsilon2 towards positive normal
             ApplCh[prim] = charge1;
             Lambda[prim] = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
-          }  // consistent with Bardhan's paper (1 / Lambda)
+            // consistent with Bardhan's paper (1 / Lambda)
+          }  
         }    // if-else if boundarytypes 0 and 4
         else {
           printf(
