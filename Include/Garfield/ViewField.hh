@@ -89,17 +89,20 @@ class ViewField : public ViewBase {
                                  const std::string& option = "v");
   /// Determine the range of the potential/field automatically (true)
   /// or set it explicitly (false). 
-  void EnableAutoRange(const bool on = true) { m_useAutoRange = on; }
+  void EnableAutoRange(const bool on = true, 
+                       const bool samplePotential = true) { 
+    m_useAutoRange = on;
+    m_samplePotential = samplePotential; 
+  }
 
-  /** Make use of the status flag returned by the sensor/component.
+  /** Make use (or not) of the status flag returned by the sensor/component.
+    * \param on Take status flag into account (true) or ignore it (false).
     * \param v0 Value to be used for regions with status != 0.
     */
-  void EnableAcknowledgeStatus(const double v0 = 0.) {
-    m_useStatus = true;
+  void AcknowledgeStatus(const bool on, const double v0 = 0.) {
+    m_useStatus = on;
     m_vBkg = v0;
   }
-  /// Ignore the status flag returned by the sensor/component.
-  void DisableAcknowledgeStatus() { m_useStatus = false; }
 
   /// Draw electric field lines from a set of starting points. 
   void PlotFieldLines(const std::vector<double>& x0,
@@ -124,6 +127,7 @@ class ViewField : public ViewBase {
   enum class Parameter { Potential = 0, Magnitude, Ex, Ey, Ez, Unknown };
 
   bool m_useAutoRange = true;
+  bool m_samplePotential = true;
   bool m_useStatus = false;
   double m_vBkg = 0.;
 

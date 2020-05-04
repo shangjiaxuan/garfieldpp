@@ -236,12 +236,12 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
     if (par == Parameter::Potential) {
       if (m_useAutoRange) {
         if (m_component) {
-          if (!m_component->GetVoltageRange(zmin, zmax)) {
+          if (m_samplePotential || !m_component->GetVoltageRange(zmin, zmax)) {
             SampleRange(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot, 
                         &f2, zmin, zmax);
           }
         } else if (m_sensor) {
-          if (!m_sensor->GetVoltageRange(zmin, zmax)) {
+          if (m_samplePotential || !m_sensor->GetVoltageRange(zmin, zmax)) {
             SampleRange(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot, 
                         &f2, zmin, zmax);
           }
@@ -342,8 +342,12 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
   if (wfield) {
     title = "weighting " + title;
     if (par == Parameter::Potential) {
-      fmin = 0.;
-      fmax = 1.;
+      if (m_useAutoRange && m_samplePotential) {
+        SampleRange(&f1, fmin, fmax);
+      } else {
+        fmin = 0.;
+        fmax = 1.;
+      }
     } else {
       if (m_useAutoRange) {
         SampleRange(&f1, fmin, fmax);
@@ -357,11 +361,11 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
     if (par == Parameter::Potential) {
       if (m_useAutoRange) {
         if (m_component) {
-          if (!m_component->GetVoltageRange(fmin, fmax)) {
+          if (m_samplePotential || !m_component->GetVoltageRange(fmin, fmax)) {
             SampleRange(&f1, fmin, fmax);
           }
         } else if (m_sensor) {
-          if (!m_sensor->GetVoltageRange(fmin, fmax)) {
+          if (m_samplePotential || !m_sensor->GetVoltageRange(fmin, fmax)) {
             SampleRange(&f1, fmin, fmax);
           }
         }
