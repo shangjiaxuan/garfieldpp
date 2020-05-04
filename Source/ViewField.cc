@@ -116,7 +116,7 @@ void ViewField::SetNumberOfSamples2d(const unsigned int nx,
 }
 
 void ViewField::PlotContour(const std::string& option) {
-  Draw2d(option, true, false, "", "CONT4Z");
+  Draw2d(option, true, false, "", "CONT1Z");
 }
 
 void ViewField::Plot(const std::string& option, const std::string& drawopt) {
@@ -137,7 +137,7 @@ void ViewField::PlotWeightingField(const std::string& label,
 
 void ViewField::PlotContourWeightingField(const std::string& label,
                                           const std::string& option) {
-  Draw2d(option, true, true, label, "CONT4Z");
+  Draw2d(option, true, true, label, "CONT1Z");
 }
 
 void ViewField::PlotProfileWeightingField(const std::string& label,
