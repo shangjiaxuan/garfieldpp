@@ -57,17 +57,17 @@ following references:
 1. Computation of 3D MEMS electrostatics using a nearly exact BEM solver,
    Supratik Muhkopadhyay, Nayana Majumdar,
    Engineering Analysis with Boundary Elements 30 (2006) 687-696,
-   (https://doi.org/10.1016/j.enganabound.2006.03.002)
+   <https://doi.org/10.1016/j.enganabound.2006.03.002>
 
 2. Simulation of three-dimensional electrostatic field configuration in wirechambers: A novel approach
    Nayana Majumdar, Supratik Mukhopadhyay,
    Nuclear Instruments and Methods in Physics Research A 566 (2006) 489-494,
-   (https://doi.org/10.1016/j.nima.2006.06.035)
+   <https://doi.org/10.1016/j.nima.2006.06.035>
 
 3. A study of three-dimensional edge and corner problems using the neBEM solver,
    Supratik Mukhopadhyay, Nayana Majumdar
    Engineering Analysis with Boundary Elements 33 (2009) 105-119,
-   (https://doi.org/10.1016/j.enganabound.2008.06.003)
+   <https://doi.org/10.1016/j.enganabound.2008.06.003>
 
 Support for this software - fixing of bugs, incorporation of new features - is
 done on a best effort basis.
