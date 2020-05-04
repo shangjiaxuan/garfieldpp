@@ -392,10 +392,7 @@ void ComponentNeBem3d::ElectricField(const double x, const double y,
   status = 0;
   // Check if the requested point is inside a medium
   m = GetMedium(x, y, z);
-  if (!m) {
-    status = -6;
-    return;
-  }
+  if (!m) status = -6;
 
   if (!m_ready) {
     if (!Initialise()) {
@@ -967,6 +964,7 @@ bool ComponentNeBem3d::Initialise() {
   }
   // TODO! Not sure if we should call this here.
   neBEMEnd();
+  m_ready = true;
   return true;
 }
 
