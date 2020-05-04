@@ -863,7 +863,7 @@ bool ComponentNeBem3d::Initialise() {
   NewBC = 1;
   NewPP = 1;
   // Pass debug level.
-  DebugLevel = m_debug ? 10 : 0;
+  DebugLevel = m_debug ? 101 : 0;
   // Store inverted matrix or not.
   // TODO!
   OptStoreInvMatrix = 0;
