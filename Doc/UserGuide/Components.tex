@@ -1172,8 +1172,11 @@ the range of the electric and weighting fields is
 ``guessed'' by taking random samples.
 This feature can be switched on or off using the function
 \begin{lstlisting}
-void EnableAutoRange(const bool on = true);
+void EnableAutoRange(const bool on = true, const bool samplePotential = true);
 \end{lstlisting}
+The flag \texttt{samplePotential} indicates whether the range of the 
+potential should be determined by random sampling or if \texttt{ViewField}
+should first try to retrieve it from the component/sensor. 
 
 If the ``auto-range'' feature is disabled,
 the range of the function to be plotted needs to be set using
@@ -1210,10 +1213,10 @@ The number of integration intervals can be set as a parameter.
 The integral of the flux over a parallelogram can be calculated using 
 the function
 \begin{lstlisting}
-double IntegrateFlux(const double x0, const double y0, const double z0,
-                     const double dx1, const double dy1, const double dz1,
-                     const double dx2, const double dy2, const double dz2,
-                     const unsigned int nU = 20, const unsigned int nV = 20); 
+double IntegrateFluxParallelogram(const double x0, const double y0, const double z0,
+                                  const double dx1, const double dy1, const double dz1,
+                                  const double dx2, const double dy2, const double dz2,
+                                  const unsigned int nU = 20, const unsigned int nV = 20); 
 \end{lstlisting}
 \begin{description}
   \item[x0,y0,z0] coordinates of one of the corners of the parallelogram,
