@@ -2494,7 +2494,7 @@ int neBEMKnownCharges(void) {
 // The resultant of all three (prior charge, electrons and ions) turns out
 // to be the assigned charge on the elements, after the execution of this
 // function.
-int neBEMChargingUp(int InfluenceMatrixFlag) {
+int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
   int debugFn = 0;
 
   // status of elements before being charged up
@@ -5309,18 +5309,15 @@ int neBEMGetNbOfLines(const char fname[]) {
 // Downloads/ComNum/Geometry/Determining if a point lies on the interior of a
 // polygon.htm
 double neBEMChkInPoly(int n, Point3D *p, Point3D q) {
-  int i;
-  double m1, m2;
-  double anglesum = 0.0, costheta = 0.0, theta = 0.0, oldtheta = 0.0;
+  double anglesum = 0.0;
+  // double theta = 0.0;
   Point3D p1, p2;
 
   // printf("In neBEMChkInPoly ... \n");
   // printf("n: %d\n", n);
 
-  for (i = 0; i < n; i++) {
+  for (int i = 0; i < n; i++) {
     // printf("i: %d\n", i);
-    oldtheta = theta;
-
     p1.X = p[i].X - q.X;
     p1.Y = p[i].Y - q.Y;
     p1.Z = p[i].Z - q.Z;
@@ -5337,27 +5334,27 @@ double neBEMChkInPoly(int n, Point3D *p, Point3D q) {
       p2.Z = p[0].Z - q.Z;
     }
 
-    m1 = MODULUS(p1);
-    m2 = MODULUS(p2);
+    double m1 = MODULUS(p1);
+    double m2 = MODULUS(p2);
     // printf("m1: %lg, m2: %lg, m1*m2: %lg", m1, m2, m1*m2);
 
-    if (m1 * m2 <=
-        1.0e-12)           // vetors of 1 micron - we may need to reduce further
+    if (m1 * m2 <= 1.0e-12) {
+      // vetors of 1 micron - we may need to reduce further
       return (neBEMtwopi); /* We are on a node, consider this inside */
-    else
-      costheta = (p1.X * p2.X + p1.Y * p2.Y + p1.Z * p2.Z) / (m1 * m2);
+    }
+    double costheta = (p1.X * p2.X + p1.Y * p2.Y + p1.Z * p2.Z) / (m1 * m2);
 
+    /*
+    double oldtheta = theta;
     theta = acos(costheta);
     // printf("n: %d, i: %d, theta: %lg\n", n, i, neBEMrtod*theta);
-
-    // if(Sign(theta) != Sign(oldtheta))	// polygon either non-covex, or
-    // the {	// point is outside the polygon return(0.0);	// absurd value
-    // implying outside polygon
-    // }
-
+    if (Sign(theta) != Sign(oldtheta)) {
+      // polygon either non-covex, or the point is outside the polygon 
+      return(0.0);  // absurd value implying outside polygon
+    }
+    */
     anglesum += acos(costheta);
-    // printf("n: %d, i: %d, anglesum: %lg %lg\n", n, i, anglesum,
-    // neBEMrtod*anglesum);
+    // printf("n: %d, i: %d, anglesum: %lg %lg\n", n, i, anglesum, neBEMrtod*anglesum);
   }
 
   return (anglesum);
