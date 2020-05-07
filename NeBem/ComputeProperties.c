@@ -3191,7 +3191,6 @@ int FastVolElePF(void) {
   double delZ;
 
   printf("\nPotential and field computation within basic fast volume\n");
-  int blktotpt;  // total number of points in a given block
   int bskip = 0, iskip = 0, jskip = 0, kskip = 0;
 
   // calculate n-skips based on NbPtSkip
@@ -3270,8 +3269,8 @@ int FastVolElePF(void) {
              jskip, kskip);
       fflush(stdout);
     }
-
-    blktotpt = (nbXCells + 1) * (nbYCells + 1) * (nbZCells + 1);
+    // total number of points in a given block
+    // int blktotpt = (nbXCells + 1) * (nbYCells + 1) * (nbZCells + 1);
     for (int i = 1 + iskip; i <= nbXCells + 1; ++i) {
       for (int j = 1 + jskip; j <= nbYCells + 1; ++j) {
         printf("Fast volume => block: %3d, i: %4d, j: %4d", block, i, j);
@@ -3466,7 +3465,7 @@ int FastVolElePF(void) {
         fflush(stdout);
       }
 
-      blktotpt = (nbXCells + 1) * (nbYCells + 1) * (nbZCells + 1);
+      // int blktotpt = (nbXCells + 1) * (nbYCells + 1) * (nbZCells + 1);
       for (int i = 1 + iskip; i <= nbXCells + 1; ++i) {
         for (int j = 1 + jskip; j <= nbYCells + 1; ++j) {
           printf("Fast volume => block: %3d, i: %4d, j: %4d", block, i, j);
@@ -4531,7 +4530,8 @@ int FastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
 }  // FastPFAtPoint ends
 
 // There could be a function
-int FastElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
+int FastElePFAtPoint(Point3D* /*globalP*/, double* /*Potential*/, 
+                     Vector3D* /*globalF*/) {
   return 0;
 }  // FastElePFAtPoint ends
 
