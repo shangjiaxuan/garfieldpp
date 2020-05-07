@@ -815,7 +815,7 @@ int LHMatrix(void) {
       neBEMMessage("LHMatrix - RawInflFile");
       return -1;
     }
-    printf("\nfInf: %p\n", fInf);
+    printf("\nfInf: %p\n", (void *)fInf);
     int rfw = fwrite(Inf, sizeof(double), NbEqns * NbUnknowns, fInf);
     fclose(fInf);
     printf("\nNb of items successfully written in raw mode in %s is %d\n",
@@ -2761,7 +2761,7 @@ int Solve(void) {
             neBEMMessage("Solve - RawInflFile in OptValidate");
             return -1;
           }
-          printf("\nfInf: %p\n", fInf);
+          printf("\nfInf: %p\n", (void *)fInf);
           int rfw = fread(RawInf, sizeof(double), NbEqns * NbUnknowns, fInf);
           fclose(fInf);
           printf("\nNb of items successfully read from raw mode in %s is %d\n",
