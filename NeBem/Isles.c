@@ -3396,7 +3396,7 @@ double AreaKnChPF(int NbVertices, Point3D *Vertex, Point3D FieldPt,
 
 // Pass vertices of the volume and get back potential and GCS flux
 // at field point assuming unit charge density.
-double VolumeKnChPF(int NbPts, Point3D *SourcePt, Point3D FieldPt,
+double VolumeKnChPF(int /*NbPts*/, Point3D* /*SourcePt*/, Point3D /*FieldPt*/,
                     Vector3D *globalF) {
   printf("VolumeKnChPF not implemented yet ... returning zero flux\n");
   {
