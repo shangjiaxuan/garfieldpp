@@ -33,8 +33,9 @@ int ComputeSolution(void) {
   int LHMatrix(void), RHVector(void), Solve(void);
   int InvertMatrix(void);
   int ReadInvertedMatrix(void);
+#ifdef _OPENMP
   double time_begin = 0., time_end = 0.;
-
+#endif
   printf(
       "----------------------------------------------------------------\n\n");
   printf("ComputeSolution: neBEM solution begins ...\n");
@@ -296,7 +297,9 @@ int ComputeSolution(void) {
 // The same is true for wire elements - origin of the LCS and the centroid are
 // collocated.
 int LHMatrix(void) {
+#ifdef _OPENMP
   int dbgFn = 0;
+#endif
   double xfld, yfld, zfld;
   int primsrc;
   double xsrc, ysrc, zsrc;
@@ -2290,7 +2293,8 @@ double ContinuityKnCh(int elefld) {
   double xfld = (EleArr + elefld - 1)->BC.CollPt.X;
   double yfld = (EleArr + elefld - 1)->BC.CollPt.Y;
   double zfld = (EleArr + elefld - 1)->BC.CollPt.Z;
-  Point3D globalP, localP;  // globalP is useful here
+  // Point3D globalP;
+  Point3D localP;
   Vector3D localF, globalF;
 
   // OMPCheck - parallelize
@@ -2310,10 +2314,10 @@ double ContinuityKnCh(int elefld) {
       exit(-1);
     }
 
-    // translated to local origin	but axes direction as in GCS
-    globalP.X = xfld - pOrigin->X;
-    globalP.Y = yfld - pOrigin->Y;
-    globalP.Z = zfld - pOrigin->Z;
+    // translated to local origin but axes direction as in GCS
+    // globalP.X = xfld - pOrigin->X;
+    // globalP.Y = yfld - pOrigin->Y;
+    // globalP.Z = zfld - pOrigin->Z;
 
     {  // Rotate point3D from global to local system
       double InitialVector[4];
@@ -2406,13 +2410,13 @@ double ContinuityKnCh(int elefld) {
 
   // Contributions from points, lines areas and volumes carrying known charge
   // (density).
-  globalP.X = xfld;
-  globalP.Y = yfld;  // the global position of the field point necessary now
-  globalP.Z = zfld;
+  // globalP.X = xfld;
+  // globalP.Y = yfld;  
+  // globalP.Z = zfld;
   for (int point = 1; point <= NbPointsKnCh; ++point) {
     // potential not being used to evaluate Neumann continuity
-    double tempPot =
-        PointKnChPF((PointKnChArr + point - 1)->P, globalP, &globalF);
+    // double tempPot =
+    //     PointKnChPF((PointKnChArr + point - 1)->P, globalP, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
     value -= (PointKnChArr + point - 1)->Assigned * localF.Y / MyFACTOR;
@@ -2420,9 +2424,9 @@ double ContinuityKnCh(int elefld) {
 
   for (int line = 1; line <= NbLinesKnCh; ++line) {
     // potential not being used to evaluate Neumann continuity
-    double tempPot = LineKnChPF(
-        (LineKnChArr + line - 1)->Start, (LineKnChArr + line - 1)->Stop,
-        (LineKnChArr + line - 1)->Radius, globalP, &globalF);
+    // double tempPot = LineKnChPF(
+    //     (LineKnChArr + line - 1)->Start, (LineKnChArr + line - 1)->Stop,
+    //     (LineKnChArr + line - 1)->Radius, globalP, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
     value -= (LineKnChArr + line - 1)->Assigned * localF.Y / MyFACTOR;
@@ -2430,9 +2434,9 @@ double ContinuityKnCh(int elefld) {
 
   for (int area = 1; area <= NbAreasKnCh; ++area) {
     // potential not being used to evaluate Neumann continuity
-    double tempPot =
-        AreaKnChPF((AreaKnChArr + area - 1)->NbVertices,
-                   ((AreaKnChArr + area - 1)->Vertex), globalP, &globalF);
+    // double tempPot =
+    //     AreaKnChPF((AreaKnChArr + area - 1)->NbVertices,
+    //                ((AreaKnChArr + area - 1)->Vertex), globalP, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
     value -= (AreaKnChArr + area - 1)->Assigned * localF.Y / MyFACTOR;
@@ -2440,9 +2444,9 @@ double ContinuityKnCh(int elefld) {
 
   for (int vol = 1; vol <= NbVolumesKnCh; ++vol) {
     // potential not being used to evaluate Neumann continuity
-    double tempPot =
-        VolumeKnChPF((VolumeKnChArr + vol - 1)->NbVertices,
-                     ((VolumeKnChArr + vol - 1)->Vertex), globalP, &globalF);
+    // double tempPot =
+    //     VolumeKnChPF((VolumeKnChArr + vol - 1)->NbVertices,
+    //                  ((VolumeKnChArr + vol - 1)->Vertex), globalP, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
     value -= (VolumeKnChArr + vol - 1)->Assigned * localF.Y / MyFACTOR;
@@ -3343,8 +3347,8 @@ int Solve(void) {
               zerrMax = zo;
             }
           }
-          if (InterfaceType[prim] ==
-              4) {  // compute displacement currents in the two dielectrics
+          if (InterfaceType[prim] == 4) {  
+            // compute displacement currents in the two dielectrics
             double xplus = xo + (EleArr + ele - 1)->G.DC.XUnit.X * normdisp;
             xplus += (EleArr + ele - 1)->G.DC.YUnit.X * normdisp;
             xplus += (EleArr + ele - 1)->G.DC.ZUnit.X * normdisp;
@@ -3361,7 +3365,6 @@ int Solve(void) {
             localF  // Flux in the ECS
                 = RotateVector3D(&globalF, &(EleArr + ele - 1)->G.DC,
                                  global2local);
-            double value1 = -localF.Y;
             double dispfld1 = Epsilon1[prim] * localF.Y;
             double xminus = xo - (EleArr + ele - 1)->G.DC.XUnit.X * normdisp;
             xminus -= (EleArr + ele - 1)->G.DC.YUnit.X * normdisp;
@@ -3379,9 +3382,7 @@ int Solve(void) {
             localF  // Flux in the ECS
                 = RotateVector3D(&globalF, &(EleArr + ele - 1)->G.DC,
                                  global2local);
-            double value2 = -localF.Y;
             double dispfld2 = Epsilon2[prim] * localF.Y;
-            double epsratio = (Epsilon2[prim] / Epsilon1[prim]);
             globalP.X = xo;
             globalP.Y = yo;
             globalP.Z = zo;
@@ -3394,8 +3395,8 @@ int Solve(void) {
                   dispfldo;  // - (&(EleArr+ele-1)->Assigned);
             fprintf(fErr, "%d\t%d\t%d\t%d\t%lg\t%lg\t%lg\t%lg\t%lg\t%lg\n",
                     prim, ele, 4, 4, xo, yo, zo, dispfld1, dispfld2, Err);
-            if ((prim == 91) && (ele == 337))  // debug switches are turned on
-            {
+            if ((prim == 91) && (ele == 337)) {
+              // debug switches are turned on
               double TotalInfl = 0.0;
               for (int elesrc = 1; elesrc <= NbElements; ++elesrc) {
                 TotalInfl += Inf[ele][elesrc] * (EleArr + elesrc - 1)->Solution;
