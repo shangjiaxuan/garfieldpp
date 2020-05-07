@@ -7,7 +7,9 @@
 #include <time.h>
 #include <unistd.h>
 
-// #include <omp.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #include "Interface.h"
 #include "Isles.h"
@@ -1442,8 +1444,10 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   SumePot = SumerPot = 0.0;
   SumeF.X = SumeF.Y = SumeF.Z = SumerF.X = SumerF.Y = SumerF.Z = 0.0;
 
+#ifdef _OPENMP
   int tid = 0, nthreads = 1;
-#pragma omp parallel private(tid, nthreads)
+  #pragma omp parallel private(tid, nthreads)
+#endif
   {
     int primsrc;
     double TransformationMatrix[4][4];
@@ -1471,21 +1475,24 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
     double erPot;
     Vector3D erF;
 
+#ifdef _OPENMP
     if (dbgFn) {
-      // tid = omp_get_thread_num();
+      tid = omp_get_thread_num();
       if (tid == 0) {
-        // nthreads = omp_get_num_threads();
+        nthreads = omp_get_num_threads();
         printf("PFAtPoint computation with %d threads\n", nthreads);
       }
     }
-
+#endif
 // by default, nested parallelization is off in C
+#ifdef _OPENMP
 #pragma omp for private(primsrc, TransformationMatrix, PrimOK, xpsrc, ypsrc, \
                         zpsrc, localPP, primPot, primF, localF, xsrc, ysrc,  \
                         zsrc, localPE, ePot, eF, SumePot, SumeF, xrpt, yrpt, \
                         zrpt, XPOfRpt, YPOfRpt, ZPOfRpt, localPPR, xrsrc,    \
                         yrsrc, zrsrc, XEOfRpt, YEOfRpt, ZEOfRpt, localPER,   \
                         erPot, erF, SumerPot, SumerF)
+#endif
     for (primsrc = 1; primsrc <= NbPrimitives; ++primsrc) {
       if (dbgFn) {
         printf("Evaluating effect of primsrc %d using on %lg, %lg, %lg\n",
@@ -2650,21 +2657,26 @@ int VoxelFPR(void) {
       }
 
       Point3D point;
+#ifdef _OPENMP
       int nthreads = 1, tid = 0;
-#pragma omp parallel private(nthreads, tid)
+      #pragma omp parallel private(nthreads, tid)
+#endif
       {
+#ifdef _OPENMP
         if (dbgFn) {
-          // tid = omp_get_thread_num();
+          tid = omp_get_thread_num();
           if (tid == 0) {
-            // nthreads = omp_get_num_threads();
+            nthreads = omp_get_num_threads();
             printf("Starting voxel computation with %d threads\n", nthreads);
           }
         }
-
+#endif
         int k;
         Vector3D field;
         double potential;
-#pragma omp for private(k, point, potential, field)
+#ifdef _OPENMP
+        #pragma omp for private(k, point, potential, field)
+#endif
         for (k = 1; k <= nbZCells + 1; ++k) {
           potential = 0.0;
           field.X = field.Y = field.Z = 0.0;
@@ -2852,21 +2864,26 @@ int MapFPR(void) {
       }
 
       Point3D point;
+#ifdef _OPENMP
       int nthreads = 1, tid = 0;
-#pragma omp parallel private(nthreads, tid)
+      #pragma omp parallel private(nthreads, tid)
+#endif
       {
+#ifdef _OPENMP
         if (dbgFn) {
-          // tid = omp_get_thread_num();
+          tid = omp_get_thread_num();
           if (tid == 0) {
-            // nthreads = omp_get_num_threads();
+            nthreads = omp_get_num_threads();
             printf("Starting voxel computation with %d threads\n", nthreads);
           }
         }
-
+#endif
         int k;
         Vector3D field;
         double potential;
-#pragma omp for private(k, point, potential, field)
+#ifdef _OPENMP
+        #pragma omp for private(k, point, potential, field)
+#endif
         for (k = 1; k <= nbZCells + 1; ++k) {
           point.X = startX + (i - 1) * delX;  // all 3 components need to be
           point.Y = startY + (j - 1) * delY;  // evaluated after pragma omp
@@ -3014,21 +3031,26 @@ printf("q: %d,  type: %d\n", vq, vtype);
         }
 
         Point3D point;
+#ifdef _OPENMP
         int nthreads = 1, tid = 0;
-#pragma omp parallel private(nthreads, tid)
+        #pragma omp parallel private(nthreads, tid)
+#endif
         {
+#ifdef _OPENMP
           if (dbgFn) {
-            // tid = omp_get_thread_num();
+            tid = omp_get_thread_num();
             if (tid == 0) {
-              // nthreads = omp_get_num_threads();
+              nthreads = omp_get_num_threads();
               printf("Starting voxel computation with %d threads\n", nthreads);
             }
           }  // if dbgFn
-
+#endif
           int k;
           Vector3D field;
           double potential;
-#pragma omp for private(k, point, potential, field)
+#ifdef _OPENMP
+          #pragma omp for private(k, point, potential, field)
+#endif
           for (k = 1; k <= nbZCells + 1; ++k) {
             point.X = startX + (i - 1) * delX;  // all 3 components need to be
             point.Y = startY + (j - 1) * delY;  // evaluated after pragma omp
@@ -3256,23 +3278,28 @@ int FastVolElePF(void) {
         fflush(stdout);
 
         Point3D point;
+#ifdef _OPENMP
         int nthreads = 1, tid = 0;
-#pragma omp parallel private(nthreads, tid)
+        #pragma omp parallel private(nthreads, tid)
+#endif
         {
+#ifdef _OPENMP
           if (dbgFn) {
-            // tid = omp_get_thread_num();
+            tid = omp_get_thread_num();
             if (tid == 0) {
-              // nthreads = omp_get_num_threads();
+              nthreads = omp_get_num_threads();
               printf("Starting fast volume computation with %d threads\n",
                      nthreads);
             }
           }
-
+#endif
           int k;
           int omitFlag;
           double potential;
           Vector3D field;
-#pragma omp for private(k, point, omitFlag, potential, field)
+#ifdef _OPENMP
+          #pragma omp for private(k, point, omitFlag, potential, field)
+#endif
           for (k = 1 + kskip; k <= nbZCells + 1; ++k) {
             potential = 0.0;
             field.X = field.Y = field.Z = 0.0;
@@ -3446,25 +3473,30 @@ int FastVolElePF(void) {
           fflush(stdout);
 
           Point3D point;
+#ifdef _OPENMP
           int nthreads = 1, tid = 0;
-#pragma omp parallel private(nthreads, tid)
+          #pragma omp parallel private(nthreads, tid)
+#endif
           {
+#ifdef _OPENMP
             if (dbgFn) {
-              // tid = omp_get_thread_num();
+              tid = omp_get_thread_num();
               if (tid == 0) {
-                // nthreads = omp_get_num_threads();
+                nthreads = omp_get_num_threads();
                 printf(
                     "Starting staggered fast volume computation with %d "
                     "threads\n",
                     nthreads);
               }
             }
-
+#endif
             int k;
             int omitFlag;
             double potential;
             Vector3D field;
-#pragma omp for private(k, point, omitFlag, potential, field)
+#ifdef _OPENMP
+            #pragma omp for private(k, point, omitFlag, potential, field)
+#endif
             for (k = 1 + kskip; k <= nbZCells + 1; ++k) {
               potential = 0.0;
               field.X = field.Y = field.Z = 0.0;
@@ -6250,8 +6282,10 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
   SumePot = SumerPot = 0.0;
   SumeF.X = SumeF.Y = SumeF.Z = SumerF.X = SumerF.Y = SumerF.Z = 0.0;
 
+#ifdef _OPENMP
   int tid = 0, nthreads = 1;
-#pragma omp parallel private(tid, nthreads)
+  #pragma omp parallel private(tid, nthreads)
+#endif
   {
     int primsrc;
     double TransformationMatrix[4][4];
@@ -6279,21 +6313,24 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
     double erPot;
     Vector3D erF;
 
+#ifdef _OPENMP
     if (dbgFn) {
-      // tid = omp_get_thread_num();
+      tid = omp_get_thread_num();
       if (tid == 0) {
-        // nthreads = omp_get_num_threads();
+        nthreads = omp_get_num_threads();
         printf("PFAtPoint computation with %d threads\n", nthreads);
       }
     }
-
+#endif
 // by default, nested parallelization is off in C
+#ifdef _OPENMP
 #pragma omp for private(primsrc, TransformationMatrix, PrimOK, xpsrc, ypsrc, \
                         zpsrc, localPP, primPot, primF, localF, xsrc, ysrc,  \
                         zsrc, localPE, ePot, eF, SumePot, SumeF, xrpt, yrpt, \
                         zrpt, XPOfRpt, YPOfRpt, ZPOfRpt, localPPR, xrsrc,    \
                         yrsrc, zrsrc, XEOfRpt, YEOfRpt, ZEOfRpt, localPER,   \
                         erPot, erF, SumerPot, SumerF)
+#endif
     for (primsrc = 1; primsrc <= NbPrimitives; ++primsrc) {
       if (dbgFn) {
         printf("Evaluating effect of primsrc %d using on %lg, %lg, %lg\n",

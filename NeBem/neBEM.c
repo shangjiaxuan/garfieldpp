@@ -8,7 +8,9 @@
 #include <time.h>
 #include <unistd.h>
 
-// #include <omp.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #include "Isles.h"
 #include "NR.h"
@@ -131,10 +133,14 @@ int ComputeSolution(void) {
       startClock = clock();
       printf("ComputeSolution: LHMatrix ... ");
       fflush(stdout);
-      // time_begin = omp_get_wtime();
+#ifdef _OPENMP
+      time_begin = omp_get_wtime();
+#endif
       int fstatus = LHMatrix();
-      // time_end = omp_get_wtime();
+#ifdef _OPENMP
+      time_end = omp_get_wtime();
       printf("Elapsed time: %lg\n", time_end - time_begin);
+#endif
       if (fstatus != 0) {
         neBEMMessage("ComputeSolution - LHMatrix");
         return -1;
@@ -236,10 +242,14 @@ int ComputeSolution(void) {
   startClock = clock();
   printf("ComputeSolution: Solve ... ");
   fflush(stdout);
-  // time_begin = omp_get_wtime();
+#ifdef _OPENMP
+  time_begin = omp_get_wtime();
+#endif
   fstatus = Solve();
-  // time_end = omp_get_wtime();
+#ifdef _OPENMP
+  time_end = omp_get_wtime();
   printf("Elapsed time: %lg\n", time_end - time_begin);
+#endif
   if (fstatus != 0) {
     neBEMMessage("ComputeSolution - Solve");
     return -1;
@@ -314,18 +324,21 @@ int LHMatrix(void) {
   // printf("field point: ");	// do not remove
   printf("Computing influence coefficient matrix ... will take time ...\n");
 
+#ifdef _OPENMP
   int nthreads = 1, tid = 0;
-#pragma omp parallel private(nthreads, tid)
+  #pragma omp parallel private(nthreads, tid)
+#endif
   {
+#ifdef _OPENMP
     if (dbgFn) {
-      // tid = omp_get_thread_num();
+      tid = omp_get_thread_num();
       if (tid == 0) {
-        // nthreads = omp_get_num_threads();
+        nthreads = omp_get_num_threads();
         printf("Starting influence matrix computation with %d threads\n",
                nthreads);
       }
     }
-
+#endif
     // printf("Field point:");
     // fflush(stdout);
 
@@ -339,7 +352,9 @@ int LHMatrix(void) {
       yfld = (EleArr + elefld - 1)->BC.CollPt.Y;
       zfld = (EleArr + elefld - 1)->BC.CollPt.Z;
 
-#pragma omp for private(primsrc, xsrc, ysrc, zsrc, localP)
+#ifdef _OPENMP
+      #pragma omp for private(primsrc, xsrc, ysrc, zsrc, localP)
+#endif
       for (int elesrc = 1; elesrc <= NbElements; ++elesrc) {
         if (DebugLevel == 301) {
           printf("\n\nelefld: %d, elesrc: %d\n", elefld, elesrc);
@@ -1365,7 +1380,9 @@ int InvertMatrix(void) {
     // Keep the original Inf[] safe
     for (int i = 1; i <= NbEqns; i++) {
       int j;
-#pragma omp parallel for private(j)
+#ifdef _OPENMP
+      #pragma omp parallel for private(j)
+#endif
       for (j = 1; j <= NbUnknowns; j++)
         SVDInf[i][j] = Inf[i][j];  // end of omp parallel for
     }
@@ -1389,7 +1406,9 @@ int InvertMatrix(void) {
          j++) {  // w+ is obtained by replacing every non-zero diagonal entry of
                  // [W]
       int i;
-#pragma omp parallel for private(i)
+#ifdef _OPENMP
+      #pragma omp parallel for private(i)
+#endif
       for (i = 1; i <= NbEqns; i++)  // (note W, not w) by its reciprocal and
       {                              // transposing the resulting matrix
         if (SVDw[j])                 // nonzero result only if w[i] is nonzero
@@ -1408,7 +1427,9 @@ int InvertMatrix(void) {
 
         int k;
         double sum = 0.0;
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(+ : sum)
+#endif
         for (k = 1; k <= NbUnknowns; k++)
           sum += SVDv[i][k] * tmpmat[k][j];  // end of omp parallel for
 
@@ -1436,7 +1457,9 @@ int InvertMatrix(void) {
     for (int i = 1; i <= NbEqns; i++)  // Keep original Inf[] safe
     {
       int j;
-#pragma omp parallel for private(j)
+#ifdef _OPENMP
+      #pragma omp parallel for private(j)
+#endif
       for (j = 1; j <= NbUnknowns; j++)
         tmpInf[i][j] = Inf[i][j];  // end of omp parallel for
     }
@@ -1448,15 +1471,18 @@ int InvertMatrix(void) {
     for (int j = 1; j <= NbUnknowns; j++)  // Find inverse by columns.
     {
       int i;
-#pragma omp parallel for private(i)
+#ifdef _OPENMP
+      #pragma omp parallel for private(i)
+#endif
       for (i = 1; i <= NbUnknowns; i++)
         col[i] = 0.0;  // end of omp parallel for
 
       col[j] = 1.0;
 
       lubksb(tmpInf, NbUnknowns, index, col);  // changed avatar of tmpInf used
-
-#pragma omp parallel for private(i)
+#ifdef _OPENMP
+      #pragma omp parallel for private(i)
+#endif
       for (i = 1; i <= NbEqns; i++) {
         y[i][j] = col[i];
         InvMat[i][j] = y[i][j];
@@ -1529,10 +1555,14 @@ int DecomposeMatrixSVD(double **SVDInf, double *SVDw, double **SVDv) {
   fflush(stdout);
 
   wmax = SVDw[1];  // Will be the maximum singular value obtained - changed 0.0
-#pragma omp parallel
+#ifdef _OPENMP
+  #pragma omp parallel
+#endif
   {
     int j;
-#pragma omp for private(j)
+#ifdef _OPENMP
+    #pragma omp for private(j)
+#endif
     for (j = 1; j <= NbUnknowns; j++) {
       if (SVDw[j] > wmax) wmax = SVDw[j];
     }
@@ -1542,10 +1572,14 @@ int DecomposeMatrixSVD(double **SVDInf, double *SVDw, double **SVDv) {
   // nonzero. The constant is typical, but not universal. You have to experiment
   // with your own application.
   wmin = wmax * 1.0e-12;
-#pragma omp parallel
+#ifdef _OPENMP
+  #pragma omp parallel
+#endif
   {
     int j;
-#pragma omp for private(j)
+#ifdef _OPENMP
+    #pragma omp for private(j)
+#endif
     for (j = 1; j <= NbUnknowns; j++) {
       if (SVDw[j] < wmin) SVDw[j] = 0.0;
     }
@@ -2530,7 +2564,9 @@ int Solve(void) {
 
     double sum = 0.0;
     int j;
-#pragma omp parallel for private(j) reduction(+ : sum)
+#ifdef _OPENMP
+    #pragma omp parallel for private(j) reduction(+ : sum)
+#endif
     for (j = 1; j <= NbUnknowns; j++) {
       sum += InvMat[i][j] * RHS[j];  // new
     }
@@ -2757,7 +2793,9 @@ int Solve(void) {
       double *Error, MaxError = 0.0;
       Error = dvector(1, NbEqns);
       int elesrc;
-#pragma omp parallel for private(elesrc)
+#ifdef _OPENMP
+      #pragma omp parallel for private(elesrc)
+#endif
       for (int elefld = 1; elefld <= NbEqns; elefld++) {
         XChk = 0.0;
         for (elesrc = 1; elesrc <= NbUnknowns; elesrc++) {
