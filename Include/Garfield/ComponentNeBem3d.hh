@@ -49,6 +49,19 @@ class ComponentNeBem3d : public ComponentBase {
   /// produced by neBEM's discretisation process.
   void SetTargetElementSize(const double length);
 
+  /// Set the parameters \f$n_x, n_y, n_z$\f defining the number of periodic 
+  /// copies that neBEM will use when dealing with periodic configurations.
+  /// neBEM will use \f$2 \times n + 1$\f copies (default: \f$n = 5$\f).
+  void SetPeriodicCopies(const unsigned int nx, const unsigned int ny,
+                         const unsigned int nz);
+  /// Retrieve the number of periodic copies used by neBEM.
+  void GetPeriodicCopies(unsigned int& nx, unsigned int& ny, 
+                         unsigned int& nz) const {
+    nx = m_nCopiesX;
+    ny = m_nCopiesY;
+    nz = m_nCopiesZ;
+  }
+
  private:
   struct Primitive {
     /// Perpendicular vector
@@ -113,6 +126,12 @@ class ComponentNeBem3d : public ComponentBase {
   unsigned int m_minNbElementsOnLength = 1;
   /// Largest number of elements produced along the axis of a primitive. 
   unsigned int m_maxNbElementsOnLength = 100; 
+  /// Number of periodic copies along x.
+  unsigned int m_nCopiesX = 5;
+  /// Number of periodic copies along y.
+  unsigned int m_nCopiesY = 5;
+  /// Number of periodic copies along z.
+  unsigned int m_nCopiesZ = 5;
 
   /// Isolate the parts of polygon 1 that are not hidden by 2 and vice versa.
   bool EliminateOverlaps(const Panel& panel1, const Panel& panel2,

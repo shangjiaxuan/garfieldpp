@@ -443,6 +443,14 @@ void ComponentNeBem3d::SetTargetElementSize(const double length) {
   m_targetElementSize = length;
 }
 
+void ComponentNeBem3d::SetPeriodicCopies(const unsigned int nx, 
+                                         const unsigned int ny,
+                                         const unsigned int nz) {
+  m_nCopiesX = nx;
+  m_nCopiesY = ny;
+  m_nCopiesZ = nz;
+}
+
 bool ComponentNeBem3d::Initialise() {
   // Reset the lists.
   m_primitives.clear();
