@@ -173,76 +173,88 @@ class ComponentBase {
     m_periodic[0] = on;
     UpdatePeriodicity();
   }
-  void DisablePeriodicityX() { EnablePeriodicityX(false); }
   /// Enable simple periodicity in the \f$y\f$ direction.
   void EnablePeriodicityY(const bool on = true) {
     m_periodic[1] = on;
     UpdatePeriodicity();
   }
-  void DisablePeriodicityY() { EnablePeriodicityY(false); }
   /// Enable simple periodicity in the \f$z\f$ direction.
   void EnablePeriodicityZ(const bool on = true) {
     m_periodic[2] = on;
     UpdatePeriodicity();
   }
-  void DisablePeriodicityZ() { EnablePeriodicityZ(false); }
+  /// Return periodicity flags.
+  void IsPeriodic(bool& perx, bool& pery, bool& perz) {
+    perx = m_periodic[0];
+    pery = m_periodic[1];
+    perz = m_periodic[2];
+  }
 
   /// Enable mirror periodicity in the \f$x\f$ direction.
   void EnableMirrorPeriodicityX(const bool on = true) {
     m_mirrorPeriodic[0] = on;
     UpdatePeriodicity();
   }
-  void DisableMirrorPeriodicityX() { EnableMirrorPeriodicityX(false); }
   /// Enable mirror periodicity in the \f$y\f$ direction.
   void EnableMirrorPeriodicityY(const bool on = true) {
     m_mirrorPeriodic[1] = on;
     UpdatePeriodicity();
   }
-  void DisableMirrorPeriodicityY() { EnableMirrorPeriodicityY(false); }
   /// Enable mirror periodicity in the \f$y\f$ direction.
   void EnableMirrorPeriodicityZ(const bool on = true) {
     m_mirrorPeriodic[2] = on;
     UpdatePeriodicity();
   }
-  void DisableMirrorPeriodicityZ() { EnableMirrorPeriodicityZ(false); }
+  /// Return mirror periodicity flags.
+  void IsMirrorPeriodic(bool& perx, bool& pery, bool& perz) {
+    perx = m_mirrorPeriodic[0];
+    pery = m_mirrorPeriodic[1];
+    perz = m_mirrorPeriodic[2];
+  }
 
   /// Enable axial periodicity in the \f$x\f$ direction.
   void EnableAxialPeriodicityX(const bool on = true) {
     m_axiallyPeriodic[0] = on;
     UpdatePeriodicity();
   }
-  void DisableAxialPeriodicityX() { EnableAxialPeriodicityX(false); }
   /// Enable axial periodicity in the \f$y\f$ direction.
   void EnableAxialPeriodicityY(const bool on = true) {
     m_axiallyPeriodic[1] = on;
     UpdatePeriodicity();
   }
-  void DisableAxialPeriodicityY() { EnableAxialPeriodicityY(false); }
   /// Enable axial periodicity in the \f$z\f$ direction.
   void EnableAxialPeriodicityZ(const bool on = true) {
     m_axiallyPeriodic[2] = on;
     UpdatePeriodicity();
   }
-  void DisableAxialPeriodicityZ() { EnableAxialPeriodicityZ(false); }
+  /// Return axial periodicity flags.
+  void IsAxiallyPeriodic(bool& perx, bool& pery, bool& perz) {
+    perx = m_axiallyPeriodic[0];
+    pery = m_axiallyPeriodic[1];
+    perz = m_axiallyPeriodic[2];
+  }
 
   /// Enable rotation symmetry around the \f$x\f$ axis.
   void EnableRotationSymmetryX(const bool on = true) {
     m_rotationSymmetric[0] = on;
     UpdatePeriodicity();
   }
-  void DisableRotationSymmetryX() { EnableRotationSymmetryX(false); }
   /// Enable rotation symmetry around the \f$y\f$ axis.
   void EnableRotationSymmetryY(const bool on = true) {
     m_rotationSymmetric[1] = on;
     UpdatePeriodicity();
   }
-  void DisableRotationSymmetryY() { EnableRotationSymmetryY(false); }
   /// Enable rotation symmetry around the \f$z\f$ axis.
   void EnableRotationSymmetryZ(const bool on = true) {
     m_rotationSymmetric[2] = on;
     UpdatePeriodicity();
   }
-  void DisableRotationSymmetryZ() { EnableRotationSymmetryZ(false); }
+  /// Return rotation symmetry flags.
+  void IsRotationSymmetric(bool& rotx, bool& roty, bool& rotz) {
+    rotx = m_rotationSymmetric[0];
+    roty = m_rotationSymmetric[1];
+    rotz = m_rotationSymmetric[2];
+  }
 
   /// Switch on debugging messages.
   void EnableDebugging() { m_debug = true; }
