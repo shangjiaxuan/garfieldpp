@@ -12,7 +12,9 @@ void ludcmp(double **a, int n, int *index, double *d) {
 
   vv = dvector(1, n); /* No looping yet. */
   *d = 1.0;           /* loop over rows to get implicit scaling info. */
+#ifdef _OPENMP
 #pragma omp parallel for private(j, big)
+#endif
   for (i = 1; i <= n; i++) {
     big = 0.0;
     for (j = 1; j <= n; j++)
@@ -25,7 +27,9 @@ void ludcmp(double **a, int n, int *index, double *d) {
   {
     for (i = 1; i < j; i++) {
       sum = a[i][j];
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(- : sum)
+#endif
       for (k = 1; k < i; k++)  // OMPChk: parallelization may not help much
         sum = sum - a[i][k] * a[k][j];
       a[i][j] = sum;
@@ -34,7 +38,9 @@ void ludcmp(double **a, int n, int *index, double *d) {
     big = 0.0; /* search for largest pivotal element. */
     for (i = j; i <= n; i++) {
       sum = a[i][j];
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(- : sum)
+#endif
       for (k = 1; k < j; k++)  // OMPChk: parallelization may not help much
         sum = sum - a[i][k] * a[k][j];
       a[i][j] = sum;
@@ -47,7 +53,9 @@ void ludcmp(double **a, int n, int *index, double *d) {
     }
 
     if (j != imax) {
+#ifdef _OPENMP
 #pragma omp parallel for private(k, dum)
+#endif
       for (k = 1; k <= n; k++) {
         dum = a[imax][k];
         a[imax][k] = a[j][k];
@@ -64,7 +72,9 @@ void ludcmp(double **a, int n, int *index, double *d) {
     if (j != n) /* finally, divide by the pivot element. */
     {
       dum = 1.0 / a[j][j];
+#ifdef _OPENMP
 #pragma omp parallel for private(i)  // OMPCheck: may not help much
+#endif
       for (i = j + 1; i <= n; i++) a[i][j] = a[i][j] * dum;
     }
   }
@@ -82,7 +92,9 @@ void lubksb(double **a, int n, int *index, double *b) {
     sum = b[ip];
     b[ip] = b[i];
     if (ii) {
+#ifdef _OPENMP
 #pragma omp parallel for private(j) reduction(- : sum)
+#endif
       for (j = ii; j <= i; j++) sum = sum - a[i][j] * b[j];
     } else if (sum)
       ii = i;
@@ -92,7 +104,9 @@ void lubksb(double **a, int n, int *index, double *b) {
   for (i = n; i >= 1; i--) /* back substitution. */
   {
     sum = b[i];
+#ifdef _OPENMP
 #pragma omp parallel for private(j) reduction(- : sum)
+#endif
     for (j = i + 1; j <= n; j++) sum = sum - a[i][j] * b[j];
     b[i] = sum / a[i][i];
   }
