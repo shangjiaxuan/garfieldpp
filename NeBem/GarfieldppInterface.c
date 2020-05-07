@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "Interface.h"
+#include "neBEMInterface.h"
 #include "NR.h"
 #include "Vector.h"
 #include "neBEM.h"

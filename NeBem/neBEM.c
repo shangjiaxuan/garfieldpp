@@ -20,7 +20,7 @@
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_matrix.h>
 
-#include "Interface.h"
+#include "neBEMInterface.h"
 #include "neBEM.h"
 
 int InfluenceMatrixFlag;

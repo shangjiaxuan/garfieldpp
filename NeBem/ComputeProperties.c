@@ -11,7 +11,7 @@
 #include <omp.h>
 #endif
 
-#include "Interface.h"
+#include "neBEMInterface.h"
 #include "Isles.h"
 #include "NR.h"
 #include "Vector.h"

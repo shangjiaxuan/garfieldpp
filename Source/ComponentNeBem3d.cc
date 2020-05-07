@@ -7,9 +7,9 @@
 #include <numeric>
 #include <vector>
 
-#include "Interface.h"
-#include "NR.h"
+#include "neBEMInterface.h"
 #include "neBEM.h"
+#include "NR.h"
 
 #include "Garfield/ComponentNeBem3d.hh"
 #include "Garfield/FundamentalConstants.hh"

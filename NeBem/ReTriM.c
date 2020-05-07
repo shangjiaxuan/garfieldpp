@@ -6,7 +6,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "Interface.h"
+#include "neBEMInterface.h"
 #include "Isles.h"
 #include "NR.h"
 #include "Vector.h"
