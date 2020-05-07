@@ -17,6 +17,10 @@
 #include <sys/stat.h>  // use of stat function
 #include <unistd.h>
 
+#ifdef __cplusplus
+#include <vector>
+#endif
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -509,11 +513,23 @@ int neBEMReadGeometry(void) {
 
   // Loop over the primitives - major loop
   int nvertex, volref1, volref2, volmax = 0;
-  double xvert[MaxNbVertices], yvert[MaxNbVertices], zvert[MaxNbVertices],
-      xnorm, ynorm, znorm;  // in case of wire , radius is read as xnorm
+#ifdef __cplusplus
+  std::vector<double> xvert(MaxNbVertices, 0.);
+  std::vector<double> yvert(MaxNbVertices, 0.);
+  std::vector<double> zvert(MaxNbVertices, 0.);
+#else
+  double xvert[MaxNbVertices], yvert[MaxNbVertices], zvert[MaxNbVertices];
+#endif
+  double xnorm, ynorm, znorm;  // in case of wire , radius is read as xnorm
   for (int prim = 1; prim <= NbPrimitives; ++prim) {
+#ifdef __cplusplus
+    fstatus = neBEMGetPrimitive(prim, &nvertex, 
+                                xvert.data(), yvert.data(), zvert.data(),
+                                &xnorm, &ynorm, &znorm, &volref1, &volref2);
+#else
     fstatus = neBEMGetPrimitive(prim, &nvertex, xvert, yvert, zvert,  // arrays
                                 &xnorm, &ynorm, &znorm, &volref1, &volref2);
+#endif
     if (fstatus != 0) {
       neBEMMessage("neBEMReadGeometry - neBEMGetPrimitve");
       return -1;
@@ -1510,10 +1526,19 @@ int neBEMReadGeometry(void) {
         fscanf(rmprimFile, "NbRmPrims: %d\n", &NbRmPrims);
         if (NbRmPrims) {
           int tint;
-          double rmXNorm[NbRmPrims + 1], rmYNorm[NbRmPrims + 1],
-              rmZNorm[NbRmPrims + 1];
-          double rmXVert[NbRmPrims + 1], rmYVert[NbRmPrims + 1],
-              rmZVert[NbRmPrims + 1];
+#ifdef __cplusplus
+          std::vector<double> rmXNorm(NbRmPrims + 1, 0.);
+          std::vector<double> rmYNorm(NbRmPrims + 1, 0.);
+          std::vector<double> rmZNorm(NbRmPrims + 1, 0.);
+          std::vector<double> rmXVert(NbRmPrims + 1, 0.);
+          std::vector<double> rmYVert(NbRmPrims + 1, 0.);
+          std::vector<double> rmZVert(NbRmPrims + 1, 0.);
+#else
+          double rmXNorm[NbRmPrims + 1], rmYNorm[NbRmPrims + 1];
+          double rmZNorm[NbRmPrims + 1];
+          double rmXVert[NbRmPrims + 1], rmYVert[NbRmPrims + 1];
+          double rmZVert[NbRmPrims + 1];
+#endif
           for (int rmprim = 1; rmprim <= NbRmPrims; ++rmprim) {
             fscanf(rmprimFile, "Prim: %d\n", &tint);
             fscanf(rmprimFile, "rmXNorm: %le\n", &rmXNorm[rmprim]);
@@ -1528,11 +1553,13 @@ int neBEMReadGeometry(void) {
                 rmprim, rmXNorm[rmprim], rmYNorm[rmprim], rmZNorm[rmprim],
                 rmXVert[rmprim], rmYVert[rmprim], rmZVert[rmprim]);
           }
-
+#ifdef __cplusplus
+          std::vector<int> remove(NbPrimitives + 1, 0);
+#else
           int remove[NbPrimitives + 1];
-          for (int prim = 1; prim <= NbPrimitives;
-               ++prim)  // check updated prim list
-          {
+#endif
+          // Check updated prim list
+          for (int prim = 1; prim <= NbPrimitives; ++prim) {
             remove[prim] = 0;
             if (dbgFn) {
               printf("\n\nprim: %d, XVertex: %lg, YVertex: %lg, ZVertex: %lg\n",
