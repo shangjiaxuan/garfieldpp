@@ -484,11 +484,7 @@ int DiscretizeWire(int prim, int nvertex, double xvert[], double yvert[],
   // Vector3D OR;
   // O = CreatePoint3D(WireX, WireY, WireZ);
   {
-    double WireX, WireY, WireZ;
     Vector3D XUnit, YUnit, ZUnit;
-    WireX = 0.5 * (xvert[1] + xvert[0]);
-    WireY = 0.5 * (yvert[1] + yvert[0]);
-    WireZ = 0.5 * (zvert[1] + zvert[0]);
     ZUnit.X = PrimDirnCosn.ZUnit.X;
     ZUnit.Y = PrimDirnCosn.ZUnit.Y;
     ZUnit.Z = PrimDirnCosn.ZUnit.Z;
@@ -497,6 +493,9 @@ int DiscretizeWire(int prim, int nvertex, double xvert[], double yvert[],
     XCoef = ZUnit.X;
     YCoef = ZUnit.Y;
     ZCoef = ZUnit.Z;
+    double WireX = 0.5 * (xvert[1] + xvert[0]);
+    double WireY = 0.5 * (yvert[1] + yvert[0]);
+    double WireZ = 0.5 * (zvert[1] + zvert[0]);
     Const = WireX * ZUnit.X + WireY * ZUnit.Y + WireZ * ZUnit.Z;
     if(abs(XCoef) < 1.0e-12)	// X can be anything!
             {
@@ -790,9 +789,6 @@ int DiscretizeTriangle(int prim, int nvertex, double xvert[], double yvert[],
   int SurfParentObj, SurfEType;
   double SurfX, SurfY, SurfZ, SurfLX, SurfLZ;
   double SurfElX, SurfElY, SurfElZ, SurfElLX, SurfElLZ;
-  double SurfLambda, SurfV, SurfCh;
-  // Looks like PrimOrigin is being assigned but not being used at all!
-  Point3D PrimOrigin;       // origin (centroid) of the current primitive
   DirnCosn3D PrimDirnCosn;  // direction cosine of the current primitive
   char primstr[10];
   char gpElem[256], gpMesh[256];
@@ -834,9 +830,6 @@ int DiscretizeTriangle(int prim, int nvertex, double xvert[], double yvert[],
   SurfX = xvert[1];
   SurfY = yvert[1];
   SurfZ = zvert[1];
-  PrimOrigin.X = SurfX;
-  PrimOrigin.Y = SurfY;
-  PrimOrigin.Z = SurfZ;
 
   // Find the proper direction cosines first - little more tricky that in the
   // rectangular case
@@ -930,9 +923,8 @@ int DiscretizeTriangle(int prim, int nvertex, double xvert[], double yvert[],
     Epsilon2[prim] = tmpEpsilon1;
   }
 
-  SurfLambda = lambda;
-  SurfV = potential;
-  SurfCh = charge;
+  double SurfLambda = lambda;
+  double SurfV = potential;
 
   // file output for a primitive
   if (OptPrimitiveFiles) {
@@ -1595,9 +1587,6 @@ int DiscretizeRectangle(int prim, int nvertex, double xvert[], double yvert[],
   int SurfParentObj, SurfEType;
   double SurfX, SurfY, SurfZ, SurfLX, SurfLZ;
   double SurfElX, SurfElY, SurfElZ, SurfElLX, SurfElLZ;
-  double SurfLambda, SurfV, SurfCh;
-  // Looks like PrimOrigin is being assigned but not being used at all!
-  Point3D PrimOrigin;       // origin (centroid) of the current primitive
   DirnCosn3D PrimDirnCosn;  // direction cosine of the current primitive
   char primstr[10];
   char gpElem[256], gpMesh[256];
@@ -1644,9 +1633,6 @@ int DiscretizeRectangle(int prim, int nvertex, double xvert[], double yvert[],
   SurfX = 0.25 * (xvert[0] + xvert[1] + xvert[2] + xvert[3]);
   SurfY = 0.25 * (yvert[0] + yvert[1] + yvert[2] + yvert[3]);
   SurfZ = 0.25 * (zvert[0] + zvert[1] + zvert[2] + zvert[3]);
-  PrimOrigin.X = SurfX;
-  PrimOrigin.Y = SurfY;
-  PrimOrigin.Z = SurfZ;
   // lengths of the sides
   SurfLX = sqrt((xvert[1] - xvert[0]) * (xvert[1] - xvert[0]) +
                 (yvert[1] - yvert[0]) * (yvert[1] - yvert[0]) +
@@ -1682,9 +1668,8 @@ int DiscretizeRectangle(int prim, int nvertex, double xvert[], double yvert[],
   PrimLX[prim] = SurfLX;
   PrimLZ[prim] = SurfLZ;
 
-  SurfLambda = lambda;
-  SurfV = potential;
-  SurfCh = charge;
+  double SurfLambda = lambda;
+  double SurfV = potential;
 
   // file output for a primitive
   if (OptPrimitiveFiles) {
@@ -2107,10 +2092,12 @@ int DiscretizeRectangle(int prim, int nvertex, double xvert[], double yvert[],
   return (0);
 }  // end of DiscretizeRectangle
 
-int DiscretizePolygon(int prim, int nvertex, double xvert[], double yvert[],
-                      double zvert[], double xnorm, double ynorm, double znorm,
-                      int volref1, int volref2, int inttype, double potential,
-                      double charge, double lambda, int NbSegX, int NbSegZ) {
+int DiscretizePolygon(int /*prim*/, int /*nvertex*/, double /*xvert*/[], 
+                      double /*yvert*/[], double /*zvert*/[], double /*xnorm*/,
+                      double /*ynorm*/, double /*znorm*/, 
+                      int /*volref1*/, int /*volref2*/, int /*inttype*/, 
+                      double /*potential*/, double /*charge*/, 
+                      double /*lambda*/, int NbSegX, int NbSegZ) {
   // Check inputs
   if ((NbSegX <= 0) || (NbSegZ <= 0)) {
     printf("segmentation input wrong in DiscretizePolygon ...\n");
