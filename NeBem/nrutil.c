@@ -138,7 +138,7 @@ int **imatrix(long nrl, long nrh, long ncl, long nch)
   return m;
 }
 
-float **submatrix(float **a, long oldrl, long oldrh, long oldcl, long oldch,
+float **submatrix(float **a, long oldrl, long oldrh, long oldcl, long /*oldch*/,
                   long newrl, long newcl)
 /* point a submatrix [newrl...][newcl...] to a [oldrl...][oldcl...] */
 {
@@ -442,92 +442,81 @@ malloc((size_t)((nrow*ncol*ndep*nd4th+NR_END)*sizeof(double)));
 }
 */
 
-void free_fvector(float *v, long nl, long nh)
 /* free a float vector  allocated with vector() */
-{
+void free_fvector(float *v, long nl, long /*nh*/) {
   free((FREE_ARG)(v + nl - NR_END));
 }
 
-void free_ivector(int *v, long nl, long nh)
 /* free an int vector  allocated with vector() */
-{
+void free_ivector(int *v, long nl, long /*nh*/) {
   free((FREE_ARG)(v + nl - NR_END));
 }
 
-void free_cvector(unsigned char *v, long nl, long nh)
 /* free an unsigned char vector  allocated with vector() */
-{
+void free_cvector(unsigned char *v, long nl, long /*nh*/) {
   free((FREE_ARG)(v + nl - NR_END));
 }
 
-void free_lvector(unsigned long *v, long nl, long nh)
 /* free an unsigned long vector  allocated with vector() */
-{
+void free_lvector(unsigned long *v, long nl, long /*nh*/) {
   free((FREE_ARG)(v + nl - NR_END));
 }
 
-void free_dvector(double *v, long nl, long nh)
 /* free a double vector  allocated with vector() */
-{
+void free_dvector(double *v, long nl, long /*nh*/) {
   free((FREE_ARG)(v + nl - NR_END));
 }
 
-void free_fmatrix(float **m, long nrl, long nrh, long ncl, long nch)
 /* free a float matrix allocated by matrix() */
-{
+void free_fmatrix(float **m, long nrl, long /*nrh*/, long ncl, long /*nch*/) {
   free((FREE_ARG)(m[nrl] + ncl - NR_END));
   free((FREE_ARG)(m + nrl - NR_END));
 }
 
-void free_dmatrix(double **m, long nrl, long nrh, long ncl, long nch)
 /* free a double matrix allocated by dmatrix() */
-{
+void free_dmatrix(double **m, long nrl, long /*nrh*/, long ncl, long /*nch*/) {
   free((FREE_ARG)(m[nrl] + ncl - NR_END));
   free((FREE_ARG)(m + nrl - NR_END));
 }
 
-void free_imatrix(int **m, long nrl, long nrh, long ncl, long nch)
 /* free an int matrix allocated by imatrix() */
-{
+void free_imatrix(int **m, long nrl, long /*nrh*/, long ncl, long /*nch*/) {
   free((FREE_ARG)(m[nrl] + ncl - NR_END));
   free((FREE_ARG)(m + nrl - NR_END));
 }
 
-void free_submatrix(float **b, long nrl, long nrh, long ncl, long nch)
 /* free a submatrix allocated by submatrix() */
-{
+void free_submatrix(float **b, long nrl, long /*nrh*/, long /*ncl*/, 
+                    long /*nch*/) {
   free((FREE_ARG)(b + nrl - NR_END));
 }
 
-void free_convert_matrix(float **b, long nrl, long nrh, long ncl, long nch)
 /* free a matrix allocated by convert_matrix() */
-{
+void free_convert_matrix(float **b, long nrl, long /*nrh*/, long /*ncl*/, 
+                         long /*nch*/) {
   free((FREE_ARG)(b + nrl - NR_END));
 }
 
-void free_f3tensor(float ***t, long nrl, long nrh, long ncl, long nch, long ndl,
-                   long ndh)
 /* free a f3tensor allocated by f3tensor() */
-{
+void free_f3tensor(float ***t, long nrl, long /*nrh*/, long ncl, long /*nch*/, 
+                   long ndl, long /*ndh*/) {
   free((FREE_ARG)(t[nrl][ncl] + ndl - NR_END));
   free((FREE_ARG)(t[nrl] + ncl - NR_END));
   free((FREE_ARG)(t + nrl - NR_END));
 }
 
-void free_d3tensor(double ***t, long nrl, long nrh, long ncl, long nch,
-                   long ndl, long ndh)
 /* free a d3tensor allocated by d3tensor() */
-{
+void free_d3tensor(double ***t, long nrl, long /*nrh*/, long ncl, long /*nch*/,
+                   long ndl, long /*ndh*/) {
   free((FREE_ARG)(t[nrl][ncl] + ndl - NR_END));
   free((FREE_ARG)(t[nrl] + ncl - NR_END));
   free((FREE_ARG)(t + nrl - NR_END));
 }
 
 // from f4tensor.txt
-void free_d4tensor(double ****t, long nrl, long nrh, long ncl, long nch,
-                   long ndl, long ndh, long nwl, long nwh)
 /* free a double d4tensor allocated by d4tensor() */
-{
+void free_d4tensor(double ****t, long nrl, long /*nrh*/, long ncl, long /*nch*/,
+                   long ndl, long /*ndh*/, long nwl, long /*nwh*/) {
   free((FREE_ARG)(t[nrl][ncl][ndl] + nwl - NR_END));
   free((FREE_ARG)(t[nrl][ncl] + ndl - NR_END));
   free((FREE_ARG)(t[nrl] + ncl - NR_END));
