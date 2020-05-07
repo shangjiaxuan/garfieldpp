@@ -37,10 +37,14 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
     g = s = scale = 0.0;
 
     if (i <= m) {
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(+ : scale)
+#endif
       for (k = i; k <= m; k++) scale += fabs(a[k][i]);
       if (scale) {
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(+ : s)
+#endif
         for (k = i; k <= m; k++) {
           a[k][i] /= scale;
           s += a[k][i] * a[k][i];
@@ -54,25 +58,34 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
         if (i != n) {
           for (j = l; j <= n; j++) {
             s = 0.0;
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(+ : s)
+#endif
             for (k = i; k <= m; k++) s += a[k][i] * a[k][j];
             f = s / h;
+#ifdef _OPENMP
 #pragma omp parallel for private(k)  // OMPCheck
+#endif
             for (k = i; k <= m; k++) a[k][j] += f * a[k][i];
           }
         }
-
+#ifdef _OPENMP
 #pragma omp parallel for private(k)
+#endif
         for (k = i; k <= m; k++) a[k][i] *= scale;
       }
     }
     w[i] = scale * g;
     g = s = scale = 0.0;
     if (i <= m && i != n) {
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(+ : scale)
+#endif
       for (k = l; k <= n; k++) scale += fabs(a[i][k]);
       if (scale) {
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(+ : s)
+#endif
         for (k = l; k <= n; k++) {
           a[i][k] /= scale;
           s += a[i][k] * a[i][k];
@@ -81,18 +94,26 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
         g = -SIGNS(sqrt(s), f);
         h = f * g - s;
         a[i][l] = f - g;
+#ifdef _OPENMP
 #pragma omp parallel for private(k)
+#endif
         for (k = l; k <= n; k++) rv1[k] = a[i][k] / h;
         if (i != m) {
           for (j = l; j <= m; j++) {
             s = 0.0;
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(+ : s)
+#endif
             for (k = l; k <= n; k++) s += a[j][k] * a[i][k];
+#ifdef _OPENMP
 #pragma omp parallel for private(k)  // OMPCheck
+#endif
             for (k = l; k <= n; k++) a[j][k] += s * rv1[k];
           }
         }
+#ifdef _OPENMP
 #pragma omp parallel for private(k)
+#endif
         for (k = l; k <= n; k++) a[i][k] *= scale;
       }
     }
@@ -103,18 +124,26 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
   {
     if (i < n) {
       if (g) {
+#ifdef _OPENMP
 #pragma omp parallel for private(j)
+#endif
         for (j = l; j <= n; j++) /* double division to avoid possible */
           v[j][i] = (a[i][j] / a[i][l]) / g; /* underflow */
         for (j = l; j <= n; j++) {
           s = 0.0;
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(+ : s)
+#endif
           for (k = l; k <= n; k++) s += a[i][k] * v[k][j];
+#ifdef _OPENMP
 #pragma omp parallel for private(k)  // OMPCheck
+#endif
           for (k = l; k <= n; k++) v[k][j] += s * v[k][i];
         }
       }
+#ifdef _OPENMP
 #pragma omp parallel for private(j)
+#endif
       for (j = l; j <= n; j++) v[i][j] = v[j][i] = 0.0;
     }
     v[i][i] = 1.0;
@@ -127,7 +156,9 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
     l = i + 1;
     g = w[i];
     if (i < n) {
+#ifdef _OPENMP
 #pragma omp parallel for private(j)
+#endif
       for (j = l; j <= n; j++) a[i][j] = 0.0;
     }
     if (g) {
@@ -135,17 +166,25 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
       if (i != n) {
         for (j = l; j <= n; j++) {
           s = 0.0;
+#ifdef _OPENMP
 #pragma omp parallel for private(k) reduction(+ : s)
+#endif
           for (k = l; k <= m; k++) s += a[k][i] * a[k][j];
           f = (s / a[i][i]) * g;
+#ifdef _OPENMP
 #pragma omp parallel for private(k)  // OMPCheck
+#endif
           for (k = i; k <= m; k++) a[k][j] += f * a[k][i];
         }
       }
+#ifdef _OPENMP
 #pragma omp parallel for private(j)
+#endif
       for (j = i; j <= m; j++) a[j][i] *= g;
     } else {
+#ifdef _OPENMP
 #pragma omp parallel for private(j)
+#endif
       for (j = i; j <= m; j++) a[j][i] = 0.0;
     }
 
@@ -178,7 +217,9 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
           h = 1.0 / h;
           c = g * h;
           s = (-f * h);
+#ifdef _OPENMP
 #pragma omp parallel for private(j, y, z)  // OMPCheck
+#endif
           for (j = 1; j <= m; j++) {
             y = a[j][nm];
             z = a[j][i];
@@ -193,7 +234,9 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
         if (z < 0.0) /* singular value is made nonnegative */
         {
           w[k] = -z;
+#ifdef _OPENMP
 #pragma omp parallel for private(j)
+#endif
           for (j = 1; j <= n; j++) v[j][k] = (-v[j][k]);
         }
         break;
@@ -226,8 +269,9 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
         g = g * c - x * s;
         h = y * s;
         y *= c;
-
+#ifdef _OPENMP
 #pragma omp parallel for private(jj, x, z)  // OMPCheck
+#endif
         for (jj = 1; jj <= n; jj++) {
           x = v[jj][j];
           z = v[jj][i];
@@ -244,7 +288,9 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
         }
         f = c * g + s * y;
         x = c * y - s * g;
+#ifdef _OPENMP
 #pragma omp parallel for private(jj, y, z)  // OMPCheck
+#endif
         for (jj = 1; jj <= m; jj++) {
           y = a[jj][j];
           z = a[jj][i];
