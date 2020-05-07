@@ -890,6 +890,15 @@ bool ComponentNeBem3d::Initialise() {
         panel.a = XNorm[i];
         panel.b = YNorm[i];
         panel.c = ZNorm[i];
+        const int nv = NbVertices[i];
+        panel.xv.resize(nv);
+        panel.yv.resize(nv);
+        panel.zv.resize(nv);
+        for (int j = 0; j < nv; ++j) {
+          panel.xv[j] = XVertex[i][j];
+          panel.yv[j] = YVertex[i][j];
+          panel.zv[j] = ZVertex[i][j];
+        }
         size1 = solid->GetDiscretisationLevel(panel);
       }
     }
@@ -902,6 +911,15 @@ bool ComponentNeBem3d::Initialise() {
         panel.a = -XNorm[i];
         panel.b = -YNorm[i];
         panel.c = -ZNorm[i];
+        const int nv = NbVertices[i];
+        panel.xv.resize(nv);
+        panel.yv.resize(nv);
+        panel.zv.resize(nv);
+        for (int j = 0; j < nv; ++j) {
+          panel.xv[j] = XVertex[i][j];
+          panel.yv[j] = YVertex[i][j];
+          panel.zv[j] = ZVertex[i][j];
+        }
         size2 = solid->GetDiscretisationLevel(panel);
       }
     }
