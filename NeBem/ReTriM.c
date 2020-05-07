@@ -2115,12 +2115,10 @@ int BoundaryConditions(void) {
   // The RHS will also need to be modified to accommodate the presence of
   // floating conductors and charged (known) substances.
   // Looping on primitives (rather than elements) can save precious time!
-  for (unsigned int ele = 1; ele <= NbElements; ++ele) {
+  for (int ele = 1; ele <= NbElements; ++ele) {
     int prim = (EleArr + ele - 1)->PrimitiveNb;
-
-    switch (
-        PrimType[prim])  // Note this condition is pure geometry, not electric!
-    {
+    // Note this condition is pure geometry, not electric!
+    switch (PrimType[prim]) {
       case 2:
         (EleArr + ele - 1)->BC.Value = ApplPot[prim];
         break;
