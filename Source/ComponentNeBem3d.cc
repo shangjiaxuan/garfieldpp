@@ -451,6 +451,105 @@ void ComponentNeBem3d::SetPeriodicCopies(const unsigned int nx,
   m_nCopiesZ = nz;
 }
 
+void ComponentNeBem3d::SetPeriodicityX(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetPeriodicityX:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[0] = s;
+  m_periodic[0] = true;
+  m_mirrorPeriodic[0] = false;
+  UpdatePeriodicity();
+}
+
+void ComponentNeBem3d::SetPeriodicityY(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetPeriodicityY:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[1] = s;
+  m_periodic[1] = true;
+  m_mirrorPeriodic[1] = false;
+  UpdatePeriodicity();
+}
+
+void ComponentNeBem3d::SetPeriodicityZ(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetPeriodicityZ:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[2] = s;
+  m_periodic[2] = true;
+  m_mirrorPeriodic[2] = false;
+  UpdatePeriodicity();
+}
+
+void ComponentNeBem3d::SetMirrorPeriodicityX(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetMirrorPeriodicityX:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[0] = s;
+  m_periodic[0] = false;
+  m_mirrorPeriodic[0] = true;
+  UpdatePeriodicity();
+}
+
+void ComponentNeBem3d::SetMirrorPeriodicityY(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetMirrorPeriodicityY:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[1] = s;
+  m_periodic[1] = false;
+  m_mirrorPeriodic[1] = true;
+  UpdatePeriodicity();
+}
+
+void ComponentNeBem3d::SetMirrorPeriodicityZ(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetMirrorPeriodicityZ:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[2] = s;
+  m_periodic[2] = false;
+  m_mirrorPeriodic[2] = true;
+  UpdatePeriodicity();
+}
+
+bool ComponentNeBem3d::GetPeriodicityX(double& s) const {
+  if (!m_periodic[0] && !m_mirrorPeriodic[0]) {
+    s = 0.;
+    return false;
+  }
+  s = m_periodicLength[0];
+  return true;
+}
+
+bool ComponentNeBem3d::GetPeriodicityY(double& s) const {
+  if (!m_periodic[1] && !m_mirrorPeriodic[1]) {
+    s = 0.;
+    return false;
+  }
+  s = m_periodicLength[1];
+  return true;
+}
+
+bool ComponentNeBem3d::GetPeriodicityZ(double& s) const {
+  if (!m_periodic[2] && !m_mirrorPeriodic[2]) {
+    s = 0.;
+    return false;
+  }
+  s = m_periodicLength[2];
+  return true;
+}
+
 bool ComponentNeBem3d::Initialise() {
   // Reset the lists.
   m_primitives.clear();
@@ -2759,7 +2858,35 @@ void ComponentNeBem3d::Reset() {
 }
 
 void ComponentNeBem3d::UpdatePeriodicity() {
-  std::cerr << m_className << "::UpdatePeriodicity:\n"
-            << "    Periodicities are not supported.\n";
+
+  for (unsigned int i = 0; i < 3; ++i) {
+    // Cannot have regular and mirror periodicity at the same time.
+    if (m_periodic[i] && m_mirrorPeriodic[i]) {
+      std::cerr << m_className << "::UpdatePeriodicity:\n"
+                << "    Both simple and mirror periodicity requested. Reset.\n";
+      m_periodic[i] = false;
+      m_mirrorPeriodic[i] = false;
+      continue;
+    }
+    if ((m_periodic[i] || m_mirrorPeriodic[i]) && m_periodicLength[i] < Small) {
+      std::cerr << m_className << "::UpdatePeriodicity:\n"
+                << "    Periodic length is not set. Reset.\n";
+      m_periodic[i] = m_mirrorPeriodic[i] = false; 
+    }
+  }
+
+  if (m_axiallyPeriodic[0] || m_axiallyPeriodic[1] || m_axiallyPeriodic[2]) {
+    std::cerr << m_className << "::UpdatePeriodicity:\n"
+              << "    Axial periodicity is not available.\n";
+    m_axiallyPeriodic.fill(false);
+  }
+
+  if (m_rotationSymmetric[0] || m_rotationSymmetric[1] ||
+      m_rotationSymmetric[2]) {
+    std::cerr << m_className << "::UpdatePeriodicity:\n"
+              << "    Rotation symmetry is not available.\n";
+    m_rotationSymmetric.fill(false);
+  }
+
 }
 }

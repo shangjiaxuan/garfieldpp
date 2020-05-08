@@ -2003,10 +2003,10 @@ int neBEMDiscretize(int **NbElemsOnPrimitives) {
     }
     if (DebugLevel == 101) {
       if (NbVertices[prim] == 2) {
-        printf("Primitive %d to be discretize into %d elements.\n", prim,
+        printf("Primitive %d to be discretized into %d elements.\n", prim,
                NbWireSeg[prim]);
       } else {
-        printf("Primitive %d to be discretize into %d X %d elements.\n", prim,
+        printf("Primitive %d to be discretized into %d X %d elements.\n", prim,
                NbSurfSegX[prim], NbSurfSegZ[prim]);
       }
     }

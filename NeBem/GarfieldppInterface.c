@@ -240,19 +240,39 @@ int neBEMGetPrimitive(int prim, int* nvertex, double xvert[], double yvert[],
 /// jx: number of periodic copies internally in neBEM
 int neBEMGetPeriodicities(int /*prim*/, int* ix, int* jx, double* sx, int* iy,
                           int* jy, double* sy, int* iz, int* jz, double* sz) {
-  // Not implemented yet. Assume no periodicity for the time being.
+  if (!Garfield::gComponentNeBem3d) return -1;
   *ix = 0;
   *iy = 0;
   *iz = 0;
-  *jx = 0;
-  *jy = 0;
-  *jz = 0;
-
+  bool perx = false, pery = false, perz = false;
+  Garfield::gComponentNeBem3d->IsPeriodic(perx, pery, perz);
+  if (perx) *ix = 1;
+  if (pery) *iy = 1;
+  if (perz) *iz = 1; 
+  Garfield::gComponentNeBem3d->IsMirrorPeriodic(perx, pery, perz);
+  if (perx) *ix = 2;
+  if (pery) *iy = 2;
+  if (perz) *iz = 2; 
+  *sx = 0.;
+  *sy = 0.;
+  *sz = 0.;
+  if (*ix > 0) Garfield::gComponentNeBem3d->GetPeriodicityX(*sx);
+  if (*iy > 0) Garfield::gComponentNeBem3d->GetPeriodicityY(*sy);
+  if (*iz > 0) Garfield::gComponentNeBem3d->GetPeriodicityZ(*sz);
   // Convert from cm to m.
   *sx *= 0.01;
   *sy *= 0.01;
   *sz *= 0.01;
-
+  *jx = 0;
+  *jy = 0;
+  *jz = 0;
+  if (*ix > 0 || *iy > 0 || *iz > 0) {
+    unsigned int nx = 0, ny = 0, nz = 0;
+    Garfield::gComponentNeBem3d->GetPeriodicCopies(nx, ny, nz);
+    *jx = nx;
+    *jy = ny;
+    *jz = nz;
+  }
   return 0;
 }
 
@@ -265,17 +285,21 @@ int neBEMGetPeriodicities(int /*prim*/, int* ix, int* jx, double* sx, int* iy,
 int neBEMGetMirror(int /*prim*/, int* ix, int* jx, double* sx, int* iy, int* jy,
                    double* sy, int* iz, int* jz, double* sz) {
 
-  // Not implemented yet. Assume no mirror periodicity for the time being.
-  *ix = *iy = *iz = 0;
+  if (!Garfield::gComponentNeBem3d) return -1;
   *jx = *jy = *jz = 0;
+  bool perx = false, pery = false, perz = false;
+  Garfield::gComponentNeBem3d->IsMirrorPeriodic(perx, pery, perz);
+  // Only one reflection is allowed at present.
+  *ix = *iy = *iz = 0;
+  if (perx) {
+    *ix = 2;
+  } else if (pery) {
+    *iy = 2;
+  } else if (perz) {
+    *iz = 2;
+  }
   // Mirror assumed to be passing through the origin.
   *sx = *sy = *sz = 0.;  
-
-  // Convert from cm to m.
-  *sx *= 0.01;
-  *sy *= 0.01;
-  *sz *= 0.01;
-
   return 0;
 }
 

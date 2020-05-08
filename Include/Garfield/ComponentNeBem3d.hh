@@ -61,6 +61,24 @@ class ComponentNeBem3d : public ComponentBase {
     ny = m_nCopiesY;
     nz = m_nCopiesZ;
   }
+  /// Set the periodic length [cm] in the x-direction.
+  void SetPeriodicityX(const double s);
+  /// Set the periodic length [cm] in the y-direction.
+  void SetPeriodicityY(const double s);
+  /// Set the periodic length [cm] in the z-direction.
+  void SetPeriodicityZ(const double s);
+  /// Set the periodic length [cm] in the x-direction.
+  void SetMirrorPeriodicityX(const double s);
+  /// Set the periodic length [cm] in the y-direction.
+  void SetMirrorPeriodicityY(const double s);
+  /// Set the periodic length [cm] in the z-direction.
+  void SetMirrorPeriodicityZ(const double s);
+  /// Get the periodic length in the x-direction.
+  bool GetPeriodicityX(double& s) const;
+  /// Get the periodic length in the y-direction.
+  bool GetPeriodicityY(double& s) const;
+  /// Get the periodic length in the z-direction.
+  bool GetPeriodicityZ(double& s) const;
 
  private:
   struct Primitive {
@@ -126,6 +144,8 @@ class ComponentNeBem3d : public ComponentBase {
   unsigned int m_minNbElementsOnLength = 1;
   /// Largest number of elements produced along the axis of a primitive. 
   unsigned int m_maxNbElementsOnLength = 100; 
+  /// Periodic lengths.
+  std::array<double, 3> m_periodicLength{{0., 0., 0.}};
   /// Number of periodic copies along x.
   unsigned int m_nCopiesX = 5;
   /// Number of periodic copies along y.
