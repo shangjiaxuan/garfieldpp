@@ -9,7 +9,7 @@
 
 namespace Garfield {
 
-GeometryRoot::GeometryRoot() : GeometryBase() { m_className = "GeometryRoot"; }
+GeometryRoot::GeometryRoot() : Geometry("GeometryRoot") {}
 
 void GeometryRoot::SetGeometry(TGeoManager* geoman) {
   if (!geoman) {
