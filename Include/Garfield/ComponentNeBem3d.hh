@@ -1,5 +1,8 @@
 #ifndef G_COMPONENT_NEBEM_3D_H
 #define G_COMPONENT_NEBEM_3D_H
+
+#include <map>
+
 #include "ComponentBase.hh"
 
 namespace Garfield {
@@ -19,6 +22,10 @@ class ComponentNeBem3d : public ComponentBase {
                      double& ey, double& ez, double& v, Medium*& m,
                      int& status) override;
   bool GetVoltageRange(double& vmin, double& vmax) override;
+
+  void WeightingField(const double x, const double y, const double z,
+                      double& wx, double& wy, double& wz,
+                      const std::string& label) override;
 
   unsigned int GetNumberOfPrimitives() const { return m_primitives.size(); }
   bool GetPrimitive(const unsigned int i, double& a, double& b, double& c,
@@ -152,6 +159,9 @@ class ComponentNeBem3d : public ComponentBase {
   unsigned int m_nCopiesY = 5;
   /// Number of periodic copies along z.
   unsigned int m_nCopiesZ = 5;
+
+  /// Electrode labels and corresponding neBEM weighting field indices.
+  std::map<std::string, int> m_wfields;
 
   /// Reduce panels to the basic period.
   void ShiftPanels(std::vector<Panel>& panels) const;

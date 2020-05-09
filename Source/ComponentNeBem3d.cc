@@ -3,8 +3,8 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <map>
 #include <numeric>
+#include <set>
 #include <vector>
 
 #include "neBEMInterface.h"
@@ -431,6 +431,27 @@ bool ComponentNeBem3d::GetVoltageRange(double& vmin, double& vmax) {
   // Voltage and other bc have to come from the solids
   vmin = vmax = 0;
   return true;
+}
+
+void ComponentNeBem3d::WeightingField(const double x, const double y,
+                                      const double z, 
+                                      double& wx, double& wy, double& wz, 
+                                      const std::string& label) {
+  wx = wy = wz = 0.;
+  if (m_wfields.count(label) == 0) return;
+  const int id = m_wfields[label];
+  Point3D point;
+  point.X = 0.01 * x;
+  point.Y = 0.01 * y;
+  point.Z = 0.01 * z;
+  Vector3D field;
+  if (neBEMWeightingField(&point, &field, id) != 0) {
+    std::cerr << m_className << "::WeightingField: Evaluation failed.\n";
+    return;
+  }
+  wx = 0.01 * field.X;
+  wy = 0.01 * field.Y;
+  wz = 0.01 * field.Z;
 }
 
 void ComponentNeBem3d::SetTargetElementSize(const double length) {
@@ -1071,8 +1092,7 @@ bool ComponentNeBem3d::Initialise() {
   }
 
   if (neBEMDiscretize(elementNbs) != 0) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Discretization failed.\n";
+    std::cerr << m_className << "::Initialise: Discretization failed.\n";
     free_imatrix(elementNbs, 1, NbPrimitives, 1, 2); 
     return false;
   }
@@ -1083,9 +1103,45 @@ bool ComponentNeBem3d::Initialise() {
     return false;
   }
   if (neBEMSolve() != 0) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Solution failed.\n";
+    std::cerr << m_className << "::Initialise: Solution failed.\n";
     return false;
+  }
+  // Now the weighting fields.
+  std::set<std::string> labels;
+  for (unsigned int i = 0; i < nSolids; ++i) {
+    const auto solid = m_geometry->GetSolid(i);
+    if (!solid) continue;
+    const std::string label = solid->GetLabel();
+    if (!label.empty()) labels.insert(label);
+  }
+  for (const auto& label : labels) {
+    std::vector<int> primitives;
+    for (unsigned int i = 0; i < nSolids; ++i) {
+      const auto solid = m_geometry->GetSolid(i);
+      if (!solid) continue;
+      if (solid->GetLabel() != label) continue;
+      const int id = solid->GetId();
+      // Add the primitives associated to this solid to the list.
+      for (int j = 1; j <= NbPrimitives; ++j) {
+        if (VolRef1[j] == id || VolRef2[j] == id) {
+          primitives.push_back(j);
+        }
+      }
+    }
+    // Request the weighting field for this list of primitives.
+    const int np = primitives.size();
+    const int id = neBEMPrepareWeightingField(np, primitives.data());
+    if (id < 0) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Weighting field calculation for readout group \""
+                << label << "\" failed.\n";
+      continue;
+    } else {
+      std::cout << m_className << "::Initialise:\n"
+                << "    Prepared weighting field for readout group \""
+                << label << "\".\n";
+      m_wfields[label] = id;
+    }
   }
   // TODO! Not sure if we should call this here.
   neBEMEnd();
