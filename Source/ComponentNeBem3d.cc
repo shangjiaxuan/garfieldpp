@@ -590,7 +590,7 @@ bool ComponentNeBem3d::Initialise() {
   // Apply cuts.
   // CALL CELSCT('APPLY')
   // Reduce to basic periodic copy.
-  // CALL BEMBAS
+  ShiftPanels(panelsIn);
 
   // Find contact panels and split into primitives.
 
@@ -1091,6 +1091,71 @@ bool ComponentNeBem3d::Initialise() {
   neBEMEnd();
   m_ready = true;
   return true;
+}
+
+void ComponentNeBem3d::ShiftPanels(std::vector<Panel>& panels) const {
+
+  // *---------------------------------------------------------------------
+  // *   BEMBAS - Reduces panels to the basic period.
+  // *---------------------------------------------------------------------
+  const bool perx = m_periodic[0] || m_mirrorPeriodic[0];
+  const bool pery = m_periodic[1] || m_mirrorPeriodic[1];
+  const bool perz = m_periodic[2] || m_mirrorPeriodic[2];
+  // Nothing to do if there is no periodicity.
+  if (!perx && !pery && !perz) return;
+
+  // Loop over the panels.
+  for (auto& panel : panels) {
+    const auto nv = panel.xv.size();
+    if (nv == 0) continue;
+    // Determine the centre of gravity.
+    double xc = std::accumulate(panel.xv.begin(), panel.xv.end(), 0.);
+    double yc = std::accumulate(panel.yv.begin(), panel.yv.end(), 0.);
+    double zc = std::accumulate(panel.zv.begin(), panel.zv.end(), 0.);
+    xc /= nv;
+    yc /= nv;
+    zc /= nv;
+    // Any change ?
+    constexpr double eps = 1.e-6;
+    double rx = 0.;
+    int nx = 0;
+    if (perx && m_periodicLength[0] > 0.) {
+      rx = xc / m_periodicLength[0];
+      nx = std::round(rx);
+      if (std::abs(rx - nx - 0.5) < eps) ++nx;
+    }
+    double ry = 0.;
+    int ny = 0;
+    if (pery && m_periodicLength[1] > 0.) {
+      ry = yc / m_periodicLength[1];
+      ny = std::round(ry);
+      if (std::abs(ry - ny - 0.5) < eps) ++ny;
+    }
+    double rz = 0.;
+    int nz = 0;
+    if (perz && m_periodicLength[2] > 0.) {
+      rz = zc / m_periodicLength[2];
+      nz = std::round(rz);
+      if (std::abs(rz - nz - 0.5) < eps) ++nz;
+    }
+    // Skip if there is no shift.
+    if (nx == 0 && ny == 0 && nz == 0) continue;
+    // Shift for x-periodicity.
+    if (nx != 0) {
+      const double shift = nx * m_periodicLength[0];
+      for (auto& x : panel.xv) x -= shift;
+    }
+    // Shift for y-periodicity.
+    if (ny != 0) {
+      const double shift = ny * m_periodicLength[1];
+      for (auto& y : panel.yv) y -= shift;
+    }
+    // Shift for z-periodicity.
+    if (nz != 0) {
+      const double shift = nz * m_periodicLength[2];
+      for (auto& z : panel.zv) z -= shift;
+    }
+  }
 }
 
 int ComponentNeBem3d::InterfaceType(const Solid::BoundaryCondition bc) const {

@@ -153,6 +153,8 @@ class ComponentNeBem3d : public ComponentBase {
   /// Number of periodic copies along z.
   unsigned int m_nCopiesZ = 5;
 
+  /// Reduce panels to the basic period.
+  void ShiftPanels(std::vector<Panel>& panels) const;
   /// Isolate the parts of polygon 1 that are not hidden by 2 and vice versa.
   bool EliminateOverlaps(const Panel& panel1, const Panel& panel2,
                          std::vector<Panel>& panelsOut,
