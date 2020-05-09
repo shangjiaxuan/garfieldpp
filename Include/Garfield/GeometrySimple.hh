@@ -3,13 +3,13 @@
 
 #include <vector>
 
-#include "GeometryBase.hh"
+#include "Geometry.hh"
 
 namespace Garfield {
 
 /// "Native" geometry, using simple shapes.
 
-class GeometrySimple : public GeometryBase {
+class GeometrySimple : public Geometry {
  public:
   /// Constructor
   GeometrySimple();
@@ -18,10 +18,6 @@ class GeometrySimple : public GeometryBase {
 
   Medium* GetMedium(const double x, const double y,
                     const double z) const override;
-  /// Get the number of media in the geometry.
-  unsigned int GetNumberOfMedia() const { return m_media.size(); }
-  /// Get a medium from the list.
-  Medium* GetMedium(const unsigned int i) const;
 
   unsigned int GetNumberOfSolids() const override { return m_solids.size(); }
   Solid* GetSolid(const unsigned int i) const override;
@@ -32,12 +28,16 @@ class GeometrySimple : public GeometryBase {
   /// Get the solid at a given location (x, y, z).
   Solid* GetSolid(const double x, const double y, const double z) const;
 
+  /// Set a background medium.
+  void SetMedium(Medium* medium) { m_medium = medium; }
+
   /// Reset the geometry.
   void Clear();
+  /// Print a summary of the solids present in the geometry.
   void PrintSolids();
 
   bool IsInside(const double x, const double y, const double z) const override;
-  // Bounding box (envelope of geometry)
+  /// Determine whether a point is inside the envelope of the geometry.
   bool IsInBoundingBox(const double x, const double y, const double z) const;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) override {
@@ -50,22 +50,21 @@ class GeometrySimple : public GeometryBase {
     return true;
   }
 
-  // Switch on/off debugging and warning messages
+  /// Switch on/off debugging and warning messages.
   void EnableDebugging(const bool on = true) { m_debug = on; }
 
  protected:
-  /// List of media.
-  std::vector<Medium*> m_media;
-
-  /// List of solids
-  std::vector<std::pair<Solid*, int> > m_solids;
+  /// List of solids and associated media.
+  std::vector<std::pair<Solid*, Medium*> > m_solids;
+  /// Background medium.
+  Medium* m_medium = nullptr;
 
   // Bounding box ranges
   bool m_hasBoundingBox = false;
   double m_xMinBoundingBox, m_yMinBoundingBox, m_zMinBoundingBox;
   double m_xMaxBoundingBox, m_yMaxBoundingBox, m_zMaxBoundingBox;
 
-  /// Switch on/off debugging messages
+  /// Switch on/off debugging messages.
   bool m_debug = false;
 };
 }

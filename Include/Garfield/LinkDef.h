@@ -19,7 +19,7 @@
 #pragma link C++ class Garfield::Solid;
 #pragma link C++ class Garfield::SolidBox;
 #pragma link C++ class Garfield::SolidTube;
-#pragma link C++ class Garfield::GeometryBase;
+#pragma link C++ class Garfield::Geometry;
 #pragma link C++ class Garfield::GeometrySimple;
 #pragma link C++ class Garfield::GeometryRoot;
 

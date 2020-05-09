@@ -5,7 +5,6 @@
 #include <vector>
 #include <array>
 
-#include "GeometryBase.hh"
 #include "Medium.hh"
 #include "Sensor.hh"
 #include "ViewDrift.hh"
