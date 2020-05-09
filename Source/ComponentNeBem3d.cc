@@ -454,6 +454,84 @@ void ComponentNeBem3d::WeightingField(const double x, const double y,
   wz = 0.01 * field.Z;
 }
 
+void ComponentNeBem3d::AddPlaneX(const double x, const double v) {
+  if (m_ynplan[0] && m_ynplan[1]) {
+    std::cerr << m_className << "::AddPlaneX:\n"
+              << "    Cannot have more than two planes at constant x.\n";
+    return;
+  }
+
+  if (m_ynplan[0]) {
+    m_ynplan[1] = true;
+    m_coplan[1] = x;
+    m_vtplan[1] = v;
+  } else {
+    m_ynplan[0] = true;
+    m_coplan[0] = x;
+    m_vtplan[0] = v;
+  }
+  m_ready = false;
+}
+
+void ComponentNeBem3d::AddPlaneY(const double y, const double v) {
+  if (m_ynplan[2] && m_ynplan[3]) {
+    std::cerr << m_className << "::AddPlaneY:\n"
+              << "    Cannot have more than two planes at constant y.\n";
+    return;
+  }
+
+  if (m_ynplan[2]) {
+    m_ynplan[3] = true;
+    m_coplan[3] = y;
+    m_vtplan[3] = v;
+  } else {
+    m_ynplan[2] = true;
+    m_coplan[2] = y;
+    m_vtplan[2] = v;
+  }
+  m_ready = false;
+}
+
+unsigned int ComponentNeBem3d::GetNumberOfPlanesX() const {
+  if (m_ynplan[0] && m_ynplan[1]) {
+    return 2;
+  } else if (m_ynplan[0] || m_ynplan[1]) {
+    return 1;
+  }
+  return 0;
+}
+
+unsigned int ComponentNeBem3d::GetNumberOfPlanesY() const {
+  if (m_ynplan[2] && m_ynplan[3]) {
+    return 2;
+  } else if (m_ynplan[2] || m_ynplan[3]) {
+    return 1;
+  }
+  return 0;
+}
+
+bool ComponentNeBem3d::GetPlaneX(const unsigned int i, double& x,
+                                 double& v) const {
+  if (i >= 2 || (i == 1 && !m_ynplan[1])) {
+    std::cerr << m_className << "::GetPlaneX: Index out of range.\n";
+    return false;
+  }
+  x = m_coplan[i];
+  v = m_vtplan[i];
+  return true;
+}
+
+bool ComponentNeBem3d::GetPlaneY(const unsigned int i, double& y,
+                                 double& v) const {
+  if (i >= 2 || (i == 1 && !m_ynplan[3])) {
+    std::cerr << m_className << "::GetPlaneY: Index out of range.\n";
+    return false;
+  }
+  y = m_coplan[i + 2];
+  v = m_vtplan[i + 2];
+  return true;
+}
+
 void ComponentNeBem3d::SetTargetElementSize(const double length) {
 
   if (length < MinDist) {
@@ -2975,6 +3053,9 @@ bool ComponentNeBem3d::GetElement(const unsigned int i,
 void ComponentNeBem3d::Reset() {
   m_primitives.clear();
   m_elements.clear();
+  m_ynplan.fill(false);
+  m_coplan.fill(0.);
+  m_vtplan.fill(0.);
   m_ready = false;
 }
 
