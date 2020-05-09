@@ -18,10 +18,6 @@ class GeometrySimple : public GeometryBase {
 
   Medium* GetMedium(const double x, const double y,
                     const double z) const override;
-  /// Get the number of media in the geometry.
-  unsigned int GetNumberOfMedia() const { return m_media.size(); }
-  /// Get a medium from the list.
-  Medium* GetMedium(const unsigned int i) const;
 
   unsigned int GetNumberOfSolids() const override { return m_solids.size(); }
   Solid* GetSolid(const unsigned int i) const override;
@@ -34,10 +30,11 @@ class GeometrySimple : public GeometryBase {
 
   /// Reset the geometry.
   void Clear();
+  /// Print a summary of the solids present in the geometry.
   void PrintSolids();
 
   bool IsInside(const double x, const double y, const double z) const override;
-  // Bounding box (envelope of geometry)
+  /// Determine whether a point is inside the envelope of the geometry.
   bool IsInBoundingBox(const double x, const double y, const double z) const;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) override {
@@ -50,7 +47,7 @@ class GeometrySimple : public GeometryBase {
     return true;
   }
 
-  // Switch on/off debugging and warning messages
+  /// Switch on/off debugging and warning messages.
   void EnableDebugging(const bool on = true) { m_debug = on; }
 
  protected:
