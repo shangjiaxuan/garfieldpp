@@ -59,7 +59,7 @@ Medium* GeometrySimple::GetMedium(const double x, const double y,
       return solid.second;
     }
   }
-  return nullptr;
+  return m_medium;
 }
 
 Solid* GeometrySimple::GetSolid(const unsigned int i) const {
@@ -83,6 +83,7 @@ Solid* GeometrySimple::GetSolid(const unsigned int i, Medium*& medium) const {
 
 void GeometrySimple::Clear() {
   m_solids.clear();
+  m_medium = nullptr;
 }
 
 void GeometrySimple::PrintSolids() {

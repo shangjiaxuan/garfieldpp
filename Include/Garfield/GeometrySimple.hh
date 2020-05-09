@@ -28,6 +28,9 @@ class GeometrySimple : public GeometryBase {
   /// Get the solid at a given location (x, y, z).
   Solid* GetSolid(const double x, const double y, const double z) const;
 
+  /// Set a background medium.
+  void SetMedium(Medium* medium) { m_medium = medium; }
+
   /// Reset the geometry.
   void Clear();
   /// Print a summary of the solids present in the geometry.
@@ -53,13 +56,15 @@ class GeometrySimple : public GeometryBase {
  protected:
   /// List of solids and associated media.
   std::vector<std::pair<Solid*, Medium*> > m_solids;
+  /// Background medium.
+  Medium* m_medium = nullptr;
 
   // Bounding box ranges
   bool m_hasBoundingBox = false;
   double m_xMinBoundingBox, m_yMinBoundingBox, m_zMinBoundingBox;
   double m_xMaxBoundingBox, m_yMaxBoundingBox, m_zMaxBoundingBox;
 
-  /// Switch on/off debugging messages
+  /// Switch on/off debugging messages.
   bool m_debug = false;
 };
 }
