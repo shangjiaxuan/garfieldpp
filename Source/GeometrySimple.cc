@@ -8,30 +8,17 @@ GeometrySimple::GeometrySimple() : GeometryBase() {
   m_className = "GeometrySimple";
 }
 
-void GeometrySimple::AddSolid(Solid* s, Medium* m) {
+void GeometrySimple::AddSolid(Solid* solid, Medium* medium) {
   // Make sure the solid and the medium are defined.
-  if (!s || !m) {
+  if (!solid || !medium) {
     std::cerr << m_className << "::AddSolid: Null pointer.\n";
     return;
   }
 
-  // Check if this medium is already in the list
-  const unsigned int nMedia = m_media.size();
-  unsigned int n = nMedia;
-  const int id = m->GetId();
-  for (unsigned int i = 0; i < nMedia; ++i) {
-    if (id == m_media[i]->GetId()) {
-      n = i;
-      break;
-    }
-  }
-  // If the medium does not exist yet, add it to the list
-  if (n == nMedia) m_media.push_back(m);
-
   // Update the bounding box ranges
   double xmin, ymin, zmin;
   double xmax, ymax, zmax;
-  if (!s->GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax)) {
+  if (!solid->GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax)) {
     std::cerr << m_className << "::AddSolid: Solid has no bounding box.\n";
     return;
   }
@@ -54,7 +41,7 @@ void GeometrySimple::AddSolid(Solid* s, Medium* m) {
   }
 
   // Add the new solid to the list.
-  m_solids.emplace_back(std::make_pair(s, n));
+  m_solids.emplace_back(std::make_pair(solid, medium));
 }
 
 Solid* GeometrySimple::GetSolid(const double x, const double y,
@@ -69,8 +56,7 @@ Medium* GeometrySimple::GetMedium(const double x, const double y,
                                   const double z) const {
   for (const auto& solid : m_solids) {
     if (solid.first->IsInside(x, y, z)) {
-      if (solid.second < 0) return nullptr;
-      return m_media[solid.second];
+      return solid.second;
     }
   }
   return nullptr;
@@ -82,7 +68,6 @@ Solid* GeometrySimple::GetSolid(const unsigned int i) const {
               << "    Requested solid " << i << " does not exist.\n";
     return nullptr;
   }
-
   return m_solids[i].first;
 }
 
@@ -92,13 +77,11 @@ Solid* GeometrySimple::GetSolid(const unsigned int i, Medium*& medium) const {
               << "    Requested solid " << i << " does not exist.\n";
     return nullptr;
   }
-
-  medium = m_media[m_solids[i].second];
+  medium = m_solids[i].second;
   return m_solids[i].first;
 }
 
 void GeometrySimple::Clear() {
-  m_media.clear();
   m_solids.clear();
 }
 
@@ -120,10 +103,18 @@ void GeometrySimple::PrintSolids() {
       std::cout << "tube     ";
     } else if (m_solids[i].first->IsSphere()) {
       std::cout << "sphere   ";
+    } else if (m_solids[i].first->IsHole()) {
+      std::cout << "hole     ";
+    } else if (m_solids[i].first->IsRidge()) {
+      std::cout << "ridge    ";
     } else {
       std::cout << "unknown  ";
     }
-    std::cout << m_media[m_solids[i].second]->GetName() << "\n";
+    if (m_solids[i].second) {
+      std::cout << m_solids[i].second->GetName() << "\n";
+    } else {
+      std::cout << " ---\n";
+    }
   }
 }
 

@@ -51,11 +51,8 @@ class GeometrySimple : public GeometryBase {
   void EnableDebugging(const bool on = true) { m_debug = on; }
 
  protected:
-  /// List of media.
-  std::vector<Medium*> m_media;
-
-  /// List of solids
-  std::vector<std::pair<Solid*, int> > m_solids;
+  /// List of solids and associated media.
+  std::vector<std::pair<Solid*, Medium*> > m_solids;
 
   // Bounding box ranges
   bool m_hasBoundingBox = false;
