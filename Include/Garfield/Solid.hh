@@ -56,7 +56,12 @@ class Solid {
   virtual bool IsHole() const { return false; }
   /// Return true if the solid is a ridge.
   virtual bool IsRidge() const { return false; }
-
+  
+  /// Set a label.
+  void SetLabel(const std::string& label) { m_label = label; }
+  /// Return the label.
+  std::string GetLabel() const { return m_label; }
+ 
   /// Retrieve the centre point of the solid.
   bool GetCentre(double& x, double& y, double& z) const {
     x = m_cX;
@@ -172,6 +177,9 @@ class Solid {
 
   /// Class name.
   std::string m_className = "Solid";
+ 
+  /// Label.
+  std::string m_label = "";
 
   /// Debug flag.
   bool m_debug = false;
