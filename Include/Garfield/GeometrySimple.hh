@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "GeometryBase.hh"
+#include "Geometry.hh"
 
 namespace Garfield {
 

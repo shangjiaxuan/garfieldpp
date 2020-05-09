@@ -6,7 +6,7 @@
 #include <TGeoManager.h>
 #include <TGeoMaterial.h>
 
-#include "GeometryBase.hh"
+#include "Geometry.hh"
 
 namespace Garfield {
 
