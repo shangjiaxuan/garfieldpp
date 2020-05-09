@@ -18,7 +18,7 @@ class ComponentBase {
   virtual ~ComponentBase() {}
 
   /// Define the geometry.
-  virtual void SetGeometry(GeometryBase* geo);
+  virtual void SetGeometry(Geometry* geo);
   /// Reset.
   virtual void Clear();
 
@@ -313,7 +313,7 @@ class ComponentBase {
   std::string m_className = "ComponentBase";
 
   /// Pointer to the geometry.
-  GeometryBase* m_geometry = nullptr;
+  Geometry* m_geometry = nullptr;
 
   /// Ready for use?
   bool m_ready = false;

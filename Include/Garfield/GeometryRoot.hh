@@ -12,7 +12,7 @@ namespace Garfield {
 
 /// Use a geometry defined using the ROOT TGeo package.
 
-class GeometryRoot : public GeometryBase {
+class GeometryRoot : public Geometry {
  public:
   /// Constructor
   GeometryRoot();

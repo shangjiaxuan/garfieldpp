@@ -8,7 +8,7 @@ namespace Garfield {
 
 ComponentBase::ComponentBase() {}
 
-void ComponentBase::SetGeometry(GeometryBase* geo) {
+void ComponentBase::SetGeometry(Geometry* geo) {
   // Make sure the geometry is defined
   if (!geo) {
     std::cerr << m_className << "::SetGeometry: Null pointer.\n";

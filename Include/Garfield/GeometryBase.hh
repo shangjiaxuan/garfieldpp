@@ -1,5 +1,5 @@
-#ifndef G_GEOMETRY_BASE_H
-#define G_GEOMETRY_BASE_H
+#ifndef G_GEOMETRY_H
+#define G_GEOMETRY_H
 
 #include <string>
 
@@ -10,12 +10,14 @@ namespace Garfield {
 
 /// Abstract base class for geometry classes.
 
-class GeometryBase {
+class Geometry {
  public:
+  /// Default constructor.
+  Geometry() = delete;
   /// Constructor
-  GeometryBase() = default;
+  Geometry(const std::string& name) : m_className(name) {}
   /// Destructor
-  virtual ~GeometryBase() {}
+  virtual ~Geometry() {}
 
   /// Retrieve the medium at a given point.
   virtual Medium* GetMedium(const double x, const double y,
@@ -39,7 +41,7 @@ class GeometryBase {
                               double& xmax, double& ymax, double& zmax) = 0;
 
  protected:
-  std::string m_className = "GeometryBase";
+  std::string m_className = "Geometry";
 };
 }
 

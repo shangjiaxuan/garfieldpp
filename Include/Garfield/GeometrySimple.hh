@@ -9,7 +9,7 @@ namespace Garfield {
 
 /// "Native" geometry, using simple shapes.
 
-class GeometrySimple : public GeometryBase {
+class GeometrySimple : public Geometry {
  public:
   /// Constructor
   GeometrySimple();

@@ -1,12 +1,11 @@
-#include "Garfield/GeometrySimple.hh"
 #include <algorithm>
 #include <iostream>
 
+#include "Garfield/GeometrySimple.hh"
+
 namespace Garfield {
 
-GeometrySimple::GeometrySimple() : GeometryBase() {
-  m_className = "GeometrySimple";
-}
+GeometrySimple::GeometrySimple() : Geometry("GeometrySimple") {}
 
 void GeometrySimple::AddSolid(Solid* solid, Medium* medium) {
   // Make sure the solid and the medium are defined.
