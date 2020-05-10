@@ -602,6 +602,18 @@ void ComponentNeBem3d::SetTargetElementSize(const double length) {
   m_targetElementSize = length;
 }
 
+void ComponentNeBem3d::SetMinMaxNumberOfElements(const unsigned int nmin,
+                                                 const unsigned int nmax) {
+
+  if (nmin == 0 || nmax == 0) {
+    std::cerr << m_className << "::SetMinMaxNumberOfElements:\n"
+              << "    Values must be non-zero.\n";
+    return;
+  }
+ m_minNbElementsOnLength = std::min(nmin, nmax);
+ m_maxNbElementsOnLength = std::max(nmin, nmax);
+}
+
 void ComponentNeBem3d::SetPeriodicCopies(const unsigned int nx, 
                                          const unsigned int ny,
                                          const unsigned int nz) {

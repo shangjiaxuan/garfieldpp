@@ -74,6 +74,10 @@ class ComponentNeBem3d : public ComponentBase {
   /// Set the default value of the target linear size of the elements
   /// produced by neBEM's discretisation process.
   void SetTargetElementSize(const double length);
+  /// Set the smallest and largest allowed number of elements along 
+  /// the lenght of a primitive.
+  void SetMinMaxNumberOfElements(const unsigned int nmin,
+                                 const unsigned int nmax);
 
   /// Set the parameters \f$n_x, n_y, n_z$\f defining the number of periodic 
   /// copies that neBEM will use when dealing with periodic configurations.
