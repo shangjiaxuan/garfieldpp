@@ -13,6 +13,10 @@
 #define global2local 1
 #define local2global -1
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 // three coordinates
 typedef struct {
   double X;
@@ -106,5 +110,9 @@ VGLOBAL Point3D ReflectPoint3DByMirrorAtOrigin(Point3D *p1, Vector3D *n);
 // Product of two matrices
 VGLOBAL double **MatrixProduct(int NbRows1, int NbCols1, double **Matrix1,
                                int NbRows2, int NbCols2, double **Matrix2);
+
+#ifdef __cplusplus
+} // namespace
+#endif
 
 #endif

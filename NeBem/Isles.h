@@ -33,6 +33,10 @@
 
 #define ST_PI 3.14159265358979323846
 
+#ifdef __cplusplus
+namespace neBEM { 
+#endif
+
 ISLESGLOBAL char ISLESVersion[10];
 
 // Nb of times these get called: FailureCntr keeps a tab of how many times
@@ -141,5 +145,9 @@ ISLESGLOBAL double VolumeKnChPF(int NbPts, Point3D *Vertices, Point3D FieldPt,
                                 Vector3D *globalF);
 
 ISLESGLOBAL int Sign(double x);
+
+#ifdef __cplusplus
+} // namespace
+#endif
 
 #endif

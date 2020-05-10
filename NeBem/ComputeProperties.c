@@ -17,6 +17,10 @@
 #include "Vector.h"
 #include "neBEM.h"
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 // Weighting field function (WtPFAtPoint) has not been modified!
 // Should be merged with PFAtPoint function.
 // Check the notes written ahead of the weighting field function.
@@ -366,7 +370,7 @@ double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
 // we avoid one unnecessary transformation for each element that comprises a
 // primitive.
 // Begin with primitive description of the device
-double xpsrc, ypsrc, zpsrc;	// source point as a primitive
+double xpsrc, ypsrc, zpsrc; // source point as a primitive
 double tmpPot;
 Vector3D localF, tmpF;
 
@@ -395,8 +399,8 @@ for
   // virtual primitives arising out of repetition, reflection etc and not
   // residing on the basic device
 
-        {	// basic device
-        Point3D localPP;	// point primitive
+        { // basic device
+        Point3D localPP; // point primitive
   // point translated to the ECS origin, but axes direction global
   { // Rotate point3D from global to local system
   double InitialVector[4];
@@ -444,7 +448,7 @@ for
     } // if considering primtive influence is OK
   else
     { // element influence
-                Point3D localPE;	// point element
+                Point3D localPE; // point element
                 double xsrc, ysrc, zsrc;
 
                 for(unsigned int ele = ElementBgn[primsrc];
@@ -454,7 +458,7 @@ for
                 xsrc = (EleArr+ele-1)->G.Origin.X;	// helps faster
 execution ysrc = (EleArr+ele-1)->G.Origin.Y; zsrc = (EleArr+ele-1)->G.Origin.Z;
 
-                        {	// Rotate point3D from global to local system;
+                        { // Rotate point3D from global to local system;
 matrix as for primitive double InitialVector[4]; double FinalVector[4];
 
                         InitialVector[0] = xfld - xsrc; InitialVector[1] = yfld
@@ -473,7 +477,7 @@ InitialVector[j];
                         localPE.X = FinalVector[0];
                         localPE.Y = FinalVector[1];
                         localPE.Z = FinalVector[2];
-                        }	// Point3D rotated
+                        } // Point3D rotated
 
                         // Potential and flux (local system) due to base
 primitive GetPF(ele, &localPE, &tmpPot, &tmpF);
@@ -493,15 +497,15 @@ Fx: %lg, Fx: %lg, Fz: %lg\n", ele, tmpPot, tmpF.X, tmpF.Y, tmpF.Z); printf("ele:
 %d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n", ele, *Potential,
 localF.X, localF.Y, localF.Z);
                                 }
-                        }	// for all the elements on this primsrc
-primitive }	// else elements influence }	// basic device ends
+                        } // for all the elements on this primsrc
+primitive } // else elements influence } // basic device ends
 
         if(MirrorTypeX[primsrc] || MirrorTypeY[primsrc] || MirrorTypeZ[primsrc])
-                {	// Mirror effect of base primitives
+                { // Mirror effect of base primitives
                 printf("Mirror may not be correctly implemented ...\n");
                 exit(0);
 
-                Point3D localPPM;	// point primitive mirrored
+                Point3D localPPM; // point primitive mirrored
                 Point3D srcptp;
                 DirnCosn3D DirCos;
 
@@ -522,7 +526,7 @@ srcptp, fldpt, MirrorDistXFromOrigin[primsrc], &DirCos);
                         if(PrimOK)
                                 {
                                 GetPrimPFGCS(primsrc, &localPPM, &tmpPot, &tmpF,
-&DirCos);	// cannot work for force
+&DirCos); // cannot work for force
 
                         if(MirrorTypeX[primsrc] == 1) // opposite charge density
                                         {
@@ -6909,8 +6913,8 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                 }  // repitition of basic primitive
 
                 if (MirrorTypeX[primsrc] || MirrorTypeY[primsrc] ||
-                    MirrorTypeZ[primsrc]) {  // Mirror effect of repeated
-                                             // primitives - not parallelized
+                    MirrorTypeZ[primsrc]) {  
+                  // Mirror effect of repeated primitives - not parallelized
                   printf(
                       "Mirror not correctly implemented in this version of "
                       "neBEM ...\n");
@@ -6947,15 +6951,15 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                       GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
                                    &DirCos);
 
-                      if (MirrorTypeX[primsrc] == 1)  // opposite charge density
-                      {
+                      if (MirrorTypeX[primsrc] == 1) {
+                        // opposite charge density
                         primPot -= AvWtChDen[IdWtField][primsrc] * tmpPot;
                         primF.X -= AvWtChDen[IdWtField][primsrc] * tmpF.X;
                         primF.Y -= AvWtChDen[IdWtField][primsrc] * tmpF.Y;
                         primF.Z -= AvWtChDen[IdWtField][primsrc] * tmpF.Z;
                       }
-                      if (MirrorTypeX[primsrc] == 2)  // same charge density
-                      {
+                      if (MirrorTypeX[primsrc] == 2) {
+                        // same charge density
                         primPot += AvWtChDen[IdWtField][primsrc] * tmpPot;
                         primF.X += AvWtChDen[IdWtField][primsrc] * tmpF.X;
                         primF.Y += AvWtChDen[IdWtField][primsrc] * tmpF.Y;
@@ -6987,16 +6991,15 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                         GetPFGCS(ele, &localPERM, &tmpPot, &tmpF,
                                  &DirCos);  // force?
 
-                        if (MirrorTypeX[primsrc] ==
-                            1)  // opposite charge density
-                        {
+                        if (MirrorTypeX[primsrc] == 1) {
+                          // opposite charge density
                           primPot -= WtFieldChDen[IdWtField][ele] * tmpPot;
                           primF.X -= WtFieldChDen[IdWtField][ele] * tmpF.X;
                           primF.Y -= WtFieldChDen[IdWtField][ele] * tmpF.Y;
                           primF.Z -= WtFieldChDen[IdWtField][ele] * tmpF.Z;
                         }
-                        if (MirrorTypeX[primsrc] == 2)  // same charge density
-                        {
+                        if (MirrorTypeX[primsrc] == 2) {
+                          // same charge density
                           primPot += WtFieldChDen[IdWtField][ele] * tmpPot;
                           primF.X += WtFieldChDen[IdWtField][ele] * tmpF.X;
                           primF.Y += WtFieldChDen[IdWtField][ele] * tmpF.Y;
@@ -7018,15 +7021,15 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                       GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
                                    &DirCos);
 
-                      if (MirrorTypeY[primsrc] == 1)  // opposite charge density
-                      {
+                      if (MirrorTypeY[primsrc] == 1) {
+                        // opposite charge density
                         primPot -= AvWtChDen[IdWtField][primsrc] * tmpPot;
                         primF.X -= AvWtChDen[IdWtField][primsrc] * tmpF.X;
                         primF.Y -= AvWtChDen[IdWtField][primsrc] * tmpF.Y;
                         primF.Z -= AvWtChDen[IdWtField][primsrc] * tmpF.Z;
                       }
-                      if (MirrorTypeY[primsrc] == 2)  // same charge density
-                      {
+                      if (MirrorTypeY[primsrc] == 2) {
+                        // same charge density
                         primPot += AvWtChDen[IdWtField][primsrc] * tmpPot;
                         primF.X += AvWtChDen[IdWtField][primsrc] * tmpF.X;
                         primF.Y += AvWtChDen[IdWtField][primsrc] * tmpF.Y;
@@ -7057,16 +7060,15 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                             MirrorDistYFromOrigin[primsrc], &DirCos);
                         GetPFGCS(ele, &localPERM, &tmpPot, &tmpF, &DirCos);
 
-                        if (MirrorTypeY[primsrc] ==
-                            1)  // opposite charge density
-                        {
+                        if (MirrorTypeY[primsrc] == 1) {
+                          // opposite charge density
                           primPot -= WtFieldChDen[IdWtField][ele] * tmpPot;
                           primF.X -= WtFieldChDen[IdWtField][ele] * tmpF.X;
                           primF.Y -= WtFieldChDen[IdWtField][ele] * tmpF.Y;
                           primF.Z -= WtFieldChDen[IdWtField][ele] * tmpF.Z;
                         }
-                        if (MirrorTypeY[primsrc] == 2)  // same charge density
-                        {
+                        if (MirrorTypeY[primsrc] == 2) {
+                          // same charge density
                           primPot += WtFieldChDen[IdWtField][ele] * tmpPot;
                           primF.X += WtFieldChDen[IdWtField][ele] * tmpF.X;
                           primF.Y += WtFieldChDen[IdWtField][ele] * tmpF.Y;
@@ -7088,15 +7090,15 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                       GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
                                    &DirCos);
 
-                      if (MirrorTypeZ[primsrc] == 1)  // opposite charge density
-                      {
+                      if (MirrorTypeZ[primsrc] == 1) {
+                        // opposite charge density
                         primPot -= AvWtChDen[IdWtField][primsrc] * tmpPot;
                         primF.X -= AvWtChDen[IdWtField][primsrc] * tmpF.X;
                         primF.Y -= AvWtChDen[IdWtField][primsrc] * tmpF.Y;
                         primF.Z -= AvWtChDen[IdWtField][primsrc] * tmpF.Z;
                       }
-                      if (MirrorTypeZ[primsrc] == 2)  // same charge density
-                      {
+                      if (MirrorTypeZ[primsrc] == 2) {
+                        // same charge density
                         primPot += AvWtChDen[IdWtField][primsrc] * tmpPot;
                         primF.X += AvWtChDen[IdWtField][primsrc] * tmpF.X;
                         primF.Y += AvWtChDen[IdWtField][primsrc] * tmpF.Y;
@@ -7128,16 +7130,15 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                             MirrorDistZFromOrigin[primsrc], &DirCos);
                         GetPFGCS(ele, &localPERM, &tmpPot, &tmpF, &DirCos);
 
-                        if (MirrorTypeZ[primsrc] ==
-                            1)  // opposite charge density
-                        {
+                        if (MirrorTypeZ[primsrc] == 1) {
+                          // opposite charge density
                           primPot -= WtFieldChDen[IdWtField][ele] * tmpPot;
                           primF.X -= WtFieldChDen[IdWtField][ele] * tmpF.X;
                           primF.Y -= WtFieldChDen[IdWtField][ele] * tmpF.Y;
                           primF.Z -= WtFieldChDen[IdWtField][ele] * tmpF.Z;
                         }
-                        if (MirrorTypeZ[primsrc] == 2)  // same charge density
-                        {
+                        if (MirrorTypeZ[primsrc] == 2) {
+                          // same charge density
                           primPot += WtFieldChDen[IdWtField][ele] * tmpPot;
                           primF.X += WtFieldChDen[IdWtField][ele] * tmpF.X;
                           primF.Y += WtFieldChDen[IdWtField][ele] * tmpF.Y;
@@ -7204,53 +7205,47 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
   // since there is no intermediate function that interfaces ExactPointP etc
   // division by MyFACTOR is necessary
   // Do parallelize before using these known charges - points or distributions
-  for(int point = 1; point <= NbPtsKnCh; ++point)
-          {
-          tmpPot = ExactPointP(&(PtKnChArr+point-1)->P, globalP);
-          (*Potential) += (PtKnChArr+point-1)->Assigned * tmpPot / MyFACTOR;
-          ExactPointF(&(PtKnChArr+point-1)->P, globalP, &tmpF);
-          globalF->X += (PtKnChArr+point-1)->Assigned * tmpF.X / MyFACTOR;
-          globalF->Y += (PtKnChArr+point-1)->Assigned * tmpF.Y / MyFACTOR;
-          globalF->Z += (PtKnChArr+point-1)->Assigned * tmpF.Z / MyFACTOR;
-          }	// for all points
+  for (int point = 1; point <= NbPtsKnCh; ++point) {
+    tmpPot = ExactPointP(&(PtKnChArr+point-1)->P, globalP);
+    (*Potential) += (PtKnChArr+point-1)->Assigned * tmpPot / MyFACTOR;
+    ExactPointF(&(PtKnChArr+point-1)->P, globalP, &tmpF);
+    globalF->X += (PtKnChArr+point-1)->Assigned * tmpF.X / MyFACTOR;
+    globalF->Y += (PtKnChArr+point-1)->Assigned * tmpF.Y / MyFACTOR;
+    globalF->Z += (PtKnChArr+point-1)->Assigned * tmpF.Z / MyFACTOR;
+  } // for all points
 
-  for(int line = 1; line <= NbLinesKnCh; ++line)
-          {
-          (*Potential) += 0.0;
-          globalF->X += 0.0;
-          globalF->Y += 0.0;
-          globalF->Z += 0.0;
-          }	// for all lines
+  for (int line = 1; line <= NbLinesKnCh; ++line) {
+    (*Potential) += 0.0;
+    globalF->X += 0.0;
+    globalF->Y += 0.0;
+    globalF->Z += 0.0;
+  } // for all lines
 
-  for(int area = 1; area <= NbAreasKnCh; ++area)
-          {
-          (*Potential) += 0.0;
-          globalF->X += 0.0;
-          globalF->Y += 0.0;
-          globalF->Z += 0.0;
-          }	// for all areas
+  for (int area = 1; area <= NbAreasKnCh; ++area) {
+    (*Potential) += 0.0;
+    globalF->X += 0.0;
+    globalF->Y += 0.0;
+    globalF->Z += 0.0;
+  } // for all areas
 
-  for(int vol = 1; vol <= NbVolsKnCh; ++vol)
-          {
-          (*Potential) += 0.0;
-          globalF->X += 0.0;
-          globalF->Y += 0.0;
-          globalF->Z += 0.0;
-          }	// for all volumes
+  for (int vol = 1; vol <= NbVolsKnCh; ++vol) {
+    (*Potential) += 0.0;
+    globalF->X += 0.0;
+    globalF->Y += 0.0;
+    globalF->Z += 0.0;
+  } // for all volumes
 
   // This should be the final position
   // *Potential = totPot;
   // globalF->X = totF.X;
   // globalF->Y = totF.Y;
   // globalF->Z = totF.Z;
-  //
-  effect of KnCh is possibly zero on weighting field */
+  // effect of KnCh is possibly zero on weighting field 
+  */
 
   (*Potential) += VSystemChargeZero;  // respect total system charge constraint
 
-  if (dbgFn)
-  // if(0)
-  {
+  if (dbgFn) {
     printf("Final values due to all primitives and other influences: ");
     // printf("xfld\tyfld\tzfld\tPot\tFx\tFy\tFz\n");	// refer, do not
     // uncomment
@@ -7287,3 +7282,7 @@ double TriLin(double xd, double yd, double zd, double c000, double c100,
   double c1 = c01 * (1.0 - yd) + c11 * yd;
   return (c0 * (1.0 - zd) + c1 * zd);
 }
+
+#ifdef __cplusplus
+} // namespace
+#endif

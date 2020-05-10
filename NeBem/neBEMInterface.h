@@ -1,5 +1,5 @@
-#ifndef _Interface_H_
-#define _Interface_H_
+#ifndef _neBEMInterface_H_
+#define _neBEMInterface_H_
 
 #ifdef DEFINE_INTFACEGLOBAL
 #define INTFACEGLOBAL
@@ -11,6 +11,10 @@
 #include <time.h>
 
 #include "Vector.h"
+
+#ifdef __cplusplus
+namespace neBEM {
+#endif
 
 INTFACEGLOBAL clock_t startClock, stopClock;  // time related variables
 
@@ -158,5 +162,9 @@ INTFACEGLOBAL double **tmpXvert, **tmpYvert, **tmpZvert;
 INTFACEGLOBAL double *tmpXNorm, *tmpYNorm, *tmpZNorm;
 INTFACEGLOBAL double *tmpVolEpsilon, *tmpVolPotential, *tmpVolCharge;
 INTFACEGLOBAL double *tmpXPeriod, *tmpYPeriod, *tmpZPeriod;
+
+#ifdef __cplusplus
+} // namespace
+#endif
 
 #endif

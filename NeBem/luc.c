@@ -5,6 +5,10 @@
 
 #define TINY 1.0e-20
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 void ludcmp(double **a, int n, int *index, double *d) {
   int i, imax, j, k;
   double big, sum, dum;
@@ -173,3 +177,7 @@ for(i = 1; i <= n; ++i)
 fclose(fp);
 }
 */
+
+#ifdef __cplusplus
+} // namespace
+#endif

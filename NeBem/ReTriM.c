@@ -12,6 +12,10 @@
 #include "Vector.h"
 #include "neBEM.h"
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 // GCS: global coordinate system
 // PCS: primitive coordinate system
 // ECS: element coordinate system
@@ -2136,3 +2140,7 @@ int BoundaryConditions(void) {
 
   return (0);
 }  // end of BoundaryConditions
+
+#ifdef __cplusplus
+} // namespace
+#endif

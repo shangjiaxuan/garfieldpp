@@ -13,6 +13,10 @@
 
 #define SHIFT 2.0
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 // Exact potential and flux for a rectangular element
 // Potential needs all the calculations, whereas, the fluxes need part of the
 // information generated during the computation for potential. This is the
@@ -3417,3 +3421,7 @@ int Sign(double x) {
   else
     return (x < 0 ? -1 : 1);
 }  // Sign ends
+
+#ifdef __cplusplus
+} // namespace
+#endif

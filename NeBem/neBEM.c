@@ -23,6 +23,10 @@
 #include "neBEMInterface.h"
 #include "neBEM.h"
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 int InfluenceMatrixFlag;
 
 // At the end of this function, one should have the charge density distribution
@@ -4039,3 +4043,7 @@ Point3D ReflectOnMirror(char Axis, int elesrc, Point3D srcpt, Point3D fldpt,
   // entirely in ECS
   return (localP = RotatePoint3D(&globalP, MirroredDC, global2local));
 }  // ReflectOnMirror ends
+
+#ifdef __cplusplus
+} // namespace
+#endif

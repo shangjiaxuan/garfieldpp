@@ -7,6 +7,8 @@
 
 #include "Garfield/ComponentNeBem3d.hh"
 
+namespace neBEM {
+
 /// Assign default values to some of the important global variables.
 int neBEMSetDefaults(void) {
 
@@ -391,3 +393,4 @@ void neBEMVolumePrimitives(int /*vol*/, int* /*nprim*/, int /*primlist*/[]) {
 
 }
 
+}

@@ -7,6 +7,10 @@
 #define NRGLOBAL extern
 #endif
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 /*
 static float sqrarg;
 #define SQR(a) ((sqrarg=(a)) ==0.0 ? 0.0 : sqrarg*sqrarg)
@@ -126,10 +130,18 @@ NRGLOBAL float *vector();
 
 #endif /* ANSI */
 
+#ifdef __cplusplus
+} // namespace
+#endif
+
 #endif /* _NR_UTILS_H_ */
 
 #ifndef _NR_H_
 #define _NR_H_
+
+#ifdef __cplusplus
+namespace neBEM {
+#endif
 
 NRGLOBAL void gaussj(double **a, int n, double *b, int m);
 
@@ -141,5 +153,9 @@ NRGLOBAL void svdcmp(double **a, int matrow, int matcol, double *w, double **v);
 
 NRGLOBAL void svbksb(double **a, double *w, double **v, int matrow, int matcol,
                      double *V, double *ChDen);
+
+#ifdef __cplusplus
+} // namespace
+#endif
 
 #endif /* NR */

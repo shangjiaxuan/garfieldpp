@@ -10,6 +10,10 @@
 
 #include "Vector.h"
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 void VectorRotate_Rect3D(double Xin, double Yin, double Zin, double RotX,
                          double RotY, double RotZ,
                          int Opt,  // 1 forward, -1 backward
@@ -495,3 +499,7 @@ Point3D ReflectPoint3DByMirrorAtOrigin(Point3D *p1, Vector3D *n) {
 
   return (p2);
 }  // ReflectPoint3DByMirrorAtOrigin ends
+
+#ifdef __cplusplus
+} // namespace
+#endif

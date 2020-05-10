@@ -8,6 +8,10 @@
 #include <math.h>
 #include "NR.h"
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 static double at, bt, ct;
 static double maxarg1, maxarg2;
 
@@ -305,3 +309,7 @@ void svdcmp(double **a, int m, int n, double *w, double **v) {
 
   free_dvector(rv1, 1, n);
 }
+
+#ifdef __cplusplus
+} // namespace
+#endif

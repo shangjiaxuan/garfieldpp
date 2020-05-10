@@ -30,6 +30,10 @@
 #include "NR.h"
 #include "neBEM.h"
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 // Called from a code requesting neBEM services
 int neBEMInitialize(void) {
 
@@ -5386,3 +5390,7 @@ double neBEMChkInPoly(int n, Point3D *p, Point3D q) {
 
   return (anglesum);
 }  // neBEMChkInPoly
+
+#ifdef __cplusplus
+} // namespace
+#endif

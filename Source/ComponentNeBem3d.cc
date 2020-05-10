@@ -404,14 +404,14 @@ void ComponentNeBem3d::ElectricField(const double x, const double y,
   }
   
   // Construct a point.
-  Point3D point;
+  neBEM::Point3D point;
   point.X = 0.01 * x;
   point.Y = 0.01 * y;
   point.Z = 0.01 * z;
 
   // Compute the field.
-  Vector3D field;
-  if (neBEMField(&point, &v, &field) != 0) {
+  neBEM::Vector3D field;
+  if (neBEM::neBEMField(&point, &v, &field) != 0) {
     status = -10;
     return;
   }
@@ -440,12 +440,12 @@ void ComponentNeBem3d::WeightingField(const double x, const double y,
   wx = wy = wz = 0.;
   if (m_wfields.count(label) == 0) return;
   const int id = m_wfields[label];
-  Point3D point;
+  neBEM::Point3D point;
   point.X = 0.01 * x;
   point.Y = 0.01 * y;
   point.Z = 0.01 * z;
-  Vector3D field;
-  if (neBEMWeightingField(&point, &field, id) != 0) {
+  neBEM::Vector3D field;
+  if (neBEM::neBEMWeightingField(&point, &field, id) != 0) {
     std::cerr << m_className << "::WeightingField: Evaluation failed.\n";
     return;
   }
@@ -1051,80 +1051,80 @@ bool ComponentNeBem3d::Initialise() {
                       std::make_move_iterator(elements.begin()),
                       std::make_move_iterator(elements.end()));
   }
-  if (neBEMInitialize() != 0) {
+  if (neBEM::neBEMInitialize() != 0) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Initialising neBEM failed.\n";
     return false;
   }
   gComponentNeBem3d = this;
   // Set the user options.
-  MinNbElementsOnLength = m_minNbElementsOnLength;
-  MaxNbElementsOnLength = m_maxNbElementsOnLength;
-  ElementLengthRqstd = m_targetElementSize * 0.01;
+  neBEM::MinNbElementsOnLength = m_minNbElementsOnLength;
+  neBEM::MaxNbElementsOnLength = m_maxNbElementsOnLength;
+  neBEM::ElementLengthRqstd = m_targetElementSize * 0.01;
 
   // New model / reuse existing model flag.
   // TODO!
-  NewModel = 1;
-  NewMesh = 1;
-  NewBC = 1;
-  NewPP = 1;
+  neBEM::NewModel = 1;
+  neBEM::NewMesh = 1;
+  neBEM::NewBC = 1;
+  neBEM::NewPP = 1;
   // Pass debug level.
-  DebugLevel = m_debug ? 101 : 0;
+  neBEM::DebugLevel = m_debug ? 101 : 0;
   // Store inverted matrix or not.
   // TODO!
-  OptStoreInvMatrix = 0;
-  OptFormattedFile = 0;
+  neBEM::OptStoreInvMatrix = 0;
+  neBEM::OptFormattedFile = 0;
   // Matrix inversion method (LU or SVD).
   // TODO!
-  OptInvMatProc = 0;
+  neBEM::OptInvMatProc = 0;
 
-  if (neBEMReadGeometry() != 0) {
+  if (neBEM::neBEMReadGeometry() != 0) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Transferring the geometry to neBEM failed.\n";
     return false;
   }
 
   // Discretization.
-  int** elementNbs = imatrix(1, NbPrimitives, 1, 2);
-  for (int i = 1; i <= NbPrimitives; ++i) {
-    const int vol1 = VolRef1[i];
+  int** elementNbs = neBEM::imatrix(1, neBEM::NbPrimitives, 1, 2);
+  for (int i = 1; i <= neBEM::NbPrimitives; ++i) {
+    const int vol1 = neBEM::VolRef1[i];
     double size1 = -1.;
     if (solids.find(vol1) != solids.end()) {
       const auto solid = solids[vol1];
       if (solid) {
         Panel panel;
-        panel.a = XNorm[i];
-        panel.b = YNorm[i];
-        panel.c = ZNorm[i];
-        const int nv = NbVertices[i];
+        panel.a = neBEM::XNorm[i];
+        panel.b = neBEM::YNorm[i];
+        panel.c = neBEM::ZNorm[i];
+        const int nv = neBEM::NbVertices[i];
         panel.xv.resize(nv);
         panel.yv.resize(nv);
         panel.zv.resize(nv);
         for (int j = 0; j < nv; ++j) {
-          panel.xv[j] = XVertex[i][j];
-          panel.yv[j] = YVertex[i][j];
-          panel.zv[j] = ZVertex[i][j];
+          panel.xv[j] = neBEM::XVertex[i][j];
+          panel.yv[j] = neBEM::YVertex[i][j];
+          panel.zv[j] = neBEM::ZVertex[i][j];
         }
         size1 = solid->GetDiscretisationLevel(panel);
       }
     }
-    int vol2 = VolRef2[i];
+    int vol2 = neBEM::VolRef2[i];
     double size2 = -1.;
     if (solids.find(vol2) != solids.end()) {
       const auto solid = solids[vol2];
       if (solid) {
         Panel panel;
-        panel.a = -XNorm[i];
-        panel.b = -YNorm[i];
-        panel.c = -ZNorm[i];
-        const int nv = NbVertices[i];
+        panel.a = -neBEM::XNorm[i];
+        panel.b = -neBEM::YNorm[i];
+        panel.c = -neBEM::ZNorm[i];
+        const int nv = neBEM::NbVertices[i];
         panel.xv.resize(nv);
         panel.yv.resize(nv);
         panel.zv.resize(nv);
         for (int j = 0; j < nv; ++j) {
-          panel.xv[j] = XVertex[i][j];
-          panel.yv[j] = YVertex[i][j];
-          panel.zv[j] = ZVertex[i][j];
+          panel.xv[j] = neBEM::XVertex[i][j];
+          panel.yv[j] = neBEM::YVertex[i][j];
+          panel.zv[j] = neBEM::ZVertex[i][j];
         }
         size2 = solid->GetDiscretisationLevel(panel);
       }
@@ -1141,46 +1141,46 @@ bool ComponentNeBem3d::Initialise() {
     size *= 0.01;
 
     // Work out the element dimensions.
-    const double dx1 = XVertex[i][0] - XVertex[i][1];
-    const double dy1 = YVertex[i][0] - YVertex[i][1];
-    const double dz1 = ZVertex[i][0] - ZVertex[i][1];
+    const double dx1 = neBEM::XVertex[i][0] - neBEM::XVertex[i][1];
+    const double dy1 = neBEM::YVertex[i][0] - neBEM::YVertex[i][1];
+    const double dz1 = neBEM::ZVertex[i][0] - neBEM::ZVertex[i][1];
     const double l1 = dx1 * dx1 + dy1 * dy1 + dz1 * dz1;
     int nb1 = (int)(sqrt(l1) / size);
     // Truncate to desired range.
-    if (nb1 < MinNbElementsOnLength) {
-      nb1 = MinNbElementsOnLength;
-    } else if (nb1 > MaxNbElementsOnLength) {
-      nb1 = MaxNbElementsOnLength;
+    if (nb1 < neBEM::MinNbElementsOnLength) {
+      nb1 = neBEM::MinNbElementsOnLength;
+    } else if (nb1 > neBEM::MaxNbElementsOnLength) {
+      nb1 = neBEM::MaxNbElementsOnLength;
     }
     int nb2 = 0;
-    if (NbVertices[i] > 2) {
-      const double dx2 = XVertex[i][2] - XVertex[i][1];
-      const double dy2 = YVertex[i][2] - YVertex[i][1];
-      const double dz2 = ZVertex[i][2] - ZVertex[i][1];
+    if (neBEM::NbVertices[i] > 2) {
+      const double dx2 = neBEM::XVertex[i][2] - neBEM::XVertex[i][1];
+      const double dy2 = neBEM::YVertex[i][2] - neBEM::YVertex[i][1];
+      const double dz2 = neBEM::ZVertex[i][2] - neBEM::ZVertex[i][1];
       const double l2 = dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
       nb2 = (int)(sqrt(l2) / size);
-      if (nb2 < MinNbElementsOnLength) {
-        nb2 = MinNbElementsOnLength;
-      } else if (nb2 > MaxNbElementsOnLength) {
-        nb2 = MaxNbElementsOnLength;
+      if (nb2 < neBEM::MinNbElementsOnLength) {
+        nb2 = neBEM::MinNbElementsOnLength;
+      } else if (nb2 > neBEM::MaxNbElementsOnLength) {
+        nb2 = neBEM::MaxNbElementsOnLength;
       }
     }
     elementNbs[i][1] = nb1;
     elementNbs[i][2] = nb2;
   }
 
-  if (neBEMDiscretize(elementNbs) != 0) {
+  if (neBEM::neBEMDiscretize(elementNbs) != 0) {
     std::cerr << m_className << "::Initialise: Discretization failed.\n";
-    free_imatrix(elementNbs, 1, NbPrimitives, 1, 2); 
+    neBEM::free_imatrix(elementNbs, 1, neBEM::NbPrimitives, 1, 2); 
     return false;
   }
-  free_imatrix(elementNbs, 1, NbPrimitives, 1, 2);
-  if (neBEMBoundaryConditions() != 0) {
+  neBEM::free_imatrix(elementNbs, 1, neBEM::NbPrimitives, 1, 2);
+  if (neBEM::neBEMBoundaryConditions() != 0) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Setting the boundary conditions failed.\n";
     return false;
   }
-  if (neBEMSolve() != 0) {
+  if (neBEM::neBEMSolve() != 0) {
     std::cerr << m_className << "::Initialise: Solution failed.\n";
     return false;
   }
@@ -1200,15 +1200,15 @@ bool ComponentNeBem3d::Initialise() {
       if (solid->GetLabel() != label) continue;
       const int id = solid->GetId();
       // Add the primitives associated to this solid to the list.
-      for (int j = 1; j <= NbPrimitives; ++j) {
-        if (VolRef1[j] == id || VolRef2[j] == id) {
+      for (int j = 1; j <= neBEM::NbPrimitives; ++j) {
+        if (neBEM::VolRef1[j] == id || neBEM::VolRef2[j] == id) {
           primitives.push_back(j);
         }
       }
     }
     // Request the weighting field for this list of primitives.
     const int np = primitives.size();
-    const int id = neBEMPrepareWeightingField(np, primitives.data());
+    const int id = neBEM::neBEMPrepareWeightingField(np, primitives.data());
     if (id < 0) {
       std::cerr << m_className << "::Initialise:\n"
                 << "    Weighting field calculation for readout group \""
@@ -1222,7 +1222,7 @@ bool ComponentNeBem3d::Initialise() {
     }
   }
   // TODO! Not sure if we should call this here.
-  neBEMEnd();
+  neBEM::neBEMEnd();
   m_ready = true;
   return true;
 }

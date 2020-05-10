@@ -34,6 +34,10 @@
 #define Q_E -1.60217646e-19  // charge of electron in SI units (Coulomb)
 #define Q_I 1.60217646e-19   // charge of ion in SI units (Coulomb)
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 neBEMGLOBAL char neBEMVersion[10];
 
 // options to decide whether or not storage of influence and inverted matrices
@@ -102,11 +106,13 @@ neBEMGLOBAL int *NbSurfSegX, *NbSurfSegZ;
 neBEMGLOBAL int *NbWireSeg;
 
 // Related to elements
-neBEMGLOBAL int
-    MinNbElementsOnLength;  // minimum number of elements allowed along Length
-neBEMGLOBAL int
-    MaxNbElementsOnLength;  // maximum number of elements allowed along Length
-neBEMGLOBAL double ElementLengthRqstd;  // user requested length of along Length
+// minimum number of elements allowed along Length
+neBEMGLOBAL int MinNbElementsOnLength;  
+// maximum number of elements allowed along Length
+neBEMGLOBAL int MaxNbElementsOnLength;  
+// user requested length of along Length
+neBEMGLOBAL double ElementLengthRqstd;  
+
 // int MinNbElementsOnSurface;	// minimum number of elements allowed on a
 // surface int MaxNbElementsOnSurface;	// maximum number of elements allowed on
 // a surface double ElementAreaRqstd;	// user requested area of each element
@@ -115,16 +121,18 @@ neBEMGLOBAL int NbElements;  // total number of elements
 neBEMGLOBAL FILE *fMeshLog;
 
 // Related to solution constraints
-neBEMGLOBAL int
-    OptSystemChargeZero;  // Whether total charge in the system is zero
-neBEMGLOBAL int
-    NbSystemChargeZero;  // which eqn / unknown is related to this constraint
-neBEMGLOBAL double
-    VSystemChargeZero;  // voltage shift necessary to enforce zero charge
+// Whether total charge in the system is zero
+neBEMGLOBAL int OptSystemChargeZero;  
+// which eqn / unknown is related to this constraint
+neBEMGLOBAL int NbSystemChargeZero;  
+// voltage shift necessary to enforce zero charge
+neBEMGLOBAL double VSystemChargeZero;  
+
 neBEMGLOBAL int NbFloatingConductors;  // Number of floating conductors
-neBEMGLOBAL int
-    NbFloatCon;  // which eqn / unknown is related to this constraint
-neBEMGLOBAL double VFloatCon;  // value of floating potential on the conductor
+// which eqn / unknown is related to this constraint
+neBEMGLOBAL int NbFloatCon;  
+// value of floating potential on the conductor
+neBEMGLOBAL double VFloatCon;  
 
 typedef struct {
   short int Type;     // 4: rectangular, 3: triangular, 2: linear (wire)
@@ -372,8 +380,8 @@ typedef struct {
 } VoxelVol;
 neBEMGLOBAL VoxelVol Voxel;
 
-// Compute flux components, potential and regions within the voxelized volume
-// and store them in an external file
+// Compute flux components, potential and regions within the voxelized 
+// volume and store them in an external file
 neBEMGLOBAL int VoxelFPR(void);
 
 // Variables and functions related to output 3dMap for Garfield++
@@ -564,5 +572,9 @@ neBEMGLOBAL void WirePrimPF(int src, Point3D *localPt, double *Pot,
 // Weighting field values
 neBEMGLOBAL int WtPFAtPoint(Point3D *globalPt, double *Pot, Vector3D *Flux,
                             int Id);
+
+#ifdef __cplusplus
+} // namespace
+#endif
 
 #endif

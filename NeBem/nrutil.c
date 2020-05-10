@@ -6,6 +6,10 @@
 #define NR_END 1
 #define FREE_ARG char *
 
+#ifdef __cplusplus
+namespace neBEM {
+#endif
+
 void nrerror(const char error_text[])
 /* Numerical Recipes standard error handler */
 {
@@ -545,3 +549,7 @@ void free_d4tensor(double ****t,long nrl, long nrh, long ncl, long nch,
    free((FREE_ARG) (t+nrl-NR_END));
 }
 */
+
+#ifdef __cplusplus
+} // namespace
+#endif
