@@ -355,6 +355,20 @@ int neBEMGetBoundingPlanes(int* ixmin, double* cxmin, double* vxmin, int* ixmax,
   *izmin = *izmax = 0;
   *vzmin = *vzmax = 0.;
   *czmin = *czmax = 0.;
+  const unsigned int nz = Garfield::gComponentNeBem3d->GetNumberOfPlanesZ();
+  for (unsigned int i = 0; i < nz; ++i) {
+    double z = 0., v = 0.;
+    Garfield::gComponentNeBem3d->GetPlaneZ(i, z, v);
+    if (i == 0) {
+      *izmin = 1;
+      *vzmin = v;
+      *czmin = z;
+    } else {
+      *izmax = 1;
+      *vzmax = v;
+      *czmax = z;
+    }
+  }
   // Convert from cm to m.
   *cxmin *= 0.01;
   *cxmax *= 0.01;

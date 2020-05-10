@@ -31,14 +31,20 @@ class ComponentNeBem3d : public ComponentBase {
   void AddPlaneX(const double x, const double voltage);
   /// Add a plane at constant y.
   void AddPlaneY(const double y, const double voltage);
+  /// Add a plane at constant z.
+  void AddPlaneZ(const double z, const double voltage);
   /// Get the number of equipotential planes at constant x.
   unsigned int GetNumberOfPlanesX() const;
   /// Get the number of equipotential planes at constant y.
   unsigned int GetNumberOfPlanesY() const;
+  /// Get the number of equipotential planes at constant z.
+  unsigned int GetNumberOfPlanesZ() const;
   /// Retrieve the parameters of a plane at constant x.
   bool GetPlaneX(const unsigned int i, double& x, double& v) const;
   /// Retrieve the parameters of a plane at constant y.
   bool GetPlaneY(const unsigned int i, double& y, double& v) const;
+  /// Retrieve the parameters of a plane at constant z.
+  bool GetPlaneZ(const unsigned int i, double& z, double& v) const;
 
   unsigned int GetNumberOfPrimitives() const { return m_primitives.size(); }
   bool GetPrimitive(const unsigned int i, double& a, double& b, double& c,
@@ -158,11 +164,11 @@ class ComponentNeBem3d : public ComponentBase {
   std::vector<Element> m_elements;
 
   /// Plane existence.
-  std::array<bool, 4> m_ynplan{{false, false, false, false}};
+  std::array<bool, 6> m_ynplan{{false, false, false, false, false, false}};
   /// Plane coordinates.
-  std::array<double, 4> m_coplan{{0., 0., 0., 0.}};
+  std::array<double, 6> m_coplan{{0., 0., 0., 0., 0., 0.}};
   /// Plane potentials.
-  std::array<double, 4> m_vtplan{{0., 0., 0., 0.}};
+  std::array<double, 6> m_vtplan{{0., 0., 0., 0., 0., 0.}};
 
   static constexpr double MinDist = 1.e-6;
   /// Target size of elements [cm].

@@ -463,8 +463,15 @@ void ComponentNeBem3d::AddPlaneX(const double x, const double v) {
 
   if (m_ynplan[0]) {
     m_ynplan[1] = true;
-    m_coplan[1] = x;
-    m_vtplan[1] = v;
+    if (x < m_coplan[0]) {
+      m_coplan[1] = m_coplan[0];
+      m_vtplan[1] = m_vtplan[0];
+      m_coplan[0] = x;
+      m_vtplan[0] = v;
+    } else {
+      m_coplan[1] = x;
+      m_vtplan[1] = v;
+    }
   } else {
     m_ynplan[0] = true;
     m_coplan[0] = x;
@@ -482,12 +489,45 @@ void ComponentNeBem3d::AddPlaneY(const double y, const double v) {
 
   if (m_ynplan[2]) {
     m_ynplan[3] = true;
-    m_coplan[3] = y;
-    m_vtplan[3] = v;
+    if (y < m_coplan[2]) {
+      m_coplan[3] = m_coplan[2];
+      m_vtplan[3] = m_vtplan[2];
+      m_coplan[2] = y;
+      m_vtplan[2] = v; 
+    } else {
+      m_coplan[3] = y;
+      m_vtplan[3] = v;
+    }
   } else {
     m_ynplan[2] = true;
     m_coplan[2] = y;
     m_vtplan[2] = v;
+  }
+  m_ready = false;
+}
+
+void ComponentNeBem3d::AddPlaneZ(const double z, const double v) {
+  if (m_ynplan[4] && m_ynplan[5]) {
+    std::cerr << m_className << "::AddPlaneZ:\n"
+              << "    Cannot have more than two planes at constant z.\n";
+    return;
+  }
+
+  if (m_ynplan[4]) {
+    m_ynplan[5] = true;
+    if (z < m_coplan[4]) {
+      m_coplan[5] = m_coplan[4];
+      m_vtplan[5] = m_vtplan[4];
+      m_coplan[4] = z;
+      m_vtplan[4] = v;
+    } else {
+      m_coplan[5] = z;
+      m_vtplan[5] = v;
+    }
+  } else {
+    m_ynplan[4] = true;
+    m_coplan[4] = z;
+    m_vtplan[4] = v;
   }
   m_ready = false;
 }
@@ -505,6 +545,15 @@ unsigned int ComponentNeBem3d::GetNumberOfPlanesY() const {
   if (m_ynplan[2] && m_ynplan[3]) {
     return 2;
   } else if (m_ynplan[2] || m_ynplan[3]) {
+    return 1;
+  }
+  return 0;
+}
+
+unsigned int ComponentNeBem3d::GetNumberOfPlanesZ() const {
+  if (m_ynplan[4] && m_ynplan[5]) {
+    return 2;
+  } else if (m_ynplan[4] || m_ynplan[5]) {
     return 1;
   }
   return 0;
@@ -529,6 +578,17 @@ bool ComponentNeBem3d::GetPlaneY(const unsigned int i, double& y,
   }
   y = m_coplan[i + 2];
   v = m_vtplan[i + 2];
+  return true;
+}
+
+bool ComponentNeBem3d::GetPlaneZ(const unsigned int i, double& z,
+                                 double& v) const {
+  if (i >= 2 || (i == 1 && !m_ynplan[5])) {
+    std::cerr << m_className << "::GetPlaneZ: Index out of range.\n";
+    return false;
+  }
+  z = m_coplan[i + 4];
+  v = m_vtplan[i + 4];
   return true;
 }
 
