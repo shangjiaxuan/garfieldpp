@@ -1092,6 +1092,44 @@ bool ComponentNeBem3d::Initialise() {
     }
   }
 
+  // Add the wires.
+  for (unsigned int i = 0; i < nSolids; ++i) {
+    const auto solid = m_geometry->GetSolid(i);
+    if (!solid) continue;
+    if (!solid->IsWire()) continue;
+    double x0 = 0., y0 = 0., z0 = 0.;
+    solid->GetCentre(x0, y0, z0);
+    double dx = 0., dy = 0., dz = 1.;
+    solid->GetDirection(dx, dy, dz);
+    const double dnorm = sqrt(dx * dx + dy * dy + dz * dz);
+    if (dnorm < Small) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Wire has zero norm direction vector; skipped.\n";
+      continue;
+    }
+    dx /= dnorm;
+    dy /= dnorm;
+    dz /= dnorm;
+    const double h = solid->GetHalfLengthZ();
+    Primitive primitive;
+    primitive.a = solid->GetRadius();
+    primitive.b = 0.;
+    primitive.c = 0.;
+    primitive.xv = {x0 - h * dx, x0 + h * dx};
+    primitive.yv = {y0 - h * dy, y0 + h * dy};
+    primitive.zv = {z0 - h * dz, z0 + h * dz};
+    primitive.v = solid->GetBoundaryPotential();
+    primitive.q = solid->GetBoundaryChargeDensity();
+    primitive.lambda = 0.;
+    primitive.interface = InterfaceType(solid->GetBoundaryConditionType());
+    // Set the requested discretization level (target element size).
+    Panel panel;
+    primitive.elementSize = solid->GetDiscretisationLevel(panel);
+    primitive.vol1 = solid->GetId();
+    primitive.vol2 = -1;
+    m_primitives.push_back(std::move(primitive));
+  }
+
   if (m_debug) {
     std::cout << m_className << "::Initialise:\n"
               << "    Created " << m_primitives.size() << " primitives.\n";
@@ -3065,7 +3103,7 @@ bool ComponentNeBem3d::GetVolume(const unsigned int vol, int& shape,
     const auto solid = m_geometry->GetSolid(i, medium);
     if (!solid) continue;
     if (solid->GetId() != vol) continue;
-    if (solid->IsTube()) {
+    if (solid->IsTube() || solid->IsWire()) {
       shape = 1;
     } else if (solid->IsHole()) {
       shape = 2;
