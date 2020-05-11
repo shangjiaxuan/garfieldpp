@@ -56,7 +56,9 @@ class Solid {
   virtual bool IsHole() const { return false; }
   /// Return true if the solid is a ridge.
   virtual bool IsRidge() const { return false; }
-  
+  /// Return true if the solid is a wire.
+  virtual bool IsWire() const { return false; }
+ 
   /// Set a label.
   void SetLabel(const std::string& label) { m_label = label; }
   /// Return the label.
