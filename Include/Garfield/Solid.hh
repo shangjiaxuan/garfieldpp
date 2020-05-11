@@ -71,6 +71,13 @@ class Solid {
     z = m_cZ;
     return true;
   }
+  /// Retrieve the direction vector.
+  bool GetDirection(double& dx, double& dy, double& dz) const {
+    dx = m_dX;
+    dy = m_dY;
+    dz = m_dZ;
+    return true;
+  }
   /// Retrieve the orientation (azimuthal and polar angles) of the solid.
   bool GetOrientation(double& ctheta, double& stheta, double& cphi,
                       double& sphi) const {
