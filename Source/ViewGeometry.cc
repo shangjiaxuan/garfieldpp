@@ -98,6 +98,10 @@ void ViewGeometry::Plot() {
       const double rmax = solid->GetOuterRadius();
       const double lz = solid->GetHalfLengthZ();
       volume = m_geoManager->MakeTube("Tube", medDefault, rmin, rmax, lz);
+    } else if (solid->IsWire()) {
+      const double rw = solid->GetRadius();
+      const double lz = solid->GetHalfLengthZ();
+      volume = m_geoManager->MakeTube("Wire", medDefault, 0., rw, lz);
     } else if (solid->IsBox()) {
       const double dx = solid->GetHalfLengthX();
       const double dy = solid->GetHalfLengthY();

@@ -107,6 +107,8 @@ void GeometrySimple::PrintSolids() {
       std::cout << "hole     ";
     } else if (m_solids[i].first->IsRidge()) {
       std::cout << "ridge    ";
+    } else if (m_solids[i].first->IsWire()) {
+      std::cout << "wire     ";
     } else {
       std::cout << "unknown  ";
     }
