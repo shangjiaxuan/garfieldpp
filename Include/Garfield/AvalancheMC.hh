@@ -68,6 +68,10 @@ class AvalancheMC {
   /// Switch off attachment and multiplication.
   void DisableAttachment() { m_useAttachment = false; }
 
+  /// Switch on calculating trapping with grid traps.
+  void EnableTcadTraps(const bool on = true) { m_useGridTrapping = on; }
+
+
   /// Switch on calculating trapping with TCAD traps.
   void EnableTcadTraps(const bool on = true) { m_useTcadTrapping = on; }
   /// Switch on TCAD velocity maps
@@ -249,6 +253,8 @@ class AvalancheMC {
   /// Scaling factor for ion signals.
   double m_scaleI = 1.;
 
+  /// Use traps from the field component (Grid):
+  bool m_useGridTrapping = false;
   /// Use traps from the field component (TCAD).
   bool m_useTcadTrapping = false;
   /// Take the velocity from the field component (TCAD).

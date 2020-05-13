@@ -1184,12 +1184,13 @@ bool ComponentGrid::GetElectricField(
   ez = node.fz;
   return true;
 }
-
+///new
 void ComponentGrid::Reset() {
   m_efields.clear();
   m_bfields.clear();
   m_wfields.clear();
-
+  m_attachment.clear();
+  
   m_wdfields.clear();
   m_wdtimes.clear();
 
@@ -1206,6 +1207,8 @@ void ComponentGrid::Reset() {
   m_hasEfield = false;
   m_hasBfield = false;
   m_hasWfield = false;
+  m_hasElektron = false;
+  m_hasHole = false;
   m_ready = false;
   
   m_wField_xOffset = 0.;
@@ -1282,4 +1285,375 @@ void ComponentGrid::Initialise(
   }
 }
 
+//new
+bool ComponentGrid::LoadAttachment(const std::string& fname,
+                                      const std::string& fmt,
+                                      const double scaleX, int col, char particle) {
+  m_ready = false;
+  m_active.assign(m_nX, std::vector<std::vector<bool> >(m_nY, std::vector<bool>(m_nZ, true)));
+  if (!((particle=='e')||(particle=='h'))) {
+      PrintError(m_className + "::LoadAttachment: no valid carrier selected ['e' or 'h']")
+      return false;
+  }
+  
+  // Read the file
+  if (!LoadData(fname, fmt, 
+                scaleX, m_lifetime, col)) {
+    return false;
+  }
+  if (particle == 'e') {
+      m_hasElectron = true;
+  }
+  if (particle == 'h') {
+      m_hasHole = true;
+  }
+  
+  m_ready = true;
+  return true;
 }
+///new
+bool ComponentGrid::LoadData(const std::string& filename, std::string format,
+    const double scaleX,
+    std::vector<std::vector<std::vector<double> > >& fields, int col) {
+
+    if (!m_hasMesh) {
+        if (!LoadMesh(filename, format, scaleX)) {
+            std::cerr << m_className << "::LoadData: Mesh not set.\n";
+            return false;
+        }
+    }
+
+    const unsigned int fmt = GetFormat(format);
+    if (fmt == 0) {
+        std::cerr << m_className << "::LoadData:\n"
+            << "    Unknown format (" << format << ").\n";
+        return false;
+    }
+
+    // Set up the grid.
+    Initialise(fields);
+
+    unsigned int nValues = 0;
+    // Keep track of which elements have been read.
+    std::vector<std::vector<std::vector<bool> > > isSet(
+        m_nX,
+        std::vector<std::vector<bool> >(m_nY, std::vector<bool>(m_nZ, false)));
+
+    std::ifstream infile;
+    infile.open(filename.c_str(), std::ios::in);
+    if (!infile) {
+        std::cerr << m_className << "::LoadData:\n"
+            << "    Could not open file " << filename << ".\n";
+        return false;
+    }
+
+    std::string line;
+    unsigned int nLines = 0;
+    bool bad = false;
+    while (!infile.fail()) {
+        // Read one line.
+        std::getline(infile, line);
+        ++nLines;
+        // Strip white space from beginning of line.
+        ltrim(line);
+        // Skip empty lines.
+        if (line.empty()) continue;
+        // Skip comments.
+        if (line[0] == '#') continue;
+        if (line[0] == '/' && line[1] == '/') continue;
+        unsigned int i = 0;
+        unsigned int j = 0;
+        unsigned int k = 0;
+        double life = 0.;
+        std::istringstream data;
+        data.str(line);
+        if (fmt == 1) {
+            // "XY"
+            double x, y;
+            data >> x >> y;
+            if (data.fail()) {
+                PrintError(m_className + "::LoadData", nLines, "coordinates");
+                bad = true;
+                break;
+            }
+            x *= scaleX;
+            y *= scaleX;
+            const double u = std::round((x - m_xMin) / m_dx);
+            const double v = std::round((y - m_yMin) / m_dy);
+            i = u < 0. ? 0 : static_cast<unsigned int>(u);
+            j = v < 0. ? 0 : static_cast<unsigned int>(v);
+            if (i >= m_nX) i = m_nX - 1;
+            if (j >= m_nY) j = m_nY - 1;
+        }
+        else if (fmt == 2) {
+            // "XYZ"
+            double x, y, z;
+            data >> x >> y >> z;
+            if (data.fail()) {
+                PrintError(m_className + "::LoadData", nLines, "coordinates");
+                bad = true;
+                break;
+            }
+            x *= scaleX;
+            y *= scaleX;
+            z *= scaleX;
+            const double u = std::round((x - m_xMin) / m_dx);
+            const double v = std::round((y - m_yMin) / m_dy);
+            const double w = std::round((z - m_zMin) / m_dz);
+            i = u < 0. ? 0 : static_cast<unsigned int>(u);
+            j = v < 0. ? 0 : static_cast<unsigned int>(v);
+            j = w < 0. ? 0 : static_cast<unsigned int>(w);
+            if (i >= m_nX) i = m_nX - 1;
+            if (j >= m_nY) j = m_nY - 1;
+            if (k >= m_nZ) k = m_nZ - 1;
+        }
+        else if (fmt == 3) {
+            // "IJ"
+            data >> i >> j;
+            if (data.fail()) {
+                PrintError(m_className + "::LoadData", nLines, "indices");
+                bad = true;
+                break;
+            }
+        }
+        else if (fmt == 4) {
+            // "IJK"
+            data >> i >> j >> k;
+            if (data.fail()) {
+                PrintError(m_className + "::LoadData", nLines, "indices");
+                bad = true;
+                break;
+            }
+        }
+        else if (fmt == 5) {
+            // "YXZ"
+            double x, y, z;
+            data >> y >> x >> z;
+            if (data.fail()) {
+                PrintError(m_className + "::LoadData", nLines, "coordinates");
+                bad = true;
+                break;
+            }
+            x *= scaleX;
+            y *= scaleX;
+            z *= scaleX;
+            const double u = std::round((x - m_xMin) / m_dx);
+            const double v = std::round((y - m_yMin) / m_dy);
+            const double w = std::round((z - m_zMin) / m_dz);
+            i = u < 0. ? 0 : static_cast<unsigned int>(u);
+            j = v < 0. ? 0 : static_cast<unsigned int>(v);
+            j = w < 0. ? 0 : static_cast<unsigned int>(w);
+            if (i >= m_nX) i = m_nX - 1;
+            if (j >= m_nY) j = m_nY - 1;
+            if (k >= m_nZ) k = m_nZ - 1;
+        }
+        // Check the indices.
+        if (i >= m_nX || j >= m_nY || k >= m_nZ) {
+            std::cerr << m_className << "::LoadData:\n"
+                << "    Error reading line " << nLines << ".\n"
+                << "    Index (" << i << ", " << j << ", " << k
+                << ") out of range.\n";
+            continue;
+        }
+        if (isSet[i][j][k]) {
+            std::cerr << m_className << "::LoadData:\n"
+                << "    Error reading line " << nLines << ".\n"
+                << "    Mesh element (" << i << ", " << j << ", " << k
+                << ") has already been set.\n";
+            continue;
+        }
+
+        // Get the field values.
+        for (int i = 0, i < col - 1, i++) {
+            data.ignore(256, ' ');
+        }
+        data >> att
+        
+        if (data.fail()) {
+           PrintError(m_className + "::LoadData", nLines, "field components");
+           bad = true;
+           break;
+        }
+
+        if (fmt == 1 || fmt == 3) {
+            // Two-dimensional field-map
+            for (unsigned int kk = 0; kk < m_nZ; ++kk) {
+                    fields[i][j][kk] = att;
+                    isSet[i][j][kk] = true;
+            }
+        }
+        else {
+                fields[i][j][k] = att;
+                isSet[i][j][k] = true;
+        }
+        ++nValues;
+    }
+    infile.close();
+    if (bad) return false;
+    std::cout << m_className << "::LoadData:\n"
+         << "    Read " << nValues << " values from " << filename << ".\n";
+    unsigned int nExpected = m_nX * m_nY;
+    if (fmt == 2 || fmt == 4 || fmt == 5) nExpected *= m_nZ;
+    if (nExpected != nValues) {
+        std::cerr << m_className << "::LoadData:\n"
+             << "   Expected " << nExpected << " values.\n";
+    }
+ return true;
+}
+
+///new
+void ComponentGrid::Initialise(
+    std::vector<std::vector<std::vector<double> > >& fields) {
+
+  fields.resize(m_nX);
+  for (unsigned int i = 0; i < m_nX; ++i) {
+    fields[i].resize(m_nY);
+    for (unsigned int j = 0; j < m_nY; ++j) {
+      fields[i][j].resize(m_nZ);
+      for (unsigned int k = 0; k < m_nZ; ++k) {
+        fields[i][j][k] = 0.;
+        
+      }
+    }
+  }
+}
+///new
+bool ComponentGrid::GetAttachment(
+    const double xi, const double yi, const double zi,
+    const std::vector<std::vector<std::vector<double> > >& field, double& att,
+     bool& active) {
+  if (!m_hasMesh) {
+    std::cerr << m_className << "::GetField: Mesh is not set.\n";
+    return false;
+  }
+
+  // Reduce the point to the basic cell (in case of periodicity) and
+  // check if it is inside the mesh.
+  bool xMirrored = false;
+  const double x =
+      Reduce(xi, m_xMin, m_xMax, m_periodic[0], m_mirrorPeriodic[0], xMirrored);
+  if (x < m_xMin || x > m_xMax) return false;
+  bool yMirrored = false;
+  const double y =
+      Reduce(yi, m_yMin, m_yMax, m_periodic[1], m_mirrorPeriodic[1], yMirrored);
+  if (y < m_yMin || y > m_yMax) return false;
+  bool zMirrored = false;
+  const double z =
+      Reduce(zi, m_zMin, m_zMax, m_periodic[2], m_mirrorPeriodic[2], zMirrored);
+  if (z < m_zMin || z > m_zMax) return false;
+
+  // Get the indices.
+  const double sx = (x - m_xMin) / m_dx;
+  const double sy = (y - m_yMin) / m_dy;
+  const double sz = (z - m_zMin) / m_dz;
+  const unsigned int i0 = static_cast<unsigned int>(std::floor(sx));
+  const unsigned int j0 = static_cast<unsigned int>(std::floor(sy));
+  const unsigned int k0 = static_cast<unsigned int>(std::floor(sz));
+  const double ux = sx - i0;
+  const double uy = sy - j0;
+  const double uz = sz - k0;
+  const unsigned int i1 = std::min(i0 + 1, m_nX - 1);
+  const unsigned int j1 = std::min(j0 + 1, m_nY - 1);
+  const unsigned int k1 = std::min(k0 + 1, m_nZ - 1);
+  const double vx = 1. - ux;
+  const double vy = 1. - uy;
+  const double vz = 1. - uz;
+  if (!m_active.empty()) {
+    active = m_active[i0][j0][k0] && m_active[i0][j0][k1] && 
+             m_active[i0][j1][k0] && m_active[i0][j1][k1] &&
+             m_active[i1][j0][k0] && m_active[i1][j0][k1] &&
+             m_active[i1][j1][k0] && m_active[i1][j1][k1]; 
+  }
+  const double& n000 = field[i0][j0][k0];
+  const double& n100 = field[i1][j0][k0];
+  const double& n010 = field[i0][j1][k0];
+  const double& n110 = field[i1][j1][k0];
+  const double& n001 = field[i0][j0][k1];
+  const double& n101 = field[i1][j0][k1];
+  const double& n011 = field[i0][j1][k1];
+  const double& n111 = field[i1][j1][k1];
+
+  if (m_debug) {
+    std::cout << m_className << "::GetField: Determining field at ("
+              << xi << ", " << yi << ", " << zi << ").\n"
+              << "    X: " << i0 << " (" << ux << ") - " 
+                           << i1 << " (" << vx << ").\n"
+              << "    Y: " << j0 << " (" << uy << ") - " 
+                           << j1 << " (" << vy << ").\n"
+              << "    Z: " << k0 << " (" << uz << ") - " 
+                           << k1 << " (" << vz << ").\n";
+  }
+  att = ((n000. * vx + n100 * ux) * vy +
+        (n010 * vx + n110 * ux) * uy) *
+           vz +
+       ((n001 * vx + n101 * ux) * vy +
+        (n011 * vx + n111 * ux) * uy) *
+           uz;
+  
+  return true;
+}
+///new
+void ComponentGrid::GetElectronAttachment(const double x, const double y,
+                                  const double z, double& att, 
+								  Medium*& m, int& status) {
+  m = nullptr;
+  status = 0;
+
+  // Make sure the field map has been loaded.
+  if (!m_ready) {
+    PrintNotReady(m_className + "::Attachment");
+    status = -10;
+    return;
+  }
+  if (!m_hasElectron) {
+      status = -5;
+      return;
+  }
+  status = 0;
+  bool active = true;
+  if (!GetAttachment(x, y, z, m_attachment, life, active)) {
+    status = -11;
+    return;
+  }
+  if (!active) {
+    status = -5;
+    return;
+  }
+  m = m_medium;
+  if (!m) status = -5;
+}
+///new
+void ComponentGrid::GetHoleAttachment(const double x, const double y,
+    const double z, double& att,
+    Medium*& m, int& status) {
+    m = nullptr;
+    status = 0;
+
+    // Make sure the field map has been loaded.
+    if (!m_ready) {
+        PrintNotReady(m_className + "::Attachment");
+        status = -10;
+        return;
+    }
+    if (!m_hasHole) {
+        status = -5;
+        return;
+    }
+    status = 0;
+    bool active = true;
+    if (!GetAttachment(x, y, z, m_attachment, life, active)) {
+        status = -11;
+        return;
+    }
+    if (!active) {
+        status = -5;
+        return;
+    }
+    m = m_medium;
+    if (!m) status = -5;
+}
+}
+
+
+
+

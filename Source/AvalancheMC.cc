@@ -8,7 +8,8 @@
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Random.hh"
-
+///new
+#include "Garfield/ComponentGrid"
 namespace {
 
 std::string PrintVec(const std::array<double, 3>& x) {
@@ -753,6 +754,20 @@ double AvalancheMC::GetAttachment(const Particle particle, Medium* medium,
       return eta;
     }
   }
+  ///new 
+  if (m_useGridTrapping) {
+    const unsigned int nComponents = m_sensor->GetNumberOfComponents();
+    for (unsigned int i = 0; i < nComponents; ++i) {
+      ComponentBase* cmp = m_sensor->GetComponent(i);
+      if (!cmp->IsTrapActive()) continue;
+      if (particle == Particle::Electron) {
+        cmp->ElectronAttachment(x[0], x[1], x[2], eta);
+      } else {
+        cmp->HoleAttachment(x[0], x[1], x[2], eta);
+      }
+      return eta;
+    }
+  }
   if (particle == Particle::Electron) {
     medium->ElectronAttachment(e[0], e[1], e[2], b[0], b[1], b[2], eta);
   } else {
@@ -1020,12 +1035,17 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
       if (!GetVelocity(particle, medium, x, e, b, v)) continue;
       // Get Townsend and attachment coefficients.
       double alpha = 0.;
+	  //new
+	  const double eta = 0;
       if (particle == Particle::Electron) {
         medium->ElectronTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
+		
       } else {
         medium->HoleTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
+		
       }
-      const double eta = GetAttachment(particle, medium, x, e, b);
+	  
+      const double eta = GetAttachment( medium, x, e, b);
       for (unsigned int k = 0; k < 3; ++k) vd[k] += wg[j] * v[k];
       alps[i] += wg[j] * alpha;
       etas[i] += wg[j] * eta;

@@ -124,13 +124,46 @@ class ComponentGrid : public ComponentBase {
   void SetMedium(Medium* m);
   /// Get the medium.
   Medium* GetMedium() const { return m_medium; }
+  
+  
+  ///new
+  // Trapping
+ void ComponentGrid::ElectricField(const double x, const double y,
+                                  const double z, double& elife, double& hlife,
+								  Medium*& m, int& status);
+ bool ComponentGrid::GetField(
+    const double xi, const double yi, const double zi,
+    const std::vector<std::vector<std::vector<Node2> > >& field, double& elife,
+    double& hlife, bool& active);
+	
+ void ComponentGrid::Initialise(
+    std::vector<std::vector<std::vector<Node2> > >& fields);
 
+ bool ComponentGrid::LoadData(const std::string& filename, std::string format,
+    const bool withFlag, 
+    const double scaleX,
+    std::vector<std::vector<std::vector<Node2> > >& fields);
+ bool ComponentGrid::LoadLifetime(const std::string& fname,
+                                      const std::string& fmt,
+                                      const bool withFlag, const double scaleX,);
+
+ bool ComponentGrid::GetHoleLifetime(
+    const unsigned int i, const unsigned int j, const unsigned int k,
+    double& f) const;
+	
+ bool ComponentGrid::GetElectronLifetime(
+    const unsigned int i, const unsigned int j, const unsigned int k,
+    double& f) const;
+	
+	
  private:
   Medium* m_medium = nullptr;
   struct Node {
-    double fx, fy, fz;  //< Field
-    double v;           //< Potential
+    double fx, fy, fz;   				//< Field
+    double v;           				//< Potential
+	
   };
+ ///new
 
   /// Electric field values and potentials.
   std::vector<std::vector<std::vector<Node> > > m_efields;
@@ -141,6 +174,8 @@ class ComponentGrid : public ComponentBase {
   /// Delayed weighting field values and potentials.
   std::vector<std::vector<std::vector<std::vector<Node> > > > m_wdfields;
   std::vector<double> m_wdtimes;
+  /// new Occupancy for the differnt Traps.
+  std::vector<std::vector<std::vector<double> > > m_lifetime;
   /// Active medium flag.
   std::vector<std::vector<std::vector<bool> > > m_active;
 
@@ -155,6 +190,14 @@ class ComponentGrid : public ComponentBase {
   bool m_hasEfield = false;
   bool m_hasBfield = false;
   bool m_hasWfield = false;
+  ///new 
+  
+  bool m_hasLifetime = false;
+  
+
+  // Are all the cross-sections and concentrations valid and set.
+  bool m_validTraps = false;
+
 
   // Offset for weighting field
   double m_wField_xOffset = 0.;
@@ -167,11 +210,13 @@ class ComponentGrid : public ComponentBase {
   /// Read/determine mesh parameters from file.
   bool LoadMesh(const std::string& filename, std::string format,
                 const double scaleX);
+  ///new
   /// Read data from file.
   bool LoadData(const std::string& filename, std::string format,
-                const bool withPotential, const bool withFlag, 
+                const bool withPotential, const bool withFlag, const bool with Occupancy
                 const double scaleX, const double scaleF, const double scaleP,
-                std::vector<std::vector<std::vector<Node> > >& field);
+                std::vector<std::vector<std::vector<Node> > >& field,
+				std::vector<std::vector<std::vector<Node2> > >& Occ);
 
   void Reset() override;
   void UpdatePeriodicity() override;
