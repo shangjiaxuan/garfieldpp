@@ -64,7 +64,9 @@ At present, the available solids are
   \item
   \texttt{SolidHole}, 
   \item
-  \texttt{SolidRidge}, and
+  \texttt{SolidRidge}, 
+  \item
+  \texttt{SolidWire}, and
   \item
   \texttt{SolidSphere}.
 \end{itemize} 
@@ -983,6 +985,58 @@ void AddPixelOnPlanePhi(const double phi,
 Valid strip directions are \texttt{'p'} ($\phi$) or \texttt{'z'} for 
 circular planes and \texttt{'r'} or \texttt{'z'} for $\phi$ planes.
 
+\section{neBEM}
+The nearly exact Boundary Element Method (neBEM) technique discretizes
+the boundary of the domain in triangular and rectangular elements 
+and solves for the charge density distribution on each of these 
+boundary elements.
+ 
+The \texttt{ComponentNeBem3d} interface class requires as input a 
+\texttt{GeometrySimple} object with its list of solids and associated 
+media. 
+\begin{lstlisting}
+void ComponentNeBem3d::SetGeometry(Geometry* geo);
+\end{lstlisting}
+The boundary conditions to be applied to each solid can be set using
+\begin{lstlisting}
+void SetBoundaryPotential(const double v);
+\end{lstlisting}
+in case of a conductor at fixed potential (Dirichlet boundary conditions) 
+or 
+\begin{lstlisting}
+void SetBoundaryDielectric();
+\end{lstlisting}
+in case of a dielectric-dielectric interface. 
+In the latter case (Neumann boundary conditions), 
+the normal component of the displacement field $\mathbf{D} = \varepsilon\mathbf{E}$ is required to be continuous,
+\begin{equation*}
+  \mathbf{n}\cdot\left(\varepsilon^{+}\mathbf{E}^{+} - \varepsilon^{-}\mathbf{E}^{-}\right).
+\end{equation*}
+
+During initialisation, \texttt{ComponentNeBem3d}
+\begin{itemize}
+\item
+retrieves the surface panels from the \texttt{Solid} objects 
+present in the geometry,
+\item
+searches for and eliminates overlaps between the panels,  
+\item
+and splits the resulting polygons into rectangular and triangular ``primitives''.
+\end{itemize}
+These ``primitives'' are then passed on to neBEM, where they are further 
+subdivided into ``elements''.
+The size of the elements can be controlled using the functions
+\begin{lstlisting}
+void SetTargetElementSize(const double length);
+void SetMinMaxNumberOfElements(const unsigned int nmin, const unsigned int nmax);
+\end{lstlisting}
+\begin{description}
+\item[length] target linear size of the elements, measured along their edges.
+\item[nmin,nmax] smallest and largest number of elements produced along either axis of a single primitive.
+\end{description}
+neBEM subsequently sets up the influence matrix and right-hand side vector based on the boundary conditions and material properties applied to the 
+solids, and inverts the matrix to calculate the charge densities of 
+each element.
 \section{Other components}
 
 For simple calculations, the class \texttt{ComponentConstant} can be used. 
