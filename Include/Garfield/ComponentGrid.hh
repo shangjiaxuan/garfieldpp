@@ -128,32 +128,18 @@ class ComponentGrid : public ComponentBase {
   
   ///new
   // Trapping
- void ComponentGrid::ElectricField(const double x, const double y,
-                                  const double z, double& elife, double& hlife,
-								  Medium*& m, int& status);
- bool ComponentGrid::GetField(
-    const double xi, const double yi, const double zi,
-    const std::vector<std::vector<std::vector<Node2> > >& field, double& elife,
-    double& hlife, bool& active);
-	
- void ComponentGrid::Initialise(
-    std::vector<std::vector<std::vector<Node2> > >& fields);
 
- bool ComponentGrid::LoadData(const std::string& filename, std::string format,
-    const bool withFlag, 
-    const double scaleX,
-    std::vector<std::vector<std::vector<Node2> > >& fields);
- bool ComponentGrid::LoadLifetime(const std::string& fname,
-                                      const std::string& fmt,
-                                      const bool withFlag, const double scaleX,);
+  bool ComponentGrid::LoadAttachment(const std::string& fname,
+      const std::string& fmt,
+      const double scaleX, int col, char particle);
 
- bool ComponentGrid::GetHoleLifetime(
-    const unsigned int i, const unsigned int j, const unsigned int k,
-    double& f) const;
-	
- bool ComponentGrid::GetElectronLifetime(
-    const unsigned int i, const unsigned int j, const unsigned int k,
-    double& f) const;
+  void ComponentGrid::GetElectronAttachment(const double x, const double y,
+      const double z, double& att,
+      Medium*& m, int& status)
+
+      void ComponentGrid::GetHoleAttachment(const double x, const double y,
+          const double z, double& att,
+          Medium*& m, int& status);
 	
 	
  private:
@@ -174,8 +160,8 @@ class ComponentGrid : public ComponentBase {
   /// Delayed weighting field values and potentials.
   std::vector<std::vector<std::vector<std::vector<Node> > > > m_wdfields;
   std::vector<double> m_wdtimes;
-  /// new Occupancy for the differnt Traps.
-  std::vector<std::vector<std::vector<double> > > m_lifetime;
+  /// new Attachment map.
+  std::vector<std::vector<std::vector<double> > > m_attachment;
   /// Active medium flag.
   std::vector<std::vector<std::vector<bool> > > m_active;
 
@@ -192,7 +178,8 @@ class ComponentGrid : public ComponentBase {
   bool m_hasWfield = false;
   ///new 
   
-  bool m_hasLifetime = false;
+  bool m_hasElectrons = false;
+  bool m_hasHoles = false;
   
 
   // Are all the cross-sections and concentrations valid and set.
@@ -231,6 +218,16 @@ class ComponentGrid : public ComponentBase {
                 bool& isMirrored) const;
   /// Set the dimensions of a table according to the mesh.
   void Initialise(std::vector<std::vector<std::vector<Node> > >& fields);
+  ///new 
+  bool ComponentGrid::LoadData(const std::string& filename, std::string format,
+      const double scaleX,
+      std::vector<std::vector<std::vector<double> > >& fields, int col);
+  void ComponentGrid::Initialise(
+      std::vector<std::vector<std::vector<double> > >& fields);
+  bool ComponentGrid::GetAttachment(
+      const double xi, const double yi, const double zi,
+      const std::vector<std::vector<std::vector<double> > >& field, double& att,
+      bool& active);
 };
 }
 #endif
