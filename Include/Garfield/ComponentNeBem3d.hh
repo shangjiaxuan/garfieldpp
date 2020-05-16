@@ -79,6 +79,11 @@ class ComponentNeBem3d : public ComponentBase {
   void SetMinMaxNumberOfElements(const unsigned int nmin,
                                  const unsigned int nmax);
 
+  /// Invert the influence matrix using lower-upper (LU) decomposition.
+  void UseLUInversion() { m_inversion = Inversion::LU; }
+  /// Invert the influence matrix using singular value decomposition.
+  void UseSVDInversion() { m_inversion = Inversion::SVD; }
+
   /// Set the parameters \f$n_x, n_y, n_z$\f defining the number of periodic 
   /// copies that neBEM will use when dealing with periodic configurations.
   /// neBEM will use \f$2 \times n + 1$\f copies (default: \f$n = 5$\f).
@@ -189,6 +194,9 @@ class ComponentNeBem3d : public ComponentBase {
   unsigned int m_nCopiesY = 5;
   /// Number of periodic copies along z.
   unsigned int m_nCopiesZ = 5;
+
+  enum class Inversion { LU = 0, SVD };
+  Inversion m_inversion = Inversion::LU;
 
   /// Electrode labels and corresponding neBEM weighting field indices.
   std::map<std::string, int> m_wfields;

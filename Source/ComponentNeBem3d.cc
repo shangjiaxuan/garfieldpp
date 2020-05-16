@@ -1185,9 +1185,11 @@ bool ComponentNeBem3d::Initialise() {
   neBEM::OptStoreInvMatrix = 0;
   neBEM::OptFormattedFile = 0;
   // Matrix inversion method (LU or SVD).
-  // TODO!
-  neBEM::OptInvMatProc = 0;
-
+  if (m_inversion == Inversion::LU) {
+    neBEM::OptInvMatProc = 0;
+  } else {
+    neBEM::OptInvMatProc = 1;
+  }
   if (neBEM::neBEMReadGeometry() != 0) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Transferring the geometry to neBEM failed.\n";
