@@ -101,13 +101,15 @@ void SolidExtrusion::SetProfile(const std::vector<double>& xp,
 }
 
 bool SolidExtrusion::SolidPanels(std::vector<Panel>& panels) {
-  const auto id = GetId();
-  const auto nPanels = panels.size();
-
   // -----------------------------------------------------------------------
   //   PLAEXP - Generates a table of polygons for an extrusion.
   // -----------------------------------------------------------------------
-
+  const auto id = GetId();
+  const auto nPanels = panels.size();
+  if (m_xp.empty()) {
+    std::cerr << "SolidExtrusion::SolidPanels: Profile is not defined.\n";
+    return false;
+  }
   // Direction vector.
   const double fnorm = sqrt(m_dX * m_dX + m_dY * m_dY + m_dZ * m_dZ);
   if (fnorm <= 0) {

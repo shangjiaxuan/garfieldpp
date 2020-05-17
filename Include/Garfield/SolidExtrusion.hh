@@ -31,7 +31,7 @@ class SolidExtrusion : public Solid {
                   std::vector<double>& yp) const override {
     xp = m_xp;
     yp = m_yp;
-    return true;
+    return !m_xp.empty();
   }
   /// Set the half-length of the extrusion.
   void SetHalfLengthZ(const double lz);
