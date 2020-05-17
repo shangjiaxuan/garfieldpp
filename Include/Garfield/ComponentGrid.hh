@@ -133,13 +133,11 @@ class ComponentGrid : public ComponentBase {
       const std::string& fmt,
       const double scaleX, int col, char particle);
 
-  void ComponentGrid::GetElectronAttachment(const double x, const double y,
-      const double z, double& att,
-      Medium*& m, int& status)
+  bool ComponentGrid::ElectronAttachment(const double x, const double y,
+      const double z, double& att)
 
-      void ComponentGrid::GetHoleAttachment(const double x, const double y,
-          const double z, double& att,
-          Medium*& m, int& status);
+      bool ComponentGrid::HoleAttachment(const double x, const double y,
+          const double z, double& att);
 	
 	
  private:
@@ -161,7 +159,8 @@ class ComponentGrid : public ComponentBase {
   std::vector<std::vector<std::vector<std::vector<Node> > > > m_wdfields;
   std::vector<double> m_wdtimes;
   /// new Attachment map.
-  std::vector<std::vector<std::vector<double> > > m_attachment;
+  std::vector<std::vector<std::vector<double> > > m_eattachment;
+  std::vector<std::vector<std::vector<double> > > m_hattachment;
   /// Active medium flag.
   std::vector<std::vector<std::vector<bool> > > m_active;
 
@@ -176,10 +175,6 @@ class ComponentGrid : public ComponentBase {
   bool m_hasEfield = false;
   bool m_hasBfield = false;
   bool m_hasWfield = false;
-  ///new 
-  
-  bool m_hasElectrons = false;
-  bool m_hasHoles = false;
   
 
   // Are all the cross-sections and concentrations valid and set.
@@ -200,10 +195,9 @@ class ComponentGrid : public ComponentBase {
   ///new
   /// Read data from file.
   bool LoadData(const std::string& filename, std::string format,
-                const bool withPotential, const bool withFlag, const bool with Occupancy
+                const bool withPotential, const bool withFlag
                 const double scaleX, const double scaleF, const double scaleP,
-                std::vector<std::vector<std::vector<Node> > >& field,
-				std::vector<std::vector<std::vector<Node2> > >& Occ);
+                std::vector<std::vector<std::vector<Node> > >& field);
 
   void Reset() override;
   void UpdatePeriodicity() override;

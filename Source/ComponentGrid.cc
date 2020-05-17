@@ -1189,7 +1189,8 @@ void ComponentGrid::Reset() {
   m_efields.clear();
   m_bfields.clear();
   m_wfields.clear();
-  m_attachment.clear();
+  m_eattachment.clear();
+  m_hattachment.clear();
   
   m_wdfields.clear();
   m_wdtimes.clear();
@@ -1207,8 +1208,6 @@ void ComponentGrid::Reset() {
   m_hasEfield = false;
   m_hasBfield = false;
   m_hasWfield = false;
-  m_hasElektron = false;
-  m_hasHole = false;
   m_ready = false;
   
   m_wField_xOffset = 0.;
@@ -1302,10 +1301,16 @@ bool ComponentGrid::LoadAttachment(const std::string& fname,
     return false;
   }
   if (particle == 'e') {
-      m_hasElectron = true;
+      if (!LoadData(fname, fmt,
+          scaleX, m_eattachment, col)) {
+          return false;
+      }
   }
   if (particle == 'h') {
-      m_hasHole = true;
+      if (!LoadData(fname, fmt,
+          scaleX, m_hattachment, col)) {
+          return false;
+      }
   }
   
   m_ready = true;
@@ -1364,7 +1369,7 @@ bool ComponentGrid::LoadData(const std::string& filename, std::string format,
         unsigned int i = 0;
         unsigned int j = 0;
         unsigned int k = 0;
-        double life = 0.;
+        double att = 0;
         std::istringstream data;
         data.str(line);
         if (fmt == 1) {
@@ -1467,7 +1472,7 @@ bool ComponentGrid::LoadData(const std::string& filename, std::string format,
         for (int i = 0, i < col - 1, i++) {
             data.ignore(256, ' ');
         }
-        data >> att
+        data >> att;
         
         if (data.fail()) {
            PrintError(m_className + "::LoadData", nLines, "field components");
@@ -1503,15 +1508,9 @@ bool ComponentGrid::LoadData(const std::string& filename, std::string format,
 
 ///new
 void ComponentGrid::Initialise(
-    std::vector<std::vector<std::vector<double> > >& fields) {
+    std::vector<std::vector<std::vector<double> > >& field) {
 
-  fields.resize(m_nX);
-  for (unsigned int i = 0; i < m_nX; ++i) {
-    fields[i].resize(m_nY);
-    for (unsigned int j = 0; j < m_nY; ++j) {
-      fields[i][j].resize(m_nZ);
-      for (unsigned int k = 0; k < m_nZ; ++k) {
-        fields[i][j][k] = 0.;
+    field.assign(m_nX, std::vector<std::vector<double> >(m_nY, std::vector<double>(m_nZ, 0)));
         
       }
     }
@@ -1520,8 +1519,7 @@ void ComponentGrid::Initialise(
 ///new
 bool ComponentGrid::GetAttachment(
     const double xi, const double yi, const double zi,
-    const std::vector<std::vector<std::vector<double> > >& field, double& att,
-     bool& active) {
+    const std::vector<std::vector<std::vector<double> > >& field, double& att) {
   if (!m_hasMesh) {
     std::cerr << m_className << "::GetField: Mesh is not set.\n";
     return false;
@@ -1558,20 +1556,20 @@ bool ComponentGrid::GetAttachment(
   const double vx = 1. - ux;
   const double vy = 1. - uy;
   const double vz = 1. - uz;
-  if (!m_active.empty()) {
-    active = m_active[i0][j0][k0] && m_active[i0][j0][k1] && 
-             m_active[i0][j1][k0] && m_active[i0][j1][k1] &&
-             m_active[i1][j0][k0] && m_active[i1][j0][k1] &&
-             m_active[i1][j1][k0] && m_active[i1][j1][k1]; 
-  }
-  const double& n000 = field[i0][j0][k0];
-  const double& n100 = field[i1][j0][k0];
-  const double& n010 = field[i0][j1][k0];
-  const double& n110 = field[i1][j1][k0];
-  const double& n001 = field[i0][j0][k1];
-  const double& n101 = field[i1][j0][k1];
-  const double& n011 = field[i0][j1][k1];
-  const double& n111 = field[i1][j1][k1];
+#if (!m_active.empty()) {
+  #   active = m_active[i0][j0][k0] && m_active[i0][j0][k1] && 
+      #          m_active[i0][j1][k0] && m_active[i0][j1][k1] &&
+      #      m_active[i1][j0][k0] && m_active[i1][j0][k1] &&
+      #      m_active[i1][j1][k0] && m_active[i1][j1][k1]; 
+#}
+  const double n000 = field[i0][j0][k0];
+  const double n100 = field[i1][j0][k0];
+  const double n010 = field[i0][j1][k0];
+  const double n110 = field[i1][j1][k0];
+  const double n001 = field[i0][j0][k1];
+  const double n101 = field[i1][j0][k1];
+  const double n011 = field[i0][j1][k1];
+  const double n111 = field[i1][j1][k1];
 
   if (m_debug) {
     std::cout << m_className << "::GetField: Determining field at ("
@@ -1583,7 +1581,7 @@ bool ComponentGrid::GetAttachment(
               << "    Z: " << k0 << " (" << uz << ") - " 
                            << k1 << " (" << vz << ").\n";
   }
-  att = ((n000. * vx + n100 * ux) * vy +
+  att = ((n000 * vx + n100 * ux) * vy +
         (n010 * vx + n110 * ux) * uy) *
            vz +
        ((n001 * vx + n101 * ux) * vy +
@@ -1593,64 +1591,49 @@ bool ComponentGrid::GetAttachment(
   return true;
 }
 ///new
-void ComponentGrid::GetElectronAttachment(const double x, const double y,
-                                  const double z, double& att, 
-								  Medium*& m, int& status) {
+bool ComponentGrid::ElectronAttachment(const double x, const double y,
+                                  const double z, double& att) {
   m = nullptr;
-  status = 0;
+ 
 
   // Make sure the field map has been loaded.
   if (!m_ready) {
     PrintNotReady(m_className + "::Attachment");
-    status = -10;
-    return;
+    return false;
   }
-  if (!m_hasElectron) {
-      status = -5;
-      return;
+  if (m_eattachment.empty()) {
+      
+      return false;
   }
-  status = 0;
+  
   bool active = true;
-  if (!GetAttachment(x, y, z, m_attachment, life, active)) {
-    status = -11;
-    return;
+  if (!GetAttachment(x, y, z, m_eattachment, life)) {
+    return true;
   }
-  if (!active) {
-    status = -5;
-    return;
-  }
-  m = m_medium;
-  if (!m) status = -5;
+  
+
 }
 ///new
-void ComponentGrid::GetHoleAttachment(const double x, const double y,
-    const double z, double& att,
-    Medium*& m, int& status) {
-    m = nullptr;
-    status = 0;
+bool ComponentGrid::HoleAttachment(const double x, const double y,
+    const double z, double& att) {
+    
 
     // Make sure the field map has been loaded.
     if (!m_ready) {
         PrintNotReady(m_className + "::Attachment");
-        status = -10;
-        return;
+        
+        return false;
     }
-    if (!m_hasHole) {
-        status = -5;
-        return;
+    if (m_hattachment.empty()) {
+        return false;
     }
-    status = 0;
-    bool active = true;
-    if (!GetAttachment(x, y, z, m_attachment, life, active)) {
-        status = -11;
-        return;
+    
+    
+    if (!GetAttachment(x, y, z, m_hattachment, att)) 
+        return false;
     }
-    if (!active) {
-        status = -5;
-        return;
-    }
-    m = m_medium;
-    if (!m) status = -5;
+   
+    return true
 }
 }
 
