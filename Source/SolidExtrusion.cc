@@ -7,21 +7,24 @@
 
 namespace Garfield {
 
-SolidExtrusion::SolidExtrusion(const double cx, const double cy, 
-                               const double cz, const double lz,
+SolidExtrusion::SolidExtrusion(const double lz,
                                const std::vector<double>& xp,
                                const std::vector<double>& yp)
-    : Solid(cx, cy, cz, "SolidExtrusion"), m_lZ(lz) {
+    : Solid(0, 0, 0, "SolidExtrusion"), m_lZ(lz) {
   SetProfile(xp, yp);
 }
 
-SolidExtrusion::SolidExtrusion(const double cx, const double cy, 
-                               const double cz, const double lz,
+SolidExtrusion::SolidExtrusion(const double lz,
                                const std::vector<double>& xp,
                                const std::vector<double>& yp,
+                               const double cx, const double cy,  
+                               const double cz,
                                const double dx, const double dy, 
                                const double dz)
-    : SolidExtrusion(cx, cy, cz, lz, xp, yp) {
+    : SolidExtrusion(lz, xp, yp) {
+  m_cX = cx;
+  m_cY = cy;
+  m_cZ = cz;
   SetDirection(dx, dy, dz);
 }
 

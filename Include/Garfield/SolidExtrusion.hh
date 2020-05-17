@@ -9,14 +9,13 @@ namespace Garfield {
 
 class SolidExtrusion : public Solid {
  public:
-  /// Constructor from centre, half-length and profile.
-  SolidExtrusion(const double cx, const double cy, const double cz, 
-                 const double lz,
+  /// Constructor from half-length and profile.
+  SolidExtrusion(const double lz,
                  const std::vector<double>& xp, const std::vector<double>& yp);
-  /// Constructor from centre, half-length, profile and orientation.
-  SolidExtrusion(const double cx, const double cy, const double cz, 
-                 const double lz,
+  /// Constructor from half-length, profile, offset and orientation.
+  SolidExtrusion(const double lz,
                  const std::vector<double>& xp, const std::vector<double>& yp,
+                 const double cx, const double cy, const double cz, 
                  const double dx, const double dy, const double dz);
   /// Destructor
   ~SolidExtrusion() {}
