@@ -136,6 +136,9 @@ bool SolidExtrusion::SolidPanels(std::vector<Panel>& panels) {
       panel.yv.push_back(y);
       panel.zv.push_back(z);
     }
+    panel.colour = 0;
+    panel.volume = id;
+    panels.push_back(std::move(panel));
   }
   // Create the bottom lid.
   if (m_botlid) {
@@ -158,9 +161,9 @@ bool SolidExtrusion::SolidPanels(std::vector<Panel>& panels) {
   // Create the side panels.
   if (m_lZ > 0) {
     double x0, y0, z0;
-    ToGlobal(m_xp.back(), m_yp.back(), +m_lZ, x0, y0, z0);
+    ToGlobal(m_xp.back(), m_yp.back(), -m_lZ, x0, y0, z0);
     double x1, y1, z1;
-    ToGlobal(m_xp.back(), m_yp.back(), -m_lZ, x1, y1, z1);
+    ToGlobal(m_xp.back(), m_yp.back(), +m_lZ, x1, y1, z1);
     // Go around the extrusion.
     for (unsigned int i = 0; i < np; ++i) {
       // Bottom and top of the line along the axis of the extrusion.
@@ -168,7 +171,7 @@ bool SolidExtrusion::SolidPanels(std::vector<Panel>& panels) {
       ToGlobal(m_xp[i], m_yp[i], +m_lZ, x2, y2, z2);
       double x3, y3, z3;
       ToGlobal(m_xp[i], m_yp[i], -m_lZ, x3, y3, z3);
-      // Compute the colour index for this segment.
+      // Compute the normal vector.
       const unsigned int k = i == 0 ? np - 1 : i - 1;
       double xn = m_yp[k] - m_yp[i];
       double yn = m_xp[i] - m_xp[k];
