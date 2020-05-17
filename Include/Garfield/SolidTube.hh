@@ -56,9 +56,9 @@ class SolidTube : public Solid {
   /// that approximates the cylinder.
   void SetAverageRadius(const bool average) { m_average = average; }
   /// Request the cylinder to be closed with a (polygonal) lid at +z.
-  void SetToplid(const bool toplid) { m_toplid = toplid; }
+  void SetTopLid(const bool closed) { m_toplid = closed; }
   /// Request the cylinder to be closed with a (polygonal) lid at -z.
-  void SetBottomlid(const bool bottomlid) { m_bottomlid = bottomlid; }
+  void SetBottomLid(const bool closed) { m_botlid = closed; }
 
   /// Return the number of sectors.
   unsigned int GetSectors() const { return m_n; }
@@ -85,7 +85,7 @@ class SolidTube : public Solid {
   /// Have a top lid?
   bool m_toplid = true;
   /// Have a bottom lid?
-  bool m_bottomlid = true;
+  bool m_botlid = true;
 
   /// Discretisation levels.
   std::array<double, 3> m_dis{{-1.,-1.,-1.}};
