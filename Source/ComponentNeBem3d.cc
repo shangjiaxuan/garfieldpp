@@ -3115,6 +3115,8 @@ bool ComponentNeBem3d::GetVolume(const unsigned int vol, int& shape,
       shape = 4;
     } else if (solid->IsRidge()) {
       shape = 5;
+    } else if (solid->IsExtrusion()) {
+      shape = 6;
     } else {
       std::cerr << m_className << "::GetVolume: Unknown solid shape.\n";
       return false;
