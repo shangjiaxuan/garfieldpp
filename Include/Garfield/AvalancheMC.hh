@@ -69,7 +69,7 @@ class AvalancheMC {
   void DisableAttachment() { m_useAttachment = false; }
 
   /// Switch on calculating trapping with grid traps.
-  void EnableTcadTraps(const bool on = true) { m_useGridTrapping = on; }
+  void EnableGridTraps(const bool on = true) { m_useGridTrapping = on; }
 
 
   /// Switch on calculating trapping with TCAD traps.

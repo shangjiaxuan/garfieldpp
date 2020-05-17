@@ -220,8 +220,7 @@ class ComponentGrid : public ComponentBase {
       std::vector<std::vector<std::vector<double> > >& fields);
   bool ComponentGrid::GetAttachment(
       const double xi, const double yi, const double zi,
-      const std::vector<std::vector<std::vector<double> > >& field, double& att,
-      bool& active);
+      const std::vector<std::vector<std::vector<double> > >& field, double& att);
 };
 }
 #endif

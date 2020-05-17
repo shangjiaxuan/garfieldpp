@@ -43,22 +43,22 @@ int main(int argc, char* argv[]) {
     efield.LoadElectricField("Efield.txt", "XY", false, false);
     efield.EnablePeriodicityX();
     efield.SetMedium(&si);
+    
+    efield.LoadAttachmnet(" Attachment.txt", "XY", 1, 1, 'e');
+    efield.LoadAttachmnet(" Attachment.txt ", "XY", 1, 2, 'h');
+    efield.ActivateTraps()
+    efield.EnableGridTraps()
 
     ComponentGrid wfield;
-    efield.LoadWeightingField("Efield.txt", "XY", false, false);
-    efield.EnablePeriodicityX();
-    efield.SetMedium(&si);
+    wfield.LoadWeightingField("Wfield.txt", "XY", false, false);
+    wfield.EnablePeriodicityX();
     
-    ComponentGrid attachment;
-    efield.LoadAttachmnet("Efield.txt", "XY", false, false);
-    efield.EnablePeriodicityX();
-    efield.SetMedium(&si);
 
     Sensor sensor;
     sensor.AddComponent(&efield);
     const std::string label = "pixel";
     sensor.AddElectrode(&wfield, label);
-    sensor.AddComponent(&attachmentfield);
+
 
     // Set the time bins.
     const unsigned int nTimeBins = 1000;
