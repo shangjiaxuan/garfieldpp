@@ -98,17 +98,19 @@ void GeometrySimple::PrintSolids() {
   for (unsigned int i = 0; i < nSolids; ++i) {
     std::cout << "        " << i << "         ";
     if (m_solids[i].first->IsBox()) {
-      std::cout << "box      ";
+      std::cout << "box       ";
     } else if (m_solids[i].first->IsTube()) {
-      std::cout << "tube     ";
+      std::cout << "tube      ";
     } else if (m_solids[i].first->IsSphere()) {
-      std::cout << "sphere   ";
+      std::cout << "sphere    ";
     } else if (m_solids[i].first->IsHole()) {
-      std::cout << "hole     ";
+      std::cout << "hole      ";
     } else if (m_solids[i].first->IsRidge()) {
-      std::cout << "ridge    ";
+      std::cout << "ridge     ";
+    } else if (m_solids[i].first->IsExtrusion()) {
+      std::cout << "extrusion ";
     } else if (m_solids[i].first->IsWire()) {
-      std::cout << "wire     ";
+      std::cout << "wire      ";
     } else {
       std::cout << "unknown  ";
     }

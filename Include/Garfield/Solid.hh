@@ -56,6 +56,8 @@ class Solid {
   virtual bool IsHole() const { return false; }
   /// Return true if the solid is a ridge.
   virtual bool IsRidge() const { return false; }
+  /// Return true if the solid is an extrusion.
+  virtual bool IsExtrusion() const { return false; }
   /// Return true if the solid is a wire.
   virtual bool IsWire() const { return false; }
  
@@ -125,6 +127,11 @@ class Solid {
   /// Return the height of a ridge.
   virtual double GetRidgeHeight() const {
     return NotImplemented("GetRidgeHeight");
+  }
+  /// Get the vertices defining an extrusion.
+  virtual bool GetProfile(std::vector<double>& /*xv*/, 
+                          std::vector<double>& /*yv*/) const {
+    return NotImplemented("GetProfile");
   }
 
   /// Get the ID of the solid.
