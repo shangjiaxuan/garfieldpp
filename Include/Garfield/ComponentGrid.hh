@@ -129,15 +129,15 @@ class ComponentGrid : public ComponentBase {
   ///new
   // Trapping
 
-  bool ComponentGrid::LoadAttachment(const std::string& fname,
+  bool LoadAttachment(const std::string& fname,
       const std::string& fmt,
       const double scaleX, int col, char particle);
 
-  bool ComponentGrid::ElectronAttachment(const double x, const double y,
-      const double z, double& att)
+  bool ElectronAttachment(const double x, const double y,
+      const double z, double& att) override;
 
-      bool ComponentGrid::HoleAttachment(const double x, const double y,
-          const double z, double& att);
+      bool HoleAttachment(const double x, const double y,
+          const double z, double& att) override;
 	
 	
  private:
@@ -195,9 +195,9 @@ class ComponentGrid : public ComponentBase {
   ///new
   /// Read data from file.
   bool LoadData(const std::string& filename, std::string format,
-                const bool withPotential, const bool withFlag
-                const double scaleX, const double scaleF, const double scaleP,
-                std::vector<std::vector<std::vector<Node> > >& field);
+                const bool withPotential, const bool withFlag,
+                const double scaleX, const double scaleF, const double scaleP, 
+				std::vector<std::vector<std::vector<Node> > >& field);
 
   void Reset() override;
   void UpdatePeriodicity() override;
@@ -213,12 +213,12 @@ class ComponentGrid : public ComponentBase {
   /// Set the dimensions of a table according to the mesh.
   void Initialise(std::vector<std::vector<std::vector<Node> > >& fields);
   ///new 
-  bool ComponentGrid::LoadData(const std::string& filename, std::string format,
+  bool LoadData(const std::string& filename, std::string format,
       const double scaleX,
       std::vector<std::vector<std::vector<double> > >& fields, int col);
-  void ComponentGrid::Initialise(
+  void Initialise(
       std::vector<std::vector<std::vector<double> > >& fields);
-  bool ComponentGrid::GetAttachment(
+  bool GetAttachment(
       const double xi, const double yi, const double zi,
       const std::vector<std::vector<std::vector<double> > >& field, double& att);
 };

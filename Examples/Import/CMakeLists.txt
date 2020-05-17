@@ -6,7 +6,7 @@ project(Import)
 find_package(Garfield REQUIRED)
 
 #---Build executable------------------------------------------------------------
-add_executable(Test Simulatipn.cpp)
+add_executable(Test Simulation.cpp)
 target_link_libraries(Test Garfield)
 
 #---Copy all files locally to the build directory-------------------------------

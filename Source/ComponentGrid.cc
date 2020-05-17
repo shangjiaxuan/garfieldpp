@@ -8,6 +8,7 @@
 #include <set>
 #include <bitset>
 
+
 #include "Garfield/ComponentGrid.hh"
 #include "Garfield/Utilities.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -1291,15 +1292,10 @@ bool ComponentGrid::LoadAttachment(const std::string& fname,
   m_ready = false;
   m_active.assign(m_nX, std::vector<std::vector<bool> >(m_nY, std::vector<bool>(m_nZ, true)));
   if (!((particle=='e')||(particle=='h'))) {
-      PrintError(m_className + "::LoadAttachment: no valid carrier selected ['e' or 'h']")
       return false;
   }
   
   // Read the file
-  if (!LoadData(fname, fmt, 
-                scaleX, m_lifetime, col)) {
-    return false;
-  }
   if (particle == 'e') {
       if (!LoadData(fname, fmt,
           scaleX, m_eattachment, col)) {
@@ -1469,7 +1465,7 @@ bool ComponentGrid::LoadData(const std::string& filename, std::string format,
         }
 
         // Get the field values.
-        for (int i = 0, i < col - 1, i++) {
+        for (int i = 0; i < col - 1; i++) {
             data.ignore(256, ' ');
         }
         data >> att;
@@ -1511,10 +1507,7 @@ void ComponentGrid::Initialise(
     std::vector<std::vector<std::vector<double> > >& field) {
 
     field.assign(m_nX, std::vector<std::vector<double> >(m_nY, std::vector<double>(m_nZ, 0)));
-        
-      }
-    }
-  }
+  
 }
 ///new
 bool ComponentGrid::GetAttachment(
@@ -1556,12 +1549,12 @@ bool ComponentGrid::GetAttachment(
   const double vx = 1. - ux;
   const double vy = 1. - uy;
   const double vz = 1. - uz;
-#if (!m_active.empty()) {
+/*if (!m_active.empty()) {
   #   active = m_active[i0][j0][k0] && m_active[i0][j0][k1] && 
       #          m_active[i0][j1][k0] && m_active[i0][j1][k1] &&
       #      m_active[i1][j0][k0] && m_active[i1][j0][k1] &&
       #      m_active[i1][j1][k0] && m_active[i1][j1][k1]; 
-#}
+}*/
   const double n000 = field[i0][j0][k0];
   const double n100 = field[i1][j0][k0];
   const double n010 = field[i0][j1][k0];
@@ -1593,9 +1586,6 @@ bool ComponentGrid::GetAttachment(
 ///new
 bool ComponentGrid::ElectronAttachment(const double x, const double y,
                                   const double z, double& att) {
-  m = nullptr;
- 
-
   // Make sure the field map has been loaded.
   if (!m_ready) {
     PrintNotReady(m_className + "::Attachment");
@@ -1607,7 +1597,7 @@ bool ComponentGrid::ElectronAttachment(const double x, const double y,
   }
   
   bool active = true;
-  if (!GetAttachment(x, y, z, m_eattachment, life)) {
+  if (!GetAttachment(x, y, z, m_eattachment, att)) {
     return true;
   }
   
@@ -1629,11 +1619,11 @@ bool ComponentGrid::HoleAttachment(const double x, const double y,
     }
     
     
-    if (!GetAttachment(x, y, z, m_hattachment, att)) 
+    if (!GetAttachment(x, y, z, m_hattachment, att)) {
         return false;
     }
    
-    return true
+    return true;
 }
 }
 

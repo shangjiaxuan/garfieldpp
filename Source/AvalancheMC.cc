@@ -9,7 +9,7 @@
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Random.hh"
 ///new
-#include "Garfield/ComponentGrid"
+#include "Garfield/ComponentGrid.hh"
 namespace {
 
 std::string PrintVec(const std::array<double, 3>& x) {
@@ -1035,8 +1035,8 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
       if (!GetVelocity(particle, medium, x, e, b, v)) continue;
       // Get Townsend and attachment coefficients.
       double alpha = 0.;
-	  //new
-	  const double eta = 0;
+	
+	  
       if (particle == Particle::Electron) {
         medium->ElectronTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
 		
@@ -1045,7 +1045,7 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
 		
       }
 	  
-      const double eta = GetAttachment( medium, x, e, b);
+      const double eta = GetAttachment(particle, medium, x, e, b);
       for (unsigned int k = 0; k < 3; ++k) vd[k] += wg[j] * v[k];
       alps[i] += wg[j] * alpha;
       etas[i] += wg[j] * eta;
