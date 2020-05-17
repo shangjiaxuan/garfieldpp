@@ -17,19 +17,12 @@
 
 #include "Vector.h"
 
-#define MyPI 3.14159265358979323846
-
 #define EPS0 8.854187817e-12       // in C2/Nm2 (SI) equivalent to pF/m
 #define MyFACTOR 111.26500547e-12  // 4 pi eps_0 is ofn reqrd for normalization
 // #define EPS0 1.0						// relevant for other physics
 // problems
 // #define MyFACTOR 1.0				// relevant for other physics
 // problems
-
-// Note that M_E is defined in math.h as the value of e (2.7182818284590452354)
-#define MASS_E 9.10938188e-31  // mass of electron in SI units (kg)
-#define M_P 1.67262e-27        // mass of proton in SI units (kg) (1836 times)
-#define M_N 1.67493e-27        // mass of neutron in SI units (kg)
 
 #define Q_E -1.60217646e-19  // charge of electron in SI units (Coulomb)
 #define Q_I 1.60217646e-19   // charge of ion in SI units (Coulomb)

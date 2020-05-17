@@ -12,6 +12,8 @@
 #include "Vector.h"
 #include "neBEM.h"
 
+#define MyPI 3.14159265358979323846
+
 #ifdef __cplusplus
 namespace neBEM {
 #endif
