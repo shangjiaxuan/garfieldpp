@@ -4,6 +4,7 @@
 #include <TGeoBBox.h>
 #include <TGeoCone.h>
 #include <TGeoArb8.h>
+#include <TGeoXtru.h>
 #include <TGeoBoolNode.h>
 #include <TGeoCompositeShape.h>
 
@@ -141,6 +142,16 @@ void ViewGeometry::Plot() {
       arb->SetVertex(6, xr, +dy);
       arb->SetVertex(7, xr, -dy);
       z0 += dz;
+    } else if (solid->IsExtrusion()) {
+      const double dz = solid->GetHalfLengthZ();
+      std::vector<double> xp;
+      std::vector<double> yp;
+      if (!solid->GetProfile(xp, yp)) continue;
+      volume = m_geoManager->MakeXtru("Extrusion", medDefault, 2);
+      auto xtru = (TGeoXtru*)volume->GetShape();
+      xtru->DefinePolygon(xp.size(), xp.data(), yp.data());
+      xtru->DefineSection(0, -dz);
+      xtru->DefineSection(1, +dz);
     } else {
       std::cerr << m_className << "::Plot: Unknown type of solid.\n";
       continue;

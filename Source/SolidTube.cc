@@ -115,16 +115,6 @@ void SolidTube::SetSectors(const unsigned int n) {
 }
 
 bool SolidTube::SolidPanels(std::vector<Panel>& panels) {
-  // AROT Rotation angle: m_rot
-  // N    Number of sectors: m_n
-  // R    Radius of cylinder: m_r
-  // ZL   half-length m_lZ
-  // X0   centre m_cX
-  // Y0   centre m_cY
-  // Z0   centre m_cZ
-  // A    direction vector m_dX
-  // B    direction vector m_dY
-  // C    direction vector m_dZ
 
   const auto id = GetId();
   const unsigned int nPanels = panels.size();
@@ -151,9 +141,9 @@ bool SolidTube::SolidPanels(std::vector<Panel>& panels) {
     std::vector<double> zv;
     for (unsigned int i = 1; i <= nPoints; i++) {
       const double alpha = m_rot + HalfPi * (i - 1.) / (m_n - 1.);
+      // Rotate into place.
       double x, y, z;
       ToGlobal(r * cos(alpha), r * sin(alpha), m_lZ, x, y, z);
-      // Rotate into place.
       xv.push_back(x);
       yv.push_back(y);
       zv.push_back(z);
@@ -170,15 +160,15 @@ bool SolidTube::SolidPanels(std::vector<Panel>& panels) {
     panels.push_back(std::move(newpanel));
   }
   // Create the bottom lid.
-  if (m_bottomlid) {
+  if (m_botlid) {
     std::vector<double> xv;
     std::vector<double> yv;
     std::vector<double> zv;
     for (unsigned int i = 1; i <= nPoints; i++) {
       const double alpha = m_rot + HalfPi * (i - 1.) / (m_n - 1.);
+      // Rotate into place.
       double x, y, z;
       ToGlobal(r * cos(alpha), r * sin(alpha), -m_lZ, x, y, z);
-      // Rotate into place.
       xv.push_back(x);
       yv.push_back(y);
       zv.push_back(z);
