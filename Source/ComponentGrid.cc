@@ -1290,7 +1290,9 @@ bool ComponentGrid::LoadAttachment(const std::string& fname,
                                       const std::string& fmt,
                                       const double scaleX, int col, char particle) {
   m_ready = false;
-  m_active.assign(m_nX, std::vector<std::vector<bool> >(m_nY, std::vector<bool>(m_nZ, true)));
+  if (m_active.empty()){
+	m_active.assign(m_nX, std::vector<std::vector<bool> >(m_nY, std::vector<bool>(m_nZ, true)));
+  }
   if (!((particle=='e')||(particle=='h'))) {
       return false;
   }
