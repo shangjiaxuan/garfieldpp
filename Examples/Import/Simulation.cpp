@@ -118,6 +118,7 @@ int main(int argc, char* argv[]) {
       const double fh = sensor.GetIonSignal(label, i);
       outfile << t << "  " << f << "  " << fe << "  " << fh << "\n";
 }
+ outfile.close();
     if (plotSignal) {
     app.Run(kTRUE);
   }

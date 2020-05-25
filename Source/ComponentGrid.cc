@@ -1598,12 +1598,10 @@ bool ComponentGrid::ElectronAttachment(const double x, const double y,
       return false;
   }
   
-  bool active = true;
   if (!GetAttachment(x, y, z, m_eattachment, att)) {
-    return true;
+    return false;
   }
-  
-
+  return true;
 }
 ///new
 bool ComponentGrid::HoleAttachment(const double x, const double y,

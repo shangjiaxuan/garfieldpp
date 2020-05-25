@@ -126,18 +126,17 @@ class ComponentGrid : public ComponentBase {
   Medium* GetMedium() const { return m_medium; }
   
   
-  ///new
-  // Trapping
 
+  ///Load Attachment data. "col" determines which data colum should be used
   bool LoadAttachment(const std::string& fname,
-      const std::string& fmt,
-      const double scaleX, int col, char particle);
-
+					  const std::string& fmt,
+					  const double scaleX, int col, char particle);
+  ///Get electron attachment
   bool ElectronAttachment(const double x, const double y,
-      const double z, double& att) override;
-
-      bool HoleAttachment(const double x, const double y,
-          const double z, double& att) override;
+					      const double z, double& att) override;
+  ///Get hole attachment
+  bool HoleAttachment(const double x, const double y,
+					  const double z, double& att) override;
 	
 	
  private:
@@ -147,7 +146,6 @@ class ComponentGrid : public ComponentBase {
     double v;           				//< Potential
 	
   };
- ///new
 
   /// Electric field values and potentials.
   std::vector<std::vector<std::vector<Node> > > m_efields;
@@ -158,7 +156,7 @@ class ComponentGrid : public ComponentBase {
   /// Delayed weighting field values and potentials.
   std::vector<std::vector<std::vector<std::vector<Node> > > > m_wdfields;
   std::vector<double> m_wdtimes;
-  /// new Attachment map.
+  /// Attachment maps for electons and holes.
   std::vector<std::vector<std::vector<double> > > m_eattachment;
   std::vector<std::vector<std::vector<double> > > m_hattachment;
   /// Active medium flag.
@@ -176,11 +174,6 @@ class ComponentGrid : public ComponentBase {
   bool m_hasBfield = false;
   bool m_hasWfield = false;
   
-
-  // Are all the cross-sections and concentrations valid and set.
-  bool m_validTraps = false;
-
-
   // Offset for weighting field
   double m_wField_xOffset = 0.;
   double m_wField_yOffset = 0.;
@@ -192,7 +185,7 @@ class ComponentGrid : public ComponentBase {
   /// Read/determine mesh parameters from file.
   bool LoadMesh(const std::string& filename, std::string format,
                 const double scaleX);
-  ///new
+
   /// Read data from file.
   bool LoadData(const std::string& filename, std::string format,
                 const bool withPotential, const bool withFlag,
@@ -212,12 +205,14 @@ class ComponentGrid : public ComponentBase {
                 bool& isMirrored) const;
   /// Set the dimensions of a table according to the mesh.
   void Initialise(std::vector<std::vector<std::vector<Node> > >& fields);
-  ///new 
+  ///Load Attachment data. "col" determines which data colum should be used
   bool LoadData(const std::string& filename, std::string format,
       const double scaleX,
       std::vector<std::vector<std::vector<double> > >& fields, int col);
+  ///Initialises Attachment data
   void Initialise(
       std::vector<std::vector<std::vector<double> > >& fields);
+  ///Get Attachment data
   bool GetAttachment(
       const double xi, const double yi, const double zi,
       const std::vector<std::vector<std::vector<double> > >& field, double& att);
