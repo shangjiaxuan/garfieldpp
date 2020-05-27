@@ -1,0 +1,24 @@
+# Copyright (C) 1994-2019 Synopsys Inc.
+# swbtree vcurrent
+
+# --- simulation flow
+sdevice sdevice "" {}
+sdevice Temperature "2D_P1" {242.05}
+sdevice fluence "0" {4e15}
+sdevice voltage "100" {-1000}
+Wfield svisual "" {}
+Attachment svisual "" {}
+Efield svisual "" {}
+# --- variables
+# --- scenarios and parameter specs
+scenario default Temperature ""
+scenario default fluence ""
+scenario default voltage ""
+# --- simulation tree
+0 1 0 {} {default} 0
+1 2 1 {242.05} {default} 0
+2 3 2 {4e15} {default} 0
+3 4 3 {-1000} {default} 0
+4 7 4 {} {default} 0
+5 8 7 {} {default} 0
+6 9 8 {} {default} 0

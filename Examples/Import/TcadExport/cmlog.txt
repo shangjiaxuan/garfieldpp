@@ -1,0 +1,8 @@
+DATE: 05/26/20 - 05/26/20 cmlog.txt
+
+This localhost (server) information:
+	Name:    lblhcbpr6
+	Address: 10.16.133.203
+Warning: detection hostname info retrieved a less specific hostname part: initial argument[lblhcbpr6.cern.ch] hostname part[lblhcbpr6].
+Warning: detection hostname info retrieved a less specific hostname part: initial argument[lblhcbpr6.cern.ch] hostname part[lblhcbpr6].
+Warning: detection hostname info retrieved a less specific hostname part: initial argument[lblhcbpr6.cern.ch] hostname part[lblhcbpr6].
