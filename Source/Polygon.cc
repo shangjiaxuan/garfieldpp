@@ -231,6 +231,76 @@ double Area(const std::vector<double>& xp, const std::vector<double>& yp) {
   return 0.5 * f; 
 }
 
+bool NonTrivial(const std::vector<double>& xp, 
+                const std::vector<double>& yp) {
+
+  // -----------------------------------------------------------------------
+  // PLACHK - Checks whether a set of points builds a non-trivial 
+  //           polygon in the (x,y) plane.
+  // -----------------------------------------------------------------------
+
+  // First check number of points.
+  if (xp.size() != yp.size()) return false;
+  const unsigned int np = xp.size();
+  if (xp.size() < 3) return false;
+  // Find a second point at maximum distance of the first.
+  double d1 = 0.;
+  double x1 = 0.;
+  double y1 = 0.;
+  unsigned int i1 = 0;
+  double xmin = xp[0];
+  double ymin = yp[0];
+  double xmax = xp[0];
+  double ymax = yp[0];
+  for (unsigned int i = 1; i < np; ++i) {
+    xmin = std::min(xmin, xp[i]);
+    ymin = std::min(ymin, yp[i]);
+    xmax = std::max(xmax, xp[i]);
+    ymax = std::max(ymax, yp[i]);
+    const double dx = xp[i] - xp[0];
+    const double dy = yp[i] - yp[0];
+    const double d = dx * dx + dy * dy;
+    if (d > d1) {
+      x1 = dx;
+      y1 = dy;
+      i1 = i;
+      d1 = d;
+    }
+  }
+  // Set tolerances.
+  double epsx = 1.e-6 * (std::abs(xmax) + std::abs(xmin));
+  double epsy = 1.e-6 * (std::abs(ymax) + std::abs(ymin));
+  if (epsx <= 0) epsx = 1.e-6;
+  if (epsy <= 0) epsy = 1.e-6;
+  // See whether there is a range at all.
+  if (std::abs(xmax - xmin) <= epsx && std::abs(ymax - ymin) <= epsy) {
+    // Single point.
+    return false;
+  }
+  // See whether there is a second point.
+  if (d1 <= epsx * epsx + epsy * epsy || i1 == 0) return false;
+
+  // Find a third point maximising the external product.
+  double d2 = 0.; 
+  unsigned int i2 = 0;
+  for (unsigned int i = 1; i < np; ++i) {
+    if (i == i1) continue;
+    const double dx = xp[i] - xp[0];
+    const double dy = yp[i] - yp[0];
+    const double d = std::abs(x1 * dy - y1 * dx);
+    if (d > d2) {
+      d2 = d;
+      i2 = i;
+    }
+  }
+  if (d2 <= epsx * epsy || i2 <= 0) {
+    // No third point.
+    return false;
+  }
+  // Seems to be OK.
+  return true;
+}
+
 }
 
 }

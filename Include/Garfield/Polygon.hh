@@ -15,6 +15,9 @@ void Inside(const std::vector<double>& xpl, const std::vector<double>& ypl,
 /// Determine the (signed) area of a polygon.
 double Area(const std::vector<double>& xp, const std::vector<double>& yp);
 
+/// Check whether a set of points builds a non-trivial polygon.
+bool NonTrivial(const std::vector<double>& xp, const std::vector<double>& yp);
+
 }
 
 }

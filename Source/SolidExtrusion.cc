@@ -81,7 +81,10 @@ void SolidExtrusion::SetProfile(const std::vector<double>& xp,
     std::cerr << "SolidExtrusion::SetProfile: Too few points; rejected.\n";
     return;
   }
-  // CALL PLACHK(NPROF,XPROF,YPROF,ZPROF,IFAIL1)
+  if (!Polygon::NonTrivial(xp, yp)) {
+    std::cerr << "SolidExtrusion::SetProfile: Not a valid polygon.\n";
+    return;
+  }
   const auto it = std::max_element(xp.begin(), xp.end());
   const unsigned int i0 = std::distance(xp.begin(), it);
   const unsigned int i1 = i0 < np - 1 ? i0 + 1 : 0;
@@ -100,7 +103,6 @@ void SolidExtrusion::SetProfile(const std::vector<double>& xp,
   }
   m_xp = xp;
   m_yp = yp;
-
 }
 
 bool SolidExtrusion::SolidPanels(std::vector<Panel>& panels) {
