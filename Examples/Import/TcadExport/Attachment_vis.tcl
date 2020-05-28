@@ -1,17 +1,17 @@
-
-load_file n@node|-2@_0V_0000_des.tdr
-create_plot -name plot0 -dataset n4_0V_0000_des
-set fo [open "Attachment_@Temperature@.txt" "w"]
+load_file simulation_des.tdr
+create_plot -name plot0 -dataset simulation_des
+set fo [open "Attachment.txt" "w"]
+set fluence 4e15
 puts $fo "#x y ElectronAttachment HoleAttachment"
-set conc1 [expr 4*@fluence@]
+set conc1 [expr 4*$fluence]
 set crossE1 2.0e-14
 set crossH1 1e-14
 
-set conc2 [expr 0.6447*@fluence@]
+set conc2 [expr 0.6447*$fluence]
 set crossE2 5e-15
 set crossH2 1e-14
 
-set conc3 [expr 0.5*@fluence@]
+set conc3 [expr 0.5*$fluence]
 set crossE3 1e-14
 set crossH3 1e-14
 
