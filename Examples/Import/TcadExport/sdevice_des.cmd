@@ -1,9 +1,9 @@
 File {
-  	Grid    = "../../Meshes/2D/2D_3pixel_msh.tdr"
+  	Grid    = "2D_3pixel_msh.tdr"
 	Parameter= "sdevice.par"
-	Plot=   "@tdrdat@"
-	Current="@plot@"
-	Output= "@log@"
+	Plot=   "simulation"
+	Current="simulation"
+	Output= "simulation"
 }
 
 Electrode {
@@ -15,7 +15,7 @@ Electrode {
 
 Physics	{
 	Fermi
-	Temperature = @Temperature@
+	Temperature = 242.05
 	Mobility(
 	 	eHighFieldSaturation
 	 	hHighFieldSaturation
@@ -36,14 +36,14 @@ Physics	{
 Physics(MaterialInterface="Oxide/Silicon") {
 		Charge(Conc = 1e12 ) 					
 }
-#if @fluence@ != 0
+
 Physics (material = "Silicon"){
 	Traps(
 		(Donor Level
 		
 		fromValBand
 		Add2TotalDoping
-		Conc = @<4*fluence>@
+		Conc = <4*4e15>
 		EnergyMid = 0.48
 		eXsection = 2.0e-14
 		hXsection = 1e-14)
@@ -52,7 +52,7 @@ Physics (material = "Silicon"){
 		
 		fromCondBand
 		Add2TotalDoping
-		Conc = @<0.75*fluence>@
+		Conc = <0.75*4e15>
 		EnergyMid = 0.525
 		eXsection = 5e-15
 		hXsection = 1e-14)
@@ -61,13 +61,13 @@ Physics (material = "Silicon"){
 		
 		fromValBand
 		Add2TotalDoping
-		Conc = @<36*fluence>@
+		Conc = <36*4e15>
 		EnergyMid = 0.90
 		eXsection = 1e-16
 		hXsection = 1e-16)
 	)
 }
-#endif
+
 Plot {
 	Potential	ElectricField/Vector eMobility hMobility 
 	eLifetime hLifetime hDriftVelocity/Vector hDriftVelocity/Vector
@@ -96,10 +96,10 @@ Solve {
 		MinStep=1e-5
 		Increment=1.4
 		Decrement=2
-		Goal{ name="bot_electrode" voltage= @voltage@}
+		Goal{ name="bot_electrode" voltage= -1000}
 	){ 
 		Coupled {Poisson Electron Hole}
-		Plot ( FilePrefix = "n@node@_0V" Time = (1.0) NoOverwrite ) 
+		Plot ( FilePrefix = "simulation_0V" Time = (1.0) NoOverwrite ) 
 	}
 	Quasistationary(
 		InitialStep=1e-3
@@ -110,7 +110,7 @@ Solve {
 		Goal{ name="pix2_electrode" voltage= 1.0 }
 	){ 
 		Coupled {Poisson Electron Hole}
-		Plot ( FilePrefix = "n@node@_1V" Time = (1.0) NoOverwrite ) 
+		Plot ( FilePrefix = "simulation_1V" Time = (1.0) NoOverwrite ) 
 	}
 	
 }
