@@ -1,7 +1,6 @@
-
-load_file n@node|-3@_0V_0000_des.tdr
-create_plot -name plot0 -dataset n@node|-3@_0V_0000_des
-set fo [open "Efield_@Temperature@.txt" "w"]
+load_file simulation_des.tdr
+create_plot -name plot0 -dataset simulation_des
+set fo [open "Efield.txt" "w"]
 puts $fo "#x y Ex Ey Potential"
 set ny 0
 set nx 0
