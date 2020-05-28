@@ -1,5 +1,5 @@
-set plot1V n@node|-1@_1V_0000_des 
-set plot0V n@node|-1@_0V_0000_des 
+set plot1V simulation_1V_0000_des 
+set plot0V simulation_0V_0000_des 
 
 load_file $plot0V.tdr
 create_plot -dataset $plot0V
@@ -7,7 +7,7 @@ load_file $plot1V.tdr
 create_plot -dataset $plot1V
 
 diff_plots "Plot_$plot1V Plot_$plot0V" -display 
-set fo [open "Wfield_@Temperature@.txt" "w"]
+set fo [open "Wfield.txt" "w"]
 puts $fo "#x y Ex Ey Potential"
 for {set w 0.5} {$w < [expr {3.0*55.0}]} {set w [expr {$w + 0.5}]} {
 	incr nx
