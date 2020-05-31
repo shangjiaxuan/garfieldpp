@@ -38,8 +38,12 @@ void SampleRange(TF1* f, double& ymin, double& ymax) {
   constexpr unsigned int n = 1000;
   ymin = std::numeric_limits<double>::max();
   ymax = -ymin;
+  double xmin = 0.;
+  double xmax = 1.;
+  f->GetRange(xmin, xmax);
+  const double dx = xmax - xmin;
   for (unsigned int i = 0; i < n; ++i) {
-    const double y = f->Eval(Garfield::RndmUniform());
+    const double y = f->Eval(xmin + dx * Garfield::RndmUniform());
     if (y < ymin) ymin = y;
     if (y > ymax) ymax = y;
   }
@@ -324,18 +328,40 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
   std::string title;
   const Parameter par = GetPar(option, title);
 
-  auto eval = [this, par, wfield, electrode, 
+  double t0 = 0.;
+  double t1 = 1.;
+  unsigned int dir = 3;
+  if (fabs(dy) + fabs(dz) < 1.e-6 * fabs(dx)) {
+    t0 = x0;
+    t1 = x1;
+    dir = 0;
+  } else if (fabs(dx) + fabs(dz) < 1.e-6 * fabs(dy)) {
+    t0 = y0;
+    t1 = y1;
+    dir = 1;
+  } else if (fabs(dx) + fabs(dy) < 1.e-6 * fabs(dz)) {
+    t0 = z0;
+    t1 = z1;
+    dir = 2;
+  }
+
+  auto eval = [this, par, wfield, electrode, dir, 
                x0, y0, z0, dx, dy, dz](double* u, double* /*p*/) {
     // Get the position.
     const double t = u[0];
-    const double x = x0 + t * dx;
-    const double y = y0 + t * dy;
-    const double z = z0 + t * dz;
+    double x = dir == 0 ? t : x0;
+    double y = dir == 1 ? t : y0;
+    double z = dir == 2 ? t : z0;
+    if (dir > 2) {
+      x += t * dx;
+      y += t * dy;
+      z += t * dz;
+    }
     return wfield ? Wfield(x, y, z, par, electrode) : Field(x, y, z, par);
   };
 
   const std::string fname = FindUnusedFunctionName("fProfile");
-  TF1 f1(fname.c_str(), eval, 0., 1., 0);
+  TF1 f1(fname.c_str(), eval, t0, t1, 0);
 
   double fmin = m_vmin;
   double fmax = m_vmax;
@@ -386,6 +412,13 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
   f1.SetMaximum(fmax);
 
   std::string labels = ";normalised distance;";
+  if (dir == 0) {
+    labels = ";#it{x} [cm];";
+  } else if (dir == 1) {
+    labels = ";#it{y} [cm];";
+  } else if (dir == 2) {
+    labels = ";#it{z} [cm];";
+  }
   if (par == Parameter::Potential) {
     labels += "#phi";
     if (wfield) {
