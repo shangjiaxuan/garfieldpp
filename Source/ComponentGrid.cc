@@ -38,7 +38,7 @@ void PrintError(const std::string& fcn, const unsigned int line,
 }
 
 void PrintNotReady(const std::string& fcn) {
-  std::cerr << fcn << ": Field map not available.\n";
+  std::cerr << fcn << ": Map not available.\n";
 }
 
 void PrintProgress(const double f) {
@@ -299,8 +299,8 @@ bool ComponentGrid::LoadElectricField(const std::string& fname,
   // Read the file.
   m_pMin = withP ? +1. : 0.;
   m_pMax = withP ? -1. : 0.;
-  if (!LoadData(fname, fmt, withP, withFlag, scaleX, scaleE, scaleP,
-                m_efields)) {
+  if (!LoadField(fname, fmt, withP, withFlag, scaleX, scaleE, scaleP,
+                 m_efields)) {
     return false;
   }
   m_hasEfield = true;
@@ -315,7 +315,7 @@ bool ComponentGrid::LoadWeightingField(const std::string& fname,
                                        const double scaleP) {
   m_hasWfield = false;
   // Read the file.
-  if (!LoadData(fname, fmt, withP, false, scaleX, scaleE, scaleP, m_wfields)) {
+  if (!LoadField(fname, fmt, withP, false, scaleX, scaleE, scaleP, m_wfields)) {
     return false;
   }
   m_hasWfield = true;
@@ -328,7 +328,7 @@ bool ComponentGrid::LoadWeightingField(const std::string& fname,
                                        const double scaleP) {
   std::vector<std::vector<std::vector<Node> > > wfield;
   // Read the file.
-  if (!LoadData(fname, fmt, withP, false, scaleX, scaleE, scaleP, wfield)) {
+  if (!LoadField(fname, fmt, withP, false, scaleX, scaleE, scaleP, wfield)) {
     return false;
   }
   if (m_wdtimes.empty() || t > m_wdtimes.back()) {
@@ -349,7 +349,7 @@ bool ComponentGrid::LoadMagneticField(const std::string& fname,
                                       const double scaleB) {
   m_hasBfield = false;
   // Read the file.
-  if (!LoadData(fname, fmt, false, false, scaleX, scaleB, 1., m_bfields)) {
+  if (!LoadField(fname, fmt, false, false, scaleX, scaleB, 1., m_bfields)) {
     return false;
   }
   m_hasBfield = true;
@@ -763,21 +763,21 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   return SetMesh(nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
-bool ComponentGrid::LoadData(
+bool ComponentGrid::LoadField(
     const std::string& filename, std::string format, const bool withPotential,
     const bool withFlag, const double scaleX, const double scaleF,
     const double scaleP,
     std::vector<std::vector<std::vector<Node> > >& fields) {
   if (!m_hasMesh) {
     if (!LoadMesh(filename, format, scaleX)) {
-      std::cerr << m_className << "::LoadData: Mesh not set.\n";
+      std::cerr << m_className << "::LoadField: Mesh not set.\n";
       return false;
     }
   }
 
   const unsigned int fmt = GetFormat(format);
   if (fmt == 0) {
-    std::cerr << m_className << "::LoadData:\n"
+    std::cerr << m_className << "::LoadField:\n"
               << "    Unknown format (" << format << ").\n";
     return false;
   }
@@ -794,7 +794,7 @@ bool ComponentGrid::LoadData(
   std::ifstream infile;
   infile.open(filename.c_str(), std::ios::in);
   if (!infile) {
-    std::cerr << m_className << "::LoadData:\n"
+    std::cerr << m_className << "::LoadField:\n"
               << "    Could not open file " << filename << ".\n";
     return false;
   }
@@ -827,7 +827,7 @@ bool ComponentGrid::LoadData(
       double x, y;
       data >> x >> y;
       if (data.fail()) {
-        PrintError(m_className + "::LoadData", nLines, "coordinates");
+        PrintError(m_className + "::LoadField", nLines, "coordinates");
         bad = true;
         break;
       }
@@ -844,7 +844,7 @@ bool ComponentGrid::LoadData(
       double x, y, z;
       data >> x >> y >> z;
       if (data.fail()) {
-        PrintError(m_className + "::LoadData", nLines, "coordinates");
+        PrintError(m_className + "::LoadField", nLines, "coordinates");
         bad = true;
         break;
       }
@@ -864,7 +864,7 @@ bool ComponentGrid::LoadData(
       // "IJ"
       data >> i >> j;
       if (data.fail()) {
-        PrintError(m_className + "::LoadData", nLines, "indices");
+        PrintError(m_className + "::LoadField", nLines, "indices");
         bad = true;
         break;
       }
@@ -872,7 +872,7 @@ bool ComponentGrid::LoadData(
       // "IJK"
       data >> i >> j >> k;
       if (data.fail()) {
-        PrintError(m_className + "::LoadData", nLines, "indices");
+        PrintError(m_className + "::LoadField", nLines, "indices");
         bad = true;
         break;
       }
@@ -881,7 +881,7 @@ bool ComponentGrid::LoadData(
       double x, y, z;
       data >> y >> x >> z;
       if (data.fail()) {
-        PrintError(m_className + "::LoadData", nLines, "coordinates");
+        PrintError(m_className + "::LoadField", nLines, "coordinates");
         bad = true;
         break;
       }
@@ -900,16 +900,16 @@ bool ComponentGrid::LoadData(
     }
     // Check the indices.
     if (i >= m_nX || j >= m_nY || k >= m_nZ) {
-      std::cerr << m_className << "::LoadData:\n"
+      std::cerr << m_className << "::LoadField:\n"
                 << "    Error reading line " << nLines << ".\n"
                 << "    Index (" << i << ", " << j << ", " << k
                 << ") out of range.\n";
       continue;
     }
     if (isSet[i][j][k]) {
-      std::cerr << m_className << "::LoadData:\n"
+      std::cerr << m_className << "::LoadField:\n"
                 << "    Error reading line " << nLines << ".\n"
-                << "    Mesh element (" << i << ", " << j << ", " << k
+                << "    Node (" << i << ", " << j << ", " << k
                 << ") has already been set.\n";
       continue;
     }
@@ -924,7 +924,7 @@ bool ComponentGrid::LoadData(
       data >> fx >> fy >> fz;
     }
     if (data.fail()) {
-      PrintError(m_className + "::LoadData", nLines, "field components");
+      PrintError(m_className + "::LoadField", nLines, "field components");
       bad = true;
       break;
     }
@@ -934,7 +934,7 @@ bool ComponentGrid::LoadData(
     if (withPotential) {
       data >> p;
       if (data.fail()) {
-        PrintError(m_className + "::LoadData", nLines, "potential");
+        PrintError(m_className + "::LoadField", nLines, "potential");
         bad = true;
         break;
       }
@@ -952,7 +952,7 @@ bool ComponentGrid::LoadData(
     if (withFlag) {
       data >> flag;
       if (data.fail()) {
-        PrintError(m_className + "::LoadData", nLines, "region");
+        PrintError(m_className + "::LoadField", nLines, "region");
         bad = true;
         break;
       }
@@ -979,12 +979,12 @@ bool ComponentGrid::LoadData(
   }
   infile.close();
   if (bad) return false;
-  std::cout << m_className << "::LoadData:\n"
+  std::cout << m_className << "::LoadField:\n"
             << "    Read " << nValues << " values from " << filename << ".\n";
   unsigned int nExpected = m_nX * m_nY;
   if (fmt == 2 || fmt == 4 || fmt == 5) nExpected *= m_nZ;
   if (nExpected != nValues) {
-    std::cerr << m_className << "::LoadData:\n"
+    std::cerr << m_className << "::LoadField:\n"
               << "   Expected " << nExpected << " values.\n";
   }
   return true;
@@ -1303,10 +1303,10 @@ bool ComponentGrid::LoadAttachment(const std::string& fname,
   m_ready = true;
   return true;
 }
-/// new
+
 bool ComponentGrid::LoadData(
     const std::string& filename, std::string format, const double scaleX,
-    std::vector<std::vector<std::vector<double> > >& fields, int col) {
+    std::vector<std::vector<std::vector<double> > >& tab, int col) {
   if (!m_hasMesh) {
     if (!LoadMesh(filename, format, scaleX)) {
       std::cerr << m_className << "::LoadData: Mesh not set.\n";
@@ -1322,7 +1322,9 @@ bool ComponentGrid::LoadData(
   }
 
   // Set up the grid.
-  Initialise(fields);
+  tab.assign(
+      m_nX, 
+      std::vector<std::vector<double> >(m_nY, std::vector<double>(m_nZ, 0.)));
 
   unsigned int nValues = 0;
   // Keep track of which elements have been read.
@@ -1445,7 +1447,7 @@ bool ComponentGrid::LoadData(
     if (isSet[i][j][k]) {
       std::cerr << m_className << "::LoadData:\n"
                 << "    Error reading line " << nLines << ".\n"
-                << "    Mesh element (" << i << ", " << j << ", " << k
+                << "    Node (" << i << ", " << j << ", " << k
                 << ") has already been set.\n";
       continue;
     }
@@ -1457,19 +1459,20 @@ bool ComponentGrid::LoadData(
     data >> att;
 
     if (data.fail()) {
-      PrintError(m_className + "::LoadData", nLines, "field components");
+      PrintError(m_className + "::LoadData", nLines, 
+                 "column " + std::to_string(col));
       bad = true;
       break;
     }
 
     if (fmt == 1 || fmt == 3) {
-      // Two-dimensional field-map
+      // Two-dimensional map
       for (unsigned int kk = 0; kk < m_nZ; ++kk) {
-        fields[i][j][kk] = att;
+        tab[i][j][kk] = att;
         isSet[i][j][kk] = true;
       }
     } else {
-      fields[i][j][k] = att;
+      tab[i][j][k] = att;
       isSet[i][j][k] = true;
     }
     ++nValues;
@@ -1487,18 +1490,11 @@ bool ComponentGrid::LoadData(
   return true;
 }
 
-/// new
-void ComponentGrid::Initialise(
-    std::vector<std::vector<std::vector<double> > >& field) {
-  field.assign(m_nX, std::vector<std::vector<double> >(
-                         m_nY, std::vector<double>(m_nZ, 0)));
-}
-/// new
-bool ComponentGrid::GetAttachment(
+bool ComponentGrid::GetData(
     const double xi, const double yi, const double zi,
-    const std::vector<std::vector<std::vector<double> > >& field, double& att) {
+    const std::vector<std::vector<std::vector<double> > >& tab, double& val) {
   if (!m_hasMesh) {
-    std::cerr << m_className << "::GetField: Mesh is not set.\n";
+    std::cerr << m_className << "::GetData: Mesh is not set.\n";
     return false;
   }
 
@@ -1533,23 +1529,17 @@ bool ComponentGrid::GetAttachment(
   const double vx = 1. - ux;
   const double vy = 1. - uy;
   const double vz = 1. - uz;
-  /*if (!m_active.empty()) {
-    #   active = m_active[i0][j0][k0] && m_active[i0][j0][k1] &&
-        #          m_active[i0][j1][k0] && m_active[i0][j1][k1] &&
-        #      m_active[i1][j0][k0] && m_active[i1][j0][k1] &&
-        #      m_active[i1][j1][k0] && m_active[i1][j1][k1];
-  }*/
-  const double n000 = field[i0][j0][k0];
-  const double n100 = field[i1][j0][k0];
-  const double n010 = field[i0][j1][k0];
-  const double n110 = field[i1][j1][k0];
-  const double n001 = field[i0][j0][k1];
-  const double n101 = field[i1][j0][k1];
-  const double n011 = field[i0][j1][k1];
-  const double n111 = field[i1][j1][k1];
+  const double n000 = tab[i0][j0][k0];
+  const double n100 = tab[i1][j0][k0];
+  const double n010 = tab[i0][j1][k0];
+  const double n110 = tab[i1][j1][k0];
+  const double n001 = tab[i0][j0][k1];
+  const double n101 = tab[i1][j0][k1];
+  const double n011 = tab[i0][j1][k1];
+  const double n111 = tab[i1][j1][k1];
 
   if (m_debug) {
-    std::cout << m_className << "::GetField: Determining field at (" << xi
+    std::cout << m_className << "::GetData: Interpolating at (" << xi
               << ", " << yi << ", " << zi << ").\n"
               << "    X: " << i0 << " (" << ux << ") - " << i1 << " (" << vx
               << ").\n"
@@ -1558,45 +1548,29 @@ bool ComponentGrid::GetAttachment(
               << "    Z: " << k0 << " (" << uz << ") - " << k1 << " (" << vz
               << ").\n";
   }
-  att = ((n000 * vx + n100 * ux) * vy + (n010 * vx + n110 * ux) * uy) * vz +
+  val = ((n000 * vx + n100 * ux) * vy + (n010 * vx + n110 * ux) * uy) * vz +
         ((n001 * vx + n101 * ux) * vy + (n011 * vx + n111 * ux) * uy) * uz;
 
   return true;
 }
-/// new
+
 bool ComponentGrid::ElectronAttachment(const double x, const double y,
                                        const double z, double& att) {
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    PrintNotReady(m_className + "::Attachment");
-    return false;
-  }
+  // Make sure the map has been loaded.
   if (m_eattachment.empty()) {
+    PrintNotReady(m_className + "::ElectronAttachment");
     return false;
   }
-
-  if (!GetAttachment(x, y, z, m_eattachment, att)) {
-    return false;
-  }
-  return true;
+  return GetData(x, y, z, m_eattachment, att);
 }
-/// new
+
 bool ComponentGrid::HoleAttachment(const double x, const double y,
                                    const double z, double& att) {
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    PrintNotReady(m_className + "::Attachment");
-
-    return false;
-  }
+  // Make sure the map has been loaded.
   if (m_hattachment.empty()) {
+    PrintNotReady(m_className + "::HoleAttachment");
     return false;
   }
-
-  if (!GetAttachment(x, y, z, m_hattachment, att)) {
-    return false;
-  }
-
-  return true;
+  return GetData(x, y, z, m_hattachment, att);
 }
 }  // namespace Garfield

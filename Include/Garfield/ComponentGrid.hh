@@ -180,37 +180,36 @@ class ComponentGrid : public ComponentBase {
   bool LoadMesh(const std::string& filename, std::string format,
                 const double scaleX);
 
-  /// Read data from file.
+  /// Read electric field and potential from file.
+  bool LoadField(const std::string& filename, std::string format,
+                 const bool withPotential, const bool withFlag,
+                 const double scaleX, const double scaleF, const double scaleP,
+                 std::vector<std::vector<std::vector<Node> > >& field);
+  /// Load other data (e. g. attachment coefficients). 
+  /// "col" determines which data colum should be used.
   bool LoadData(const std::string& filename, std::string format,
-                const bool withPotential, const bool withFlag,
-                const double scaleX, const double scaleF, const double scaleP,
-                std::vector<std::vector<std::vector<Node> > >& field);
+                const double scaleX,
+                std::vector<std::vector<std::vector<double> > >& fields,
+                int col);
 
   void Reset() override;
   void UpdatePeriodicity() override;
 
-  /// Look up/interpolate the field at a given point.
+  /// Interpolation of the field and potential at a given point.
   bool GetField(const double x, const double y, const double z,
                 const std::vector<std::vector<std::vector<Node> > >& field,
                 double& fx, double& fy, double& fz, double& p, bool& active);
+  /// Interpolation in a table of scalars.
+  bool GetData(const double x, const double y, const double z,
+      const std::vector<std::vector<std::vector<double> > >& table,
+      double& value);
+
   /// Reduce a coordinate to the basic cell (in case of periodicity).
   double Reduce(const double xin, const double xmin, const double xmax,
                 const bool simplePeriodic, const bool mirrorPeriodic,
                 bool& isMirrored) const;
   /// Set the dimensions of a table according to the mesh.
   void Initialise(std::vector<std::vector<std::vector<Node> > >& fields);
-  /// Load Attachment data. "col" determines which data colum should be used
-  bool LoadData(const std::string& filename, std::string format,
-                const double scaleX,
-                std::vector<std::vector<std::vector<double> > >& fields,
-                int col);
-  /// Initialises Attachment data
-  void Initialise(std::vector<std::vector<std::vector<double> > >& fields);
-  /// Get Attachment data
-  bool GetAttachment(
-      const double xi, const double yi, const double zi,
-      const std::vector<std::vector<std::vector<double> > >& field,
-      double& att);
 };
 }  // namespace Garfield
 #endif
