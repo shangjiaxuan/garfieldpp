@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
   // Use steps of 1 micron.
   drift.SetDistanceSteps(1.e-4);
   drift.EnableSignalCalculation();
-  drift.EnableGridTraps();
+  drift.EnableAttachmentMap();
 
   double x0 = pitch * 1.5, y0 = 5.e-5, z0 = 0., t0 = 0.;
   double dx = 0., dy = 1., dz = 0.;

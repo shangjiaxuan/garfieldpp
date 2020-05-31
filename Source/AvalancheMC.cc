@@ -8,8 +8,7 @@
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Random.hh"
-/// new
-#include "Garfield/ComponentGrid.hh"
+
 namespace {
 
 std::string PrintVec(const std::array<double, 3>& x) {
@@ -665,7 +664,7 @@ bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium,
                               const std::array<double, 3>& b,
                               std::array<double, 3>& v) const {
   v.fill(0.);
-  if (m_useTcadVelocity && particle != Particle::Ion) {
+  if (m_useVelocityMap && particle != Particle::Ion) {
     // We assume there is only one component with active velocity.
     const unsigned int nComponents = m_sensor->GetNumberOfComponents();
     for (unsigned int i = 0; i < nComponents; ++i) {
@@ -684,7 +683,7 @@ bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium,
       }
       // Seems to have worked.
       if (m_debug) {
-        std::cout << m_className << "::GetVelocity: TCAD velocity at "
+        std::cout << m_className << "::GetVelocity: Velocity at "
                   << PrintVec(x) << " = " << PrintVec(v) << "\n";
       }
       return true;
@@ -733,21 +732,7 @@ double AvalancheMC::GetAttachment(const Particle particle, Medium* medium,
                                   const std::array<double, 3>& e,
                                   const std::array<double, 3>& b) const {
   double eta = 0.;
-  if (m_useTcadTrapping) {
-    const unsigned int nComponents = m_sensor->GetNumberOfComponents();
-    for (unsigned int i = 0; i < nComponents; ++i) {
-      ComponentBase* cmp = m_sensor->GetComponent(i);
-      if (!cmp->IsTrapActive()) continue;
-      if (particle == Particle::Electron) {
-        cmp->ElectronAttachment(x[0], x[1], x[2], eta);
-      } else {
-        cmp->HoleAttachment(x[0], x[1], x[2], eta);
-      }
-      return eta;
-    }
-  }
-  /// new
-  if (m_useGridTrapping) {
+  if (m_useAttachmentMap) {
     const unsigned int nComponents = m_sensor->GetNumberOfComponents();
     for (unsigned int i = 0; i < nComponents; ++i) {
       ComponentBase* cmp = m_sensor->GetComponent(i);

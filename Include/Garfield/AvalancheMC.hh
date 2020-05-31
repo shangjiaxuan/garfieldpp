@@ -68,13 +68,11 @@ class AvalancheMC {
   /// Switch off attachment and multiplication.
   void DisableAttachment() { m_useAttachment = false; }
 
-  /// Switch on calculating trapping with grid traps.
-  void EnableGridTraps(const bool on = true) { m_useGridTrapping = on; }
+  /// Retrieve the attachment coefficient from the component.
+  void EnableAttachmentMap(const bool on = true) { m_useAttachmentMap = on; }
 
-  /// Switch on calculating trapping with TCAD traps.
-  void EnableTcadTraps(const bool on = true) { m_useTcadTrapping = on; }
-  /// Switch on TCAD velocity maps
-  void EnableTcadVelocity(const bool on = true) { m_useTcadVelocity = on; }
+  /// Retrieve the drift velocity from the component.
+  void EnableVelocityMap(const bool on = true) { m_useVelocityMap = on; }
 
   /// Enable use of magnetic field in stepping algorithm.
   void EnableMagneticField(const bool on = true) { m_useBfield = on; }
@@ -257,12 +255,10 @@ class AvalancheMC {
   /// Scaling factor for ion signals.
   double m_scaleI = 1.;
 
-  /// Use traps from the field component (Grid):
-  bool m_useGridTrapping = false;
-  /// Use traps from the field component (TCAD).
-  bool m_useTcadTrapping = false;
-  /// Take the velocity from the field component (TCAD).
-  bool m_useTcadVelocity = false;
+  /// Take attachment coefficients from the component.
+  bool m_useAttachmentMap = false;
+  /// Take the drift velocities from the component.
+  bool m_useVelocityMap = false;
 
   bool m_debug = false;
 
