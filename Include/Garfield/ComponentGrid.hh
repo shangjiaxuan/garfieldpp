@@ -124,13 +124,26 @@ class ComponentGrid : public ComponentBase {
   /// Get the medium.
   Medium* GetMedium() const { return m_medium; }
 
-  /// Load Attachment data. "col" determines which data colum should be used
-  bool LoadAttachment(const std::string& fname, const std::string& fmt,
-                      const double scaleX, int col, char particle);
-  /// Get electron attachment
+  /** Import electron attachment coefficients from a file.
+   * \param fname name of the text file.
+   * \param fmt format string ("XY", "XYZ", "IJ", "IJK").
+   * \param col column in the file which has the attachment coefficient.
+   * \param scaleX scaling factor to be applied to the coordinates.
+   */ 
+  bool LoadElectronAttachment(const std::string& fname, 
+                              const std::string& fmt,
+                              const unsigned int col, 
+                              const double scaleX = 1.);
+  /// Import hole attachment coefficients from a file.
+  bool LoadHoleAttachment(const std::string& fname, 
+                          const std::string& fmt,
+                          const unsigned int col,
+                          const double scaleX = 1.);
+
+  /// Get electron attachment coefficient.
   bool ElectronAttachment(const double x, const double y, const double z,
                           double& att) override;
-  /// Get hole attachment
+  /// Get hole attachment coefficient.
   bool HoleAttachment(const double x, const double y, const double z,
                       double& att) override;
 
@@ -185,12 +198,11 @@ class ComponentGrid : public ComponentBase {
                  const bool withPotential, const bool withFlag,
                  const double scaleX, const double scaleF, const double scaleP,
                  std::vector<std::vector<std::vector<Node> > >& field);
-  /// Load other data (e. g. attachment coefficients). 
-  /// "col" determines which data colum should be used.
+  /// Load other data (e. g. attachment coefficients) from file. 
   bool LoadData(const std::string& filename, std::string format,
                 const double scaleX,
-                std::vector<std::vector<std::vector<double> > >& fields,
-                int col);
+                std::vector<std::vector<std::vector<double> > >& tab,
+                const unsigned int col);
 
   void Reset() override;
   void UpdatePeriodicity() override;

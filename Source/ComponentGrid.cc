@@ -321,6 +321,7 @@ bool ComponentGrid::LoadWeightingField(const std::string& fname,
   m_hasWfield = true;
   return true;
 }
+
 bool ComponentGrid::LoadWeightingField(const std::string& fname,
                                        const std::string& fmt, const double t,
                                        const bool withP, const double scaleX,
@@ -1176,7 +1177,7 @@ bool ComponentGrid::GetElectricField(const unsigned int i, const unsigned int j,
   ez = node.fz;
   return true;
 }
-/// new
+
 void ComponentGrid::Reset() {
   m_efields.clear();
   m_bfields.clear();
@@ -1275,38 +1276,26 @@ void ComponentGrid::Initialise(
   }
 }
 
-// new
-bool ComponentGrid::LoadAttachment(const std::string& fname,
-                                   const std::string& fmt, const double scaleX,
-                                   int col, char particle) {
-  m_ready = false;
-  if (m_active.empty()) {
-    m_active.assign(m_nX, std::vector<std::vector<bool> >(
-                              m_nY, std::vector<bool>(m_nZ, true)));
-  }
-  if (!((particle == 'e') || (particle == 'h'))) {
-    return false;
-  }
+bool ComponentGrid::LoadElectronAttachment(const std::string& fname,
+                                           const std::string& fmt, 
+                                           const unsigned int col,
+                                           const double scaleX) {
+  // Read the file.
+  return LoadData(fname, fmt, scaleX, m_eattachment, col);
+}
 
-  // Read the file
-  if (particle == 'e') {
-    if (!LoadData(fname, fmt, scaleX, m_eattachment, col)) {
-      return false;
-    }
-  }
-  if (particle == 'h') {
-    if (!LoadData(fname, fmt, scaleX, m_hattachment, col)) {
-      return false;
-    }
-  }
-
-  m_ready = true;
-  return true;
+bool ComponentGrid::LoadHoleAttachment(const std::string& fname,
+                                       const std::string& fmt, 
+                                       const unsigned int col,
+                                       const double scaleX) {
+  // Read the file.
+  return LoadData(fname, fmt, scaleX, m_hattachment, col);
 }
 
 bool ComponentGrid::LoadData(
     const std::string& filename, std::string format, const double scaleX,
-    std::vector<std::vector<std::vector<double> > >& tab, int col) {
+    std::vector<std::vector<std::vector<double> > >& tab, 
+    const unsigned int col) {
   if (!m_hasMesh) {
     if (!LoadMesh(filename, format, scaleX)) {
       std::cerr << m_className << "::LoadData: Mesh not set.\n";
@@ -1320,6 +1309,20 @@ bool ComponentGrid::LoadData(
               << "    Unknown format (" << format << ").\n";
     return false;
   }
+  // Check the column index.
+  if (fmt == 1 || fmt == 3) {
+    if (col < 2) {
+      std::cerr << m_className << "::LoadData:\n"
+                << "    Unexpected column index (" << col << ").\n";
+      return false; 
+    }
+  } else {
+    if (col < 3) {
+      std::cerr << m_className << "::LoadData:\n"
+                << "    Unexpected column index (" << col << ").\n";
+      return false; 
+    }
+  }  
 
   // Set up the grid.
   tab.assign(
@@ -1357,7 +1360,7 @@ bool ComponentGrid::LoadData(
     unsigned int i = 0;
     unsigned int j = 0;
     unsigned int k = 0;
-    double att = 0;
+    double val = 0;
     std::istringstream data;
     data.str(line);
     if (fmt == 1) {
@@ -1452,11 +1455,11 @@ bool ComponentGrid::LoadData(
       continue;
     }
 
-    // Get the field values.
-    for (int i = 0; i < col - 1; i++) {
+    // Skip to the requested column.
+    for (unsigned int i = 0; i < col - 1; i++) {
       data.ignore(256, ' ');
     }
-    data >> att;
+    data >> val;
 
     if (data.fail()) {
       PrintError(m_className + "::LoadData", nLines, 
@@ -1468,11 +1471,11 @@ bool ComponentGrid::LoadData(
     if (fmt == 1 || fmt == 3) {
       // Two-dimensional map
       for (unsigned int kk = 0; kk < m_nZ; ++kk) {
-        tab[i][j][kk] = att;
+        tab[i][j][kk] = val;
         isSet[i][j][kk] = true;
       }
     } else {
-      tab[i][j][k] = att;
+      tab[i][j][k] = val;
       isSet[i][j][k] = true;
     }
     ++nValues;

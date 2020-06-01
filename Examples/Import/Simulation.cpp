@@ -41,8 +41,8 @@ int main(int argc, char* argv[]) {
   // efield.EnablePeriodicityX();
   efield.SetMedium(&si);
 
-  efield.LoadAttachment("Attachment.txt", "XY", 1, 1, 'e');
-  efield.LoadAttachment("Attachment.txt", "XY", 1, 2, 'h');
+  efield.LoadElectronAttachment("Attachment.txt", "XY", 1);
+  efield.LoadHoleAttachment("Attachment.txt", "XY", 2);
   efield.ActivateTraps();
 
   ComponentGrid wfield;
