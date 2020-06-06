@@ -8,20 +8,15 @@
 #include <TROOT.h>
 #include <TSystem.h>
 
-#include "Garfield/ComponentConstant.hh"
-#include "Garfield/ComponentUser.hh"
-#include "Garfield/GeometrySimple.hh"
 #include "Garfield/MediumSilicon.hh"
 #include "Garfield/SolidBox.hh"
-
-#include "Garfield/AvalancheMC.hh"
+#include "Garfield/GeometrySimple.hh"
 #include "Garfield/ComponentGrid.hh"
 #include "Garfield/Sensor.hh"
 #include "Garfield/TrackHeed.hh"
-
+#include "Garfield/AvalancheMC.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/ViewSignal.hh"
-
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/Random.hh"
 
@@ -30,15 +25,15 @@ using namespace Garfield;
 int main(int argc, char* argv[]) {
   TApplication app("app", &argc, argv);
 
-  double d = 199.5e-04;
-  double pitch = 55e-4;
+  constexpr double d = 199.5e-04;
+  constexpr double pitch = 55e-4;
   // Define the medium.
   MediumSilicon si;
   si.SetTemperature(293.);
 
   ComponentGrid efield;
   efield.LoadElectricField("Efield.txt", "XY", true, false);
-  // efield.EnablePeriodicityX();
+  efield.EnablePeriodicityX();
   efield.SetMedium(&si);
 
   efield.LoadElectronAttachment("Attachment.txt", "XY", 2);
@@ -47,8 +42,8 @@ int main(int argc, char* argv[]) {
 
   ComponentGrid wfield;
   wfield.LoadWeightingField("Wfield.txt", "XY", true);
-  wfield.EnablePeriodicityX();
 
+  wfield.Print();
   Sensor sensor;
   sensor.AddComponent(&efield);
   const std::string label = "pixel";
@@ -93,7 +88,7 @@ int main(int argc, char* argv[]) {
       drift.DriftHole(xe, ye, ze, te);
     }
   }
-  bool plotSignal = true;
+  constexpr bool plotSignal = true;
   ViewSignal signalView;
   signalView.SetSensor(&sensor);
   constexpr bool plotTotalSignal = true;
