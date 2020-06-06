@@ -1310,19 +1310,22 @@ bool ComponentGrid::LoadData(
     return false;
   }
   // Check the column index.
+  unsigned int offset = 0;
   if (fmt == 1 || fmt == 3) {
     if (col < 2) {
       std::cerr << m_className << "::LoadData:\n"
                 << "    Unexpected column index (" << col << ").\n";
       return false; 
     }
+    offset = 2;
   } else {
     if (col < 3) {
       std::cerr << m_className << "::LoadData:\n"
                 << "    Unexpected column index (" << col << ").\n";
       return false; 
     }
-  }  
+    offset = 3;
+  } 
 
   // Set up the grid.
   tab.assign(
@@ -1456,8 +1459,18 @@ bool ComponentGrid::LoadData(
     }
 
     // Skip to the requested column.
-    for (unsigned int i = 0; i < col - 1; i++) {
-      data.ignore(256, ' ');
+    for (unsigned int i = 0; i < col - offset; ++i) {
+      double dummy = 0.;
+      data >> dummy;
+      if (data.fail()) {
+        PrintError(m_className + "::LoadData", nLines, 
+                   "column " + std::to_string(offset + i));
+        break;
+      }
+    }
+    if (data.fail()) {
+      bad = true;
+      break;
     }
     data >> val;
 
