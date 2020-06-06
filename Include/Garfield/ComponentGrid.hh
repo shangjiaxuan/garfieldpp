@@ -124,6 +124,9 @@ class ComponentGrid : public ComponentBase {
   /// Get the medium.
   Medium* GetMedium() const { return m_medium; }
 
+  /// Print information about the mesh and the available data.
+  void Print();
+
   /** Import electron attachment coefficients from a file.
    * \param fname name of the text file.
    * \param fmt format string ("XY", "XYZ", "IJ", "IJK").

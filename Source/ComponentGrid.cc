@@ -1178,6 +1178,40 @@ bool ComponentGrid::GetElectricField(const unsigned int i, const unsigned int j,
   return true;
 }
 
+void ComponentGrid::Print() {
+
+  std::cout << m_className << "::Print:\n";
+  if (!m_hasMesh) {
+    std::cout << "    Mesh not set.\n";
+    return;
+  }
+  std::printf("    %15.8f < x [cm] < %15.8f, %10u nodes\n", 
+              m_xMin, m_xMax, m_nX); 
+  std::printf("    %15.8f < y [cm] < %15.8f, %10u nodes\n", 
+              m_yMin, m_yMax, m_nY); 
+  std::printf("    %15.8f < z [cm] < %15.8f, %10u nodes\n", 
+              m_zMin, m_zMax, m_nZ);
+  if (m_efields.empty() && m_bfields.empty() && 
+      m_wfields.empty() && m_wdfields.empty() && 
+      m_eattachment.empty() && m_hattachment.empty()) {
+    std::cout << "    Available data: None.\n";
+    return;
+  }
+  std::cout << "    Available data:\n";
+  if (!m_efields.empty()) std::cout << "      Electric field.\n"; 
+  if (!m_bfields.empty()) std::cout << "      Magnetic field.\n"; 
+  if (!m_wfields.empty()) std::cout << "      Weighting field.\n"; 
+  if (!m_wdfields.empty()) {
+    std::cout << "      Delayed weighting field.\n";
+  }
+  if (!m_eattachment.empty()) {
+    std::cout << "      Electron attachment coefficient.\n";
+  }
+  if (!m_hattachment.empty()) {
+    std::cout << "      Hole attachment coefficient.\n";
+  }
+}
+
 void ComponentGrid::Reset() {
   m_efields.clear();
   m_bfields.clear();
