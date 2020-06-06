@@ -1,9 +1,9 @@
 #ifndef G_AVALANCHE_MC_H
 #define G_AVALANCHE_MC_H
 
+#include <array>
 #include <string>
 #include <vector>
-#include <array>
 
 #include "FundamentalConstants.hh"
 #include "Sensor.hh"
@@ -31,30 +31,30 @@ class AvalancheMC {
 
   /// Switch on calculation of induced currents (default: disabled).
   void EnableSignalCalculation(const bool on = true) { m_doSignal = on; }
-  /// Set the number of points to be used when averaging the 
+  /// Set the number of points to be used when averaging the
   /// signal vector over a time bin in the Sensor class.
-  /// The averaging is done with a \f$2\times navg + 1\f$ point 
-  /// Newton-Raphson integration. Default: 1. 
+  /// The averaging is done with a \f$2\times navg + 1\f$ point
+  /// Newton-Raphson integration. Default: 1.
   void SetSignalAveragingOrder(const unsigned int navg) { m_navg = navg; }
   /// Use the weighting potential (as opposed to the weighting field)
   /// for calculating the induced signal.
-  void UseWeightingPotential(const bool on = true) { 
-    m_useWeightingPotential = on; 
+  void UseWeightingPotential(const bool on = true) {
+    m_useWeightingPotential = on;
   }
 
   /// Switch on calculation of induced charge (default: disabled).
-  void EnableInducedChargeCalculation(const bool on = true) { 
-   m_doInducedCharge = on; 
+  void EnableInducedChargeCalculation(const bool on = true) {
+    m_doInducedCharge = on;
   }
 
-  /** Switch on Runge-Kutta-Fehlberg stepping (as opposed to simple 
-    * straight-line steps. */
+  /** Switch on Runge-Kutta-Fehlberg stepping (as opposed to simple
+   * straight-line steps. */
   void EnableRKFSteps(const bool on = true) { m_doRKF = on; }
- 
+
   /** Switch on equilibration of multiplication and attachment
-    * over the drift line (default: enabled). */
-  void EnableProjectedPathIntegration(const bool on = true) { 
-    m_doEquilibration = on; 
+   * over the drift line (default: enabled). */
+  void EnableProjectedPathIntegration(const bool on = true) {
+    m_doEquilibration = on;
   }
 
   /// Switch on diffusion (default: enabled).
@@ -63,15 +63,16 @@ class AvalancheMC {
   void DisableDiffusion() { m_useDiffusion = false; }
 
   /** Switch on attachment (and multiplication) for drift line calculation
-    * (default: enabled). For avalanches the flag is ignored. */
+   * (default: enabled). For avalanches the flag is ignored. */
   void EnableAttachment() { m_useAttachment = true; }
   /// Switch off attachment and multiplication.
   void DisableAttachment() { m_useAttachment = false; }
 
-  /// Switch on calculating trapping with TCAD traps.
-  void EnableTcadTraps(const bool on = true) { m_useTcadTrapping = on; }
-  /// Switch on TCAD velocity maps
-  void EnableTcadVelocity(const bool on = true) { m_useTcadVelocity = on; }
+  /// Retrieve the attachment coefficient from the component.
+  void EnableAttachmentMap(const bool on = true) { m_useAttachmentMap = on; }
+
+  /// Retrieve the drift velocity from the component.
+  void EnableVelocityMap(const bool on = true) { m_useVelocityMap = on; }
 
   /// Enable use of magnetic field in stepping algorithm.
   void EnableMagneticField(const bool on = true) { m_useBfield = on; }
@@ -89,9 +90,9 @@ class AvalancheMC {
   /// Use fixed distance steps (default 10 um).
   void SetDistanceSteps(const double d = 0.001);
   /** Use exponentially distributed time steps with mean equal
-    * to the specified multiple of the collision time (default model).*/
+   * to the specified multiple of the collision time (default model).*/
   void SetCollisionSteps(const unsigned int n = 100);
-  /// Retrieve the step distance from a user-supplied function. 
+  /// Retrieve the step distance from a user-supplied function.
   void SetStepDistanceFunction(double (*f)(double x, double y, double z));
 
   /// Define a time interval (only carriers inside the interval are drifted).
@@ -119,12 +120,12 @@ class AvalancheMC {
                          double& t) const;
 
   /** Return the number of electron trajectories in the last
-    * simulated avalanche (including captured electrons). */
+   * simulated avalanche (including captured electrons). */
   unsigned int GetNumberOfElectronEndpoints() const {
     return m_endpointsElectrons.size();
   }
   /** Return the number of hole trajectories in the last
-    * simulated avalanche (including captured holes). */
+   * simulated avalanche (including captured holes). */
   unsigned int GetNumberOfHoleEndpoints() const {
     return m_endpointsHoles.size();
   }
@@ -134,12 +135,12 @@ class AvalancheMC {
   }
 
   /** Return the coordinates and time of start and end point of a given
-    * electron drift line.
-    * \param i index of the drift line
-    * \param x0,y0,z0,t0 coordinates and time of the starting point
-    * \param x1,y1,z1,t1 coordinates and time of the end point
-    * \param status status code (see GarfieldConstants.hh)
-    */
+   * electron drift line.
+   * \param i index of the drift line
+   * \param x0,y0,z0,t0 coordinates and time of the starting point
+   * \param x1,y1,z1,t1 coordinates and time of the end point
+   * \param status status code (see GarfieldConstants.hh)
+   */
   void GetElectronEndpoint(const unsigned int i, double& x0, double& y0,
                            double& z0, double& t0, double& x1, double& y1,
                            double& z1, double& t1, int& status) const;
@@ -188,7 +189,12 @@ class AvalancheMC {
   /// Current drift line
   std::vector<DriftPoint> m_drift;
 
-  enum class StepModel { FixedTime, FixedDistance, CollisionTime, UserDistance};
+  enum class StepModel {
+    FixedTime,
+    FixedDistance,
+    CollisionTime,
+    UserDistance
+  };
   /// Step size model.
   StepModel m_stepModel = StepModel::CollisionTime;
 
@@ -219,10 +225,10 @@ class AvalancheMC {
   unsigned int m_nIons = 0;
 
   struct EndPoint {
-    std::array<double, 3> x0; //< Starting point.
-    std::array<double, 3> x1; //< End point.
-    double t0, t1;            //< Start and end time.
-    int status;               //< Status flag at the end point.
+    std::array<double, 3> x0;  //< Starting point.
+    std::array<double, 3> x1;  //< End point.
+    double t0, t1;             //< Start and end time.
+    int status;                //< Status flag at the end point.
   };
   /// Endpoints of all electrons in the avalanche (including captured ones)
   std::vector<EndPoint> m_endpointsElectrons;
@@ -249,16 +255,16 @@ class AvalancheMC {
   /// Scaling factor for ion signals.
   double m_scaleI = 1.;
 
-  /// Use traps from the field component (TCAD).
-  bool m_useTcadTrapping = false;
-  /// Take the velocity from the field component (TCAD).
-  bool m_useTcadVelocity = false;
+  /// Take attachment coefficients from the component.
+  bool m_useAttachmentMap = false;
+  /// Take the drift velocities from the component.
+  bool m_useVelocityMap = false;
 
   bool m_debug = false;
 
   /// Compute a drift line with starting point (x0, y0, z0).
   bool DriftLine(const double x0, const double y0, const double z0,
-                 const double t0, const Particle particle, 
+                 const double t0, const Particle particle,
                  const bool aval = false);
   /// Compute an avalanche with starting point (x0, y0, z0).
   bool Avalanche(const double x0, const double y0, const double z0,
@@ -279,13 +285,12 @@ class AvalancheMC {
   }
 
   /// Compute electric and magnetic field at a given position.
-  int GetField(const std::array<double, 3>& x, 
-               std::array<double, 3>& e, std::array<double, 3>& b,
-               Medium*& medium) const;
+  int GetField(const std::array<double, 3>& x, std::array<double, 3>& e,
+               std::array<double, 3>& b, Medium*& medium) const;
   /// Retrieve the low-field mobility.
   double GetMobility(const Particle particle, Medium* medium) const;
   /// Compute the drift velocity.
-  bool GetVelocity(const Particle particle, Medium* medium, 
+  bool GetVelocity(const Particle particle, Medium* medium,
                    const std::array<double, 3>& x,
                    const std::array<double, 3>& e,
                    const std::array<double, 3>& b,
@@ -293,10 +298,10 @@ class AvalancheMC {
   /// Compute the diffusion coefficients.
   bool GetDiffusion(const Particle particle, Medium* medium,
                     const std::array<double, 3>& e,
-                    const std::array<double, 3>& b,
-                    double& dl, double& dt) const;
+                    const std::array<double, 3>& b, double& dl,
+                    double& dt) const;
   /// Compute the attachment coefficient.
-  double GetAttachment(const Particle particle, Medium* medium, 
+  double GetAttachment(const Particle particle, Medium* medium,
                        const std::array<double, 3>& x,
                        const std::array<double, 3>& e,
                        const std::array<double, 3>& b) const;
@@ -313,7 +318,7 @@ class AvalancheMC {
   void Terminate(const std::array<double, 3>& x0, const double t0,
                  std::array<double, 3>& x, double& t) const;
   /// Compute multiplication and losses along the current drift line.
-  bool ComputeGainLoss(const Particle particle, 
+  bool ComputeGainLoss(const Particle particle,
                        std::vector<DriftPoint>& driftLine, int& status,
                        const bool semiconductor = false);
   /// Compute Townsend and attachment coefficients along the current drift line.
@@ -328,11 +333,10 @@ class AvalancheMC {
   /// Compute the induced charge for the current drift line.
   void ComputeInducedCharge(const double q,
                             const std::vector<DriftPoint>& driftLine) const;
-  void PrintError(const std::string& fcn, const std::string& par, 
-                  const Particle particle, 
+  void PrintError(const std::string& fcn, const std::string& par,
+                  const Particle particle,
                   const std::array<double, 3>& x) const;
-
 };
-}
+}  // namespace Garfield
 
 #endif
