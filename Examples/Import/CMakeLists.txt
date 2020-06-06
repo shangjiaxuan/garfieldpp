@@ -1,6 +1,6 @@
 #---Setup the example project---------------------------------------------------
 cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
-project(Import)
+project(Trapping)
 
 #---Find Garfield package-------------------------------------------------------
 find_package(Garfield REQUIRED)
