@@ -80,7 +80,8 @@ To create a cylinder with a different orientation, the constructor
 SolidTube(const double cx, const double cy, const double cz, const double r,
           const double lz, const double dx, const double dy, const double dz);
 \end{lstlisting} 
-can be used.
+can be used. 
+Constructors for cylinders with non-zero inner radius are also available.
 
 \begin{figure}
 \centering
@@ -126,6 +127,29 @@ can be used.
 \label{Fig:SolidTube}
 \end{figure}
 
+When determining the surface panels (\eg for use in neBEM), 
+the cylinder is approximated as a polygon with a finite number of panels.
+The type of polygon to be used can be set using
+\begin{lstlisting}
+void SetSectors(const unsigned int n);
+\end{lstlisting}
+The number of corners of the polygon equals $4(n - 1)$.
+Thus, $n = 2$ will produce a square, $n = 3$ an octagon.
+By default, the polygon used for approximating the cylinder 
+is inscribed in a circle of the specified radius. 
+If the ``average-radius'' flag is activated using
+\begin{lstlisting}
+void SetAverageRadius(const bool average);
+\end{lstlisting}
+the radius will be interpreted as the mean radius of the polygon
+that approximates the cylinder.
+By default, the list of surface panels will include the ``lids'' at 
+$\pm z$. This can be switched off using the functions 
+\begin{lstlisting}
+void SetTopLid(const bool closed);
+void SetBottomLid(const bool closed);
+\end{lstlisting}
+
 \section{Sphere}
 \texttt{SolidSphere} has two constructors.
 The first one takes the location of the 
@@ -167,6 +191,14 @@ SolidSphere(const double cx, const double cy, const double cz,
 \caption{\texttt{SolidSphere} centred at $\left(0,0,0\right)$.}
 \label{Fig:SolidSphere}
 \end{figure}
+
+When calculating surface panels (\eg for use in neBEM), 
+the sphere is approximated by a set of parallelograms.
+The parameter $n$, set using
+\begin{lstlisting}
+void SetMeridians(const unsigned int n);
+\end{lstlisting} 
+specifies the number of meridians and also the number of parallels.
 
 \section{Hole}
 \texttt{SolidHole} describes an, optionally tapered, cylindrical hole 
@@ -235,6 +267,12 @@ is available.
 \caption{\texttt{SolidHole} centred at $\left(0,0,0\right)$.}
 \label{Fig:SolidHole}
 \end{figure}
+
+Like in \texttt{SolidTube}, the type of polygon used for approximating the 
+hole when calculating the surface panels can be specified using 
+\begin{lstlisting}
+void SetSectors(const unsigned int n);
+\end{lstlisting}
 
 \section{Ridge}
 \texttt{SolidRidge} describes a ridge, similar to a Toblerone bar. 
