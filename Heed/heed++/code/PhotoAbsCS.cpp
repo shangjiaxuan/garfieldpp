@@ -742,8 +742,6 @@ void AtomPhotoAbsCS::get_escape_particles(
 #ifdef DEBUG_PRINT_get_escape_particles
   Iprint2n(mcout, nshell, main_n);
   Iprintn(mcout, is);
-  Iprint(mcout, felectron_energy);
-  Iprint(mcout, fphoton_energy);
 #endif
 
   if (is != 0) {
