@@ -245,7 +245,14 @@ class spquadr : public polygon {
 
   spquadr(spquadr& sq);
   spquadr(const spquadr& sq);
-
+  spquadr& operator=(const spquadr& sq) {
+    polygon::operator=(sq);
+    piv = sq.piv;
+    dir1 = sq.dir1;
+    dir2 = sq.dir2;
+    awidth = sq.awidth;
+    return *this;
+  }
   spquadr(const point& fpiv, const straight& sl1, const straight& sl2,
           const vec& fdir1, const vec& fdir2, vfloat prec);
 
