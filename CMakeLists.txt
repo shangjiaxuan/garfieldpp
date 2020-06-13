@@ -68,9 +68,9 @@ set_source_files_properties(${nebem_sources} PROPERTIES LANGUAGE CXX)
 
 #--- Flags to pass to the compiler----------------------------------------------
 if(APPLE)
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -Wabi -Wno-long-long -Woverloaded-virtual -fno-common" )
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -Wno-long-long -Woverloaded-virtual -fno-common" )
 else()
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wabi -Wno-long-long -Woverloaded-virtual -fno-common -pg" )
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wno-long-long -Woverloaded-virtual -fno-common -pg" )
 endif()
 
 #--- Set the C++ standard (depending on the ROOT version)-----------------------

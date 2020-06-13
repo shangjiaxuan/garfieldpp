@@ -15,10 +15,10 @@ The file is provided "as is" without express or implied warranty.
 
 namespace Heed {
 
-// **** straight ****
+// **** straight line ****
 
-absref absref::*(straight::aref[2]) = {(absref absref::*)&straight::piv,
-                                       (absref absref::*)&straight::dir};
+absref absref::* straight::aref[2] = {(absref absref::*)&straight::piv,
+                                      (absref absref::*)&straight::dir};
 
 absref_transmit straight::get_components() {
   return absref_transmit(2, aref);
@@ -38,9 +38,8 @@ int operator==(const straight& sl1, const straight& sl2) {
 }
 
 bool apeq(const straight& sl1, const straight& sl2, vfloat prec) {
-  pvecerror("int apeq(const straight &sl1, const straight &sl2, vfloat prec)");
-  int i = check_par(sl1.dir, sl2.dir, prec);
-  if (i == 0) return false;
+  pvecerror("bool apeq(const straight &sl1, const straight &sl2, vfloat prec)");
+  if (check_par(sl1.dir, sl2.dir, prec) == 0) return false;
   if (apeq(sl1.piv, sl2.piv, prec)) return true;
   return (sl1.check_point_in(sl2.piv, prec) == 1);
 }
@@ -73,7 +72,7 @@ point straight::cross(const straight& sl, vfloat prec) const {
 vfloat straight::vecdistance(const straight& sl, int& type_of_cross,
                              point pt[2]) const {
   pvecerror(
-      "vfloat straight::distance(const straight& sl, int type_of_cross,  "
+      "vfloat straight::vecdistance(const straight& sl, int& type_of_cross, "
       "point pt[2])");
   pt[0] = point();
   pt[1] = point();

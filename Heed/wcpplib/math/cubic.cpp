@@ -1,7 +1,7 @@
 #include <cfloat>
 #include <iomanip>
 #include "wcpplib/math/cubic.h"
-#include "wcpplib/math/parabol.h"
+#include "wcpplib/math/parabola.h"
 #include "wcpplib/util/FunNameStack.h"
 
 /*
@@ -125,7 +125,7 @@ int Cubic::find_maxmin(double xmm[2], double ymm[2], int s_mm[2]) const {
   double ap = 3 * da;
   double bp = 2 * db;
   double cp = dc;
-  Parabol par(ap, bp, cp);
+  Parabola par(ap, bp, cp);
   s_mm[0] = 0;
   s_mm[1] = 0;
   int qz = par.find_zero(xmm);

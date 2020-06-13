@@ -14,8 +14,8 @@ The file is provided "as is" without express or implied warranty.
 
 namespace Heed {
 
-absref absref::*(circumf::aref[2]) = {(absref absref::*)&circumf::piv,
-                                      (absref absref::*)&circumf::dir};
+absref absref::* circumf::aref[2] = {(absref absref::*)&circumf::piv,
+                                     (absref absref::*)&circumf::dir};
 
 circumf::circumf() : piv(), dir(), rad(0) {}
 circumf::circumf(const point& fpiv, const vec& fdir, vfloat frad)

@@ -71,7 +71,7 @@ class splane : public surface {
   vec dir_ins;  // direction to inside, supposed to be unit length (What for?)
  protected:
   absref_transmit get_components() override;
-  static absref(absref::*aref_splane[2]);
+  static absref absref::* aref_splane[2];
 
  public:
   /// Default constructor

@@ -35,7 +35,7 @@ std::ostream& operator<<(std::ostream& file, const spin_def& f);
 /// it has to use either char* (string) notation, or pointer (or reference)
 /// to one of these objects.
 /// The user pogram can initialize the new particles.
-/// The standard particles are initiated right here, below.
+/// The standard particles are initialized right here, below.
 ///
 /// 1999 - 2004,   I. Smirnov
 
@@ -51,32 +51,39 @@ class particle_def {
   int baryon_n = 0;
   float spin = 0.;
   spin_def isospin;
+  /// Default constructor.
   particle_def() {
     particle_def::get_logbook().push_back(this);
   }
+  /// Constructor.
   particle_def(const std::string& fname, const std::string& fnotation,
                double fmass, double fcharge, int flepton_n, int fbarion_n,
                float fspin, const spin_def& fisospin);
+  /// Constructor.
   particle_def(const std::string& fname, const std::string& fnotation,
                double fmass, double fcharge, int flepton_n, int fbarion_n,
-               float fspin, float fisospin_total, float fisospin_proj) {
-    *this = particle_def(fname, fnotation, fmass, fcharge, flepton_n, fbarion_n,
-                         fspin, spin_def(fisospin_total, fisospin_proj));
-  }
-
-  particle_def(const particle_def& f) {
-    *this = f;
+               float fspin, float fisospin_total, float fisospin_proj) 
+      : particle_def(fname, fnotation, fmass, fcharge, flepton_n, fbarion_n,
+                     fspin, spin_def(fisospin_total, fisospin_proj)) {}
+  /// Constructor to create an anti-particle.
+  particle_def(const std::string& fname, const std::string& fnotation,
+               particle_def& p);
+  /// Copy constructor.
+  particle_def(const particle_def& f) 
+      : name(f.name), notation(f.notation), mass(f.mass), charge(f.charge), 
+        lepton_n(f.lepton_n), baryon_n(f.baryon_n), 
+        spin(f.spin), isospin(f.isospin) {
     verify();
     particle_def::get_logbook().push_back(this);
   }
+  /// Assignment operator.
+  particle_def& operator=(const particle_def& f) = default;
+
+  /// Destructor.
+  ~particle_def() { particle_def::get_logbook().remove(this); }
 
   /// Function for making an anti-particle.
   particle_def anti_particle(const particle_def& p);
-  /// Create anti-particle through the call of anti_particle(p)
-  particle_def(const std::string& fname, const std::string& fnotation,
-               particle_def& p);
-
-  ~particle_def() { particle_def::get_logbook().remove(this); }
   void print(std::ostream& file, int l) const;
   static void printall(std::ostream& file);
 
