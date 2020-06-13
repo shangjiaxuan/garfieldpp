@@ -99,7 +99,7 @@ class trajestep : public absref {
 
  protected:
   virtual absref_transmit get_components() override;
-  static absref(absref::*aref[4]);
+  static absref absref::* aref[4];
 
  private:
   void Gnextpoint1(vfloat frange, point& fpos, vec& fdir, vec& frelcen) const;

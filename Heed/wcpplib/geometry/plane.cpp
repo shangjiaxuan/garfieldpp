@@ -16,8 +16,8 @@ namespace Heed {
 
 // **** plane ****
 
-absref absref::*(plane::aref[2]) = {(absref absref::*)&plane::piv,
-                                    (absref absref::*)&plane::dir};
+absref absref::* plane::aref[2] = {(absref absref::*)&plane::piv,
+                                   (absref absref::*)&plane::dir};
 
 absref_transmit plane::get_components() {
   return absref_transmit(2, aref);

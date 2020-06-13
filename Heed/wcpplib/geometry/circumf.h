@@ -64,7 +64,7 @@ class circumf : public absref {
   vfloat rad;  
 
   virtual absref_transmit get_components() override;
-  static absref(absref::*aref[2]);
+  static absref absref::* aref[2];
 
 };
 std::ostream& operator<<(std::ostream& file, const circumf& f);

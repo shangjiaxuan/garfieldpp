@@ -100,7 +100,7 @@ class absref {
 /// Three methods of transmission (fast, slower and slowest) are available.
 class absref_transmit {
  public:
-  absref_transmit() {}
+  absref_transmit() = default;
   // For transmitting the members of the class, when
   // their relative addresses are available.
   absref_transmit(int fqaref, absref absref::** faref)
@@ -115,9 +115,11 @@ class absref_transmit {
         aref(faref),
         qaref_pointer(fqaref_pointer),
         aref_pointer(faref_pointer) {}
-
-  absref_transmit(const absref_transmit& f) { *this = f; }
-  /// Destructor
+  /// Copy constructor.
+  absref_transmit(const absref_transmit& f) = default; 
+  /// Assignment operator.
+  absref_transmit& operator=(const absref_transmit& f) = default;
+  /// Destructor.
   virtual ~absref_transmit() {}
 
   virtual void print(std::ostream& file, int l) const;
@@ -127,7 +129,7 @@ class absref_transmit {
   int qaref = 0;
   /// Reference to address of array containing their relative addresses
   /// as class members.
-  absref(absref::** aref);  
+  absref absref::** aref;  
 
   // When the relative addresses are not available, in particular
   // when the component object is located in heap memory:
@@ -369,7 +371,7 @@ class point : public absref {
 
  private:
   absref_transmit get_components() override;
-  static absref(absref::*aref);
+  static absref absref::* aref;
 
  public:
   void down(const abssyscoor* fasc) override;
@@ -384,6 +386,9 @@ class point : public absref {
   /// Constructor from coordinates.
   point(const vfloat fex, const vfloat fey, const vfloat fez)
       : v(fex, fey, fez) {}
+  /// Copy constructor.
+  point(const point& p) : v(p.v) {}
+  /// Assignment operator.
   point& operator=(const point& fp) {
     v = fp.v;
     return *this;
@@ -455,7 +460,7 @@ class fixsyscoor : public absref, public abssyscoor {
 
  protected:
   absref_transmit get_components() override;
-  static absref(absref::*aref[2]);
+  static absref absref::* aref[2];
 
  private:
   point piv;

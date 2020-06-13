@@ -15,10 +15,10 @@ The file is provided "as is" without express or implied warranty.
 
 namespace Heed {
 
-// **** straight ****
+// **** straight line ****
 
-absref absref::*(straight::aref[2]) = {(absref absref::*)&straight::piv,
-                                       (absref absref::*)&straight::dir};
+absref absref::* straight::aref[2] = {(absref absref::*)&straight::piv,
+                                      (absref absref::*)&straight::dir};
 
 absref_transmit straight::get_components() {
   return absref_transmit(2, aref);
