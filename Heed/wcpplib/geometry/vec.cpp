@@ -264,7 +264,7 @@ vec dv0(0, 0, 0);
 
 // **** basis ****
 
-absref absref::*basis::aref[3] = {
+absref absref::* basis::aref[3] = {
     reinterpret_cast<absref absref::*>(static_cast<vec absref::*>(&basis::ex)),
     reinterpret_cast<absref absref::*>(static_cast<vec absref::*>(&basis::ey)),
     reinterpret_cast<absref absref::*>(static_cast<vec absref::*>(&basis::ez))};
@@ -408,7 +408,7 @@ std::ostream& operator<<(std::ostream& file, const basis& b) {
 
 // **** point ****
 
-absref absref::*(point::aref) =
+absref absref::* point::aref =
     reinterpret_cast<absref absref::*>(static_cast<vec absref::*>(&point::v));
 
 absref_transmit point::get_components() {
@@ -464,7 +464,7 @@ std::ostream& operator<<(std::ostream& file, const abssyscoor& f) {
   return file;
 }
 
-absref absref::*(fixsyscoor::aref[2]) = {
+absref absref::* fixsyscoor::aref[2] = {
     reinterpret_cast<absref absref::*>(
         static_cast<point absref::*>(&fixsyscoor::piv)),
     reinterpret_cast<absref absref::*>(

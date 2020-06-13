@@ -13,10 +13,10 @@ The file is provided "as is" without express or implied warranty.
 
 namespace Heed {
 
-absref absref::*(trajestep::aref[4]) = {(absref absref::*)&trajestep::currpos,
-                                        (absref absref::*)&trajestep::dir,
-                                        (absref absref::*)&trajestep::relcen,
-                                        (absref absref::*)&trajestep::mpoint};
+absref absref::* trajestep::aref[4] = {(absref absref::*)&trajestep::currpos,
+                                       (absref absref::*)&trajestep::dir,
+                                       (absref absref::*)&trajestep::relcen,
+                                       (absref absref::*)&trajestep::mpoint};
 
 absref_transmit trajestep::get_components() {
   return absref_transmit(4, aref);

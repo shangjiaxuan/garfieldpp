@@ -34,7 +34,7 @@ class straight : public absref {
 
  protected:
   virtual absref_transmit get_components() override;
-  static absref(absref::*aref[2]);
+  static absref absref::* aref[2];
 
  public:
   straight() : piv(), dir() {}

@@ -20,7 +20,7 @@ absref_transmit polyline::get_components() {
 }
 
 polyline::polyline(polyline& pl) : absref(pl) {
-  mfunname("polyline::polyline(      polyline &pl)");
+  mfunname("polyline::polyline(polyline &pl)");
   polyline_init(pl.pt, pl.qpt);
 }
 polyline::polyline(const polyline& pl) : absref(pl) {
@@ -229,9 +229,9 @@ std::ostream& operator<<(std::ostream& file, const polyline& p) {
   indn.n -= 2;
   return file;
 }
-//             **** polyline in plane  ****
+// **** polyline in plane  ****
 
-absref absref::*(polyline_pl::aref_pl) = (absref absref::*)&polyline_pl::pn;
+absref absref::* polyline_pl::aref_pl = (absref absref::*)&polyline_pl::pn;
 
 absref_transmit polyline_pl::get_components() {
   return absref_transmit(1, &aref_pl, qpt + qsl, aref);
@@ -420,8 +420,9 @@ std::ostream& operator<<(std::ostream& file, const polygon& p) {
   indn.n -= 2;
   return file;
 }
-//             ***  rectangle ***
-absref absref::*(rectangle::aref_rct[4]) = {
+
+// ***  rectangle ***
+absref absref::* rectangle::aref_rct[4] = {
     (absref absref::*)&rectangle::pn,   (absref absref::*)&rectangle::piv,
     (absref absref::*)&rectangle::dir1, (absref absref::*)&rectangle::dir2};
 
@@ -478,9 +479,9 @@ std::ostream& operator<<(std::ostream& file, const rectangle& f) {
   return file;
 }
 
-//             **** special quadrangle ****  for cathode strip shamber
+// **** special quadrangle ****  for cathode strip shamber
 
-absref absref::*(spquadr::aref_sp[4]) = {
+absref absref::* spquadr::aref_sp[4] = {
     (absref absref::*)&spquadr::pn,   (absref absref::*)&spquadr::piv,
     (absref absref::*)&spquadr::dir1, (absref absref::*)&spquadr::dir2};
 

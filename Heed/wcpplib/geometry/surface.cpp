@@ -15,8 +15,8 @@ The file is provided "as is" without express or implied warranty.
 namespace Heed {
 
 // **** splane ****
-absref absref::*(splane::aref_splane[2]) = {(absref absref::*)&splane::pn,
-                                            (absref absref::*)&splane::dir_ins};
+absref absref::* splane::aref_splane[2] = {(absref absref::*)&splane::pn,
+                                           (absref absref::*)&splane::dir_ins};
 
 absref_transmit splane::get_components() {
   return absref_transmit(2, aref_splane);

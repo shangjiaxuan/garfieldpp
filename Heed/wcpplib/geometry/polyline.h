@@ -125,7 +125,7 @@ class polyline_pl : public polyline {
   plane Gpn() const { return pn; }
 
  protected:
-  static absref(absref::*aref_pl);
+  static absref absref::* aref_pl;
   virtual absref_transmit get_components() override;
 
  public:
@@ -192,7 +192,7 @@ class rectangle : public polygon {
   // Prec is used to check that sides are perpendicular and
   // at initing of the polygon via straight lines.
  protected:
-  static absref(absref::*aref_rct[4]);
+  static absref absref::* aref_rct[4];
   virtual absref_transmit get_components() override;
 };
 std::ostream& operator<<(std::ostream& file, const rectangle& f);
@@ -214,7 +214,7 @@ class spquadr : public polygon {
   vfloat Gawidth() const { return awidth; }
 
  protected:
-  static absref(absref::*aref_sp[4]);
+  static absref absref::* aref_sp[4];
   virtual absref_transmit get_components() override;
 
  public:
