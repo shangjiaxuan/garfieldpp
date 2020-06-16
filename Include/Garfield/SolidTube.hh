@@ -68,6 +68,7 @@ class SolidTube : public Solid {
   bool GetAverage() const { return m_average; }
 
   bool SolidPanels(std::vector<Panel>& panels) override;
+  void SetDiscretisationLevel(const double dis) override { m_dis.fill(dis); }
   double GetDiscretisationLevel(const Panel& panel) override;
 
  private:

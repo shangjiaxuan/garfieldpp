@@ -30,6 +30,7 @@ class SolidWire : public Solid {
   double GetRadius() const override { return m_r; }
 
   bool SolidPanels(std::vector<Panel>& panels) override;
+  void SetDiscretisationLevel(const double dis) override { m_dis = dis; }
   double GetDiscretisationLevel(const Panel& panel) override;
 
  private:

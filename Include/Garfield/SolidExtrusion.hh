@@ -43,6 +43,9 @@ class SolidExtrusion : public Solid {
   void SetBottomLid(const bool closed) { m_botlid = closed; }
 
   bool SolidPanels(std::vector<Panel>& panels) override;
+  void SetDiscretisationLevel(const double dis) override {
+    m_dis.fill(dis);
+  }
   double GetDiscretisationLevel(const Panel& panel) override;
 
  private:

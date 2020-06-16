@@ -38,6 +38,7 @@ class SolidSphere : public Solid {
   void SetMeridians(const unsigned int n);
 
   bool SolidPanels(std::vector<Panel>& panels) override;
+  void SetDiscretisationLevel(const double dis) override { m_dis = dis; }
   double GetDiscretisationLevel(const Panel& panel) override;
 
  private:

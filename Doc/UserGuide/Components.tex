@@ -1044,7 +1044,14 @@ void SetMinMaxNumberOfElements(const unsigned int nmin, const unsigned int nmax)
 \item[length] preferred linear size of the elements, measured along their edges.
 \item[nmin,nmax] smallest and largest number of elements produced along either axis of a single primitive.
 \end{description}
-neBEM subsequently determines the influence matrix $K$ and 
+One can also request different target element sizes for each 
+\texttt{Solid} object, using
+\begin{lstlisting}
+void Solid::SetDiscretisationLevel(const double dis);
+\end{lstlisting} 
+
+After splitting the primitives into elements, 
+neBEM determines the influence matrix $K$ and 
 the right-hand side vector\footnote{In a system with only Dirichlet 
 boundary conditions, the right-hand side vector is given by the 
 potentials at the elements, $b_{i} = V_{i}$.}
@@ -1059,15 +1066,18 @@ of every element,
 \end{equation*}
 
 \subsection{Weighting fields}
-In order to request neBEM to compute the weighting field of a 
-given \texttt{Solid}, 
-it is enough to give the \texttt{Solid} a label. 
+If a \texttt{Solid} object has been given a label using 
 \begin{lstlisting}
 void Solid::SetLabel(const std::string& label);
 \end{lstlisting}
+neBEM will compute its weighting field at the same time as 
+the electric field.
+One can assign the same label to multiple \texttt{Solid} objects.
+The weighting field corresponding to this label will then be 
+computed by setting the potential of all elements associated to solids 
+with this label to 1\,V (and grounding all other conducting elements).
 
 \section{Other components}
-
 For simple calculations, the class \texttt{ComponentConstant} can be used. 
 As the name implies, it provides a uniform electric field. 
 The electric field and potential can be specified using
