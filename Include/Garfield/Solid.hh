@@ -144,7 +144,8 @@ class Solid {
   virtual double GetDiscretisationLevel(const Panel& panel) = 0;
 
   enum BoundaryCondition {
-    Voltage = 1,
+    Unknown = 0,
+    Voltage,
     Charge,
     Float,
     Dielectric,
@@ -201,7 +202,7 @@ class Solid {
   bool m_debug = false;
 
   /// Type of boundary condition.
-  BoundaryCondition m_bctype = Voltage;
+  BoundaryCondition m_bctype = Unknown;
   /// Potential at the surface.
   double m_volt = 0.;
   /// Surface charge density.

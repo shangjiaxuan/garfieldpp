@@ -751,6 +751,18 @@ bool ComponentNeBem3d::Initialise() {
     solids[id] = solid;
     bc[id] = solid->GetBoundaryConditionType();
     volt[id] = solid->GetBoundaryPotential();
+    if (bc[id] == Solid::Unknown) {
+      std::cout << m_className << "::Initialise:\n"
+                << "    Boundary conditions for solid " << id << " not set.\n";
+      if (medium && medium->IsConductor()) {
+        std::cout << "    Assuming the panels to be grounded.\n";
+        bc[id] = Solid::Voltage;
+        volt[id] = 0.; 
+      } else {
+        std::cout << "    Assuming dielectric-dielectric interfaces.\n";
+        bc[id] = Solid::Dielectric;
+      }
+    } 
     charge[id] = solid->GetBoundaryChargeDensity();
     if (!medium) {
       eps[id] = 1.;
