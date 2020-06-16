@@ -794,6 +794,10 @@ bool ComponentNeBem3d::Initialise() {
   }
   // Keep track of which panels have been processed.
   std::vector<bool> mark(nIn, false);
+  // Count the number of interface panels that have been discarded.
+  unsigned int nTrivial = 0;
+  unsigned int nConflicting = 0;
+  unsigned int nNotImplemented = 0;
   // Pick up panels which coincide potentially.
   for (unsigned int i = 0; i < nIn; ++i) {
     // Skip panels already done.
@@ -1057,6 +1061,13 @@ bool ComponentNeBem3d::Initialise() {
                     << " is not implemented. Skip.\n";
         }
       }
+      if (interfaceType < 0) {
+        ++nConflicting;
+      } else if (interfaceType < 1) {
+        ++nTrivial;
+      } else if (interfaceType > 5) {
+        ++nNotImplemented;
+      } 
       if (interfaceType < 1 || interfaceType > 5) continue;
 
       std::vector<Panel> panelsOut;
@@ -1141,7 +1152,22 @@ bool ComponentNeBem3d::Initialise() {
     primitive.vol2 = -1;
     m_primitives.push_back(std::move(primitive));
   }
-
+  // Print a warning if we have discarded some panels during the process.
+  if (nTrivial > 0 || nConflicting > 0 || nNotImplemented > 0) {
+    std::cerr << m_className << "::Initialise:\n";
+    if (nConflicting > 0) {
+      std::cerr << "    Skipped " << nConflicting 
+                << " panels with conflicting boundary conditions.\n";
+    } 
+    if (nNotImplemented > 0) {
+      std::cerr << "    Skipped " << nNotImplemented 
+                << " panels with not yet available boundary conditions.\n";
+    }
+    if (nTrivial > 0) {
+       std::cerr << "    Skipped " << nTrivial 
+                 << " panels with trivial boundary conditions.\n";
+    } 
+  }
   if (m_debug) {
     std::cout << m_className << "::Initialise:\n"
               << "    Created " << m_primitives.size() << " primitives.\n";
