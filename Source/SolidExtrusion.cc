@@ -141,7 +141,7 @@ bool SolidExtrusion::SolidPanels(std::vector<Panel>& panels) {
       panel.yv.push_back(y);
       panel.zv.push_back(z);
     }
-    panel.colour = 0;
+    panel.colour = m_colour;
     panel.volume = id;
     panels.push_back(std::move(panel));
   }
@@ -159,7 +159,7 @@ bool SolidExtrusion::SolidPanels(std::vector<Panel>& panels) {
       panel.yv.push_back(y);
       panel.zv.push_back(z);
     }
-    panel.colour = 0;
+    panel.colour = m_colour;
     panel.volume = id;
     panels.push_back(std::move(panel));
   }
@@ -199,7 +199,7 @@ bool SolidExtrusion::SolidPanels(std::vector<Panel>& panels) {
       panel.xv = {x0, x1, x2, x3};
       panel.yv = {y0, y1, y2, y3};
       panel.zv = {z0, z1, z2, z3};
-      panel.colour = 0;
+      panel.colour = m_colour;
       panel.volume = id;
       panels.push_back(std::move(panel));
       // Shift the points.
@@ -229,6 +229,89 @@ double SolidExtrusion::GetDiscretisationLevel(const Panel& panel) {
     return m_dis[1];
   }
   return m_dis[2];
+}
+
+void SolidExtrusion::Cut(const double x0, const double y0, const double z0,
+                         const double xn, const double yn, const double zn,
+                         std::vector<Panel>& panels) {
+
+  //-----------------------------------------------------------------------
+  //   PLAEXC - Cuts extrusion with a plane.
+  //-----------------------------------------------------------------------
+
+  std::vector<double> xv;
+  std::vector<double> yv;
+  std::vector<double> zv;
+  const unsigned int np = m_xp.size(); 
+  // Go through the lines of the top lid, first point.
+  double x1, y1, z1;
+  ToGlobal(m_xp.back(), m_yp.back(), m_lZ, x1, y1, z1);
+  // Loop over the points.
+  for (unsigned int i = 0; i < np; ++i) { 
+    double x2, y2, z2;
+    ToGlobal(m_xp[i], m_yp[i], m_lZ, x2, y2, z2);
+    // Cut with the plane.
+    double xc, yc, zc;
+    if (Intersect(x1, y1, z1, x2, y2, z2, 
+                  x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+      xv.push_back(xc);
+      yv.push_back(yc);
+      zv.push_back(zc);
+    }
+    // Shift the coordinates.
+    x1 = x2;
+    y1 = y2;
+    z1 = z2;
+  }
+
+  if (m_lZ > 0.) {
+    // Go through the lines of the bottom lid, first point.
+    ToGlobal(m_xp.back(), m_yp.back(), -m_lZ, x1, y1, z1);
+    // Loop over the points.
+    for (unsigned int i = 0; i < np; ++i) {
+      double x2, y2, z2;
+      ToGlobal(m_xp[i], m_yp[i], -m_lZ, x2, y2, z2);
+      double xc, yc, zc;
+      if (Intersect(x1, y1, z1, x2, y2, z2,
+                    x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+        xv.push_back(xc);
+        yv.push_back(yc);
+        zv.push_back(zc);
+      }
+      // Shift the coordinates.
+      x1 = x2;
+      y1 = y2;
+      z1 = z2;
+    }
+    // Go through the ribs.
+    for (unsigned int i = 0; i < np; ++i) {
+      // Bottom and top of the line along the axis of the extrusion.
+      ToGlobal(m_xp[i], m_yp[i], +m_lZ, x1, y1, z1);
+      double x2, y2, z2;
+      ToGlobal(m_xp[i], m_yp[i], -m_lZ, x2, y2, z2);
+      double xc, yc, zc;
+      if (Intersect(x1, y1, z1, x2, y2, z2, 
+                    x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+        xv.push_back(xc);
+        yv.push_back(yc);
+        zv.push_back(zc);
+      }
+    }
+  }
+  // Get rid of butterflies.
+  Polygon::EliminateButterflies(xv, yv, zv);
+  if (xv.size() >= 3) {
+    Panel panel;
+    panel.a = xn;
+    panel.b = yn;
+    panel.c = zn;
+    panel.xv = xv;
+    panel.yv = yv;
+    panel.zv = zv;
+    panel.colour = m_colour;
+    panel.volume = GetId();
+    panels.push_back(std::move(panel));
+  }
 }
  
 }

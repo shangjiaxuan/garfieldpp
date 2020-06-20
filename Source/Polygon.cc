@@ -127,6 +127,57 @@ bool Crossing(const double x1, const double y1, const double x2,
   return false;
 }
 
+/// Determines whether the 2 straight lines (x1, y1) to (x2, y2)
+/// and (u1, u2) to (v1, v2) cross at an intermediate point for both lines.
+bool Crossing(const double x1, const double y1, 
+              const double x2, const double y2,
+              const double u1, const double v1,
+              const double u2, const double v2) {
+
+  std::array<std::array<double, 2>, 2> a;
+  // Matrix to compute the crossing point.
+  a[0][0] = y2 - y1;
+  a[1][0] = v2 - v1;
+  a[0][1] = x1 - x2;
+  a[1][1] = u1 - u2;
+  const double det = a[0][0] * a[1][1] - a[0][1] * a[1][0];
+  // Set tolerances.
+  const double epsx = std::max(1.e-10 * std::max({std::abs(x1), std::abs(x2),
+                                                  std::abs(u1), std::abs(u2)}),
+                               1.e-10);
+  const double epsy = std::max(1.e-10 * std::max({std::abs(y1), std::abs(y2),
+                                                  std::abs(v1), std::abs(v2)}),
+                               1.e-10);
+  // Check for a point of one line located on the other line.
+  if (OnLine(x1, y1, x2, y2, u1, v1) || OnLine(x1, y1, x2, y2, u2, v2) || 
+      OnLine(u1, v1, u2, v2, x1, y1) || OnLine(u1, v1, u2, v2, x2, y2)) {
+    // Point on other line.
+    return true;
+  }
+  if (std::abs(det) < epsx * epsy) {
+    // Parallel, non-touching
+    return false;
+  }
+  // Crossing, non-trivial lines: solve crossing equations.
+  std::swap(a[0][0], a[1][1]);
+  const double invdet = 1. / det;
+  a[0][0] *= invdet;
+  a[1][1] *= invdet;
+  a[0][1] = -a[0][1] * invdet;
+  a[1][0] = -a[1][0] * invdet;
+  // Compute crossing point.
+  const double xc = a[0][0] * (x1 * y2 - x2 * y1) + 
+                    a[0][1] * (u1 * v2 - u2 * v1);
+  const double yc = a[1][0] * (x1 * y2 - x2 * y1) +
+                    a[1][1] * (u1 * v2 - u2 * v1);
+  // See whether the crossing point is on both lines.
+  if (OnLine(x1, y1, x2, y2, xc, yc) && OnLine(u1, v1, u2, v2, xc, yc)) {
+    return true;
+  }
+  // Crossing point not on both lines.
+  return false;
+}
+
 }
 
 namespace Garfield {
@@ -299,6 +350,119 @@ bool NonTrivial(const std::vector<double>& xp,
   }
   // Seems to be OK.
   return true;
+}
+
+void EliminateButterflies(std::vector<double>& xp, std::vector<double>& yp,
+                          std::vector<double>& zp) {
+  //----------------------------------------------------------------------
+  //   BUTFLD - Tries to eliminate "butterflies", i.e. the crossing of 2
+  //            adjacent segments of a polygon, by point exchanges.
+  //----------------------------------------------------------------------
+  unsigned int np = xp.size();
+  if (np <= 3) return;
+  // Compute range.
+  const double xmin = *std::min_element(std::begin(xp), std::end(xp));
+  const double xmax = *std::max_element(std::begin(xp), std::end(xp));
+  const double ymin = *std::min_element(std::begin(yp), std::end(yp));
+  const double ymax = *std::max_element(std::begin(yp), std::end(yp));
+  const double zmin = *std::min_element(std::begin(zp), std::end(zp));
+  const double zmax = *std::max_element(std::begin(zp), std::end(zp));
+  // Set tolerances.
+  const double epsx = std::max(1.e-10 * std::abs(xmax - xmin), 1.e-6);
+  const double epsy = std::max(1.e-10 * std::abs(ymax - ymin), 1.e-6);
+  const double epsz = std::max(1.e-10 * std::abs(zmax - zmin), 1.e-6);
+  double xsurf = 0.;
+  double ysurf = 0.;
+  double zsurf = 0.;
+  for (unsigned int i = 2; i < np; ++i) {
+    const double x1 = xp[i - 1] - xp[0];
+    const double y1 = yp[i - 1] - yp[0];
+    const double z1 = zp[i - 1] - zp[0];
+    xsurf += std::abs((yp[i] - yp[0]) * z1 - y1 * (zp[i] - zp[0]));
+    ysurf += std::abs((xp[i] - xp[0]) * z1 - x1 * (zp[i] - zp[0]));
+    zsurf += std::abs((xp[i] - xp[0]) * y1 - x1 * (yp[i] - yp[0]));
+  }
+  // Eliminate points appearing twice, initialise marks.
+  std::vector<bool> mark(np, false);
+  // Scan the list.
+  for (unsigned int i = 0; i < np; ++i) {
+    if (mark[i]) continue;
+    for (unsigned int j = i + 1; j < np; ++j) {
+      if (std::abs(xp[i] - xp[j]) <= epsx && std::abs(yp[i] - yp[j]) <= epsy &&
+          std::abs(zp[i] - zp[j]) <= epsz) {
+        mark[j] = true;
+      }
+    }
+  }
+  // And remove the duplicate points.
+  unsigned int nNew = 0;
+  for (unsigned int i = 0; i < np; ++i) {
+    if (mark[i]) continue;
+    xp[nNew] = xp[i];
+    yp[nNew] = yp[i];
+    zp[nNew] = zp[i];
+    ++nNew;
+  }
+  // std::cout << "ElminateButterflies: old/new number of points: " << np 
+  //           << "/" << nNew << "\n";
+  // Update the number of points.
+  np = nNew;
+  xp.resize(np);
+  yp.resize(np);
+  zp.resize(np);
+  // No risk of having a butterfly with less than 4 points.
+  if (np <= 3) return;
+  // Select the axis with the largest norm.
+  unsigned int iaxis = 0;
+  if (xsurf > ysurf && xsurf > zsurf) {
+    iaxis = 1;
+  } else if (ysurf > zsurf) {
+    iaxis = 2; 
+  } else {
+    iaxis = 3;
+  }
+  // Set number of passes to avoid endless loop.
+  unsigned int nPass = 0;
+  bool repass = true;
+  while (repass) {
+    // Make a pass.
+    ++nPass;
+    repass = false;
+    for (unsigned int i = 0; i < np; ++i) {
+      const unsigned int ii = (i + 1) % np;
+      for (unsigned int j = i + 2; j < np; ++j) {
+        const unsigned int jj = (j + 1) % np;
+        if (j + 1 >= np && jj >= i) continue;
+        // Check for a crossing.
+        if (iaxis == 1 && !Crossing(yp[i], zp[i], yp[ii], zp[ii],
+                                    yp[j], zp[j], yp[jj], zp[jj])) {
+          continue;
+        } else if (iaxis == 2 && !Crossing(xp[i], zp[i], xp[ii], zp[ii],
+                                           xp[j], zp[j], xp[jj], zp[jj])) {
+          continue;
+        } else if (iaxis == 3 && !Crossing(xp[i], yp[i], xp[ii], yp[ii],
+                                           xp[j], yp[j], xp[jj], yp[jj])) {
+          continue;
+        }
+        // If there is a crossing, exchange the portion in between.
+        for (unsigned int k = 0; k < (j - i) / 2; ++k) {
+          const unsigned int k1 = (i + k + 1) % np;
+          const unsigned int k2 = (j - k) % np;
+          std::swap(xp[k1], xp[k2]);
+          std::swap(yp[k1], yp[k2]);
+          std::swap(zp[k1], zp[k2]);
+        }
+        // And remember we have to do another pass after this.
+        repass = true;
+      }
+    }
+    // See whether we have to do another pass.
+    if (repass && nPass > np) {
+      std::cerr << "Butterfly: unable to eliminate the internal crossings;\n"
+                << "    plot probably incorrect.\n";
+      break;
+    }
+  }
 }
 
 }

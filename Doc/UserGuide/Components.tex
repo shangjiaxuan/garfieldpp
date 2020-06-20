@@ -129,15 +129,29 @@ void SetGeometry(Geometry* geo);
 Geometries described by \texttt{GeometrySimple} can be viewed 
 using the class \texttt{ViewGeometry}. 
 \begin{lstlisting}
+MediumMagboltz gas;
 // Create and setup the geometry.
-GeometrySimple* geo = new GeometrySimple();
-...
+GeometrySimple geo;
+const double r1 = 0.4;
+const double r2 = 0.6;
+SolidHole hole(0, 0, 0, r1, r2, 1, 1, 1);
+hole.SetSectors(4);
+geo.AddSolid(&hole, &gas);
+
 // Create a viewer.
-ViewGeometry* view = new ViewGeometry();
-// Set the pointer to the geometry.
-view->SetGeometry(geo);
-view->Plot();
+ViewGeometry geoView;
+geoView.SetGeometry(&geo);
+geoView.Plot3d();
 \end{lstlisting}
+The snippet above will produce a three-dimensional impression of the geometry.
+The function \texttt{ViewGeometry::Plot2d()} draws a cut through the solids 
+at the current viewing plane, \textit{e. g.} using again the geometry defined above,
+\begin{lstlisting}
+// ...
+ViewGeometry geoView;
+geoView.SetPlaneXZ();
+geoView.Plot2d();
+\end{lstlisting} 
 
 ROOT geometries can be visualized by calling the \texttt{Draw()} function of
 \texttt{TGeoManager}. 

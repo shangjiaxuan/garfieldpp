@@ -7,6 +7,7 @@
 #include <TGeoXtru.h>
 #include <TGeoBoolNode.h>
 #include <TGeoCompositeShape.h>
+#include <TPolyLine.h>
 
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -34,15 +35,24 @@ void ViewGeometry::SetGeometry(GeometrySimple* geo) {
   m_geometry = geo;
 }
 
-void ViewGeometry::Plot() {
+void ViewGeometry::Plot(const bool twod) {
+
+  if (twod) {
+    Plot2d();
+  } else {
+    Plot3d();
+  }
+}
+
+void ViewGeometry::Plot3d() {
   if (!m_geometry) {
-    std::cerr << m_className << "::Plot: Geometry is not defined.\n";
+    std::cerr << m_className << "::Plot3d: Geometry is not defined.\n";
     return;
   }
 
   const unsigned int nSolids = m_geometry->GetNumberOfSolids();
   if (nSolids == 0) {
-    std::cerr << m_className << "::Plot: Geometry is empty.\n";
+    std::cerr << m_className << "::Plot3d: Geometry is empty.\n";
     return;
   }
 
@@ -50,7 +60,7 @@ void ViewGeometry::Plot() {
   double xMin = 0., yMin = 0., zMin = 0.;
   double xMax = 0., yMax = 0., zMax = 0.;
   if (!m_geometry->GetBoundingBox(xMin, yMin, zMin, xMax, yMax, zMax)) {
-    std::cerr << m_className << "::Plot: Cannot retrieve bounding box.\n";
+    std::cerr << m_className << "::Plot3d: Cannot retrieve bounding box.\n";
     return;
   }
   auto canvas = GetCanvas();
@@ -72,21 +82,21 @@ void ViewGeometry::Plot() {
   for (unsigned int i = 0; i < nSolids; ++i) {
     Solid* solid = m_geometry->GetSolid(i);
     if (!solid) {
-      std::cerr << m_className << "::Plot:\n"
+      std::cerr << m_className << "::Plot3d:\n"
                 << "    Could not get solid " << i << " from geometry.\n";
       continue;
     }
     // Get the center coordinates.
     double x0 = 0., y0 = 0., z0 = 0.;
     if (!solid->GetCentre(x0, y0, z0)) {
-      std::cerr << m_className << "::Plot: Could not determine solid centre.\n";
+      std::cerr << m_className << "::Plot3d: Could not determine solid centre.\n";
       continue;
     }
     // Get the rotation.
     double ctheta = 1., stheta = 0.;
     double cphi = 1., sphi = 0.;
     if (!solid->GetOrientation(ctheta, stheta, cphi, sphi)) {
-      std::cerr << m_className << "::Plot:\n"
+      std::cerr << m_className << "::Plot3d:\n"
                 << "    Could not determine solid orientation.\n";
       continue;
     }
@@ -153,11 +163,13 @@ void ViewGeometry::Plot() {
       xtru->DefineSection(0, -dz);
       xtru->DefineSection(1, +dz);
     } else {
-      std::cerr << m_className << "::Plot: Unknown type of solid.\n";
+      std::cerr << m_className << "::Plot3d: Unknown type of solid.\n";
       continue;
     }
     Medium* medium = m_geometry->GetMedium(x0, y0, z0);
-    if (!medium) {
+    if (solid->GetColour() >= 0) {
+      volume->SetLineColor(solid->GetColour());
+    } else if (!medium) {
       volume->SetLineColor(kGreen + 2);
       volume->SetTransparency(50);
     } else if (medium->IsGas()) {
@@ -181,6 +193,97 @@ void ViewGeometry::Plot() {
   m_geoManager->GetTopNode()->Draw("ogl");
 }
 
+void ViewGeometry::Plot2d() {
+
+  if (!m_geometry) {
+    std::cerr << m_className << "::Plot2d: Geometry is not defined.\n";
+    return;
+  }
+
+  const unsigned int nSolids = m_geometry->GetNumberOfSolids();
+  if (nSolids == 0) {
+    std::cerr << m_className << "::Plot2d: Geometry is empty.\n";
+    return;
+  }
+
+  // Determine the plot limits.
+  double x0 = 0., y0 = 0.;
+  double x1 = 0., y1 = 0.;
+  if (m_userPlotLimits) {
+    x0 = m_xMinPlot;
+    y0 = m_yMinPlot;
+    x1 = m_xMaxPlot;
+    y1 = m_yMaxPlot;
+  } else if (m_userBox) {
+    PlotLimitsFromUserBox(x0, y0, x1, y1);
+  } else {
+    std::array<double, 3> bbmin;
+    std::array<double, 3> bbmax;
+    if (!m_geometry->GetBoundingBox(bbmin[0], bbmin[1], bbmin[2], 
+                                    bbmax[0], bbmax[1], bbmax[2])) {
+      std::cerr << m_className << "::Plot2d: Cannot retrieve bounding box.\n";
+      return;
+    }
+    PlotLimits(bbmin, bbmax, x0, y0, x1, y1);
+  }
+
+  auto canvas = GetCanvas();
+  canvas->cd();
+  canvas->SetTitle("Geometry");
+
+  bool empty = false;
+  if (!gPad ||
+      (gPad->GetListOfPrimitives()->GetSize() == 0 && gPad->GetX1() == 0 &&
+       gPad->GetX2() == 1 && gPad->GetY1() == 0 && gPad->GetY2() == 1)) {
+    empty = true;
+  }
+  const double bm = canvas->GetBottomMargin();
+  const double lm = canvas->GetLeftMargin();
+  const double rm = canvas->GetRightMargin();
+  const double tm = canvas->GetTopMargin();
+  if (!empty) {
+    TPad* pad = new TPad("geo", "", 0, 0, 1, 1);
+    pad->SetFillStyle(0);
+    pad->SetFrameFillStyle(0);
+    pad->Draw();
+    pad->cd();
+  }
+  gPad->Range(x0 - (x1 - x0) * (lm / (1. - rm - lm)),
+              y0 - (y1 - y0) * (bm / (1. - tm - lm)),
+              x1 + (x1 - x0) * (rm / (1. - rm - lm)),
+              y1 + (y1 - y0) * (tm / (1. - tm - lm)));
+  TPolyLine pl;
+  pl.SetLineWidth(2);
+  for (unsigned int i = 0; i < nSolids; ++i) {
+    auto solid = m_geometry->GetSolid(i);
+    if (!solid) continue;
+    std::vector<Panel> panels;
+    solid->Cut(m_proj[2][0], m_proj[2][1], m_proj[2][2],
+               m_plane[0], m_plane[1], m_plane[2], panels);
+    for (const auto& panel : panels) {
+      const unsigned int nv = panel.xv.size();
+      if (nv < 3) continue;
+      std::vector<double> xpl;
+      std::vector<double> ypl;
+      for (unsigned int j = 0; j < nv; ++j) {
+        double u, v;
+        ToPlane(panel.xv[j], panel.yv[j], panel.zv[j], u, v);
+        xpl.push_back(u);
+        ypl.push_back(v);
+      }
+      xpl.push_back(xpl[0]);
+      ypl.push_back(ypl[0]);
+      if (panel.colour < 0) {
+        pl.SetLineColor(kBlack);
+      } else {
+        pl.SetLineColor(panel.colour);
+      }
+      pl.DrawPolyLine(nv + 1, xpl.data(), ypl.data(), "same");
+    }
+  }
+  gPad->Update();
+}
+
 void ViewGeometry::Reset() {
   for (auto it = m_volumes.begin(), end = m_volumes.end(); it != end; ++it) {
     if (*it) {
@@ -201,4 +304,5 @@ void ViewGeometry::Reset() {
 
   m_geoManager.reset(nullptr);
 }
+ 
 }
