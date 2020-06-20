@@ -18,7 +18,7 @@ struct Panel {
   /// Z-coordinates of vertices
   std::vector<double> zv;
   /// Colour index
-  double colour;
+  int colour;
   /// Reference to solid to which the panel belongs
   int volume;
 };
@@ -143,6 +143,10 @@ class Solid {
   /// Retrieve the discretization level of a panel.
   virtual double GetDiscretisationLevel(const Panel& panel) = 0;
 
+  virtual void Cut(const double x0, const double y0, const double z0,
+                   const double xn, const double yn, const double zn,
+                   std::vector<Panel>& panels) = 0;
+
   enum BoundaryCondition {
     Voltage = 1,
     Charge,
@@ -180,6 +184,17 @@ class Solid {
   /// Switch debugging messages on/off.
   void EnableDebugging(const bool on = true) { m_debug = on; }
 
+  /// Set the colour of the solid.
+  void SetColour(const int col) { m_colour = col; }
+  /// Get the colour of the solid.
+  int GetColour() const { return m_colour; }
+ 
+  static bool Intersect(const double x1, const double y1, const double z1,
+                        const double x2, const double y2, const double z2,
+                        const double x0, const double y0, const double z0,
+                        const double a, const double b, const double c,
+                        double& xc, double& yc, double& zc);
+
  protected:
   /// Centre of the solid.
   double m_cX = 0., m_cY = 0., m_cZ = 0.;
@@ -208,6 +223,9 @@ class Solid {
   double m_charge = 0.;
   /// Dielectric constant.
   double m_eps = 0.;
+
+  /// Colour.
+  int m_colour = -1;
 
   /// Transform a point from global coordinates (x, y, z) 
   /// to local coordinates (u, v, w).
@@ -245,6 +263,7 @@ class Solid {
   static unsigned int s_id;
   /// ID of the solid.
   unsigned int m_id;
+
 };
 }
 

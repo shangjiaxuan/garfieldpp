@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "Garfield/FundamentalConstants.hh"
+#include "Garfield/Polygon.hh"
 #include "Garfield/SolidTube.hh"
 
 namespace Garfield {
@@ -148,16 +149,16 @@ bool SolidTube::SolidPanels(std::vector<Panel>& panels) {
       yv.push_back(y);
       zv.push_back(z);
     }
-    Panel newpanel;
-    newpanel.a = m_cPhi * m_sTheta;
-    newpanel.b = m_sPhi * m_sTheta;
-    newpanel.c = m_cTheta;
-    newpanel.xv = xv;
-    newpanel.yv = yv;
-    newpanel.zv = zv;
-    newpanel.colour = 0;
-    newpanel.volume = id;
-    panels.push_back(std::move(newpanel));
+    Panel panel;
+    panel.a = m_cPhi * m_sTheta;
+    panel.b = m_sPhi * m_sTheta;
+    panel.c = m_cTheta;
+    panel.xv = xv;
+    panel.yv = yv;
+    panel.zv = zv;
+    panel.colour = m_colour;
+    panel.volume = id;
+    panels.push_back(std::move(panel));
   }
   // Create the bottom lid.
   if (m_botlid) {
@@ -173,16 +174,16 @@ bool SolidTube::SolidPanels(std::vector<Panel>& panels) {
       yv.push_back(y);
       zv.push_back(z);
     }
-    Panel newpanel;
-    newpanel.a = -m_cPhi * m_sTheta;
-    newpanel.b = -m_sPhi * m_sTheta;
-    newpanel.c = -m_cTheta;
-    newpanel.xv = xv;
-    newpanel.yv = yv;
-    newpanel.zv = zv;
-    newpanel.colour = 0;
-    newpanel.volume = id;
-    panels.push_back(std::move(newpanel));
+    Panel panel;
+    panel.a = -m_cPhi * m_sTheta;
+    panel.b = -m_sPhi * m_sTheta;
+    panel.c = -m_cTheta;
+    panel.xv = xv;
+    panel.yv = yv;
+    panel.zv = zv;
+    panel.colour = m_colour;
+    panel.volume = id;
+    panels.push_back(std::move(panel));
   }
   // Create the side panels.
   double u = r * cos(m_rot);
@@ -204,19 +205,19 @@ bool SolidTube::SolidPanels(std::vector<Panel>& panels) {
     double xv3, yv3, zv3;
     ToGlobal(u, v, -m_lZ, xv3, yv3, zv3);
     // Store the plane.
-    Panel newpanel;
+    Panel panel;
     alpha = m_rot + HalfPi * (i - 1.5) / (m_n - 1.);
     const double cAlpha = cos(alpha);
     const double sAlpha = sin(alpha);
-    newpanel.a = m_cPhi * m_cTheta * cAlpha - m_sPhi * sAlpha;
-    newpanel.b = m_sPhi * m_cTheta * cAlpha + m_cPhi * sAlpha;
-    newpanel.c = -m_sTheta * cAlpha;
-    newpanel.xv = {xv0, xv1, xv2, xv3};
-    newpanel.yv = {yv0, yv1, yv2, yv3};
-    newpanel.zv = {zv0, zv1, zv2, zv3};
-    newpanel.colour = 0;
-    newpanel.volume = id;
-    panels.push_back(std::move(newpanel));
+    panel.a = m_cPhi * m_cTheta * cAlpha - m_sPhi * sAlpha;
+    panel.b = m_sPhi * m_cTheta * cAlpha + m_cPhi * sAlpha;
+    panel.c = -m_sTheta * cAlpha;
+    panel.xv = {xv0, xv1, xv2, xv3};
+    panel.yv = {yv0, yv1, yv2, yv3};
+    panel.zv = {zv0, zv1, zv2, zv3};
+    panel.colour = m_colour;
+    panel.volume = id;
+    panels.push_back(std::move(panel));
     // Shift the points.
     xv0 = xv3;
     yv0 = yv3;
@@ -243,5 +244,81 @@ double SolidTube::GetDiscretisationLevel(const Panel& panel) {
   }
   return m_dis[2];
 } 
+
+void SolidTube::Cut(const double x0, const double y0, const double z0,
+                    const double xn, const double yn, const double zn,
+                    std::vector<Panel>& panels) {
+
+  // -----------------------------------------------------------------------
+  //    PLACYC - Cuts cylinder with a plane.
+  // -----------------------------------------------------------------------
+  std::vector<double> xv;
+  std::vector<double> yv;
+  std::vector<double> zv;
+  // Set the mean or the outer radius.
+  double r = m_rMax;
+  if (m_average) {
+    const double alpha = Pi / (4. * (m_n - 1.));
+    r = 2 * m_rMax / (1. + asinh(tan(alpha)) * cos(alpha) / tan(alpha));
+  }
+  const unsigned int nPoints = 4 * (m_n - 1);
+  const double dphi = HalfPi / (m_n - 1.);
+  // Go through the lines of the top and bottom lids.
+  for (const auto zLid : {-m_lZ, +m_lZ}) {
+    double x1, y1, z1;
+    ToGlobal(r * cos(m_rot), r * sin(m_rot), zLid, x1, y1, z1);
+    // Loop over the points.
+    for (unsigned int i = 2; i <= nPoints + 1; ++i) {
+      const double phi = m_rot + (i - 1.) * dphi;
+      double x2, y2, z2;
+      ToGlobal(r * cos(phi), r * sin(phi), zLid, x2, y2, z2);
+      // Cut with the plane.
+      double xc, yc, zc;
+      if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, 
+                    xn, yn, zn, xc, yc, zc)) {
+        xv.push_back(xc);
+        yv.push_back(yc);
+        zv.push_back(zc);
+      }
+      // Shift the coordinates.
+      x1 = x2;
+      y1 = y2;
+      z1 = z2;
+    }
+  }
+  // Go through the ribs.
+  for (unsigned int i = 2; i <= nPoints + 1; ++i) {
+    // Bottom and top of the line along the axis of the cylinder.
+    const double phi = m_rot + (i - 1.) * dphi;
+    const double u = r * cos(phi);
+    const double v = r * sin(phi);
+    double x1, y1, z1;
+    ToGlobal(u, v, +m_lZ, x1, y1, z1);
+    double x2, y2, z2;
+    ToGlobal(u, v, -m_lZ, x2, y2, z2);
+    // Cut with the plane.
+    double xc, yc, zc;
+    if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+      xv.push_back(xc);
+      yv.push_back(yc);
+      zv.push_back(zc);
+    }
+  }
+  // Get rid of butterflies.
+  Polygon::EliminateButterflies(xv, yv, zv);
+
+  if (xv.size() >= 3) {
+    Panel panel;
+    panel.a = xn;
+    panel.b = yn;
+    panel.c = zn;
+    panel.xv = xv;
+    panel.yv = yv;
+    panel.zv = zv;
+    panel.colour = m_colour;
+    panel.volume = GetId();
+    panels.push_back(std::move(panel));
+  }
+}
 
 }

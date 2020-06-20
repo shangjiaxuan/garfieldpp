@@ -45,6 +45,10 @@ class SolidExtrusion : public Solid {
   bool SolidPanels(std::vector<Panel>& panels) override;
   double GetDiscretisationLevel(const Panel& panel) override;
 
+  void Cut(const double x0, const double y0, const double z0,
+           const double xn, const double yn, const double zn,
+           std::vector<Panel>& panels) override;
+
  private:
   /// Half length.
   double m_lZ = 0.;

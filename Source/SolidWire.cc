@@ -76,4 +76,11 @@ double SolidWire::GetDiscretisationLevel(const Panel& /*panel*/) {
   return m_dis;
 } 
 
+void SolidWire::Cut(
+    const double /*x0*/, const double /*y0*/, const double /*z0*/,
+    const double /*xn*/, const double /*yn*/, const double /*zn*/,
+    std::vector<Panel>& /*panels*/) {
+
+}
+
 }
