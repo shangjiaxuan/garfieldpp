@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "Garfield/FundamentalConstants.hh"
+#include "Garfield/Polygon.hh"
 #include "Garfield/SolidRidge.hh"
 
 namespace Garfield {
@@ -121,7 +122,7 @@ bool SolidRidge::SolidPanels(std::vector<Panel>& panels) {
   base.xv = {xv0, xv1, xv2, xv3};
   base.yv = {yv0, yv1, yv2, yv3};
   base.zv = {zv0, zv1, zv2, zv3};
-  base.colour = 0;
+  base.colour = m_colour;
   base.volume = id;
   panels.push_back(std::move(base));
 
@@ -141,7 +142,7 @@ bool SolidRidge::SolidPanels(std::vector<Panel>& panels) {
     side.xv = {xv0, xv1, xv2};
     side.yv = {yv0, yv1, yv2};
     side.zv = {zv0, zv1, zv2};
-    side.colour = 0;
+    side.colour = m_colour;
     side.volume = id;
     panels.push_back(std::move(side));
   }
@@ -165,7 +166,7 @@ bool SolidRidge::SolidPanels(std::vector<Panel>& panels) {
     roof.xv = {xv0, xv1, xv2, xv3};
     roof.yv = {yv0, yv1, yv2, yv3};
     roof.zv = {zv0, zv1, zv2, zv3};
-    roof.colour = 0;
+    roof.colour = m_colour;
     roof.volume = id;
     panels.push_back(std::move(roof));
   }
@@ -196,6 +197,113 @@ double SolidRidge::GetDiscretisationLevel(const Panel& panel) {
               << "    Found no match for the panel; return first value.\n";
   }
   return m_dis[0];
+}
+
+void SolidRidge::Cut(const double x0, const double y0, const double z0,
+                     const double xn, const double yn, const double zn,
+                     std::vector<Panel>& panels) {
+  
+  //-----------------------------------------------------------------------
+  //   PLATBC - Cuts ridge with a plane.
+  //-----------------------------------------------------------------------
+ 
+  std::vector<double> xv;
+  std::vector<double> yv;
+  std::vector<double> zv;
+  // Draw all 9 lines and cut.
+  // The line (xmin,ymin,0) to (xmax,ymin,0).
+  double x1, y1, z1;
+  ToGlobal(-m_lX, -m_lY, 0., x1, y1, z1);
+  double x2, y2, z2;
+  ToGlobal(+m_lX, -m_lY, 0., x2, y2, z2); 
+  double xc, yc, zc;
+  if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+    xv.push_back(xc);
+    yv.push_back(yc);
+    zv.push_back(zc);
+  }
+  // ... to (xmin,ymax,0).
+  ToGlobal(-m_lX, +m_lY, 0., x2, y2, z2);
+  if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+    xv.push_back(xc);
+    yv.push_back(yc);
+    zv.push_back(zc);
+  }
+  // ... to (xh,ymin,zh).
+  ToGlobal(m_hx, -m_lY, m_hz, x2, y2, z2);
+  if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+    xv.push_back(xc);
+    yv.push_back(yc);
+    zv.push_back(zc);
+  }
+  
+  // The line (xmax,ymax,0) to (xmin,ymax,0).
+  ToGlobal(+m_lX, +m_lY, 0., x1, y1, z1);
+  ToGlobal(-m_lX, +m_lY, 0., x2, y2, z2);
+  if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+    xv.push_back(xc);
+    yv.push_back(yc);
+    zv.push_back(zc);
+  }
+
+  // ... to (xmax,ymin,0).
+  ToGlobal(+m_lX, -m_lY, 0., x2, y2, z2);
+  if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+    xv.push_back(xc);
+    yv.push_back(yc);
+    zv.push_back(zc);
+  }
+
+  // ... to (xh,ymax,zh).
+  ToGlobal(m_hx, +m_lY, m_hz, x2, y2, z2);
+  if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+    xv.push_back(xc);
+    yv.push_back(yc);
+    zv.push_back(zc);
+  }
+
+  // The line (xmin,ymax,0) to (xh,ymax,zh).
+  ToGlobal(-m_lX, +m_lY, 0., x1, y1, z1);
+  ToGlobal(m_hx, +m_lY, m_hz, x2, y2, z2);
+  if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+    xv.push_back(xc);
+    yv.push_back(yc);
+    zv.push_back(zc);
+  }
+
+  // The line (xh,ymax,zh) to (xh,ymin,zh)
+  ToGlobal(m_hx, +m_lY, m_hz, x1, y1, z1);
+  ToGlobal(m_hx, -m_lY, m_hz, x2, y2, z2);
+  if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+    xv.push_back(xc);
+    yv.push_back(yc);
+    zv.push_back(zc);
+  }
+
+  // The line (xh,ymin,zh) to (xmax,ymin,0)
+  ToGlobal(m_hx, -m_lY, m_hz, x1, y1, z1);
+  ToGlobal(+m_lX, -m_lY, 0., x2, y2, z2);
+  if (Intersect(x1, y1, z1, x2, y2, z2, x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+    xv.push_back(xc);
+    yv.push_back(yc);
+    zv.push_back(zc);
+  }
+  
+  // Get rid of butterflies.
+  Polygon::EliminateButterflies(xv, yv, zv);
+  if (xv.size() >= 3) {
+    Panel panel;
+    panel.a = xn;
+    panel.b = yn;
+    panel.c = zn;
+    panel.xv = xv;
+    panel.yv = yv;
+    panel.zv = zv;
+    panel.colour = m_colour;
+    panel.volume = GetId();
+    panels.push_back(std::move(panel));
+  }
+
 }
 
 }

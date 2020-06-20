@@ -124,7 +124,14 @@ void ViewField::PlotContour(const std::string& option) {
 }
 
 void ViewField::Plot(const std::string& option, const std::string& drawopt) {
-  Draw2d(option, false, false, "", drawopt);
+  std::string opt1;
+  std::transform(drawopt.begin(), drawopt.end(), 
+                 std::back_inserter(opt1), toupper);
+  if (opt1.find("CONT") != std::string::npos) {
+    Draw2d(option, true, false, "", drawopt);
+  } else {
+    Draw2d(option, false, false, "", drawopt);
+  }
 }
 
 void ViewField::PlotProfile(const double x0, const double y0, const double z0,

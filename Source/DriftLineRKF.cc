@@ -1629,7 +1629,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
   double ex = 0., ey = 0., ez = 0.;
   Medium* medium = nullptr;
   int stat = 0;
-  m_sensor->ElectricField(xi, xi, zi, ex, ey, ez, medium, stat);
+  m_sensor->ElectricField(xi, yi, zi, ex, ey, ez, medium, stat);
   if (!medium || stat != 0) {
     std::cerr << m_className << "::FieldLine:\n"
               << "    No valid field at initial position.\n";

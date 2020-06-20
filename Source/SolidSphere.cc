@@ -3,6 +3,7 @@
 
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Polygon.hh"
 #include "Garfield/SolidSphere.hh"
 
 namespace Garfield {
@@ -181,5 +182,73 @@ double SolidSphere::GetDiscretisationLevel(const Panel& /*panel*/) {
   return m_dis;
 }
 
+void SolidSphere::Cut(const double x0, const double y0, const double z0,
+                      const double xn, const double yn, const double zn,
+                      std::vector<Panel>& panels) {
+
+  //-----------------------------------------------------------------------
+  //    PLASPC - Cuts sphere IVOL with a plane.
+  //-----------------------------------------------------------------------
+  std::vector<double> xv;
+  std::vector<double> yv;
+  std::vector<double> zv;
+  // Loop over the sphere.
+  const double r = m_rMax;
+  for (unsigned int i = 1; i <= m_n; ++i) {
+    // phi-Coordinates.
+    const double phi0 = TwoPi * (i - 1.) / m_n;
+    const double phi1 = TwoPi * i / m_n;
+    for (unsigned int j = 1; j <= m_n; ++j) {
+      // theta-Coordinates.
+      const double theta0 = -HalfPi + Pi * (j - 1.) / m_n;
+      const double theta1 = -HalfPi + Pi * j / m_n;
+      // Reference point of this square.
+      const double x1 = x0 + r * cos(phi0) * cos(theta0);
+      const double y1 = y0 + r * sin(phi0) * cos(theta0);
+      const double z1 = z0 + r * sin(theta0);
+      // The meridian segment, doesn't exist at the S pole.
+      if (j > 0) {
+        const double x2 = x0 + r * cos(phi1) * cos(theta0);
+        const double y2 = y0 + r * sin(phi1) * cos(theta0);
+        const double z2 = z0 + r * sin(theta0);
+        // Cut with the plane.
+        double xc, yc, zc;
+        if (Intersect(x1, y1, z1, x2, y2, z2, 
+                      x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+          xv.push_back(xc);
+          yv.push_back(yc);
+          zv.push_back(zc);
+        }
+      }
+      // The latitude.
+      const double x2 = x0 + r * cos(phi0) * cos(theta1);
+      const double y2 = y0 + r * sin(phi0) * cos(theta1);
+      const double z2 = z0 + r * sin(theta1);
+      // Cut with the plane.
+      double xc, yc, zc;
+      if (Intersect(x1, y1, z1, x2, y2, z2, 
+                    x0, y0, z0, xn, yn, zn, xc, yc, zc)) {
+        xv.push_back(xc);
+        yv.push_back(yc);
+        zv.push_back(zc);
+      }
+    }
+  }
+  // Get rid of butterflies.
+  Polygon::EliminateButterflies(xv, yv, zv);
+
+  if (xv.size() >= 3) {
+    Panel panel;
+    panel.a = xn;
+    panel.b = yn;
+    panel.c = zn;
+    panel.xv = xv;
+    panel.yv = yv;
+    panel.zv = zv;
+    panel.colour = m_colour;
+    panel.volume = GetId();
+    panels.push_back(std::move(panel));
+  }
+}
 
 }

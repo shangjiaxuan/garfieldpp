@@ -25,7 +25,11 @@ class ViewGeometry : public ViewBase {
   /// Set the geometry to be drawn.
   void SetGeometry(GeometrySimple* geo);
   /// Draw the geometry.
-  void Plot();
+  void Plot(const bool twod = false);
+  /// Draw a cut through the geometry at the current viewing plane. 
+  void Plot2d();
+  /// Draw a three-dimensional view of the geometry.
+  void Plot3d();
 
  private:
   GeometrySimple* m_geometry = nullptr;

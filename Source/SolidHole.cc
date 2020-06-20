@@ -2,7 +2,60 @@
 #include <iostream>
 
 #include "Garfield/FundamentalConstants.hh"
+#include "Garfield/Polygon.hh"
 #include "Garfield/SolidHole.hh"
+
+namespace {
+
+void CutBox(const std::array<double, 8>& xbox,
+            const std::array<double, 8>& ybox,
+            const std::array<double, 8>& zbox,
+            std::vector<double>& xcut,
+            std::vector<double>& ycut,
+            std::vector<double>& zcut,
+            const double x0, const double y0, const double z0,
+            const double a, const double b, const double c) {
+
+  //-----------------------------------------------------------------------
+  //   PLABOX - Crossings between a box and a plane.
+  //-----------------------------------------------------------------------
+  xcut.clear();
+  ycut.clear();
+  zcut.clear();
+  // Compute the, at most 6, crossings between plane and box.
+  for (unsigned int i = 0; i < 8; ++i) {
+    double xc, yc, zc;
+    unsigned int j = i + 1;
+    if (i == 3) {
+      j = 0;
+    } else if (i == 7) {
+      j = 4;
+    } 
+    if (Garfield::Solid::Intersect(xbox[i], ybox[i], zbox[i], 
+                                   xbox[j], ybox[j], zbox[j], 
+                                   x0, y0, z0, a, b, c, xc, yc, zc)) {
+      xcut.push_back(xc);
+      ycut.push_back(yc);
+      zcut.push_back(zc);
+    }
+  }
+  for (unsigned int i = 0; i < 4; ++i) {
+    double xc, yc, zc;
+    const unsigned int j = i + 4;
+    if (Garfield::Solid::Intersect(xbox[i], ybox[i], zbox[i],
+                                   xbox[j], ybox[j], zbox[j],
+                                   x0, y0, z0, a, b, c, xc, yc, zc)) {
+      xcut.push_back(xc);
+      ycut.push_back(yc);
+      zcut.push_back(zc);
+    }
+  }
+
+  // Eliminate the butterflies.
+  Garfield::Polygon::EliminateButterflies(xcut, ycut, zcut);
+}
+
+}
 
 namespace Garfield {
 
@@ -154,16 +207,16 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
     ToGlobal(-m_lX, +m_lY, -m_lZ, xv1, yv1, zv1);
     ToGlobal(-m_lX, +m_lY, +m_lZ, xv2, yv2, zv2);
     ToGlobal(-m_lX, -m_lY, +m_lZ, xv3, yv3, zv3);
-    Panel newpanel;
-    newpanel.a = -m_cPhi * m_cTheta;
-    newpanel.b = -m_sPhi * m_cTheta;
-    newpanel.c = +m_sTheta;
-    newpanel.xv = {xv0, xv1, xv2, xv3};
-    newpanel.yv = {yv0, yv1, yv2, yv3};
-    newpanel.zv = {zv0, zv1, zv2, zv3};
-    newpanel.colour = 0;
-    newpanel.volume = id;
-    panels.push_back(std::move(newpanel));
+    Panel panel;
+    panel.a = -m_cPhi * m_cTheta;
+    panel.b = -m_sPhi * m_cTheta;
+    panel.c = +m_sTheta;
+    panel.xv = {xv0, xv1, xv2, xv3};
+    panel.yv = {yv0, yv1, yv2, yv3};
+    panel.zv = {zv0, zv1, zv2, zv3};
+    panel.colour = m_colour;
+    panel.volume = id;
+    panels.push_back(std::move(panel));
   }
   // The x=xmax face.
   if (m_lX > 0 && m_lY > 0 && m_lZ > 0) {
@@ -171,16 +224,16 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
     ToGlobal(+m_lX, +m_lY, -m_lZ, xv1, yv1, zv1);
     ToGlobal(+m_lX, +m_lY, +m_lZ, xv2, yv2, zv2);
     ToGlobal(+m_lX, -m_lY, +m_lZ, xv3, yv3, zv3);
-    Panel newpanel;
-    newpanel.a = m_cPhi * m_cTheta;
-    newpanel.b = m_sPhi * m_cTheta;
-    newpanel.c = -m_sTheta;
-    newpanel.xv = {xv0, xv1, xv2, xv3};
-    newpanel.yv = {yv0, yv1, yv2, yv3};
-    newpanel.zv = {zv0, zv1, zv2, zv3};
-    newpanel.colour = 0;
-    newpanel.volume = id;
-    panels.push_back(std::move(newpanel));
+    Panel panel;
+    panel.a = m_cPhi * m_cTheta;
+    panel.b = m_sPhi * m_cTheta;
+    panel.c = -m_sTheta;
+    panel.xv = {xv0, xv1, xv2, xv3};
+    panel.yv = {yv0, yv1, yv2, yv3};
+    panel.zv = {zv0, zv1, zv2, zv3};
+    panel.colour = m_colour;
+    panel.volume = id;
+    panels.push_back(std::move(panel));
   }
   // The y=ymin face.
   if (m_lX > 0 && m_lZ > 0) {
@@ -188,16 +241,16 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
     ToGlobal(+m_lX, -m_lY, -m_lZ, xv1, yv1, zv1);
     ToGlobal(+m_lX, -m_lY, +m_lZ, xv2, yv2, zv2);
     ToGlobal(-m_lX, -m_lY, +m_lZ, xv3, yv3, zv3);
-    Panel newpanel;
-    newpanel.a = m_sPhi;
-    newpanel.b = -m_cPhi;
-    newpanel.c = 0;
-    newpanel.xv = {xv0, xv1, xv2, xv3};
-    newpanel.yv = {yv0, yv1, yv2, yv3};
-    newpanel.zv = {zv0, zv1, zv2, zv3};
-    newpanel.colour = 0;
-    newpanel.volume = id;
-    panels.push_back(std::move(newpanel));
+    Panel panel;
+    panel.a = m_sPhi;
+    panel.b = -m_cPhi;
+    panel.c = 0;
+    panel.xv = {xv0, xv1, xv2, xv3};
+    panel.yv = {yv0, yv1, yv2, yv3};
+    panel.zv = {zv0, zv1, zv2, zv3};
+    panel.colour = m_colour;
+    panel.volume = id;
+    panels.push_back(std::move(panel));
   }
   // The y=ymax face.
   if (m_lX > 0 && m_lY > 0 && m_lZ > 0) {
@@ -205,16 +258,16 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
     ToGlobal(+m_lX, +m_lY, -m_lZ, xv1, yv1, zv1);
     ToGlobal(+m_lX, +m_lY, +m_lZ, xv2, yv2, zv2);
     ToGlobal(-m_lX, +m_lY, +m_lZ, xv3, yv3, zv3);
-    Panel newpanel;
-    newpanel.a = -m_sPhi;
-    newpanel.b = m_cPhi;
-    newpanel.c = 0;
-    newpanel.xv = {xv0, xv1, xv2, xv3};
-    newpanel.yv = {yv0, yv1, yv2, yv3};
-    newpanel.zv = {zv0, zv1, zv2, zv3};
-    newpanel.colour = 0;
-    newpanel.volume = id;
-    panels.push_back(std::move(newpanel));
+    Panel panel;
+    panel.a = -m_sPhi;
+    panel.b = m_cPhi;
+    panel.c = 0;
+    panel.xv = {xv0, xv1, xv2, xv3};
+    panel.yv = {yv0, yv1, yv2, yv3};
+    panel.zv = {zv0, zv1, zv2, zv3};
+    panel.colour = m_colour;
+    panel.volume = id;
+    panels.push_back(std::move(panel));
   }
   const double phi0 = -0.5 * HalfPi;
   const double dphi = HalfPi / double(m_n - 1);
@@ -222,12 +275,12 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
   for (int iside = -1; iside <= 1; iside += 2) {
     const double r = iside == -1 ? r1 : r2;
     const double w = m_lZ * iside;
-    Panel newpanel;
-    newpanel.a = iside * m_cPhi * m_sTheta;
-    newpanel.b = iside * m_sPhi * m_sTheta;
-    newpanel.c = iside * m_cTheta;
-    newpanel.colour = 0;
-    newpanel.volume = id;
+    Panel panel;
+    panel.a = iside * m_cPhi * m_sTheta;
+    panel.b = iside * m_sPhi * m_sTheta;
+    panel.c = iside * m_cTheta;
+    panel.colour = m_colour;
+    panel.volume = id;
     // Loop over the panels.
     for (unsigned int i = 0; i < m_n - 1; ++i) {
       // The panels for x=xmax.
@@ -239,10 +292,10 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
       ToGlobal(r * cos(phi2), r * sin(phi2), w, xv3, yv3, zv3);
       ToGlobal(m_lX, m_lY * t1, w, xv1, yv1, zv1);
       ToGlobal(m_lX, m_lY * t2, w, xv2, yv2, zv2);
-      newpanel.xv = {xv0, xv1, xv2, xv3};
-      newpanel.yv = {yv0, yv1, yv2, yv3};
-      newpanel.zv = {zv0, zv1, zv2, zv3};
-      panels.push_back(newpanel);
+      panel.xv = {xv0, xv1, xv2, xv3};
+      panel.yv = {yv0, yv1, yv2, yv3};
+      panel.zv = {zv0, zv1, zv2, zv3};
+      panels.push_back(panel);
       // The panels for y=ymax.
       const double phi3 = phi1 + HalfPi;
       const double phi4 = phi3 + dphi;
@@ -250,10 +303,10 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
       ToGlobal(r * cos(phi4), r * sin(phi4), w, xv3, yv3, zv3);
       ToGlobal(-m_lX * t1, m_lY, w, xv1, yv1, zv1);
       ToGlobal(-m_lX * t2, m_lY, w, xv2, yv2, zv2);
-      newpanel.xv = {xv0, xv1, xv2, xv3};
-      newpanel.yv = {yv0, yv1, yv2, yv3};
-      newpanel.zv = {zv0, zv1, zv2, zv3};
-      panels.push_back(newpanel);
+      panel.xv = {xv0, xv1, xv2, xv3};
+      panel.yv = {yv0, yv1, yv2, yv3};
+      panel.zv = {zv0, zv1, zv2, zv3};
+      panels.push_back(panel);
       // The panels for x=xmin.
       const double phi5 = phi3 + HalfPi;
       const double phi6 = phi5 + dphi;
@@ -261,10 +314,10 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
       ToGlobal(r * cos(phi6), r * sin(phi6), w, xv3, yv3, zv3);
       ToGlobal(-m_lX, -m_lY * t1, w, xv1, yv1, zv1);
       ToGlobal(-m_lX, -m_lY * t2, w, xv2, yv2, zv2);
-      newpanel.xv = {xv0, xv1, xv2, xv3};
-      newpanel.yv = {yv0, yv1, yv2, yv3};
-      newpanel.zv = {zv0, zv1, zv2, zv3};
-      panels.push_back(newpanel);
+      panel.xv = {xv0, xv1, xv2, xv3};
+      panel.yv = {yv0, yv1, yv2, yv3};
+      panel.zv = {zv0, zv1, zv2, zv3};
+      panels.push_back(panel);
       // The panels for y=ymin.
       const double phi7 = phi5 + HalfPi;
       const double phi8 = phi7 + dphi;
@@ -272,10 +325,10 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
       ToGlobal(r * cos(phi8), r * sin(phi8), w, xv3, yv3, zv3);
       ToGlobal(m_lX * t1, -m_lY, w, xv1, yv1, zv1);
       ToGlobal(m_lX * t2, -m_lY, w, xv2, yv2, zv2);
-      newpanel.xv = {xv0, xv1, xv2, xv3};
-      newpanel.yv = {yv0, yv1, yv2, yv3};
-      newpanel.zv = {zv0, zv1, zv2, zv3};
-      panels.push_back(newpanel);
+      panel.xv = {xv0, xv1, xv2, xv3};
+      panel.yv = {yv0, yv1, yv2, yv3};
+      panel.zv = {zv0, zv1, zv2, zv3};
+      panels.push_back(panel);
     }
   }
   // The panels of the central cylinder, compute the projection angles.
@@ -294,23 +347,23 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
     ToGlobal(r2 * cos(phi), r2 * sin(phi), +m_lZ, xv2, yv2, zv2);
     ToGlobal(r1 * cos(phi), r1 * sin(phi), -m_lZ, xv3, yv3, zv3);
     // Store the plane.
-    Panel newpanel;
+    Panel panel;
     const double phim = phi0 + dphi * (i - 0.5);
     const double cm = cos(phim);
     const double sm = sin(phim);
-    newpanel.a = -m_cPhi * m_cTheta * cm * ci +
-                  m_sPhi *            sm * ci -
-                  m_cPhi * m_sTheta      * si;
-    newpanel.b = -m_sPhi * m_cTheta * cm * ci -
-                  m_cPhi *            sm * ci -
-                  m_sPhi * m_sTheta      * si;
-    newpanel.c = m_sTheta * cm * ci - m_cTheta * si;
-    newpanel.xv = {xv0, xv1, xv2, xv3};
-    newpanel.yv = {yv0, yv1, yv2, yv3};
-    newpanel.zv = {zv0, zv1, zv2, zv3};
-    newpanel.colour = 0;
-    newpanel.volume = id;
-    panels.push_back(std::move(newpanel));
+    panel.a = -m_cPhi * m_cTheta * cm * ci +
+               m_sPhi *            sm * ci -
+               m_cPhi * m_sTheta      * si;
+    panel.b = -m_sPhi * m_cTheta * cm * ci -
+               m_cPhi *            sm * ci -
+               m_sPhi * m_sTheta      * si;
+    panel.c = m_sTheta * cm * ci - m_cTheta * si;
+    panel.xv = {xv0, xv1, xv2, xv3};
+    panel.yv = {yv0, yv1, yv2, yv3};
+    panel.zv = {zv0, zv1, zv2, zv3};
+    panel.colour = m_colour;
+    panel.volume = id;
+    panels.push_back(std::move(panel));
     // Shift the points.
     xv0 = xv3;
     yv0 = yv3;
@@ -353,6 +406,153 @@ double SolidHole::GetDiscretisationLevel(const Panel& panel) {
               << "    Found no match for the panel; returning first value.\n";
   }
   return m_dis[0];
+}
+
+void SolidHole::Cut(const double x0, const double y0, const double z0,
+                    const double xn, const double yn, const double zn,
+                    std::vector<Panel>& panels) {
+
+  //-----------------------------------------------------------------------
+  //   PLACHC - Cuts a cylindrical hole with a plane.
+  //-----------------------------------------------------------------------
+
+  // Adjust the mean radii if requested.
+  double r1 = m_rLow;
+  double r2 = m_rUp;
+  if (m_average) {
+    const double alpha = Pi / (4. * (m_n - 1.));
+    const double f = 2. / (1. + asinh(tan(alpha)) * cos(alpha) / tan(alpha));
+    r1 *= f;
+    r2 *= f;
+  }
+  std::array<double, 8> xbox;
+  std::array<double, 8> ybox;
+  std::array<double, 8> zbox;
+  // Loop over the boxes that make up the hole.
+  const double dphi = HalfPi / (m_n - 1.);
+  for (unsigned int i = 1; i <= m_n - 1; ++i) {
+    const double phi1 = dphi * (i - 1.);
+    const double phi2 = dphi * i;
+    const double t1 = tan(-0.5 * HalfPi + phi1);
+    const double t2 = tan(-0.5 * HalfPi + phi2);
+    // The boxes ending at x=xmax.
+    for (int iside : {-1, 1}) {
+      const double r = iside < 0 ? r1 : r2;
+      const double w = iside * m_lZ;
+      const unsigned int k = iside < 0 ? 0 : 4;
+      const double phi0 = -0.5 * HalfPi;
+      ToGlobal(r * cos(phi0 + phi1), r * sin(phi0 + phi1), w, 
+               xbox[k], ybox[k], zbox[k]);
+      ToGlobal(r * cos(phi0 + phi2), r * sin(phi0 + phi2), w, 
+               xbox[k + 3], ybox[k + 3], zbox[k + 3]);
+      ToGlobal(m_lX, m_lY * t1, w, xbox[k + 1], ybox[k + 1], zbox[k + 1]);
+      ToGlobal(m_lX, m_lY * t2, w, xbox[k + 2], ybox[k + 2], zbox[k + 2]);
+    }
+    std::vector<double> xv;
+    std::vector<double> yv;
+    std::vector<double> zv;
+    CutBox(xbox, ybox, zbox, xv, yv, zv, x0, y0, z0, xn, yn, zn);
+    if (xv.size() >= 3) {
+      Panel panel;
+      panel.a = xn;
+      panel.b = yn;
+      panel.c = zn;
+      panel.xv = xv;
+      panel.yv = yv;
+      panel.zv = zv;
+      panel.colour = m_colour;
+      panel.volume = GetId();
+      panels.push_back(std::move(panel));    
+    }
+    xv.clear();
+    yv.clear();
+    zv.clear();
+    // The panels for y=ymax.
+    for (int iside : {-1, 1}) {
+      const double r = iside < 0 ? r1 : r2;
+      const double w = iside * m_lZ;
+      const unsigned int k = iside < 0 ? 0 : 4;
+      const double phi0 = 0.5 * HalfPi;
+      ToGlobal(r * cos(phi0 + phi1), r * sin(phi0 + phi1), w, 
+               xbox[k], ybox[k], zbox[k]);
+      ToGlobal(r * cos(phi0 + phi2), r * sin(phi0 + phi2), w, 
+               xbox[k + 3], ybox[k + 3], zbox[k + 3]);
+      ToGlobal(-m_lX * t1, m_lY, w, xbox[k + 1], ybox[k + 1], zbox[k + 1]);
+      ToGlobal(-m_lX * t2, m_lY, w, xbox[k + 2], ybox[k + 2], zbox[k + 2]);
+    }
+    CutBox(xbox, ybox, zbox, xv, yv, zv, x0, y0, z0, xn, yn, zn);
+    if (xv.size() >= 3) {
+      Panel panel;
+      panel.a = xn;
+      panel.b = yn;
+      panel.c = zn;
+      panel.xv = xv;
+      panel.yv = yv;
+      panel.zv = zv;
+      panel.colour = m_colour;
+      panel.volume = GetId();
+      panels.push_back(std::move(panel));    
+    }
+    xv.clear();
+    yv.clear();
+    zv.clear();
+    // The panels for x=xmin.
+    for (int iside : {-1, 1}) {
+      const double r = iside < 0 ? r1 : r2;
+      const double w = iside * m_lZ;
+      const unsigned int k = iside < 0 ? 0 : 4;
+      const double phi0 = 1.5 * HalfPi;
+      ToGlobal(r * cos(phi0 + phi1), r * sin(phi0 + phi1), w, 
+               xbox[k], ybox[k], zbox[k]);
+      ToGlobal(r * cos(phi0 + phi2), r * sin(phi0 + phi2), w, 
+               xbox[k + 3], ybox[k + 3], zbox[k + 3]);
+      ToGlobal(-m_lX, -m_lY * t1, w, xbox[k + 1], ybox[k + 1], zbox[k + 1]);
+      ToGlobal(-m_lX, -m_lY * t2, w, xbox[k + 2], ybox[k + 2], zbox[k + 2]);
+    }
+    CutBox(xbox, ybox, zbox, xv, yv, zv, x0, y0, z0, xn, yn, zn);
+    if (xv.size() >= 3) {
+      Panel panel;
+      panel.a = xn;
+      panel.b = yn;
+      panel.c = zn;
+      panel.xv = xv;
+      panel.yv = yv;
+      panel.zv = zv;
+      panel.colour = m_colour;
+      panel.volume = GetId();
+      panels.push_back(std::move(panel));    
+    }
+    xv.clear();
+    yv.clear();
+    zv.clear();
+    // The panels for y=ymin.
+    for (int iside : {-1, 1}) {
+      const double r = iside < 0 ? r1 : r2;
+      const double w = iside * m_lZ;
+      const unsigned int k = iside < 0 ? 0 : 4;
+      const double phi0 = -1.5 * HalfPi;
+      ToGlobal(r * cos(phi0 + phi1), r * sin(phi0 + phi1), w, 
+               xbox[k], ybox[k], zbox[k]);
+      ToGlobal(r * cos(phi0 + phi2), r * sin(phi0 + phi2), w, 
+               xbox[k + 3], ybox[k + 3], zbox[k + 3]);
+      ToGlobal(m_lX * t1, -m_lY, w, xbox[k + 1], ybox[k + 1], zbox[k + 1]);
+      ToGlobal(m_lX * t2, -m_lY, w, xbox[k + 2], ybox[k + 2], zbox[k + 2]);
+
+    }
+    CutBox(xbox, ybox, zbox, xv, yv, zv, x0, y0, z0, xn, yn, zn);
+    if (xv.size() >= 3) {
+      Panel panel;
+      panel.a = xn;
+      panel.b = yn;
+      panel.c = zn;
+      panel.xv = xv;
+      panel.yv = yv;
+      panel.zv = zv;
+      panel.colour = m_colour;
+      panel.volume = GetId();
+      panels.push_back(std::move(panel));    
+    }
+  }
 }
 
 }

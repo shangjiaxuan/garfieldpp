@@ -46,6 +46,10 @@ class SolidRidge : public Solid {
   }
   double GetDiscretisationLevel(const Panel& panel) override;
 
+  void Cut(const double x0, const double y0, const double z0,
+           const double xn, const double yn, const double zn,
+           std::vector<Panel>& panels) override;
+
  private:
   /// Half-length in x.
   double m_lX;

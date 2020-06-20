@@ -38,6 +38,10 @@ class SolidBox : public Solid {
   } 
   double GetDiscretisationLevel(const Panel& panel) override;
 
+  void Cut(const double x0, const double y0, const double z0,
+           const double xn, const double yn, const double zn,
+           std::vector<Panel>& panels) override;
+
  private:
   /// Half lengths.
   double m_lX = 0., m_lY = 0., m_lZ = 0.;
