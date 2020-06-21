@@ -3512,11 +3512,23 @@ void MediumMagboltz::GenerateGasTable(const int numColl, const bool verbose) {
 
   m_excRates.clear();
   m_ionRates.clear();
-  m_excLevels.clear();
-  m_ionLevels.clear();
-  std::vector<unsigned int> excLevelIndex;
-  std::vector<unsigned int> ionLevelIndex;
-
+  // Retrieve the excitation and ionisation cross-sections in the gas mixture.
+  GetExcitationIonisationLevels();
+  std::cout << m_className << "::GenerateGasTable: Found "
+            << m_excLevels.size() << " excitations and "
+            << m_ionLevels.size() << " ionisations.\n";
+  for (const auto& exc : m_excLevels) {
+    std::cout << "    " << exc.label << ", energy = " << exc.energy << " eV.\n";
+  }
+  for (const auto& ion : m_ionLevels) {
+    std::cout << "    " << ion.label << ", energy = " << ion.energy << " eV.\n";
+  }
+  if (!m_excLevels.empty()) {
+    Init(nEfields, nBfields, nAngles, m_excLevels.size(), m_excRates, 0.);
+  }
+  if (!m_ionLevels.empty()) {
+    Init(nEfields, nBfields, nAngles, m_ionLevels.size(), m_ionRates, 0.);
+  }
   double vx = 0., vy = 0., vz = 0.;
   double difl = 0., dift = 0.;
   double alpha = 0., eta = 0.;
@@ -3553,68 +3565,29 @@ void MediumMagboltz::GenerateGasTable(const int numColl, const bool verbose) {
           m_eDifM[l][j][k][i] = difftens[l];
         }
         // If not done yet, retrieve the excitation and ionisation levels.
-        if (m_excLevels.empty() && m_ionLevels.empty()) {
-          for (long long il = 0; il < Magboltz::nMaxLevels; ++il) {
-            if (Magboltz::large_.iarry[il] <= 0) break;
-            // Skip levels that are not ionisations or inelastic collisions.
-            const int cstype = (Magboltz::large_.iarry[il] - 1) % 5;
-            if (cstype != 1 && cstype != 3) continue;
-            const int igas = int((Magboltz::large_.iarry[il] - 1) / 5);
-            std::string descr = GetDescription(il, Magboltz::scrip_.dscrpt);
-            if (cstype == 3) {
-              // Skip levels that are not excitations.
-              if (!(descr[1] == 'E' && descr[2] == 'X') &&
-                  !(descr[0] == 'E' && descr[1] == 'X'))
-                continue;
+        for (long long il = 0; il < Magboltz::nMaxLevels; ++il) {
+          if (Magboltz::large_.iarry[il] <= 0) break;
+          // Skip levels that are not ionisations or inelastic collisions.
+          const int cstype = (Magboltz::large_.iarry[il] - 1) % 5;
+          if (cstype != 1 && cstype != 3) continue;
+          const int igas = int((Magboltz::large_.iarry[il] - 1) / 5);
+          std::string descr = GetDescription(il, Magboltz::scrip_.dscrpt);
+          descr = m_gas[igas] + descr;
+          if (cstype == 3) {
+            const unsigned int nExc = m_excLevels.size();
+            for (unsigned int ie = 0; ie < nExc; ++ie) {
+              if (descr != m_excLevels[ie].label) continue;
+              m_excRates[ie][j][k][i] = Magboltz::outpt_.icoln[il];
+              break;
             }
-            descr = m_gas[igas] + descr;
-            if (cstype == 3) {
-              ExcLevel exc;
-              exc.label = descr;
-              exc.energy = Magboltz::large_.ein[il];
-              exc.prob = 0.;
-              exc.rms = 0.;
-              exc.dt = 0.;
-              m_excLevels.push_back(std::move(exc));
-              excLevelIndex.push_back(il);
-            } else {
-              IonLevel ion;
-              ion.label = descr;
-              ion.energy = Magboltz::large_.ein[il];
-              m_ionLevels.push_back(std::move(ion));
-              ionLevelIndex.push_back(il);
+          } else if (cstype == 1) {
+            const unsigned int nIon = m_ionLevels.size();
+            for (unsigned int ii = 0; ii < nIon; ++ii) {
+              if (descr != m_ionLevels[ii].label) continue;
+              m_ionRates[ii][j][k][i] = Magboltz::outpt_.icoln[il];
+              break;
             }
           }
-          std::cout << m_className << "::GenerateGasTable: Found "
-                    << m_excLevels.size() << " excitations and "
-                    << m_ionLevels.size() << " ionisations.\n";
-          for (const auto& exc : m_excLevels) {
-            std::cout << "    " << exc.label << ", energy = " << exc.energy
-                      << " eV.\n";
-          }
-          for (const auto& ion : m_ionLevels) {
-            std::cout << "    " << ion.label << ", energy = " << ion.energy
-                      << " eV.\n";
-          }
-          if (!m_excLevels.empty()) {
-            Init(nEfields, nBfields, nAngles, m_excLevels.size(),
-                 m_excRates, 0.);
-          }
-          if (!m_ionLevels.empty()) {
-            Init(nEfields, nBfields, nAngles, m_ionLevels.size(),
-                 m_ionRates, 0.);
-          }
-        }
-        // Retrieve the excitation and ionisation rates.
-        const unsigned int nExc = m_excLevels.size();
-        for (unsigned int ie = 0; ie < nExc; ++ie) {
-          const unsigned int level = excLevelIndex[ie];
-          m_excRates[ie][j][k][i] = Magboltz::outpt_.icoln[level];
-        }
-        const unsigned int nIon = m_ionLevels.size();
-        for (unsigned int ii = 0; ii < nIon; ++ii) {
-          const unsigned int level = ionLevelIndex[ii];
-          m_ionRates[ii][j][k][i] = Magboltz::outpt_.icoln[level];
         }
       }
     }
@@ -3623,4 +3596,99 @@ void MediumMagboltz::GenerateGasTable(const int numColl, const bool verbose) {
   SetThreshold(m_eAlp);
   SetThreshold(m_eAtt);
 }
+
+void MediumMagboltz::GetExcitationIonisationLevels() {
+ 
+  // Reset.
+  m_excLevels.clear();
+  m_ionLevels.clear();
+  // Cross-sections.
+  static double q[Magboltz::nEnergySteps][6];
+  static double qIn[Magboltz::nEnergySteps][Magboltz::nMaxInelasticTerms];
+  static double qIon[Magboltz::nEnergySteps][Magboltz::nMaxIonisationTerms];
+  static double qAtt[Magboltz::nEnergySteps][Magboltz::nMaxAttachmentTerms];
+  static double qNull[Magboltz::nEnergySteps][Magboltz::nMaxNullTerms];
+  // Parameters for angular distributions.
+  static double pEqEl[Magboltz::nEnergySteps][6];
+  static double pEqIn[Magboltz::nEnergySteps][Magboltz::nMaxInelasticTerms];
+  static double pEqIon[Magboltz::nEnergySteps][Magboltz::nMaxIonisationTerms];
+  // Penning transfer parameters
+  static double penFra[Magboltz::nMaxInelasticTerms][3];
+  // Description of cross-section terms
+  static char scrpt[Magboltz::nMaxLevelsPerComponent][Magboltz::nCharDescr];
+  static char scrptn[Magboltz::nMaxNullTerms][Magboltz::nCharDescr];
+
+  // Loop over the gases in the mixture.
+  for (unsigned int i = 0; i < m_nComponents; ++i) {
+    // Choose the energy range large enough to cover all relevant levels.
+    const double emax = 400.;
+    Magboltz::inpt_.efinal = emax;
+    Magboltz::inpt_.estep = emax / Magboltz::nEnergySteps;
+    char name[] = "                         ";
+    // Number of inelastic, ionisation, attachment and null-collision levels.
+    long long nIn = 0, nIon = 0, nAtt = 1, nNull = 0;
+    // Virial coefficient (not used)
+    double virial = 0.;
+    // Thresholds/characteristic energies.
+    std::array<double, 6> e;
+    // Energy losses and ionisation thresholds.
+    std::array<double, Magboltz::nMaxInelasticTerms> eIn;
+    std::array<double, Magboltz::nMaxIonisationTerms> eIon;
+    // Scattering parameters.
+    std::array<long long, Magboltz::nMaxInelasticTerms> kIn;
+    std::array<long long, 6> kEl;
+    // Opal-Beaty parameters.
+    std::array<double, Magboltz::nMaxIonisationTerms> eoby;
+    // Scaling factor for "null-collision" terms
+    std::array<double, Magboltz::nMaxNullTerms> scln;
+    // Parameters for simulation of Auger and fluorescence processes.
+    std::array<long long, Magboltz::nMaxIonisationTerms> nc0;
+    std::array<long long, Magboltz::nMaxIonisationTerms> ng1;
+    std::array<long long, Magboltz::nMaxIonisationTerms> ng2;
+    std::array<double, Magboltz::nMaxIonisationTerms> ec0;
+    std::array<double, Magboltz::nMaxIonisationTerms> wklm;
+    std::array<double, Magboltz::nMaxIonisationTerms> efl;
+    std::array<double, Magboltz::nMaxIonisationTerms> eg1;
+    std::array<double, Magboltz::nMaxIonisationTerms> eg2;
+
+    // Retrieve the cross-section data for this gas from Magboltz.
+    long long ng = GetGasNumberMagboltz(m_gas[i]);
+    if (ng <= 0) {
+      std::cerr << m_className << "::GetExcitationIonisationLevels:\n\n"
+                << "    Gas " << m_gas[i] << " not available in Magboltz.\n";
+      continue;
+    }
+    Magboltz::gasmix_(
+        &ng, q[0], qIn[0], &nIn, e.data(), eIn.data(), name, &virial,
+        eoby.data(), pEqEl[0], pEqIn[0], penFra[0], kEl.data(), kIn.data(),
+        qIon[0], pEqIon[0], eIon.data(), &nIon, qAtt[0], &nAtt, qNull[0],
+        &nNull, scln.data(), nc0.data(), ec0.data(), wklm.data(), efl.data(),
+        ng1.data(), eg1.data(), ng2.data(), eg2.data(), scrpt, scrptn);
+    const double r = 1. + 0.5 * e[1];
+    // Ionisation cross section(s).
+    for (int j = 0; j < nIon; ++j) {
+      const std::string descr = GetDescription(2 + j, scrpt);
+      IonLevel ion;
+      ion.label = m_gas[i] + descr;
+      ion.energy = eIon[j] / r;
+      m_ionLevels.push_back(std::move(ion));
+    }
+    // Excitation cross-sections.
+    for (int j = 0; j < nIn; ++j) {
+      const std::string descr = GetDescription(4 + nIon + nAtt + j, scrpt);
+      if ((descr[1] == 'E' && descr[2] == 'X') ||
+          (descr[0] == 'E' && descr[1] == 'X')) {
+        // Excitation
+        ExcLevel exc;
+        exc.label = m_gas[i] + descr;
+        exc.energy = eIn[j] / r;
+        exc.prob = 0.;
+        exc.rms = 0.;
+        exc.dt = 0.;
+        m_excLevels.push_back(std::move(exc));
+      }
+    }
+  }
+}
+
 }
