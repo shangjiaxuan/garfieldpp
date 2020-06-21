@@ -346,6 +346,9 @@ class MediumMagboltz : public MediumGas {
   void SetScatteringParameters(const int model, const double parIn, double& cut,
                                double& parOut) const;
   void ComputeAngularCut(const double parIn, double& cut, double& parOut) const;
+
+  void GetExcitationIonisationLevels();
+
   void ComputeDeexcitationTable(const bool verbose);
   void AddPenningDeexcitation(Deexcitation& dxc, const double rate,
                               const double pPenning) {
