@@ -27,6 +27,12 @@ std::string GetDescription(const unsigned int index,
   return std::string(scrpt[index],
                      scrpt[index] + Garfield::Magboltz::nCharDescr);
 }
+
+std::string GetDescription(const unsigned int i1, const unsigned int i2,
+                           char scrpt[][6][Garfield::Magboltz::nCharDescr]) {
+  return std::string(scrpt[i1][i2],
+                     scrpt[i1][i2] + Garfield::Magboltz::nCharDescr);
+}
 }
 
 namespace Garfield {
@@ -3564,29 +3570,97 @@ void MediumMagboltz::GenerateGasTable(const int numColl, const bool verbose) {
         for (unsigned int l = 0; l < 6; ++l) {
           m_eDifM[l][j][k][i] = difftens[l];
         }
-        // If not done yet, retrieve the excitation and ionisation levels.
-        for (long long il = 0; il < Magboltz::nMaxLevels; ++il) {
-          if (Magboltz::large_.iarry[il] <= 0) break;
-          // Skip levels that are not ionisations or inelastic collisions.
-          const int cstype = (Magboltz::large_.iarry[il] - 1) % 5;
-          if (cstype != 1 && cstype != 3) continue;
-          const int igas = int((Magboltz::large_.iarry[il] - 1) / 5);
-          std::string descr = GetDescription(il, Magboltz::scrip_.dscrpt);
-          descr = m_gas[igas] + descr;
-          if (cstype == 3) {
-            const unsigned int nExc = m_excLevels.size();
-            for (unsigned int ie = 0; ie < nExc; ++ie) {
-              if (descr != m_excLevels[ie].label) continue;
-              m_excRates[ie][j][k][i] = Magboltz::outpt_.icoln[il];
-              break;
+        // Retrieve the excitation and ionisation rates.
+        unsigned int nNonZero = 0;
+        if (m_useGasMotion) {
+          // Retrieve the total collision frequency and number of collisions.
+          double ftot = 0., fel = 0., fion = 0., fatt = 0., fin = 0.;
+          long long ntotal = 0;
+          Magboltz::colft_(&ftot, &fel, &fion, &fatt, &fin, &ntotal);
+          if (ntotal == 0) continue;
+          // Convert from ps-1 to ns-1.
+          const double scale = 1.e3 * ftot / ntotal;
+          for (unsigned int ig = 0; ig < m_nComponents; ++ig) {
+            const auto nL = Magboltz::larget_.last[ig];
+            for (long long il = 0; il < nL; ++il) {
+              if (Magboltz::larget_.iarry[il][ig] <= 0) break;
+              // Skip levels that are not ionisations or inelastic collisions.
+              const int cstype = (Magboltz::larget_.iarry[il][ig] - 1) % 5;
+              if (cstype != 1 && cstype != 3) continue;
+              // const int igas = int((Magboltz::larget_.iarry[il][ig] - 1) / 5);
+              auto descr = GetDescription(il, ig, Magboltz::script_.dscrpt);
+              descr = m_gas[ig] + descr;
+              if (cstype == 3) {
+                const unsigned int nExc = m_excLevels.size();
+                for (unsigned int ie = 0; ie < nExc; ++ie) {
+                  if (descr != m_excLevels[ie].label) continue;
+                  const auto ncoll = Magboltz::outptt_.icoln[il][ig];
+                  m_excRates[ie][j][k][i] = scale * ncoll;
+                  if (ncoll > 0) ++nNonZero;
+                  break;
+                }
+              } else if (cstype == 1) {
+                const unsigned int nIon = m_ionLevels.size();
+                for (unsigned int ii = 0; ii < nIon; ++ii) {
+                  if (descr != m_ionLevels[ii].label) continue;
+                  const auto ncoll = Magboltz::outptt_.icoln[il][ig];
+                  m_ionRates[ii][j][k][i] = scale * ncoll;
+                  if (ncoll > 0) ++nNonZero;
+                  break;
+                }
+              }
             }
-          } else if (cstype == 1) {
-            const unsigned int nIon = m_ionLevels.size();
-            for (unsigned int ii = 0; ii < nIon; ++ii) {
-              if (descr != m_ionLevels[ii].label) continue;
-              m_ionRates[ii][j][k][i] = Magboltz::outpt_.icoln[il];
-              break;
+          }
+        } else {
+          // Retrieve the total collision frequency and number of collisions.
+          double ftot = 0., fel = 0., fion = 0., fatt = 0., fin = 0.;
+          long long ntotal = 0;
+          Magboltz::colf_(&ftot, &fel, &fion, &fatt, &fin, &ntotal);
+          if (ntotal == 0) continue;
+          // Convert from ps-1 to ns-1.
+          const double scale = 1.e3 * ftot / ntotal;
+          for (long long il = 0; il < Magboltz::nMaxLevels; ++il) {
+            if (Magboltz::large_.iarry[il] <= 0) break;
+            // Skip levels that are not ionisations or inelastic collisions.
+            const int cstype = (Magboltz::large_.iarry[il] - 1) % 5;
+            if (cstype != 1 && cstype != 3) continue;
+            const int igas = int((Magboltz::large_.iarry[il] - 1) / 5);
+            std::string descr = GetDescription(il, Magboltz::scrip_.dscrpt);
+            descr = m_gas[igas] + descr;
+            if (cstype == 3) {
+              const unsigned int nExc = m_excLevels.size();
+              for (unsigned int ie = 0; ie < nExc; ++ie) {
+                if (descr != m_excLevels[ie].label) continue;
+                m_excRates[ie][j][k][i] = scale * Magboltz::outpt_.icoln[il];
+                if (Magboltz::outpt_.icoln[il] > 0) ++nNonZero;
+                break;
+              }
+            } else if (cstype == 1) {
+              const unsigned int nIon = m_ionLevels.size();
+              for (unsigned int ii = 0; ii < nIon; ++ii) {
+                if (descr != m_ionLevels[ii].label) continue;
+                m_ionRates[ii][j][k][i] = scale * Magboltz::outpt_.icoln[il];
+                if (Magboltz::outpt_.icoln[il] > 0) ++nNonZero;
+                break;
+              }
             }
+          }
+        }
+        if (nNonZero > 0) {
+          std::cout << "    Excitation and ionisation rates:\n";
+          std::cout << "                         Level                         "
+                    << "          Rate [ns-1]\n";
+          const unsigned int nExc = m_excLevels.size();
+          for (unsigned int ie = 0; ie < nExc; ++ie) {
+            if (m_excRates[ie][j][k][i] <= 0) continue;
+            std::cout << std::setw(60) << m_excLevels[ie].label;
+            std::printf(" %15.8f\n", m_excRates[ie][j][k][i]);
+          }
+          const unsigned int nIon = m_ionLevels.size();
+          for (unsigned int ii = 0; ii < nIon; ++ii) {
+            if (m_ionRates[ii][j][k][i] <= 0) continue;
+            std::cout << std::setw(60) << m_ionLevels[ii].label;
+            std::printf(" %15.8f\n", m_ionRates[ii][j][k][i]);
           }
         }
       }
