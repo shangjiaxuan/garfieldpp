@@ -19,7 +19,7 @@ elseif(DEFINED ROOT_CMAKE_DIR)
     list(APPEND CMAKE_PREFIX_PATH ${ROOT_CMAKE_DIR} )
 else()
     message(FATAL_ERROR "Please consider to set ROOTSYS or use -DROOTSYS=..."
-                        "If still there is a proplem, point to the directory which includes FindROOT.cmake using -DROOT_CMAKE_DIR=...")
+                        "If still there is a problem, point to the directory which includes FindROOT.cmake using -DROOT_CMAKE_DIR=...")
 endif(DEFINED ENV{ROOTSYS})
 
 find_package(ROOT 6.0 REQUIRED COMPONENTS Geom Gdml)
@@ -63,7 +63,7 @@ set_source_files_properties( ${heed_sources} PROPERTIES LANGUAGE CXX)
 if(APPLE)
   set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -Wno-long-long -Woverloaded-virtual -fno-common" )
 else()
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wno-long-long -Woverloaded-virtual -fno-common -pg" )
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wno-long-long -Woverloaded-virtual -fno-common" )
 endif()
 
 #--- Set the C++ standard (depending on the ROOT version)-----------------------
@@ -85,8 +85,8 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif()
 
 #--- Add switches used in HEED--------------------------------------------------
-#    -DNOT_INCLUDE_GASLIB_IN_PACSLIB is used in Heed/heed++/code/PhotoAbsCS.c
-set_source_files_properties(${heed_sources} PROPERTIES COMPILE_FLAGS "-DNOT_INCLUDE_GASLIB_IN_PACSLIB -DGARFIELD_HEED_INTERFACE -DUSE_SRANLUX -DEXCLUDE_FUNCTIONS_WITH_HISTDEF -DINS_CRETURN -DFUNNAMESTACK")
+# -DNOT_INCLUDE_GASLIB_IN_PACSLIB is used in Heed/heed++/code/PhotoAbsCS.c
+set_source_files_properties(${heed_sources} PROPERTIES COMPILE_FLAGS "-DNOT_INCLUDE_GASLIB_IN_PACSLIB -DGARFIELD_HEED_INTERFACE -DFUNNAMESTACK")
 
 #--- create ROOT dictionary-----------------------------------------------------
 if(ROOT_VERSION VERSION_LESS 6.17)
