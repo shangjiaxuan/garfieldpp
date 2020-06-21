@@ -1372,7 +1372,7 @@ bool ComponentNeBem3d::Initialise() {
     }
   }
   // TODO! Not sure if we should call this here.
-  neBEM::neBEMEnd();
+  // neBEM::neBEMEnd();
   m_ready = true;
   return true;
 }

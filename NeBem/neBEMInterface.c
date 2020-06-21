@@ -4765,7 +4765,7 @@ int neBEMEnd(void) {
           "IslesCntr: %d, ExactCntr: %d, FailureCntr: %d, ApproxCntr: %d\n",
           IslesCntr, ExactCntr, FailureCntr, ApproxCntr);
   fclose(fIsles);
-
+  fIsles = NULL;
   printf("neBEM ends ... bye!\n");
 
   return 0;
