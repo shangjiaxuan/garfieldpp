@@ -938,11 +938,11 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
     if (ni > 0) {
       if (particle == Particle::Electron) {
         if (semiconductor) {
-          driftLine[i].ni = ni;
-          m_nIons += ni;
-        } else {
           driftLine[i].nh = ni;
           m_nHoles += ni;
+        } else {
+          driftLine[i].ni = ni;
+          m_nIons += ni;
         }
       } else {
         driftLine[i].ne = ni;
