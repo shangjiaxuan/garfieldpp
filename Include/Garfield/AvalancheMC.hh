@@ -283,6 +283,23 @@ class AvalancheMC {
     point.ni = ni;
     points.push_back(std::move(point));
   }
+  void AddEndPoint(const std::array<double, 3>& x0, const double t0,
+                   const std::array<double, 3>& x1, const double t1,
+                   const int status, const Particle particle) { 
+    EndPoint endPoint;
+    endPoint.x0 = x0;
+    endPoint.t0 = t0;
+    endPoint.x1 = x1;
+    endPoint.t1 = t1;
+    endPoint.status = status;
+    if (particle == Particle::Electron) {
+      m_endpointsElectrons.push_back(std::move(endPoint));
+    } else if (particle == Particle::Hole) {
+      m_endpointsHoles.push_back(std::move(endPoint));
+    } else if (particle == Particle::Ion) {
+      m_endpointsIons.push_back(std::move(endPoint));
+    }
+  }
 
   /// Compute electric and magnetic field at a given position.
   int GetField(const std::array<double, 3>& x, std::array<double, 3>& e,
