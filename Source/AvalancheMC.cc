@@ -258,12 +258,6 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
     status = StatusOutsideTimeWindow;
     std::cerr << m_className + "::DriftLine: " << t0
               << " is outside the time window.\n";
-if (particle == Particle::Electron) {
-  std::cerr << " Electron\n";
-} else {
-  std::cerr << " Hole\n";
-}
-std::cerr << "    " << m_tMin << " < t < " << m_tMax << "\n";
   }
   // Stop here if initial position or time are invalid.
   if (status != 0) return false;

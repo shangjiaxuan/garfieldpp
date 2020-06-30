@@ -160,19 +160,21 @@ class AvalancheMC {
   /// Simulate the drift line of an ion from a given starting point.
   bool DriftIon(const double x0, const double y0, const double z0,
                 const double t0);
-  /// Simulate an avalanche initiated by an electron at a given starting point.
+  /** Simulate an avalanche initiated by an electron at a given starting point.
+   * \param x0,y0,z0,t0 coordinates and time of the initial electron
+   * \param hole simulate the hole component of the avalanche or not
+   */
   bool AvalancheElectron(const double x0, const double y0, const double z0,
-                         const double t0, const bool hole = false);
+                         const double t0, const bool hole = true);
   /// Simulate an avalanche initiated by a hole at a given starting point.
   bool AvalancheHole(const double x0, const double y0, const double z0,
-                     const double t0, const bool electron = false);
+                     const double t0, const bool electron = true);
+  /// Simulate an avalanche initiated by an electron-hole pair.
   bool AvalancheElectronHole(const double x0, const double y0, const double z0,
                              const double t0);
 
-  /// Switch on debugging messages (default: off).
-  void EnableDebugging() { m_debug = true; }
-  /// Switch off debugging messages.
-  void DisableDebugging() { m_debug = false; }
+  /// Switch debugging messages on/off (default: off).
+  void EnableDebugging(const bool on = true) { m_debug = on; }
 
  private:
   std::string m_className = "AvalancheMC";
