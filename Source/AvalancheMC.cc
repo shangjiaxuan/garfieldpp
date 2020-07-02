@@ -591,7 +591,7 @@ bool AvalancheMC::Avalanche(const double x0, const double y0, const double z0,
           }
           // Loop over the drift line.
           const unsigned int nPoints = m_drift.size();
-          for (unsigned int j = 0; j < nPoints - 2; ++j) {
+          for (unsigned int j = 0; j < nPoints - 1; ++j) {
             const auto& p = m_drift[j];
             if (p.ne == 0 && p.nh == 0 && p.ni == 0) continue;
             // Add the point to the table.
