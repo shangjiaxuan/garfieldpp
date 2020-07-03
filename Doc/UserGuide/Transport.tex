@@ -277,7 +277,7 @@ using fixed time steps (default: 20\,ps),
 in the second case using fixed distance steps (default: 10\,\textmu{m}). 
 Calling the third function instructs the class to 
 do the integration with exponentially distributed time steps 
-with a mean equal to the specified multiple of the ``collision time'' 
+with a mean equal to a multiple of the ``collision time'' 
 \begin{equation*}
   \tau = \frac{m v_{d}}{q E}.
 \end{equation*}
@@ -341,11 +341,11 @@ bool AvalancheHole(const double x0, const double y0, const double z0,
 bool AvalancheElectronHole(const double x0, const double y0, const double z0, 
                            const double t0);
 \end{lstlisting}
-The flags \texttt{hole} and \texttt{electron} specify whether 
-multiplication of holes and electrons, respectively, should be 
-taken into account in the simulation. 
-In case of gas-based detectors, only \texttt{AvalancheElectron} with 
-\texttt{hole = false} is meaningful. 
+The flags \texttt{hole} and \texttt{electron} specify whether the  
+drift and multiplication of the holes/ions (electrons) created in the 
+avalanche should be simulated. 
+%In case of gas-based detectors, only \texttt{AvalancheElectron} with 
+%\texttt{hole = false} is meaningful. 
 
 The starting and endpoints of electrons in the avalanche can be 
 retrieved using
