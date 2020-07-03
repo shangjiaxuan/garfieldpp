@@ -165,10 +165,10 @@ class AvalancheMC {
    * \param hole simulate the hole component of the avalanche or not
    */
   bool AvalancheElectron(const double x0, const double y0, const double z0,
-                         const double t0, const bool hole = true);
+                         const double t0, const bool hole = false);
   /// Simulate an avalanche initiated by a hole at a given starting point.
   bool AvalancheHole(const double x0, const double y0, const double z0,
-                     const double t0, const bool electron = true);
+                     const double t0, const bool electron = false);
   /// Simulate an avalanche initiated by an electron-hole pair.
   bool AvalancheElectronHole(const double x0, const double y0, const double z0,
                              const double t0);
