@@ -1664,6 +1664,9 @@ void ComponentNeBem2d::BoxField(const double a, const double b,
   if (fabs(x) > a || fabs(y) > b) {
     std::array<double, 4> alpha = {atan2(dy[0], dx[0]), atan2(dy[0], dx[1]),
                                    atan2(dy[1], dx[1]), atan2(dy[1], dx[0])};
+    if (x < 0.) {
+      for (size_t i = 0; i < 4; ++i) if (alpha[i] < 0.) alpha[i] += TwoPi;
+    }
     ex += dx[0] * (alpha[0] - alpha[3]) + dx[1] * (alpha[2] - alpha[1]);
     ey -= dy[0] * (alpha[0] - alpha[1]) + dy[1] * (alpha[2] - alpha[3]);
   } else {
