@@ -455,6 +455,20 @@ void ComponentNeBem3d::WeightingField(const double x, const double y,
   wz = 0.01 * field.Z;
 }
 
+double ComponentNeBem3d::WeightingPotential(const double x, const double y,
+                                            const double z, 
+                                            const std::string& label) {
+  if (m_wfields.count(label) == 0) return 0.;
+  const int id = m_wfields[label];
+  neBEM::Point3D point;
+  point.X = 0.01 * x;
+  point.Y = 0.01 * y;
+  point.Z = 0.01 * z;
+  neBEM::Vector3D field;
+  const double v = neBEM::neBEMWeightingField(&point, &field, id);
+  return v == DBL_MAX ? 0. : v;
+}
+
 void ComponentNeBem3d::AddPlaneX(const double x, const double v) {
   if (m_ynplan[0] && m_ynplan[1]) {
     std::cerr << m_className << "::AddPlaneX:\n"

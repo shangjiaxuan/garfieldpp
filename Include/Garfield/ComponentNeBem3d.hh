@@ -26,6 +26,8 @@ class ComponentNeBem3d : public ComponentBase {
   void WeightingField(const double x, const double y, const double z,
                       double& wx, double& wy, double& wz,
                       const std::string& label) override;
+  double WeightingPotential(const double x, const double y,
+                            const double z, const std::string& label) override;
 
   /// Add a plane at constant x.
   void AddPlaneX(const double x, const double voltage);
