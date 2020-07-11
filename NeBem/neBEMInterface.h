@@ -128,12 +128,15 @@ INTFACEGLOBAL int neBEMPrepareWeightingField(int NbPrimsWtField,
 // Deallocates memory reserved for a weighting field
 INTFACEGLOBAL void neBEMDeleteWeightingField(int IdWtField);
 
-// Get weighting field at a specific point
+// Deallocates all memory reserved for all weighting fields
+INTFACEGLOBAL void neBEMDeleteAllWeightingFields(void);
+
+// Get weighting field and potential at a specific point
 // arguments: evaluation position, field vector and the identification tag
-// to indicate the necessary weighting field configuration; returns success (0)
-// or failure (non-zero)
-INTFACEGLOBAL int neBEMWeightingField(Point3D *point, Vector3D *field,
-                                      int IdWtField);
+// to indicate the necessary weighting field configuration; returns potential values
+// evaluation failure returns DBL_MAX for the value of potential
+INTFACEGLOBAL double neBEMWeightingField(Point3D *point, Vector3D *field,
+                                         int IdWtField);
 
 // no argument
 INTFACEGLOBAL int neBEMEnd(void);

@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <sys/stat.h>  // use of stat function
 #include <unistd.h>
+#include <float.h>
 
 #ifdef __cplusplus
 #include <vector>
@@ -38,7 +39,7 @@ namespace neBEM {
 int neBEMInitialize(void) {
 
   // Version information
-  strcpy(neBEMVersion, "1.9.07");
+  strcpy(neBEMVersion, "1.9.08");
   strcpy(ISLESVersion, "1.4.8");
   printf("Using neBEM version %s and ISLES version %s\n", neBEMVersion,
          ISLESVersion);
@@ -442,7 +443,7 @@ int neBEMReadGeometry(void) {
   // Explicit storage of these variables related to primitives may not be
   // necessary if the elements are created immediately after a primitive is read
   // in.
-  // MaxNbVertices = 4;	// value specified through SetDefaults or init files
+  // MaxNbVertices = 4; // value specified through SetDefaults or init files
   if (neBEMState == 2) {
     // neBEM has been initialized, NbPrimitives set
     PrimType = ivector(1, NbPrimitives);
@@ -4628,7 +4629,7 @@ int neBEMPrepareWeightingField(int nprim, int primlist[]) {
   }
 
   // Find first free slot
-  const int MaxWtField = 100;
+  const int MaxWtField = 100; // used again while deallocating these memories
   if (WtFieldChDen == NULL)
     WtFieldChDen = (double **)malloc(MaxWtField * sizeof(double *));
   if (AvWtChDen == NULL)
@@ -4672,11 +4673,26 @@ int neBEMPrepareWeightingField(int nprim, int primlist[]) {
 }  // neBEMPrepareWeightingField ends
 
 // Deallocates memory reserved for a weighting field
-void neBEMDeleteWeightingField(int IdWtField) { free(WtFieldChDen[IdWtField]); }
+void neBEMDeleteWeightingField(int IdWtField) { 
+  free(WtFieldChDen[IdWtField]); 
+  free(AvWtChDen[IdWtField]);
+}
+
+// Deallocates all memory reserved for all weighting fields
+void neBEMDeleteAllWeightingFields(void) {
+  const int MaxWtField = 100;	// being used while allocating memory
+  for (int id = 1; id < MaxWtField; ++id)	{ // count from 1
+    free(WtFieldChDen[id]);
+    free(AvWtChDen[id]);
+  }
+  free(WtFieldChDen); 
+  free(AvWtChDen);
+}
 
 // Get weighting field (potential also) at a specific point
-int neBEMWeightingField(Point3D *point, Vector3D *field, int IdWtField) {
-  double potential;  // not exported since not used at all
+// returns DBL_MAX as the value of potential when something goes wrong.
+double neBEMWeightingField(Point3D *point, Vector3D *field, int IdWtField) {
+  double potential;
   int fstatus;
 
   if (neBEMState < 9) {
@@ -4684,8 +4700,7 @@ int neBEMWeightingField(Point3D *point, Vector3D *field, int IdWtField) {
     return (-1);
   }
 
-  if (OptFixedWtField)  // minimum computation, too restricted!
-  {
+  if (OptFixedWtField) { // minimum computation, too restricted!
     potential = FixedWtPotential;
     field->X = FixedWtFieldX;
     field->Y = FixedWtFieldY;
@@ -4693,26 +4708,26 @@ int neBEMWeightingField(Point3D *point, Vector3D *field, int IdWtField) {
     fstatus = 0;
     if (fstatus != 0) {
       neBEMMessage("neBEMWeightingField - FixedWtFieldAtPoint");
-      return -1;
+      return DBL_MAX; 
     }
   } else if (OptWtFldFastVol)  // bit more computation, lot more flexibility
   {                            // Note: this is not the Creat or Read option
     fstatus = WtFldFastPFAtPoint(point, &potential, field);
     if (fstatus != 0) {
       neBEMMessage("neBEMWeightingField - WtFldFastPFAtPoint");
-      return -1;
+      return DBL_MAX;
     }
   } else {
     fstatus = WtPFAtPoint(point, &potential, field, IdWtField);
     if (fstatus != 0) {
       neBEMMessage("neBEMWeightingField - WtPFAtPoint");
-      return -1;
+      return DBL_MAX;
     }
   }
 
   // printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
 
-  return (0);
+  return potential;
 }  // neBEMWeightingField ends
 
 double neBEMVolumeCharge(int volume) {

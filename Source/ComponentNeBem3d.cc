@@ -6,6 +6,7 @@
 #include <numeric>
 #include <set>
 #include <vector>
+#include <cfloat>
 
 #include "neBEMInterface.h"
 #include "neBEM.h"
@@ -445,7 +446,7 @@ void ComponentNeBem3d::WeightingField(const double x, const double y,
   point.Y = 0.01 * y;
   point.Z = 0.01 * z;
   neBEM::Vector3D field;
-  if (neBEM::neBEMWeightingField(&point, &field, id) != 0) {
+  if (neBEM::neBEMWeightingField(&point, &field, id) == DBL_MAX) {
     std::cerr << m_className << "::WeightingField: Evaluation failed.\n";
     return;
   }
@@ -1228,6 +1229,11 @@ bool ComponentNeBem3d::Initialise() {
   } else {
     neBEM::OptInvMatProc = 1;
   }
+  // Delete existing weighting fields (if any).
+  if (neBEM::WtFieldChDen != NULL) {
+    neBEM::neBEMDeleteAllWeightingFields();
+  }
+  // Transfer the geometry.
   if (neBEM::neBEMReadGeometry() != 0) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Transferring the geometry to neBEM failed.\n";
