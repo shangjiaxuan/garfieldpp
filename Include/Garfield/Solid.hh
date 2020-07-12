@@ -129,10 +129,8 @@ class Solid {
     return NotImplemented("GetRidgeHeight");
   }
   /// Get the vertices defining an extrusion.
-  virtual bool GetProfile(std::vector<double>& /*xv*/, 
-                          std::vector<double>& /*yv*/) const {
-    return NotImplemented("GetProfile");
-  }
+  virtual bool GetProfile(std::vector<double>& xv, 
+                          std::vector<double>& yv) const;
 
   /// Get the ID of the solid.
   unsigned int GetId() const { return m_id; }
