@@ -125,60 +125,60 @@ class ComponentNeBem2d : public ComponentBase {
   double m_zmax =  1.;
   /// Boundary condition type.
   enum BC {
-    Voltage = 1, //< Fixed potential.
-    Charge,      //< Fixed charge density (not implemented).
-    Floating,    //< Floating conductor (not implemented).
-    Dielectric   //< Dielectric-dielectric interface.
+    Voltage = 1, ///< Fixed potential.
+    Charge,      ///< Fixed charge density (not implemented).
+    Floating,    ///< Floating conductor (not implemented).
+    Dielectric   ///< Dielectric-dielectric interface.
   };
   struct Region {
-    std::vector<double> xv;    //< x-coordinates of the vertices.
-    std::vector<double> yv;    //< y-coordinates of the vertices.
-    Medium* medium;            //< Medium associated to the region.
-    std::pair<BC, double> bc;  //< Applied boundary condition.
-    unsigned int depth;        //< Level in the hierarchy.
-    int ndiv;                  //< Number of elements per edge segment.
+    std::vector<double> xv;    ///< x-coordinates of the vertices.
+    std::vector<double> yv;    ///< y-coordinates of the vertices.
+    Medium* medium;            ///< Medium associated to the region.
+    std::pair<BC, double> bc;  ///< Applied boundary condition.
+    unsigned int depth;        ///< Level in the hierarchy.
+    int ndiv;                  ///< Number of elements per edge segment.
   };
   /// Regions.
   std::vector<Region> m_regions;
 
   struct Segment {
-    std::array<double, 2> x0;  //< Coordinates of the start point.
-    std::array<double, 2> x1;  //< Coordinates of the end point.
-    int region1;               //< Inner region. 
-    int region2;               //< Outer region.
-    std::pair<BC, double> bc;  //< Applied boundary condition.
-    int ndiv;                  //< Number of elements.
+    std::array<double, 2> x0;  ///< Coordinates of the start point.
+    std::array<double, 2> x1;  ///< Coordinates of the end point.
+    int region1;               ///< Inner region. 
+    int region2;               ///< Outer region.
+    std::pair<BC, double> bc;  ///< Applied boundary condition.
+    int ndiv;                  ///< Number of elements.
   };
   /// User-specified conducting straight-line segments.
   std::vector<Segment> m_segments;
 
   struct Wire {
-    double x, y; //< Coordinates of the centre.
-    double r;    //< Radius.
-    double v;    //< Potential.
-    double q;    //< Charge.
-    int ntrap;   //< Trap radius (in units of the wire radius).
+    double x, y; ///< Coordinates of the centre.
+    double r;    ///< Radius.
+    double v;    ///< Potential.
+    double q;    ///< Charge.
+    int ntrap;   ///< Trap radius (in units of the wire radius).
   };
   /// Wires.
   std::vector<Wire> m_wires;
 
   struct Element {
-    double x, y; //< Coordinates of the element centre (collocation point).
-    double a;    //< Half-length.
-    double cphi; //< Rotation.
-    double sphi; //< Rotation.
-    double q;    //< Charge density (solution).
-    std::pair<BC, double> bc; //< Boundary condition.
-    double lambda;            //< Ratio of dielectric permittivities.
+    double x, y; ///< Coordinates of the element centre (collocation point).
+    double a;    ///< Half-length.
+    double cphi; ///< Rotation.
+    double sphi; ///< Rotation.
+    double q;    ///< Charge density (solution).
+    std::pair<BC, double> bc; ///< Boundary condition.
+    double lambda;            ///< Ratio of dielectric permittivities.
   };
   /// Straight-line boundary elements.
   std::vector<Element> m_elements;
 
   struct SpaceCharge {
-    double x, y; //< Coordinates of the centre.
-    double a, b; //< Half-lengths.
-    double q;    //< Charge density.
-    double v0;   //< Offset.
+    double x, y; ///< Coordinates of the centre.
+    double a, b; ///< Half-lengths.
+    double q;    ///< Charge density.
+    double v0;   ///< Offset.
   };
   std::vector<SpaceCharge> m_spaceCharge;
 

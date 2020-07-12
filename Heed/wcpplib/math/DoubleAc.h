@@ -42,9 +42,9 @@ const double one_minus_def_flt_prec = double(1.0) - DEF_FLT_PREC;
 /// The central the most probable value is also watched for.
 
 class DoubleAc {
-  double d;   //< the main  value
-  double di;  //< the left limit   di <= d
-  double da;  //< the right limit  da >= d
+  double d;   ///< the main  value
+  double di;  ///< the left limit   di <= d
+  double da;  ///< the right limit  da >= d
  public:
   inline DoubleAc(void) {
     di = 0.0;

@@ -105,7 +105,7 @@ class DriftLineRKF {
 
   /** Compute an electric field line.
     * \param xi,yi,zi starting point
-    * \param xf points along the field line
+    * \param xl points along the field line
     * \param electron flag to set the direction in which to follow the field
     */ 
   bool FieldLine(const double xi, const double yi, const double zi,
