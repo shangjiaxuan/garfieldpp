@@ -1493,12 +1493,12 @@ bool ComponentGrid::LoadData(
     }
 
     // Skip to the requested column.
-    for (unsigned int i = 0; i < col - offset; ++i) {
+    for (unsigned int ii = 0; ii < col - offset; ++ii) {
       double dummy = 0.;
       data >> dummy;
       if (data.fail()) {
         PrintError(m_className + "::LoadData", nLines, 
-                   "column " + std::to_string(offset + i));
+                   "column " + std::to_string(offset + ii));
         break;
       }
     }
