@@ -180,17 +180,17 @@ bool SolidExtrusion::SolidPanels(std::vector<Panel>& panels) {
       const unsigned int k = i == 0 ? np - 1 : i - 1;
       double xn = m_yp[k] - m_yp[i];
       double yn = m_xp[i] - m_xp[k];
-      const double fnorm = sqrt(xn * xn + yn * yn);
-      if (fnorm <= 0) {
+      const double fn = sqrt(xn * xn + yn * yn);
+      if (fn <= 0) {
         std::cerr << "SolidExtrusion::SolidPanels: Zero norm edge (warning).\n";
         continue;
       }
       if (m_clockwise) {
-        xn = xn / fnorm;
-        yn = yn / fnorm;
+        xn = xn / fn;
+        yn = yn / fn;
       } else {
-        xn = -xn / fnorm;
-        yn = -yn / fnorm;
+        xn = -xn / fn;
+        yn = -yn / fn;
       }
       Panel panel;
       panel.a = m_cPhi * m_cTheta * xn - m_sPhi * yn;

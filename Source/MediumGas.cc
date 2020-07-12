@@ -961,7 +961,7 @@ bool MediumGas::MergeGasFile(const std::string& filename,
   std::vector<IonLevel> ionLevels;
   if (!ReadHeader(gasfile, version, gasok, new3d, mixture, efields, bfields,
                   angles, excLevels, ionLevels)) {
-    std::cerr << m_className << "::MergeGasFile: Error reading header.\n",
+    std::cerr << m_className << "::MergeGasFile: Error reading header.\n";
     gasfile.close();
     return false;
   } 
@@ -1097,7 +1097,7 @@ bool MediumGas::MergeGasFile(const std::string& filename,
   gasfile.seekg(0);
   if (!ReadHeader(gasfile, version, gasok, new3d, mixture, efields, bfields,
                   angles, excLevels, ionLevels)) {
-    std::cerr << m_className << "::MergeGasFile: Error re-reading header.\n",
+    std::cerr << m_className << "::MergeGasFile: Error re-reading header.\n";
     gasfile.close();
     return false;
   }
@@ -2220,7 +2220,6 @@ bool MediumGas::LoadIonMobility(const std::string& filename) {
   if (!infile) {
     std::cerr << m_className << "::LoadIonMobility:\n"
               << "    Error opening file " << filename << ".\n";
-    ;
     return false;
   }
 
@@ -2747,196 +2746,133 @@ std::string MediumGas::GetGasName(const int gasnumber, const int version) const 
   switch (gasnumber) {
     case 1:
       return "CF4";
-      break;
     case 2:
       return "Ar";
-      break;
     case 3:
       return "He";
-      break;
     case 4:
       return "He-3";
-      break;
     case 5:
       return "Ne";
-      break;
     case 6:
       return "Kr";
-      break;
     case 7:
       return "Xe";
-      break;
     case 8:
       return "CH4";
-      break;
     case 9:
       return "C2H6";
-      break;
     case 10:
       return "C3H8";
-      break;
     case 11:
       return "iC4H10";
-      break;
     case 12:
       return "CO2";
-      break;
     case 13:
       return "neoC5H12";
-      break;
     case 14:
       return "H2O";
-      break;
     case 15:
       return "O2";
-      break;
     case 16:
       return "N2";
-      break;
     case 17:
       return "NO";
-      break;
     case 18:
       return "N2O";
-      break;
     case 19:
       return "C2H4";
-      break;
     case 20:
       return "C2H2";
-      break;
     case 21:
       return "H2";
-      break;
     case 22:
       return "D2";
-      break;
     case 23:
       return "CO";
-      break;
     case 24:
       return "Methylal";
-      break;
     case 25:
       return "DME";
-      break;
     case 26:
       return "Reid-Step";
-      break;
     case 27:
       return "Maxwell-Model";
-      break;
     case 28:
       return "Reid-Ramp";
-      break;
     case 29:
       return "C2F6";
-      break;
     case 30:
       return "SF6";
-      break;
     case 31:
       return "NH3";
-      break;
     case 32:
       return "C3H6";
-      break;
     case 33:
       return "cC3H6";
-      break;
     case 34:
       return "CH3OH";
-      break;
     case 35:
       return "C2H5OH";
-      break;
     case 36:
       return "C3H7OH";
-      break;
     case 37:
       return "Cs";
-      break;
     case 38:
       return "F2";
-      break;
     case 39:
       return "CS2";
-      break;
     case 40:
       return "COS";
-      break;
     case 41:
       return "CD4";
-      break;
     case 42:
       return "BF3";
-      break;
     case 43:
       return "C2H2F4";
-      break;
     case 44:
       return version <= 11 ? "He-3" : "TMA";
-      break;
     case 45:
       return version <= 11 ? "He" : "paraH2";
-      break;
     case 46:
       return version <= 11 ? "Ne" : "nC3H7OH";
-      break;
     case 47:
       return "Ar";
-      break;
     case 48:
       return version <= 11 ? "Kr" : "orthoD2";
-      break;
     case 49:
       return "Xe";
-      break;
     case 50:
       return "CHF3";
-      break;
     case 51:
       return "CF3Br";
-      break;
     case 52:
       return "C3F8";
-      break;
     case 53:
       return "O3";
-      break;
     case 54:
       return "Hg";
-      break;
     case 55:
       return "H2S";
-      break;
     case 56:
       return "nC4H10";
-      break;
     case 57:
       return "nC5H12";
-      break;
     case 58:
       return "N2";
-      break;
     case 59:
       return "GeH4";
-      break;
     case 60:
       return "SiH4";
-      break;
     default:
-      return "";
       break;
   }
   return "";
 }
 
 std::string MediumGas::GetGasName(std::string input) const {
-  // Convert to upper-case
-  for (unsigned int i = 0; i < input.length(); ++i) {
-    input[i] = toupper(input[i]);
-  }
+  // Convert to upper-case.
+  std::transform(input.begin(), input.end(), input.begin(), toupper);
 
   if (input.empty()) return "";
 

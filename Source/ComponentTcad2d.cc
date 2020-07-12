@@ -1240,7 +1240,7 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
   unsigned int ivertex = 0;
   for (int j = 0; j < nValues; ++j) {
     // Read the next value.
-    double val1, val2;
+    double val1 = 0., val2 = 0.;
     if (isVector) {
       datafile >> val1 >> val2;
     } else {
@@ -1414,7 +1414,7 @@ bool ComponentTcad2d::LoadWeightingField(const std::string& datafilename,
     unsigned int ivertex = 0;
     for (int j = 0; j < nValues; ++j) {
       // Read the next value.
-      double val1, val2;
+      double val1 = 0., val2 = 0.;
       if (field) {
         datafile >> val1 >> val2;
       } else {
@@ -1850,7 +1850,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
           Cleanup();
           gridfile.close();
           return false;
-          break;
       }
       m_elements[j].type = type;
       m_elements[j].region = -1;
@@ -2038,13 +2037,10 @@ bool ComponentTcad2d::CheckElement(const double x, const double y,
   switch (element.type) {
     case 1:
       return CheckLine(x, y, element, w);
-      break;
     case 2:
       return CheckTriangle(x, y, element, w);
-      break;
     case 3:
       return CheckRectangle(x, y, element, w);
-      break;
     default:
       std::cerr << m_className << "::CheckElement:\n"
                 << "    Unknown element type. Program bug!\n";

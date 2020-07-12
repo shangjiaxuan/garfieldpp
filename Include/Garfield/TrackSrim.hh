@@ -95,9 +95,9 @@ class TrackSrim : public Track {
   /// Fano factor [-]
   double m_fano = -1.;
   /// Charge of ion
-  double m_q;
+  double m_qion;
   /// Mass of ion [MeV]
-  double m_mass = -1.;
+  double m_mion = -1.;
   /// A and Z of the gas
   double m_a = -1.;
   double m_z = -1.;

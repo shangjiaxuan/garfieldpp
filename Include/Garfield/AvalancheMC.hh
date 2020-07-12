@@ -184,9 +184,9 @@ class AvalancheMC {
   enum class Particle { Electron = 0, Ion, Hole };
 
   struct DriftPoint {
-    std::array<double, 3> x;  //< Position.
-    double t;                 //< Time.
-    unsigned int ne, nh, ni;  //< Number of secondaries produced at this point.
+    std::array<double, 3> x;  ///< Position.
+    double t;                 ///< Time.
+    unsigned int ne, nh, ni;  ///< Number of secondaries produced at this point.
   };
   /// Current drift line
   std::vector<DriftPoint> m_drift;
@@ -227,10 +227,10 @@ class AvalancheMC {
   unsigned int m_nIons = 0;
 
   struct EndPoint {
-    std::array<double, 3> x0;  //< Starting point.
-    std::array<double, 3> x1;  //< End point.
-    double t0, t1;             //< Start and end time.
-    int status;                //< Status flag at the end point.
+    std::array<double, 3> x0;  ///< Starting point.
+    std::array<double, 3> x1;  ///< End point.
+    double t0, t1;             ///< Start and end time.
+    int status;                ///< Status flag at the end point.
   };
   /// Endpoints of all electrons in the avalanche (including captured ones)
   std::vector<EndPoint> m_endpointsElectrons;

@@ -46,7 +46,7 @@ class ViewMedium : public ViewBase {
   void SetAngle(const double angle) { m_angle = angle; }
 
   /** Plot the drift velocity components of electrons in the medium.
-    * \param[xaxis] abscissa.
+    * \param xaxis abscissa.
     *   - 'e': electric field, 
     *   - 'b': magnetic field, 
     *   - 'a': angle between E and B.

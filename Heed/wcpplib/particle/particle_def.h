@@ -99,7 +99,7 @@ class particle_def {
   /// if it is registered in system, or NULL otherwise.
   static particle_def* get_particle_def(const std::string& fnotation);
   /// Check that there is no particle with the same name in the container.
-  void verify() {};
+  void verify() {}
 };
 std::ostream& operator<<(std::ostream& file, const particle_def& f);
 

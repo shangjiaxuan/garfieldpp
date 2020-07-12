@@ -103,8 +103,8 @@ class ComponentNeBem3dMap : public ComponentBase {
  private:
   std::vector<Medium*> m_media;
   struct Element {
-    double fx, fy, fz;  //< Field
-    double v;           //< Potential
+    double fx, fy, fz;  ///< Field
+    double v;           ///< Potential
   };
   /// Electric field values and potentials at each mesh element.
   std::vector<std::vector<std::vector<Element> > > m_efields;

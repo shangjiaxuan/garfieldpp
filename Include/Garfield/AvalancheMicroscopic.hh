@@ -250,25 +250,25 @@ class AvalancheMicroscopic {
   };
 
   struct Electron {
-    int status;                    //< Status.
-    bool hole;                     //< Electron or hole.
-    double x0, y0, z0, t0;         //< Starting point and time.
-    double e0;                     //< Initial kinetic energy.
-    int band;                      //< Band.
-    double x, y, z, t;             //< Current position and time.
-    double kx, ky, kz;             //< Current direction/wave vector.
-    double energy;                 //< Current kinetic energy.
-    std::vector<point> driftLine;  //< Drift line.
-    double xLast, yLast, zLast;    //< Previous position.
+    int status;                    ///< Status.
+    bool hole;                     ///< Electron or hole.
+    double x0, y0, z0, t0;         ///< Starting point and time.
+    double e0;                     ///< Initial kinetic energy.
+    int band;                      ///< Band.
+    double x, y, z, t;             ///< Current position and time.
+    double kx, ky, kz;             ///< Current direction/wave vector.
+    double energy;                 ///< Current kinetic energy.
+    std::vector<point> driftLine;  ///< Drift line.
+    double xLast, yLast, zLast;    ///< Previous position.
   };
   std::vector<Electron> m_endpointsElectrons;
   std::vector<Electron> m_endpointsHoles;
 
   struct photon {
-    int status;             //< Status
-    double energy;          //< Energy
-    double x0, y0, z0, t0;  //< Starting point and time.
-    double x1, y1, z1, t1;  //< End point and time.
+    int status;             ///< Status
+    double energy;          ///< Energy
+    double x0, y0, z0, t0;  ///< Starting point and time.
+    double x1, y1, z1, t1;  ///< End point and time.
   };
   std::vector<photon> m_photons;
 

@@ -51,9 +51,9 @@ double Shaper::Shape(const double t) const {
   switch (m_type) {
     case ShaperType::Unipolar:
       return UnipolarShaper(t);
-      break;
     case ShaperType::Bipolar:
       return BipolarShaper(t);
+    default:
       break;
   }
   return 0;

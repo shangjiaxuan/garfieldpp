@@ -68,7 +68,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     const auto hname = FindUnusedHistogramName("hSignal_");
     m_hSignal.reset(new TH1D(hname.c_str(), "", nBins, t0, t1));
     m_hSignal->SetLineColor(m_colTotal);
-    m_hSignal->GetXaxis()->SetTitle(xlabel.c_str()),
+    m_hSignal->GetXaxis()->SetTitle(xlabel.c_str());
     m_hSignal->GetYaxis()->SetTitle(ylabel.c_str());
     m_hSignal->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {

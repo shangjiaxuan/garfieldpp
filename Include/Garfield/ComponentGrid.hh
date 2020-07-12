@@ -153,8 +153,8 @@ class ComponentGrid : public ComponentBase {
  private:
   Medium* m_medium = nullptr;
   struct Node {
-    double fx, fy, fz;  //< Field
-    double v;           //< Potential
+    double fx, fy, fz;  ///< Field
+    double v;           ///< Potential
   };
 
   /// Electric field values and potentials.

@@ -1610,7 +1610,6 @@ bool MediumMagboltz::Mixer(const bool verbose) {
         for (int j = 0; j < nNull; ++j) {
           ++np;
           m_cf[iE][np] = qNull[iE][j] * van * scln[j];
-          ;
           if (m_useCsOutput) outfile << qNull[iE][j] << "  ";
         }
       }

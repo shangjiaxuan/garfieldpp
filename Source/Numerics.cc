@@ -33,7 +33,7 @@ int deqnGen(const int n, std::vector<std::vector<double > >& a,
 /// \param result resulting approximation to the integral.
 /// \param abserr estimate of the absolute error computed from
 ///               result and the three previous results.
-/// \param lastResults last three results.
+/// \param lastRes last three results.
 /// \param nres number of calls to the function.
 void qelg(unsigned int& n, std::array<double, 52>& epstab, 
           double& result, double& abserr, 
@@ -172,10 +172,10 @@ void qagi(std::function<double(double)> f, double bound, const int inf,
   if ((abserr <= tol && abserr != resasc0) || abserr == 0.) return;
 
   struct Interval {
-    double a; //< Left end point. 
-    double b; //< Right end point.
-    double r; //< Approximation to the integral over this interval.
-    double e; //< Error estimate.
+    double a; ///< Left end point. 
+    double b; ///< Right end point.
+    double r; ///< Approximation to the integral over this interval.
+    double e; ///< Error estimate.
   };
   std::vector<Interval> intervals(1);
   intervals[0].a = 0.;

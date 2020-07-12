@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -1125,10 +1126,8 @@ void Medium::SetExtrapolationMethod(const std::string& low,
 }
 
 bool Medium::GetExtrapolationIndex(std::string str, unsigned int& nb) const {
-  // Convert to upper-case
-  for (unsigned int i = 0; i < str.length(); ++i) {
-    str[i] = toupper(str[i]);
-  }
+  // Convert to upper-case.
+  std::transform(str.begin(), str.end(), str.begin(), toupper);
 
   if (str == "CONST" || str == "CONSTANT") {
     nb = 0;
