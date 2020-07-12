@@ -1240,7 +1240,7 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
   unsigned int ivertex = 0;
   for (int j = 0; j < nValues; ++j) {
     // Read the next value.
-    double val1, val2;
+    double val1 = 0., val2 = 0.;
     if (isVector) {
       datafile >> val1 >> val2;
     } else {
@@ -1414,7 +1414,7 @@ bool ComponentTcad2d::LoadWeightingField(const std::string& datafilename,
     unsigned int ivertex = 0;
     for (int j = 0; j < nValues; ++j) {
       // Read the next value.
-      double val1, val2;
+      double val1 = 0., val2 = 0.;
       if (field) {
         datafile >> val1 >> val2;
       } else {
