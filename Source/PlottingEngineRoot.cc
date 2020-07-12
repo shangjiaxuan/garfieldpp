@@ -44,7 +44,7 @@ void PlottingEngineRoot::SetDefaultStyle() {
   m_garfieldStyle.SetPadGridX(kTRUE);
   m_garfieldStyle.SetPadGridY(kTRUE);
 
-  const int font = m_serif ? 132 : 42;
+  const short font = m_serif ? 132 : 42;
   const double tsize = 0.04;
   m_garfieldStyle.SetTextFont(font);
   m_garfieldStyle.SetTextSize(tsize);
@@ -87,7 +87,7 @@ void PlottingEngineRoot::SetDefaultStyle() {
   m_garfieldStyle.SetNdivisions(510, "y");
   m_garfieldStyle.SetMarkerStyle(20);
   m_garfieldStyle.SetMarkerSize(1.2);
-  const double lw = 2;
+  const short lw = 2;
   m_garfieldStyle.SetLineWidth(lw);
   m_garfieldStyle.SetLineStyleString(2, "[12 12]");
   m_garfieldStyle.SetFrameLineWidth(lw);
