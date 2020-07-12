@@ -258,7 +258,6 @@ bool MediumSilicon::ElectronAttachment(const double ex, const double ey,
     default:
       std::cerr << m_className << "::ElectronAttachment: Unknown model. Bug!\n";
       return false;
-      break;
   }
 
   return true;
