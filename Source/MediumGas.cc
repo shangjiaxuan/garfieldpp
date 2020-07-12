@@ -2220,7 +2220,6 @@ bool MediumGas::LoadIonMobility(const std::string& filename) {
   if (!infile) {
     std::cerr << m_className << "::LoadIonMobility:\n"
               << "    Error opening file " << filename << ".\n";
-    ;
     return false;
   }
 
