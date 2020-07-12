@@ -52,7 +52,7 @@ typedef std::map< const std::string, EnergyRange_MeV> MapParticlesEnergy;
 class GarfieldParticle{
 public:
 	GarfieldParticle(std::string particleName, double ekin_eV,double time, double x_cm,double y_cm,double z_cm, double dx,double dy,double dz):fParticleName(particleName), fEkin_MeV(ekin_eV/1000000), fTime(time), fx_mm(10*x_cm),fy_mm(10*y_cm), fz_mm(10*z_cm),  fdx(dx), fdy(dy), fdz(dz){}
-	~GarfieldParticle(){};
+	~GarfieldParticle(){}
 
 	std::string getParticleName(){return fParticleName;}
 	double getX_mm() {return fx_mm;}
@@ -93,11 +93,11 @@ public:
 	std::string GetIonizationModel();
 	std::vector<GarfieldParticle*>* GetSecondaryParticles();
 	void DeleteSecondaryParticles();
-	inline void EnableCreateSecondariesInGeant4(bool flag) {createSecondariesInGeant4 = flag;};
-	inline bool GetCreateSecondariesInGeant4() {return createSecondariesInGeant4;};
-	inline double GetEnergyDeposit_MeV() {return fEnergyDeposit/1000000;};
-	inline double GetAvalancheSize() {return fAvalancheSize;};
-	inline double GetGain() {return fGain;};
+	inline void EnableCreateSecondariesInGeant4(bool flag) {createSecondariesInGeant4 = flag;}
+	inline bool GetCreateSecondariesInGeant4() {return createSecondariesInGeant4;}
+	inline double GetEnergyDeposit_MeV() {return fEnergyDeposit/1000000;}
+	inline double GetAvalancheSize() {return fAvalancheSize;}
+	inline double GetGain() {return fGain;}
 	inline void Clear() {fEnergyDeposit=0;fAvalancheSize=0;fGain=0;nsum=0;}
 
 private:

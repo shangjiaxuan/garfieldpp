@@ -153,7 +153,7 @@ class ulsvolume : public absvol {
 
  public:
   /// Default constructor.
-  ulsvolume() {};
+  ulsvolume() {}
   /// Constructor from surfaces.
   ulsvolume(const std::vector<std::shared_ptr<surface> >& fsurf, char* fname, vfloat fprec);
   ulsvolume(ulsvolume& f);
