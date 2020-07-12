@@ -2871,10 +2871,8 @@ std::string MediumGas::GetGasName(const int gasnumber, const int version) const 
 }
 
 std::string MediumGas::GetGasName(std::string input) const {
-  // Convert to upper-case
-  for (unsigned int i = 0; i < input.length(); ++i) {
-    input[i] = toupper(input[i]);
-  }
+  // Convert to upper-case.
+  std::transform(input.begin(), input.end(), input.begin(), toupper);
 
   if (input.empty()) return "";
 
