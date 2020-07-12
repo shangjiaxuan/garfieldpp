@@ -6806,7 +6806,7 @@ bool ComponentAnalyticField::Wfield(const double xin, const double yin,
     return false;
   }
 
-  if (label.empty()) return volt;
+  if (label.empty()) return false;
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
   if (it == m_readout.end()) return false;
   const auto isw = it - m_readout.begin();
