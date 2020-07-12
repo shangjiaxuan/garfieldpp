@@ -215,13 +215,10 @@ bool MediumSilicon::ElectronTownsend(const double ex, const double ey,
   switch (m_impactIonisationModel) {
     case ImpactIonisation::VanOverstraeten:
       return ElectronImpactIonisationVanOverstraetenDeMan(e, alpha);
-      break;
     case ImpactIonisation::Grant:
       return ElectronImpactIonisationGrant(e, alpha);
-      break;
     case ImpactIonisation::Massey:
       return ElectronImpactIonisationMassey(e, alpha);
-      break;
     default:
       std::cerr << m_className << "::ElectronTownsend: Unknown model. Bug!\n";
       break;
@@ -348,13 +345,10 @@ bool MediumSilicon::HoleTownsend(const double ex, const double ey,
   switch (m_impactIonisationModel) {
     case ImpactIonisation::VanOverstraeten:
       return HoleImpactIonisationVanOverstraetenDeMan(e, alpha);
-      break;
     case ImpactIonisation::Grant:
       return HoleImpactIonisationGrant(e, alpha);
-      break;
     case ImpactIonisation::Massey:
       return HoleImpactIonisationMassey(e, alpha);
-      break;
     default:
       std::cerr << m_className << "::HoleTownsend: Unknown model. Bug!\n";
       break;
@@ -394,7 +388,6 @@ bool MediumSilicon::HoleAttachment(const double ex, const double ey,
     default:
       std::cerr << m_className << "::HoleAttachment: Unknown model. Bug!\n";
       return false;
-      break;
   }
 
   return true;
@@ -1082,7 +1075,6 @@ bool MediumSilicon::GetElectronCollision(
           break;
         default:
           return false;
-          break;
       }
     } else {
       pstar *= sqrt(3. / (1. / m_mLongX + 2. / m_mTransX));
