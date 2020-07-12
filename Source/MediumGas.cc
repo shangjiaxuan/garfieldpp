@@ -961,7 +961,7 @@ bool MediumGas::MergeGasFile(const std::string& filename,
   std::vector<IonLevel> ionLevels;
   if (!ReadHeader(gasfile, version, gasok, new3d, mixture, efields, bfields,
                   angles, excLevels, ionLevels)) {
-    std::cerr << m_className << "::MergeGasFile: Error reading header.\n",
+    std::cerr << m_className << "::MergeGasFile: Error reading header.\n";
     gasfile.close();
     return false;
   } 
@@ -1097,7 +1097,7 @@ bool MediumGas::MergeGasFile(const std::string& filename,
   gasfile.seekg(0);
   if (!ReadHeader(gasfile, version, gasok, new3d, mixture, efields, bfields,
                   angles, excLevels, ionLevels)) {
-    std::cerr << m_className << "::MergeGasFile: Error re-reading header.\n",
+    std::cerr << m_className << "::MergeGasFile: Error re-reading header.\n";
     gasfile.close();
     return false;
   }

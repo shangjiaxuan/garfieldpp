@@ -30,8 +30,8 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   if (fmplist.fail()) {
     std::cerr << m_className << "::Initialise:\n";
     std::cerr << "    Could not open material file " << mplist
-              << " for reading.\n",
-        std::cerr << "    The file perhaps does not exist.\n";
+              << " for reading.\n"
+              << "    The file perhaps does not exist.\n";
     return false;
   }
 

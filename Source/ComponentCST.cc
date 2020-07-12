@@ -49,8 +49,8 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   if (fmplist.fail()) {
     std::cerr << m_className << "::Initialise:" << std::endl;
     std::cerr << "    Could not open material file " << mplist
-              << " for reading." << std::endl,
-        std::cerr << "    The file perhaps does not exist." << std::endl;
+              << " for reading." << std::endl;
+    std::cerr << "    The file perhaps does not exist." << std::endl;
     return false;
   }
 

@@ -724,7 +724,8 @@ bool AvalancheMC::GetDiffusion(const Particle particle, Medium* medium,
                                const std::array<double, 3>& e,
                                const std::array<double, 3>& b, double& dl,
                                double& dt) const {
-  dl = 0., dt = 0.;
+  dl = 0.;
+  dt = 0.;
   bool ok = false;
   if (particle == Particle::Electron) {
     ok = medium->ElectronDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);

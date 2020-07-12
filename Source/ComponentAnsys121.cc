@@ -334,8 +334,8 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
     if (materials[imat - 1].eps < 0) {
       std::cerr << m_className << "::Initialise:\n";
       std::cerr << "    Element " << ielem << " in element list " << elist
-                << " uses material " << imat << " which\n",
-          std::cerr << "    has not been assigned a positive permittivity\n";
+                << " uses material " << imat << " which\n"
+                << "    has not been assigned a positive permittivity\n";
       std::cerr << "    in material list " << mplist << ".\n";
       ok = false;
     }
@@ -564,8 +564,8 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   if (nread != nNodes) {
     std::cerr << m_className << "::Initialise:\n";
     std::cerr << "    Number of nodes read (" << nread << ") on potential file "
-              << prnsol << " does not\n",
-        std::cerr << "    match the node list (" << nNodes << ").\n";
+              << prnsol << " does not\n"
+              << "    match the node list (" << nNodes << ").\n";
     ok = false;
   }
   // Set the ready flag
