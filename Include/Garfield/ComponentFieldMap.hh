@@ -154,7 +154,7 @@ class ComponentFieldMap : public ComponentBase {
   unsigned int m_nWarnings = 0;
 
   // Reset the component
-  void Reset() override{};
+  void Reset() override {}
 
   // Periodicities
   void UpdatePeriodicity2d();
