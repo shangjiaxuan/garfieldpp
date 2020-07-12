@@ -1384,48 +1384,46 @@ bool MediumMagboltz::Mixer(const bool verbose) {
     Magboltz::inpt_.estep = m_eStep;
     Magboltz::mix2_.eg[iemax] = (iemax + 0.5) * m_eStep;
     Magboltz::mix2_.eroot[iemax] = sqrt((iemax + 0.5) * m_eStep);
-    char name[] = "                         ";
+    char name[25];
     // Number of inelastic cross-sections
-    long long nIn = 0;
+    std::int64_t nIn = 0;
     // Number of ionisation cross-sections
-    long long nIon = 0;
+    std::int64_t nIon = 0;
     // Number of attachment cross-sections
-    long long nAtt = 1;
+    std::int64_t nAtt = 1;
     // Number of "null-collision" cross-sections
-    long long nNull = 0;
+    std::int64_t nNull = 0;
     // Virial coefficient (not used)
     double virial = 0.;
     // Thresholds/characteristic energies.
-    std::array<double, 6> e;
+    static double e[6];
     // Energy losses for inelastic cross-sections.
-    std::array<double, Magboltz::nMaxInelasticTerms> eIn;
+    static double eIn[Magboltz::nMaxInelasticTerms];
     // Ionisation thresholds.
-    std::array<double, Magboltz::nMaxIonisationTerms> eIon;
+    static double eIon[Magboltz::nMaxIonisationTerms];
     // Scattering algorithms
-    std::array<long long, Magboltz::nMaxInelasticTerms> kIn;
-    std::array<long long, 6> kEl;
+    static std::int64_t kIn[Magboltz::nMaxInelasticTerms];
+    static std::int64_t kEl[6];
     // Opal-Beaty parameter
-    std::array<double, Magboltz::nMaxIonisationTerms> eoby;
+    static double eoby[Magboltz::nMaxIonisationTerms];
     // Scaling factor for "null-collision" terms
-    std::array<double, Magboltz::nMaxNullTerms> scln;
+    static double scln[Magboltz::nMaxNullTerms];
     // Parameters for simulation of Auger and fluorescence processes.
-    std::array<long long, Magboltz::nMaxIonisationTerms> nc0;
-    std::array<long long, Magboltz::nMaxIonisationTerms> ng1;
-    std::array<long long, Magboltz::nMaxIonisationTerms> ng2;
-    std::array<double, Magboltz::nMaxIonisationTerms> ec0;
-    std::array<double, Magboltz::nMaxIonisationTerms> wklm;
-    std::array<double, Magboltz::nMaxIonisationTerms> efl;
-    std::array<double, Magboltz::nMaxIonisationTerms> eg1;
-    std::array<double, Magboltz::nMaxIonisationTerms> eg2;
-
+    static std::int64_t nc0[Magboltz::nMaxIonisationTerms];
+    static std::int64_t ng1[Magboltz::nMaxIonisationTerms];
+    static std::int64_t ng2[Magboltz::nMaxIonisationTerms];
+    static double ec0[Magboltz::nMaxIonisationTerms];
+    static double wklm[Magboltz::nMaxIonisationTerms];
+    static double efl[Magboltz::nMaxIonisationTerms];
+    static double eg1[Magboltz::nMaxIonisationTerms];
+    static double eg2[Magboltz::nMaxIonisationTerms];
     // Retrieve the cross-section data for this gas from Magboltz.
-    long long ngs = gasNumber[iGas];
+    std::int64_t ngs = gasNumber[iGas];
     Magboltz::gasmix_(
-        &ngs, q[0], qIn[0], &nIn, e.data(), eIn.data(), name, &virial,
-        eoby.data(), pEqEl[0], pEqIn[0], penFra[0], kEl.data(), kIn.data(),
-        qIon[0], pEqIon[0], eIon.data(), &nIon, qAtt[0], &nAtt, qNull[0],
-        &nNull, scln.data(), nc0.data(), ec0.data(), wklm.data(), efl.data(),
-        ng1.data(), eg1.data(), ng2.data(), eg2.data(), scrpt, scrptn);
+        &ngs, q[0], qIn[0], &nIn, &e[0], eIn, name, &virial, eoby, pEqEl[0], 
+        pEqIn[0], penFra[0], kEl, kIn, qIon[0], pEqIon[0], eIon, &nIon, 
+        qAtt[0], &nAtt, qNull[0], &nNull, scln, nc0, ec0, wklm, efl,
+        ng1, eg1, ng2, eg2, scrpt, scrptn);
     if (m_debug || verbose) {
       const double m = (2. / e[1]) * ElectronMass / AtomicMassUnitElectronVolt;
       std::cout << "    " << name << "\n"
@@ -1632,11 +1630,10 @@ bool MediumMagboltz::Mixer(const bool verbose) {
       Magboltz::mix2_.eg[iemax] = emax;
       Magboltz::mix2_.eroot[iemax] = sqrt(emax);
       Magboltz::gasmix_(
-          &ngs, q[0], qIn[0], &nIn, e.data(), eIn.data(), name, &virial,
-          eoby.data(), pEqEl[0], pEqIn[0], penFra[0], kEl.data(), kIn.data(),
-          qIon[0], pEqIon[0], eIon.data(), &nIon, qAtt[0], &nAtt, qNull[0],
-          &nNull, scln.data(), nc0.data(), ec0.data(), wklm.data(), efl.data(),
-          ng1.data(), eg1.data(), ng2.data(), eg2.data(), scrpt, scrptn);
+          &ngs, q[0], qIn[0], &nIn, e, eIn, name, &virial, eoby, pEqEl[0], 
+          pEqIn[0], penFra[0], kEl, kIn, qIon[0], pEqIon[0], eIon, &nIon, 
+          qAtt[0], &nAtt, qNull[0], &nNull, scln, nc0, ec0, wklm, efl,
+          ng1, eg1, ng2, eg2, scrpt, scrptn);
       np = np0;
       if (m_useCsOutput) outfile << emax << "  " << q[iemax][1] << "  ";
       // Elastic scattering
@@ -3575,14 +3572,14 @@ void MediumMagboltz::GenerateGasTable(const int numColl, const bool verbose) {
         if (m_useGasMotion) {
           // Retrieve the total collision frequency and number of collisions.
           double ftot = 0., fel = 0., fion = 0., fatt = 0., fin = 0.;
-          long long ntotal = 0;
+          std::int64_t ntotal = 0;
           Magboltz::colft_(&ftot, &fel, &fion, &fatt, &fin, &ntotal);
           if (ntotal == 0) continue;
           // Convert from ps-1 to ns-1.
           const double scale = 1.e3 * ftot / ntotal;
           for (unsigned int ig = 0; ig < m_nComponents; ++ig) {
             const auto nL = Magboltz::larget_.last[ig];
-            for (long long il = 0; il < nL; ++il) {
+            for (std::int64_t il = 0; il < nL; ++il) {
               if (Magboltz::larget_.iarry[il][ig] <= 0) break;
               // Skip levels that are not ionisations or inelastic collisions.
               const int cstype = (Magboltz::larget_.iarry[il][ig] - 1) % 5;
@@ -3614,12 +3611,12 @@ void MediumMagboltz::GenerateGasTable(const int numColl, const bool verbose) {
         } else {
           // Retrieve the total collision frequency and number of collisions.
           double ftot = 0., fel = 0., fion = 0., fatt = 0., fin = 0.;
-          long long ntotal = 0;
+          std::int64_t ntotal = 0;
           Magboltz::colf_(&ftot, &fel, &fion, &fatt, &fin, &ntotal);
           if (ntotal == 0) continue;
           // Convert from ps-1 to ns-1.
           const double scale = 1.e3 * ftot / ntotal;
-          for (long long il = 0; il < Magboltz::nMaxLevels; ++il) {
+          for (std::int64_t il = 0; il < Magboltz::nMaxLevels; ++il) {
             if (Magboltz::large_.iarry[il] <= 0) break;
             // Skip levels that are not ionisations or inelastic collisions.
             const int cstype = (Magboltz::large_.iarry[il] - 1) % 5;
@@ -3698,46 +3695,45 @@ void MediumMagboltz::GetExcitationIonisationLevels() {
     const double emax = 400.;
     Magboltz::inpt_.efinal = emax;
     Magboltz::inpt_.estep = emax / Magboltz::nEnergySteps;
-    char name[] = "                         ";
+    char name[25];
     // Number of inelastic, ionisation, attachment and null-collision levels.
-    long long nIn = 0, nIon = 0, nAtt = 1, nNull = 0;
+    std::int64_t nIn = 0, nIon = 0, nAtt = 1, nNull = 0;
     // Virial coefficient (not used)
     double virial = 0.;
     // Thresholds/characteristic energies.
-    std::array<double, 6> e;
+    static double e[6];
     // Energy losses and ionisation thresholds.
-    std::array<double, Magboltz::nMaxInelasticTerms> eIn;
-    std::array<double, Magboltz::nMaxIonisationTerms> eIon;
+    static double eIn[Magboltz::nMaxInelasticTerms];
+    static double eIon[Magboltz::nMaxIonisationTerms];
     // Scattering parameters.
-    std::array<long long, Magboltz::nMaxInelasticTerms> kIn;
-    std::array<long long, 6> kEl;
+    static std::int64_t kIn[Magboltz::nMaxInelasticTerms];
+    static std::int64_t kEl[6];
     // Opal-Beaty parameters.
-    std::array<double, Magboltz::nMaxIonisationTerms> eoby;
+    static double eoby[Magboltz::nMaxIonisationTerms];
     // Scaling factor for "null-collision" terms
-    std::array<double, Magboltz::nMaxNullTerms> scln;
+    static double scln[Magboltz::nMaxNullTerms];
     // Parameters for simulation of Auger and fluorescence processes.
-    std::array<long long, Magboltz::nMaxIonisationTerms> nc0;
-    std::array<long long, Magboltz::nMaxIonisationTerms> ng1;
-    std::array<long long, Magboltz::nMaxIonisationTerms> ng2;
-    std::array<double, Magboltz::nMaxIonisationTerms> ec0;
-    std::array<double, Magboltz::nMaxIonisationTerms> wklm;
-    std::array<double, Magboltz::nMaxIonisationTerms> efl;
-    std::array<double, Magboltz::nMaxIonisationTerms> eg1;
-    std::array<double, Magboltz::nMaxIonisationTerms> eg2;
+    static std::int64_t nc0[Magboltz::nMaxIonisationTerms];
+    static std::int64_t ng1[Magboltz::nMaxIonisationTerms];
+    static std::int64_t ng2[Magboltz::nMaxIonisationTerms];
+    static double ec0[Magboltz::nMaxIonisationTerms];
+    static double wklm[Magboltz::nMaxIonisationTerms];
+    static double efl[Magboltz::nMaxIonisationTerms];
+    static double eg1[Magboltz::nMaxIonisationTerms];
+    static double eg2[Magboltz::nMaxIonisationTerms];
 
     // Retrieve the cross-section data for this gas from Magboltz.
-    long long ng = GetGasNumberMagboltz(m_gas[i]);
+    std::int64_t ng = GetGasNumberMagboltz(m_gas[i]);
     if (ng <= 0) {
       std::cerr << m_className << "::GetExcitationIonisationLevels:\n\n"
                 << "    Gas " << m_gas[i] << " not available in Magboltz.\n";
       continue;
     }
     Magboltz::gasmix_(
-        &ng, q[0], qIn[0], &nIn, e.data(), eIn.data(), name, &virial,
-        eoby.data(), pEqEl[0], pEqIn[0], penFra[0], kEl.data(), kIn.data(),
-        qIon[0], pEqIon[0], eIon.data(), &nIon, qAtt[0], &nAtt, qNull[0],
-        &nNull, scln.data(), nc0.data(), ec0.data(), wklm.data(), efl.data(),
-        ng1.data(), eg1.data(), ng2.data(), eg2.data(), scrpt, scrptn);
+        &ng, q[0], qIn[0], &nIn, e, eIn, name, &virial, eoby, pEqEl[0], 
+        pEqIn[0], penFra[0], kEl, kIn, qIon[0], pEqIon[0], eIon, &nIon, 
+        qAtt[0], &nAtt, qNull[0], &nNull, scln, nc0, ec0, wklm, efl,
+        ng1, eg1, ng2, eg2, scrpt, scrptn);
     const double r = 1. + 0.5 * e[1];
     // Ionisation cross section(s).
     for (int j = 0; j < nIon; ++j) {
