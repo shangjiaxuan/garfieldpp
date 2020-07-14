@@ -111,13 +111,15 @@ list(APPEND garfield_sources GarfieldDict.cxx)
 
 #--- Print information on considered files and the root dictionary include directories
 message(STATUS "-----------------------------------------------------------" )
-message(STATUS "Considered Garfield files: ${garfield_sources}" )
+message(STATUS "Garfield source files: ${garfield_sources}" )
 message(STATUS "-----------------------------------------------------------" )
-message(STATUS "Considered Heed files: ${heed_sources}" )
+message(STATUS "Heed source files: ${heed_sources}" )
 message(STATUS "-----------------------------------------------------------" )
-message(STATUS "Considered Magboltz files: ${magboltz_sources}" )
+message(STATUS "Magboltz source files: ${magboltz_sources}" )
 message(STATUS "-----------------------------------------------------------" )
-message(STATUS "Directory used to find root dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
+message(STATUS "neBEM source files: ${nebem_sources}" )
+message(STATUS "-----------------------------------------------------------" )
+message(STATUS "Directory used to find ROOT dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
 message(STATUS "-----------------------------------------------------------" )
 
 #--- build the Garfield library
