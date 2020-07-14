@@ -6,9 +6,6 @@ project(neBEM)
 find_package(Garfield REQUIRED)
 
 #---Build executables-----------------------------------------------------------
-add_executable(test test.C)
-target_link_libraries(test Garfield)
-
 add_executable(RPCbyneBEM RPCbyneBEM.C)
 target_link_libraries(RPCbyneBEM Garfield)
 
@@ -17,3 +14,10 @@ target_link_libraries(MWPCbyneBEM Garfield)
 
 add_executable(BiconicalGemByneBEM BiconicalGemByneBEM.C)
 target_link_libraries(BiconicalGemByneBEM Garfield)
+
+add_executable(parallelPlates parallelPlates.C)
+target_link_libraries(parallelPlates Garfield)
+
+add_executable(crossingWires crossingWires.C)
+target_link_libraries(crossingWires Garfield)
+
