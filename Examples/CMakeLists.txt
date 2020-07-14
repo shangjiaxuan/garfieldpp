@@ -28,3 +28,5 @@ add_subdirectory(Srim)
 #--- Geant4-Garfield interface
 add_subdirectory(Geant4GarfieldInterface)
 
+#--- neBEM
+add_subdirectory(neBEM)
