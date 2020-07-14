@@ -121,11 +121,12 @@ int ComputeSolution(void) {
     NbFloatCon = NbUnknowns;  // which equation and unknown relates to this
   }                           // floating conductor
 
-  if (NewModel || NewMesh)
+  if (NewModel || NewMesh) {
+    OptValidateSolution = 1;
     InfluenceMatrixFlag = 1;
-  else
+  } else {
     InfluenceMatrixFlag = 0;
-
+  }
   // Computation of the influence coefficient matrix and inversion of the same
   // is necessary only when we are considering a NewModel, and / or a NewMesh,
   // i.e., InfluenceMatrixFlag is true.
