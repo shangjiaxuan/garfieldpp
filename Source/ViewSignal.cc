@@ -62,7 +62,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
   std::string xlabel = "time [ns]"; 
   std::string ylabel = m_labelY;
   if (ylabel.empty()) {
-    ylabel = m_sensor->IsIntegrated() ? "signal [fC]" : "signal [fC / ns]";
+    ylabel = m_sensor->IsIntegrated(label) ? "signal [fC]" : "signal [fC / ns]";
   }
   if (total) {
     const auto hname = FindUnusedHistogramName("hSignal_");

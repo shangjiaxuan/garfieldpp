@@ -142,7 +142,7 @@ class Sensor {
   /// Replace the current signal curve by its integral.
   bool IntegrateSignal();
   /// Return whether the signal has been integrated/convoluted.
-  bool IsIntegrated() const { return m_integrated; }
+  bool IsIntegrated(const std::string& label) const;
 
   /// Delay the signal and subtract an attenuated copy 
   /// (modelling a constant fraction discriminator).
@@ -235,6 +235,7 @@ class Sensor {
     std::vector<double> delayedElectronSignal;
     std::vector<double> delayedIonSignal;
     double charge;
+    bool integrated;
   };
   /// Electrodes
   std::vector<Electrode> m_electrodes;
@@ -257,8 +258,6 @@ class Sensor {
   double m_fTransferSq = -1.;
   // FFT of the transfer function.
   std::vector<double> m_fTransferFFT;
-  // Flag whether the signals have been convoluted/integrated.
-  bool m_integrated = false;
 
   // Noise
   double (*m_fNoise)(double t) = nullptr;

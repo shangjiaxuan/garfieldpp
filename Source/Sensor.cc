@@ -422,9 +422,9 @@ void Sensor::ClearSignal() {
     electrode.ionsignal.assign(m_nTimeBins, 0.);
     electrode.delayedElectronSignal.assign(m_nTimeBins, 0.);
     electrode.delayedIonSignal.assign(m_nTimeBins, 0.);
+    electrode.integrated = false;
   }
   m_nEvents = 0;
-  m_integrated = false;
 }
 
 void Sensor::SetDelayedSignalTimes(const std::vector<double>& ts) {
@@ -952,8 +952,8 @@ bool Sensor::ConvoluteSignal(const bool fft) {
       }
     }
     electrode.signal.swap(tmpSignal);
+    electrode.integrated = true;
   }
-  m_integrated = true;
   return true;
 }
 
@@ -990,8 +990,8 @@ bool Sensor::ConvoluteSignalFFT() {
     for (unsigned int i = 0; i < m_nTimeBins; ++i) {
       electrode.signal[i] = scale * g[2 * i + 1];
     }
+    electrode.integrated = true;
   }
-  m_integrated = true;
   return true;
 }
 
@@ -1012,9 +1012,17 @@ bool Sensor::IntegrateSignal() {
         electrode.ionsignal[j] += electrode.ionsignal[j - 1];
       }
     }
+    electrode.integrated = true;
   }
-  m_integrated = true;
   return true;
+}
+
+bool Sensor::IsIntegrated(const std::string& label) const {
+  
+  for (const auto& electrode : m_electrodes) {
+    if (electrode.label == label) return electrode.integrated;
+  }
+  return false;
 }
 
 bool Sensor::DelayAndSubtractFraction(const double td, const double f) {
@@ -1143,20 +1151,20 @@ bool Sensor::ComputeThresholdCrossings(const double thr,
               << "No signals present.\n";
     return false;
   }
-  if (!m_integrated) {
-    std::cerr << m_className << "::ComputeThresholdCrossings:\n    "
-              << "Warning: signal has not been integrated/convoluted.\n";
-  }
   // Compute the total signal.
   std::vector<double> signal(m_nTimeBins, 0.);
   // Loop over the electrodes.
   bool foundLabel = false;
   for (const auto& electrode : m_electrodes) {
-    if (electrode.label == label) {
-      foundLabel = true;
-      for (unsigned int i = 0; i < m_nTimeBins; ++i) {
-        signal[i] += electrode.signal[i];
-      }
+    if (electrode.label != label) continue;
+    foundLabel = true;
+    if (!electrode.integrated) {
+      std::cerr << m_className << "::ComputeThresholdCrossings:\n    "
+                << "Warning: signal on electrode " << label 
+                << " has not been integrated/convoluted.\n";
+    }
+    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+      signal[i] += electrode.signal[i];
     }
   }
   if (!foundLabel) {
