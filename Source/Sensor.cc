@@ -1001,20 +1001,39 @@ bool Sensor::IntegrateSignal() {
     return false;
   }
 
-  for (auto& electrode : m_electrodes) {
-    for (unsigned int j = 0; j < m_nTimeBins; ++j) {
-      electrode.signal[j] *= m_tStep;
-      electrode.electronsignal[j] *= m_tStep;
-      electrode.ionsignal[j] *= m_tStep;
-      if (j > 0) {
-        electrode.signal[j] += electrode.signal[j - 1];
-        electrode.electronsignal[j] += electrode.electronsignal[j - 1];
-        electrode.ionsignal[j] += electrode.ionsignal[j - 1];
-      }
-    }
-    electrode.integrated = true;
-  }
+  for (auto& electrode : m_electrodes) IntegrateSignal(electrode);
   return true;
+}
+
+bool Sensor::IntegrateSignal(const std::string& label) {
+  if (m_nEvents == 0) {
+    std::cerr << m_className << "::IntegrateSignal: No signals present.\n";
+    return false;
+  }
+
+  for (auto& electrode : m_electrodes) {
+    if (label != electrode.label) continue;
+    IntegrateSignal(electrode);
+    return true; 
+  }
+  std::cerr << m_className << "::IntegrateSignal: Electrode "
+            << label << " not found.\n";
+  return false;
+}
+
+void Sensor::IntegrateSignal(Electrode& electrode) {
+
+  for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+    electrode.signal[j] *= m_tStep;
+    electrode.electronsignal[j] *= m_tStep;
+    electrode.ionsignal[j] *= m_tStep;
+    if (j > 0) {
+      electrode.signal[j] += electrode.signal[j - 1];
+      electrode.electronsignal[j] += electrode.electronsignal[j - 1];
+      electrode.ionsignal[j] += electrode.ionsignal[j - 1];
+    }
+  }
+  electrode.integrated = true;
 }
 
 bool Sensor::IsIntegrated(const std::string& label) const {

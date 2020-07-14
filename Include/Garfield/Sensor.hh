@@ -139,7 +139,9 @@ class Sensor {
   } 
   /// Convolute the induced current with the transfer function.
   bool ConvoluteSignal(const bool fft = false);
-  /// Replace the current signal curve by its integral.
+  /// Replace the signal on a given electrode by its integral.
+  bool IntegrateSignal(const std::string& label);
+  /// Replace the signals on all electrodes curve by their integrals.
   bool IntegrateSignal();
   /// Return whether the signal has been integrated/convoluted.
   bool IsIntegrated(const std::string& label) const;
@@ -292,6 +294,7 @@ class Sensor {
       if (delayed) electrode.delayedIonSignal[bin] += signal;
     }
   }
+  void IntegrateSignal(Electrode& electrode);
   // Evaluate the integral over the transfer function squared. 
   double TransferFunctionSq();
   double InterpolateTransferFunctionTable(const double t) const;
