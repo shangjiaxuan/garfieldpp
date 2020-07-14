@@ -9,3 +9,11 @@ find_package(Garfield REQUIRED)
 add_executable(test test.C)
 target_link_libraries(test Garfield)
 
+add_executable(RPCbyneBEM RPCbyneBEM.C)
+target_link_libraries(RPCbyneBEM Garfield)
+
+add_executable(MWPCbyneBEM MWPCbyneBEM.C)
+target_link_libraries(MWPCbyneBEM Garfield)
+
+add_executable(BiconicalGemByneBEM BiconicalGemByneBEM.C)
+target_link_libraries(BiconicalGemByneBEM Garfield)
