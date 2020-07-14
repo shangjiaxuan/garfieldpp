@@ -7243,7 +7243,7 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
   // effect of KnCh is possibly zero on weighting field 
   */
 
-  (*Potential) += VSystemChargeZero;  // respect total system charge constraint
+  // (*Potential) += VSystemChargeZero;  // respect total system charge constraint
 
   if (dbgFn) {
     printf("Final values due to all primitives and other influences: ");
