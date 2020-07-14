@@ -28,6 +28,7 @@ namespace Garfield {
 ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap() {
   m_className = "ComponentElmer2D";
   m_is3d = false;
+
   // Default bounding box
   m_minBoundingBox[2] = -50;
   m_maxBoundingBox[2] = 50;
@@ -41,6 +42,7 @@ ComponentElmer2D::ComponentElmer2D(const std::string& header,
     : ComponentFieldMap() {
   m_className = "ComponentElmer2D";
   m_is3d = false;
+
   // Default bounding box
   m_minBoundingBox[2] = -50;
   m_maxBoundingBox[2] = 50;
@@ -390,15 +392,36 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     // ElmerSolver manual (appendix D. at the time of this comment)               |         |
     // In order to work properly with Coordinates4 and Coordinates5, the    -->   7         5
     // Elmer ordering 0,1,2,3,4,5,6,7 (counter-clockwise about the element)       |         |
-    // needs to be changed to 3,2,1,0,6,5,4,7 (clockwise about the element)       0 -- 4 -- 1
-    newElement.emap[3] = in0 - 1;
-    newElement.emap[2] = in1 - 1;
-    newElement.emap[1] = in2 - 1;
-    newElement.emap[0] = in3 - 1;
-    newElement.emap[6] = in4 - 1;
-    newElement.emap[5] = in5 - 1;
-    newElement.emap[4] = in6 - 1;
-    newElement.emap[7] = in7 - 1;
+    // will need to be changed to 3,2,1,0,6,5,4,7 (clockwise about the element)   0 -- 4 -- 1
+    // if the normal of the defined element points in the -Z direction.
+
+    // Check the direction of the element normal, +Z or -Z.
+    double x01 = nodes[in1-1].x - nodes[in0-1].x;
+    double y01 = nodes[in1-1].y - nodes[in0-1].y;
+    double x12 = nodes[in2-1].x - nodes[in1-1].x;
+    double y12 = nodes[in2-1].y - nodes[in1-1].y;
+    double crossprod = x01*y12 - y01*x12;
+    if(crossprod < 0) {
+      newElement.emap[3] = in0 - 1;
+      newElement.emap[2] = in1 - 1;
+      newElement.emap[1] = in2 - 1;
+      newElement.emap[0] = in3 - 1;
+      newElement.emap[6] = in4 - 1;
+      newElement.emap[5] = in5 - 1;
+      newElement.emap[4] = in6 - 1;
+      newElement.emap[7] = in7 - 1;
+    }
+    else{
+      newElement.emap[0] = in0 - 1;
+      newElement.emap[1] = in1 - 1;
+      newElement.emap[2] = in2 - 1;
+      newElement.emap[3] = in3 - 1;
+      newElement.emap[4] = in4 - 1;
+      newElement.emap[5] = in5 - 1;
+      newElement.emap[6] = in6 - 1;
+      newElement.emap[7] = in7 - 1;
+    }
+
     elements.push_back(newElement);
   }
 

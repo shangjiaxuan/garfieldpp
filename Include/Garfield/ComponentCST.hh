@@ -127,9 +127,9 @@ class ComponentCST : public ComponentFieldMap {
    * component
    * in drift direction would be added twice!
    */
-  void DisableXField() { disableFieldComponent[0] = true; };
-  void DisableYField() { disableFieldComponent[1] = true; };
-  void DisableZField() { disableFieldComponent[2] = true; };
+  void DisableXField() { disableFieldComponent[0] = true; }
+  void DisableYField() { disableFieldComponent[1] = true; }
+  void DisableZField() { disableFieldComponent[2] = true; }
   /**
    * If you calculate the electric field component in \f$x\f$ direction along a
    * line in x direction

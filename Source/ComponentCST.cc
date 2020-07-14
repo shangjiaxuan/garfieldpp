@@ -49,8 +49,8 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   if (fmplist.fail()) {
     std::cerr << m_className << "::Initialise:" << std::endl;
     std::cerr << "    Could not open material file " << mplist
-              << " for reading." << std::endl,
-        std::cerr << "    The file perhaps does not exist." << std::endl;
+              << " for reading." << std::endl;
+    std::cerr << "    The file perhaps does not exist." << std::endl;
     return false;
   }
 
@@ -1037,7 +1037,7 @@ void ComponentCST::WeightingField(const double xin, const double yin,
   double rz = (position_mapped[2] - m_zlines.at(k)) /
               (m_zlines.at(k + 1) - m_zlines.at(k));
 
-  float fwx, fwy, fwz;
+  float fwx = 0., fwy = 0., fwz = 0.;
   if (!disableFieldComponent[0])
     fwx = GetFieldComponent(i, j, k, rx, ry, rz, 'x', &((*it).second));
   if (!disableFieldComponent[1])
@@ -1048,9 +1048,9 @@ void ComponentCST::WeightingField(const double xin, const double yin,
   if (m_elementMaterial.size() > 0 && doShaping) {
     ShapeField(fwx, fwy, fwz, rx, ry, rz, i, j, k, &((*it).second));
   }
-  if (mirrored[0]) fwx *= -1.;
-  if (mirrored[1]) fwy *= -1.;
-  if (mirrored[2]) fwz *= -1.;
+  if (mirrored[0]) fwx *= -1.f;
+  if (mirrored[1]) fwy *= -1.f;
+  if (mirrored[2]) fwz *= -1.f;
   if (m_warning) PrintWarning("WeightingField");
   if (materials.at(m_elementMaterial.at(Index2Element(i, j, k))).driftmedium) {
     if (!disableFieldComponent[0]) wx = fwx;
@@ -1343,14 +1343,14 @@ void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
   if (m_elementMaterial.size() > 0 && doShaping) {
     ShapeField(fex, fey, fez, rx, ry, rz, i, j, k, &m_potential);
   }
-  if (mirrored[0]) fex *= -1.;
-  if (mirrored[1]) fey *= -1.;
-  if (mirrored[2]) fez *= -1.;
+  if (mirrored[0]) fex *= -1.f;
+  if (mirrored[1]) fey *= -1.f;
+  if (mirrored[2]) fez *= -1.f;
   if (m_debug) {
     std::cout << m_className << "::ElectricFieldBinary:" << std::endl;
     std::cout << "    Found position (" << x << ", " << y << ", " << z
               << "): " << std::endl;
-    std::cout << "    Indexes are: x: " << i << "/" << m_xlines.size()
+    std::cout << "    Indices are: x: " << i << "/" << m_xlines.size()
               << "\t y: " << j << "/" << m_ylines.size() << "\t z: " << k << "/"
               << m_zlines.size() << std::endl;
     if (i != 0 && j != 0 && k != 0) {
@@ -1371,7 +1371,7 @@ void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
   //  m = materials[elements[imap].matmap].medium;
   status = -5;
   if (materials.at(m_elementMaterial.at(Index2Element(i, j, k))).driftmedium) {
-    if (m != 0) {
+    if (m) {
       if (m->IsDriftable()) status = 0;
     }
   }

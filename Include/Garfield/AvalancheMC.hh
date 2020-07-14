@@ -160,19 +160,21 @@ class AvalancheMC {
   /// Simulate the drift line of an ion from a given starting point.
   bool DriftIon(const double x0, const double y0, const double z0,
                 const double t0);
-  /// Simulate an avalanche initiated by an electron at a given starting point.
+  /** Simulate an avalanche initiated by an electron at a given starting point.
+   * \param x0,y0,z0,t0 coordinates and time of the initial electron
+   * \param hole simulate the hole component of the avalanche or not
+   */
   bool AvalancheElectron(const double x0, const double y0, const double z0,
                          const double t0, const bool hole = false);
   /// Simulate an avalanche initiated by a hole at a given starting point.
   bool AvalancheHole(const double x0, const double y0, const double z0,
                      const double t0, const bool electron = false);
+  /// Simulate an avalanche initiated by an electron-hole pair.
   bool AvalancheElectronHole(const double x0, const double y0, const double z0,
                              const double t0);
 
-  /// Switch on debugging messages (default: off).
-  void EnableDebugging() { m_debug = true; }
-  /// Switch off debugging messages.
-  void DisableDebugging() { m_debug = false; }
+  /// Switch debugging messages on/off (default: off).
+  void EnableDebugging(const bool on = true) { m_debug = on; }
 
  private:
   std::string m_className = "AvalancheMC";
@@ -182,9 +184,9 @@ class AvalancheMC {
   enum class Particle { Electron = 0, Ion, Hole };
 
   struct DriftPoint {
-    std::array<double, 3> x;  //< Position.
-    double t;                 //< Time.
-    unsigned int ne, nh, ni;  //< Number of secondaries produced at this point.
+    std::array<double, 3> x;  ///< Position.
+    double t;                 ///< Time.
+    unsigned int ne, nh, ni;  ///< Number of secondaries produced at this point.
   };
   /// Current drift line
   std::vector<DriftPoint> m_drift;
@@ -225,10 +227,10 @@ class AvalancheMC {
   unsigned int m_nIons = 0;
 
   struct EndPoint {
-    std::array<double, 3> x0;  //< Starting point.
-    std::array<double, 3> x1;  //< End point.
-    double t0, t1;             //< Start and end time.
-    int status;                //< Status flag at the end point.
+    std::array<double, 3> x0;  ///< Starting point.
+    std::array<double, 3> x1;  ///< End point.
+    double t0, t1;             ///< Start and end time.
+    int status;                ///< Status flag at the end point.
   };
   /// Endpoints of all electrons in the avalanche (including captured ones)
   std::vector<EndPoint> m_endpointsElectrons;
@@ -282,6 +284,23 @@ class AvalancheMC {
     point.nh = nh;
     point.ni = ni;
     points.push_back(std::move(point));
+  }
+  void AddEndPoint(const std::array<double, 3>& x0, const double t0,
+                   const std::array<double, 3>& x1, const double t1,
+                   const int status, const Particle particle) { 
+    EndPoint endPoint;
+    endPoint.x0 = x0;
+    endPoint.t0 = t0;
+    endPoint.x1 = x1;
+    endPoint.t1 = t1;
+    endPoint.status = status;
+    if (particle == Particle::Electron) {
+      m_endpointsElectrons.push_back(std::move(endPoint));
+    } else if (particle == Particle::Hole) {
+      m_endpointsHoles.push_back(std::move(endPoint));
+    } else if (particle == Particle::Ion) {
+      m_endpointsIons.push_back(std::move(endPoint));
+    }
   }
 
   /// Compute electric and magnetic field at a given position.

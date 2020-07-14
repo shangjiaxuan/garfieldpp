@@ -512,19 +512,14 @@ double ViewField::Field(const double x, const double y, const double z,
   switch (par) {
     case Parameter::Potential:
       return volt;
-      break;
     case Parameter::Magnitude:
       return sqrt(ex * ex + ey * ey + ez * ez);
-      break;
     case Parameter::Ex:
       return ex;
-      break;
     case Parameter::Ey:
       return ey;
-      break;
     case Parameter::Ez:
       return ez;
-      break;
     default:
       break;
   }
@@ -553,16 +548,12 @@ double ViewField::Wfield(const double x, const double y, const double z,
   switch (par) {
     case Parameter::Magnitude:
       return sqrt(ex * ex + ey * ey + ez * ez);
-      break;
     case Parameter::Ex:
       return ex;
-      break;
     case Parameter::Ey:
       return ey;
-      break;
     case Parameter::Ez:
       return ez;
-      break;
     default:
       break;
   }

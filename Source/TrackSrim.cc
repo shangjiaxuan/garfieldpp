@@ -113,13 +113,13 @@ bool TrackSrim::ReadFile(const std::string& file) {
   token = strtok(NULL, " []=");
   token = strtok(NULL, " []=");
   // Set the ion charge.
-  m_q = std::atof(token);
+  m_qion = std::atof(token);
   m_chargeset = true;
   token = strtok(NULL, " []=");
   token = strtok(NULL, " []=");
   token = strtok(NULL, " []=");
   // Set the ion mass (convert amu to eV).
-  m_mass = std::atof(token) * AtomicMassUnitElectronVolt;
+  m_mion = std::atof(token) * AtomicMassUnitElectronVolt;
 
   // Find the target density
   if (!fsrim.getline(line, 100, '\n')) {
@@ -298,8 +298,8 @@ void TrackSrim::Print() {
   std::cout << "\n";
   printf("    Work function:  %g eV\n", m_work);
   printf("    Fano factor:    %g\n", m_fano);
-  printf("    Ion charge:     %g\n", m_q);
-  printf("    Mass:           %g MeV\n", 1.e-6 * m_mass);
+  printf("    Ion charge:     %g\n", m_qion);
+  printf("    Mass:           %g MeV\n", 1.e-6 * m_mion);
   printf("    Density:        %g g/cm3\n", m_density);
   printf("    A, Z:           %g, %g\n", m_a, m_z);
 }
@@ -440,7 +440,7 @@ double TrackSrim::Xi(const double x, const double beta2) const {
   constexpr double fconst = 1.e-6 * TwoPi * (
     FineStructureConstant * FineStructureConstant * HbarC * HbarC) / 
     (ElectronMass * AtomicMassUnit);
-  return fconst * m_q * m_q * m_z * m_density * x / (m_a * beta2);
+  return fconst * m_qion * m_qion * m_z * m_density * x / (m_a * beta2);
 }
 
 bool TrackSrim::PreciseLoss(const double step, const double estart,
@@ -672,7 +672,7 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
   }
 
   // Make sure all necessary parameters have been set.
-  if (m_mass < Small) {
+  if (m_mion < Small) {
     std::cerr << hdr << "Particle mass not set.\n";
     return false;
   } else if (!m_chargeset) {
@@ -690,7 +690,7 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
   }
   // Check the initial energy (in MeV).
   const double ekin0 = 1.e-6 * GetKineticEnergy();
-  if (ekin0 < 1.e-14 * m_mass || ekin0 < 1.e-3 * m_work) {
+  if (ekin0 < 1.e-14 * m_mion || ekin0 < 1.e-3 * m_work) {
     if (m_debug) {
       std::cout << hdr << "Initial kinetic energy E = " << ekin0
                 << " MeV such that beta2 = 0 or E << W; particle stopped.\n";
@@ -707,8 +707,8 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
     const unsigned int nTable = m_ekin.size();
     printf("      Table size           %u\n", nTable);
     printf("      Particle kin. energy %g MeV\n", ekin0);
-    printf("      Particle mass        %g MeV\n", 1.e-6 * m_mass);
-    printf("      Particle charge      %g\n", m_q);
+    printf("      Particle mass        %g MeV\n", 1.e-6 * m_mion);
+    printf("      Particle charge      %g\n", m_qion);
     printf("      Work function        %g eV\n", m_work);
     if (m_fano > 0.) {
       printf("      Fano factor          %g\n", m_fano);
@@ -988,10 +988,10 @@ bool TrackSrim::SmallestStep(const double ekin, double de, double step,
               << " MeV, dE = " << de << " MeV, step length = " << step
               << " cm.\n";
     return false;
-  } else if (m_mass <= 0 || fabs(m_q) <= 0) {
+  } else if (m_mion <= 0 || fabs(m_qion) <= 0) {
     std::cerr << hdr
-              << "Track parameters not valid.\n    Mass = " << 1.e-6 * m_mass
-              << " MeV, charge = " << m_q << ".\n";
+              << "Track parameters not valid.\n    Mass = " << 1.e-6 * m_mion
+              << " MeV, charge = " << m_qion << ".\n";
     return false;
   } else if (m_a <= 0 || m_z <= 0 || m_density <= 0) {
     std::cerr << hdr << "Gas parameters not valid.\n    A = " << m_a
@@ -1000,12 +1000,12 @@ bool TrackSrim::SmallestStep(const double ekin, double de, double step,
   }
 
   // Basic kinematic parameters
-  const double rkin = 1.e6 * ekin / m_mass;
+  const double rkin = 1.e6 * ekin / m_mion;
   const double gamma = 1. + rkin;
   const double beta2 = rkin > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rkin;
 
   // Compute the maximum energy transfer [MeV]
-  const double rm = ElectronMass / m_mass;
+  const double rm = ElectronMass / m_mion;
   const double emax = 2 * ElectronMass * 1.e-6 * beta2 * gamma * gamma /
                       (1. + 2 * gamma * rm + rm * rm);
   // Compute the Rutherford term
@@ -1021,7 +1021,7 @@ bool TrackSrim::SmallestStep(const double ekin, double de, double step,
     // Debugging output.
     if (m_debug) {
       PrintSettings(hdr, denow, stpnow, ekin, beta2, gamma, m_a, m_z, m_density,
-                    m_q, m_mass, emax, xi, rkappa);
+                    m_qion, m_mion, emax, xi, rkappa);
     }
     double xinew = xi;
     double rknew = rkappa;
@@ -1164,9 +1164,9 @@ double TrackSrim::RndmEnergyLoss(const double ekin, const double de,
               << " MeV, dE = " << de << " MeV, step length = " << step
               << " cm.\n";
     return 0.;
-  } else if (m_mass <= 0 || fabs(m_q) <= 0) {
+  } else if (m_mion <= 0 || fabs(m_qion) <= 0) {
     std::cerr << hdr << "Track parameters not valid.\n    Mass = " 
-              << m_mass << " MeV, charge = " << m_q << ".\n";
+              << m_mion << " MeV, charge = " << m_qion << ".\n";
     return 0.;
   } else if (m_a <= 0 || m_z <= 0 || m_density <= 0) {
     std::cerr << hdr << "Material parameters not valid.\n    A = " << m_a
@@ -1174,12 +1174,12 @@ double TrackSrim::RndmEnergyLoss(const double ekin, const double de,
     return 0.;
   }
   // Basic kinematic parameters
-  const double rkin = 1.e6 * ekin / m_mass;
+  const double rkin = 1.e6 * ekin / m_mion;
   const double gamma = 1. + rkin;
   const double beta2 = rkin > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rkin;
 
   // Compute maximum energy transfer
-  const double rm = ElectronMass / m_mass;
+  const double rm = ElectronMass / m_mion;
   const double emax = 2 * ElectronMass * 1.e-6 * beta2 * gamma * gamma /
                       (1. + 2 * gamma * rm + rm * rm);
   // Compute the Rutherford term
@@ -1188,8 +1188,8 @@ double TrackSrim::RndmEnergyLoss(const double ekin, const double de,
   const double rkappa = xi / emax;
   // Debugging output.
   if (m_debug) {
-    PrintSettings(hdr, de, step, ekin, beta2, gamma, m_a, m_z, m_density, m_q,
-                  m_mass, emax, xi, rkappa);
+    PrintSettings(hdr, de, step, ekin, beta2, gamma, m_a, m_z, m_density, 
+                  m_qion, m_mion, emax, xi, rkappa);
   }
   double rndde = de;
   if (m_model <= 0 || m_model > 4) {

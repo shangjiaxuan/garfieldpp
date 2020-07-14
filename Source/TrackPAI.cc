@@ -452,12 +452,10 @@ double TrackPAI::ComputeCsTail(const double emin, const double emax) {
     case 0:
       // Spin 0
       return 1. / emin - 1. / emax - m_beta2 * log(emax / emin) / emax;
-      break;
     case 1:
       // Spin 1/2
       return 1. / emin - 1. / emax - m_beta2 * log(emax / emin) / emax +
              (emax - emin) / (2 * m_energy * m_energy);
-      break;
     case 2: {
       // Spin 1
       const double e2 = 2 * m_energy * m_energy;
@@ -466,7 +464,6 @@ double TrackPAI::ComputeCsTail(const double emin, const double emax) {
       const double b = (emax - emin);
       return 1. / emin - 1. / emax + a * b * (emin + e2 + emax) / e2 -
              m_beta2 * a * b / emax + (a - m_beta2 / emax) * log(emax / emin);
-      break;
     }
     default:
       break;
@@ -495,12 +492,10 @@ double TrackPAI::ComputeDeDxTail(const double emin, const double emax) {
   switch (m_spin) {
     case 0:
       return log(emax / emin) - m_beta2 * (emax - emin) / emax;
-      break;
     case 1:
       // Spin 1/2
       return log(emax / emin) - m_beta2 * (emax - emin) / emax +
              (emax * emax - emin * emin) / (2 * m_energy * m_energy);
-      break;
     case 2: {
       // Spin 1
       double e2 = m_energy * m_energy;
@@ -510,7 +505,6 @@ double TrackPAI::ComputeDeDxTail(const double emin, const double emax) {
              (emax - emin) *
                  (2. - (1. + emin / emax + 6 * ec / emax) * m_beta2) /
                  (6. * ec);
-      break;
     }
     default:
       break;
@@ -535,15 +529,12 @@ double TrackPAI::SampleAsymptoticCs(double u) const {
     case 0:
       // Spin 0
       return SampleAsymptoticCsSpinZero(emin, u);
-      break;
     case 1:
       // Spin 1/2
       return SampleAsymptoticCsSpinHalf(emin, u);
-      break;
     case 2:
       // Spin 1
       return SampleAsymptoticCsSpinOne(emin, u);
-      break;
     default:
       break;
   }

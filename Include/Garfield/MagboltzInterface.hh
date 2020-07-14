@@ -3,6 +3,8 @@
 #ifndef G_MAGBOLTZ_INTERFACE
 #define G_MAGBOLTZ_INTERFACE
 
+#include <cstdint>
+
 #ifndef __CINT__
 
 namespace Garfield {
@@ -17,6 +19,7 @@ constexpr unsigned int nMaxNullTerms = 10;
 constexpr unsigned int nMaxLevelsPerComponent = 300;
 constexpr unsigned int nCharDescr = 50;
 constexpr unsigned int nMaxLevels = 960;
+constexpr unsigned int nMaxComponents = 6;
 
 extern "C" {
 
@@ -30,16 +33,16 @@ extern struct {
 } bfld_;
 
 extern struct {
-  long long nGas;
-  long long nStep;
-  long long nAniso;
+  std::int64_t nGas;
+  std::int64_t nStep;
+  std::int64_t nAniso;
   double efinal;
   double estep;
   double akt;
   double ary;
   double tempc;
   double torr;
-  long long ipen;
+  std::int64_t ipen;
 } inpt_;
 
 extern struct {
@@ -50,7 +53,7 @@ extern struct {
   double theta, phi;
   double rstart;
   double efield;
-  long long nmax;
+  std::int64_t nmax;
 } setp_;
 
 extern struct {
@@ -58,7 +61,7 @@ extern struct {
   double vtmb[6];
   double tcfmx;
   double tcfmxg[6];
-  long long ithrm;
+  std::int64_t ithrm;
 } thrm_;
 
 // Physical constants
@@ -82,7 +85,7 @@ extern struct { double den[nEnergySteps]; } dens_;
 
 extern struct {
   double time[300];
-  long long icoll[30];
+  std::int64_t icoll[30];
   double spec[nEnergySteps];
   double tmax1;
   double ave;
@@ -92,10 +95,27 @@ extern struct {
   double y;
   double z;
   double st;
-  long long nnull;
-  double icoln[nMaxLevels];
-  long long icolnn[60];
+  std::int64_t nnull;
+  std::int64_t icoln[nMaxLevels];
+  std::int64_t icolnn[60];
 } outpt_;
+
+extern struct {
+  double time[300];
+  std::int64_t icoll[5][nMaxComponents];
+  double spec[nEnergySteps];
+  double tmax1;
+  double ave;
+  double den;
+  double xid;
+  double x;
+  double y;
+  double z;
+  double st;
+  std::int64_t nnull;
+  std::int64_t icoln[290][nMaxComponents];
+  std::int64_t icolnn[10][nMaxComponents];
+} outptt_;
 
 extern struct {
   char dscrpt[nMaxLevels][nCharDescr];
@@ -103,21 +123,40 @@ extern struct {
 } scrip_;
 
 extern struct {
+  char dscrpt[nMaxLevelsPerComponent][nMaxComponents][nCharDescr];
+  char dscrptn[10][nMaxComponents][nCharDescr];
+} script_;
+
+extern struct {
   double cf[nMaxLevels][nEnergySteps];
   double ein[nMaxLevels];
   double tcf[nEnergySteps];
-  long long iarry[nMaxLevels];
+  std::int64_t iarry[nMaxLevels];
   double rgas[nMaxLevels];
   double ipn[nMaxLevels];
   double wpl[nMaxLevels];
-  long long last;
-  long long isize;
+  std::int64_t last;
+  std::int64_t isize;
   double penfra[nMaxLevels][3];
   double tcfmax[8];
 } large_;
 
+extern struct {
+  double cf[290][nEnergySteps][nMaxComponents];
+  double ein[290][nMaxComponents];
+  double tcf[nEnergySteps][nMaxComponents];
+  std::int64_t iarry[290][nMaxComponents];
+  double rgas[290][nMaxComponents];
+  double ipn[290][nMaxComponents];
+  double wpl[290][nMaxComponents];
+  std::int64_t last[nMaxComponents];
+  std::int64_t isize[nMaxComponents];
+  double penfra[290][3][nMaxComponents];
+  double tcfmax[nMaxComponents];
+} larget_;
+
 // Definition of the gas mixture
-extern struct { long long ngasn[6]; } gasn_;
+extern struct { std::int64_t ngasn[6]; } gasn_;
 
 extern struct {
   double an1, an2, an3, an4, an5, an6, an;
@@ -152,15 +191,21 @@ extern struct {
   double rattof, ratofer;
 } tofout_;
 
-void gasmix_(long long* ngs, double* q, double* qin, long long* nin, double* e,
+void gasmix_(std::int64_t* ngs, double* q, double* qin, std::int64_t* nin, double* e,
              double* ei, char* name, double* virl, double* eb, double* peqel,
-             double* peqin, double* penfra, long long* kel, long long* kin,
-             double* qion, double* peqion, double* eion, long long* nion,
-             double* qatt, long long* natt, double* qnull, long long* nnull,
-             double* scln, long long* nc0, double* ec0, double* wk, double* efl,
-             long long* ng1, double* eg1, long long* ng2, double* eg2,
+             double* peqin, double* penfra, std::int64_t* kel, std::int64_t* kin,
+             double* qion, double* peqion, double* eion, std::int64_t* nion,
+             double* qatt, std::int64_t* natt, double* qnull, std::int64_t* nnull,
+             double* scln, std::int64_t* nc0, double* ec0, double* wk, double* efl,
+             std::int64_t* ng1, double* eg1, std::int64_t* ng2, double* eg2,
              char scrpt[nMaxLevelsPerComponent][nCharDescr],
              char scrptn[nMaxNullTerms][nCharDescr]);
+
+void colf_(double* freq, double* freel, double* freion, double* freatt, 
+           double* frein, std::int64_t *ntotal);
+
+void colft_(double* freq, double* freel, double* freion, double* freatt, 
+            double* frein, std::int64_t *ntotal);
 
 void magboltz_();
 }

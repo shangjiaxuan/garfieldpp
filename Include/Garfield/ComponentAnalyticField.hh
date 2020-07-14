@@ -369,17 +369,17 @@ class ComponentAnalyticField : public ComponentBase {
   // Wires
   unsigned int m_nWires;
   struct Wire {
-    double x, y;       //< Location.
-    double r;          //< Radius.
-    double v;          //< Potential.
-    double e;          //< Charge.
-    std::string type;  //< Label.
-    double u;          //< Length.
-    int ind;           //< Readout group.
+    double x, y;       ///< Location.
+    double r;          ///< Radius.
+    double v;          ///< Potential.
+    double e;          ///< Charge.
+    std::string type;  ///< Label.
+    double u;          ///< Length.
+    int ind;           ///< Readout group.
     /// Trap radius. Particle is "trapped" if within nTrap * radius of wire.
     int nTrap;
-    double tension;  //< Stretching weight.
-    double density;  //< Density.
+    double tension;    ///< Stretching weight.
+    double density;    ///< Density.
   };
   std::vector<Wire> m_w;
 
@@ -416,27 +416,27 @@ class ComponentAnalyticField : public ComponentBase {
   double m_vtplan[4];
 
   struct Strip {
-    std::string type;   //< Label.
-    int ind;            //< Readout group.
-    double smin, smax;  //< Coordinates.
-    double gap;         //< Distance to the opposite electrode.
+    std::string type;   ///< Label.
+    int ind;            ///< Readout group.
+    double smin, smax;  ///< Coordinates.
+    double gap;         ///< Distance to the opposite electrode.
   };
 
   struct Pixel {
-    std::string type;   //< Label.
-    int ind;            //< Readout group.
-    double smin, smax;  //< Coordinates in x/y.
-    double zmin, zmax;  //< Coordinates in z.
-    double gap;         //< Distance to the opposite electrode.
+    std::string type;   ///< Label.
+    int ind;            ///< Readout group.
+    double smin, smax;  ///< Coordinates in x/y.
+    double zmin, zmax;  ///< Coordinates in z.
+    double gap;         ///< Distance to the opposite electrode.
   };
 
   struct Plane {
-    std::string type;            //< Label.
-    int ind;                     //< Readout group.
-    double ewxcor, ewycor;       //< Background weighting fields
-    std::vector<Strip> strips1;  //< x/y strips.
-    std::vector<Strip> strips2;  //< z strips.
-    std::vector<Pixel> pixels;   //< Pixels.
+    std::string type;            ///< Label.
+    int ind;                     ///< Readout group.
+    double ewxcor, ewycor;       ///< Background weighting fields
+    std::vector<Strip> strips1;  ///< x/y strips.
+    std::vector<Strip> strips2;  ///< z strips.
+    std::vector<Pixel> pixels;   ///< Pixels.
   };
   std::array<Plane, 5> m_planes;
 
@@ -457,8 +457,8 @@ class ComponentAnalyticField : public ComponentBase {
 
   // Point charges
   struct Charge3d {
-    double x, y, z;  //< Coordinates.
-    double e;        //< Charge.
+    double x, y, z;  ///< Coordinates.
+    double e;        ///< Charge.
   };
   std::vector<Charge3d> m_ch3d;
   unsigned int m_nTermBessel = 10;

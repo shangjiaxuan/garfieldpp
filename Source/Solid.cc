@@ -37,6 +37,13 @@ void Solid::SetDirection(const double dx, const double dy, const double dz) {
   m_sPhi = sin(phi);
 }
 
+bool Solid::GetProfile(std::vector<double>& /*xv*/,
+                       std::vector<double>& /*yv*/) const {
+
+  std::cerr << m_className << "::GetProfile: function not implemented.\n";
+  return false;
+}
+ 
 double Solid::NotImplemented(const std::string& fcn) const {
   std::cerr << m_className << "::" << fcn << ": function not implemented.\n";
   return 0.;

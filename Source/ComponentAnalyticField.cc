@@ -1812,7 +1812,6 @@ bool ComponentAnalyticField::ElectricFieldAtWire(const unsigned int iw,
       std::cerr << m_className << "::ElectricFieldAtWire:\n"
                 << "    Unknown cell type (id " << m_cellType << ")\n";
       return false;
-      break;
   }
   // Correct for the equipotential planes.
   ex -= m_corvta;
@@ -2389,7 +2388,6 @@ int ComponentAnalyticField::Field(const double xin, const double yin,
       std::cerr << m_className << "::Field:\n";
       std::cerr << "    Unknown cell type (id " << m_cellType << ")\n";
       return -10;
-      break;
   }
 
   // Add dipole terms if requested
@@ -6808,7 +6806,7 @@ bool ComponentAnalyticField::Wfield(const double xin, const double yin,
     return false;
   }
 
-  if (label.empty()) return volt;
+  if (label.empty()) return false;
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
   if (it == m_readout.end()) return false;
   const auto isw = it - m_readout.begin();

@@ -113,8 +113,8 @@ class ComponentVoxel : public ComponentBase {
  private:
   std::vector<Medium*> m_media;
   struct Element {
-    double fx, fy, fz;  //< Field
-    double v;           //< Potential
+    double fx, fy, fz;  ///< Field
+    double v;           ///< Potential
   };
 
   /// Region indices.
