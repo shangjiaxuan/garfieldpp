@@ -128,7 +128,7 @@ message(STATUS "-----------------------------------------------------------" )
 add_library(Garfield SHARED ${garfield_sources} ${magboltz_sources} ${heed_sources} ${nebem_sources})
 target_link_libraries(Garfield ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES})
 if(OpenMP_CXX_FOUND)
-  target_link_libraries(Garfield PUBLIC OpenMP::OpenMP_CXX)
+  target_link_libraries(Garfield OpenMP::OpenMP_CXX)
 endif()
 target_compile_features(Garfield INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
