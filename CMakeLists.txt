@@ -29,6 +29,8 @@ include(${ROOT_USE_FILE})
 find_package(GSL REQUIRED)
 include_directories(${GSL_INCLUDE_DIR})
 
+find_package(OpenMP)
+
 #--- If you cannot create symbolic links turn FALSE the library version
 set(BUILD_WITH_VERSION_NUMBER TRUE)
 if(BUILD_WITH_VERSION_NUMBER)
@@ -125,6 +127,9 @@ message(STATUS "-----------------------------------------------------------" )
 #--- build the Garfield library
 add_library(Garfield SHARED ${garfield_sources} ${magboltz_sources} ${heed_sources} ${nebem_sources})
 target_link_libraries(Garfield ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES})
+if(OpenMP_CXX_FOUND)
+  target_link_libraries(Garfield PUBLIC OpenMP::OpenMP_CXX)
+endif()
 target_compile_features(Garfield INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
@@ -165,7 +170,7 @@ message(STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "If you want to change this path call cmake -DCMAKE_INSTALL_PREFIX=my_install_path ...")
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
 
-#--- Where the library will end up and to write info in  GarfieldTargets.cmake--
+#--- Where the library will end up and to write info in GarfieldTargets.cmake--
 install(TARGETS Garfield DESTINATION ${CMAKE_INSTALL_LIBDIR} EXPORT GarfieldTargets)
 
 #--- Install pcm file in case of root 6
@@ -176,7 +181,7 @@ if(ROOT_VERSION VERSION_GREATER 6.06)
 endif()
 
 #--- install the Heed database--------------------------------------------------
-install(DIRECTORY Heed/heed++/database DESTINATION  Heed/heed++)
+install(DIRECTORY Heed/heed++/database DESTINATION Heed/heed++)
 
 #--- install headers------------------------------------------------------------
 install(DIRECTORY Include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} REGEX LinkDef EXCLUDE)
