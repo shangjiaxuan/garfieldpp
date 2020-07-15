@@ -904,6 +904,30 @@ double Sensor::GetTransferFunction(const double t) {
   return InterpolateTransferFunctionTable(t);
 }
 
+bool Sensor::ConvoluteSignal(const std::string& label, const bool fft) {
+  if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
+    std::cerr << m_className << "::ConvoluteSignal: "
+              << "Transfer function not set.\n";
+    return false;
+  }
+  if (m_nEvents == 0) {
+    std::cerr << m_className << "::ConvoluteSignal: No signals present.\n";
+    return false;
+  }
+
+  if (fft) return ConvoluteSignalFFT(label);
+  std::vector<double> cnvTab;
+  MakeTransferFunctionTable(cnvTab);
+  // Loop over all electrodes.
+  for (auto& electrode : m_electrodes) {
+    if (label != electrode.label) continue;
+    ConvoluteSignal(electrode, cnvTab);
+    return true;
+  }
+  return false;
+}
+
+
 bool Sensor::ConvoluteSignal(const bool fft) {
   if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
     std::cerr << m_className << "::ConvoluteSignal: "
@@ -916,12 +940,20 @@ bool Sensor::ConvoluteSignal(const bool fft) {
   }
 
   if (fft) return ConvoluteSignalFFT();
+  std::vector<double> cnvTab;
+  MakeTransferFunctionTable(cnvTab);
+  // Loop over all electrodes.
+  for (auto& electrode : m_electrodes) ConvoluteSignal(electrode, cnvTab);
+  return true;
+}
+
+void Sensor::MakeTransferFunctionTable(std::vector<double>& cnvTab) {
 
   // Set the range where the transfer function is valid.
   constexpr double cnvMin = 0.;
   constexpr double cnvMax = 1.e10;
 
-  std::vector<double> cnvTab(2 * m_nTimeBins - 1, 0.);
+  cnvTab.assign(2 * m_nTimeBins - 1, 0.);
   const unsigned int offset = m_nTimeBins - 1;
   // Evaluate the transfer function.
   for (unsigned int i = 0; i < m_nTimeBins; ++i) {
@@ -941,20 +973,21 @@ bool Sensor::ConvoluteSignal(const bool fft) {
       cnvTab[offset + i] = GetTransferFunction(t);
     }
   }
+}
+
+void Sensor::ConvoluteSignal(Electrode& electrode,
+                             const std::vector<double>& tab) {
+  // Do the convolution.
   std::vector<double> tmpSignal(m_nTimeBins, 0.);
-  // Loop over all electrodes.
-  for (auto& electrode : m_electrodes) {
-    // Do the convolution.
-    for (unsigned int j = 0; j < m_nTimeBins; ++j) {
-      tmpSignal[j] = 0.;
-      for (unsigned int k = 0; k < m_nTimeBins; ++k) {
-        tmpSignal[j] += m_tStep * cnvTab[offset + j - k] * electrode.signal[k];
-      }
+  const unsigned int offset = m_nTimeBins - 1;
+  for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+    tmpSignal[j] = 0.;
+    for (unsigned int k = 0; k < m_nTimeBins; ++k) {
+      tmpSignal[j] += m_tStep * tab[offset + j - k] * electrode.signal[k];
     }
-    electrode.signal.swap(tmpSignal);
-    electrode.integrated = true;
   }
-  return true;
+  electrode.signal.swap(tmpSignal);
+  electrode.integrated = true;
 }
 
 bool Sensor::ConvoluteSignalFFT() {
@@ -971,28 +1004,57 @@ bool Sensor::ConvoluteSignalFFT() {
     FFT(m_fTransferFFT, false, nn);
   }
 
-  const double scale = m_tStep / nn;
   for (auto& electrode : m_electrodes) {
-    std::vector<double> g(2 * (nn + 1), 0.);
-    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
-      g[2 * i + 1] = electrode.signal[i];
-    }
-    FFT(g, false, nn);
-    for (unsigned int i = 0; i < nn; ++i) {
-      const double fr = m_fTransferFFT[2 * i + 1];
-      const double fi = m_fTransferFFT[2 * i + 2];
-      const double gr = g[2 * i + 1];
-      const double gi = g[2 * i + 2];
-      g[2 * i + 1] = fr * gr - fi * gi;
-      g[2 * i + 2] = fr * gi + gr * fi;
-    }
-    FFT(g, true, nn);
-    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
-      electrode.signal[i] = scale * g[2 * i + 1];
-    }
-    electrode.integrated = true;
+    ConvoluteSignalFFT(electrode, m_fTransferFFT, nn);
   }
   return true;
+}
+
+bool Sensor::ConvoluteSignalFFT(const std::string& label) {
+
+  // Number of bins must be a power of 2.
+  const unsigned int nn = exp2(ceil(log2(m_nTimeBins)));
+
+  if (!m_cacheTransferFunction || m_fTransferFFT.size() != 2 * (nn + 1)) {
+    // (Re-)compute the FFT of the transfer function.
+    m_fTransferFFT.assign(2 * (nn + 1), 0.);
+    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+      m_fTransferFFT[2 * i + 1] = GetTransferFunction(i * m_tStep);
+    }
+    FFT(m_fTransferFFT, false, nn);
+  }
+
+  for (auto& electrode : m_electrodes) {
+    if (label != electrode.label) continue;
+    ConvoluteSignalFFT(electrode, m_fTransferFFT, nn);
+    return true;
+  }
+  return false;
+}
+
+void Sensor::ConvoluteSignalFFT(Electrode& electrode,
+                                const std::vector<double>& tab,
+                                const unsigned int nn) {
+
+  std::vector<double> g(2 * (nn + 1), 0.);
+  for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+    g[2 * i + 1] = electrode.signal[i];
+  }
+  FFT(g, false, nn);
+  for (unsigned int i = 0; i < nn; ++i) {
+    const double fr = tab[2 * i + 1];
+    const double fi = tab[2 * i + 2];
+    const double gr = g[2 * i + 1];
+    const double gi = g[2 * i + 2];
+    g[2 * i + 1] = fr * gr - fi * gi;
+    g[2 * i + 2] = fr * gi + gr * fi;
+  }
+  FFT(g, true, nn);
+  const double scale = m_tStep / nn;
+  for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+    electrode.signal[i] = scale * g[2 * i + 1];
+  }
+  electrode.integrated = true;
 }
 
 bool Sensor::IntegrateSignal() {

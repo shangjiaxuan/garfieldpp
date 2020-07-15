@@ -137,7 +137,10 @@ class Sensor {
   void EnableTransferFunctionCache(const bool on = true) { 
     m_cacheTransferFunction = on;
   } 
-  /// Convolute the induced current with the transfer function.
+  /// Convolute the induced current on a given electrode 
+  /// with the transfer function.
+  bool ConvoluteSignal(const std::string& label, const bool fft = false);
+  /// Convolute all induced currents with the transfer function.
   bool ConvoluteSignal(const bool fft = false);
   /// Replace the signal on a given electrode by its integral.
   bool IntegrateSignal(const std::string& label);
@@ -295,10 +298,17 @@ class Sensor {
     }
   }
   void IntegrateSignal(Electrode& electrode);
+  void ConvoluteSignal(Electrode& electrode,
+                       const std::vector<double>& tab);
+  bool ConvoluteSignalFFT();
+  bool ConvoluteSignalFFT(const std::string& label);
+  void ConvoluteSignalFFT(Electrode& electrode,
+                          const std::vector<double>& tab,
+                          const unsigned int nn);
   // Evaluate the integral over the transfer function squared. 
   double TransferFunctionSq();
   double InterpolateTransferFunctionTable(const double t) const;
-  bool ConvoluteSignalFFT(); 
+  void MakeTransferFunctionTable(std::vector<double>& tab);
   void FFT(std::vector<double>& data, const bool inverse, const int nn);
 };
 }
