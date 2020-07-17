@@ -1214,6 +1214,7 @@ bool ComponentNeBem3d::Initialise() {
                       std::make_move_iterator(elements.begin()),
                       std::make_move_iterator(elements.end()));
   }
+  neBEM::NbThreads = m_nThreads;
   if (neBEM::neBEMInitialize() != 0) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Initialising neBEM failed.\n";

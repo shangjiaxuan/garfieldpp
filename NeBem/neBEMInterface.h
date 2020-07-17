@@ -45,6 +45,9 @@ INTFACEGLOBAL int OptDeviceFile;
 INTFACEGLOBAL char DeviceInputFile[256];
 INTFACEGLOBAL int neBEMGetInputsFromFiles(void);
 
+// Number of threads requested
+INTFACEGLOBAL int NbThreads;
+
 INTFACEGLOBAL int neBEMInitialize(void);
 INTFACEGLOBAL int OptPrintPrimaryDetails, OptPrintVolumeDetails;
 

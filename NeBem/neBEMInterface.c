@@ -101,7 +101,7 @@ int neBEMInitialize(void) {
   if (processFile == NULL) {
     printf("neBEMProcess.inp absent ... assuming defaults ...\n");
     PrimAfter = 0;
-    RqstdThreads = 1;
+    if (NbThreads > 0) RqstdThreads = NbThreads;
   } else {
     fscanf(processFile, "PrimAfter: %d\n", &PrimAfter);
     fscanf(processFile, "RqstdThreads: %d\n", &RqstdThreads);

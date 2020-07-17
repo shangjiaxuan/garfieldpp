@@ -117,6 +117,11 @@ class ComponentNeBem3d : public ComponentBase {
   /// Get the periodic length in the z-direction.
   bool GetPeriodicityZ(double& s) const;
 
+  /// Set the number of threads to be used by neBEM.
+  void SetNumberOfThreads(const unsigned int n) {
+    m_nThreads = n > 0 ? n : 1;
+  }
+
  private:
   struct Primitive {
     /// Perpendicular vector
@@ -180,6 +185,9 @@ class ComponentNeBem3d : public ComponentBase {
   std::array<double, 6> m_coplan{{0., 0., 0., 0., 0., 0.}};
   /// Plane potentials.
   std::array<double, 6> m_vtplan{{0., 0., 0., 0., 0., 0.}};
+
+  // Number of threads to be used by neBEM.
+  unsigned int m_nThreads = 1;
 
   static constexpr double MinDist = 1.e-6;
   /// Target size of elements [cm].
