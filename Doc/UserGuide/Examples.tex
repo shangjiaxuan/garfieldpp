@@ -1,7 +1,7 @@
 \section{Examples}
 
 Section~\ref{Sec:ExampleTube} discusses the 
-calculation of transport parameters with Magboltz, 
+calculation of transport parameters with \textsc{Magboltz}, 
 the use of analytic field calculation techniques, 
 ``macroscopic'' simulation of electron and ion drift lines, 
 and the calculation of induced signals. 
@@ -46,10 +46,10 @@ with logarithmic spacing.
 \begin{lstlisting}
 gas.SetFieldGrid(100., 100.e3, 20, true);
 \end{lstlisting}
-Now we run Magboltz to generate the gas table for this grid. 
+Now we run \textsc{Magboltz} to generate the gas table for this grid. 
 As input parameter we have to specify the number of collisions 
 (in multiples of \(10^{7}\)) over which the electron is traced 
-by Magboltz.
+by \textsc{Magboltz}.
 \begin{lstlisting}
 const int ncoll = 10;
 gas.GenerateGasTable(ncoll);
@@ -300,14 +300,14 @@ gas.SetPressure(760.);
 In this example, we will simulate electron avalanches using 
 a ``microscopic'' Monte Carlo method,
 based on the electron-atom/molecule cross-sections in the database of the 
-Magboltz program. 
+\textsc{Magboltz program}. 
 As discussed in more detail in Sec.~\ref{Sec:MicroscopicTracking},
 the algorithm takes as input the collision rates (as function of the 
 electron's kinetic energy) for each scattering mechanism 
 that can take place in the gas.
 The preparation of the tables of collision rates and the interpolation 
 in these tables is done by the class \texttt{MediumMagboltz}, which -- as
-the name suggests -- provides an interface to Magboltz.
+the name suggests -- provides an interface to \textsc{Magboltz}.
 
 In \texttt{MediumMagboltz} the collision rates are stored on an
 evenly spaced energy grid. The max. energy can be set by the user.
@@ -335,7 +335,7 @@ gas.EnablePenningTransfer(rPenning, lambdaPenning, "ar");
 \end{lstlisting}
 \paragraph{Ion transport properties}
 Unlike electrons, ions cannnot be tracked microscopically in Garfield++.
-Moreover, there is no program like Magboltz that can compute  
+Moreover, there is no program like \textsc{Magboltz} that can compute  
 the macroscopic transport properties (such as the drift velocity),
 so we have to provide these data ourselves.
 In this example, we use the mobility of Ar$^{+}$ ions in Ar
