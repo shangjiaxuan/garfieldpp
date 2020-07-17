@@ -138,7 +138,9 @@ class Solid {
   /// Retrieve the surface panels of the solid.
   virtual bool SolidPanels(std::vector<Panel>& panels) = 0;
 
-  /// Retrieve the discretization level of a panel.
+  /// Set the discretisation level (for all panels).
+  virtual void SetDiscretisationLevel(const double dis) = 0;
+  /// Retrieve the discretisation level of a panel.
   virtual double GetDiscretisationLevel(const Panel& panel) = 0;
 
   virtual void Cut(const double x0, const double y0, const double z0,
@@ -146,7 +148,8 @@ class Solid {
                    std::vector<Panel>& panels) = 0;
 
   enum BoundaryCondition {
-    Voltage = 1,
+    Unknown = 0,
+    Voltage,
     Charge,
     Float,
     Dielectric,
@@ -214,7 +217,7 @@ class Solid {
   bool m_debug = false;
 
   /// Type of boundary condition.
-  BoundaryCondition m_bctype = Voltage;
+  BoundaryCondition m_bctype = Unknown;
   /// Potential at the surface.
   double m_volt = 0.;
   /// Surface charge density.

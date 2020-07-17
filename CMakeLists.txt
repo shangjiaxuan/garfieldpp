@@ -26,6 +26,11 @@ find_package(ROOT 6.0 REQUIRED COMPONENTS Geom Gdml)
 #--- Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
 include(${ROOT_USE_FILE})
 
+find_package(GSL REQUIRED)
+include_directories(${GSL_INCLUDE_DIR})
+
+find_package(OpenMP)
+
 #--- If you cannot create symbolic links turn FALSE the library version
 set(BUILD_WITH_VERSION_NUMBER TRUE)
 if(BUILD_WITH_VERSION_NUMBER)
@@ -57,7 +62,11 @@ set( heed_dirs
 foreach(heed_dir ${heed_dirs})
   aux_source_directory(${heed_dir} heed_sources)
 endforeach()
-set_source_files_properties( ${heed_sources} PROPERTIES LANGUAGE CXX)
+set_source_files_properties(${heed_sources} PROPERTIES LANGUAGE CXX)
+
+#--- Add neBEM------------------------------------------------------------------
+aux_source_directory(NeBem nebem_sources)
+set_source_files_properties(${nebem_sources} PROPERTIES LANGUAGE CXX)
 
 #--- Flags to pass to the compiler----------------------------------------------
 if(APPLE)
@@ -104,22 +113,28 @@ list(APPEND garfield_sources GarfieldDict.cxx)
 
 #--- Print information on considered files and the root dictionary include directories
 message(STATUS "-----------------------------------------------------------" )
-message(STATUS "Considered Garfield files: ${garfield_sources}" )
+message(STATUS "Garfield source files: ${garfield_sources}" )
 message(STATUS "-----------------------------------------------------------" )
-message(STATUS "Considered Heed files: ${heed_sources}" )
+message(STATUS "Heed source files: ${heed_sources}" )
 message(STATUS "-----------------------------------------------------------" )
-message(STATUS "Considered Magboltz files: ${magboltz_sources}" )
+message(STATUS "Magboltz source files: ${magboltz_sources}" )
 message(STATUS "-----------------------------------------------------------" )
-message(STATUS "Directory used to find root dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
+message(STATUS "neBEM source files: ${nebem_sources}" )
+message(STATUS "-----------------------------------------------------------" )
+message(STATUS "Directory used to find ROOT dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
 message(STATUS "-----------------------------------------------------------" )
 
 #--- build the Garfield library
-add_library(Garfield SHARED ${garfield_sources} ${magboltz_sources} ${heed_sources})
-target_link_libraries(Garfield ROOT::Geom ROOT::Gdml ROOT::Graf3d)
+add_library(Garfield SHARED ${garfield_sources} ${magboltz_sources} ${heed_sources} ${nebem_sources})
+target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES})
+if(OpenMP_CXX_FOUND)
+  target_link_libraries(Garfield PRIVATE OpenMP::OpenMP_CXX)
+endif()
 target_compile_features(Garfield INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
-                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>)
+                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>
+                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/NeBem>)
 if(BUILD_WITH_VERSION_NUMBER)
   set_target_properties(Garfield PROPERTIES
                         VERSION ${Garfield_VERSION}
@@ -155,7 +170,7 @@ message(STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "If you want to change this path call cmake -DCMAKE_INSTALL_PREFIX=my_install_path ...")
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
 
-#--- Where the library will end up and to write info in  GarfieldTargets.cmake--
+#--- Where the library will end up and to write info in GarfieldTargets.cmake--
 install(TARGETS Garfield DESTINATION ${CMAKE_INSTALL_LIBDIR} EXPORT GarfieldTargets)
 
 #--- Install pcm file in case of root 6
@@ -166,7 +181,7 @@ if(ROOT_VERSION VERSION_GREATER 6.06)
 endif()
 
 #--- install the Heed database--------------------------------------------------
-install(DIRECTORY Heed/heed++/database DESTINATION  Heed/heed++)
+install(DIRECTORY Heed/heed++/database DESTINATION Heed/heed++)
 
 #--- install headers------------------------------------------------------------
 install(DIRECTORY Include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} REGEX LinkDef EXCLUDE)

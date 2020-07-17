@@ -125,13 +125,14 @@ void ViewGeometry::Plot3d() {
     } else if (solid->IsHole()) {
       const double r1 = solid->GetLowerRadius();
       const double r2 = solid->GetUpperRadius();
-      const double rm = 0.5 * (r1 + r2);
-      const double dr = (r2 - r1);
       const double dx = solid->GetHalfLengthX();
       const double dy = solid->GetHalfLengthY();
       const double dz = solid->GetHalfLengthZ();
+      const double lz = 10 * std::max({dx, dy, dz});
+      const double rm = 0.5 * (r1 + r2);
+      const double dr = 0.5 * (r2 - r1) * lz / dz;
       TGeoBBox* box = new TGeoBBox("HoleBox", dx, dy, dz);
-      TGeoCone* cone = new TGeoCone("HoleCone", 2 * dz, 0, rm - dr, 0, rm + dr);
+      TGeoCone* cone = new TGeoCone("HoleCone", lz, 0, rm - dr, 0, rm + dr);
       TGeoCompositeShape* hole = new TGeoCompositeShape("Hole", 
         new TGeoSubtraction(box, cone));
       hole->RegisterYourself();

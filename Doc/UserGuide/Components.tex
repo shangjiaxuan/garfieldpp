@@ -64,7 +64,9 @@ At present, the available solids are
   \item
   \texttt{SolidHole}, 
   \item
-  \texttt{SolidRidge}, and
+  \texttt{SolidRidge}, 
+  \item
+  \texttt{SolidWire}, and
   \item
   \texttt{SolidSphere}.
 \end{itemize} 
@@ -997,8 +999,99 @@ void AddPixelOnPlanePhi(const double phi,
 Valid strip directions are \texttt{'p'} ($\phi$) or \texttt{'z'} for 
 circular planes and \texttt{'r'} or \texttt{'z'} for $\phi$ planes.
 
-\section{Other components}
+\section{neBEM}
+The nearly exact Boundary Element Method (neBEM) solver discretizes
+the boundary of the domain in triangular and rectangular elements 
+and computes the surface charge density on each of these elements that is
+required to satisfy the applied boundary conditions. 
+Once the charge density distribution has been obtained, 
+the potential and field can be evaluated at any point in the domain. 
+A detailed description of the technique can be found in 
+Refs.~\cite{Mukhopadhyay2006Eng,Mukhopadhyay2006,Mukhopadhyay2009}. 
+ 
+The \texttt{ComponentNeBem3d} interface class requires as input a 
+\texttt{GeometrySimple} object with its list of solids and associated 
+media. 
+\begin{lstlisting}
+void ComponentNeBem3d::SetGeometry(Geometry* geo);
+\end{lstlisting}
+The boundary conditions to be applied to each solid can be set using
+\begin{lstlisting}
+void Solid::SetBoundaryPotential(const double v);
+\end{lstlisting}
+in case of a conductor at fixed potential (Dirichlet boundary conditions) 
+or 
+\begin{lstlisting}
+void Solid::SetBoundaryDielectric();
+\end{lstlisting}
+in case of a dielectric-dielectric interface. 
+In the latter case (Neumann boundary conditions), 
+the normal component of the displacement field $\mathbf{D} = \varepsilon\mathbf{E}$ is required to be continuous at the boundary of the solid,
+\begin{equation*}
+  \mathbf{n}\cdot\left(\varepsilon^{+}\mathbf{E}^{+} - \varepsilon^{-}\mathbf{E}^{-}\right).
+\end{equation*}
 
+During initialisation, \texttt{ComponentNeBem3d}
+\begin{itemize}
+\item
+retrieves the surface panels from the \texttt{Solid} objects 
+present in the geometry,
+\item
+searches for and eliminates overlaps between the panels,  
+\item
+and splits the resulting polygons into rectangular and triangular ``primitives''.
+\end{itemize}
+These ``primitives'' are then passed on to neBEM, where they are further 
+subdivided into ``elements'' (rectangles and right-angled triangles).
+A special case are \texttt{SolidWire} objects which are represented 
+as one-dimensional straight line primitives and elements 
+(corresponding to the thin-wire approximation used also 
+in \texttt{ComponentAnalyticField}). 
+The elements should be small enough such that the distribution of the 
+charge density on them be approximated as uniform.
+The size of the elements can be controlled using the functions
+\begin{lstlisting}
+void SetTargetElementSize(const double length);
+void SetMinMaxNumberOfElements(const unsigned int nmin, const unsigned int nmax);
+\end{lstlisting}
+\begin{description}
+\item[length] preferred linear size of the elements, measured along their edges.
+\item[nmin,nmax] smallest and largest number of elements produced along either axis of a single primitive.
+\end{description}
+One can also request different target element sizes for each 
+\texttt{Solid} object, using
+\begin{lstlisting}
+void Solid::SetDiscretisationLevel(const double dis);
+\end{lstlisting} 
+
+After splitting the primitives into elements, 
+neBEM determines the influence matrix $K$ and 
+the right-hand side vector\footnote{In a system with only Dirichlet 
+boundary conditions, the right-hand side vector is given by the 
+potentials at the elements, $b_{i} = V_{i}$.}
+of the system of equations
+\begin{equation*}
+K \boldsymbol{\rho} = \mathbf{b},
+\end{equation*}
+inverts the matrix and computes the surface charge density $\rho_{i}$ 
+of every element,
+\begin{equation*}
+\rho_{i} = K^{-1}_{ij} b_{j}. 
+\end{equation*}
+
+\subsection{Weighting fields}
+If a \texttt{Solid} object has been given a label using 
+\begin{lstlisting}
+void Solid::SetLabel(const std::string& label);
+\end{lstlisting}
+neBEM will compute its weighting field at the same time as 
+the electric field.
+One can assign the same label to multiple \texttt{Solid} objects.
+The weighting field corresponding to this label will then be 
+computed by setting the potential of all elements associated to solids 
+with this label to 1\,V (and grounding all other conducting elements).
+
+\section{Other components}
 For simple calculations, the class \texttt{ComponentConstant} can be used. 
 As the name implies, it provides a uniform electric field. 
 The electric field and potential can be specified using
