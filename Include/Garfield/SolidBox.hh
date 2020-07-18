@@ -33,6 +33,9 @@ class SolidBox : public Solid {
   void SetHalfLengthZ(const double lz);
 
   bool SolidPanels(std::vector<Panel>& panels) override;
+  void SetDiscretisationLevel(const double dis) override {
+    m_dis.fill(dis);
+  } 
   double GetDiscretisationLevel(const Panel& panel) override;
 
   void Cut(const double x0, const double y0, const double z0,

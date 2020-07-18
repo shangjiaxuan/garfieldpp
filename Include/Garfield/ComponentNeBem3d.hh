@@ -1,5 +1,8 @@
 #ifndef G_COMPONENT_NEBEM_3D_H
 #define G_COMPONENT_NEBEM_3D_H
+
+#include <map>
+
 #include "ComponentBase.hh"
 
 namespace Garfield {
@@ -20,11 +23,43 @@ class ComponentNeBem3d : public ComponentBase {
                      int& status) override;
   bool GetVoltageRange(double& vmin, double& vmax) override;
 
+  void WeightingField(const double x, const double y, const double z,
+                      double& wx, double& wy, double& wz,
+                      const std::string& label) override;
+  double WeightingPotential(const double x, const double y,
+                            const double z, const std::string& label) override;
+
+  /// Add a plane at constant x.
+  void AddPlaneX(const double x, const double voltage);
+  /// Add a plane at constant y.
+  void AddPlaneY(const double y, const double voltage);
+  /// Add a plane at constant z.
+  void AddPlaneZ(const double z, const double voltage);
+  /// Get the number of equipotential planes at constant x.
+  unsigned int GetNumberOfPlanesX() const;
+  /// Get the number of equipotential planes at constant y.
+  unsigned int GetNumberOfPlanesY() const;
+  /// Get the number of equipotential planes at constant z.
+  unsigned int GetNumberOfPlanesZ() const;
+  /// Retrieve the parameters of a plane at constant x.
+  bool GetPlaneX(const unsigned int i, double& x, double& v) const;
+  /// Retrieve the parameters of a plane at constant y.
+  bool GetPlaneY(const unsigned int i, double& y, double& v) const;
+  /// Retrieve the parameters of a plane at constant z.
+  bool GetPlaneZ(const unsigned int i, double& z, double& v) const;
+
   unsigned int GetNumberOfPrimitives() const { return m_primitives.size(); }
   bool GetPrimitive(const unsigned int i, double& a, double& b, double& c,
                     std::vector<double>& xv, std::vector<double>& yv,
                     std::vector<double>& zv, int& interface, double& v,
                     double& q, double& lambda) const;
+  bool GetPrimitive(const unsigned int i, double& a, double& b, double& c,
+                    std::vector<double>& xv, std::vector<double>& yv,
+                    std::vector<double>& zv, int& vol1, int& vol2) const;
+  bool GetVolume(const unsigned int vol, int& shape, int& material, 
+                 double& eps, double& potential, double& charge, int& bc);
+  int GetVolume(const double x, const double y, const double z);
+
   unsigned int GetNumberOfElements() const { return m_elements.size(); }
   bool GetElement(const unsigned int i, 
                   std::vector<double>& xv, std::vector<double>& yv,
@@ -41,6 +76,51 @@ class ComponentNeBem3d : public ComponentBase {
   /// Set the default value of the target linear size of the elements
   /// produced by neBEM's discretisation process.
   void SetTargetElementSize(const double length);
+  /// Set the smallest and largest allowed number of elements along 
+  /// the lenght of a primitive.
+  void SetMinMaxNumberOfElements(const unsigned int nmin,
+                                 const unsigned int nmax);
+
+  /// Invert the influence matrix using lower-upper (LU) decomposition.
+  void UseLUInversion() { m_inversion = Inversion::LU; }
+  /// Invert the influence matrix using singular value decomposition.
+  void UseSVDInversion() { m_inversion = Inversion::SVD; }
+
+  /// Set the parameters \f$n_x, n_y, n_z$\f defining the number of periodic 
+  /// copies that neBEM will use when dealing with periodic configurations.
+  /// neBEM will use \f$2 \times n + 1$\f copies (default: \f$n = 5$\f).
+  void SetPeriodicCopies(const unsigned int nx, const unsigned int ny,
+                         const unsigned int nz);
+  /// Retrieve the number of periodic copies used by neBEM.
+  void GetPeriodicCopies(unsigned int& nx, unsigned int& ny, 
+                         unsigned int& nz) const {
+    nx = m_nCopiesX;
+    ny = m_nCopiesY;
+    nz = m_nCopiesZ;
+  }
+  /// Set the periodic length [cm] in the x-direction.
+  void SetPeriodicityX(const double s);
+  /// Set the periodic length [cm] in the y-direction.
+  void SetPeriodicityY(const double s);
+  /// Set the periodic length [cm] in the z-direction.
+  void SetPeriodicityZ(const double s);
+  /// Set the periodic length [cm] in the x-direction.
+  void SetMirrorPeriodicityX(const double s);
+  /// Set the periodic length [cm] in the y-direction.
+  void SetMirrorPeriodicityY(const double s);
+  /// Set the periodic length [cm] in the z-direction.
+  void SetMirrorPeriodicityZ(const double s);
+  /// Get the periodic length in the x-direction.
+  bool GetPeriodicityX(double& s) const;
+  /// Get the periodic length in the y-direction.
+  bool GetPeriodicityY(double& s) const;
+  /// Get the periodic length in the z-direction.
+  bool GetPeriodicityZ(double& s) const;
+
+  /// Set the number of threads to be used by neBEM.
+  void SetNumberOfThreads(const unsigned int n) {
+    m_nThreads = n > 0 ? n : 1;
+  }
 
  private:
   struct Primitive {
@@ -62,6 +142,8 @@ class ComponentNeBem3d : public ComponentBase {
     double lambda;
     /// Target element size.
     double elementSize;
+    /// Volumes.
+    int vol1, vol2;
   };
   /// List of primitives.
   std::vector<Primitive> m_primitives;
@@ -97,6 +179,16 @@ class ComponentNeBem3d : public ComponentBase {
   /// List of elements.
   std::vector<Element> m_elements;
 
+  /// Plane existence.
+  std::array<bool, 6> m_ynplan{{false, false, false, false, false, false}};
+  /// Plane coordinates.
+  std::array<double, 6> m_coplan{{0., 0., 0., 0., 0., 0.}};
+  /// Plane potentials.
+  std::array<double, 6> m_vtplan{{0., 0., 0., 0., 0., 0.}};
+
+  // Number of threads to be used by neBEM.
+  unsigned int m_nThreads = 1;
+
   static constexpr double MinDist = 1.e-6;
   /// Target size of elements [cm].
   double m_targetElementSize = 50.0e-4;
@@ -104,7 +196,23 @@ class ComponentNeBem3d : public ComponentBase {
   unsigned int m_minNbElementsOnLength = 1;
   /// Largest number of elements produced along the axis of a primitive. 
   unsigned int m_maxNbElementsOnLength = 100; 
+  /// Periodic lengths.
+  std::array<double, 3> m_periodicLength{{0., 0., 0.}};
+  /// Number of periodic copies along x.
+  unsigned int m_nCopiesX = 5;
+  /// Number of periodic copies along y.
+  unsigned int m_nCopiesY = 5;
+  /// Number of periodic copies along z.
+  unsigned int m_nCopiesZ = 5;
 
+  enum class Inversion { LU = 0, SVD };
+  Inversion m_inversion = Inversion::LU;
+
+  /// Electrode labels and corresponding neBEM weighting field indices.
+  std::map<std::string, int> m_wfields;
+
+  /// Reduce panels to the basic period.
+  void ShiftPanels(std::vector<Panel>& panels) const;
   /// Isolate the parts of polygon 1 that are not hidden by 2 and vice versa.
   bool EliminateOverlaps(const Panel& panel1, const Panel& panel2,
                          std::vector<Panel>& panelsOut,
@@ -152,6 +260,9 @@ class ComponentNeBem3d : public ComponentBase {
                            std::vector<Element>& elements) const;
   int InterfaceType(const Solid::BoundaryCondition bc) const;
 };
+
+extern ComponentNeBem3d* gComponentNeBem3d;
+
 }
 
 #endif

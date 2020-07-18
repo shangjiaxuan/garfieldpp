@@ -329,10 +329,10 @@ daughter class \texttt{MediumMagboltz}.
 While \texttt{MediumGas} deals only with the interpolation of gas tables 
 and the import of gas files, 
 \texttt{MediumMagboltz} -- owing to an interface to the 
-Magboltz program \cite{Biagi1999} -- can be used for the calculation 
-of transport parameters. 
+\textsc{Magboltz} program \cite{Biagi1999} -- 
+can be used for the calculation of transport parameters. 
 In addition, the latter class provides access to the 
-electron-molecule scattering cross-sections used in Magboltz and is 
+electron-molecule scattering cross-sections used in \textsc{Magboltz} and is 
 thus suitable for microscopic tracking (chapter \ref{Chap:Transport}). 
 
 The composition of the gas mixture is specified using
@@ -403,14 +403,14 @@ can be found in Refs.~\cite{Ellis1976,Ellis1978,Ellis1984,Viehland1995}.
 
 \subsection{Magboltz}
 
-Magboltz, written by Steve Biagi, is a program 
+\textsc{Magboltz}, written by Steve Biagi, is a program 
 for the calculation of electron transport properties in gas 
 mixtures using semi-classical Monte Carlo simulation
 \cite{Biagi1999}. 
 It includes a database of electron-atom/molecule cross-sections 
 for a large number of detection gases. 
 
-In order to run Magboltz via the \texttt{MediumMagboltz} interface class
+In order to run \textsc{Magboltz} via the \texttt{MediumMagboltz} interface class
 given electric field, magnetic field and field angle, the following 
 function is provided:
 \begin{lstlisting}
@@ -430,7 +430,7 @@ void RunMagboltz(const double e, const double b, const double btheta,
     number of collisions (in multiples of \(10^{7}\)) over which 
     the electron is tracked
   \item[verbose] 
-    flag switching on/off full output from Magboltz
+    flag switching on/off full output from \textsc{Magboltz}
   \item[vx, vy, vz] 
     drift velocity along \(\mathbf{E}\) (\(vz\)), 
     along \(\mathbf{B}_{t}\) (\(vy\)), and  
@@ -453,7 +453,7 @@ void RunMagboltz(const double e, const double b, const double btheta,
     $\sigma_{xy} = \sigma_{yx}$) 
 \end{description}
 By default, the max. energy of the cross-section table  
-is chosen automatically by Magboltz. Using
+is chosen automatically by \textsc{Magboltz}. Using
 \begin{lstlisting}
 void EnableAutoEnergyLimit(const bool on = true);
 \end{lstlisting} 
@@ -467,7 +467,7 @@ An accuracy better than \(0.5\%\) can be achieved by
 For pure elastic gases such as Ar, \texttt{nColl} should 
 be at least 10.  
 
-Recent versions of Magboltz allow the thermal motion of the gas 
+Recent versions of \textsc{Magboltz} allow the thermal motion of the gas 
 atoms/molecules to be taken into account in the simulation. 
 This feature can be enabled or disabled using
 \begin{lstlisting}
@@ -484,7 +484,7 @@ the function
 void GenerateGasTable(const int numCollisions, const bool verbose);
 \end{lstlisting}
 can be used. In addition to the transport parameters, this function also 
-retrieves the rates calculated by Magboltz for each excitation and 
+retrieves the rates calculated by \textsc{Magboltz} for each excitation and 
 ionisation level, and stores them in the gas table. These can be used 
 later to adjust the Townsend coefficient based on the Penning transfer 
 probabilities set by the user.
@@ -526,7 +526,7 @@ gas.WriteGasFile("ar_co2_merged.gas");
 As a prerequisite for ``microscopic tracking'' a 
 table of the electron scattering rates 
 (based on the electron-atom/molecule cross-sections included in the 
-Magboltz database) for the 
+\textsc{Magboltz} database) for the 
 current gas mixture and density needs to be prepared. 
 This can be done using the function 
 \begin{lstlisting}
@@ -541,7 +541,7 @@ If
 void EnableCrossSectionOutput();
 \end{lstlisting}
 is called prior to \texttt{Initialise}, a table of the cross-sections 
-(as retrieved from Magboltz) is written to a file \texttt{cs.txt} 
+(as retrieved from \textsc{Magboltz}) is written to a file \texttt{cs.txt} 
 in the current working directory. 
 
 By default, the table of scattering rates extends from 0 to 40\,eV. 
@@ -569,7 +569,7 @@ bool GetLevel(const unsigned int i, int& ngas, int& type, std::string& descr, do
   \item[ngas] index of the gas in the mixture
   \item[type] classification of the cross-section term 
               (see Table~\ref{Tab:ElectronCollisionType})
-  \item[descr] description of the cross-section term (from Magboltz)
+  \item[descr] description of the cross-section term (from \textsc{Magboltz})
   \item[e] energy loss
 \end{description}
 

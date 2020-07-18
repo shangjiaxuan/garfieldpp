@@ -3,9 +3,14 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <map>
 #include <numeric>
+#include <set>
 #include <vector>
+#include <cfloat>
+
+#include "neBEMInterface.h"
+#include "neBEM.h"
+#include "NR.h"
 
 #include "Garfield/ComponentNeBem3d.hh"
 #include "Garfield/FundamentalConstants.hh"
@@ -374,6 +379,8 @@ bool Equal(const Garfield::Panel& panel1, const Garfield::Panel& panel2,
 
 namespace Garfield {
 
+ComponentNeBem3d* gComponentNeBem3d = nullptr;
+
 ComponentNeBem3d::ComponentNeBem3d() : ComponentBase() {
   m_className = "ComponentNeBem3d";
 }
@@ -386,10 +393,7 @@ void ComponentNeBem3d::ElectricField(const double x, const double y,
   status = 0;
   // Check if the requested point is inside a medium
   m = GetMedium(x, y, z);
-  if (!m) {
-    status = -6;
-    return;
-  }
+  if (!m) status = -6;
 
   if (!m_ready) {
     if (!Initialise()) {
@@ -399,6 +403,22 @@ void ComponentNeBem3d::ElectricField(const double x, const double y,
     }
     m_ready = true;
   }
+  
+  // Construct a point.
+  neBEM::Point3D point;
+  point.X = 0.01 * x;
+  point.Y = 0.01 * y;
+  point.Z = 0.01 * z;
+
+  // Compute the field.
+  neBEM::Vector3D field;
+  if (neBEM::neBEMField(&point, &v, &field) != 0) {
+    status = -10;
+    return;
+  }
+  ex = 0.01 * field.X;
+  ey = 0.01 * field.Y;
+  ez = 0.01 * field.Z;
 }
 
 void ComponentNeBem3d::ElectricField(const double x, const double y,
@@ -414,6 +434,179 @@ bool ComponentNeBem3d::GetVoltageRange(double& vmin, double& vmax) {
   return true;
 }
 
+void ComponentNeBem3d::WeightingField(const double x, const double y,
+                                      const double z, 
+                                      double& wx, double& wy, double& wz, 
+                                      const std::string& label) {
+  wx = wy = wz = 0.;
+  if (m_wfields.count(label) == 0) return;
+  const int id = m_wfields[label];
+  neBEM::Point3D point;
+  point.X = 0.01 * x;
+  point.Y = 0.01 * y;
+  point.Z = 0.01 * z;
+  neBEM::Vector3D field;
+  if (neBEM::neBEMWeightingField(&point, &field, id) == DBL_MAX) {
+    std::cerr << m_className << "::WeightingField: Evaluation failed.\n";
+    return;
+  }
+  wx = 0.01 * field.X;
+  wy = 0.01 * field.Y;
+  wz = 0.01 * field.Z;
+}
+
+double ComponentNeBem3d::WeightingPotential(const double x, const double y,
+                                            const double z, 
+                                            const std::string& label) {
+  if (m_wfields.count(label) == 0) return 0.;
+  const int id = m_wfields[label];
+  neBEM::Point3D point;
+  point.X = 0.01 * x;
+  point.Y = 0.01 * y;
+  point.Z = 0.01 * z;
+  neBEM::Vector3D field;
+  const double v = neBEM::neBEMWeightingField(&point, &field, id);
+  return v == DBL_MAX ? 0. : v;
+}
+
+void ComponentNeBem3d::AddPlaneX(const double x, const double v) {
+  if (m_ynplan[0] && m_ynplan[1]) {
+    std::cerr << m_className << "::AddPlaneX:\n"
+              << "    Cannot have more than two planes at constant x.\n";
+    return;
+  }
+
+  if (m_ynplan[0]) {
+    m_ynplan[1] = true;
+    if (x < m_coplan[0]) {
+      m_coplan[1] = m_coplan[0];
+      m_vtplan[1] = m_vtplan[0];
+      m_coplan[0] = x;
+      m_vtplan[0] = v;
+    } else {
+      m_coplan[1] = x;
+      m_vtplan[1] = v;
+    }
+  } else {
+    m_ynplan[0] = true;
+    m_coplan[0] = x;
+    m_vtplan[0] = v;
+  }
+  m_ready = false;
+}
+
+void ComponentNeBem3d::AddPlaneY(const double y, const double v) {
+  if (m_ynplan[2] && m_ynplan[3]) {
+    std::cerr << m_className << "::AddPlaneY:\n"
+              << "    Cannot have more than two planes at constant y.\n";
+    return;
+  }
+
+  if (m_ynplan[2]) {
+    m_ynplan[3] = true;
+    if (y < m_coplan[2]) {
+      m_coplan[3] = m_coplan[2];
+      m_vtplan[3] = m_vtplan[2];
+      m_coplan[2] = y;
+      m_vtplan[2] = v; 
+    } else {
+      m_coplan[3] = y;
+      m_vtplan[3] = v;
+    }
+  } else {
+    m_ynplan[2] = true;
+    m_coplan[2] = y;
+    m_vtplan[2] = v;
+  }
+  m_ready = false;
+}
+
+void ComponentNeBem3d::AddPlaneZ(const double z, const double v) {
+  if (m_ynplan[4] && m_ynplan[5]) {
+    std::cerr << m_className << "::AddPlaneZ:\n"
+              << "    Cannot have more than two planes at constant z.\n";
+    return;
+  }
+
+  if (m_ynplan[4]) {
+    m_ynplan[5] = true;
+    if (z < m_coplan[4]) {
+      m_coplan[5] = m_coplan[4];
+      m_vtplan[5] = m_vtplan[4];
+      m_coplan[4] = z;
+      m_vtplan[4] = v;
+    } else {
+      m_coplan[5] = z;
+      m_vtplan[5] = v;
+    }
+  } else {
+    m_ynplan[4] = true;
+    m_coplan[4] = z;
+    m_vtplan[4] = v;
+  }
+  m_ready = false;
+}
+
+unsigned int ComponentNeBem3d::GetNumberOfPlanesX() const {
+  if (m_ynplan[0] && m_ynplan[1]) {
+    return 2;
+  } else if (m_ynplan[0] || m_ynplan[1]) {
+    return 1;
+  }
+  return 0;
+}
+
+unsigned int ComponentNeBem3d::GetNumberOfPlanesY() const {
+  if (m_ynplan[2] && m_ynplan[3]) {
+    return 2;
+  } else if (m_ynplan[2] || m_ynplan[3]) {
+    return 1;
+  }
+  return 0;
+}
+
+unsigned int ComponentNeBem3d::GetNumberOfPlanesZ() const {
+  if (m_ynplan[4] && m_ynplan[5]) {
+    return 2;
+  } else if (m_ynplan[4] || m_ynplan[5]) {
+    return 1;
+  }
+  return 0;
+}
+
+bool ComponentNeBem3d::GetPlaneX(const unsigned int i, double& x,
+                                 double& v) const {
+  if (i >= 2 || (i == 1 && !m_ynplan[1])) {
+    std::cerr << m_className << "::GetPlaneX: Index out of range.\n";
+    return false;
+  }
+  x = m_coplan[i];
+  v = m_vtplan[i];
+  return true;
+}
+
+bool ComponentNeBem3d::GetPlaneY(const unsigned int i, double& y,
+                                 double& v) const {
+  if (i >= 2 || (i == 1 && !m_ynplan[3])) {
+    std::cerr << m_className << "::GetPlaneY: Index out of range.\n";
+    return false;
+  }
+  y = m_coplan[i + 2];
+  v = m_vtplan[i + 2];
+  return true;
+}
+
+bool ComponentNeBem3d::GetPlaneZ(const unsigned int i, double& z,
+                                 double& v) const {
+  if (i >= 2 || (i == 1 && !m_ynplan[5])) {
+    std::cerr << m_className << "::GetPlaneZ: Index out of range.\n";
+    return false;
+  }
+  z = m_coplan[i + 4];
+  v = m_vtplan[i + 4];
+  return true;
+}
+
 void ComponentNeBem3d::SetTargetElementSize(const double length) {
 
   if (length < MinDist) {
@@ -422,6 +615,125 @@ void ComponentNeBem3d::SetTargetElementSize(const double length) {
     return; 
   }
   m_targetElementSize = length;
+}
+
+void ComponentNeBem3d::SetMinMaxNumberOfElements(const unsigned int nmin,
+                                                 const unsigned int nmax) {
+
+  if (nmin == 0 || nmax == 0) {
+    std::cerr << m_className << "::SetMinMaxNumberOfElements:\n"
+              << "    Values must be non-zero.\n";
+    return;
+  }
+ m_minNbElementsOnLength = std::min(nmin, nmax);
+ m_maxNbElementsOnLength = std::max(nmin, nmax);
+}
+
+void ComponentNeBem3d::SetPeriodicCopies(const unsigned int nx, 
+                                         const unsigned int ny,
+                                         const unsigned int nz) {
+  m_nCopiesX = nx;
+  m_nCopiesY = ny;
+  m_nCopiesZ = nz;
+}
+
+void ComponentNeBem3d::SetPeriodicityX(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetPeriodicityX:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[0] = s;
+  m_periodic[0] = true;
+  m_mirrorPeriodic[0] = false;
+  UpdatePeriodicity();
+}
+
+void ComponentNeBem3d::SetPeriodicityY(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetPeriodicityY:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[1] = s;
+  m_periodic[1] = true;
+  m_mirrorPeriodic[1] = false;
+  UpdatePeriodicity();
+}
+
+void ComponentNeBem3d::SetPeriodicityZ(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetPeriodicityZ:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[2] = s;
+  m_periodic[2] = true;
+  m_mirrorPeriodic[2] = false;
+  UpdatePeriodicity();
+}
+
+void ComponentNeBem3d::SetMirrorPeriodicityX(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetMirrorPeriodicityX:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[0] = s;
+  m_periodic[0] = false;
+  m_mirrorPeriodic[0] = true;
+  UpdatePeriodicity();
+}
+
+void ComponentNeBem3d::SetMirrorPeriodicityY(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetMirrorPeriodicityY:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[1] = s;
+  m_periodic[1] = false;
+  m_mirrorPeriodic[1] = true;
+  UpdatePeriodicity();
+}
+
+void ComponentNeBem3d::SetMirrorPeriodicityZ(const double s) {
+  if (s < Small) {
+    std::cerr << m_className << "::SetMirrorPeriodicityZ:\n"
+              << "    Periodic length must be greater than zero.\n";
+    return;
+  }
+  m_periodicLength[2] = s;
+  m_periodic[2] = false;
+  m_mirrorPeriodic[2] = true;
+  UpdatePeriodicity();
+}
+
+bool ComponentNeBem3d::GetPeriodicityX(double& s) const {
+  if (!m_periodic[0] && !m_mirrorPeriodic[0]) {
+    s = 0.;
+    return false;
+  }
+  s = m_periodicLength[0];
+  return true;
+}
+
+bool ComponentNeBem3d::GetPeriodicityY(double& s) const {
+  if (!m_periodic[1] && !m_mirrorPeriodic[1]) {
+    s = 0.;
+    return false;
+  }
+  s = m_periodicLength[1];
+  return true;
+}
+
+bool ComponentNeBem3d::GetPeriodicityZ(double& s) const {
+  if (!m_periodic[2] && !m_mirrorPeriodic[2]) {
+    s = 0.;
+    return false;
+  }
+  s = m_periodicLength[2];
+  return true;
 }
 
 bool ComponentNeBem3d::Initialise() {
@@ -454,6 +766,18 @@ bool ComponentNeBem3d::Initialise() {
     solids[id] = solid;
     bc[id] = solid->GetBoundaryConditionType();
     volt[id] = solid->GetBoundaryPotential();
+    if (bc[id] == Solid::Unknown) {
+      std::cout << m_className << "::Initialise:\n"
+                << "    Boundary conditions for solid " << id << " not set.\n";
+      if (medium && medium->IsConductor()) {
+        std::cout << "    Assuming the panels to be grounded.\n";
+        bc[id] = Solid::Voltage;
+        volt[id] = 0.; 
+      } else {
+        std::cout << "    Assuming dielectric-dielectric interfaces.\n";
+        bc[id] = Solid::Dielectric;
+      }
+    } 
     charge[id] = solid->GetBoundaryChargeDensity();
     if (!medium) {
       eps[id] = 1.;
@@ -464,7 +788,7 @@ bool ComponentNeBem3d::Initialise() {
   // Apply cuts.
   // CALL CELSCT('APPLY')
   // Reduce to basic periodic copy.
-  // CALL BEMBAS
+  ShiftPanels(panelsIn);
 
   // Find contact panels and split into primitives.
 
@@ -485,6 +809,10 @@ bool ComponentNeBem3d::Initialise() {
   }
   // Keep track of which panels have been processed.
   std::vector<bool> mark(nIn, false);
+  // Count the number of interface panels that have been discarded.
+  unsigned int nTrivial = 0;
+  unsigned int nConflicting = 0;
+  unsigned int nNotImplemented = 0;
   // Pick up panels which coincide potentially.
   for (unsigned int i = 0; i < nIn; ++i) {
     // Skip panels already done.
@@ -748,6 +1076,13 @@ bool ComponentNeBem3d::Initialise() {
                     << " is not implemented. Skip.\n";
         }
       }
+      if (interfaceType < 0) {
+        ++nConflicting;
+      } else if (interfaceType < 1) {
+        ++nTrivial;
+      } else if (interfaceType > 5) {
+        ++nNotImplemented;
+      } 
       if (interfaceType < 1 || interfaceType > 5) continue;
 
       std::vector<Panel> panelsOut;
@@ -788,11 +1123,66 @@ bool ComponentNeBem3d::Initialise() {
             primitive.elementSize = solid->GetDiscretisationLevel(panel);
           }
         }
+        primitive.vol1 = vol1[j];
+        primitive.vol2 = vol2[j];
         m_primitives.push_back(std::move(primitive));
       }
     }
   }
 
+  // Add the wires.
+  for (unsigned int i = 0; i < nSolids; ++i) {
+    const auto solid = m_geometry->GetSolid(i);
+    if (!solid) continue;
+    if (!solid->IsWire()) continue;
+    double x0 = 0., y0 = 0., z0 = 0.;
+    solid->GetCentre(x0, y0, z0);
+    double dx = 0., dy = 0., dz = 1.;
+    solid->GetDirection(dx, dy, dz);
+    const double dnorm = sqrt(dx * dx + dy * dy + dz * dz);
+    if (dnorm < Small) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Wire has zero norm direction vector; skipped.\n";
+      continue;
+    }
+    dx /= dnorm;
+    dy /= dnorm;
+    dz /= dnorm;
+    const double h = solid->GetHalfLengthZ();
+    Primitive primitive;
+    primitive.a = solid->GetRadius();
+    primitive.b = 0.;
+    primitive.c = 0.;
+    primitive.xv = {x0 - h * dx, x0 + h * dx};
+    primitive.yv = {y0 - h * dy, y0 + h * dy};
+    primitive.zv = {z0 - h * dz, z0 + h * dz};
+    primitive.v = solid->GetBoundaryPotential();
+    primitive.q = solid->GetBoundaryChargeDensity();
+    primitive.lambda = 0.;
+    primitive.interface = InterfaceType(solid->GetBoundaryConditionType());
+    // Set the requested discretization level (target element size).
+    Panel panel;
+    primitive.elementSize = solid->GetDiscretisationLevel(panel);
+    primitive.vol1 = solid->GetId();
+    primitive.vol2 = -1;
+    m_primitives.push_back(std::move(primitive));
+  }
+  // Print a warning if we have discarded some panels during the process.
+  if (nTrivial > 0 || nConflicting > 0 || nNotImplemented > 0) {
+    std::cerr << m_className << "::Initialise:\n";
+    if (nConflicting > 0) {
+      std::cerr << "    Skipped " << nConflicting 
+                << " panels with conflicting boundary conditions.\n";
+    } 
+    if (nNotImplemented > 0) {
+      std::cerr << "    Skipped " << nNotImplemented 
+                << " panels with not yet available boundary conditions.\n";
+    }
+    if (nTrivial > 0) {
+       std::cerr << "    Skipped " << nTrivial 
+                 << " panels with trivial boundary conditions.\n";
+    } 
+  }
   if (m_debug) {
     std::cout << m_className << "::Initialise:\n"
               << "    Created " << m_primitives.size() << " primitives.\n";
@@ -824,7 +1214,253 @@ bool ComponentNeBem3d::Initialise() {
                       std::make_move_iterator(elements.begin()),
                       std::make_move_iterator(elements.end()));
   }
+  neBEM::NbThreads = m_nThreads;
+  if (neBEM::neBEMInitialize() != 0) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Initialising neBEM failed.\n";
+    return false;
+  }
+  gComponentNeBem3d = this;
+  // Set the user options.
+  neBEM::MinNbElementsOnLength = m_minNbElementsOnLength;
+  neBEM::MaxNbElementsOnLength = m_maxNbElementsOnLength;
+  neBEM::ElementLengthRqstd = m_targetElementSize * 0.01;
+
+  // New model / reuse existing model flag.
+  // TODO!
+  neBEM::NewModel = 1;
+  neBEM::NewMesh = 1;
+  neBEM::NewBC = 1;
+  neBEM::NewPP = 1;
+  // Pass debug level.
+  neBEM::DebugLevel = m_debug ? 101 : 0;
+  // Store inverted matrix or not.
+  // TODO!
+  neBEM::OptStoreInvMatrix = 0;
+  neBEM::OptFormattedFile = 0;
+  // Matrix inversion method (LU or SVD).
+  if (m_inversion == Inversion::LU) {
+    neBEM::OptInvMatProc = 0;
+  } else {
+    neBEM::OptInvMatProc = 1;
+  }
+  // Delete existing weighting fields (if any).
+  if (neBEM::WtFieldChDen != NULL) {
+    neBEM::neBEMDeleteAllWeightingFields();
+  }
+  // Transfer the geometry.
+  if (neBEM::neBEMReadGeometry() != 0) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Transferring the geometry to neBEM failed.\n";
+    return false;
+  }
+
+  // Discretization.
+  int** elementNbs = neBEM::imatrix(1, neBEM::NbPrimitives, 1, 2);
+  for (int i = 1; i <= neBEM::NbPrimitives; ++i) {
+    const int vol1 = neBEM::VolRef1[i];
+    double size1 = -1.;
+    if (solids.find(vol1) != solids.end()) {
+      const auto solid = solids[vol1];
+      if (solid) {
+        Panel panel;
+        panel.a = neBEM::XNorm[i];
+        panel.b = neBEM::YNorm[i];
+        panel.c = neBEM::ZNorm[i];
+        const int nv = neBEM::NbVertices[i];
+        panel.xv.resize(nv);
+        panel.yv.resize(nv);
+        panel.zv.resize(nv);
+        for (int j = 0; j < nv; ++j) {
+          panel.xv[j] = neBEM::XVertex[i][j];
+          panel.yv[j] = neBEM::YVertex[i][j];
+          panel.zv[j] = neBEM::ZVertex[i][j];
+        }
+        size1 = solid->GetDiscretisationLevel(panel);
+      }
+    }
+    int vol2 = neBEM::VolRef2[i];
+    double size2 = -1.;
+    if (solids.find(vol2) != solids.end()) {
+      const auto solid = solids[vol2];
+      if (solid) {
+        Panel panel;
+        panel.a = -neBEM::XNorm[i];
+        panel.b = -neBEM::YNorm[i];
+        panel.c = -neBEM::ZNorm[i];
+        const int nv = neBEM::NbVertices[i];
+        panel.xv.resize(nv);
+        panel.yv.resize(nv);
+        panel.zv.resize(nv);
+        for (int j = 0; j < nv; ++j) {
+          panel.xv[j] = neBEM::XVertex[i][j];
+          panel.yv[j] = neBEM::YVertex[i][j];
+          panel.zv[j] = neBEM::ZVertex[i][j];
+        }
+        size2 = solid->GetDiscretisationLevel(panel);
+      }
+    }
+    double size = m_targetElementSize;
+    if (size1 > 0. && size2 > 0.) {
+      size = std::min(size1, size2);
+    } else if (size1 > 0.) {
+      size = size1;
+    } else if (size2 > 0.) {
+      size = size2;
+    }
+    // Convert from cm to m.
+    size *= 0.01;
+
+    // Work out the element dimensions.
+    const double dx1 = neBEM::XVertex[i][0] - neBEM::XVertex[i][1];
+    const double dy1 = neBEM::YVertex[i][0] - neBEM::YVertex[i][1];
+    const double dz1 = neBEM::ZVertex[i][0] - neBEM::ZVertex[i][1];
+    const double l1 = dx1 * dx1 + dy1 * dy1 + dz1 * dz1;
+    int nb1 = (int)(sqrt(l1) / size);
+    // Truncate to desired range.
+    if (nb1 < neBEM::MinNbElementsOnLength) {
+      nb1 = neBEM::MinNbElementsOnLength;
+    } else if (nb1 > neBEM::MaxNbElementsOnLength) {
+      nb1 = neBEM::MaxNbElementsOnLength;
+    }
+    int nb2 = 0;
+    if (neBEM::NbVertices[i] > 2) {
+      const double dx2 = neBEM::XVertex[i][2] - neBEM::XVertex[i][1];
+      const double dy2 = neBEM::YVertex[i][2] - neBEM::YVertex[i][1];
+      const double dz2 = neBEM::ZVertex[i][2] - neBEM::ZVertex[i][1];
+      const double l2 = dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
+      nb2 = (int)(sqrt(l2) / size);
+      if (nb2 < neBEM::MinNbElementsOnLength) {
+        nb2 = neBEM::MinNbElementsOnLength;
+      } else if (nb2 > neBEM::MaxNbElementsOnLength) {
+        nb2 = neBEM::MaxNbElementsOnLength;
+      }
+    }
+    elementNbs[i][1] = nb1;
+    elementNbs[i][2] = nb2;
+  }
+
+  if (neBEM::neBEMDiscretize(elementNbs) != 0) {
+    std::cerr << m_className << "::Initialise: Discretization failed.\n";
+    neBEM::free_imatrix(elementNbs, 1, neBEM::NbPrimitives, 1, 2); 
+    return false;
+  }
+  neBEM::free_imatrix(elementNbs, 1, neBEM::NbPrimitives, 1, 2);
+  if (neBEM::neBEMBoundaryConditions() != 0) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Setting the boundary conditions failed.\n";
+    return false;
+  }
+  if (neBEM::neBEMSolve() != 0) {
+    std::cerr << m_className << "::Initialise: Solution failed.\n";
+    return false;
+  }
+  // Now the weighting fields.
+  std::set<std::string> labels;
+  for (unsigned int i = 0; i < nSolids; ++i) {
+    const auto solid = m_geometry->GetSolid(i);
+    if (!solid) continue;
+    const std::string label = solid->GetLabel();
+    if (!label.empty()) labels.insert(label);
+  }
+  for (const auto& label : labels) {
+    std::vector<int> primitives;
+    for (unsigned int i = 0; i < nSolids; ++i) {
+      const auto solid = m_geometry->GetSolid(i);
+      if (!solid) continue;
+      if (solid->GetLabel() != label) continue;
+      const int id = solid->GetId();
+      // Add the primitives associated to this solid to the list.
+      for (int j = 1; j <= neBEM::NbPrimitives; ++j) {
+        if (neBEM::VolRef1[j] == id || neBEM::VolRef2[j] == id) {
+          primitives.push_back(j);
+        }
+      }
+    }
+    // Request the weighting field for this list of primitives.
+    const int np = primitives.size();
+    const int id = neBEM::neBEMPrepareWeightingField(np, primitives.data());
+    if (id < 0) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Weighting field calculation for readout group \""
+                << label << "\" failed.\n";
+      continue;
+    } else {
+      std::cout << m_className << "::Initialise:\n"
+                << "    Prepared weighting field for readout group \""
+                << label << "\".\n";
+      m_wfields[label] = id;
+    }
+  }
+  // TODO! Not sure if we should call this here.
+  // neBEM::neBEMEnd();
+  m_ready = true;
   return true;
+}
+
+void ComponentNeBem3d::ShiftPanels(std::vector<Panel>& panels) const {
+
+  // *---------------------------------------------------------------------
+  // *   BEMBAS - Reduces panels to the basic period.
+  // *---------------------------------------------------------------------
+  const bool perx = m_periodic[0] || m_mirrorPeriodic[0];
+  const bool pery = m_periodic[1] || m_mirrorPeriodic[1];
+  const bool perz = m_periodic[2] || m_mirrorPeriodic[2];
+  // Nothing to do if there is no periodicity.
+  if (!perx && !pery && !perz) return;
+
+  // Loop over the panels.
+  for (auto& panel : panels) {
+    const auto nv = panel.xv.size();
+    if (nv == 0) continue;
+    // Determine the centre of gravity.
+    double xc = std::accumulate(panel.xv.begin(), panel.xv.end(), 0.);
+    double yc = std::accumulate(panel.yv.begin(), panel.yv.end(), 0.);
+    double zc = std::accumulate(panel.zv.begin(), panel.zv.end(), 0.);
+    xc /= nv;
+    yc /= nv;
+    zc /= nv;
+    // Any change ?
+    constexpr double eps = 1.e-6;
+    double rx = 0.;
+    int nx = 0;
+    if (perx && m_periodicLength[0] > 0.) {
+      rx = xc / m_periodicLength[0];
+      nx = std::round(rx);
+      if (std::abs(rx - nx - 0.5) < eps) ++nx;
+    }
+    double ry = 0.;
+    int ny = 0;
+    if (pery && m_periodicLength[1] > 0.) {
+      ry = yc / m_periodicLength[1];
+      ny = std::round(ry);
+      if (std::abs(ry - ny - 0.5) < eps) ++ny;
+    }
+    double rz = 0.;
+    int nz = 0;
+    if (perz && m_periodicLength[2] > 0.) {
+      rz = zc / m_periodicLength[2];
+      nz = std::round(rz);
+      if (std::abs(rz - nz - 0.5) < eps) ++nz;
+    }
+    // Skip if there is no shift.
+    if (nx == 0 && ny == 0 && nz == 0) continue;
+    // Shift for x-periodicity.
+    if (nx != 0) {
+      const double shift = nx * m_periodicLength[0];
+      for (auto& x : panel.xv) x -= shift;
+    }
+    // Shift for y-periodicity.
+    if (ny != 0) {
+      const double shift = ny * m_periodicLength[1];
+      for (auto& y : panel.yv) y -= shift;
+    }
+    // Shift for z-periodicity.
+    if (nz != 0) {
+      const double shift = nz * m_periodicLength[2];
+      for (auto& z : panel.zv) z -= shift;
+    }
+  }
 }
 
 int ComponentNeBem3d::InterfaceType(const Solid::BoundaryCondition bc) const {
@@ -2496,6 +3132,77 @@ bool ComponentNeBem3d::GetPrimitive(const unsigned int i, double& a, double& b,
   return true;
 }
 
+bool ComponentNeBem3d::GetPrimitive(const unsigned int i, double& a, double& b,
+                                    double& c, std::vector<double>& xv,
+                                    std::vector<double>& yv,
+                                    std::vector<double>& zv, int& vol1, int& vol2) const {
+  if (i >= m_primitives.size()) {
+    std::cerr << m_className << "::GetPrimitive: Index out of range.\n";
+    return false;
+  }
+  const auto& primitive = m_primitives[i];
+  a = primitive.a;
+  b = primitive.b;
+  c = primitive.c;
+  xv = primitive.xv;
+  yv = primitive.yv;
+  zv = primitive.zv;
+  vol1 = primitive.vol1;
+  vol2 = primitive.vol2;
+  return true;
+}
+
+bool ComponentNeBem3d::GetVolume(const unsigned int vol, int& shape,
+                                 int& material, double& epsilon, 
+                                 double& potential, double& charge,
+                                 int& bc) {
+
+  if (!m_geometry) return false;
+  const unsigned int nSolids = m_geometry->GetNumberOfSolids();
+  for (unsigned int i = 0; i < nSolids; ++i) {
+    Medium* medium = nullptr;
+    const auto solid = m_geometry->GetSolid(i, medium);
+    if (!solid) continue;
+    if (solid->GetId() != vol) continue;
+    if (solid->IsTube() || solid->IsWire()) {
+      shape = 1;
+    } else if (solid->IsHole()) {
+      shape = 2;
+    } else if (solid->IsBox()) {
+      shape = 3;
+    } else if (solid->IsSphere()) {
+      shape = 4;
+    } else if (solid->IsRidge()) {
+      shape = 5;
+    } else if (solid->IsExtrusion()) {
+      shape = 6;
+    } else {
+      std::cerr << m_className << "::GetVolume: Unknown solid shape.\n";
+      return false;
+    }
+    material = medium ? medium->GetId() : 11;
+    epsilon = medium ? medium->GetDielectricConstant() : 1.;
+    potential = solid->GetBoundaryPotential();
+    charge = solid->GetBoundaryChargeDensity();
+    bc = solid->GetBoundaryConditionType();
+    return true;
+  }
+  return false;
+}
+
+int ComponentNeBem3d::GetVolume(const double x, const double y, 
+                                const double z) {
+  if (!m_geometry) return -1;
+  const unsigned int nSolids = m_geometry->GetNumberOfSolids();
+  for (unsigned int i = 0; i < nSolids; ++i) {
+    Medium* medium = nullptr;
+    const auto solid = m_geometry->GetSolid(i, medium);
+    if (!solid) continue;
+    if (solid->IsInside(x, y, z)) return solid->GetId();
+  }
+  return -1;
+}
+
 bool ComponentNeBem3d::GetElement(const unsigned int i, 
                                   std::vector<double>& xv, 
                                   std::vector<double>& yv,
@@ -2519,11 +3226,42 @@ bool ComponentNeBem3d::GetElement(const unsigned int i,
 void ComponentNeBem3d::Reset() {
   m_primitives.clear();
   m_elements.clear();
+  m_ynplan.fill(false);
+  m_coplan.fill(0.);
+  m_vtplan.fill(0.);
   m_ready = false;
 }
 
 void ComponentNeBem3d::UpdatePeriodicity() {
-  std::cerr << m_className << "::UpdatePeriodicity:\n"
-            << "    Periodicities are not supported.\n";
+
+  for (unsigned int i = 0; i < 3; ++i) {
+    // Cannot have regular and mirror periodicity at the same time.
+    if (m_periodic[i] && m_mirrorPeriodic[i]) {
+      std::cerr << m_className << "::UpdatePeriodicity:\n"
+                << "    Both simple and mirror periodicity requested. Reset.\n";
+      m_periodic[i] = false;
+      m_mirrorPeriodic[i] = false;
+      continue;
+    }
+    if ((m_periodic[i] || m_mirrorPeriodic[i]) && m_periodicLength[i] < Small) {
+      std::cerr << m_className << "::UpdatePeriodicity:\n"
+                << "    Periodic length is not set. Reset.\n";
+      m_periodic[i] = m_mirrorPeriodic[i] = false; 
+    }
+  }
+
+  if (m_axiallyPeriodic[0] || m_axiallyPeriodic[1] || m_axiallyPeriodic[2]) {
+    std::cerr << m_className << "::UpdatePeriodicity:\n"
+              << "    Axial periodicity is not available.\n";
+    m_axiallyPeriodic.fill(false);
+  }
+
+  if (m_rotationSymmetric[0] || m_rotationSymmetric[1] ||
+      m_rotationSymmetric[2]) {
+    std::cerr << m_className << "::UpdatePeriodicity:\n"
+              << "    Rotation symmetry is not available.\n";
+    m_rotationSymmetric.fill(false);
+  }
+
 }
 }
