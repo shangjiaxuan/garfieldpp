@@ -1152,6 +1152,54 @@ void Sensor::AddNoise(const bool total, const bool electron, const bool ion) {
   }
 }
 
+void Sensor::AddWhiteNoise(const std::string& label, const double enc, 
+                           const bool poisson, const double q0) {
+
+  if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
+    std::cerr << m_className << "::AddWhiteNoise: Transfer function not set.\n";
+    return;
+  }
+  if (m_nEvents == 0) m_nEvents = 1;
+  
+  const double f2 = TransferFunctionSq();
+  if (f2 < 0.) {
+    std::cerr << m_className << "::AddWhiteNoise:\n"
+              << "  Could not calculate transfer function integral.\n";
+    return;
+  }
+
+  if (poisson) {
+    // Frequency of random delta pulses to model noise.
+    const double nu = (enc * enc / (q0 * q0)) / f2;
+    // Average number of delta pulses.
+    const double avg = nu * m_tStep * m_nTimeBins;
+    // Sample the number of pulses.
+    for (auto& electrode : m_electrodes) {
+      if (label != electrode.label) continue;
+      const int nPulses = RndmPoisson(avg);
+      for (int j = 0; j < nPulses; ++j) {
+        const int bin = static_cast<int>(m_nTimeBins * RndmUniform());
+        electrode.signal[bin] += q0;
+      }
+      const double offset = q0 * nu * m_tStep;
+      for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+        electrode.signal[j] -= offset;
+      }
+      break;
+    }
+  } else {
+    // Gaussian approximation.
+    const double sigma = enc * sqrt(m_tStep / f2);
+    for (auto& electrode : m_electrodes) {
+      if (label != electrode.label) continue;
+      for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+        electrode.signal[j] += RndmGaussian(0., sigma);
+      }
+      break;
+    }
+  }
+}
+
 void Sensor::AddWhiteNoise(const double enc, const bool poisson, 
                            const double q0) {
 

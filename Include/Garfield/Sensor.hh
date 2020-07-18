@@ -161,14 +161,19 @@ class Sensor {
   void AddNoise(const bool total = true, const bool electron = false,
                 const bool ion = false);
   /** Add white noise to the induced signal, given a desired output ENC.
+    * \param label name of the electrode 
     * \param enc Equivalent Noise Charge, in electrons.
     * \param poisson flag to sample the number of noise pulses from a 
     *                Poisson distribution. Otherwise the noise charge in each
     *                bin is sampled from a Gaussian distribution.
     * \param q0      amplitude of the noise delta pulses (in electrons). 
     */
+  void AddWhiteNoise(const std::string& label, const double enc, 
+                     const bool poisson = true, const double q0 = 1.);
+  /// Add white noise to the induced signals on all electrodes.
   void AddWhiteNoise(const double enc, const bool poisson = true, 
                      const double q0 = 1.);
+
   /** Determine the threshold crossings of the current signal curve.
     * \param thr threshold value
     * \param label electrode for which to compute the threshold crossings
