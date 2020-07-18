@@ -86,9 +86,9 @@ class ComponentNeBem3d : public ComponentBase {
   /// Invert the influence matrix using singular value decomposition.
   void UseSVDInversion() { m_inversion = Inversion::SVD; }
 
-  /// Set the parameters \f$n_x, n_y, n_z$\f defining the number of periodic 
+  /// Set the parameters \f$n_x, n_y, n_z\f$ defining the number of periodic 
   /// copies that neBEM will use when dealing with periodic configurations.
-  /// neBEM will use \f$2 \times n + 1$\f copies (default: \f$n = 5$\f).
+  /// neBEM will use \f$2 \times n + 1\f$ copies (default: \f$n = 5\f$).
   void SetPeriodicCopies(const unsigned int nx, const unsigned int ny,
                          const unsigned int nz);
   /// Retrieve the number of periodic copies used by neBEM.
