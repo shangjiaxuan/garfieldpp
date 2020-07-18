@@ -62,9 +62,9 @@ double Sensor::GetIonSignal(const std::string label, const int bin);
   the sum of both electron and hole signals.   
   \item
   After the signal of a given track is finished, call
-  \begin{lstlisting}
+\begin{lstlisting}
 void Sensor::ClearSignal();
-  \end{lstlisting}
+\end{lstlisting}
   to reset the signal to zero.
 \end{enumerate}
 
@@ -191,8 +191,16 @@ Sensor::SetTransferFunction(Shaper& shaper);
 The presently stored signal can be convoluted with the 
 transfer function (specified using one of the methods above) using 
 \begin{lstlisting}
+bool Sensor::ConvoluteSignal(const std::string& label);
+\end{lstlisting}
+\begin{description}
+  \item[label] name of the electrode
+\end{description}
+The function
+\begin{lstlisting}
 bool Sensor::ConvoluteSignal();
 \end{lstlisting}
+convolutes the signals of all electrodes with the transfer function.
 
 As an example, consider the following transfer function
 \begin{equation*}
@@ -201,9 +209,8 @@ As an example, consider the following transfer function
 \end{equation*}
 \ie~a unipolar shaper with $n = 1$. The two code snippets 
 below illustrate different methods for applying this transfer function 
-to the induced signal. 
-\begin{itemize}
-\item 
+to the induced signal. In the first one, we pass a pointer to a 
+C-style function to the \texttt{Sensor}.
 \begin{lstlisting}
 double transfer(double t) {
   constexpr double tau = 25.;
@@ -224,8 +231,7 @@ int main(int argc, char* argv[]) {
 }
 \end{lstlisting}
 
-\item
-
+In the second one, we use a \texttt{Shaper} object.
 \begin{lstlisting}
 int main(int argc, char* argv[]) {
 
@@ -238,7 +244,6 @@ int main(int argc, char* argv[]) {
   // ...
 }
 \end{lstlisting}
-\end{itemize}
 
 \subsection{Noise}
 Prior to convoluting the induced current with a transfer function, 
