@@ -143,6 +143,9 @@ class ComponentGrid : public ComponentBase {
                           const unsigned int col,
                           const double scaleX = 1.);
 
+  bool HasAttachmentMap() const override {
+    return !(m_eAttachment.empty() && m_hAttachment.empty());
+  } 
   bool ElectronAttachment(const double x, const double y, const double z,
                           double& att) override;
   bool HoleAttachment(const double x, const double y, const double z,
@@ -167,6 +170,9 @@ class ComponentGrid : public ComponentBase {
                         const double scaleX = 1.,
                         const double scaleV = 1.e-9);
 
+  bool HasVelocityMap() const override {
+    return !(m_eVelocity.empty() && m_hVelocity.empty());
+  } 
   bool ElectronVelocity(const double x, const double y, const double z,
                         double& vx, double& vy, double& vz) override;
   bool HoleVelocity(const double x, const double y, const double z,

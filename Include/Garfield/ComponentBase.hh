@@ -262,9 +262,9 @@ class ComponentBase {
   void DisableDebugging() { m_debug = false; }
 
   /// Does the component have attachment maps?
-  virtual bool HasAttachmentMap() { return m_hasAttachmentMap; }
+  virtual bool HasAttachmentMap() const { return false; }
   /// Does the component have velocity maps?
-  virtual bool HasVelocityMap() { return m_hasVelocityMap; }
+  virtual bool HasVelocityMap() const { return false; }
 
   /// Get the electron attachment coefficient.
   virtual bool ElectronAttachment(const double /*x*/, const double /*y*/,
@@ -313,11 +313,6 @@ class ComponentBase {
   /// Ready for use?
   bool m_ready = false;
 
-  /// Does the component have attachment maps?
-  bool m_hasAttachmentMap = false;
-  /// Does the component have velocity maps?
-  bool m_hasVelocityMap = false;
-
   /// Simple periodicity in x, y, z.
   std::array<bool, 3> m_periodic = {{false, false, false}};
   /// Mirror periodicity in x, y, z.
@@ -327,7 +322,8 @@ class ComponentBase {
   /// Rotation symmetry around x-axis, y-axis, z-axis.
   std::array<bool, 3> m_rotationSymmetric = {{false, false, false}};
 
-  double m_bx0 = 0., m_by0 = 0., m_bz0 = 0.;  ///< Constant magnetic field.
+  /// Constant magnetic field.
+  std::array<double, 3> m_b0 = {{0., 0., 0.}};
 
   /// Switch on/off debugging messages
   bool m_debug = false;

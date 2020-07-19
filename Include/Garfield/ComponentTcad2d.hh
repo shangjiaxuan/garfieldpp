@@ -85,7 +85,9 @@ class ComponentTcad2d : public ComponentBase {
   bool GetMobility(const double x, const double y, const double z, double& emob,
                    double& hmob);
 
-  // Velocity field maps
+  /// Switch use of the imported velocity map on/off.
+  void EnableVelocityMap(const bool on) { m_useVelocityMap = on; }
+  bool HasVelocityMap() const override { return m_useVelocityMap; }
   bool ElectronVelocity(const double x, const double y, const double z,
                         double& vx, double& vy, double& vz) override;
   bool HoleVelocity(const double x, const double y, const double z, 
@@ -112,6 +114,9 @@ class ComponentTcad2d : public ComponentBase {
   bool SetAcceptor(const unsigned int acceptorNumber, const double eXsec,
                    const double hxSec, const double concentration);
 
+  /// Switch use of the imported trapping map on/off.
+  void EnableAttachmentMap(const bool on) { m_useAttachmentMap = on; }
+  bool HasAttachmentMap() const override;
   bool ElectronAttachment(const double x, const double y, const double z,
                           double& eta) override;
   bool HoleAttachment(const double x, const double y, const double z,
@@ -195,6 +200,10 @@ class ComponentTcad2d : public ComponentBase {
   bool m_hasHoleVelocity = false;
   bool m_hasElectronLifetime = false;
   bool m_hasHoleLifetime = false;
+
+  // Use velocity and trapping maps or not.
+  bool m_useVelocityMap = false;
+  bool m_useAttachmentMap = false;
 
   // Are all the cross-sections and concentrations valid and set.
   bool m_validTraps = false;

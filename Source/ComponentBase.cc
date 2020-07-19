@@ -64,9 +64,9 @@ double ComponentBase::WeightingPotential(const double /*x*/, const double /*y*/,
 void ComponentBase::MagneticField(const double x, const double y,
                                   const double z, double& bx, double& by,
                                   double& bz, int& status) {
-  bx = m_bx0;
-  by = m_by0;
-  bz = m_bz0;
+  bx = m_b0[0];
+  by = m_b0[1];
+  bz = m_b0[2];
   if (m_debug) {
     std::cout << m_className << "::MagneticField: Field at (" << x << ", " << y
               << ", " << z << ") is (" << bx << ", " << by << ", " << bz
@@ -77,9 +77,7 @@ void ComponentBase::MagneticField(const double x, const double y,
 
 void ComponentBase::SetMagneticField(const double bx, const double by,
                                      const double bz) {
-  m_bx0 = bx;
-  m_by0 = by;
-  m_bz0 = bz;
+  m_b0 = {bx, by, bz};
 }
 
 bool ComponentBase::GetBoundingBox(double& xmin, double& ymin, double& zmin,

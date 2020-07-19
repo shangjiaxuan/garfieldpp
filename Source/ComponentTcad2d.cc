@@ -49,6 +49,10 @@ bool ComponentTcad2d::SetAcceptor(const unsigned int acceptorNumber,
   return true;
 }
 
+bool ComponentTcad2d::HasAttachmentMap() const {
+  return (m_useAttachmentMap && m_validTraps);
+}
+
 bool ComponentTcad2d::ElectronAttachment(const double x, const double y,
                                          const double z, double& eta) {
   eta = 0.;
