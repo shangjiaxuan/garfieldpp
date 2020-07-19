@@ -160,13 +160,11 @@ class ComponentGrid : public ComponentBase {
    */ 
   bool LoadElectronVelocity(const std::string& fname, 
                             const std::string& fmt,
-                            const unsigned int col, 
                             const double scaleX = 1.,
                             const double scaleV = 1.e-9);
   /// Import a map of hole drift velocities from a file.
   bool LoadHoleVelocity(const std::string& fname, 
                         const std::string& fmt,
-                        const unsigned int col, 
                         const double scaleX = 1.,
                         const double scaleV = 1.e-9);
 

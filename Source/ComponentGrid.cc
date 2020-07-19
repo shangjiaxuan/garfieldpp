@@ -1316,7 +1316,6 @@ void ComponentGrid::Initialise(
 
 bool ComponentGrid::LoadElectronVelocity(const std::string& fname, 
                                          const std::string& fmt,
-                                         const unsigned int col, 
                                          const double scaleX,
                                          const double scaleV) {
   // Read the file.
@@ -1328,7 +1327,6 @@ bool ComponentGrid::LoadElectronVelocity(const std::string& fname,
 
 bool ComponentGrid::LoadHoleVelocity(const std::string& fname, 
                                      const std::string& fmt,
-                                     const unsigned int col, 
                                      const double scaleX,
                                      const double scaleV) {
   // Read the file.
