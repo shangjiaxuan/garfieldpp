@@ -675,20 +675,17 @@ bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium,
   v.fill(0.);
   bool ok = false;
   if (m_useVelocityMap && particle != Particle::Ion) {
-    // We assume there is only one component with active velocity.
+    // We assume there is only one component with a velocity map.
     const unsigned int nComponents = m_sensor->GetNumberOfComponents();
     for (unsigned int i = 0; i < nComponents; ++i) {
       ComponentBase* cmp = m_sensor->GetComponent(i);
-      if (!cmp->IsVelocityActive()) continue;
+      if (!cmp->HasVelocityMap()) continue;
       if (particle == Particle::Electron) {
         ok = cmp->ElectronVelocity(x[0], x[1], x[2], v[0], v[1], v[2]);
       } else if (particle == Particle::Hole) {
         ok = cmp->HoleVelocity(x[0], x[1], x[2], v[0], v[1], v[2]);
       }
-      if (!ok) {
-        PrintError("GetVelocity", "velocity", particle, x);
-        return false;
-      }
+      if (!ok) continue;
       // Seems to have worked.
       if (m_debug) {
         std::cout << m_className << "::GetVelocity: Velocity at "
@@ -744,11 +741,11 @@ double AvalancheMC::GetAttachment(const Particle particle, Medium* medium,
     const unsigned int nComponents = m_sensor->GetNumberOfComponents();
     for (unsigned int i = 0; i < nComponents; ++i) {
       ComponentBase* cmp = m_sensor->GetComponent(i);
-      if (!cmp->IsTrapActive()) continue;
+      if (!cmp->HasAttachmentMap()) continue;
       if (particle == Particle::Electron) {
-        cmp->ElectronAttachment(x[0], x[1], x[2], eta);
+        if (!cmp->ElectronAttachment(x[0], x[1], x[2], eta)) continue;
       } else {
-        cmp->HoleAttachment(x[0], x[1], x[2], eta);
+        if (!cmp->HoleAttachment(x[0], x[1], x[2], eta)) continue;
       }
       return eta;
     }

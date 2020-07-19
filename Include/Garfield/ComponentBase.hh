@@ -261,15 +261,10 @@ class ComponentBase {
   /// Switch off debugging messages.
   void DisableDebugging() { m_debug = false; }
 
-  /// Request trapping to be taken care of by the component (for TCAD).
-  void ActivateTraps() { m_activeTraps = true; }
-  void DeactivateTraps() { m_activeTraps = false; }
-  bool IsTrapActive() { return m_activeTraps; }
-
-  /// Request velocity to be taken care of by the component (for TCAD).
-  void ActivateVelocityMap() { m_hasVelocityMap = true; }
-  void DectivateVelocityMap() { m_hasVelocityMap = false; }
-  bool IsVelocityActive() { return m_hasVelocityMap; }
+  /// Does the component have attachment maps?
+  virtual bool HasAttachmentMap() { return m_hasAttachmentMap; }
+  /// Does the component have velocity maps?
+  virtual bool HasVelocityMap() { return m_hasVelocityMap; }
 
   /// Get the electron attachment coefficient.
   virtual bool ElectronAttachment(const double /*x*/, const double /*y*/,
@@ -318,8 +313,8 @@ class ComponentBase {
   /// Ready for use?
   bool m_ready = false;
 
-  /// Does the component have traps?
-  bool m_activeTraps = false;
+  /// Does the component have attachment maps?
+  bool m_hasAttachmentMap = false;
   /// Does the component have velocity maps?
   bool m_hasVelocityMap = false;
 
