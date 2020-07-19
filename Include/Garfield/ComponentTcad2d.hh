@@ -86,11 +86,11 @@ class ComponentTcad2d : public ComponentBase {
                    double& hmob);
 
   // Velocity field maps
-  void ElectronVelocity(const double x, const double y, const double z,
-                        double& vx, double& vy, double& vz, Medium*& m,
-                        int& status) override;
-  void HoleVelocity(const double x, const double y, const double z, double& vx,
-                    double& vy, double& vz, Medium*& m, int& status) override;
+  bool ElectronVelocity(const double x, const double y, const double z,
+                        double& vx, double& vy, double& vz) override;
+  bool HoleVelocity(const double x, const double y, const double z, 
+                    double& vx, double& vy, double& vz) override;
+
   // Lifetime field maps
   bool GetElectronLifetime(const double x, const double y, const double z,
                            double& etau) override;

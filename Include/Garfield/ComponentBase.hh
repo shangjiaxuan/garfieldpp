@@ -284,18 +284,18 @@ class ComponentBase {
     return false;
   }
   /// Get the electron drift velocity.
-  virtual void ElectronVelocity(const double /*x*/, const double /*y*/,
+  virtual bool ElectronVelocity(const double /*x*/, const double /*y*/,
                                 const double /*z*/, double& vx, double& vy,
-                                double& vz, Medium*& /*m*/, int& status) {
+                                double& vz) {
     vx = vy = vz = 0;
-    status = -100;
+    return false;
   }
   /// Get the hole drift velocity.
-  virtual void HoleVelocity(const double /*x*/, const double /*y*/,
+  virtual bool HoleVelocity(const double /*x*/, const double /*y*/,
                             const double /*z*/, double& vx, double& vy,
-                            double& vz, Medium*& /*m*/, int& status) {
+                            double& vz) {
     vx = vy = vz = 0;
-    status = -100;
+    return false;
   }
   virtual bool GetElectronLifetime(const double /*x*/, const double /*y*/,
                                    const double /*z*/, double& etau) {
