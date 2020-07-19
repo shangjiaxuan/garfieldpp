@@ -261,15 +261,10 @@ class ComponentBase {
   /// Switch off debugging messages.
   void DisableDebugging() { m_debug = false; }
 
-  /// Request trapping to be taken care of by the component (for TCAD).
-  void ActivateTraps() { m_activeTraps = true; }
-  void DeactivateTraps() { m_activeTraps = false; }
-  bool IsTrapActive() { return m_activeTraps; }
-
-  /// Request velocity to be taken care of by the component (for TCAD).
-  void ActivateVelocityMap() { m_hasVelocityMap = true; }
-  void DectivateVelocityMap() { m_hasVelocityMap = false; }
-  bool IsVelocityActive() { return m_hasVelocityMap; }
+  /// Does the component have attachment maps?
+  virtual bool HasAttachmentMap() const { return false; }
+  /// Does the component have velocity maps?
+  virtual bool HasVelocityMap() const { return false; }
 
   /// Get the electron attachment coefficient.
   virtual bool ElectronAttachment(const double /*x*/, const double /*y*/,
@@ -284,18 +279,18 @@ class ComponentBase {
     return false;
   }
   /// Get the electron drift velocity.
-  virtual void ElectronVelocity(const double /*x*/, const double /*y*/,
+  virtual bool ElectronVelocity(const double /*x*/, const double /*y*/,
                                 const double /*z*/, double& vx, double& vy,
-                                double& vz, Medium*& /*m*/, int& status) {
+                                double& vz) {
     vx = vy = vz = 0;
-    status = -100;
+    return false;
   }
   /// Get the hole drift velocity.
-  virtual void HoleVelocity(const double /*x*/, const double /*y*/,
+  virtual bool HoleVelocity(const double /*x*/, const double /*y*/,
                             const double /*z*/, double& vx, double& vy,
-                            double& vz, Medium*& /*m*/, int& status) {
+                            double& vz) {
     vx = vy = vz = 0;
-    status = -100;
+    return false;
   }
   virtual bool GetElectronLifetime(const double /*x*/, const double /*y*/,
                                    const double /*z*/, double& etau) {
@@ -318,11 +313,6 @@ class ComponentBase {
   /// Ready for use?
   bool m_ready = false;
 
-  /// Does the component have traps?
-  bool m_activeTraps = false;
-  /// Does the component have velocity maps?
-  bool m_hasVelocityMap = false;
-
   /// Simple periodicity in x, y, z.
   std::array<bool, 3> m_periodic = {{false, false, false}};
   /// Mirror periodicity in x, y, z.
@@ -332,7 +322,8 @@ class ComponentBase {
   /// Rotation symmetry around x-axis, y-axis, z-axis.
   std::array<bool, 3> m_rotationSymmetric = {{false, false, false}};
 
-  double m_bx0 = 0., m_by0 = 0., m_bz0 = 0.;  ///< Constant magnetic field.
+  /// Constant magnetic field.
+  std::array<double, 3> m_b0 = {{0., 0., 0.}};
 
   /// Switch on/off debugging messages
   bool m_debug = false;

@@ -143,13 +143,38 @@ class ComponentGrid : public ComponentBase {
                           const unsigned int col,
                           const double scaleX = 1.);
 
-  /// Get electron attachment coefficient.
+  bool HasAttachmentMap() const override {
+    return !(m_eAttachment.empty() && m_hAttachment.empty());
+  } 
   bool ElectronAttachment(const double x, const double y, const double z,
                           double& att) override;
-  /// Get hole attachment coefficient.
   bool HoleAttachment(const double x, const double y, const double z,
                       double& att) override;
 
+  /** Import a map of electron drift velocities from a file.
+   * \param fname name of the text file.
+   * \param fmt format string ("XY", "XYZ", "IJ", "IJK").
+   * \param col column in the file with the x-component of the velocity.
+   * \param scaleX scaling factor to be applied to the coordinates.
+   * \param scaleV scaling factor to be applied to the velocity components.
+   */ 
+  bool LoadElectronVelocity(const std::string& fname, 
+                            const std::string& fmt,
+                            const double scaleX = 1.,
+                            const double scaleV = 1.e-9);
+  /// Import a map of hole drift velocities from a file.
+  bool LoadHoleVelocity(const std::string& fname, 
+                        const std::string& fmt,
+                        const double scaleX = 1.,
+                        const double scaleV = 1.e-9);
+
+  bool HasVelocityMap() const override {
+    return !(m_eVelocity.empty() && m_hVelocity.empty());
+  } 
+  bool ElectronVelocity(const double x, const double y, const double z,
+                        double& vx, double& vy, double& vz) override;
+  bool HoleVelocity(const double x, const double y, const double z,
+                    double& vx, double& vy, double& vz) override;
  private:
   Medium* m_medium = nullptr;
   struct Node {
@@ -166,9 +191,12 @@ class ComponentGrid : public ComponentBase {
   /// Delayed weighting field values and potentials.
   std::vector<std::vector<std::vector<std::vector<Node> > > > m_wdfields;
   std::vector<double> m_wdtimes;
-  /// Attachment maps for electons and holes.
-  std::vector<std::vector<std::vector<double> > > m_eattachment;
-  std::vector<std::vector<std::vector<double> > > m_hattachment;
+  /// Attachment maps for electrons and holes.
+  std::vector<std::vector<std::vector<double> > > m_eAttachment;
+  std::vector<std::vector<std::vector<double> > > m_hAttachment;
+  /// Velocity maps for electrons and holes.
+  std::vector<std::vector<std::vector<Node> > > m_eVelocity;
+  std::vector<std::vector<std::vector<Node> > > m_hVelocity;
   /// Active medium flag.
   std::vector<std::vector<std::vector<bool> > > m_active;
 
@@ -180,9 +208,6 @@ class ComponentGrid : public ComponentBase {
 
   bool m_hasMesh = false;
   bool m_hasPotential = false;
-  bool m_hasEfield = false;
-  bool m_hasBfield = false;
-  bool m_hasWfield = false;
 
   // Offset for weighting field
   double m_wField_xOffset = 0.;
@@ -197,11 +222,11 @@ class ComponentGrid : public ComponentBase {
                 const double scaleX);
 
   /// Read electric field and potential from file.
-  bool LoadField(const std::string& filename, std::string format,
-                 const bool withPotential, const bool withFlag,
-                 const double scaleX, const double scaleF, const double scaleP,
-                 std::vector<std::vector<std::vector<Node> > >& field);
-  /// Load other data (e. g. attachment coefficients) from file. 
+  bool LoadData(const std::string& filename, std::string format,
+                const bool withPotential, const bool withFlag,
+                const double scaleX, const double scaleF, const double scaleP,
+                std::vector<std::vector<std::vector<Node> > >& field);
+  /// Load scalar data (e. g. attachment coefficients) from file. 
   bool LoadData(const std::string& filename, std::string format,
                 const double scaleX,
                 std::vector<std::vector<std::vector<double> > >& tab,

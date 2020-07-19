@@ -38,7 +38,6 @@ int main(int argc, char* argv[]) {
 
   efield.LoadElectronAttachment("Attachment.txt", "XY", 2);
   efield.LoadHoleAttachment("Attachment.txt", "XY", 3);
-  efield.ActivateTraps();
 
   ComponentGrid wfield;
   wfield.LoadWeightingField("Wfield.txt", "XY", true);

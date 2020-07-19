@@ -49,6 +49,10 @@ bool ComponentTcad2d::SetAcceptor(const unsigned int acceptorNumber,
   return true;
 }
 
+bool ComponentTcad2d::HasAttachmentMap() const {
+  return (m_useAttachmentMap && m_validTraps);
+}
+
 bool ComponentTcad2d::ElectronAttachment(const double x, const double y,
                                          const double z, double& eta) {
   eta = 0.;
@@ -224,38 +228,28 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
   m_lastElement = i;
 }
 
-void ComponentTcad2d::ElectronVelocity(const double xin, const double yin,
+bool ComponentTcad2d::ElectronVelocity(const double xin, const double yin,
                                        const double zin, double& vx, double& vy,
-                                       double& vz, Medium*& m, int& status) {
-  // Assume this will work.
-  status = 0;
+                                       double& vz) {
   // Initialise.
   vx = vy = vz = 0.;
-  m = nullptr;
   // Make sure the field map has been loaded.
   if (!m_ready) {
     std::cerr << m_className << "::ElectronVelocity:\n"
               << "    Field map is not available for interpolation.\n";
-    status = -10;
-    return;
+    return false;
   }
 
   double x = xin, y = yin, z = zin;
   // In case of periodicity, reduce to the cell volume.
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
-  if (!InsideBoundingBox(x, y, z)) {
-    status = -6;
-    return;
-  }
+  if (!InsideBoundingBox(x, y, z)) return false;
 
   std::array<double, nMaxVertices> w;
   const unsigned int i = FindElement(x, y, w);
-  if (i >= m_elements.size()) {
-    // Point is outside the mesh.
-    status = -6;
-    return;
-  }
+  // Stop if the point is outside the mesh.
+  if (i >= m_elements.size()) return false;
 
   const Element& element = m_elements[i];
   const unsigned int nVertices = element.type + 1;
@@ -266,45 +260,33 @@ void ComponentTcad2d::ElectronVelocity(const double xin, const double yin,
   }
   if (xmirr) vx = -vx;
   if (ymirr) vy = -vy;
-  m = m_regions[element.region].medium;
-  if (!m_regions[element.region].drift || !m) status = -5;
   m_lastElement = i;
+  return true;
 }
 
-void ComponentTcad2d::HoleVelocity(const double xin, const double yin,
+bool ComponentTcad2d::HoleVelocity(const double xin, const double yin,
                                    const double zin, double& vx, double& vy,
-                                   double& vz, Medium*& m, int& status) {
-
-  // Assume this will work.
-  status = 0;
+                                   double& vz) {
   // Initialise.
   vx = vy = vz = 0.;
-  m = nullptr;
 
   // Make sure the field map has been loaded.
   if (!m_ready) {
     std::cerr << m_className << "::HoleVelocity:\n"
               << "    Field map is not available for interpolation.\n";
-    status = -10;
-    return;
+    return false;
   }
 
   double x = xin, y = yin, z = zin;
   // In case of periodicity, reduce to the cell volume.
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
-  if (!InsideBoundingBox(x, y, z)) {
-    status = -6;
-    return;
-  }
+  if (!InsideBoundingBox(x, y, z)) return false;
 
   std::array<double, nMaxVertices> w;
   const unsigned int i = FindElement(x, y, w);
-  if (i >= m_elements.size()) {
-    // Point is outside the mesh.
-    status = -6;
-    return;
-  }
+  // Stop if the point is outside the mesh.
+  if (i >= m_elements.size()) return false;
 
   const Element& element = m_elements[i];
   const unsigned int nVertices = element.type + 1;
@@ -315,9 +297,8 @@ void ComponentTcad2d::HoleVelocity(const double xin, const double yin,
   }
   if (xmirr) vx = -vx;
   if (ymirr) vy = -vy;
-  m = m_regions[element.region].medium;
-  if (!m_regions[element.region].drift || !m) status = -5;
   m_lastElement = i;
+  return true;
 }
 
 Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
