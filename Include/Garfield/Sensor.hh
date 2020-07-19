@@ -137,12 +137,17 @@ class Sensor {
   void EnableTransferFunctionCache(const bool on = true) { 
     m_cacheTransferFunction = on;
   } 
-  /// Convolute the induced current with the transfer function.
+  /// Convolute the induced current on a given electrode 
+  /// with the transfer function.
+  bool ConvoluteSignal(const std::string& label, const bool fft = false);
+  /// Convolute all induced currents with the transfer function.
   bool ConvoluteSignal(const bool fft = false);
-  /// Replace the current signal curve by its integral.
+  /// Replace the signal on a given electrode by its integral.
+  bool IntegrateSignal(const std::string& label);
+  /// Replace the signals on all electrodes curve by their integrals.
   bool IntegrateSignal();
   /// Return whether the signal has been integrated/convoluted.
-  bool IsIntegrated() const { return m_integrated; }
+  bool IsIntegrated(const std::string& label) const;
 
   /// Delay the signal and subtract an attenuated copy 
   /// (modelling a constant fraction discriminator).
@@ -156,14 +161,19 @@ class Sensor {
   void AddNoise(const bool total = true, const bool electron = false,
                 const bool ion = false);
   /** Add white noise to the induced signal, given a desired output ENC.
+    * \param label name of the electrode 
     * \param enc Equivalent Noise Charge, in electrons.
     * \param poisson flag to sample the number of noise pulses from a 
     *                Poisson distribution. Otherwise the noise charge in each
     *                bin is sampled from a Gaussian distribution.
     * \param q0      amplitude of the noise delta pulses (in electrons). 
     */
+  void AddWhiteNoise(const std::string& label, const double enc, 
+                     const bool poisson = true, const double q0 = 1.);
+  /// Add white noise to the induced signals on all electrodes.
   void AddWhiteNoise(const double enc, const bool poisson = true, 
                      const double q0 = 1.);
+
   /** Determine the threshold crossings of the current signal curve.
     * \param thr threshold value
     * \param label electrode for which to compute the threshold crossings
@@ -235,6 +245,7 @@ class Sensor {
     std::vector<double> delayedElectronSignal;
     std::vector<double> delayedIonSignal;
     double charge;
+    bool integrated;
   };
   /// Electrodes
   std::vector<Electrode> m_electrodes;
@@ -257,8 +268,6 @@ class Sensor {
   double m_fTransferSq = -1.;
   // FFT of the transfer function.
   std::vector<double> m_fTransferFFT;
-  // Flag whether the signals have been convoluted/integrated.
-  bool m_integrated = false;
 
   // Noise
   double (*m_fNoise)(double t) = nullptr;
@@ -293,10 +302,18 @@ class Sensor {
       if (delayed) electrode.delayedIonSignal[bin] += signal;
     }
   }
+  void IntegrateSignal(Electrode& electrode);
+  void ConvoluteSignal(Electrode& electrode,
+                       const std::vector<double>& tab);
+  bool ConvoluteSignalFFT();
+  bool ConvoluteSignalFFT(const std::string& label);
+  void ConvoluteSignalFFT(Electrode& electrode,
+                          const std::vector<double>& tab,
+                          const unsigned int nn);
   // Evaluate the integral over the transfer function squared. 
   double TransferFunctionSq();
   double InterpolateTransferFunctionTable(const double t) const;
-  bool ConvoluteSignalFFT(); 
+  void MakeTransferFunctionTable(std::vector<double>& tab);
   void FFT(std::vector<double>& data, const bool inverse, const int nn);
 };
 }

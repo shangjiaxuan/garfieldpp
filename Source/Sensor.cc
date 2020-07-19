@@ -422,9 +422,9 @@ void Sensor::ClearSignal() {
     electrode.ionsignal.assign(m_nTimeBins, 0.);
     electrode.delayedElectronSignal.assign(m_nTimeBins, 0.);
     electrode.delayedIonSignal.assign(m_nTimeBins, 0.);
+    electrode.integrated = false;
   }
   m_nEvents = 0;
-  m_integrated = false;
 }
 
 void Sensor::SetDelayedSignalTimes(const std::vector<double>& ts) {
@@ -904,6 +904,30 @@ double Sensor::GetTransferFunction(const double t) {
   return InterpolateTransferFunctionTable(t);
 }
 
+bool Sensor::ConvoluteSignal(const std::string& label, const bool fft) {
+  if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
+    std::cerr << m_className << "::ConvoluteSignal: "
+              << "Transfer function not set.\n";
+    return false;
+  }
+  if (m_nEvents == 0) {
+    std::cerr << m_className << "::ConvoluteSignal: No signals present.\n";
+    return false;
+  }
+
+  if (fft) return ConvoluteSignalFFT(label);
+  std::vector<double> cnvTab;
+  MakeTransferFunctionTable(cnvTab);
+  // Loop over all electrodes.
+  for (auto& electrode : m_electrodes) {
+    if (label != electrode.label) continue;
+    ConvoluteSignal(electrode, cnvTab);
+    return true;
+  }
+  return false;
+}
+
+
 bool Sensor::ConvoluteSignal(const bool fft) {
   if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
     std::cerr << m_className << "::ConvoluteSignal: "
@@ -916,12 +940,20 @@ bool Sensor::ConvoluteSignal(const bool fft) {
   }
 
   if (fft) return ConvoluteSignalFFT();
+  std::vector<double> cnvTab;
+  MakeTransferFunctionTable(cnvTab);
+  // Loop over all electrodes.
+  for (auto& electrode : m_electrodes) ConvoluteSignal(electrode, cnvTab);
+  return true;
+}
+
+void Sensor::MakeTransferFunctionTable(std::vector<double>& cnvTab) {
 
   // Set the range where the transfer function is valid.
   constexpr double cnvMin = 0.;
   constexpr double cnvMax = 1.e10;
 
-  std::vector<double> cnvTab(2 * m_nTimeBins - 1, 0.);
+  cnvTab.assign(2 * m_nTimeBins - 1, 0.);
   const unsigned int offset = m_nTimeBins - 1;
   // Evaluate the transfer function.
   for (unsigned int i = 0; i < m_nTimeBins; ++i) {
@@ -941,20 +973,21 @@ bool Sensor::ConvoluteSignal(const bool fft) {
       cnvTab[offset + i] = GetTransferFunction(t);
     }
   }
+}
+
+void Sensor::ConvoluteSignal(Electrode& electrode,
+                             const std::vector<double>& tab) {
+  // Do the convolution.
   std::vector<double> tmpSignal(m_nTimeBins, 0.);
-  // Loop over all electrodes.
-  for (auto& electrode : m_electrodes) {
-    // Do the convolution.
-    for (unsigned int j = 0; j < m_nTimeBins; ++j) {
-      tmpSignal[j] = 0.;
-      for (unsigned int k = 0; k < m_nTimeBins; ++k) {
-        tmpSignal[j] += m_tStep * cnvTab[offset + j - k] * electrode.signal[k];
-      }
+  const unsigned int offset = m_nTimeBins - 1;
+  for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+    tmpSignal[j] = 0.;
+    for (unsigned int k = 0; k < m_nTimeBins; ++k) {
+      tmpSignal[j] += m_tStep * tab[offset + j - k] * electrode.signal[k];
     }
-    electrode.signal.swap(tmpSignal);
   }
-  m_integrated = true;
-  return true;
+  electrode.signal.swap(tmpSignal);
+  electrode.integrated = true;
 }
 
 bool Sensor::ConvoluteSignalFFT() {
@@ -971,28 +1004,57 @@ bool Sensor::ConvoluteSignalFFT() {
     FFT(m_fTransferFFT, false, nn);
   }
 
-  const double scale = m_tStep / nn;
   for (auto& electrode : m_electrodes) {
-    std::vector<double> g(2 * (nn + 1), 0.);
-    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
-      g[2 * i + 1] = electrode.signal[i];
-    }
-    FFT(g, false, nn);
-    for (unsigned int i = 0; i < nn; ++i) {
-      const double fr = m_fTransferFFT[2 * i + 1];
-      const double fi = m_fTransferFFT[2 * i + 2];
-      const double gr = g[2 * i + 1];
-      const double gi = g[2 * i + 2];
-      g[2 * i + 1] = fr * gr - fi * gi;
-      g[2 * i + 2] = fr * gi + gr * fi;
-    }
-    FFT(g, true, nn);
-    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
-      electrode.signal[i] = scale * g[2 * i + 1];
-    }
+    ConvoluteSignalFFT(electrode, m_fTransferFFT, nn);
   }
-  m_integrated = true;
   return true;
+}
+
+bool Sensor::ConvoluteSignalFFT(const std::string& label) {
+
+  // Number of bins must be a power of 2.
+  const unsigned int nn = exp2(ceil(log2(m_nTimeBins)));
+
+  if (!m_cacheTransferFunction || m_fTransferFFT.size() != 2 * (nn + 1)) {
+    // (Re-)compute the FFT of the transfer function.
+    m_fTransferFFT.assign(2 * (nn + 1), 0.);
+    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+      m_fTransferFFT[2 * i + 1] = GetTransferFunction(i * m_tStep);
+    }
+    FFT(m_fTransferFFT, false, nn);
+  }
+
+  for (auto& electrode : m_electrodes) {
+    if (label != electrode.label) continue;
+    ConvoluteSignalFFT(electrode, m_fTransferFFT, nn);
+    return true;
+  }
+  return false;
+}
+
+void Sensor::ConvoluteSignalFFT(Electrode& electrode,
+                                const std::vector<double>& tab,
+                                const unsigned int nn) {
+
+  std::vector<double> g(2 * (nn + 1), 0.);
+  for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+    g[2 * i + 1] = electrode.signal[i];
+  }
+  FFT(g, false, nn);
+  for (unsigned int i = 0; i < nn; ++i) {
+    const double fr = tab[2 * i + 1];
+    const double fi = tab[2 * i + 2];
+    const double gr = g[2 * i + 1];
+    const double gi = g[2 * i + 2];
+    g[2 * i + 1] = fr * gr - fi * gi;
+    g[2 * i + 2] = fr * gi + gr * fi;
+  }
+  FFT(g, true, nn);
+  const double scale = m_tStep / nn;
+  for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+    electrode.signal[i] = scale * g[2 * i + 1];
+  }
+  electrode.integrated = true;
 }
 
 bool Sensor::IntegrateSignal() {
@@ -1001,20 +1063,47 @@ bool Sensor::IntegrateSignal() {
     return false;
   }
 
+  for (auto& electrode : m_electrodes) IntegrateSignal(electrode);
+  return true;
+}
+
+bool Sensor::IntegrateSignal(const std::string& label) {
+  if (m_nEvents == 0) {
+    std::cerr << m_className << "::IntegrateSignal: No signals present.\n";
+    return false;
+  }
+
   for (auto& electrode : m_electrodes) {
-    for (unsigned int j = 0; j < m_nTimeBins; ++j) {
-      electrode.signal[j] *= m_tStep;
-      electrode.electronsignal[j] *= m_tStep;
-      electrode.ionsignal[j] *= m_tStep;
-      if (j > 0) {
-        electrode.signal[j] += electrode.signal[j - 1];
-        electrode.electronsignal[j] += electrode.electronsignal[j - 1];
-        electrode.ionsignal[j] += electrode.ionsignal[j - 1];
-      }
+    if (label != electrode.label) continue;
+    IntegrateSignal(electrode);
+    return true; 
+  }
+  std::cerr << m_className << "::IntegrateSignal: Electrode "
+            << label << " not found.\n";
+  return false;
+}
+
+void Sensor::IntegrateSignal(Electrode& electrode) {
+
+  for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+    electrode.signal[j] *= m_tStep;
+    electrode.electronsignal[j] *= m_tStep;
+    electrode.ionsignal[j] *= m_tStep;
+    if (j > 0) {
+      electrode.signal[j] += electrode.signal[j - 1];
+      electrode.electronsignal[j] += electrode.electronsignal[j - 1];
+      electrode.ionsignal[j] += electrode.ionsignal[j - 1];
     }
   }
-  m_integrated = true;
-  return true;
+  electrode.integrated = true;
+}
+
+bool Sensor::IsIntegrated(const std::string& label) const {
+  
+  for (const auto& electrode : m_electrodes) {
+    if (electrode.label == label) return electrode.integrated;
+  }
+  return false;
 }
 
 bool Sensor::DelayAndSubtractFraction(const double td, const double f) {
@@ -1059,6 +1148,54 @@ void Sensor::AddNoise(const bool total, const bool electron, const bool ion) {
       if (electron) electrode.electronsignal[j] += noise;
       if (ion) electrode.ionsignal[j] += noise;
       t += m_tStep;
+    }
+  }
+}
+
+void Sensor::AddWhiteNoise(const std::string& label, const double enc, 
+                           const bool poisson, const double q0) {
+
+  if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
+    std::cerr << m_className << "::AddWhiteNoise: Transfer function not set.\n";
+    return;
+  }
+  if (m_nEvents == 0) m_nEvents = 1;
+  
+  const double f2 = TransferFunctionSq();
+  if (f2 < 0.) {
+    std::cerr << m_className << "::AddWhiteNoise:\n"
+              << "  Could not calculate transfer function integral.\n";
+    return;
+  }
+
+  if (poisson) {
+    // Frequency of random delta pulses to model noise.
+    const double nu = (enc * enc / (q0 * q0)) / f2;
+    // Average number of delta pulses.
+    const double avg = nu * m_tStep * m_nTimeBins;
+    // Sample the number of pulses.
+    for (auto& electrode : m_electrodes) {
+      if (label != electrode.label) continue;
+      const int nPulses = RndmPoisson(avg);
+      for (int j = 0; j < nPulses; ++j) {
+        const int bin = static_cast<int>(m_nTimeBins * RndmUniform());
+        electrode.signal[bin] += q0;
+      }
+      const double offset = q0 * nu * m_tStep;
+      for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+        electrode.signal[j] -= offset;
+      }
+      break;
+    }
+  } else {
+    // Gaussian approximation.
+    const double sigma = enc * sqrt(m_tStep / f2);
+    for (auto& electrode : m_electrodes) {
+      if (label != electrode.label) continue;
+      for (unsigned int j = 0; j < m_nTimeBins; ++j) {
+        electrode.signal[j] += RndmGaussian(0., sigma);
+      }
+      break;
     }
   }
 }
@@ -1143,20 +1280,20 @@ bool Sensor::ComputeThresholdCrossings(const double thr,
               << "No signals present.\n";
     return false;
   }
-  if (!m_integrated) {
-    std::cerr << m_className << "::ComputeThresholdCrossings:\n    "
-              << "Warning: signal has not been integrated/convoluted.\n";
-  }
   // Compute the total signal.
   std::vector<double> signal(m_nTimeBins, 0.);
   // Loop over the electrodes.
   bool foundLabel = false;
   for (const auto& electrode : m_electrodes) {
-    if (electrode.label == label) {
-      foundLabel = true;
-      for (unsigned int i = 0; i < m_nTimeBins; ++i) {
-        signal[i] += electrode.signal[i];
-      }
+    if (electrode.label != label) continue;
+    foundLabel = true;
+    if (!electrode.integrated) {
+      std::cerr << m_className << "::ComputeThresholdCrossings:\n    "
+                << "Warning: signal on electrode " << label 
+                << " has not been integrated/convoluted.\n";
+    }
+    for (unsigned int i = 0; i < m_nTimeBins; ++i) {
+      signal[i] += electrode.signal[i];
     }
   }
   if (!foundLabel) {
