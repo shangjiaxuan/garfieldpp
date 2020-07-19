@@ -104,7 +104,7 @@ void ComponentGrid::WeightingField(const double x, const double y,
                                    const double z, double& wx, double& wy,
                                    double& wz, const std::string& /*label*/) {
   wx = wy = wz = 0.;
-  if (!m_hasWfield) return;
+  if (m_wfields.empty()) return;
   const double xx = x - m_wField_xOffset;
   const double yy = y - m_wField_yOffset;
   const double zz = z - m_wField_zOffset;
@@ -116,7 +116,7 @@ void ComponentGrid::WeightingField(const double x, const double y,
 double ComponentGrid::WeightingPotential(const double x, const double y,
                                          const double z,
                                          const std::string& /*label*/) {
-  if (!m_hasWfield) return 0.;
+  if (m_wfields.empty()) return 0.;
   const double xx = x - m_wField_xOffset;
   const double yy = y - m_wField_yOffset;
   const double zz = z - m_wField_zOffset;
@@ -178,7 +178,7 @@ void ComponentGrid::MagneticField(const double x, const double y,
                                   const double z, double& bx, double& by,
                                   double& bz, int& status) {
   status = 0;
-  if (!m_hasBfield) {
+  if (m_bfields.empty()) {
     return ComponentBase::MagneticField(x, y, z, bx, by, bz, status);
   }
 
@@ -293,17 +293,17 @@ bool ComponentGrid::LoadElectricField(const std::string& fname,
                                       const double scaleE,
                                       const double scaleP) {
   m_ready = false;
-  m_hasPotential = m_hasEfield = false;
+  m_hasPotential = false;
   m_active.assign(m_nX, std::vector<std::vector<bool> >(
                             m_nY, std::vector<bool>(m_nZ, true)));
   // Read the file.
   m_pMin = withP ? +1. : 0.;
   m_pMax = withP ? -1. : 0.;
-  if (!LoadField(fname, fmt, withP, withFlag, scaleX, scaleE, scaleP,
+  if (!LoadData(fname, fmt, withP, withFlag, scaleX, scaleE, scaleP,
                  m_efields)) {
+    m_efields.clear();
     return false;
   }
-  m_hasEfield = true;
   m_ready = true;
   if (withP) m_hasPotential = true;
   return true;
@@ -313,12 +313,11 @@ bool ComponentGrid::LoadWeightingField(const std::string& fname,
                                        const std::string& fmt, const bool withP,
                                        const double scaleX, const double scaleE,
                                        const double scaleP) {
-  m_hasWfield = false;
   // Read the file.
-  if (!LoadField(fname, fmt, withP, false, scaleX, scaleE, scaleP, m_wfields)) {
+  if (!LoadData(fname, fmt, withP, false, scaleX, scaleE, scaleP, m_wfields)) {
+    m_wfields.clear();
     return false;
   }
-  m_hasWfield = true;
   return true;
 }
 
@@ -329,7 +328,7 @@ bool ComponentGrid::LoadWeightingField(const std::string& fname,
                                        const double scaleP) {
   std::vector<std::vector<std::vector<Node> > > wfield;
   // Read the file.
-  if (!LoadField(fname, fmt, withP, false, scaleX, scaleE, scaleP, wfield)) {
+  if (!LoadData(fname, fmt, withP, false, scaleX, scaleE, scaleP, wfield)) {
     return false;
   }
   if (m_wdtimes.empty() || t > m_wdtimes.back()) {
@@ -348,12 +347,11 @@ bool ComponentGrid::LoadMagneticField(const std::string& fname,
                                       const std::string& fmt,
                                       const double scaleX,
                                       const double scaleB) {
-  m_hasBfield = false;
   // Read the file.
-  if (!LoadField(fname, fmt, false, false, scaleX, scaleB, 1., m_bfields)) {
+  if (!LoadData(fname, fmt, false, false, scaleX, scaleB, 1., m_bfields)) {
+    m_bfields.clear();
     return false;
   }
-  m_hasBfield = true;
   return true;
 }
 
@@ -764,21 +762,21 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   return SetMesh(nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax);
 }
 
-bool ComponentGrid::LoadField(
+bool ComponentGrid::LoadData(
     const std::string& filename, std::string format, const bool withPotential,
     const bool withFlag, const double scaleX, const double scaleF,
     const double scaleP,
     std::vector<std::vector<std::vector<Node> > >& fields) {
   if (!m_hasMesh) {
     if (!LoadMesh(filename, format, scaleX)) {
-      std::cerr << m_className << "::LoadField: Mesh not set.\n";
+      std::cerr << m_className << "::LoadData: Mesh not set.\n";
       return false;
     }
   }
 
   const unsigned int fmt = GetFormat(format);
   if (fmt == 0) {
-    std::cerr << m_className << "::LoadField:\n"
+    std::cerr << m_className << "::LoadData:\n"
               << "    Unknown format (" << format << ").\n";
     return false;
   }
@@ -795,7 +793,7 @@ bool ComponentGrid::LoadField(
   std::ifstream infile;
   infile.open(filename.c_str(), std::ios::in);
   if (!infile) {
-    std::cerr << m_className << "::LoadField:\n"
+    std::cerr << m_className << "::LoadData:\n"
               << "    Could not open file " << filename << ".\n";
     return false;
   }
@@ -828,7 +826,7 @@ bool ComponentGrid::LoadField(
       double x, y;
       data >> x >> y;
       if (data.fail()) {
-        PrintError(m_className + "::LoadField", nLines, "coordinates");
+        PrintError(m_className + "::LoadData", nLines, "coordinates");
         bad = true;
         break;
       }
@@ -845,7 +843,7 @@ bool ComponentGrid::LoadField(
       double x, y, z;
       data >> x >> y >> z;
       if (data.fail()) {
-        PrintError(m_className + "::LoadField", nLines, "coordinates");
+        PrintError(m_className + "::LoadData", nLines, "coordinates");
         bad = true;
         break;
       }
@@ -865,7 +863,7 @@ bool ComponentGrid::LoadField(
       // "IJ"
       data >> i >> j;
       if (data.fail()) {
-        PrintError(m_className + "::LoadField", nLines, "indices");
+        PrintError(m_className + "::LoadData", nLines, "indices");
         bad = true;
         break;
       }
@@ -873,7 +871,7 @@ bool ComponentGrid::LoadField(
       // "IJK"
       data >> i >> j >> k;
       if (data.fail()) {
-        PrintError(m_className + "::LoadField", nLines, "indices");
+        PrintError(m_className + "::LoadData", nLines, "indices");
         bad = true;
         break;
       }
@@ -882,7 +880,7 @@ bool ComponentGrid::LoadField(
       double x, y, z;
       data >> y >> x >> z;
       if (data.fail()) {
-        PrintError(m_className + "::LoadField", nLines, "coordinates");
+        PrintError(m_className + "::LoadData", nLines, "coordinates");
         bad = true;
         break;
       }
@@ -901,14 +899,14 @@ bool ComponentGrid::LoadField(
     }
     // Check the indices.
     if (i >= m_nX || j >= m_nY || k >= m_nZ) {
-      std::cerr << m_className << "::LoadField:\n"
+      std::cerr << m_className << "::LoadData:\n"
                 << "    Error reading line " << nLines << ".\n"
                 << "    Index (" << i << ", " << j << ", " << k
                 << ") out of range.\n";
       continue;
     }
     if (isSet[i][j][k]) {
-      std::cerr << m_className << "::LoadField:\n"
+      std::cerr << m_className << "::LoadData:\n"
                 << "    Error reading line " << nLines << ".\n"
                 << "    Node (" << i << ", " << j << ", " << k
                 << ") has already been set.\n";
@@ -925,7 +923,7 @@ bool ComponentGrid::LoadField(
       data >> fx >> fy >> fz;
     }
     if (data.fail()) {
-      PrintError(m_className + "::LoadField", nLines, "field components");
+      PrintError(m_className + "::LoadData", nLines, "field components");
       bad = true;
       break;
     }
@@ -935,7 +933,7 @@ bool ComponentGrid::LoadField(
     if (withPotential) {
       data >> p;
       if (data.fail()) {
-        PrintError(m_className + "::LoadField", nLines, "potential");
+        PrintError(m_className + "::LoadData", nLines, "potential");
         bad = true;
         break;
       }
@@ -953,7 +951,7 @@ bool ComponentGrid::LoadField(
     if (withFlag) {
       data >> flag;
       if (data.fail()) {
-        PrintError(m_className + "::LoadField", nLines, "region");
+        PrintError(m_className + "::LoadData", nLines, "region");
         bad = true;
         break;
       }
@@ -980,12 +978,12 @@ bool ComponentGrid::LoadField(
   }
   infile.close();
   if (bad) return false;
-  std::cout << m_className << "::LoadField:\n"
+  std::cout << m_className << "::LoadData:\n"
             << "    Read " << nValues << " values from " << filename << ".\n";
   unsigned int nExpected = m_nX * m_nY;
   if (fmt == 2 || fmt == 4 || fmt == 5) nExpected *= m_nZ;
   if (nExpected != nValues) {
-    std::cerr << m_className << "::LoadField:\n"
+    std::cerr << m_className << "::LoadData:\n"
               << "   Expected " << nExpected << " values.\n";
   }
   return true;
@@ -1193,7 +1191,8 @@ void ComponentGrid::Print() {
               m_zMin, m_zMax, m_nZ);
   if (m_efields.empty() && m_bfields.empty() && 
       m_wfields.empty() && m_wdfields.empty() && 
-      m_eattachment.empty() && m_hattachment.empty()) {
+      m_eAttachment.empty() && m_hAttachment.empty() &&
+      m_eVelocity.empty() && m_hVelocity.empty()) {
     std::cout << "    Available data: None.\n";
     return;
   }
@@ -1204,10 +1203,16 @@ void ComponentGrid::Print() {
   if (!m_wdfields.empty()) {
     std::cout << "      Delayed weighting field.\n";
   }
-  if (!m_eattachment.empty()) {
+  if (!m_eVelocity.empty()) {
+    std::cout << "      Electron drift velocity.\n";
+  }
+  if (!m_hVelocity.empty()) {
+    std::cout << "      Hole drift velocity.\n";
+  }
+  if (!m_eAttachment.empty()) {
     std::cout << "      Electron attachment coefficient.\n";
   }
-  if (!m_hattachment.empty()) {
+  if (!m_hAttachment.empty()) {
     std::cout << "      Hole attachment coefficient.\n";
   }
 }
@@ -1216,8 +1221,10 @@ void ComponentGrid::Reset() {
   m_efields.clear();
   m_bfields.clear();
   m_wfields.clear();
-  m_eattachment.clear();
-  m_hattachment.clear();
+  m_eAttachment.clear();
+  m_hAttachment.clear();
+  m_eVelocity.clear();
+  m_hVelocity.clear();
 
   m_wdfields.clear();
   m_wdtimes.clear();
@@ -1232,9 +1239,6 @@ void ComponentGrid::Reset() {
 
   m_hasMesh = false;
   m_hasPotential = false;
-  m_hasEfield = false;
-  m_hasBfield = false;
-  m_hasWfield = false;
   m_ready = false;
 
   m_wField_xOffset = 0.;
@@ -1310,12 +1314,60 @@ void ComponentGrid::Initialise(
   }
 }
 
+bool ComponentGrid::LoadElectronVelocity(const std::string& fname, 
+                                         const std::string& fmt,
+                                         const unsigned int col, 
+                                         const double scaleX,
+                                         const double scaleV) {
+  // Read the file.
+  if (!LoadData(fname, fmt, false, false, scaleX, scaleV, 1., m_eVelocity)) {
+    return false;
+  }
+  return true;
+}
+
+bool ComponentGrid::LoadHoleVelocity(const std::string& fname, 
+                                     const std::string& fmt,
+                                     const unsigned int col, 
+                                     const double scaleX,
+                                     const double scaleV) {
+  // Read the file.
+  if (!LoadData(fname, fmt, false, false, scaleX, scaleV, 1., m_hVelocity)) {
+    return false;
+  }
+  return true;
+}
+
+bool ComponentGrid::ElectronVelocity(const double x, const double y, 
+                                     const double z,
+                                     double& vx, double& vy, double& vz) {
+  if (m_eVelocity.empty()) {
+    PrintNotReady(m_className + "::ElectronVelocity");
+    return false;
+  }
+  double p = 0.;
+  bool active = true;
+  return GetField(x, y, z, m_eVelocity, vx, vy, vz, p, active);
+}
+
+bool ComponentGrid::HoleVelocity(const double x, const double y, 
+                                 const double z,
+                                 double& vx, double& vy, double& vz) {
+  if (m_hVelocity.empty()) {
+    PrintNotReady(m_className + "::HoleVelocity");
+    return false;
+  }
+  double p = 0.;
+  bool active = true;
+  return GetField(x, y, z, m_eVelocity, vx, vy, vz, p, active);
+}
+
 bool ComponentGrid::LoadElectronAttachment(const std::string& fname,
                                            const std::string& fmt, 
                                            const unsigned int col,
                                            const double scaleX) {
   // Read the file.
-  return LoadData(fname, fmt, scaleX, m_eattachment, col);
+  return LoadData(fname, fmt, scaleX, m_eAttachment, col);
 }
 
 bool ComponentGrid::LoadHoleAttachment(const std::string& fname,
@@ -1323,7 +1375,7 @@ bool ComponentGrid::LoadHoleAttachment(const std::string& fname,
                                        const unsigned int col,
                                        const double scaleX) {
   // Read the file.
-  return LoadData(fname, fmt, scaleX, m_hattachment, col);
+  return LoadData(fname, fmt, scaleX, m_hAttachment, col);
 }
 
 bool ComponentGrid::LoadData(
@@ -1607,20 +1659,20 @@ bool ComponentGrid::GetData(
 bool ComponentGrid::ElectronAttachment(const double x, const double y,
                                        const double z, double& att) {
   // Make sure the map has been loaded.
-  if (m_eattachment.empty()) {
+  if (m_eAttachment.empty()) {
     PrintNotReady(m_className + "::ElectronAttachment");
     return false;
   }
-  return GetData(x, y, z, m_eattachment, att);
+  return GetData(x, y, z, m_eAttachment, att);
 }
 
 bool ComponentGrid::HoleAttachment(const double x, const double y,
                                    const double z, double& att) {
   // Make sure the map has been loaded.
-  if (m_hattachment.empty()) {
+  if (m_hAttachment.empty()) {
     PrintNotReady(m_className + "::HoleAttachment");
     return false;
   }
-  return GetData(x, y, z, m_hattachment, att);
+  return GetData(x, y, z, m_hAttachment, att);
 }
 }  // namespace Garfield
