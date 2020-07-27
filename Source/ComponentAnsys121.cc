@@ -267,6 +267,14 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   int highestnode = 0;
   while (felist.getline(line, size, '\n')) {
     il++;
+    // Skip page feed in batch page title
+    if (strstr(line,"VERSION") != NULL) {
+      felist.getline(line, size, '\n');
+      il++;
+      felist.getline(line, size, '\n');
+      il++;
+      continue;
+    }
     // Split the line in tokens
     char* token = NULL;
     // Split into tokens
@@ -274,8 +282,11 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
     // Skip blank lines and headers
     if (!token || strcmp(token, " ") == 0 || strcmp(token, "\n") == 0 ||
         int(token[0]) == 10 || int(token[0]) == 13 ||
-        strcmp(token, "LIST") == 0 || strcmp(token, "ELEM") == 0)
+        strcmp(token, "LIST") == 0 || strcmp(token, "ELEM") == 0 ||
+        strcmp(token, "ANSYS") == 0 || strcmp(token, "***") == 0 ||
+        strcmp(token, "VERSION") == 0) {
       continue;
+    }
     // Read the element
     int ielem = ReadInteger(token, -1, readerror);
     token = strtok(NULL, " ");
@@ -444,15 +455,27 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   il = 0;
   while (fnlist.getline(line, size, '\n')) {
     il++;
-    // Split the line in tokens
+    // Skip page feed in batch page title
+    if (strstr(line,"VERSION") != NULL) {
+      fnlist.getline(line, size, '\n');
+      il++;
+      fnlist.getline(line, size, '\n');
+      il++;
+      continue;
+    }
+     // Split the line in tokens
     char* token = NULL;
     // Split into tokens
     token = strtok(line, " ");
     // Skip blank lines and headers
     if (!token || strcmp(token, " ") == 0 || strcmp(token, "\n") == 0 ||
         int(token[0]) == 10 || int(token[0]) == 13 ||
-        strcmp(token, "LIST") == 0 || strcmp(token, "NODE") == 0)
+        strcmp(token, "LIST") == 0 || strcmp(token, "NODE") == 0 ||
+        strcmp(token, "ANSYS") == 0 || strcmp(token, "***") == 0 ||
+        strcmp(token, "FILE") == 0 || strcmp(token, "Electric") == 0 ||
+        strcmp(token, "VERSION") == 0) {
       continue;
+    }
     // Read the element
     int inode = ReadInteger(token, -1, readerror);
     token = strtok(NULL, " ");
@@ -518,17 +541,28 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   readerror = false;
   while (fprnsol.getline(line, size, '\n')) {
     il++;
+    // Skip page feed in batch page title
+    if (strstr(line,"VERSION") != NULL) {
+      fprnsol.getline(line, size, '\n');
+      il++;
+      fprnsol.getline(line, size, '\n');
+      il++;
+      continue;
+    }
     // Split the line in tokens
     char* token = NULL;
     token = strtok(line, " ");
     // Skip blank lines and headers
     if (!token || strcmp(token, " ") == 0 || strcmp(token, "\n") == 0 ||
         int(token[0]) == 10 || int(token[0]) == 13 ||
-        strcmp(token, "PRINT") == 0 || strcmp(token, "*****") == 0 ||
-        strcmp(token, "LOAD") == 0 || strcmp(token, "TIME=") == 0 ||
-        strcmp(token, "MAXIMUM") == 0 || strcmp(token, "VALUE") == 0 ||
-        strcmp(token, "NODE") == 0)
+        strcmp(token, "PRINT") == 0 || strcmp(token, "ANSYS") == 0 || 
+        strcmp(token, "VERSION") == 0 || strcmp(token, "NODAL") == 0 || 
+        strcmp(token, "FILE") == 0 || strcmp(token, "*****") == 0 ||
+        strcmp(token, "***") == 0 || strcmp(token, "LOAD") == 0 ||
+        strcmp(token, "TIME=") == 0 || strcmp(token, "MAXIMUM") == 0 ||
+        strcmp(token, "VALUE") == 0 || strcmp(token, "NODE") == 0) {
       continue;
+    }
     // Read the element
     int inode = ReadInteger(token, -1, readerror);
     token = strtok(NULL, " ");
@@ -641,6 +675,14 @@ bool ComponentAnsys121::SetWeightingField(std::string prnsol,
   bool readerror = false;
   while (fprnsol.getline(line, size, '\n')) {
     il++;
+    // Skip page feed in batch page title
+    if (strstr(line,"VERSION") != NULL) {
+      fprnsol.getline(line, size, '\n');
+      il++;
+      fprnsol.getline(line, size, '\n');
+      il++;
+      continue;
+    }
     // Split the line in tokens.
     char* token = NULL;
     token = strtok(line, " ");
