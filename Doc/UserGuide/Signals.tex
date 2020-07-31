@@ -198,7 +198,7 @@ bool Sensor::ConvoluteSignal(const std::string& label);
 \end{description}
 The function
 \begin{lstlisting}
-bool Sensor::ConvoluteSignal();
+bool Sensor::ConvoluteSignals();
 \end{lstlisting}
 convolutes the signals of all electrodes with the transfer function.
 
@@ -226,7 +226,7 @@ int main(int argc, char* argv[]) {
   // Calculate the induced current.
   // ...
   // Apply the transfer function.
-  sensor.ConvoluteSignal();
+  sensor.ConvoluteSignals();
   // ...
 }
 \end{lstlisting}
@@ -240,7 +240,7 @@ int main(int argc, char* argv[]) {
   Sensor sensor;
   sensor.SetTransferFunction(shaper);
   // ...
-  sensor.ConvoluteSignal();
+  sensor.ConvoluteSignals();
   // ...
 }
 \end{lstlisting}
