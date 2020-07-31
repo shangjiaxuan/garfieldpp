@@ -180,7 +180,7 @@ int main(int argc, char * argv[]) {
   // Convolute with the transfer function and plot again.
   sensor.SetTransferFunction(transfer);
   constexpr bool fft = true;
-  sensor.ConvoluteSignal(fft);
+  sensor.ConvoluteSignals(fft);
   TCanvas c2("c2", "", 800, 600);
   signalView.SetCanvas(&c2);
   signalView.SetLabelY("signal [mV]");
