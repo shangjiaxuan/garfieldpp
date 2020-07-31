@@ -141,11 +141,11 @@ class Sensor {
   /// with the transfer function.
   bool ConvoluteSignal(const std::string& label, const bool fft = false);
   /// Convolute all induced currents with the transfer function.
-  bool ConvoluteSignal(const bool fft = false);
+  bool ConvoluteSignals(const bool fft = false);
   /// Replace the signal on a given electrode by its integral.
   bool IntegrateSignal(const std::string& label);
   /// Replace the signals on all electrodes curve by their integrals.
-  bool IntegrateSignal();
+  bool IntegrateSignals();
   /// Return whether the signal has been integrated/convoluted.
   bool IsIntegrated(const std::string& label) const;
 
