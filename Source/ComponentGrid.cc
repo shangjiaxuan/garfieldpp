@@ -1357,7 +1357,7 @@ bool ComponentGrid::HoleVelocity(const double x, const double y,
   }
   double p = 0.;
   bool active = true;
-  return GetField(x, y, z, m_eVelocity, vx, vy, vz, p, active);
+  return GetField(x, y, z, m_hVelocity, vx, vy, vz, p, active);
 }
 
 bool ComponentGrid::LoadElectronAttachment(const std::string& fname,
