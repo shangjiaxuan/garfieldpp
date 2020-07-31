@@ -153,7 +153,7 @@ int main(int argc, char * argv[]) {
     std::cout << nesum << " electrons, " 
               << nesum * ElementaryCharge << " fC.\n";
     // Convolute the signal with the transfer function.
-    sensor.ConvoluteSignal();
+    sensor.ConvoluteSignals();
     // Plot the signal.
     if (!plotSignal) continue;
     vSignal.PlotSignal("strip");

@@ -928,14 +928,14 @@ bool Sensor::ConvoluteSignal(const std::string& label, const bool fft) {
 }
 
 
-bool Sensor::ConvoluteSignal(const bool fft) {
+bool Sensor::ConvoluteSignals(const bool fft) {
   if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
-    std::cerr << m_className << "::ConvoluteSignal: "
+    std::cerr << m_className << "::ConvoluteSignals: "
               << "Transfer function not set.\n";
     return false;
   }
   if (m_nEvents == 0) {
-    std::cerr << m_className << "::ConvoluteSignal: No signals present.\n";
+    std::cerr << m_className << "::ConvoluteSignals: No signals present.\n";
     return false;
   }
 
@@ -1057,9 +1057,9 @@ void Sensor::ConvoluteSignalFFT(Electrode& electrode,
   electrode.integrated = true;
 }
 
-bool Sensor::IntegrateSignal() {
+bool Sensor::IntegrateSignals() {
   if (m_nEvents == 0) {
-    std::cerr << m_className << "::IntegrateSignal: No signals present.\n";
+    std::cerr << m_className << "::IntegrateSignals: No signals present.\n";
     return false;
   }
 
