@@ -1393,8 +1393,8 @@ bool MediumMagboltz::Mixer(const bool verbose) {
     std::int64_t nAtt = 1;
     // Number of "null-collision" cross-sections
     std::int64_t nNull = 0;
-    // Virial coefficient (not used)
-    double virial = 0.;
+    // Virial coefficient (not used).
+    static double virial = 0.;
     // Thresholds/characteristic energies.
     static double e[6];
     // Energy losses for inelastic cross-sections.

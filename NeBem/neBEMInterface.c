@@ -1776,13 +1776,13 @@ int neBEMReadGeometry(void) {
   FILE *fNativeInFile = fopen(NativeInFile, "w");
   fprintf(fNativeInFile, "#====>Input directory\n");
   fprintf(fNativeInFile, "%s\n", NativePrimDir);
-  fprintf(fNativeInFile, "#====>No. of pritimives:\n");
+  fprintf(fNativeInFile, "#====>No. of primitives:\n");
   fprintf(fNativeInFile, "%d\n", NbPrimitives);
   fprintf(fNativeInFile, "#====>No. of volumes:\n");
   fprintf(fNativeInFile, "%d\n", VolMax);
   for (int prim = 1; prim <= NbPrimitives; ++prim) {
-    char NativePrimFile[256], strPrimNb[10];
-
+    char NativePrimFile[256];
+    char strPrimNb[11];
     sprintf(strPrimNb, "%d", prim);
     strcpy(NativePrimFile, "Primitive");
     strcat(NativePrimFile, strPrimNb);
@@ -1842,8 +1842,8 @@ int neBEMReadGeometry(void) {
     neBEMVolumeDescription(volume, &shape, &material, &epsilon, &potential,
                            &charge, &boundarytype);
 
-    char NativeVolFile[256], strVolNb[10];
-
+    char NativeVolFile[256];
+    char strVolNb[11];
     sprintf(strVolNb, "%d", volume);
 
     strcpy(NativeVolFile, NativePrimDir);
@@ -1924,7 +1924,7 @@ int neBEMDiscretize(int **NbElemsOnPrimitives) {
   int fstatus;
 
   // For a model and a mesh that were defined before and for which data were
-  // stored in two files - one for pritimives and one for elements
+  // stored in two files - one for primitives and one for elements
   // The following operation does not assume that the primitives have been read
   // in from a stored file. In essence, these two read-in-s are maintained
   // independent of each other. However, for a stored element file to be useful,
@@ -2723,7 +2723,7 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                 }  // debugFn
 
                 // use a, b, c (normal is ai + bj + ck) at one of the nodes to
-                // get d ax + by + cz + d = 0 is the equation of the plane
+                // get d, ax + by + cz + d = 0 is the equation of the plane
                 double a = XNorm[prim];
                 double b = YNorm[prim];
                 double c = ZNorm[prim];
@@ -3022,9 +3022,9 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
               {
                 int nvert;
                 Point3D polynode[4];
-                int nearestele;
-                double distele = 1.0e6,
-                       mindistele = 1.0e6;  // absurdly high value
+                int nearestele = ElementBgn[nearestprim];
+                double distele = 1.0e6;
+                double mindistele = 1.0e6;  // absurdly high value
 
                 if (debugFn) {
                   printf("prim == (NbPrimitives) ... checking nearest ...\n");
@@ -3062,13 +3062,11 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                   polynode[2].X = (EleArr+ele-1)->G.Vertex[2].X;
                   polynode[2].Y = (EleArr+ele-1)->G.Vertex[2].Y;
                   polynode[2].Z = (EleArr+ele-1)->G.Vertex[2].Z;
-                  if(nvert == 4)
-                          {
-                          polynode[3].X = (EleArr+ele-1)->G.Vertex[3].X;
-                          polynode[3].Y = (EleArr+ele-1)->G.Vertex[3].Y;
-                          polynode[3].Z = (EleArr+ele-1)->G.Vertex[3].Z;
-                          }
-
+                  if (nvert == 4) {
+                    polynode[3].X = (EleArr+ele-1)->G.Vertex[3].X;
+                    polynode[3].Y = (EleArr+ele-1)->G.Vertex[3].Y;
+                    polynode[3].Z = (EleArr+ele-1)->G.Vertex[3].Z;
+                  }
                   Vector3D v01, v12, elenorm, unitelenorm;
                   v01.X = polynode[1].X - polynode[0].X;
                   v01.Y = polynode[1].Y - polynode[0].Y;
@@ -3079,50 +3077,49 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                   elenorm = Vector3DCrossProduct(&v01, &v12);
                   unitelenorm = UnitVector3D(&elenorm);
 
-                  if((nvert == 3) || (nvert == 4))
-                          {
-                          if(debugFn)
-                                  {
-                                  printf("nearestprim: %d, element: %d\n",
-  nearestprim, ele); printf("vertex0: %lg, %lg, %lg\n", polynode[0].X,
-  polynode[0].Y, polynode[0].Z); printf("vertex1: %lg, %lg, %lg\n",
-                                                  polynode[1].X, polynode[1].Y,
-  polynode[1].Z); printf("vertex2: %lg, %lg, %lg\n", polynode[2].X,
-  polynode[2].Y, polynode[2].Z); if(PrimType[prim] == 4)
-                                          {
-                                          printf("vertex3: %lg, %lg, %lg\n",
-                                                  polynode[3].X, polynode[3].Y,
-  polynode[3].Z);
-                                          }
-                                  fprintf(ftmpEF, "#nearestprim: %d, element:
-  %d\n", nearestprim, ele); fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X,
-  polynode[0].Y, polynode[0].Z); fprintf(ftmpEF, "%lg %lg %lg\n", polynode[1].X,
-  polynode[1].Y, polynode[1].Z); fprintf(ftmpEF, "%lg %lg %lg\n", polynode[2].X,
-  polynode[2].Y, polynode[2].Z); if(PrimType[prim] == 4)
-                                          {
-                                          fprintf(ftmpEF, "%lg %lg %lg\n",
-                                                  polynode[3].X, polynode[3].Y,
-  polynode[3].Z);
-                                          }
-                                  fprintf(ftmpEF, "%lg %lg %lg\n",
-                                                  polynode[0].X, polynode[0].Y,
-  polynode[0].Z); fprintf(ftmpEF, "\n"); fflush(stdout); }	// debugFn
-
-  // use a, b, c (normal is ai + bj + ck) at one of the nodes to get d
-  // ax + by + cz + d = 0 is the equation of the plane
-                          double a = unitelenorm.X;
-                          double b = unitelenorm.Y;
-                          double c = unitelenorm.Z;
-                          double d = - a*polynode[0].X - b*polynode[0].Y
-                                                                          -
-  c*polynode[0].Z;
-
-                          // distance of the end point to this primitve is
-                          distele = (xend*a + yend*b + zend*c + d)
-                                                                                  / sqrt(a*a + b*b + c*c);
-                          distele = fabs(distele);	// if only magnitude is
-  required
-                          */
+                  if ((nvert == 3) || (nvert == 4)) {
+                    if (debugFn) { 
+                      printf("nearestprim: %d, element: %d\n",
+                             nearestprim, ele); 
+                      printf("vertex0: %lg, %lg, %lg\n", polynode[0].X,
+                             polynode[0].Y, polynode[0].Z); 
+                      printf("vertex1: %lg, %lg, %lg\n", polynode[1].X, 
+                             polynode[1].Y, polynode[1].Z); 
+                      printf("vertex2: %lg, %lg, %lg\n", polynode[2].X,
+                             polynode[2].Y, polynode[2].Z); 
+                      if (PrimType[prim] == 4) { 
+                        printf("vertex3: %lg, %lg, %lg\n", polynode[3].X, 
+                               polynode[3].Y, polynode[3].Z);
+                      }
+                      fprintf(ftmpEF, "#nearestprim: %d, element: %d\n", 
+                              nearestprim, ele); 
+                      fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X,
+                              polynode[0].Y, polynode[0].Z); 
+                      fprintf(ftmpEF, "%lg %lg %lg\n", polynode[1].X,
+                              polynode[1].Y, polynode[1].Z); 
+                      fprintf(ftmpEF, "%lg %lg %lg\n", polynode[2].X,
+                              polynode[2].Y, polynode[2].Z); 
+                      if (PrimType[prim] == 4) { 
+                        fprintf(ftmpEF, "%lg %lg %lg\n", polynode[3].X, 
+                                polynode[3].Y, polynode[3].Z);
+                      }
+                      fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X, 
+                              polynode[0].Y, polynode[0].Z); 
+                      fprintf(ftmpEF, "\n"); 
+                      fflush(stdout); 
+                    } // debugFn
+                    // use a, b, c (normal is ai + bj + ck) 
+                    // at one of the nodes to get d
+                    // ax + by + cz + d = 0 is the equation of the plane
+                    double a = unitelenorm.X;
+                    double b = unitelenorm.Y;
+                    double c = unitelenorm.Z;
+                    double d = - a * polynode[0].X - b * polynode[0].Y - c * polynode[0].Z;
+                    // distance of the end point to this primitve is
+                    distele = (xend * a + yend * b + zend * c + d) /
+                              sqrt(a * a + b * b + c * c);
+                    distele = fabs(distele); // if only magnitude is required
+                    */
 
                   Vector3D eleOrigin;
                   eleOrigin.X = (EleArr + ele - 1)->G.Origin.X;
@@ -3769,14 +3766,13 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
 
               // If, after checking all the primitives, no interstion is found
               // valid
-              if (prim ==
-                  (NbPrimitives))  // end of the list and no intersection
-              {
+              if (prim == (NbPrimitives)) {
+                // end of the list and no intersection
                 int nvert;
                 Point3D polynode[4];
-                int nearestele;
-                double distele = 1.0e6,
-                       mindistele = 1.0e6;  // absurdly high value
+                int nearestele = ElementBgn[nearestprim];
+                double distele = 1.0e6;
+                double mindistele = 1.0e6;  // absurdly high value
 
                 if (debugFn) {
                   printf("prim == (NbPrimitives) ... checking nearest ...\n");
@@ -3814,12 +3810,11 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                   polynode[2].X = (EleArr+ele-1)->G.Vertex[2].X;
                   polynode[2].Y = (EleArr+ele-1)->G.Vertex[2].Y;
                   polynode[2].Z = (EleArr+ele-1)->G.Vertex[2].Z;
-                  if(nvert == 4)
-                          {
-                          polynode[3].X = (EleArr+ele-1)->G.Vertex[3].X;
-                          polynode[3].Y = (EleArr+ele-1)->G.Vertex[3].Y;
-                          polynode[3].Z = (EleArr+ele-1)->G.Vertex[3].Z;
-                          }
+                  if (nvert == 4) {
+                    polynode[3].X = (EleArr+ele-1)->G.Vertex[3].X;
+                    polynode[3].Y = (EleArr+ele-1)->G.Vertex[3].Y;
+                    polynode[3].Z = (EleArr+ele-1)->G.Vertex[3].Z;
+                  } 
 
                   Vector3D v01, v12, elenorm, unitelenorm;
                   v01.X = polynode[1].X - polynode[0].X;
@@ -3831,59 +3826,50 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                   elenorm = Vector3DCrossProduct(&v01, &v12);
                   unitelenorm = UnitVector3D(&elenorm);
 
-                  if((nvert == 3) || (nvert == 4))
-                          {
-                          if(debugFn)
-                                  {
-                                  printf("nearestprim: %d, element: %d\n",
-          nearestprim, ele); printf("vertex0: %lg, %lg, %lg\n", polynode[0].X,
-          polynode[0].Y, polynode[0].Z); printf("vertex1: %lg, %lg, %lg\n",
-                                                          polynode[1].X,
-          polynode[1].Y, polynode[1].Z); printf("vertex2: %lg, %lg, %lg\n",
-                                                  polynode[2].X, polynode[2].Y,
-          polynode[2].Z); if(PrimType[prim] == 4)
-                                          {
-                                          printf("vertex3: %lg, %lg, %lg\n",
-                                                          polynode[3].X,
-          polynode[3].Y, polynode[3].Z);
-                                          }
-                                  fprintf(ftmpIF, "#nearestprim: %d, element:
-          %d\n", nearestprim, ele); fprintf(ftmpIF, "%lg %lg %lg\n",
-                                                          polynode[0].X,
-          polynode[0].Y, polynode[0].Z); fprintf(ftmpIF, "%lg %lg %lg\n",
-                                                          polynode[1].X,
-          polynode[1].Y, polynode[1].Z); fprintf(ftmpIF, "%lg %lg %lg\n",
-                                                          polynode[2].X,
-          polynode[2].Y, polynode[2].Z); if(PrimType[prim] == 4)
-                                          {
-                                          fprintf(ftmpIF, "%lg %lg %lg\n",
-                                                  polynode[3].X, polynode[3].Y,
-          polynode[3].Z);
-                                          }
-                                  fprintf(ftmpIF, "%lg %lg %lg\n",
-                                                          polynode[0].X,
-          polynode[0].Y, polynode[0].Z); fprintf(ftmpIF, "\n"); fflush(stdout);
-                                  }	// debugFn
+                  if ((nvert == 3) || (nvert == 4)) {
+                    if (debugFn) {
+                      printf("nearestprim: %d, element: %d\n",
+                             nearestprim, ele); 
+                      printf("vertex0: %lg, %lg, %lg\n", polynode[0].X,
+                             polynode[0].Y, polynode[0].Z); 
+                      printf("vertex1: %lg, %lg, %lg\n", polynode[1].X,
+                             polynode[1].Y, polynode[1].Z); 
+                      printf("vertex2: %lg, %lg, %lg\n", polynode[2].X, 
+                             polynode[2].Y, polynode[2].Z); 
+                      if (PrimType[prim] == 4) {
+                        printf("vertex3: %lg, %lg, %lg\n", polynode[3].X,
+                               polynode[3].Y, polynode[3].Z);
+                      }
+                      fprintf(ftmpIF, "#nearestprim: %d, element: %d\n", 
+                              nearestprim, ele); 
+                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X,
+                              polynode[0].Y, polynode[0].Z); 
+                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[1].X,
+                              polynode[1].Y, polynode[1].Z); 
+                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[2].X,
+                              polynode[2].Y, polynode[2].Z); 
+                      if (PrimType[prim] == 4) {
+                        fprintf(ftmpIF, "%lg %lg %lg\n", polynode[3].X, 
+                                polynode[3].Y, polynode[3].Z);
+                      }
+                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X,
+                              polynode[0].Y, polynode[0].Z); 
+                      fprintf(ftmpIF, "\n"); 
+                      fflush(stdout);
+                    } // debugFn
 
-          // use a, b, c (normal is ai + bj + ck) at one of the nodes to get d
-          // ax + by + cz + d = 0 is the equation of the plane
-                          double a = unitelenorm.X;
-                          double b = unitelenorm.Y;
-                          double c = unitelenorm.Z;
-                          double d = - unitelenorm.X*polynode[0].X
-                                                                                  - unitelenorm.Y*polynode[0].Y
-                                                                                  - unitelenorm.Z*polynode[0].Z;
-
-                          // distance of the end point to this primitve is
-                          distele = (xend * unitelenorm.X + yend * unitelenorm.Y
-                                                                                  + zend * unitelenorm.Z + d)
-                                                                                          /
-                                                                                  sqrt(unitelenorm.X*unitelenorm.X
-                                                                                                          + unitelenorm.Y*unitelenorm.Y
-                                                                                                          + unitelenorm.Z*unitelenorm.Z);
-                          distele = fabs(distele);	// if only magnitude is
-          required
-                          */
+                    // use a, b, c (normal is ai + bj + ck) 
+                    // at one of the nodes to get d
+                    // ax + by + cz + d = 0 is the equation of the plane
+                    double a = unitelenorm.X;
+                    double b = unitelenorm.Y;
+                    double c = unitelenorm.Z;
+                    double d = - a * polynode[0].X - b * polynode[0].Y - c * polynode[0].Z;
+                    // distance of the end point to this primitve is
+                    distele = (xend * a + yend * b + zend * c + d) /
+                              sqrt(a * a + b * b + c * c);
+                    distele = fabs(distele); // if only magnitude is required
+                  */
 
                   Vector3D eleOrigin;
                   eleOrigin.X = (EleArr + ele - 1)->G.Origin.X;
