@@ -10,7 +10,8 @@ namespace neBEM {
 #endif
 
 void ludcmp(double **a, int n, int *index, double *d) {
-  int i, imax, j, k;
+  int i, j, k;
+  int imax = 1;
   double big, sum, dum;
   double *vv; /* vv stores the implicit scaling of each row */
 
