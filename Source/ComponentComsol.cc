@@ -23,6 +23,7 @@ ComponentComsol::ComponentComsol(std::string mesh, std::string mplist,
 }
 
 bool ends_with(std::string s, std::string t) {
+  if (!s.empty() && s.back() == '\r') s.pop_back();
   return s.size() >= t.size() && s.substr(s.size() - t.size(), t.size()) == t;
 }
 
@@ -49,7 +50,7 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   fmplist.open(mplist.c_str(), std::ios::in);
   if (fmplist.fail()) {
     std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Could not open result file " << mplist
+    std::cerr << "    Could not open materials file " << mplist
               << " for reading.\n";
     return false;
   }
@@ -91,24 +92,36 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   }
 
   do {
-    std::getline(fmesh, line);
+    if (!std::getline(fmesh, line)) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Could not read number of nodes from " << mesh << ".\n";
+      fmesh.close();
+      return false;
+    }
   } while (!ends_with(line, "# number of mesh points"));
   nNodes = readInt(line);
 
   std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Read " << nNodes << " nodes from file " << mesh << ".\n";
+  std::cout << "    Reading " << nNodes << " nodes from " << mesh << ".\n";
   do {
-    std::getline(fmesh, line);
-  } while (line != "# Mesh point coordinates");
-  double minx = 1e100, miny = 1e100, minz = 1e100, maxx = -1e100, maxy = -1e100,
-         maxz = -1e100;
+    if (!std::getline(fmesh, line)) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Error reading " << mesh << ".\n";
+      fmesh.close();
+      return false;
+    }
+  } while (line.find("# Mesh point coordinates") == std::string::npos);
+  double minx = +std::numeric_limits<double>::max();
+  double maxx = -std::numeric_limits<double>::max();
+  double miny = minx, minz = minx;
+  double maxy = maxx, maxz = maxx;
   for (int i = 0; i < nNodes; ++i) {
     Node newNode;
     fmesh >> newNode.x >> newNode.y >> newNode.z;
     newNode.x *= unit;
     newNode.y *= unit;
     newNode.z *= unit;
-    nodes.push_back(newNode);
+    nodes.push_back(std::move(newNode));
     minx = std::min(minx, newNode.x);
     maxx = std::max(maxx, newNode.x);
     miny = std::min(miny, newNode.y);
@@ -116,21 +129,31 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
     minz = std::min(minz, newNode.z);
     maxz = std::max(maxz, newNode.z);
   }
-  std::cout << minx << " < x < " << maxx << "\n";
-  std::cout << miny << " < y < " << maxy << "\n";
-  std::cout << minz << " < z < " << maxz << "\n";
+  std::cout << m_className << "::Initialise: Bounding box:\n";
+  std::cout << "    " << minx << " < x < " << maxx << "\n";
+  std::cout << "    " << miny << " < y < " << maxy << "\n";
+  std::cout << "    " << minz << " < z < " << maxz << "\n";
 
   do {
-    std::getline(fmesh, line);
-  } while (line != "4 tet2 # type name");
+    if (!std::getline(fmesh, line)) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Error reading " << mesh << ".\n";
+      fmesh.close();
+      return false;
+    }
+  } while (line.find("4 tet2 # type name") == std::string::npos);
   do {
-    std::getline(fmesh, line);
+    if (!std::getline(fmesh, line)) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Error reading " << mesh << ".\n";
+      fmesh.close();
+      return false;
+    }
   } while (!ends_with(line, "# number of elements"));
   nElements = readInt(line);
   elements.clear();
-  std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Read " << nElements << " elements from file " << mesh
-            << ".\n";
+  std::cout << m_className << "::Initialise:\n"
+            << "    Reading " << nElements << " elements.\n";
   std::getline(fmesh, line);
   // elements 6 & 7 are swapped due to differences in COMSOL and ANSYS
   // representation
@@ -141,12 +164,17 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
     for (int j = 0; j < 10; ++j) {
       fmesh >> newElement.emap[perm[j]];
     }
-    elements.push_back(newElement);
+    elements.push_back(std::move(newElement));
   }
 
   do {
-    std::getline(fmesh, line);
-  } while (line != "# Geometric entity indices");
+    if (!std::getline(fmesh, line)) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Error reading " << mesh << ".\n";
+      fmesh.close();
+      return false;
+    }
+  } while (line.find("# Geometric entity indices") == std::string::npos);
   for (int i = 0; i < nElements; ++i) {
     int domain;
     fmesh >> domain;
@@ -164,13 +192,18 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   std::ifstream ffield;
   ffield.open(field.c_str(), std::ios::in);
   if (ffield.fail()) {
-    std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Could not open field potentials file " << field
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Could not open potentials file " << field
               << " for reading.\n";
     return false;
   }
   do {
-    std::getline(ffield, line);
+    if (!std::getline(ffield, line)) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Error reading " << field << ".\n";
+      ffield.close();
+      return false;
+    }
   } while (line.substr(0, 81) !=
            "% x                       y                        z               "
            "         V (V)");
