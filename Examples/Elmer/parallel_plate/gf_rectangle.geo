@@ -91,7 +91,6 @@ Function gf_rectangle
   // *******************************
 
   sl = newsl; Surface Loop(sl) = {s5, s1, s4, s3, s2, s6};
-  vol = newv; Volume(vol) = {sl};
 
   // ---------------------------------------
 
