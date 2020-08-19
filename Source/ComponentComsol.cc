@@ -9,18 +9,7 @@
 
 #include "Garfield/ComponentComsol.hh"
 
-namespace Garfield {
-
-ComponentComsol::ComponentComsol() : ComponentFieldMap() {
-  m_className = "ComponentComsol";
-}
-
-ComponentComsol::ComponentComsol(std::string mesh, std::string mplist,
-                                 std::string field)
-    : ComponentFieldMap() {
-  m_className = "ComponentComsol";
-  Initialise(mesh, mplist, field);
-}
+namespace {
 
 bool ends_with(std::string s, std::string t) {
   if (!s.empty() && s.back() == '\r') s.pop_back();
@@ -34,24 +23,36 @@ int readInt(std::string s) {
   return ret;
 }
 
+}
+
+namespace Garfield {
+
+ComponentComsol::ComponentComsol() : ComponentFieldMap() {
+  m_className = "ComponentComsol";
+}
+
+ComponentComsol::ComponentComsol(std::string mesh, std::string mplist,
+                                 std::string field)
+    : ComponentFieldMap() {
+  m_className = "ComponentComsol";
+  Initialise(mesh, mplist, field);
+}
+
 bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
                                  std::string field) {
   m_ready = false;
   m_warning = false;
   m_nWarnings = 0;
 
-  double unit = 100.0;  // m
-
-  std::string line;
+  constexpr double unit = 100.0;  // m
 
   // Open the materials file.
   materials.clear();
   std::ifstream fmplist;
   fmplist.open(mplist.c_str(), std::ios::in);
   if (fmplist.fail()) {
-    std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Could not open materials file " << mplist
-              << " for reading.\n";
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Could not open materials file " << mplist << ".\n";
     return false;
   }
   fmplist >> m_nMaterials;
@@ -86,11 +87,12 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   std::ifstream fmesh;
   fmesh.open(mesh.c_str(), std::ios::in);
   if (fmesh.fail()) {
-    std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Could not open nodes file " << mesh << " for reading.\n";
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Could not open nodes file " << mesh << ".\n";
     return false;
   }
 
+  std::string line;
   do {
     if (!std::getline(fmesh, line)) {
       std::cerr << m_className << "::Initialise:\n"
@@ -101,12 +103,11 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   } while (!ends_with(line, "# number of mesh points"));
   nNodes = readInt(line);
 
-  std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Reading " << nNodes << " nodes from " << mesh << ".\n";
+  std::cout << m_className << "::Initialise: " << nNodes << " nodes.\n";
   do {
     if (!std::getline(fmesh, line)) {
       std::cerr << m_className << "::Initialise:\n"
-                << "    Error reading " << mesh << ".\n";
+                << "    Error parsing " << mesh << ".\n";
       fmesh.close();
       return false;
     }
@@ -121,15 +122,15 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
     newNode.x *= unit;
     newNode.y *= unit;
     newNode.z *= unit;
-    nodes.push_back(std::move(newNode));
     minx = std::min(minx, newNode.x);
     maxx = std::max(maxx, newNode.x);
     miny = std::min(miny, newNode.y);
     maxy = std::max(maxy, newNode.y);
     minz = std::min(minz, newNode.z);
     maxz = std::max(maxz, newNode.z);
+    nodes.push_back(std::move(newNode));
   }
-  std::cout << m_className << "::Initialise: Bounding box:\n";
+  std::cout << m_className << "::Initialise:\n";
   std::cout << "    " << minx << " < x < " << maxx << "\n";
   std::cout << "    " << miny << " < y < " << maxy << "\n";
   std::cout << "    " << minz << " < z < " << maxz << "\n";
@@ -137,7 +138,7 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   do {
     if (!std::getline(fmesh, line)) {
       std::cerr << m_className << "::Initialise:\n"
-                << "    Error reading " << mesh << ".\n";
+                << "    Error parsing " << mesh << ".\n";
       fmesh.close();
       return false;
     }
@@ -145,15 +146,14 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   do {
     if (!std::getline(fmesh, line)) {
       std::cerr << m_className << "::Initialise:\n"
-                << "    Error reading " << mesh << ".\n";
+                << "    Error parsing " << mesh << ".\n";
       fmesh.close();
       return false;
     }
   } while (!ends_with(line, "# number of elements"));
   nElements = readInt(line);
   elements.clear();
-  std::cout << m_className << "::Initialise:\n"
-            << "    Reading " << nElements << " elements.\n";
+  std::cout << m_className << "::Initialise: " << nElements << " elements.\n";
   std::getline(fmesh, line);
   // elements 6 & 7 are swapped due to differences in COMSOL and ANSYS
   // representation
@@ -170,7 +170,7 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   do {
     if (!std::getline(fmesh, line)) {
       std::cerr << m_className << "::Initialise:\n"
-                << "    Error reading " << mesh << ".\n";
+                << "    Error parsing " << mesh << ".\n";
       fmesh.close();
       return false;
     }
@@ -187,26 +187,24 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   for (int i = 0; i < nNodes; ++i) {
     nodeIdx[nodes[i]].push_back(i);
   }
-  std::cout << "Map size: " << nodeIdx.size() << std::endl;
+  // std::cout << "Map size: " << nodeIdx.size() << std::endl;
 
   std::ifstream ffield;
   ffield.open(field.c_str(), std::ios::in);
   if (ffield.fail()) {
     std::cerr << m_className << "::Initialise:\n"
-              << "    Could not open potentials file " << field
-              << " for reading.\n";
+              << "    Could not open potentials file " << field << ".\n";
     return false;
   }
+  const std::string hdr = "% x                       y                        z                        V (V)";
   do {
     if (!std::getline(ffield, line)) {
       std::cerr << m_className << "::Initialise:\n"
-                << "    Error reading " << field << ".\n";
+                << "    Error parsing " << field << ".\n";
       ffield.close();
       return false;
     }
-  } while (line.substr(0, 81) !=
-           "% x                       y                        z               "
-           "         V (V)");
+  } while (line.find(hdr) == std::string::npos);
   {
     std::istringstream sline(line);
     std::string token;
@@ -242,17 +240,18 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
     // for (int j : nodeIdx[tmp]) {
     for (unsigned int k = 0; k < nIdx; ++k) {
       int j = nodeIdx[tmp][k];
-      double dist = (tmp.x - nodes[j].x) * (tmp.x - nodes[j].x) +
-                    (tmp.y - nodes[j].y) * (tmp.y - nodes[j].y) +
-                    (tmp.z - nodes[j].z) * (tmp.z - nodes[j].z);
-      if (dist < closestDist) {
+      const double dx = tmp.x - nodes[j].x;
+      const double dy = tmp.y - nodes[j].y;
+      const double dz = tmp.z - nodes[j].z;
+      const double dist = dx * dx + dy * dy + dz * dz;
+      if (closest < 0 || dist < closestDist) {
         closestDist = dist;
         closest = j;
       }
     }
     if (closest == -1) {
       std::cerr << m_className << "::Initialise:\n";
-      std::cerr << "    Could not match the node from field potentials file: "
+      std::cerr << "    Could not match the node from potentials file: "
                 << tmp.x << " " << tmp.y << " " << tmp.z << "\n.";
       return false;
     }
@@ -279,12 +278,12 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
 }
 
 bool ComponentComsol::SetWeightingField(std::string field, std::string label) {
-  double unit = 100.0;  // m;
+  constexpr double unit = 100.0;  // m;
 
   if (!m_ready) {
     std::cerr << m_className << "::SetWeightingField:\n";
     std::cerr << "    No valid field map is present.\n";
-    std::cerr << "    Weighting field cannot be added.\n";
+    std::cerr << "    Weighting fields cannot be added.\n";
     return false;
   }
 
@@ -292,13 +291,12 @@ bool ComponentComsol::SetWeightingField(std::string field, std::string label) {
   std::ifstream ffield;
   ffield.open(field.c_str(), std::ios::in);
   if (ffield.fail()) {
-    std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Could not open field potentials file " << field
-              << " for reading.\n";
+    std::cerr << m_className << "::SetWeightingField:\n";
+    std::cerr << "    Could not open potentials file " << field << ".\n";
     return false;
   }
 
-  // Check if a weighting field with the same label alm_ready exists.
+  // Check if a weighting field with the same label already exists.
   int iw = nWeightingFields;
   for (int i = nWeightingFields; i--;) {
     if (wfields[i] == label) {
@@ -323,14 +321,18 @@ bool ComponentComsol::SetWeightingField(std::string field, std::string label) {
   for (int i = 0; i < nNodes; ++i) {
     nodeIdx[nodes[i]].push_back(i);
   }
-  std::cout << "Map size: " << nodeIdx.size() << std::endl;
+  // std::cout << "Map size: " << nodeIdx.size() << std::endl;
 
+  const std::string hdr = "% x                       y                        z                        V (V)";
   std::string line;
   do {
-    std::getline(ffield, line);
-  } while (line !=
-           "% x                       y                        z               "
-           "         V (V)");
+    if (!std::getline(ffield, line)) {
+      std::cerr << m_className << "::SetWeightingField:\n"
+                << "    Error parsing " << field << ".\n";
+      ffield.close();
+      return false;
+    }
+  } while (line.find(hdr) == std::string::npos);
   for (int i = 0; i < nNodes; ++i) {
     Node tmp;
     ffield >> tmp.x >> tmp.y >> tmp.z >> tmp.v;
@@ -343,17 +345,18 @@ bool ComponentComsol::SetWeightingField(std::string field, std::string label) {
     // for (int j : nodeIdx[tmp]) {
     for (unsigned int k = 0; k < nIdx; ++k) {
       int j = nodeIdx[tmp][k];
-      double dist = (tmp.x - nodes[j].x) * (tmp.x - nodes[j].x) +
-                    (tmp.y - nodes[j].y) * (tmp.y - nodes[j].y) +
-                    (tmp.z - nodes[j].z) * (tmp.z - nodes[j].z);
-      if (dist < closestDist) {
+      const double dx = tmp.x - nodes[j].x;
+      const double dy = tmp.y - nodes[j].y;
+      const double dz = tmp.z - nodes[j].z;
+      const double dist = dx * dx + dy * dy + dz * dz;
+      if (closest < 0 || dist < closestDist) {
         closestDist = dist;
         closest = j;
       }
     }
     if (closest == -1) {
-      std::cerr << m_className << "::Initialise:\n";
-      std::cerr << "    Could not match the node from field potentials file: "
+      std::cerr << m_className << "::SetWeightingField:\n";
+      std::cerr << "    Could not match the node from potentials file: "
                 << tmp.x << " " << tmp.y << " " << tmp.z << "\n.";
       return false;
     }
