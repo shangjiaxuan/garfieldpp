@@ -24,6 +24,22 @@ int readInt(std::string s) {
   return ret;
 }
 
+void PrintProgress(const double f) {
+  if (f < 0.) return;
+  constexpr unsigned int width = 70;
+  const unsigned int n = static_cast<unsigned int>(std::floor(width * f));
+  std::string bar = "[";
+  if (n < 1) {
+    bar += std::string(width, ' ');
+  } else if (n >= width) {
+    bar += std::string(width, '=');
+  } else {
+    bar += std::string(n, '=') + ">" + std::string(width - n - 1, ' ');
+  }
+  bar += "]";
+  std::cout << bar << "\r" << std::flush;
+}
+
 }
 
 namespace Garfield {
@@ -113,28 +129,14 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
       return false;
     }
   } while (line.find("# Mesh point coordinates") == std::string::npos);
-  double minx = +std::numeric_limits<double>::max();
-  double maxx = -std::numeric_limits<double>::max();
-  double miny = minx, minz = minx;
-  double maxy = maxx, maxz = maxx;
   for (int i = 0; i < nNodes; ++i) {
     Node newNode;
     fmesh >> newNode.x >> newNode.y >> newNode.z;
     newNode.x *= unit;
     newNode.y *= unit;
     newNode.z *= unit;
-    minx = std::min(minx, newNode.x);
-    maxx = std::max(maxx, newNode.x);
-    miny = std::min(miny, newNode.y);
-    maxy = std::max(maxy, newNode.y);
-    minz = std::min(minz, newNode.z);
-    maxz = std::max(maxz, newNode.z);
     nodes.push_back(std::move(newNode));
   }
-  std::cout << m_className << "::Initialise:\n";
-  std::cout << "    " << minx << " < x < " << maxx << "\n";
-  std::cout << "    " << miny << " < y < " << maxy << "\n";
-  std::cout << "    " << minz << " < z < " << maxz << "\n";
 
   do {
     if (!std::getline(fmesh, line)) {
@@ -228,9 +230,13 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
     }
   }
 
+  const unsigned int nPrint =
+      std::pow(10, static_cast<unsigned int>(
+                       std::max(std::floor(std::log10(nNodes)) - 1, 1.)));
+  std::cout << m_className << "::Initialise: Reading potentials...\n";
+  PrintProgress(0.);
   std::vector<bool> used(nNodes, false);
   for (int i = 0; i < nNodes; ++i) {
-    if (i % 100000 == 0) std::cout << i << "...\n";
     double x, y, z, v;
     ffield >> x >> y >> z >> v;
     x *= unit;
@@ -246,7 +252,7 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
     std::vector<KDTreeResult> res;
     kdtree.n_nearest(pt, 1, res);
     if (res.empty()) {
-      std::cerr << m_className << "::Initialise:\n"
+      std::cerr << std::endl << m_className << "::Initialise:\n"
                 << "    Could not find a matching mesh node for point ("
                 << x << ", " << y << ", " << z << ")\n.";
       ffield.close();
@@ -256,10 +262,11 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
     used[k] = true;
     nodes[k].v = v;
     nodes[k].w = w;
+    if ((i + 1) % nPrint == 0) PrintProgress(double(i + 1) / nNodes);
   }
+  std::cout << std::endl << m_className << "::Initialise: Done.\n";
   ffield.close();
   m_ready = true;
-
   // Establish the ranges.
   SetRange();
   UpdatePeriodicity();
