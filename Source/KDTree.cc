@@ -4,11 +4,12 @@
 // Licensed under the Academic Free License version 1.1 found in file LICENSE
 // with additional provisions in that same file.
 
+#include <algorithm> 
+#include <limits>
+#include <queue>
+#include <iostream>
 
 #include "Garfield/KDTree.hh"
-
-#include <algorithm> 
-#include <iostream>
 
 namespace {
 
@@ -29,27 +30,6 @@ namespace Garfield {
 
 inline bool operator<(const KDTreeResult& e1, const KDTreeResult& e2) {
   return (e1.dis < e2.dis);
-}
-
-double KDTreeResultVector::max_value() {
-  return (*begin()).dis; // very first element
-}
-
-void KDTreeResultVector::push_element_and_heapify(KDTreeResult& e) {
-  push_back(e); // what a vector does.
-  push_heap(begin(), end()); // and now heapify it, with the new elt.
-}
-
-double KDTreeResultVector::replace_maxpri_elt_return_new_maxpri(KDTreeResult& e) {
-  // remove the maximum priority element on the queue and replace it
-  // with 'e', and return its priority.
-  // here, it means replacing the first element [0] with e, and re heapifying.
-  
-  pop_heap(begin(), end());
-  pop_back();
-  push_back(e); // insert new
-  push_heap(begin(), end()); // and heapify. 
-  return ((*this)[0].dis);
 }
 
 // Constructor
@@ -211,8 +191,6 @@ int KDTree::select_on_coordinate_value(int c, double alpha, int l, int u) {
 // this holds useful information  to be used
 // during the search
 
-static const double infinity = 1.0e38;
-
 class SearchRecord {
 
 private:
@@ -225,78 +203,100 @@ private:
   double ballsize;
   int centeridx, correltime;
 
-  KDTreeResultVector& result;  // results
+  std::priority_queue<KDTreeResult>& result;
   const KDTreeArray* data; 
   const std::vector<int>& ind; 
 
 public:
   SearchRecord(std::vector<double>& qv_in, KDTree& tree_in,
-               KDTreeResultVector& result_in) :  
+               std::priority_queue<KDTreeResult>& result_in) :
     qv(qv_in),
     result(result_in),
     data(tree_in.data),
     ind(tree_in.ind) { 
     dim = tree_in.dim;
-    ballsize = infinity; 
+    ballsize = std::numeric_limits<double>::max();
   };
 
 };
 
 // search for n nearest to a given query vector 'qv'.
-void KDTree::n_nearest(std::vector<double>& qv, int nn, KDTreeResultVector& result) {
-  result.clear(); 
-  SearchRecord sr(qv, *this, result);
+void KDTree::n_nearest(std::vector<double>& qv, int nn, 
+                       std::vector<KDTreeResult>& result) {
+
+  std::priority_queue<KDTreeResult> res; 
+  SearchRecord sr(qv, *this, res);
   sr.centeridx = -1;
   sr.correltime = 0;
   sr.nn = nn; 
   root->search(sr); 
+  result.clear();
+  while (!res.empty()) {
+    result.push_back(res.top());
+    res.pop();
+  }
   if (sort_results) sort(result.begin(), result.end());
   
 }
 
 void KDTree::n_nearest_around_point(int idxin, int correltime, int nn,
-                                    KDTreeResultVector& result) {
+                                    std::vector<KDTreeResult>& result) {
 
   std::vector<double> qv(dim);
-  for (int i=0; i<dim; i++) {
+  for (int i = 0; i < dim; i++) {
     qv[i] = the_data[idxin][i]; 
   }
-  result.clear(); 
-  // Construct the search record. 
-  SearchRecord sr(qv, *this, result);
+  std::priority_queue<KDTreeResult> res;
+  SearchRecord sr(qv, *this, res);
   sr.centeridx = idxin;
   sr.correltime = correltime;
   sr.nn = nn; 
   root->search(sr); 
+  result.clear(); 
+  while (!res.empty()) {
+    result.push_back(res.top());
+    res.pop();
+  }
   if (sort_results) sort(result.begin(), result.end());
 }
 
 // search for all within a ball of a certain radius
-void KDTree::r_nearest(std::vector<double>& qv, double r2, KDTreeResultVector& result) {
-  result.clear(); 
-  SearchRecord sr(qv,*this,result);
+void KDTree::r_nearest(std::vector<double>& qv, double r2, 
+                       std::vector<KDTreeResult>& result) {
+  std::priority_queue<KDTreeResult> res;
+  SearchRecord sr(qv, *this, res);
   sr.centeridx = -1;
   sr.correltime = 0;
   sr.nn = 0; 
   sr.ballsize = r2; 
   root->search(sr); 
+  result.clear(); 
+  while (!res.empty()) {
+    result.push_back(res.top());
+    res.pop();
+  }
   if (sort_results) sort(result.begin(), result.end());
 } 
 
 void KDTree::r_nearest_around_point(int idxin, int correltime, double r2,
-                                    KDTreeResultVector& result) {
+                                    std::vector<KDTreeResult>& result) {
   std::vector<double> qv(dim);
   for (int i = 0; i < dim; i++) {
     qv[i] = the_data[idxin][i]; 
   }
-  result.clear(); 
-  // Construct the search record. 
-  SearchRecord sr(qv, *this, result);
+
+  std::priority_queue<KDTreeResult> res;
+  SearchRecord sr(qv, *this, res);
   sr.centeridx = idxin;
   sr.correltime = correltime;
   sr.ballsize = r2; 
   sr.nn = 0; 
   root->search(sr); 
+  result.clear(); 
+  while (!res.empty()) {
+    result.push_back(res.top());
+    res.pop();
+  }
   if (sort_results) sort(result.begin(), result.end());
 }
 
@@ -396,9 +396,9 @@ void KDTreeNode::process_terminal_node(SearchRecord& sr) {
       KDTreeResult e;
       e.idx = indexofi;
       e.dis = dis;
-      sr.result.push_element_and_heapify(e); 
+      sr.result.push(e); 
       // Set the ball radius to the largest on the list (maximum priority).
-      if (sr.result.size() == nn) ballsize = sr.result.max_value();
+      if (sr.result.size() == nn) ballsize = sr.result.top().dis;
     } else {
       // if we get here then the current node, has a squared 
       // distance smaller
@@ -406,7 +406,9 @@ void KDTreeNode::process_terminal_node(SearchRecord& sr) {
       KDTreeResult e;
       e.idx = indexofi;
       e.dis = dis;
-      ballsize = sr.result.replace_maxpri_elt_return_new_maxpri(e); 
+      sr.result.pop();
+      sr.result.push(e); 
+      ballsize = sr.result.top().dis;
     }
   } // main loop
   sr.ballsize = ballsize;
@@ -441,7 +443,8 @@ void KDTreeNode::process_terminal_node_fixedball(SearchRecord& sr) {
     KDTreeResult e;
     e.idx = indexofi;
     e.dis = dis;
-    sr.result.push_back(e);
+    // sr.result.push_back(e);
+    sr.result.push(e);
   }
 }
 

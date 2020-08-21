@@ -30,28 +30,6 @@ public:
   int idx;    // which neighbor was found
 }; 
 
-class KDTreeResultVector : public std::vector<KDTreeResult> {
-  // inherit a std::vector<KDTreeResult>
-  // but, optionally maintain it in heap form as a priority
-  // queue.
-public:
-
-  //  
-  // add one new element to the list of results, and
-  // keep it in heap order.  To keep it in ordinary, as inserted,
-  // order, then simply use push_back() as inherited
-  // via std::vector<> 
-
-  void push_element_and_heapify(KDTreeResult&);
-  double replace_maxpri_elt_return_new_maxpri(KDTreeResult&);
-
-  double max_value(); 
-  // return the distance which has the maximum value of all on list, 
-  // assuming that ALL insertions were made by
-  // push_element_and_heapify() 
-};
-
-
 // KDTree
 //
 // The main data structure, one for each k-d tree, pointing
@@ -81,22 +59,22 @@ public:
 public:
   // Search for n nearest to a given query vector 'qv'.
   void n_nearest(std::vector<double>& qv, int nn, 
-                 KDTreeResultVector& result);
+                 std::vector<KDTreeResult>& result);
 
   // Search for 'nn' nearest to point [idxin] of the input data, excluding
   // neighbors within correltime 
   void n_nearest_around_point(int idxin, int correltime, int nn,
-                              KDTreeResultVector& result);
+                              std::vector<KDTreeResult>& result);
   
   // Search for all neighbors in ball of size (square Euclidean distance)
   // r2.
   void r_nearest(std::vector<double>& qv, double r2,
-                 KDTreeResultVector& result); 
+                 std::vector<KDTreeResult>& result);
 
   // Like 'r_nearest', but around existing point, with decorrelation
   // interval. 
   void r_nearest_around_point(int idxin, int correltime, double r2,
-                              KDTreeResultVector& result);
+                              std::vector<KDTreeResult>& result);
 
   friend class KDTreeNode;
   friend class SearchRecord;
