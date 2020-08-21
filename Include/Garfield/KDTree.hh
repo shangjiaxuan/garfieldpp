@@ -11,15 +11,12 @@
 // in k-dimensional Euclidean space.
 
 #include <vector>
+#include <array>
 #include <algorithm>
 
 namespace Garfield {
 
 typedef std::vector<std::vector<double> > KDTreeArray;
-
-typedef struct {
-  double lower, upper;
-} interval;
 
 class KDTreeNode; 
 class SearchRecord;
@@ -46,7 +43,6 @@ public:
   // during use of the search facilities of this tree.
   // Also, the user must deallocate the memory underlying it.
 
-  const int N;   // number of data points
   int dim;
   bool sort_results = false;
 
@@ -91,7 +87,7 @@ private:
 private:
   KDTreeNode* build_tree_for_range(int l, int u, KDTreeNode* parent);
   int select_on_coordinate_value(int c, double alpha, int l, int u); 
-  void spread_in_coordinate(int c, int l, int u, interval& interv);
+  std::array<double, 2> spread_in_coordinate(int c, int l, int u);
 };
 
 /// A node in the tree.
@@ -111,9 +107,9 @@ private:
   // Cut value.
   double cut_val, cut_val_left, cut_val_right;  
   // Extents in index array for searching
-  int l,u;  
+  int l, u;  
   // [min,max] of the box enclosing all points
-  std::vector<interval> box; 
+  std::vector<std::array<double, 2> > box; 
 
   // Pointers to left and right nodes.
   KDTreeNode *left = nullptr;

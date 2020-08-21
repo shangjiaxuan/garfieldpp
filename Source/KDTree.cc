@@ -34,17 +34,17 @@ inline bool operator<(const KDTreeResult& e1, const KDTreeResult& e2) {
 
 // Constructor
 KDTree::KDTree(KDTreeArray& data_in)
-  : the_data(data_in),
-    N(data_in.size()),
-    ind(N) {
- 
+  : the_data(data_in) {
+
+  const size_t n = data_in.size(); 
   if (!data_in.empty()) {
     dim = data_in[0].size();
   } 
 
-  for (int i = 0; i < N; i++) ind[i] = i; 
+  ind.resize(n);
+  for (size_t i = 0; i < n; i++) ind[i] = i; 
   // Build the tree.
-  root = build_tree_for_range(0, N - 1, 0); 
+  root = build_tree_for_range(0, n - 1, 0); 
   data = &the_data;
 }
 
@@ -61,7 +61,7 @@ KDTreeNode* KDTree::build_tree_for_range(int l, int u, KDTreeNode* parent) {
     // Create a terminal node. 
     // Always compute true bounding box for terminal node. 
     for (int i = 0; i < dim; i++) {
-      spread_in_coordinate(i, l, u, node->box[i]);
+      node->box[i] = spread_in_coordinate(i, l, u);
     }
     node->cut_dim = 0; 
     node->cut_val = 0.0;
@@ -79,11 +79,11 @@ KDTreeNode* KDTree::build_tree_for_range(int l, int u, KDTreeNode* parent) {
     double maxspread = 0.0;
     for (int i = 0; i < dim; i++) {
       if (!parent || (parent->cut_dim == i)) {
-        spread_in_coordinate(i, l, u, node->box[i]);
+        node->box[i] = spread_in_coordinate(i, l, u);
       } else {
         node->box[i] = parent->box[i];
       }
-      double spread = node->box[i].upper - node->box[i].lower; 
+      double spread = node->box[i][1] - node->box[i][0]; 
       if (spread > maxspread) {
         maxspread = spread;
         c = i; 
@@ -109,37 +109,36 @@ KDTreeNode* KDTree::build_tree_for_range(int l, int u, KDTreeNode* parent) {
       for (int i = 0; i < dim; i++) { 
         node->box[i] = node->left->box[i];
       } 
-      node->cut_val = node->left->box[c].upper;
+      node->cut_val = node->left->box[c][1];
       node->cut_val_left = node->cut_val_right = node->cut_val;
     } else if (!node->left) {
       for (int i = 0; i < dim; i++) { 
         node->box[i] = node->right->box[i];
       } 
-      node->cut_val = node->right->box[c].upper;
+      node->cut_val = node->right->box[c][1];
       node->cut_val_left = node->cut_val_right = node->cut_val;
     } else {
-      node->cut_val_right = node->right->box[c].lower;
-      node->cut_val_left  = node->left->box[c].upper;
+      node->cut_val_right = node->right->box[c][0];
+      node->cut_val_left  = node->left->box[c][1];
       node->cut_val = 0.5 * (node->cut_val_left + node->cut_val_right); 
       
       // Now recompute true bounding box as union of subtree boxes.
       // This is now faster having built the tree, being logarithmic in
       // N, not linear as would be from naive method.
       for (int i = 0; i < dim; i++) {
-        node->box[i].upper = std::max(node->left->box[i].upper,
-                                      node->right->box[i].upper);
+        node->box[i][1] = std::max(node->left->box[i][1],
+                                      node->right->box[i][1]);
         
-        node->box[i].lower = std::min(node->left->box[i].lower,
-                                      node->right->box[i].lower);
+        node->box[i][0] = std::min(node->left->box[i][0],
+                                      node->right->box[i][0]);
       }
     }
   }
   return node;
 }
 
-void KDTree:: spread_in_coordinate(int c, int l, int u, interval& interv) {
-  // return the minimum and maximum of the indexed data between l and u in
-  // smin_out and smax_out.
+std::array<double, 2> KDTree::spread_in_coordinate(int c, int l, int u) {
+  // Return the minimum and maximum of the indexed data between l and u.
 
   double smin = the_data[ind[l]][c];
   double smax = smin;
@@ -159,8 +158,7 @@ void KDTree:: spread_in_coordinate(int c, int l, int u, interval& interv) {
     if (smin > last) smin = last;
     if (smax < last) smax = last;
   }
-  interv.lower = smin;
-  interv.upper = smax;
+  return {smin, smax};
 }
 
 int KDTree::select_on_coordinate_value(int c, double alpha, int l, int u) {
@@ -357,7 +355,7 @@ inline bool KDTreeNode::box_in_search_range(SearchRecord& sr) {
   double dis2 = 0.0; 
   double ballsize = sr.ballsize; 
   for (int i = 0; i < dim; i++) {
-    dis2 += squared(dis_from_bnd(sr.qv[i], box[i].lower, box[i].upper));
+    dis2 += squared(dis_from_bnd(sr.qv[i], box[i][0], box[i][1]));
     if (dis2 > ballsize) return false;
   }
   return true;
