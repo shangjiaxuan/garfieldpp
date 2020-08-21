@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <array>
+#include <queue>
 #include <algorithm>
 
 namespace Garfield {
@@ -19,78 +20,83 @@ namespace Garfield {
 typedef std::vector<std::vector<double> > KDTreeArray;
 
 class KDTreeNode; 
-class SearchRecord;
+
+/// Search result
 
 struct KDTreeResult {
-public:
-  double dis;  // its square Euclidean distance
-  int idx;    // which neighbor was found
+  double dis; //< square Euclidean distance
+  int idx;    //< index
 }; 
 
-// KDTree
-//
-// The main data structure, one for each k-d tree, pointing
-// to a tree of an indeterminate number of "KDTreeNode"s.
+/// Main k-d tree class.
+/// Fast search of points in k-dimensional Euclidean space.
 
 class KDTree {
 public: 
-  const KDTreeArray& the_data;   
-  // "the_data" is a reference to the underlying 
-  // data to be included in the tree.
-  //
-  // NOTE: this structure does *NOT* own the storage underlying this.
-  // Hence, it would be a very bad idea to change the underlying data
-  // during use of the search facilities of this tree.
-  // Also, the user must deallocate the memory underlying it.
+  // Reference to the underlying data to be included in the tree.
+  const KDTreeArray& m_data;   
 
-  int dim;
+  size_t m_dim;
   bool sort_results = false;
 
 public:
-  // Constructor.
+  KDTree() = delete;
+  /// Constructor.
   KDTree(KDTreeArray& data_in);
-  // Destructor.
+  /// Destructor.
   ~KDTree();
 
-public:
-  // Search for n nearest to a given query vector 'qv'.
-  void n_nearest(std::vector<double>& qv, int nn, 
-                 std::vector<KDTreeResult>& result);
+  /** Search for nn nearest neighbours around a point.
+    * \param qv input point 
+    * \param nn number of nearest neighbours
+    * \param result indices and distances of the nearest neighbours
+    */
+  void n_nearest(const std::vector<double>& qv, const unsigned int nn, 
+                 std::vector<KDTreeResult>& result) const;
 
-  // Search for 'nn' nearest to point [idxin] of the input data, excluding
-  // neighbors within correltime 
-  void n_nearest_around_point(int idxin, int correltime, int nn,
-                              std::vector<KDTreeResult>& result);
+  /** Search for nn nearest neighbours around a node of the input data, 
+    * excluding neighbors within a decorrelation interval.
+    * \param idx index of the input point
+    * \param ndecorrel decorrelation interval
+    * \param nn number of nearest neighbours
+    * \param result indices and distances of the nearest neighbours
+    */
+  void n_nearest_around_point(const unsigned int idx, 
+                              const unsigned int ndecorrel, 
+                              const unsigned int nn,
+                              std::vector<KDTreeResult>& result) const;
   
-  // Search for all neighbors in ball of size (square Euclidean distance)
-  // r2.
-  void r_nearest(std::vector<double>& qv, double r2,
-                 std::vector<KDTreeResult>& result);
+  /** Search for all neighbors in a ball of size r2 
+    * \param qv input point
+    * \param r2 ball size (square Euclidean distance)
+    * \param result indices and distances of the nearest neighbours
+    */ 
+  void r_nearest(const std::vector<double>& qv, const double r2,
+                 std::vector<KDTreeResult>& result) const;
 
-  // Like 'r_nearest', but around existing point, with decorrelation
-  // interval. 
-  void r_nearest_around_point(int idxin, int correltime, double r2,
-                              std::vector<KDTreeResult>& result);
+  /// Like r_nearest, but around an existing point, 
+  /// with decorrelation interval. 
+  void r_nearest_around_point(const unsigned int idx, 
+                              const unsigned int ndecorrel, const double r2,
+                              std::vector<KDTreeResult>& result) const;
 
   friend class KDTreeNode;
-  friend class SearchRecord;
 private:
-  KDTreeNode* root = nullptr;
-  const KDTreeArray* data = nullptr;
+  KDTreeNode* m_root = nullptr;
 
   // Index for the tree leaves. Data in a leaf with bounds [l,u] are
-  // in 'the_data[ind[l],*] to the_data[ind[u],*]
-  std::vector<int> ind; 
+  // in 'data[ind[l],*] to data[ind[u],*]
+  std::vector<size_t> m_ind; 
 
-  static const int bucketsize = 12; // global constant. 
+  static constexpr int bucketsize = 12; // global constant. 
 
 private:
   KDTreeNode* build_tree_for_range(int l, int u, KDTreeNode* parent);
   int select_on_coordinate_value(int c, double alpha, int l, int u); 
-  std::array<double, 2> spread_in_coordinate(int c, int l, int u);
+  std::array<double, 2> spread_in_coordinate(const int c, const int l, const int u) const;
 };
 
-/// A node in the tree.
+/// A node in the k-d tree.
 
 class KDTreeNode {
 public:
@@ -103,11 +109,11 @@ private:
   friend class KDTree;
 
   // Dimension to cut.
-  int cut_dim;                                 
+  size_t cut_dim; 
   // Cut value.
   double cut_val, cut_val_left, cut_val_right;  
   // Extents in index array for searching
-  int l, u;  
+  int m_l, m_u;  
   // [min,max] of the box enclosing all points
   std::vector<std::array<double, 2> > box; 
 
@@ -115,16 +121,31 @@ private:
   KDTreeNode *left = nullptr;
   KDTreeNode *right = nullptr;  
 
-  // Recursive innermost core routine for searching.
-  void search(SearchRecord& sr); 
-
+  // Recursive innermost core routines for searching.
+  void search_n(const int idx0, const int nd,
+                const unsigned int nn, double& r2,
+                const std::vector<double>& qv, const KDTree& tree, 
+                std::priority_queue<KDTreeResult>& res) const; 
+  void search_r(const int idx0, const int nd, const double r2,
+                const std::vector<double>& qv, const KDTree& tree, 
+                std::vector<KDTreeResult>& res) const;
+  
   // Return true if the bounding box for this node is within the
-  // search range given by the searchvector and maximum ballsize in 'sr'. 
-  bool box_in_search_range(SearchRecord& sr);
+  // search range around a point.
+  bool box_in_search_range(const double r2, 
+                           const std::vector<double>& qv) const;
 
   // For processing final buckets. 
-  void process_terminal_node(SearchRecord& sr);
-  void process_terminal_node_fixedball(SearchRecord& sr);
+  void process_terminal_node_n(const int idx0, const int nd,
+                               const unsigned int nn, double& r2, 
+                               const std::vector<double>& qv, 
+                               const KDTree& tree,
+                               std::priority_queue<KDTreeResult>& res) const;
+  void process_terminal_node_r(const int idx0, const int nd,
+                               const double r2, 
+                               const std::vector<double>& qv, 
+                               const KDTree& tree,
+                               std::vector<KDTreeResult>& res) const;
 
 };
 
