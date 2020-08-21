@@ -48,14 +48,5 @@ class ComponentComsol : public ComponentFieldMap {
   void GetAspectRatio(const unsigned int i, double& dmin,
                       double& dmax) override;
 
-  struct nodeCmp {
-    bool operator()(const ComponentFieldMap::Node& lhs,
-                    const ComponentFieldMap::Node& rhs) const {
-      double dx = round(lhs.x * 1e6) - round(rhs.x * 1e6);
-      double dy = round(lhs.y * 1e6) - round(rhs.y * 1e6);
-      double dz = round(lhs.z * 1e6) - round(rhs.z * 1e6);
-      return dx < 0 || (dx == 0 && (dy < 0 || (dy == 0 && dz < 0)));
-    }
-  };
 };
 }

@@ -25,7 +25,7 @@ class KDTreeNode;
 
 struct KDTreeResult {
   double dis; //< square Euclidean distance
-  int idx;    //< index
+  size_t idx; //< index
 }; 
 
 /// Main k-d tree class.
