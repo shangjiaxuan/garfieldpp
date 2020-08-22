@@ -248,8 +248,8 @@ class ComponentCST : public ComponentFieldMap {
   unsigned int m_nElements = 0; ///< Number of elements
   unsigned int m_nNodes = 0;    ///< Number of nodes
   // If true x,y,z fields of this component are disabled (e=0 V/cm).
-  bool disableFieldComponent[3];
-  bool doShaping;
+  bool disableFieldComponent[3] = {false, false, false};
+  bool doShaping = false;
   static const unsigned int headerSize =
       1000;  ///< Size of the header in binary files used in the CST export
   void ElectricFieldBinary(const double x, const double y, const double z,

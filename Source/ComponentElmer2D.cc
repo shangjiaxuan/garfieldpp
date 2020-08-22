@@ -25,8 +25,7 @@ void PrintErrorOpeningFile(const std::string& hdr, const std::string& filetype,
 
 namespace Garfield {
 
-ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap() {
-  m_className = "ComponentElmer2D";
+ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap("Elmer2D") {
   m_is3d = false;
 
   // Default bounding box
@@ -35,17 +34,13 @@ ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap() {
 }
 
 ComponentElmer2D::ComponentElmer2D(const std::string& header,
-                               const std::string& elist,
-                               const std::string& nlist,
-                               const std::string& mplist,
-                               const std::string& volt, const std::string& unit)
-    : ComponentFieldMap() {
-  m_className = "ComponentElmer2D";
-  m_is3d = false;
+                                   const std::string& elist,
+                                   const std::string& nlist,
+                                   const std::string& mplist,
+                                   const std::string& volt, 
+                                   const std::string& unit)
+    : ComponentElmer2D() {
 
-  // Default bounding box
-  m_minBoundingBox[2] = -50;
-  m_maxBoundingBox[2] = 50;
   Initialise(header, elist, nlist, mplist, volt, unit);
 }
 

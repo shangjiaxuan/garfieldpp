@@ -11,8 +11,9 @@
 
 namespace Garfield {
 
-ComponentFieldMap::ComponentFieldMap() : ComponentBase() {
-  m_className = "ComponentFieldMap";
+ComponentFieldMap::ComponentFieldMap(const std::string& name) 
+    : ComponentBase() {
+  m_className = "Component" + name;
 }
 
 ComponentFieldMap::~ComponentFieldMap() {

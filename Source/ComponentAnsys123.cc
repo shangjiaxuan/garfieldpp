@@ -7,9 +7,7 @@
 
 namespace Garfield {
 
-ComponentAnsys123::ComponentAnsys123() : ComponentFieldMap() {
-  m_className = "ComponentAnsys123";
-}
+ComponentAnsys123::ComponentAnsys123() : ComponentFieldMap("Ansys123") {}
 
 bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
                                    std::string mplist, std::string prnsol,
@@ -21,7 +19,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   bool ok = true;
 
   // Buffer for reading
-  const int size = 100;
+  constexpr int size = 100;
   char line[size];
 
   // Open the material list.
@@ -85,8 +83,8 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
         material.medium = nullptr;
       }
       if (m_debug) {
-        std::cout << m_className << "::Initialise:\n";
-        std::cout << "    Number of materials: " << nMaterials << "\n";
+        std::cout << m_className << "::Initialise: " << nMaterials 
+                  << " materials.\n";
       }
     } else if (strcmp(token, "MATERIAL") == 0) {
       // Version 12 format: read material number
@@ -235,8 +233,8 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   }
 
   // Tell how many lines read
-  std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Read properties of " << m_materials.size()
+  std::cout << m_className << "::Initialise:\n"
+            << "    Read properties of " << m_materials.size()
             << " materials from file " << mplist << ".\n";
   if (m_debug) PrintMaterials();
 
@@ -439,8 +437,9 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   felist.close();
 
   // Tell how many lines read.
-  std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Read " << m_elements.size() << " elements,\n";
+  std::cout << m_className << "::Initialise:\n"
+            << "    Read " << m_elements.size() << " elements from file "
+            << elist << ",\n";
   std::cout << "    highest node number: " << highestnode << ",\n";
   std::cout << "    background elements skipped: " << nbackground << "\n";
   // Check the value of the unit
@@ -631,9 +630,8 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   // Close the file
   fprnsol.close();
   // Tell how many lines read
-  std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Read " << nread << " potentials from file " << prnsol
-            << ".\n";
+  std::cout << m_className << "::Initialise:\n    Read "
+            << nread << " potentials from file " << prnsol << ".\n";
   // Check number of nodes
   if (nread != m_nodes.size()) {
     std::cerr << m_className << "::Initialise:\n";
@@ -706,7 +704,7 @@ bool ComponentAnsys123::SetWeightingField(std::string prnsol,
   m_wfieldsOk[iw] = false;
 
   // Buffer for reading
-  const int size = 100;
+  constexpr int size = 100;
   char line[size];
 
   bool ok = true;

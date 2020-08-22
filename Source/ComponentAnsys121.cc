@@ -7,8 +7,7 @@
 
 namespace Garfield {
 
-ComponentAnsys121::ComponentAnsys121() : ComponentFieldMap() {
-  m_className = "ComponentAnsys121";
+ComponentAnsys121::ComponentAnsys121() : ComponentFieldMap("Ansys121") {
   m_is3d = false;
   // Default bounding box
   m_minBoundingBox[2] = -50;
@@ -25,7 +24,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   bool ok = true;
 
   // Buffer for reading
-  const int size = 100;
+  constexpr int size = 100;
   char line[size];
 
   // Open the material list.
@@ -82,10 +81,10 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
         return false;
       }
       m_materials.resize(nMaterials);
-      for (unsigned int i = 0; i < nMaterials; ++i) {
-        m_materials[i].ohm = -1;
-        m_materials[i].eps = -1;
-        m_materials[i].medium = nullptr;
+      for (auto& material : m_materials) {
+        material.ohm = -1;
+        material.eps = -1;
+        material.medium = nullptr;
       }
       if (m_debug) {
         std::cout << m_className << "::Initialise: " << nMaterials
@@ -239,8 +238,8 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   }
 
   // Tell how many lines read
-  std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Read properties of " << m_materials.size()
+  std::cout << m_className << "::Initialise:\n"
+            << "    Read properties of " << m_materials.size()
             << " materials from file " << mplist << ".\n";
   if (m_debug) PrintMaterials();
 
@@ -403,8 +402,9 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   // Close the file
   felist.close();
   // Tell how many lines read
-  std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Read " << m_elements.size() << " elements,\n";
+  std::cout << m_className << "::Initialise:\n"
+            << "    Read " << m_elements.size() << " elements from file "
+            << elist << ",\n";
   std::cout << "    highest node number: " << highestnode << ",\n";
   std::cout << "    degenerate elements: " << ndegenerate << ",\n";
   std::cout << "    background elements skipped: " << nbackground << ".\n";
@@ -645,7 +645,7 @@ bool ComponentAnsys121::SetWeightingField(std::string prnsol,
   m_wfieldsOk[iw] = false;
 
   // Buffer for reading
-  const int size = 100;
+  constexpr int size = 100;
   char line[size];
 
   bool ok = true;

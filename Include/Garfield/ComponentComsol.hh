@@ -13,7 +13,7 @@ class ComponentComsol : public ComponentFieldMap {
   /// Constructor from file names.
   ComponentComsol(const std::string& mesh, 
                   const std::string& mplist, const std::string& field,
-                  std::string unit = "m");
+                  const std::string& unit = "m");
   /// Destructor.
   ~ComponentComsol() {}
 
@@ -41,7 +41,7 @@ class ComponentComsol : public ComponentFieldMap {
   bool Initialise(const std::string& header = "mesh.mphtxt",
                   const std::string& mplist = "dielectrics.dat",
                   const std::string& field = "field.txt",
-                  std::string unit = "m");
+                  const std::string& unit = "m");
   /// Import weighting field maps.
   bool SetWeightingField(const std::string& file, const std::string& label);
 

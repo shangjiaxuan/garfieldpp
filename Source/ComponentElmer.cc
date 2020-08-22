@@ -25,17 +25,14 @@ void PrintErrorOpeningFile(const std::string& hdr, const std::string& filetype,
 
 namespace Garfield {
 
-ComponentElmer::ComponentElmer() : ComponentFieldMap() {
-  m_className = "ComponentElmer";
-}
+ComponentElmer::ComponentElmer() : ComponentFieldMap("Elmer") {}
 
 ComponentElmer::ComponentElmer(const std::string& header,
                                const std::string& elist,
                                const std::string& nlist,
                                const std::string& mplist,
                                const std::string& volt, const std::string& unit)
-    : ComponentFieldMap() {
-  m_className = "ComponentElmer";
+    : ComponentFieldMap("Elmer") {
   Initialise(header, elist, nlist, mplist, volt, unit);
 }
 

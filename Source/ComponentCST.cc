@@ -15,8 +15,7 @@
 
 namespace Garfield {
 
-ComponentCST::ComponentCST() : ComponentFieldMap() {
-  m_className = "ComponentCST";
+ComponentCST::ComponentCST() : ComponentFieldMap("CST") {
   // Default bounding box
   m_minBoundingBox[2] = -50.;
   m_maxBoundingBox[2] = 50.;
@@ -24,10 +23,6 @@ ComponentCST::ComponentCST() : ComponentFieldMap() {
   m_ylines.clear();
   m_zlines.clear();
   m_deleteBackground = false;
-  disableFieldComponent[0] = false;
-  disableFieldComponent[1] = false;
-  disableFieldComponent[2] = false;
-  doShaping = false;
 }
 
 bool ComponentCST::Initialise(std::string elist, std::string nlist,

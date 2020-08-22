@@ -44,21 +44,20 @@ void PrintProgress(const double f) {
 
 namespace Garfield {
 
-ComponentComsol::ComponentComsol() : ComponentFieldMap() {
-  m_className = "ComponentComsol";
-}
+ComponentComsol::ComponentComsol() : ComponentFieldMap("Comsol") {}
 
 ComponentComsol::ComponentComsol(const std::string& mesh, 
                                  const std::string& mplist,
-                                 const std::string& field, std::string unit)
-    : ComponentFieldMap() {
-  m_className = "ComponentComsol";
+                                 const std::string& field, 
+                                 const std::string& unit)
+    : ComponentComsol() {
   Initialise(mesh, mplist, field, unit);
 }
 
 bool ComponentComsol::Initialise(const std::string& mesh, 
                                  const std::string& mplist,
-                                 const std::string& field, std::string unit) {
+                                 const std::string& field, 
+                                 const std::string& unit) {
   m_ready = false;
   m_warning = false;
   m_nWarnings = 0;

@@ -12,8 +12,10 @@ namespace Garfield {
 
 class ComponentFieldMap : public ComponentBase {
  public:
+  /// Default constructor.
+  ComponentFieldMap() = delete;
   /// Constructor
-  ComponentFieldMap();
+  ComponentFieldMap(const std::string& name);
   /// Destructor
   virtual ~ComponentFieldMap();
 
