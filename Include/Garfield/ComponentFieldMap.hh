@@ -67,11 +67,10 @@ class ComponentFieldMap : public ComponentBase {
                   double& dmax);
 
   // Options
-  void EnableCheckMapIndices() {
-    m_checkMultipleElement = true;
-    m_lastElement = -1;
+  void EnableCheckMapIndices(const bool on = true) {
+    m_checkMultipleElement = on;
+    if (on) m_lastElement = -1;
   }
-  void DisableCheckMapIndices() { m_checkMultipleElement = false; }
   /// Option to eliminate mesh elements in conductors (default: on).
   void EnableDeleteBackgroundElements(const bool on = true) { 
     m_deleteBackground = on; 
@@ -190,7 +189,7 @@ class ComponentFieldMap : public ComponentBase {
   virtual void GetAspectRatio(const unsigned int i, double& dmin,
                               double& dmax) = 0;
 
-  int GetWeightingFieldIndex(const std::string& label) const;
+  size_t GetWeightingFieldIndex(const std::string& label) const;
   size_t GetOrCreateWeightingFieldIndex(const std::string& label);
 
   void PrintWarning(const std::string& header) {

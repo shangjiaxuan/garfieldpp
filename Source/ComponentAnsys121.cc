@@ -690,10 +690,10 @@ bool ComponentAnsys121::SetWeightingField(std::string prnsol,
             << ".\n";
   // Check the number of nodes.
   if (nread != m_nodes.size()) {
-    std::cerr << m_className << "::SetWeightingField:\n";
-    std::cerr << "    Number of nodes read (" << nread << ") "
-              << "    on potential file " << prnsol << "\n";
-    std::cerr << "    does not match the node list (" << m_nodes.size() << ").\n";
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Number of nodes read from potential file " << prnsol
+              << " (" << nread << ")\n    does not match the node list (" 
+              << m_nodes.size() << ").\n";
     ok = false;
   }
 
@@ -868,9 +868,9 @@ void ComponentAnsys121::WeightingField(const double xin, const double yin,
   if (!m_ready) return;
 
   // Look for the label.
-  const int iw = GetWeightingFieldIndex(label);
+  const size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (iw < 0) return;
+  if (iw == m_wfields.size()) return;
   // Check if the weighting field is properly initialised.
   if (!m_wfieldsOk[iw]) return;
 
@@ -975,9 +975,9 @@ double ComponentAnsys121::WeightingPotential(const double xin, const double yin,
   if (!m_ready) return 0.;
 
   // Look for the label.
-  const int iw = GetWeightingFieldIndex(label);
+  const size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (iw < 0) return 0.;
+  if (iw == m_wfields.size()) return 0.;
   // Check if the weighting field is properly initialised.
   if (!m_wfieldsOk[iw]) return 0.;
 

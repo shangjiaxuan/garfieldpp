@@ -2401,13 +2401,13 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   return true;
 }
 
-int ComponentFieldMap::GetWeightingFieldIndex(const std::string& label) const {
+size_t ComponentFieldMap::GetWeightingFieldIndex(const std::string& label) const {
 
   const size_t nWeightingFields = m_wfields.size();
   for (size_t i = 0; i < nWeightingFields; ++i) {
     if (m_wfields[i] == label) return i;
   }
-  return -1;
+  return nWeightingFields; 
 }
 
 size_t ComponentFieldMap::GetOrCreateWeightingFieldIndex(

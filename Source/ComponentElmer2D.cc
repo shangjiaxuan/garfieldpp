@@ -657,9 +657,9 @@ void ComponentElmer2D::WeightingField(const double xin, const double yin,
   if (!m_ready) return;
 
   // Look for the label.
-  const int iw = GetWeightingFieldIndex(label);
+  const size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (iw < 0) return;
+  if (iw == m_wfields.size()) return;
   // Check if the weighting field is properly initialised.
   if (!m_wfieldsOk[iw]) return;
 
@@ -752,9 +752,9 @@ double ComponentElmer2D::WeightingPotential(const double xin, const double yin,
   if (!m_ready) return 0.;
 
   // Look for the label.
-  const int iw = GetWeightingFieldIndex(label);
+  const size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (iw < 0) return 0.;
+  if (iw == m_wfields.size()) return 0.;
   // Check if the weighting field is properly initialised.
   if (!m_wfieldsOk[iw]) return 0.;
 
