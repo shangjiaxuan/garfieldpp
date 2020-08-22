@@ -226,7 +226,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   const unsigned int nPrint =
       std::pow(10, static_cast<unsigned int>(
                        std::max(std::floor(std::log10(nNodes)) - 1, 1.)));
-  std::cout << m_className << "::Initialise: Reading potentials...\n";
+  std::cout << m_className << "::Initialise: Reading potentials.\n";
   PrintProgress(0.);
   // Build a k-d tree from the node coordinates.
   std::vector<std::vector<double> > points;
@@ -264,8 +264,16 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     nodes[k].w = w;
     if ((i + 1) % nPrint == 0) PrintProgress(double(i + 1) / nNodes);
   }
-  std::cout << std::endl << m_className << "::Initialise: Done.\n";
+  PrintProgress(1.);
   ffield.close();
+  auto nMissing = std::count(used.begin(), used.end(), false);
+  if (nMissing > 0) {
+    std::cerr << std::endl << m_className << "::Initialise:\n"
+              << "    Missing potentials for " << nMissing << " nodes.\n";
+    return false;
+  }
+  std::cout << std::endl << m_className << "::Initialise: Done.\n";
+
   m_ready = true;
   // Establish the ranges.
   SetRange();
