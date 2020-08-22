@@ -8,6 +8,7 @@
 #include <sstream>
 
 #include "Garfield/ComponentComsol.hh"
+#include "Garfield/KDTree.hh"
 
 namespace {
 
@@ -23,6 +24,22 @@ int readInt(std::string s) {
   return ret;
 }
 
+void PrintProgress(const double f) {
+  if (f < 0.) return;
+  constexpr unsigned int width = 70;
+  const unsigned int n = static_cast<unsigned int>(std::floor(width * f));
+  std::string bar = "[";
+  if (n < 1) {
+    bar += std::string(width, ' ');
+  } else if (n >= width) {
+    bar += std::string(width, '=');
+  } else {
+    bar += std::string(n, '=') + ">" + std::string(width - n - 1, ' ');
+  }
+  bar += "]";
+  std::cout << bar << "\r" << std::flush;
+}
+
 }
 
 namespace Garfield {
@@ -31,20 +48,23 @@ ComponentComsol::ComponentComsol() : ComponentFieldMap() {
   m_className = "ComponentComsol";
 }
 
-ComponentComsol::ComponentComsol(std::string mesh, std::string mplist,
-                                 std::string field)
+ComponentComsol::ComponentComsol(const std::string& mesh, 
+                                 const std::string& mplist,
+                                 const std::string& field)
     : ComponentFieldMap() {
   m_className = "ComponentComsol";
   Initialise(mesh, mplist, field);
 }
 
-bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
-                                 std::string field) {
+bool ComponentComsol::Initialise(const std::string& mesh, 
+                                 const std::string& mplist,
+                                 const std::string& field) {
   m_ready = false;
   m_warning = false;
   m_nWarnings = 0;
 
-  constexpr double unit = 100.0;  // m
+  // Conversion from m to cm.
+  constexpr double unit = 100.0;
 
   // Open the materials file.
   materials.clear();
@@ -62,15 +82,15 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
     newMaterial.medium = nullptr;
     newMaterial.ohm = -1;
     fmplist >> newMaterial.eps;
-    materials.push_back(newMaterial);
+    materials.push_back(std::move(newMaterial));
   }
   {
-    // add default material
+    // Add default material
     Material newMaterial;
     newMaterial.driftmedium = false;
     newMaterial.medium = nullptr;
     newMaterial.eps = newMaterial.ohm = -1;
-    materials.push_back(newMaterial);
+    materials.push_back(std::move(newMaterial));
     m_nMaterials++;
   }
   std::map<int, int> domain2material;
@@ -112,28 +132,14 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
       return false;
     }
   } while (line.find("# Mesh point coordinates") == std::string::npos);
-  double minx = +std::numeric_limits<double>::max();
-  double maxx = -std::numeric_limits<double>::max();
-  double miny = minx, minz = minx;
-  double maxy = maxx, maxz = maxx;
   for (int i = 0; i < nNodes; ++i) {
     Node newNode;
     fmesh >> newNode.x >> newNode.y >> newNode.z;
     newNode.x *= unit;
     newNode.y *= unit;
     newNode.z *= unit;
-    minx = std::min(minx, newNode.x);
-    maxx = std::max(maxx, newNode.x);
-    miny = std::min(miny, newNode.y);
-    maxy = std::max(maxy, newNode.y);
-    minz = std::min(minz, newNode.z);
-    maxz = std::max(maxz, newNode.z);
     nodes.push_back(std::move(newNode));
   }
-  std::cout << m_className << "::Initialise:\n";
-  std::cout << "    " << minx << " < x < " << maxx << "\n";
-  std::cout << "    " << miny << " < y < " << maxy << "\n";
-  std::cout << "    " << minz << " < z < " << maxz << "\n";
 
   do {
     if (!std::getline(fmesh, line)) {
@@ -155,7 +161,7 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   elements.clear();
   std::cout << m_className << "::Initialise: " << nElements << " elements.\n";
   std::getline(fmesh, line);
-  // elements 6 & 7 are swapped due to differences in COMSOL and ANSYS
+  // Elements 6 & 7 are swapped due to differences in COMSOL and ANSYS
   // representation
   int perm[10] = {0, 1, 2, 3, 4, 5, 7, 6, 8, 9};
   for (int i = 0; i < nElements; ++i) {
@@ -183,12 +189,6 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   }
   fmesh.close();
 
-  std::map<Node, std::vector<int>, nodeCmp> nodeIdx;
-  for (int i = 0; i < nNodes; ++i) {
-    nodeIdx[nodes[i]].push_back(i);
-  }
-  // std::cout << "Map size: " << nodeIdx.size() << std::endl;
-
   std::ifstream ffield;
   ffield.open(field.c_str(), std::ios::in);
   if (ffield.fail()) {
@@ -196,6 +196,7 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
               << "    Could not open potentials file " << field << ".\n";
     return false;
   }
+
   const std::string hdr = "% x                       y                        z                        V (V)";
   do {
     if (!std::getline(ffield, line)) {
@@ -205,85 +206,90 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
       return false;
     }
   } while (line.find(hdr) == std::string::npos);
-  {
-    std::istringstream sline(line);
-    std::string token;
-    sline >> token;  // %
-    sline >> token;  // x
-    sline >> token;  // y
-    sline >> token;  // z
-    sline >> token;  // V
+  std::istringstream sline(line);
+  std::string token;
+  sline >> token;  // %
+  sline >> token;  // x
+  sline >> token;  // y
+  sline >> token;  // z
+  sline >> token;  // V
+  sline >> token;  // (V)
+  while (sline >> token) {
+    std::cout << m_className << "::Initialise:\n"
+              << "    Reading data for weighting field " << token << ".\n";
+    nWeightingFields++;
+    wfields.push_back(token);
+    wfieldsOk.push_back(true);
     sline >> token;  // (V)
-    while (sline >> token) {
-      std::cout << m_className << "::Initialise:\n";
-      std::cout << "    Reading data for weighting field " << token << ".\n";
-      nWeightingFields++;
-      wfields.push_back(token);
-      wfieldsOk.push_back(true);
-      sline >> token;  // (V)
-    }
   }
+
+  const unsigned int nPrint =
+      std::pow(10, static_cast<unsigned int>(
+                       std::max(std::floor(std::log10(nNodes)) - 1, 1.)));
+  std::cout << m_className << "::Initialise: Reading potentials.\n";
+  PrintProgress(0.);
+  // Build a k-d tree from the node coordinates.
+  std::vector<std::vector<double> > points;
   for (int i = 0; i < nNodes; ++i) {
-    Node tmp;
-    ffield >> tmp.x >> tmp.y >> tmp.z >> tmp.v;
-    tmp.x *= unit;
-    tmp.y *= unit;
-    tmp.z *= unit;
+    std::vector<double> point = {nodes[i].x, nodes[i].y, nodes[i].z};
+    points.push_back(std::move(point));
+  }
+  KDTree kdtree(points);
+  std::vector<bool> used(nNodes, false);
+  for (int i = 0; i < nNodes; ++i) {
+    double x, y, z, v;
+    ffield >> x >> y >> z >> v;
+    x *= unit;
+    y *= unit;
+    z *= unit;
+    std::vector<double> w;
     for (int j = 0; j < nWeightingFields; ++j) {
-      double w;
-      ffield >> w;
-      tmp.w.push_back(w);
+      double p;
+      ffield >> p;
+      w.push_back(p);
     }
-    int closest = -1;
-    double closestDist = 1;
-    const unsigned int nIdx = nodeIdx[tmp].size();
-    // for (int j : nodeIdx[tmp]) {
-    for (unsigned int k = 0; k < nIdx; ++k) {
-      int j = nodeIdx[tmp][k];
-      const double dx = tmp.x - nodes[j].x;
-      const double dy = tmp.y - nodes[j].y;
-      const double dz = tmp.z - nodes[j].z;
-      const double dist = dx * dx + dy * dy + dz * dz;
-      if (closest < 0 || dist < closestDist) {
-        closestDist = dist;
-        closest = j;
-      }
-    }
-    if (closest == -1) {
-      std::cerr << m_className << "::Initialise:\n";
-      std::cerr << "    Could not match the node from potentials file: "
-                << tmp.x << " " << tmp.y << " " << tmp.z << "\n.";
+    const std::vector<double> pt = {x, y, z};
+    std::vector<KDTreeResult> res;
+    kdtree.n_nearest(pt, 1, res);
+    if (res.empty()) {
+      std::cerr << std::endl << m_className << "::Initialise:\n"
+                << "    Could not find a matching mesh node for point ("
+                << x << ", " << y << ", " << z << ")\n.";
+      ffield.close();
       return false;
     }
-    nodes[closest].v = tmp.v;
-    nodes[closest].w = tmp.w;
+    const size_t k = res[0].idx;
+    used[k] = true;
+    nodes[k].v = v;
+    nodes[k].w = w;
+    if ((i + 1) % nPrint == 0) PrintProgress(double(i + 1) / nNodes);
   }
+  PrintProgress(1.);
+  ffield.close();
+  auto nMissing = std::count(used.begin(), used.end(), false);
+  if (nMissing > 0) {
+    std::cerr << std::endl << m_className << "::Initialise:\n"
+              << "    Missing potentials for " << nMissing << " nodes.\n";
+    return false;
+  }
+  std::cout << std::endl << m_className << "::Initialise: Done.\n";
 
   m_ready = true;
-
-  //  for (int i = 0; i < nNodes; ++i) {
-  //    double ex, ey, ez, v;
-  //    Medium* m;
-  //    int status;
-  //    ElectricField(nodes[i].x, nodes[i].y, nodes[i].z, ex, ey, ez, v, m,
-  // status);
-  //    std::cout << "Field at " << nodes[i].x << " " << nodes[i].y << " " <<
-  // nodes[i].z << ": " << ex << " " << ey << " " << ez << " " << v << "\n";
-  //  }
-
   // Establish the ranges.
   SetRange();
   UpdatePeriodicity();
   return true;
 }
 
-bool ComponentComsol::SetWeightingField(std::string field, std::string label) {
-  constexpr double unit = 100.0;  // m;
+bool ComponentComsol::SetWeightingField(const std::string& field, 
+                                        const std::string& label) {
+  // Conversion from m to cm.
+  constexpr double unit = 100.0;  
 
   if (!m_ready) {
-    std::cerr << m_className << "::SetWeightingField:\n";
-    std::cerr << "    No valid field map is present.\n";
-    std::cerr << "    Weighting fields cannot be added.\n";
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    No valid field map is present.\n"
+              << "    Weighting fields cannot be added.\n";
     return false;
   }
 
@@ -291,8 +297,8 @@ bool ComponentComsol::SetWeightingField(std::string field, std::string label) {
   std::ifstream ffield;
   ffield.open(field.c_str(), std::ios::in);
   if (ffield.fail()) {
-    std::cerr << m_className << "::SetWeightingField:\n";
-    std::cerr << "    Could not open potentials file " << field << ".\n";
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not open potentials file " << field << ".\n";
     return false;
   }
 
@@ -312,16 +318,19 @@ bool ComponentComsol::SetWeightingField(std::string field, std::string label) {
       nodes[j].w.resize(nWeightingFields);
     }
   } else {
-    std::cout << m_className << "::SetWeightingField:\n";
-    std::cout << "    Replacing existing weighting field " << label << ".\n";
+    std::cout << m_className << "::SetWeightingField:\n"
+              << "    Replacing existing weighting field " << label << ".\n";
   }
   wfields[iw] = label;
   wfieldsOk[iw] = false;
-  std::map<Node, std::vector<int>, nodeCmp> nodeIdx;
+
+  // Build a k-d tree from the node coordinates.
+  std::vector<std::vector<double> > points;
   for (int i = 0; i < nNodes; ++i) {
-    nodeIdx[nodes[i]].push_back(i);
+    std::vector<double> point = {nodes[i].x, nodes[i].y, nodes[i].z};
+    points.push_back(std::move(point));
   }
-  // std::cout << "Map size: " << nodeIdx.size() << std::endl;
+  KDTree kdtree(points);
 
   const std::string hdr = "% x                       y                        z                        V (V)";
   std::string line;
@@ -334,35 +343,26 @@ bool ComponentComsol::SetWeightingField(std::string field, std::string label) {
     }
   } while (line.find(hdr) == std::string::npos);
   for (int i = 0; i < nNodes; ++i) {
-    Node tmp;
-    ffield >> tmp.x >> tmp.y >> tmp.z >> tmp.v;
-    tmp.x *= unit;
-    tmp.y *= unit;
-    tmp.z *= unit;
-    int closest = -1;
-    double closestDist = 1;
-    const unsigned int nIdx = nodeIdx[tmp].size();
-    // for (int j : nodeIdx[tmp]) {
-    for (unsigned int k = 0; k < nIdx; ++k) {
-      int j = nodeIdx[tmp][k];
-      const double dx = tmp.x - nodes[j].x;
-      const double dy = tmp.y - nodes[j].y;
-      const double dz = tmp.z - nodes[j].z;
-      const double dist = dx * dx + dy * dy + dz * dz;
-      if (closest < 0 || dist < closestDist) {
-        closestDist = dist;
-        closest = j;
-      }
-    }
-    if (closest == -1) {
-      std::cerr << m_className << "::SetWeightingField:\n";
-      std::cerr << "    Could not match the node from potentials file: "
-                << tmp.x << " " << tmp.y << " " << tmp.z << "\n.";
+    double x, y, z, v;
+    ffield >> x >> y >> z >> v;
+    x *= unit;
+    y *= unit;
+    z *= unit;
+    // Find the closest mesh node.
+    const std::vector<double> pt = {x, y, z};
+    std::vector<KDTreeResult> res;
+    kdtree.n_nearest(pt, 1, res);
+    if (res.empty()) {
+      std::cerr << m_className << "::SetWeightingField:\n"
+                << "    Could not find a matching mesh node for point ("
+                << x << ", " << y << ", " << z << ")\n.";
+      ffield.close();
       return false;
     }
-    nodes[closest].w[iw] = tmp.v;
+    const size_t k = res[0].idx;
+    nodes[k].w[iw] = v;
   }
-
+  ffield.close();
   return true;
 }
 
@@ -388,7 +388,7 @@ void ComponentComsol::ElectricField(const double xin, const double yin,
   // Initial values
   ex = ey = ez = volt = 0.;
   status = 0;
-  m = NULL;
+  m = nullptr;
 
   // Do not proceed if not properly initialised.
   if (!m_ready) {
@@ -404,8 +404,8 @@ void ComponentComsol::ElectricField(const double xin, const double yin,
   const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
   if (imap < 0) {
     if (m_debug) {
-      std::cout << m_className << "::ElectricField:\n";
-      std::cout << "    Point (" << x << ", " << y << ", " << z
+      std::cout << m_className << "::ElectricField:\n"
+                << "    Point (" << x << ", " << y << ", " << z
                 << " not in the mesh.\n";
     }
     status = -6;
@@ -461,13 +461,11 @@ void ComponentComsol::ElectricField(const double xin, const double yin,
 
   // Transform field to global coordinates
   UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-  //  std::cout << "ef @(" << xin << ", " << yin << ", " << zin << ") = " <<
-  // volt << "\n";
 
   // Drift medium?
   if (m_debug) {
-    std::cout << m_className << "::ElectricField:\n";
-    std::cout << "    Material " << element.matmap << ", drift flag "
+    std::cout << m_className << "::ElectricField:\n"
+              << "    Material " << element.matmap << ", drift flag "
               << materials[element.matmap].driftmedium << "\n";
   }
   m = materials[element.matmap].medium;
@@ -655,8 +653,8 @@ Medium* ComponentComsol::GetMedium(const double xin, const double yin,
   const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
   if (imap < 0) {
     if (m_debug) {
-      std::cout << m_className << "::GetMedium:\n";
-      std::cout << "    Point (" << x << ", " << y << ", " << z
+      std::cout << m_className << "::GetMedium:\n"
+                << "    Point (" << x << ", " << y << ", " << z
                 << ") not in the mesh.\n";
     }
     return nullptr;
@@ -664,8 +662,8 @@ Medium* ComponentComsol::GetMedium(const double xin, const double yin,
   const Element& element = elements[imap];
   if (element.matmap >= m_nMaterials) {
     if (m_debug) {
-      std::cerr << m_className << "::GetMedium:\n";
-      std::cerr << "    Point (" << x << ", " << y
+      std::cerr << m_className << "::GetMedium:\n"
+                << "    Point (" << x << ", " << y << ", " << z
                 << ") has out of range material number " << imap << ".\n";
     }
     return nullptr;

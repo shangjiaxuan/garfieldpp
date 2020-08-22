@@ -11,7 +11,8 @@ class ComponentComsol : public ComponentFieldMap {
   /// Default constructor.
   ComponentComsol();
   /// Constructor from file names.
-  ComponentComsol(std::string mesh, std::string mplist, std::string field);
+  ComponentComsol(const std::string& mesh, 
+                  const std::string& mplist, const std::string& field);
   /// Destructor.
   ~ComponentComsol() {}
 
@@ -33,13 +34,13 @@ class ComponentComsol : public ComponentFieldMap {
   /** Import a field map.
     * \param header name of the file containing the list of nodes
     * \param mplist name of the file containing the material properties
-    * \param field name of the fiel containing the potentials on the nodes
+    * \param field name of the file containing the potentials at the nodes
     */ 
-  bool Initialise(std::string header = "mesh.mphtxt",
-                  std::string mplist = "dielectrics.dat",
-                  std::string field = "field.txt");
+  bool Initialise(const std::string& header = "mesh.mphtxt",
+                  const std::string& mplist = "dielectrics.dat",
+                  const std::string& field = "field.txt");
   /// Import weighting field maps.
-  bool SetWeightingField(std::string file, std::string label);
+  bool SetWeightingField(const std::string& file, const std::string& label);
 
  protected:
   void UpdatePeriodicity() override { UpdatePeriodicityCommon(); }
@@ -48,14 +49,5 @@ class ComponentComsol : public ComponentFieldMap {
   void GetAspectRatio(const unsigned int i, double& dmin,
                       double& dmax) override;
 
-  struct nodeCmp {
-    bool operator()(const ComponentFieldMap::Node& lhs,
-                    const ComponentFieldMap::Node& rhs) const {
-      double dx = round(lhs.x * 1e6) - round(rhs.x * 1e6);
-      double dy = round(lhs.y * 1e6) - round(rhs.y * 1e6);
-      double dz = round(lhs.z * 1e6) - round(rhs.z * 1e6);
-      return dx < 0 || (dx == 0 && (dy < 0 || (dy == 0 && dz < 0)));
-    }
-  };
 };
 }
