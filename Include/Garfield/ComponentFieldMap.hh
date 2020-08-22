@@ -97,7 +97,7 @@ class ComponentFieldMap : public ComponentBase {
     // Bounding box of the element
     double xmin, ymin, zmin, xmax, ymax, zmax;
   };
-  std::vector<Element> elements;
+  std::vector<Element> m_elements;
 
   // Nodes
   int nNodes = -1;
@@ -109,7 +109,7 @@ class ComponentFieldMap : public ComponentBase {
     // Weighting potentials
     std::vector<double> w;
   };
-  std::vector<Node> nodes;
+  std::vector<Node> m_nodes;
 
   // Materials
   unsigned int m_nMaterials = 0;
@@ -122,14 +122,14 @@ class ComponentFieldMap : public ComponentBase {
     // Associated medium
     Medium* medium;
   };
-  std::vector<Material> materials;
+  std::vector<Material> m_materials;
 
   int nWeightingFields = 0;
-  std::vector<std::string> wfields;
-  std::vector<bool> wfieldsOk;
+  std::vector<std::string> m_wfields;
+  std::vector<bool> m_wfieldsOk;
 
   // Bounding box
-  bool hasBoundingBox = false;
+  bool m_hasBoundingBox = false;
   std::array<double, 3> m_minBoundingBox;
   std::array<double, 3> m_maxBoundingBox;
 
@@ -144,7 +144,6 @@ class ComponentFieldMap : public ComponentBase {
   double m_mapvmin, m_mapvmax;
 
   std::array<bool, 3> m_setang;
-  // double mapsx, mapsy, mapsz;
 
   // Option to delete meshing in conductors
   bool m_deleteBackground = true;

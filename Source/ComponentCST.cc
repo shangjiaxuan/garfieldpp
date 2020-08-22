@@ -80,11 +80,11 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
         ok = false;
         return false;
       }
-      materials.resize(m_nMaterials);
+      m_materials.resize(m_nMaterials);
       for (unsigned int i = 0; i < m_nMaterials; ++i) {
-        materials[i].ohm = -1;
-        materials[i].eps = -1;
-        materials[i].medium = NULL;
+        m_materials[i].ohm = -1;
+        m_materials[i].eps = -1;
+        m_materials[i].medium = nullptr;
       }
       if (m_debug) {
         std::cout << m_className << "::Initialise:" << std::endl;
@@ -125,9 +125,9 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
         }
         token = strtok(NULL, " ");
         if (itype == 1) {
-          materials[imat - 1].eps = ReadDouble(token, -1, readerror);
+          m_materials[imat - 1].eps = ReadDouble(token, -1, readerror);
         } else if (itype == 2) {
-          materials[imat - 1].ohm = ReadDouble(token, -1, readerror);
+          m_materials[imat - 1].ohm = ReadDouble(token, -1, readerror);
           token = strtok(NULL, " ");
           if (strcmp(token, "PERX") != 0) {
             std::cerr << m_className << "::Initialise:" << std::endl;
@@ -138,7 +138,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
             ok = false;
           } else {
             token = strtok(NULL, " ");
-            materials[imat - 1].eps = ReadDouble(token, -1, readerror);
+            m_materials[imat - 1].eps = ReadDouble(token, -1, readerror);
           }
         }
         if (readerror) {
@@ -154,11 +154,11 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
           std::cout << "    Read material properties for material "
                     << (imat - 1) << "" << std::endl;
           if (itype == 2) {
-            std::cout << "    eps = " << materials[imat - 1].eps
-                      << " ohm = " << materials[imat - 1].ohm << ""
+            std::cout << "    eps = " << m_materials[imat - 1].eps
+                      << " ohm = " << m_materials[imat - 1].ohm << ""
                       << std::endl;
           } else {
-            std::cout << "    eps = " << materials[imat - 1].eps << ""
+            std::cout << "    eps = " << m_materials[imat - 1].eps << ""
                       << std::endl;
           }
         }
@@ -171,15 +171,15 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   double epsmin = -1.;
   unsigned int iepsmin = 0;
   for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
-    if (materials[imat].eps < 0) continue;
-    if (materials[imat].eps == 0) {
+    if (m_materials[imat].eps < 0) continue;
+    if (m_materials[imat].eps == 0) {
       std::cout << m_className << "::Initialise:" << std::endl;
       std::cout << "    Material " << imat
                 << " has been assigned a permittivity" << std::endl;
       std::cout << "    equal to zero in " << mplist << "." << std::endl;
       ok = false;
-    } else if (epsmin < 0. || epsmin > materials[imat].eps) {
-      epsmin = materials[imat].eps;
+    } else if (epsmin < 0. || epsmin > m_materials[imat].eps) {
+      epsmin = m_materials[imat].eps;
       iepsmin = imat;
     }
   }
@@ -192,9 +192,9 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   } else {
     for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
       if (imat == iepsmin) {
-        materials[imat].driftmedium = true;
+        m_materials[imat].driftmedium = true;
       } else {
-        materials[imat].driftmedium = false;
+        m_materials[imat].driftmedium = false;
       }
     }
   }
@@ -394,7 +394,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
                 << std::endl;
       ok = false;
     }
-    if (materials[imat - 1].eps < 0) {
+    if (m_materials[imat - 1].eps < 0) {
       std::cerr << m_className << "::Initialise:" << std::endl;
       std::cerr << "    Element " << ielem << " in element list " << elist
                 << " uses material " << imat << " which" << std::endl;
@@ -591,7 +591,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   m_potential.resize(n_s);
   m_elementMaterial.resize(e_m);
   //	elements_scalar.resize(e_s);
-  materials.resize(m_nMaterials);
+  m_materials.resize(m_nMaterials);
   result = fread(m_xlines.data(), sizeof(double), m_xlines.size(), f);
   if (result != m_xlines.size()) {
     fputs("Reading error while reading xlines.", stderr);
@@ -638,7 +638,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
    *  The material vector is filled according to the material id!
    *  Thus material.at(0) is material with id 0.
    */
-  for (unsigned int i = 0; i < materials.size(); i++) {
+  for (unsigned int i = 0; i < m_materials.size(); i++) {
     float id;
     result = fread(&(id), sizeof(float), 1, f);
     if (result != 1) {
@@ -661,14 +661,14 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
     st << "  Read material: " << name.c_str();
     if (name.compare("gas") == 0) {
       st << " (considered as drift medium)";
-      materials.at(id).driftmedium = true;
+      m_materials.at(id).driftmedium = true;
     } else {
-      materials.at(id).driftmedium = false;
+      m_materials.at(id).driftmedium = false;
     }
     delete[] c;
     float tmp_eps;
     result = fread(&(tmp_eps), sizeof(float), 1, f);
-    materials.at(id).eps = tmp_eps;
+    m_materials.at(id).eps = tmp_eps;
     if (result != 1) {
       fputs("Reading error while reading eps.", stderr);
       exit(3);
@@ -682,7 +682,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
     //		if (result != 1) {fputs ("Reading error while reading
     //rho.",stderr);
     // exit (3);}
-    st << "; eps is: " << materials.at(id).eps <<
+    st << "; eps is: " << m_materials.at(id).eps <<
         //				"\t mue is: " << mue <<
         //				"\t rho is: " << rho <<
         "\t id is: " << id << std::endl;
@@ -692,9 +692,9 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   }
   if (m_debug) {
     std::cout << st.str();
-    for (auto it = materials.begin(), it_end = materials.end(); it != it_end;
+    for (auto it = m_materials.begin(), it_end = m_materials.end(); it != it_end;
          it++) {
-      std::cout << "Material id: " << std::distance(materials.begin(), it)
+      std::cout << "Material id: " << std::distance(m_materials.begin(), it)
                 << " \t driftable: " << (*it).driftmedium << std::endl;
     }
   }
@@ -758,15 +758,15 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
     std::cout << "    Replacing existing weighting field " << label << "."
               << std::endl;
   } else {
-    wfields.push_back(label);
-    wfieldsOk.push_back(false);
+    m_wfields.push_back(label);
+    m_wfieldsOk.push_back(false);
   }
 
   if (std::distance(m_weightingFields.begin(), it) !=
-      std::distance(wfields.begin(),
-                    find(wfields.begin(), wfields.end(), label))) {
+      std::distance(m_wfields.begin(),
+                    find(m_wfields.begin(), m_wfields.end(), label))) {
     std::cerr << m_className << "::SetWeightingField:" << std::endl;
-    std::cerr << "    Indexes of the weighting fields and the weighting field "
+    std::cerr << "    Indices of the weighting fields and the weighting field "
                  "counter are not equal!"
               << std::endl;
     return false;
@@ -941,7 +941,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
   m_weightingFields[label] = potentials;
 
   // Set the ready flag.
-  wfieldsOk[iField] = ok;
+  m_wfieldsOk[iField] = ok;
   return true;
 }
 
@@ -992,7 +992,7 @@ void ComponentCST::WeightingField(const double xin, const double yin,
   }
 
   // Check if the weighting field is properly initialised.
-  if (!wfieldsOk[std::distance(m_weightingFields.begin(), it)]) return;
+  if (!m_wfieldsOk[std::distance(m_weightingFields.begin(), it)]) return;
 
   // Copy the coordinates
   double x = xin, y = yin, z = zin;
@@ -1028,7 +1028,7 @@ void ComponentCST::WeightingField(const double xin, const double yin,
   if (mirrored[1]) fwy *= -1.f;
   if (mirrored[2]) fwz *= -1.f;
   if (m_warning) PrintWarning("WeightingField");
-  if (materials.at(m_elementMaterial.at(Index2Element(i, j, k))).driftmedium) {
+  if (m_materials.at(m_elementMaterial.at(Index2Element(i, j, k))).driftmedium) {
     if (!disableFieldComponent[0]) wx = fwx;
     if (!disableFieldComponent[1]) wy = fwy;
     if (!disableFieldComponent[2]) wz = fwz;
@@ -1051,7 +1051,7 @@ double ComponentCST::WeightingPotential(const double xin, const double yin,
   }
 
   // Check if the weighting field is properly initialised.
-  if (!wfieldsOk[std::distance(m_weightingFields.begin(), it)]) return 0.;
+  if (!m_wfieldsOk[std::distance(m_weightingFields.begin(), it)]) return 0.;
 
   // Copy the coordinates
   double x = xin, y = yin, z = zin;
@@ -1136,7 +1136,7 @@ Medium* ComponentCST::GetMedium(const double xin, const double yin,
     std::cout << m_className << "::GetMedium:" << std::endl;
     std::cout << "    Found position (" << xin << ", " << yin << ", " << zin
               << "): " << std::endl;
-    std::cout << "    Indexes are: x: " << i << "/" << m_xlines.size()
+    std::cout << "    Indices are: x: " << i << "/" << m_xlines.size()
               << "\t y: " << j << "/" << m_ylines.size() << "\t z: " << k << "/"
               << m_zlines.size() << std::endl;
     std::cout << "    Element material index: " << Index2Element(i, j, k)
@@ -1144,7 +1144,7 @@ Medium* ComponentCST::GetMedium(const double xin, const double yin,
     std::cout << "    Element index: "
               << (int)m_elementMaterial.at(Index2Element(i, j, k)) << std::endl;
   }
-  return materials.at(m_elementMaterial.at(Index2Element(i, j, k))).medium;
+  return m_materials.at(m_elementMaterial.at(Index2Element(i, j, k))).medium;
 }
 
 void ComponentCST::SetRange() {
@@ -1170,7 +1170,7 @@ void ComponentCST::SetRange() {
     m_mapmin[2] = m_minBoundingBox[2];
     m_mapmax[2] = m_maxBoundingBox[2];
   }
-  hasBoundingBox = true;
+  m_hasBoundingBox = true;
 }
 
 void ComponentCST::SetRangeZ(const double zmin, const double zmax) {
@@ -1343,10 +1343,10 @@ void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
   }
   // get the material index of the element and return the medium taken from the
   // materials (since the material id is equal to the material vector position)
-  m = materials.at(m_elementMaterial.at(Index2Element(i, j, k))).medium;
+  m = m_materials.at(m_elementMaterial.at(Index2Element(i, j, k))).medium;
   //  m = materials[elements[imap].matmap].medium;
   status = -5;
-  if (materials.at(m_elementMaterial.at(Index2Element(i, j, k))).driftmedium) {
+  if (m_materials.at(m_elementMaterial.at(Index2Element(i, j, k))).driftmedium) {
     if (m) {
       if (m->IsDriftable()) status = 0;
     }

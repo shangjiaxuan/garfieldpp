@@ -80,11 +80,11 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
         ok = false;
         return false;
       }
-      materials.resize(m_nMaterials);
+      m_materials.resize(m_nMaterials);
       for (unsigned int i = 0; i < m_nMaterials; ++i) {
-        materials[i].ohm = -1;
-        materials[i].eps = -1;
-        materials[i].medium = nullptr;
+        m_materials[i].ohm = -1;
+        m_materials[i].eps = -1;
+        m_materials[i].medium = nullptr;
       }
       if (m_debug) {
         std::cout << m_className << "::Initialise:\n";
@@ -132,9 +132,9 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
         ok = false;
         readerror = false;
       } else if (itype == 1) {
-        materials[icurrmat - 1].eps = ReadDouble(token, -1, readerror);
+        m_materials[icurrmat - 1].eps = ReadDouble(token, -1, readerror);
       } else if (itype == 2) {
-        materials[icurrmat - 1].ohm = ReadDouble(token, -1, readerror);
+        m_materials[icurrmat - 1].ohm = ReadDouble(token, -1, readerror);
       }
       if (readerror) {
         std::cerr << m_className << "::Initialise:\n";
@@ -185,9 +185,9 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
         token = strtok(line, " ");
         token = strtok(NULL, " ");
         if (itype == 1) {
-          materials[imat - 1].eps = ReadDouble(token, -1, readerror);
+          m_materials[imat - 1].eps = ReadDouble(token, -1, readerror);
         } else if (itype == 2) {
-          materials[imat - 1].ohm = ReadDouble(token, -1, readerror);
+          m_materials[imat - 1].ohm = ReadDouble(token, -1, readerror);
         }
         if (readerror) {
           std::cerr << m_className << "::Initialise:\n";
@@ -208,15 +208,15 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   double epsmin = -1;
   unsigned int iepsmin = 0;
   for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
-    if (materials[imat].eps < 0) continue;
-    if (materials[imat].eps == 0) {
+    if (m_materials[imat].eps < 0) continue;
+    if (m_materials[imat].eps == 0) {
       std::cerr << m_className << "::Initialise:\n";
       std::cerr << "    Material " << imat
                 << " has been assigned a permittivity\n";
       std::cerr << "    equal to zero in " << mplist << ".\n";
       ok = false;
-    } else if (epsmin < 0. || epsmin > materials[imat].eps) {
-      epsmin = materials[imat].eps;
+    } else if (epsmin < 0. || epsmin > m_materials[imat].eps) {
+      epsmin = m_materials[imat].eps;
       iepsmin = imat;
     }
   }
@@ -229,9 +229,9 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   } else {
     for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
       if (imat == iepsmin) {
-        materials[imat].driftmedium = true;
+        m_materials[imat].driftmedium = true;
       } else {
-        materials[imat].driftmedium = false;
+        m_materials[imat].driftmedium = false;
       }
     }
   }
@@ -254,7 +254,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   }
 
   // Read the element list
-  elements.clear();
+  m_elements.clear();
   nElements = 0;
   Element newElement;
   int nbackground = 0;
@@ -364,7 +364,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
                 << in7 << ", " << in8 << ", " << in9 << ")\n";
       ok = false;
     }
-    if (materials[imat - 1].eps < 0) {
+    if (m_materials[imat - 1].eps < 0) {
       std::cerr << m_className << "::Initialise:\n";
       std::cerr << "    Element " << ielem << " in element list " << elist
                 << "\n";
@@ -399,7 +399,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
     if (in9 > highestnode) highestnode = in9;
 
     // Skip elements in conductors.
-    if (m_deleteBackground && materials[imat - 1].ohm == 0) {
+    if (m_deleteBackground && m_materials[imat - 1].ohm == 0) {
       nbackground++;
       continue;
     }
@@ -437,7 +437,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
     newElement.emap[6] = in7 - 1;
     newElement.emap[8] = in8 - 1;
     newElement.emap[9] = in9 - 1;
-    elements.push_back(newElement);
+    m_elements.push_back(newElement);
     nElements++;
   }
   // Close the file
@@ -473,7 +473,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   }
 
   // Read the node list
-  nodes.clear();
+  m_nodes.clear();
   nNodes = 0;
   Node newNode;
   newNode.w.clear();
@@ -543,7 +543,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
     newNode.x = xnode * funit;
     newNode.y = ynode * funit;
     newNode.z = znode * funit;
-    nodes.push_back(newNode);
+    m_nodes.push_back(newNode);
     nNodes++;
   }
   // Close the file
@@ -632,7 +632,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
                 << ").\n";
       ok = false;
     } else {
-      nodes[inode - 1].v = volt;
+      m_nodes[inode - 1].v = volt;
       nread++;
     }
   }
@@ -662,8 +662,8 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   }
 
   // Remove weighting fields (if any).
-  wfields.clear();
-  wfieldsOk.clear();
+  m_wfields.clear();
+  m_wfieldsOk.clear();
   nWeightingFields = 0;
 
   // Establish the ranges
@@ -694,24 +694,24 @@ bool ComponentAnsys123::SetWeightingField(std::string prnsol,
   // Check if a weighting field with the same label already exists.
   int iw = nWeightingFields;
   for (int i = nWeightingFields; i--;) {
-    if (wfields[i] == label) {
+    if (m_wfields[i] == label) {
       iw = i;
       break;
     }
   }
   if (iw == nWeightingFields) {
     ++nWeightingFields;
-    wfields.resize(nWeightingFields);
-    wfieldsOk.resize(nWeightingFields);
+    m_wfields.resize(nWeightingFields);
+    m_wfieldsOk.resize(nWeightingFields);
     for (int j = nNodes; j--;) {
-      nodes[j].w.resize(nWeightingFields);
+      m_nodes[j].w.resize(nWeightingFields);
     }
   } else {
     std::cout << m_className << "::SetWeightingField:\n";
     std::cout << "    Replacing existing weighting field " << label << ".\n";
   }
-  wfields[iw] = label;
-  wfieldsOk[iw] = false;
+  m_wfields[iw] = label;
+  m_wfieldsOk[iw] = false;
 
   // Buffer for reading
   const int size = 100;
@@ -780,7 +780,7 @@ bool ComponentAnsys123::SetWeightingField(std::string prnsol,
                 << ").\n";
       ok = false;
     } else {
-      nodes[inode - 1].w[iw] = volt;
+      m_nodes[inode - 1].w[iw] = volt;
       nread++;
     }
   }
@@ -800,7 +800,7 @@ bool ComponentAnsys123::SetWeightingField(std::string prnsol,
   }
 
   // Set the ready flag.
-  wfieldsOk[iw] = ok;
+  m_wfieldsOk[iw] = ok;
   if (!ok) {
     std::cerr << m_className << "::SetWeightingField:\n";
     std::cerr << "    Field map could not be read "
@@ -855,20 +855,20 @@ void ComponentAnsys123::ElectricField(const double xin, const double yin,
     return;
   }
 
-  const Element& element = elements[imap];
+  const Element& element = m_elements[imap];
   if (m_debug) {
     PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 10);
   }
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
-  const Node& n6 = nodes[element.emap[6]];
-  const Node& n7 = nodes[element.emap[7]];
-  const Node& n8 = nodes[element.emap[8]];
-  const Node& n9 = nodes[element.emap[9]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
+  const Node& n6 = m_nodes[element.emap[6]];
+  const Node& n7 = m_nodes[element.emap[7]];
+  const Node& n8 = m_nodes[element.emap[8]];
+  const Node& n9 = m_nodes[element.emap[9]];
   // Shorthands.
   const double fourt1 = 4 * t1;
   const double fourt2 = 4 * t2;
@@ -917,11 +917,11 @@ void ComponentAnsys123::ElectricField(const double xin, const double yin,
   if (m_debug) {
     std::cout << m_className << "::ElectricField:\n";
     std::cout << "    Material " << element.matmap << ", drift flag "
-              << materials[element.matmap].driftmedium << ".\n";
+              << m_materials[element.matmap].driftmedium << ".\n";
   }
-  m = materials[element.matmap].medium;
+  m = m_materials[element.matmap].medium;
   status = -5;
-  if (materials[element.matmap].driftmedium) {
+  if (m_materials[element.matmap].driftmedium) {
     if (m && m->IsDriftable()) status = 0;
   }
 }
@@ -939,7 +939,7 @@ void ComponentAnsys123::WeightingField(const double xin, const double yin,
   int iw = 0;
   bool found = false;
   for (int i = nWeightingFields; i--;) {
-    if (wfields[i] == label) {
+    if (m_wfields[i] == label) {
       iw = i;
       found = true;
       break;
@@ -949,7 +949,7 @@ void ComponentAnsys123::WeightingField(const double xin, const double yin,
   // Do not proceed if the requested weighting field does not exist.
   if (!found) return;
   // Check if the weighting field is properly initialised.
-  if (!wfieldsOk[iw]) return;
+  if (!m_wfieldsOk[iw]) return;
 
   // Copy the coordinates.
   double x = xin, y = yin, z = zin;
@@ -967,20 +967,20 @@ void ComponentAnsys123::WeightingField(const double xin, const double yin,
   // Check if the point is in the mesh.
   if (imap < 0) return;
 
-  const Element& element = elements[imap];
+  const Element& element = m_elements[imap];
   if (m_debug) {
     PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 10, iw);
   }
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
-  const Node& n6 = nodes[element.emap[6]];
-  const Node& n7 = nodes[element.emap[7]];
-  const Node& n8 = nodes[element.emap[8]];
-  const Node& n9 = nodes[element.emap[9]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
+  const Node& n6 = m_nodes[element.emap[6]];
+  const Node& n7 = m_nodes[element.emap[7]];
+  const Node& n8 = m_nodes[element.emap[8]];
+  const Node& n9 = m_nodes[element.emap[9]];
   // Tetrahedral field
   const double invdet = 1. / det;
   const double fourt1 = 4 * t1;
@@ -1037,7 +1037,7 @@ double ComponentAnsys123::WeightingPotential(const double xin, const double yin,
   int iw = 0;
   bool found = false;
   for (int i = nWeightingFields; i--;) {
-    if (wfields[i] == label) {
+    if (m_wfields[i] == label) {
       iw = i;
       found = true;
       break;
@@ -1047,7 +1047,7 @@ double ComponentAnsys123::WeightingPotential(const double xin, const double yin,
   // Do not proceed if the requested weighting field does not exist.
   if (!found) return 0.;
   // Check if the weighting field is properly initialised.
-  if (!wfieldsOk[iw]) return 0.;
+  if (!m_wfieldsOk[iw]) return 0.;
 
   // Copy the coordinates.
   double x = xin, y = yin, z = zin;
@@ -1064,21 +1064,21 @@ double ComponentAnsys123::WeightingPotential(const double xin, const double yin,
   const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
   if (imap < 0) return 0.;
 
-  const Element& element = elements[imap];
+  const Element& element = m_elements[imap];
   if (m_debug) {
     PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
                  iw);
   }
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
-  const Node& n6 = nodes[element.emap[6]];
-  const Node& n7 = nodes[element.emap[7]];
-  const Node& n8 = nodes[element.emap[8]];
-  const Node& n9 = nodes[element.emap[9]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
+  const Node& n6 = m_nodes[element.emap[6]];
+  const Node& n7 = m_nodes[element.emap[7]];
+  const Node& n8 = m_nodes[element.emap[8]];
+  const Node& n9 = m_nodes[element.emap[9]];
   return n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
          n2.w[iw] * t3 * (2 * t3 - 1) + n3.w[iw] * t4 * (2 * t4 - 1) +
          4 * n4.w[iw] * t1 * t2 + 4 * n5.w[iw] * t1 * t3 +
@@ -1100,7 +1100,7 @@ Medium* ComponentAnsys123::GetMedium(const double xin, const double yin,
   if (!m_ready) {
     std::cerr << m_className << "::GetMedium:\n";
     std::cerr << "    Field map not available for interpolation.\n";
-    return NULL;
+    return nullptr;
   }
   if (m_warning) PrintWarning("GetMedium");
 
@@ -1113,16 +1113,16 @@ Medium* ComponentAnsys123::GetMedium(const double xin, const double yin,
       std::cerr << "    Point (" << x << ", " << y << ", " << z
                 << ") not in the mesh.\n";
     }
-    return NULL;
+    return nullptr;
   }
-  const Element& element = elements[imap];
+  const Element& element = m_elements[imap];
   if (element.matmap >= m_nMaterials) {
     if (m_debug) {
       std::cerr << m_className << "::GetMedium:\n";
       std::cerr << "    Point (" << x << ", " << y << ", " << z << ")"
                 << " has out of range material number " << imap << ".\n";
     }
-    return NULL;
+    return nullptr;
   }
 
   if (m_debug) {
@@ -1130,16 +1130,16 @@ Medium* ComponentAnsys123::GetMedium(const double xin, const double yin,
   }
 
   // Assign a medium.
-  return materials[element.matmap].medium;
+  return m_materials[element.matmap].medium;
 }
 
 double ComponentAnsys123::GetElementVolume(const unsigned int i) {
-  if (i >= elements.size()) return 0.;
-  const Element& element = elements[i];
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
+  if (i >= m_elements.size()) return 0.;
+  const Element& element = m_elements[i];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
   const double vol =
       fabs((n3.x - n0.x) *
                ((n1.y - n0.y) * (n2.z - n0.z) - (n2.y - n0.y) * (n1.z - n0.z)) +
@@ -1153,18 +1153,18 @@ double ComponentAnsys123::GetElementVolume(const unsigned int i) {
 
 void ComponentAnsys123::GetAspectRatio(const unsigned int i, double& dmin,
                                        double& dmax) {
-  if (i >= elements.size()) {
+  if (i >= m_elements.size()) {
     dmin = dmax = 0.;
     return;
   }
 
-  const Element& element = elements[i];
+  const Element& element = m_elements[i];
   const int np = 4;
   // Loop over all pairs of vertices.
   for (int j = 0; j < np - 1; ++j) {
-    const Node& nj = nodes[element.emap[j]];
+    const Node& nj = m_nodes[element.emap[j]];
     for (int k = j + 1; k < np; ++k) {
-      const Node& nk = nodes[element.emap[k]];
+      const Node& nk = m_nodes[element.emap[k]];
       // Compute distance.
       const double dx = nj.x - nk.x;
       const double dy = nj.y - nk.y;
