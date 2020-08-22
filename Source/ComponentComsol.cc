@@ -50,22 +50,26 @@ ComponentComsol::ComponentComsol() : ComponentFieldMap() {
 
 ComponentComsol::ComponentComsol(const std::string& mesh, 
                                  const std::string& mplist,
-                                 const std::string& field)
+                                 const std::string& field, std::string unit)
     : ComponentFieldMap() {
   m_className = "ComponentComsol";
-  Initialise(mesh, mplist, field);
+  Initialise(mesh, mplist, field, unit);
 }
 
 bool ComponentComsol::Initialise(const std::string& mesh, 
                                  const std::string& mplist,
-                                 const std::string& field) {
+                                 const std::string& field, std::string unit) {
   m_ready = false;
   m_warning = false;
   m_nWarnings = 0;
 
-  // Conversion from m to cm.
-  constexpr double unit = 100.0;
-
+  // Get the conversion factor to be applied to the coordinates.
+  m_unit = ScalingFactor(unit);
+  if (m_unit <= 0.) {
+    std::cerr << m_className << "::Initialise:\n    Unknown length unit " 
+              << unit << ". Will use default (m).\n";
+    m_unit = 100.;
+  }
   // Open the materials file.
   materials.clear();
   std::ifstream fmplist;
@@ -135,9 +139,9 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   for (int i = 0; i < nNodes; ++i) {
     Node newNode;
     fmesh >> newNode.x >> newNode.y >> newNode.z;
-    newNode.x *= unit;
-    newNode.y *= unit;
-    newNode.z *= unit;
+    newNode.x *= m_unit;
+    newNode.y *= m_unit;
+    newNode.z *= m_unit;
     nodes.push_back(std::move(newNode));
   }
 
@@ -239,9 +243,9 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   for (int i = 0; i < nNodes; ++i) {
     double x, y, z, v;
     ffield >> x >> y >> z >> v;
-    x *= unit;
-    y *= unit;
-    z *= unit;
+    x *= m_unit;
+    y *= m_unit;
+    z *= m_unit;
     std::vector<double> w;
     for (int j = 0; j < nWeightingFields; ++j) {
       double p;
@@ -283,8 +287,6 @@ bool ComponentComsol::Initialise(const std::string& mesh,
 
 bool ComponentComsol::SetWeightingField(const std::string& field, 
                                         const std::string& label) {
-  // Conversion from m to cm.
-  constexpr double unit = 100.0;  
 
   if (!m_ready) {
     std::cerr << m_className << "::SetWeightingField:\n"
@@ -345,9 +347,9 @@ bool ComponentComsol::SetWeightingField(const std::string& field,
   for (int i = 0; i < nNodes; ++i) {
     double x, y, z, v;
     ffield >> x >> y >> z >> v;
-    x *= unit;
-    y *= unit;
-    z *= unit;
+    x *= m_unit;
+    y *= m_unit;
+    z *= m_unit;
     // Find the closest mesh node.
     const std::vector<double> pt = {x, y, z};
     std::vector<KDTreeResult> res;

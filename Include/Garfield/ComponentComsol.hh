@@ -12,7 +12,8 @@ class ComponentComsol : public ComponentFieldMap {
   ComponentComsol();
   /// Constructor from file names.
   ComponentComsol(const std::string& mesh, 
-                  const std::string& mplist, const std::string& field);
+                  const std::string& mplist, const std::string& field,
+                  std::string unit = "m");
   /// Destructor.
   ~ComponentComsol() {}
 
@@ -35,10 +36,12 @@ class ComponentComsol : public ComponentFieldMap {
     * \param header name of the file containing the list of nodes
     * \param mplist name of the file containing the material properties
     * \param field name of the file containing the potentials at the nodes
+    * \param unit length unit
     */ 
   bool Initialise(const std::string& header = "mesh.mphtxt",
                   const std::string& mplist = "dielectrics.dat",
-                  const std::string& field = "field.txt");
+                  const std::string& field = "field.txt",
+                  std::string unit = "m");
   /// Import weighting field maps.
   bool SetWeightingField(const std::string& file, const std::string& label);
 
@@ -48,6 +51,8 @@ class ComponentComsol : public ComponentFieldMap {
   double GetElementVolume(const unsigned int i) override;
   void GetAspectRatio(const unsigned int i, double& dmin,
                       double& dmax) override;
+ private:
+  double m_unit = 100.;
 
 };
 }

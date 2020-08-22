@@ -153,6 +153,9 @@ class ComponentFieldMap : public ComponentBase {
   bool m_warning = false;
   unsigned int m_nWarnings = 0;
 
+  // Get the scaling factor for a given length unit.
+  static double ScalingFactor(std::string unit);
+ 
   // Reset the component
   void Reset() override {}
 

@@ -2270,6 +2270,20 @@ void ComponentFieldMap::UnmapFields(double& ex, double& ey, double& ez,
   }
 }
 
+double ComponentFieldMap::ScalingFactor(std::string unit) {
+  std::transform(unit.begin(), unit.end(), unit.begin(), toupper);
+  if (unit == "MUM" || unit == "MICRON" || unit == "MICROMETER") {
+    return 0.0001;
+  } else if (unit == "MM" || unit == "MILLIMETER") {
+    return 0.1;
+  } else if (unit == "CM" || unit == "CENTIMETER") {
+    return 1.0;
+  } else if (unit == "M" || unit == "METER") {
+    return 100.0;
+  }
+  return -1.;
+}
+
 int ComponentFieldMap::ReadInteger(char* token, int def, bool& error) {
   if (!token) {
     error = true;
