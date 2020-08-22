@@ -450,28 +450,16 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   std::cout << "    highest node number: " << highestnode << ",\n";
   std::cout << "    background elements skipped: " << nbackground << "\n";
   // Check the value of the unit
-  double funit;
-  if (strcmp(unit.c_str(), "mum") == 0 || strcmp(unit.c_str(), "micron") == 0 ||
-      strcmp(unit.c_str(), "micrometer") == 0) {
-    funit = 0.0001;
-  } else if (strcmp(unit.c_str(), "mm") == 0 ||
-             strcmp(unit.c_str(), "millimeter") == 0) {
-    funit = 0.1;
-  } else if (strcmp(unit.c_str(), "cm") == 0 ||
-             strcmp(unit.c_str(), "centimeter") == 0) {
-    funit = 1.0;
-  } else if (strcmp(unit.c_str(), "m") == 0 ||
-             strcmp(unit.c_str(), "meter") == 0) {
-    funit = 100.0;
-  } else {
-    std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Unknown length unit " << unit << ".\n";
+  double funit = ScalingFactor(unit);
+  if (funit <= 0.) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Unknown length unit " << unit << ".\n";
     ok = false;
     funit = 1.0;
   }
   if (m_debug) {
-    std::cout << m_className << ":Initialise:\n";
-    std::cout << "    Unit scaling factor = " << funit << ".\n";
+    std::cout << m_className << ":Initialise: Unit scaling factor = " 
+              << funit << ".\n";
   }
 
   // Open the node list

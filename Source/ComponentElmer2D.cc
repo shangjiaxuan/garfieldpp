@@ -106,20 +106,8 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   }
 
   // Check the value of the unit.
-  double funit;
-  if (strcmp(unit.c_str(), "mum") == 0 || strcmp(unit.c_str(), "micron") == 0 ||
-      strcmp(unit.c_str(), "micrometer") == 0) {
-    funit = 0.0001;
-  } else if (strcmp(unit.c_str(), "mm") == 0 ||
-             strcmp(unit.c_str(), "millimeter") == 0) {
-    funit = 0.1;
-  } else if (strcmp(unit.c_str(), "cm") == 0 ||
-             strcmp(unit.c_str(), "centimeter") == 0) {
-    funit = 1.0;
-  } else if (strcmp(unit.c_str(), "m") == 0 ||
-             strcmp(unit.c_str(), "meter") == 0) {
-    funit = 100.0;
-  } else {
+  double funit = ScalingFactor(unit);
+  if (funit <= 0.) {
     std::cerr << hdr << " Unknown length unit " << unit << ".\n";
     ok = false;
     funit = 1.0;
