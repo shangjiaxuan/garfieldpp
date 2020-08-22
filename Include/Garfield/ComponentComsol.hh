@@ -11,7 +11,8 @@ class ComponentComsol : public ComponentFieldMap {
   /// Default constructor.
   ComponentComsol();
   /// Constructor from file names.
-  ComponentComsol(std::string mesh, std::string mplist, std::string field);
+  ComponentComsol(const std::string& mesh, 
+                  const std::string& mplist, const std::string& field);
   /// Destructor.
   ~ComponentComsol() {}
 
@@ -33,13 +34,13 @@ class ComponentComsol : public ComponentFieldMap {
   /** Import a field map.
     * \param header name of the file containing the list of nodes
     * \param mplist name of the file containing the material properties
-    * \param field name of the fiel containing the potentials on the nodes
+    * \param field name of the file containing the potentials at the nodes
     */ 
-  bool Initialise(std::string header = "mesh.mphtxt",
-                  std::string mplist = "dielectrics.dat",
-                  std::string field = "field.txt");
+  bool Initialise(const std::string& header = "mesh.mphtxt",
+                  const std::string& mplist = "dielectrics.dat",
+                  const std::string& field = "field.txt");
   /// Import weighting field maps.
-  bool SetWeightingField(std::string file, std::string label);
+  bool SetWeightingField(const std::string& file, const std::string& label);
 
  protected:
   void UpdatePeriodicity() override { UpdatePeriodicityCommon(); }

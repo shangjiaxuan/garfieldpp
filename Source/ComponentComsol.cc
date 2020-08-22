@@ -48,20 +48,23 @@ ComponentComsol::ComponentComsol() : ComponentFieldMap() {
   m_className = "ComponentComsol";
 }
 
-ComponentComsol::ComponentComsol(std::string mesh, std::string mplist,
-                                 std::string field)
+ComponentComsol::ComponentComsol(const std::string& mesh, 
+                                 const std::string& mplist,
+                                 const std::string& field)
     : ComponentFieldMap() {
   m_className = "ComponentComsol";
   Initialise(mesh, mplist, field);
 }
 
-bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
-                                 std::string field) {
+bool ComponentComsol::Initialise(const std::string& mesh, 
+                                 const std::string& mplist,
+                                 const std::string& field) {
   m_ready = false;
   m_warning = false;
   m_nWarnings = 0;
 
-  constexpr double unit = 100.0;  // m
+  // Conversion from m to cm.
+  constexpr double unit = 100.0;
 
   // Open the materials file.
   materials.clear();
@@ -79,15 +82,15 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
     newMaterial.medium = nullptr;
     newMaterial.ohm = -1;
     fmplist >> newMaterial.eps;
-    materials.push_back(newMaterial);
+    materials.push_back(std::move(newMaterial));
   }
   {
-    // add default material
+    // Add default material
     Material newMaterial;
     newMaterial.driftmedium = false;
     newMaterial.medium = nullptr;
     newMaterial.eps = newMaterial.ohm = -1;
-    materials.push_back(newMaterial);
+    materials.push_back(std::move(newMaterial));
     m_nMaterials++;
   }
   std::map<int, int> domain2material;
@@ -158,7 +161,7 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   elements.clear();
   std::cout << m_className << "::Initialise: " << nElements << " elements.\n";
   std::getline(fmesh, line);
-  // elements 6 & 7 are swapped due to differences in COMSOL and ANSYS
+  // Elements 6 & 7 are swapped due to differences in COMSOL and ANSYS
   // representation
   int perm[10] = {0, 1, 2, 3, 4, 5, 7, 6, 8, 9};
   for (int i = 0; i < nElements; ++i) {
@@ -186,14 +189,6 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   }
   fmesh.close();
 
-  // Build a k-d tree from the node coordinates.
-  std::vector<std::vector<double> > meshNodes;
-  for (int i = 0; i < nNodes; ++i) {
-    std::vector<double> node = {nodes[i].x, nodes[i].y, nodes[i].z};
-    meshNodes.push_back(std::move(node));
-  }
-  KDTree kdtree(meshNodes);
-
   std::ifstream ffield;
   ffield.open(field.c_str(), std::ios::in);
   if (ffield.fail()) {
@@ -211,23 +206,21 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
       return false;
     }
   } while (line.find(hdr) == std::string::npos);
-  {
-    std::istringstream sline(line);
-    std::string token;
-    sline >> token;  // %
-    sline >> token;  // x
-    sline >> token;  // y
-    sline >> token;  // z
-    sline >> token;  // V
+  std::istringstream sline(line);
+  std::string token;
+  sline >> token;  // %
+  sline >> token;  // x
+  sline >> token;  // y
+  sline >> token;  // z
+  sline >> token;  // V
+  sline >> token;  // (V)
+  while (sline >> token) {
+    std::cout << m_className << "::Initialise:\n"
+              << "    Reading data for weighting field " << token << ".\n";
+    nWeightingFields++;
+    wfields.push_back(token);
+    wfieldsOk.push_back(true);
     sline >> token;  // (V)
-    while (sline >> token) {
-      std::cout << m_className << "::Initialise:\n"
-                << "    Reading data for weighting field " << token << ".\n";
-      nWeightingFields++;
-      wfields.push_back(token);
-      wfieldsOk.push_back(true);
-      sline >> token;  // (V)
-    }
   }
 
   const unsigned int nPrint =
@@ -235,6 +228,13 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
                        std::max(std::floor(std::log10(nNodes)) - 1, 1.)));
   std::cout << m_className << "::Initialise: Reading potentials...\n";
   PrintProgress(0.);
+  // Build a k-d tree from the node coordinates.
+  std::vector<std::vector<double> > points;
+  for (int i = 0; i < nNodes; ++i) {
+    std::vector<double> point = {nodes[i].x, nodes[i].y, nodes[i].z};
+    points.push_back(std::move(point));
+  }
+  KDTree kdtree(points);
   std::vector<bool> used(nNodes, false);
   for (int i = 0; i < nNodes; ++i) {
     double x, y, z, v;
@@ -273,8 +273,10 @@ bool ComponentComsol::Initialise(std::string mesh, std::string mplist,
   return true;
 }
 
-bool ComponentComsol::SetWeightingField(std::string field, std::string label) {
-  constexpr double unit = 100.0;  // m to cm;
+bool ComponentComsol::SetWeightingField(const std::string& field, 
+                                        const std::string& label) {
+  // Conversion from m to cm.
+  constexpr double unit = 100.0;  
 
   if (!m_ready) {
     std::cerr << m_className << "::SetWeightingField:\n"
@@ -315,12 +317,12 @@ bool ComponentComsol::SetWeightingField(std::string field, std::string label) {
   wfieldsOk[iw] = false;
 
   // Build a k-d tree from the node coordinates.
-  std::vector<std::vector<double> > meshNodes;
+  std::vector<std::vector<double> > points;
   for (int i = 0; i < nNodes; ++i) {
-    std::vector<double> node = {nodes[i].x, nodes[i].y, nodes[i].z};
-    meshNodes.push_back(std::move(node));
+    std::vector<double> point = {nodes[i].x, nodes[i].y, nodes[i].z};
+    points.push_back(std::move(point));
   }
-  KDTree kdtree(meshNodes);
+  KDTree kdtree(points);
 
   const std::string hdr = "% x                       y                        z                        V (V)";
   std::string line;
