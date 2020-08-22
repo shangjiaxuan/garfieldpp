@@ -12,8 +12,10 @@ namespace Garfield {
 
 class ComponentFieldMap : public ComponentBase {
  public:
+  /// Default constructor.
+  ComponentFieldMap() = delete;
   /// Constructor
-  ComponentFieldMap();
+  ComponentFieldMap(const std::string& name);
   /// Destructor
   virtual ~ComponentFieldMap();
 
@@ -45,7 +47,7 @@ class ComponentFieldMap : public ComponentBase {
   /// Flag a field map materials as a non-drift medium.
   void NotDriftMedium(const unsigned int imat);
   /// Return the number of materials in the field map.
-  unsigned int GetNumberOfMaterials() const { return m_nMaterials; }
+  unsigned int GetNumberOfMaterials() const { return m_materials.size(); }
   /// Return the permittivity of a field map material.
   double GetPermittivity(const unsigned int imat) const;
   /// Return the conductivity of a field map material.
@@ -56,20 +58,19 @@ class ComponentFieldMap : public ComponentBase {
   Medium* GetMedium(const unsigned int i) const;
   using ComponentBase::GetMedium;
 
-  unsigned int GetNumberOfMedia() const { return m_nMaterials; }
+  unsigned int GetNumberOfMedia() const { return m_materials.size(); }
 
   /// Return the number of mesh elements.
-  int GetNumberOfElements() const { return nElements; }
+  unsigned int GetNumberOfElements() const { return m_elements.size(); }
   /// Return the volume and aspect ratio of a mesh element.
   bool GetElement(const unsigned int i, double& vol, double& dmin,
                   double& dmax);
 
   // Options
-  void EnableCheckMapIndices() {
-    m_checkMultipleElement = true;
-    m_lastElement = -1;
+  void EnableCheckMapIndices(const bool on = true) {
+    m_checkMultipleElement = on;
+    if (on) m_lastElement = -1;
   }
-  void DisableCheckMapIndices() { m_checkMultipleElement = false; }
   /// Option to eliminate mesh elements in conductors (default: on).
   void EnableDeleteBackgroundElements(const bool on = true) { 
     m_deleteBackground = on; 
@@ -87,7 +88,6 @@ class ComponentFieldMap : public ComponentBase {
   bool m_is3d = true;
 
   // Elements
-  int nElements = -1;
   struct Element {
     // Nodes
     int emap[10];
@@ -97,10 +97,9 @@ class ComponentFieldMap : public ComponentBase {
     // Bounding box of the element
     double xmin, ymin, zmin, xmax, ymax, zmax;
   };
-  std::vector<Element> elements;
+  std::vector<Element> m_elements;
 
   // Nodes
-  int nNodes = -1;
   struct Node {
     // Coordinates
     double x, y, z;
@@ -109,10 +108,9 @@ class ComponentFieldMap : public ComponentBase {
     // Weighting potentials
     std::vector<double> w;
   };
-  std::vector<Node> nodes;
+  std::vector<Node> m_nodes;
 
   // Materials
-  unsigned int m_nMaterials = 0;
   struct Material {
     // Permittivity
     double eps;
@@ -122,14 +120,13 @@ class ComponentFieldMap : public ComponentBase {
     // Associated medium
     Medium* medium;
   };
-  std::vector<Material> materials;
+  std::vector<Material> m_materials;
 
-  int nWeightingFields = 0;
-  std::vector<std::string> wfields;
-  std::vector<bool> wfieldsOk;
+  std::vector<std::string> m_wfields;
+  std::vector<bool> m_wfieldsOk;
 
   // Bounding box
-  bool hasBoundingBox = false;
+  bool m_hasBoundingBox = false;
   std::array<double, 3> m_minBoundingBox;
   std::array<double, 3> m_maxBoundingBox;
 
@@ -144,7 +141,6 @@ class ComponentFieldMap : public ComponentBase {
   double m_mapvmin, m_mapvmax;
 
   std::array<bool, 3> m_setang;
-  // double mapsx, mapsy, mapsz;
 
   // Option to delete meshing in conductors
   bool m_deleteBackground = true;
@@ -192,6 +188,9 @@ class ComponentFieldMap : public ComponentBase {
   virtual double GetElementVolume(const unsigned int i) = 0;
   virtual void GetAspectRatio(const unsigned int i, double& dmin,
                               double& dmax) = 0;
+
+  size_t GetWeightingFieldIndex(const std::string& label) const;
+  size_t GetOrCreateWeightingFieldIndex(const std::string& label);
 
   void PrintWarning(const std::string& header) {
     if (!m_warning || m_nWarnings > 10) return;

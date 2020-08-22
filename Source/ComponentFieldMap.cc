@@ -11,8 +11,9 @@
 
 namespace Garfield {
 
-ComponentFieldMap::ComponentFieldMap() : ComponentBase() {
-  m_className = "ComponentFieldMap";
+ComponentFieldMap::ComponentFieldMap(const std::string& name) 
+    : ComponentBase() {
+  m_className = "Component" + name;
 }
 
 ComponentFieldMap::~ComponentFieldMap() {
@@ -23,24 +24,25 @@ void ComponentFieldMap::PrintMaterials() {
   // Do not proceed if not properly initialised.
   if (!m_ready) PrintNotReady("PrintMaterials");
 
-  if (materials.empty()) {
+  if (m_materials.empty()) {
     std::cerr << m_className << "::PrintMaterials:\n"
               << "    No materials are currently defined.\n";
     return;
   }
 
+  const size_t nMaterials = m_materials.size();
   std::cout << m_className << "::PrintMaterials:\n"
-            << "    Currently " << m_nMaterials << " materials are defined.\n"
+            << "    Currently " << nMaterials << " materials are defined.\n"
             << "      Index Permittivity  Resistivity Notes\n";
-  for (unsigned int i = 0; i < m_nMaterials; ++i) {
-    printf("      %5d %12g %12g", i, materials[i].eps, materials[i].ohm);
-    if (materials[i].medium) {
-      std::string name = materials[i].medium->GetName();
+  for (size_t i = 0; i < nMaterials; ++i) {
+    printf("      %5zu %12g %12g", i, m_materials[i].eps, m_materials[i].ohm);
+    if (m_materials[i].medium) {
+      std::string name = m_materials[i].medium->GetName();
       std::cout << " " << name;
-      if (materials[i].medium->IsDriftable()) std::cout << ", drift medium";
-      if (materials[i].medium->IsIonisable()) std::cout << ", ionisable";
+      if (m_materials[i].medium->IsDriftable()) std::cout << ", drift medium";
+      if (m_materials[i].medium->IsIonisable()) std::cout << ", ionisable";
     }
-    if (materials[i].driftmedium) {
+    if (m_materials[i].driftmedium) {
       std::cout << " (drift medium)\n";
     } else {
       std::cout << "\n";
@@ -53,13 +55,13 @@ void ComponentFieldMap::DriftMedium(const unsigned int imat) {
   if (!m_ready) PrintNotReady("DriftMedium");
 
   // Check value
-  if (imat >= m_nMaterials) {
+  if (imat >= m_materials.size()) {
     std::cerr << m_className << "::DriftMedium: Index out of range.\n";
     return;
   }
 
   // Make drift medium
-  materials[imat].driftmedium = true;
+  m_materials[imat].driftmedium = true;
 }
 
 void ComponentFieldMap::NotDriftMedium(const unsigned int imat) {
@@ -67,42 +69,41 @@ void ComponentFieldMap::NotDriftMedium(const unsigned int imat) {
   if (!m_ready) PrintNotReady("NotDriftMedium");
 
   // Check value
-  if (imat >= m_nMaterials) {
+  if (imat >= m_materials.size()) {
     std::cerr << m_className << "::NotDriftMedium: Index out of range.\n";
     return;
   }
 
   // Make drift medium
-  materials[imat].driftmedium = false;
+  m_materials[imat].driftmedium = false;
 }
 
 double ComponentFieldMap::GetPermittivity(const unsigned int imat) const {
-  if (imat >= m_nMaterials) {
+  if (imat >= m_materials.size()) {
     std::cerr << m_className << "::GetPermittivity: Index out of range.\n";
     return -1.;
   }
 
-  return materials[imat].eps;
+  return m_materials[imat].eps;
 }
 
 double ComponentFieldMap::GetConductivity(const unsigned int imat) const {
-  if (imat >= m_nMaterials) {
+  if (imat >= m_materials.size()) {
     std::cerr << m_className << "::GetConductivity: Index out of range.\n";
     return -1.;
   }
 
-  return materials[imat].ohm;
+  return m_materials[imat].ohm;
 }
 
 void ComponentFieldMap::SetMedium(const unsigned int imat, Medium* m) {
-  if (imat >= m_nMaterials) {
-    std::cerr << m_className << "::SetMedium:\n";
-    std::cerr << "    Material index " << imat << " is out of range.\n";
+  if (imat >= m_materials.size()) {
+    std::cerr << m_className << "::SetMedium: Index out of range.\n";
     return;
   }
 
   if (!m) {
-    std::cerr << m_className << "::SetMedium:    Null pointer.\n";
+    std::cerr << m_className << "::SetMedium: Null pointer.\n";
     return;
   }
 
@@ -111,24 +112,22 @@ void ComponentFieldMap::SetMedium(const unsigned int imat, Medium* m) {
               << " with medium " << m->GetName() << ".\n";
   }
 
-  materials[imat].medium = m;
+  m_materials[imat].medium = m;
 }
 
 Medium* ComponentFieldMap::GetMedium(const unsigned int imat) const {
-  if (imat >= m_nMaterials) {
-    std::cerr << m_className << "::GetMedium:\n"
-              << "    Material index " << imat << " is out of range.\n";
+  if (imat >= m_materials.size()) {
+    std::cerr << m_className << "::GetMedium: Index out of range.\n";
     return nullptr;
   }
 
-  return materials[imat].medium;
+  return m_materials[imat].medium;
 }
 
 bool ComponentFieldMap::GetElement(const unsigned int i, double& vol,
                                    double& dmin, double& dmax) {
-  if ((int)i >= nElements) {
-    std::cerr << m_className << "::GetElement:\n";
-    std::cerr << "    Element index (" << i << ") out of range.\n";
+  if (i >= m_elements.size()) {
+    std::cerr << m_className << "::GetElement: Index out of range.\n";
     return false;
   }
 
@@ -172,7 +171,7 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
 
   // Check previously used element
   if (m_lastElement > -1 && !m_checkMultipleElement) {
-    const Element& element = elements[m_lastElement];
+    const Element& element = m_elements[m_lastElement];
     if (element.degenerate) {
       if (Coordinates3(x, y, z, t1, t2, t3, t4, jac, det, element) == 0) {
         if (t1 >= 0 && t1 <= +1 && t2 >= 0 && t2 <= +1 && t3 >= 0 && t3 <= +1) {
@@ -192,10 +191,10 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
 
   // Number of elements to scan.
   // With tetra tree disabled, all elements are scanned.
-  const int numElemToSearch = m_useTetrahedralTree ? tetList.size() : nElements;
+  const int numElemToSearch = m_useTetrahedralTree ? tetList.size() : m_elements.size();
   for (int i = 0; i < numElemToSearch; ++i) {
     const int idxToElemList = m_useTetrahedralTree ? tetList[i] : i;
-    const Element& element = elements[idxToElemList];
+    const Element& element = m_elements[idxToElemList];
     if (x < element.xmin || x > element.xmax || y < element.ymin ||
         y > element.ymax || z < element.zmin || z > element.zmax)
       continue;
@@ -319,7 +318,7 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
 
   // Check previously used element
   if (m_lastElement > -1 && !m_checkMultipleElement) {
-    const Element& element = elements[m_lastElement];
+    const Element& element = m_elements[m_lastElement];
     if (Coordinates13(x, y, z, t1, t2, t3, t4, jac, det, element) == 0) {
       if (t1 >= 0 && t1 <= +1 && t2 >= 0 && t2 <= +1 && t3 >= 0 && t3 <= +1 &&
           t4 >= 0 && t4 <= +1) {
@@ -342,7 +341,7 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
   }
   // Number of elements to scan.
   // With tetra tree disabled, all elements are scanned.
-  const int numElemToSearch = m_useTetrahedralTree ? tetList.size() : nElements;
+  const int numElemToSearch = m_useTetrahedralTree ? tetList.size() : m_elements.size();
   // Verify the count of volumes that contain the point.
   int nfound = 0;
   int imap = -1;
@@ -350,7 +349,7 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
   // Scan all elements
   for (int i = 0; i < numElemToSearch; i++) {
     const int idxToElemList = m_useTetrahedralTree ? tetList[i] : i;
-    const Element& element = elements[idxToElemList];
+    const Element& element = m_elements[idxToElemList];
     if (x < element.xmin || x > element.xmax || y < element.ymin ||
         y > element.ymax || z < element.zmin || z > element.zmax)
       continue;
@@ -428,12 +427,12 @@ int ComponentFieldMap::FindElementCube(const double x, const double y,
                                        std::vector<TMatrixD*>& dN) {
   int imap = -1;
   if (m_lastElement >= 0) {
-    const Element& element = elements[m_lastElement];
-    const Node& n3 = nodes[element.emap[3]];
+    const Element& element = m_elements[m_lastElement];
+    const Node& n3 = m_nodes[element.emap[3]];
     if (x >= n3.x && y >= n3.y && z >= n3.z) {
-      const Node& n0 = nodes[element.emap[0]];
-      const Node& n2 = nodes[element.emap[2]];
-      const Node& n7 = nodes[element.emap[7]];
+      const Node& n0 = m_nodes[element.emap[0]];
+      const Node& n2 = m_nodes[element.emap[2]];
+      const Node& n7 = m_nodes[element.emap[7]];
       if (x < n0.x && y < n2.y && z < n7.z) {
         imap = m_lastElement;
       }
@@ -442,13 +441,14 @@ int ComponentFieldMap::FindElementCube(const double x, const double y,
 
   // Default element loop
   if (imap == -1) {
-    for (int i = 0; i < nElements; ++i) {
-      const Element& element = elements[i];
-      const Node& n3 = nodes[element.emap[3]];
+    const size_t nElements = m_elements.size();
+    for (size_t i = 0; i < nElements; ++i) {
+      const Element& element = m_elements[i];
+      const Node& n3 = m_nodes[element.emap[3]];
       if (x < n3.x || y < n3.y || z < n3.z) continue;
-      const Node& n0 = nodes[element.emap[0]];
-      const Node& n2 = nodes[element.emap[2]];
-      const Node& n7 = nodes[element.emap[7]];
+      const Node& n0 = m_nodes[element.emap[0]];
+      const Node& n2 = m_nodes[element.emap[2]];
+      const Node& n7 = m_nodes[element.emap[7]];
       if (x < n0.x && y < n2.y && z < n7.z) {
         imap = i;
         break;
@@ -461,20 +461,20 @@ int ComponentFieldMap::FindElementCube(const double x, const double y,
       std::cout << m_className << "::FindElementCube:\n";
       std::cout << "    Point (" << x << "," << y << "," << z
                 << ") not in the mesh, it is background or PEC.\n";
-      const Node& first0 = nodes[elements.front().emap[0]];
-      const Node& first2 = nodes[elements.front().emap[2]];
-      const Node& first3 = nodes[elements.front().emap[3]];
-      const Node& first7 = nodes[elements.front().emap[7]];
+      const Node& first0 = m_nodes[m_elements.front().emap[0]];
+      const Node& first2 = m_nodes[m_elements.front().emap[2]];
+      const Node& first3 = m_nodes[m_elements.front().emap[3]];
+      const Node& first7 = m_nodes[m_elements.front().emap[7]];
       std::cout << "    First node (" << first3.x << "," << first3.y << ","
                 << first3.z << ") in the mesh.\n";
       std::cout << "  dx= " << (first0.x - first3.x)
                 << ", dy= " << (first2.y - first3.y)
                 << ", dz= " << (first7.z - first3.z) << "\n";
-      const Node& last0 = nodes[elements.back().emap[0]];
-      const Node& last2 = nodes[elements.back().emap[2]];
-      const Node& last3 = nodes[elements.back().emap[3]];
-      const Node& last5 = nodes[elements.back().emap[5]];
-      const Node& last7 = nodes[elements.back().emap[7]];
+      const Node& last0 = m_nodes[m_elements.back().emap[0]];
+      const Node& last2 = m_nodes[m_elements.back().emap[2]];
+      const Node& last3 = m_nodes[m_elements.back().emap[3]];
+      const Node& last5 = m_nodes[m_elements.back().emap[5]];
+      const Node& last7 = m_nodes[m_elements.back().emap[7]];
       std::cout << "    Last node (" << last5.x << "," << last5.y << ","
                 << last5.z << ") in the mesh.\n";
       std::cout << "  dx= " << (last0.x - last3.x)
@@ -483,9 +483,9 @@ int ComponentFieldMap::FindElementCube(const double x, const double y,
     }
     return -1;
   }
-  CoordinatesCube(x, y, z, t1, t2, t3, jac, dN, elements[imap]);
+  CoordinatesCube(x, y, z, t1, t2, t3, jac, dN, m_elements[imap]);
   if (m_debug) {
-    PrintElement("FindElementCube", x, y, z, t1, t2, t3, 0., elements[imap], 8);
+    PrintElement("FindElementCube", x, y, z, t1, t2, t3, 0., m_elements[imap], 8);
   }
   return imap;
 }
@@ -500,12 +500,12 @@ void ComponentFieldMap::Jacobian3(const Element& element, const double u,
   jac[1][0] = 0;
   jac[1][1] = 0;
 
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
 
   // Shorthands.
   const double fouru = 4 * u;
@@ -557,14 +557,14 @@ void ComponentFieldMap::Jacobian5(const Element& element, const double u,
   jac[1][0] = 0;
   jac[1][1] = 0;
 
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
-  const Node& n6 = nodes[element.emap[6]];
-  const Node& n7 = nodes[element.emap[7]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
+  const Node& n6 = m_nodes[element.emap[6]];
+  const Node& n7 = m_nodes[element.emap[7]];
   const double u2 = u * u;
   const double v2 = v * v;
   const double twou = 2 * u;
@@ -726,16 +726,16 @@ void ComponentFieldMap::Jacobian13(const Element& element, const double t,
     for (int k = 0; k < 4; ++k) jac[j][k] = 0;
   }
 
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
-  const Node& n6 = nodes[element.emap[6]];
-  const Node& n7 = nodes[element.emap[7]];
-  const Node& n8 = nodes[element.emap[8]];
-  const Node& n9 = nodes[element.emap[9]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
+  const Node& n6 = m_nodes[element.emap[6]];
+  const Node& n7 = m_nodes[element.emap[7]];
+  const Node& n8 = m_nodes[element.emap[8]];
+  const Node& n9 = m_nodes[element.emap[9]];
 
   // Shorthands.
   const double fourt = 4 * t;
@@ -915,7 +915,7 @@ void ComponentFieldMap::JacobianCube(const Element& element, const double t1,
   dN.push_back(m_N8);
   // Calculation of the jacobian using dN
   for (int j = 0; j < 8; ++j) {
-    const Node& node = nodes[element.emap[j]];
+    const Node& node = m_nodes[element.emap[j]];
     (*jac)(0, 0) += node.x * ((*dN.at(j))(0, 0));
     (*jac)(0, 1) += node.y * ((*dN.at(j))(0, 0));
     (*jac)(0, 2) += node.z * ((*dN.at(j))(0, 0));
@@ -937,7 +937,7 @@ void ComponentFieldMap::JacobianCube(const Element& element, const double t1,
               << "," << t3 << ")" << std::endl;
     std::cout << "   Node xyzV" << std::endl;
     for (int j = 0; j < 8; ++j) {
-      const Node& node = nodes[element.emap[j]];
+      const Node& node = m_nodes[element.emap[j]];
       std::cout << "         " << element.emap[j] << "          " << node.x
                 << "         " << node.y << "         " << node.z << "         "
                 << node.v << std::endl;
@@ -961,9 +961,9 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
   t1 = t2 = t3 = t4 = 0;
 
   // Make a first order approximation, using the linear triangle.
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
   const double tt1 = (x - n1.x) * (n2.y - n1.y) - (y - n1.y) * (n2.x - n1.x);
   const double tt2 = (x - n2.x) * (n0.y - n2.y) - (y - n2.y) * (n0.x - n2.x);
   const double tt3 = (x - n0.x) * (n1.y - n0.y) - (y - n0.y) * (n1.x - n0.x);
@@ -982,9 +982,9 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
     t2 = tt2 / f2;
     t3 = tt3 / f3;
   }
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
 
   // Start iterative refinement.
   double td1 = t1, td2 = t2, td3 = t3;
@@ -1103,10 +1103,10 @@ int ComponentFieldMap::Coordinates4(const double x, const double y,
   // Provisional values
   t1 = t2 = t3 = t4 = 0.;
 
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
   // Compute determinant.
   const double dd = -(n0.x * n1.y) + n3.x * n2.y - n2.x * n3.y +
                     x * (-n0.y + n1.y - n2.y + n3.y) + n1.x * (n0.y - y) +
@@ -1292,14 +1292,14 @@ int ComponentFieldMap::Coordinates5(const double x, const double y,
 
   // Start iteration
   double td1 = t1, td2 = t2;
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
-  const Node& n6 = nodes[element.emap[6]];
-  const Node& n7 = nodes[element.emap[7]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
+  const Node& n6 = m_nodes[element.emap[6]];
+  const Node& n7 = m_nodes[element.emap[7]];
   bool converged = false;
   for (int iter = 0; iter < 10; iter++) {
     if (m_debug) {
@@ -1416,10 +1416,10 @@ int ComponentFieldMap::Coordinates12(const double x, const double y,
 
   // Failure flag
   int ifail = 1;
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
   // Compute tetrahedral coordinates.
   const double f1x =
       (n2.y - n1.y) * (n3.z - n1.z) - (n3.y - n1.y) * (n2.z - n1.z);
@@ -1528,16 +1528,16 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
     std::cout << "    Iteration starts at (t1,t2,t3,t4) = (" << td1 << ", "
               << td2 << ", " << td3 << ", " << td4 << ").\n";
   }
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
-  const Node& n6 = nodes[element.emap[6]];
-  const Node& n7 = nodes[element.emap[7]];
-  const Node& n8 = nodes[element.emap[8]];
-  const Node& n9 = nodes[element.emap[9]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
+  const Node& n6 = m_nodes[element.emap[6]];
+  const Node& n7 = m_nodes[element.emap[7]];
+  const Node& n8 = m_nodes[element.emap[8]];
+  const Node& n9 = m_nodes[element.emap[9]];
 
   // Loop
   bool converged = false;
@@ -1697,10 +1697,10 @@ int ComponentFieldMap::CoordinatesCube(const double x, const double y,
   // Failure flag
   int ifail = 1;
 
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n7 = nodes[element.emap[7]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n7 = m_nodes[element.emap[7]];
 
   // Compute hexahedral coordinates (t1->[-1,1],t2->[-1,1],t3->[-1,1]) and
   // t1 (zeta) is in y-direction
@@ -1727,7 +1727,7 @@ int ComponentFieldMap::CoordinatesCube(const double x, const double y,
     double zr = 0;
 
     for (int i = 0; i < 8; i++) {
-      const Node& node = nodes[element.emap[i]];
+      const Node& node = m_nodes[element.emap[i]];
       xr += node.x * n[i];
       yr += node.y * n[i];
       zr += node.z * n[i];
@@ -1941,24 +1941,18 @@ void ComponentFieldMap::SetRange() {
   m_setang.fill(false);
 
   // Make sure the required data is available.
-  if (!m_ready || nNodes < 1) {
-    std::cerr << m_className << "::SetRange:\n";
-    std::cerr << "    Field map not yet set.\n";
-    return;
-  }
-  if (nNodes < 1) {
-    std::cerr << m_className << "::SetRange:\n";
-    std::cerr << "    Number of nodes < 1.\n";
+  if (!m_ready || m_nodes.empty()) {
+    std::cerr << m_className << "::SetRange: Field map not yet set.\n";
     return;
   }
 
   // Loop over the nodes.
-  m_mapmin[0] = m_mapmax[0] = nodes[0].x;
-  m_mapmin[1] = m_mapmax[1] = nodes[0].y;
-  m_mapmin[2] = m_mapmax[2] = nodes[0].z;
-  m_mapvmin = m_mapvmax = nodes[0].v;
+  m_mapmin[0] = m_mapmax[0] = m_nodes[0].x;
+  m_mapmin[1] = m_mapmax[1] = m_nodes[0].y;
+  m_mapmin[2] = m_mapmax[2] = m_nodes[0].z;
+  m_mapvmin = m_mapvmax = m_nodes[0].v;
 
-  for (const auto& node : nodes) {
+  for (const auto& node : m_nodes) {
     const std::array<double, 3> pos = {{node.x, node.y, node.z}};
     for (unsigned int i = 0; i < 3; ++i) {
       m_mapmin[i] = std::min(m_mapmin[i], pos[i]);
@@ -2022,7 +2016,7 @@ void ComponentFieldMap::SetRange() {
     m_mapmin[2] = m_minBoundingBox[2];
     m_mapmax[2] = m_maxBoundingBox[2];
   }
-  hasBoundingBox = true;
+  m_hasBoundingBox = true;
 
   // Display the range if requested.
   if (m_debug) PrintRange();
@@ -2309,11 +2303,11 @@ void ComponentFieldMap::CalculateElementBoundingBoxes(void) {
   }
 
   // Calculate the bounding boxes of all elements
-  for (auto& element : elements) {
-    const Node& n0 = nodes[element.emap[0]];
-    const Node& n1 = nodes[element.emap[1]];
-    const Node& n2 = nodes[element.emap[2]];
-    const Node& n3 = nodes[element.emap[3]];
+  for (auto& element : m_elements) {
+    const Node& n0 = m_nodes[element.emap[0]];
+    const Node& n1 = m_nodes[element.emap[1]];
+    const Node& n2 = m_nodes[element.emap[2]];
+    const Node& n3 = m_nodes[element.emap[3]];
     element.xmin = std::min({n0.x, n1.x, n2.x, n3.x});
     element.xmax = std::max({n0.x, n1.x, n2.x, n3.x});
     element.ymin = std::min({n0.y, n1.y, n2.y, n3.y});
@@ -2349,20 +2343,20 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   // Cache the bounding boxes if it has not been done yet.
   if (!m_cacheElemBoundingBoxes) CalculateElementBoundingBoxes();
 
-  if (nodes.empty()) {
+  if (m_nodes.empty()) {
     std::cerr << m_className << "::InitializeTetrahedralTree: Empty mesh.\n";
     return false;
   }
 
   // Determine the bounding box
-  double xmin = nodes.front().x;
-  double ymin = nodes.front().y;
-  double zmin = nodes.front().z;
+  double xmin = m_nodes.front().x;
+  double ymin = m_nodes.front().y;
+  double zmin = m_nodes.front().z;
   double xmax = xmin;
   double ymax = ymin;
   double zmax = zmin;
-  for (unsigned int i = 0; i < nodes.size(); i++) {
-    const Node& n = nodes[i];
+  for (unsigned int i = 0; i < m_nodes.size(); i++) {
+    const Node& n = m_nodes[i];
     xmin = std::min(xmin, n.x);
     xmax = std::max(xmax, n.x);
     ymin = std::min(ymin, n.y);
@@ -2387,16 +2381,16 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   if (m_debug) std::cout << "    Tree instantiated.\n";
 
   // Insert all mesh nodes in the tree
-  for (unsigned int i = 0; i < nodes.size(); i++) {
-    const Node& n = nodes[i];
+  for (unsigned int i = 0; i < m_nodes.size(); i++) {
+    const Node& n = m_nodes[i];
     m_tetTree->InsertMeshNode(Vec3(n.x, n.y, n.z), i);
   }
 
   if (m_debug) std::cout << "    Tree nodes initialized successfully.\n"; 
 
   // Insert all mesh elements (tetrahedrons) in the tree
-  for (unsigned int i = 0; i < elements.size(); i++) {
-    const Element& e = elements[i];
+  for (unsigned int i = 0; i < m_elements.size(); i++) {
+    const Element& e = m_elements[i];
     const double bb[6] = {e.xmin, e.ymin, e.zmin, e.xmax, e.ymax, e.zmax};
     m_tetTree->InsertTetrahedron(bb, i);
   }
@@ -2405,6 +2399,33 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
 
   m_isTreeInitialized = true;
   return true;
+}
+
+size_t ComponentFieldMap::GetWeightingFieldIndex(const std::string& label) const {
+
+  const size_t nWeightingFields = m_wfields.size();
+  for (size_t i = 0; i < nWeightingFields; ++i) {
+    if (m_wfields[i] == label) return i;
+  }
+  return nWeightingFields; 
+}
+
+size_t ComponentFieldMap::GetOrCreateWeightingFieldIndex(
+    const std::string& label) {
+
+  // Check if a weighting field with the same label already exists.
+  size_t nWeightingFields = m_wfields.size();
+  for (size_t i = 0; i < nWeightingFields; ++i) {
+    if (m_wfields[i] == label) return i;
+  }
+  ++nWeightingFields;
+  m_wfields.resize(nWeightingFields);
+  m_wfieldsOk.resize(nWeightingFields);
+  for (auto& node : m_nodes) {
+    node.w.resize(nWeightingFields);
+  }
+  m_wfields.back() = label;
+  return nWeightingFields - 1;
 }
 
 void ComponentFieldMap::PrintElement(const std::string& header, const double x,
@@ -2420,7 +2441,7 @@ void ComponentFieldMap::PrintElement(const std::string& header, const double x,
   if (element.degenerate) std::cout << "    Element is degenerate.\n";
   std::cout << " Node             x            y            z            V\n";
   for (unsigned int ii = 0; ii < n; ++ii) {
-    const Node& node = nodes[element.emap[ii]];
+    const Node& node = m_nodes[element.emap[ii]];
     const double v = iw < 0 ? node.v : node.w[iw];
     printf("      %-5d %12g %12g %12g %12g\n", element.emap[ii], node.x, node.y,
            node.z, v);

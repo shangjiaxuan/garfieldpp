@@ -25,8 +25,7 @@ void PrintErrorOpeningFile(const std::string& hdr, const std::string& filetype,
 
 namespace Garfield {
 
-ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap() {
-  m_className = "ComponentElmer2D";
+ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap("Elmer2D") {
   m_is3d = false;
 
   // Default bounding box
@@ -35,17 +34,13 @@ ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap() {
 }
 
 ComponentElmer2D::ComponentElmer2D(const std::string& header,
-                               const std::string& elist,
-                               const std::string& nlist,
-                               const std::string& mplist,
-                               const std::string& volt, const std::string& unit)
-    : ComponentFieldMap() {
-  m_className = "ComponentElmer2D";
-  m_is3d = false;
+                                   const std::string& elist,
+                                   const std::string& nlist,
+                                   const std::string& mplist,
+                                   const std::string& volt, 
+                                   const std::string& unit)
+    : ComponentElmer2D() {
 
-  // Default bounding box
-  m_minBoundingBox[2] = -50;
-  m_maxBoundingBox[2] = 50;
   Initialise(header, elist, nlist, mplist, volt, unit);
 }
 
@@ -65,7 +60,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   bool ok = true;
 
   // Buffer for reading
-  const int size = 100;
+  constexpr int size = 100;
   char line[size];
 
   // Open the header.
@@ -84,9 +79,9 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   // Read the header to get the number of nodes and elements.
   fheader.getline(line, size, '\n');
   token = strtok(line, " ");
-  nNodes = ReadInteger(token, 0, readerror);
+  const int nNodes = ReadInteger(token, 0, readerror);
   token = strtok(NULL, " ");
-  nElements = ReadInteger(token, 0, readerror);
+  const int nElements = ReadInteger(token, 0, readerror);
   std::cout << hdr << "\n    Read " << nNodes << " nodes and " << nElements
             << " elements from file " << header << ".\n";
   if (readerror) {
@@ -106,20 +101,8 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   }
 
   // Check the value of the unit.
-  double funit;
-  if (strcmp(unit.c_str(), "mum") == 0 || strcmp(unit.c_str(), "micron") == 0 ||
-      strcmp(unit.c_str(), "micrometer") == 0) {
-    funit = 0.0001;
-  } else if (strcmp(unit.c_str(), "mm") == 0 ||
-             strcmp(unit.c_str(), "millimeter") == 0) {
-    funit = 0.1;
-  } else if (strcmp(unit.c_str(), "cm") == 0 ||
-             strcmp(unit.c_str(), "centimeter") == 0) {
-    funit = 1.0;
-  } else if (strcmp(unit.c_str(), "m") == 0 ||
-             strcmp(unit.c_str(), "meter") == 0) {
-    funit = 100.0;
-  } else {
+  double funit = ScalingFactor(unit);
+  if (funit <= 0.) {
     std::cerr << hdr << " Unknown length unit " << unit << ".\n";
     ok = false;
     funit = 1.0;
@@ -154,7 +137,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     newNode.x = xnode * funit;
     newNode.y = ynode * funit;
     newNode.z = znode * funit;
-    nodes.push_back(std::move(newNode));
+    m_nodes.push_back(std::move(newNode));
   }
 
   // Close the nodes file.
@@ -202,7 +185,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
       return false;
     }
     // Place the voltage in its appropriate node.
-    nodes[tl].v = v;
+    m_nodes[tl].v = v;
   }
 
   // Close the potentials file.
@@ -225,14 +208,14 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     ok = false;
     return false;
   }
-  m_nMaterials = ReadInteger(token, 0, readerror);
-  materials.resize(m_nMaterials);
-  for (unsigned int i = 0; i < m_nMaterials; ++i) {
-    materials[i].ohm = -1;
-    materials[i].eps = -1;
-    materials[i].medium = nullptr;
+  const unsigned int nMaterials = ReadInteger(token, 0, readerror);
+  m_materials.resize(nMaterials);
+  for (auto& material : m_materials) {
+    material.ohm = -1;
+    material.eps = -1;
+    material.medium = nullptr;
   }
-  for (il = 2; il < ((int)m_nMaterials + 2); il++) {
+  for (il = 2; il < ((int)nMaterials + 2); il++) {
     fmplist.getline(line, size, '\n');
     token = strtok(line, " ");
     ReadInteger(token, -1, readerror);
@@ -244,9 +227,9 @@ bool ComponentElmer2D::Initialise(const std::string& header,
       ok = false;
       return false;
     }
-    materials[il - 2].eps = dc;
+    m_materials[il - 2].eps = dc;
     std::cout << hdr << "\n    Set material " << il - 2 << " of "
-              << m_nMaterials << " to eps " << dc << ".\n";
+              << nMaterials << " to eps " << dc << ".\n";
   }
 
   // Close the materials file.
@@ -255,15 +238,15 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   // Find the lowest epsilon, check for eps = 0, set default drift media.
   double epsmin = -1.;
   unsigned int iepsmin = 0;
-  for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
-    if (materials[imat].eps < 0) continue;
-    if (materials[imat].eps == 0) {
+  for (unsigned int imat = 0; imat < nMaterials; ++imat) {
+    if (m_materials[imat].eps < 0) continue;
+    if (m_materials[imat].eps == 0) {
       std::cerr << hdr << "\n    Material " << imat
                 << " has been assigned a permittivity equal to zero in\n    "
                 << mplist << ".\n";
       ok = false;
-    } else if (epsmin < 0. || epsmin > materials[imat].eps) {
-      epsmin = materials[imat].eps;
+    } else if (epsmin < 0. || epsmin > m_materials[imat].eps) {
+      epsmin = m_materials[imat].eps;
       iepsmin = imat;
     }
   }
@@ -273,8 +256,8 @@ bool ComponentElmer2D::Initialise(const std::string& header,
               << "    in material list " << mplist << ".\n";
     ok = false;
   } else {
-    for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
-      materials[imat].driftmedium = imat == iepsmin ? true : false;
+    for (unsigned int imat = 0; imat < nMaterials; ++imat) {
+      m_materials[imat].driftmedium = imat == iepsmin ? true : false;
     }
   }
 
@@ -286,9 +269,8 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   }
 
   // Read the elements and their material indices.
-  elements.clear();
+  m_elements.clear();
   int highestnode = 0;
-  Element newElement;
   for (il = 0; il < nElements; il++) {
     // Get a line
     felems.getline(line, size, '\n');
@@ -333,7 +315,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     }
 
     // Check the material number and ensure that epsilon is non-negative.
-    if (imat < 0 || imat > (int)m_nMaterials) {
+    if (imat < 0 || imat > (int)nMaterials) {
       std::cerr << hdr << "\n    Out-of-range material number on file " << elist
                 << " (line " << il << ").\n";
       std::cerr << "    Element: " << il << ", material: " << imat << "\n";
@@ -342,7 +324,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
                 << in7 << ")\n";
       ok = false;
     }
-    if (materials[imat].eps < 0) {
+    if (m_materials[imat].eps < 0) {
       std::cerr << hdr << "\n    Element " << il << " in element list " << elist
                 << "\n    uses material " << imat
                 << " which has not been assigned a positive permittivity in "
@@ -381,9 +363,8 @@ bool ComponentElmer2D::Initialise(const std::string& header,
                 << "    no such elements are allowed in this type of map.\n";
       ok = false;
     }
-
+    Element newElement;
     newElement.degenerate = false;
-
     // Store the material reference.
     newElement.matmap = imat;
 
@@ -396,12 +377,12 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     // if the normal of the defined element points in the -Z direction.
 
     // Check the direction of the element normal, +Z or -Z.
-    double x01 = nodes[in1-1].x - nodes[in0-1].x;
-    double y01 = nodes[in1-1].y - nodes[in0-1].y;
-    double x12 = nodes[in2-1].x - nodes[in1-1].x;
-    double y12 = nodes[in2-1].y - nodes[in1-1].y;
+    double x01 = m_nodes[in1-1].x - m_nodes[in0-1].x;
+    double y01 = m_nodes[in1-1].y - m_nodes[in0-1].y;
+    double x12 = m_nodes[in2-1].x - m_nodes[in1-1].x;
+    double y12 = m_nodes[in2-1].y - m_nodes[in1-1].y;
     double crossprod = x01*y12 - y01*x12;
-    if(crossprod < 0) {
+    if (crossprod < 0) {
       newElement.emap[3] = in0 - 1;
       newElement.emap[2] = in1 - 1;
       newElement.emap[1] = in2 - 1;
@@ -410,8 +391,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
       newElement.emap[5] = in5 - 1;
       newElement.emap[4] = in6 - 1;
       newElement.emap[7] = in7 - 1;
-    }
-    else{
+    } else {
       newElement.emap[0] = in0 - 1;
       newElement.emap[1] = in1 - 1;
       newElement.emap[2] = in2 - 1;
@@ -421,8 +401,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
       newElement.emap[6] = in6 - 1;
       newElement.emap[7] = in7 - 1;
     }
-
-    elements.push_back(newElement);
+    m_elements.push_back(std::move(newElement));
   }
 
   // Close the elements file.
@@ -440,9 +419,8 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   std::cout << hdr << " Finished.\n";
 
   // Remove weighting fields (if any).
-  wfields.clear();
-  wfieldsOk.clear();
-  nWeightingFields = 0;
+  m_wfields.clear();
+  m_wfieldsOk.clear();
 
   // Establish the ranges.
   SetRange();
@@ -470,29 +448,15 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
   }
 
   // Check if a weighting field with the same label already exists.
-  int iw = nWeightingFields;
-  for (int i = nWeightingFields; i--;) {
-    if (wfields[i] == label) {
-      iw = i;
-      break;
-    }
+  const size_t iw = GetOrCreateWeightingFieldIndex(label);
+  if (iw + 1 != m_wfields.size()) {
+    std::cout << m_className << "::SetWeightingField:\n"
+              << "    Replacing existing weighting field " << label << ".\n";
   }
-  if (iw == nWeightingFields) {
-    ++nWeightingFields;
-    wfields.resize(nWeightingFields);
-    wfieldsOk.resize(nWeightingFields);
-    for (int j = nNodes; j--;) {
-      nodes[j].w.resize(nWeightingFields);
-    }
-  } else {
-    std::cout << hdr << "\n    Replacing existing weighting field " << label
-              << ".\n";
-  }
-  wfields[iw] = label;
-  wfieldsOk[iw] = false;
+  m_wfieldsOk[iw] = false;
 
   // Temporary variables for use in file reading
-  const int size = 100;
+  constexpr int size = 100;
   char line[size];
   char* token = NULL;
   bool readerror = false;
@@ -516,6 +480,7 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
   }
 
   // Read past the permutation map (number of lines = nNodes).
+  const int nNodes = m_nodes.size();
   for (int tl = 0; tl < nNodes; tl++) {
     fwvolt.getline(line, size, '\n');
     il++;
@@ -534,7 +499,7 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
       return false;
     }
     // Place the weighting potential at its appropriate node and index.
-    nodes[tl].w[iw] = v;
+    m_nodes[tl].w[iw] = v;
   }
 
   // Close the potentials file.
@@ -542,7 +507,7 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
   std::cout << hdr << "\n    Read potentials from file " << wvolt << ".\n";
 
   // Set the ready flag.
-  wfieldsOk[iw] = ok;
+  m_wfieldsOk[iw] = ok;
   if (!ok) {
     std::cerr << hdr << "\n    Field map could not "
               << "be read and cannot be interpolated.\n";
@@ -602,18 +567,18 @@ void ComponentElmer2D::ElectricField(const double xin, const double yin,
     return;
   }
 
-  const Element& element = elements[imap];
+  const Element& element = m_elements[imap];
   if (m_debug) {
     PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 10);
   }
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
-  const Node& n6 = nodes[element.emap[6]];
-  const Node& n7 = nodes[element.emap[7]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
+  const Node& n6 = m_nodes[element.emap[6]];
+  const Node& n7 = m_nodes[element.emap[7]];
 
   // Shorthands.
   const double invdet = 1. / det;
@@ -672,7 +637,7 @@ void ComponentElmer2D::ElectricField(const double xin, const double yin,
   UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
 
   // Drift medium?
-  const Material& mat = materials[element.matmap];
+  const Material& mat = m_materials[element.matmap];
   if (m_debug) {
     std::cout << m_className << "::ElectricField:\n    Material "
               << element.matmap << ", drift flag " << mat.driftmedium << ".\n";
@@ -692,20 +657,11 @@ void ComponentElmer2D::WeightingField(const double xin, const double yin,
   if (!m_ready) return;
 
   // Look for the label.
-  int iw = 0;
-  bool found = false;
-  for (int i = nWeightingFields; i--;) {
-    if (wfields[i] == label) {
-      iw = i;
-      found = true;
-      break;
-    }
-  }
-
+  const size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (!found) return;
+  if (iw == m_wfields.size()) return;
   // Check if the weighting field is properly initialised.
-  if (!wfieldsOk[iw]) return;
+  if (!m_wfieldsOk[iw]) return;
 
   // Copy the coordinates.
   double x = xin, y = yin, z = 0.;
@@ -728,18 +684,18 @@ void ComponentElmer2D::WeightingField(const double xin, const double yin,
   // Check if the point is in the mesh.
   if (imap < 0) return;
 
-  const Element& element = elements[imap];
+  const Element& element = m_elements[imap];
   if (m_debug) {
     PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 10, iw);
   }
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
-  const Node& n6 = nodes[element.emap[6]];
-  const Node& n7 = nodes[element.emap[7]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
+  const Node& n6 = m_nodes[element.emap[6]];
+  const Node& n7 = m_nodes[element.emap[7]];
   // Shorthands.
   const double invdet = 1. / det;
   wx = -(n0.w[iw] * ((1 - t2) * (2 * t1 + t2) * jac[0][0] +
@@ -796,20 +752,11 @@ double ComponentElmer2D::WeightingPotential(const double xin, const double yin,
   if (!m_ready) return 0.;
 
   // Look for the label.
-  int iw = 0;
-  bool found = false;
-  for (int i = nWeightingFields; i--;) {
-    if (wfields[i] == label) {
-      iw = i;
-      found = true;
-      break;
-    }
-  }
-
+  const size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (!found) return 0.;
+  if (iw == m_wfields.size()) return 0.;
   // Check if the weighting field is properly initialised.
-  if (!wfieldsOk[iw]) return 0.;
+  if (!m_wfieldsOk[iw]) return 0.;
 
   // Copy the coordinates.
   double x = xin, y = yin, z = 0.;
@@ -831,19 +778,19 @@ double ComponentElmer2D::WeightingPotential(const double xin, const double yin,
   const int imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
   if (imap < 0) return 0.;
 
-  const Element& element = elements[imap];
+  const Element& element = m_elements[imap];
   if (m_debug) {
     PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
                  iw);
   }
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
-  const Node& n4 = nodes[element.emap[4]];
-  const Node& n5 = nodes[element.emap[5]];
-  const Node& n6 = nodes[element.emap[6]];
-  const Node& n7 = nodes[element.emap[7]];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
+  const Node& n4 = m_nodes[element.emap[4]];
+  const Node& n5 = m_nodes[element.emap[5]];
+  const Node& n6 = m_nodes[element.emap[6]];
+  const Node& n7 = m_nodes[element.emap[7]];
   return -n0.w[iw] * (1 - t1) * (1 - t2) * (1 + t1 + t2) * 0.25 -
          n1.w[iw] * (1 + t1) * (1 - t2) * (1 - t1 + t2) * 0.25 -
          n2.w[iw] * (1 + t1) * (1 + t2) * (1 - t1 - t2) * 0.25 -
@@ -885,8 +832,8 @@ Medium* ComponentElmer2D::GetMedium(const double xin, const double yin,
     }
     return nullptr;
   }
-  const Element& element = elements[imap];
-  if (element.matmap >= m_nMaterials) {
+  const Element& element = m_elements[imap];
+  if (element.matmap >= m_materials.size()) {
     if (m_debug) {
       std::cerr << m_className << "::GetMedium:\n    Point (" << x << ", " << y
                 << ", " << z << ") has out of range material number " << imap
@@ -897,7 +844,7 @@ Medium* ComponentElmer2D::GetMedium(const double xin, const double yin,
 
   if (m_debug) PrintElement("GetMedium", x, y, z, t1, t2, t3, t4, element, 10);
 
-  return materials[element.matmap].medium;
+  return m_materials[element.matmap].medium;
 }
 
 
@@ -917,12 +864,12 @@ void ComponentElmer2D::UpdatePeriodicity() {
 
 
 double ComponentElmer2D::GetElementVolume(const unsigned int i) {
-  if (i >= elements.size()) return 0.;
-  const Element& element = elements[i];
-  const Node& n0 = nodes[element.emap[0]];
-  const Node& n1 = nodes[element.emap[1]];
-  const Node& n2 = nodes[element.emap[2]];
-  const Node& n3 = nodes[element.emap[3]];
+  if (i >= m_elements.size()) return 0.;
+  const Element& element = m_elements[i];
+  const Node& n0 = m_nodes[element.emap[0]];
+  const Node& n1 = m_nodes[element.emap[1]];
+  const Node& n2 = m_nodes[element.emap[2]];
+  const Node& n3 = m_nodes[element.emap[3]];
   const double surf =
       0.5 *
       (fabs((n1.x - n0.x) * (n2.y - n0.y) - (n2.x - n0.x) * (n1.y - n0.y)) +
@@ -932,18 +879,18 @@ double ComponentElmer2D::GetElementVolume(const unsigned int i) {
 
 void ComponentElmer2D::GetAspectRatio(const unsigned int i, double& dmin,
                                     double& dmax) {
-  if (i >= elements.size()) {
+  if (i >= m_elements.size()) {
     dmin = dmax = 0.;
     return;
   }
 
-  const Element& element = elements[i];
+  const Element& element = m_elements[i];
   const int np = 8;
   // Loop over all pairs of vertices.
   for (int j = 0; j < np - 1; ++j) {
-    const Node& nj = nodes[element.emap[j]];
+    const Node& nj = m_nodes[element.emap[j]];
     for (int k = j + 1; k < np; ++k) {
-      const Node& nk = nodes[element.emap[k]];
+      const Node& nk = m_nodes[element.emap[k]];
       // Compute distance.
       const double dx = nj.x - nk.x;
       const double dy = nj.y - nk.y;

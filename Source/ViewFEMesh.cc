@@ -211,10 +211,10 @@ void ViewFEMesh::DrawElements() {
   const int nMaxZ = perZ ? int(m_zMaxBox / sz) + 1 : 0;
 
   // Loop over all elements.
-  for (const auto& element : m_component->elements) {
+  for (const auto& element : m_component->m_elements) {
     const auto mat = element.matmap;
     // Do not plot the drift medium.
-    if (m_component->materials[mat].driftmedium && !m_plotMeshBorders) {
+    if (m_component->m_materials[mat].driftmedium && !m_plotMeshBorders) {
       continue;
     }
     // Do not create polygons for disabled materials.
@@ -241,10 +241,10 @@ void ViewFEMesh::DrawElements() {
     if (m_fillMesh) opt += "f";
     opt += "same";
 
-    const auto& n0 = m_component->nodes[element.emap[0]];
-    const auto& n1 = m_component->nodes[element.emap[1]];
-    const auto& n2 = m_component->nodes[element.emap[2]];
-    const auto& n3 = m_component->nodes[element.emap[3]];
+    const auto& n0 = m_component->m_nodes[element.emap[0]];
+    const auto& n1 = m_component->m_nodes[element.emap[1]];
+    const auto& n2 = m_component->m_nodes[element.emap[2]];
+    const auto& n3 = m_component->m_nodes[element.emap[3]];
     // Loop over the periodicities in x.
     for (int nx = nMinX; nx <= nMaxX; nx++) {
       // Determine the x-coordinates of the tetrahedral vertices.
