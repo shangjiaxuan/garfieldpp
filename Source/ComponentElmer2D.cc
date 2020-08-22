@@ -276,7 +276,6 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   // Read the elements and their material indices.
   m_elements.clear();
   int highestnode = 0;
-  Element newElement;
   for (il = 0; il < nElements; il++) {
     // Get a line
     felems.getline(line, size, '\n');
@@ -369,9 +368,8 @@ bool ComponentElmer2D::Initialise(const std::string& header,
                 << "    no such elements are allowed in this type of map.\n";
       ok = false;
     }
-
+    Element newElement;
     newElement.degenerate = false;
-
     // Store the material reference.
     newElement.matmap = imat;
 
@@ -389,7 +387,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     double x12 = m_nodes[in2-1].x - m_nodes[in1-1].x;
     double y12 = m_nodes[in2-1].y - m_nodes[in1-1].y;
     double crossprod = x01*y12 - y01*x12;
-    if(crossprod < 0) {
+    if (crossprod < 0) {
       newElement.emap[3] = in0 - 1;
       newElement.emap[2] = in1 - 1;
       newElement.emap[1] = in2 - 1;
@@ -398,8 +396,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
       newElement.emap[5] = in5 - 1;
       newElement.emap[4] = in6 - 1;
       newElement.emap[7] = in7 - 1;
-    }
-    else{
+    } else {
       newElement.emap[0] = in0 - 1;
       newElement.emap[1] = in1 - 1;
       newElement.emap[2] = in2 - 1;
@@ -409,8 +406,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
       newElement.emap[6] = in6 - 1;
       newElement.emap[7] = in7 - 1;
     }
-
-    m_elements.push_back(newElement);
+    m_elements.push_back(std::move(newElement));
   }
 
   // Close the elements file.

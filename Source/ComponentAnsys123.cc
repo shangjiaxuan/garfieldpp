@@ -256,7 +256,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   // Read the element list
   m_elements.clear();
   nElements = 0;
-  Element newElement;
+
   int nbackground = 0;
   il = 0;
   int highestnode = 0;
@@ -420,7 +420,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       std::cerr << "    no such elements allowed in this type of map.\n";
       ok = false;
     }
-
+    Element newElement;
     newElement.degenerate = false;
 
     // Store the material reference
@@ -437,7 +437,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
     newElement.emap[6] = in7 - 1;
     newElement.emap[8] = in8 - 1;
     newElement.emap[9] = in9 - 1;
-    m_elements.push_back(newElement);
+    m_elements.push_back(std::move(newElement));
     nElements++;
   }
   // Close the file
@@ -475,8 +475,6 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   // Read the node list
   m_nodes.clear();
   nNodes = 0;
-  Node newNode;
-  newNode.w.clear();
   il = 0;
   while (fnlist.getline(line, size, '\n')) {
     il++;
@@ -540,10 +538,12 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       ok = false;
     }
     // Store the point coordinates
+    Node newNode;
+    newNode.w.clear();
     newNode.x = xnode * funit;
     newNode.y = ynode * funit;
     newNode.z = znode * funit;
-    m_nodes.push_back(newNode);
+    m_nodes.push_back(std::move(newNode));
     nNodes++;
   }
   // Close the file

@@ -266,7 +266,7 @@ bool ComponentElmer::Initialise(const std::string& header,
   // Read the elements and their material indices.
   m_elements.clear();
   int highestnode = 0;
-  Element newElement;
+
   for (il = 0; il < nElements; il++) {
     // Get a line
     felems.getline(line, size, '\n');
@@ -373,7 +373,7 @@ bool ComponentElmer::Initialise(const std::string& header,
                 << "    no such elements are allowed in this type of map.\n";
       ok = false;
     }
-
+    Element newElement;
     newElement.degenerate = false;
 
     // Store the material reference.
@@ -390,7 +390,7 @@ bool ComponentElmer::Initialise(const std::string& header,
     newElement.emap[6] = in7 - 1;
     newElement.emap[8] = in8 - 1;
     newElement.emap[9] = in9 - 1;
-    m_elements.push_back(newElement);
+    m_elements.push_back(std::move(newElement));
   }
 
   // Close the elements file.

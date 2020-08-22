@@ -258,7 +258,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   // Read the element list
   m_elements.clear();
   nElements = 0;
-  Element newElement;
+
   int ndegenerate = 0;
   int nbackground = 0;
   il = 0;
@@ -371,6 +371,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
       continue;
     }
     // Store the element, degeneracy
+    Element newElement;
     if (in2 == in3 && in3 == in6) {
       ndegenerate++;
       newElement.degenerate = true;
@@ -399,7 +400,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
       newElement.emap[6] = in6 - 1;
       newElement.emap[7] = in7 - 1;
     }
-    m_elements.push_back(newElement);
+    m_elements.push_back(std::move(newElement));
     ++nElements;
   }
   // Close the file
@@ -436,8 +437,6 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   // Read the node list
   m_nodes.clear();
   nNodes = 0;
-  Node newNode;
-  newNode.w.clear();
   il = 0;
   while (fnlist.getline(line, size, '\n')) {
     il++;
@@ -489,12 +488,13 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
                 << ")\n";
       ok = false;
     }
-
+    Node newNode;
+    newNode.w.clear();
     // Store the point coordinates
     newNode.x = xnode * funit;
     newNode.y = ynode * funit;
     newNode.z = znode * funit;
-    m_nodes.push_back(newNode);
+    m_nodes.push_back(std::move(newNode));
     ++nNodes;
   }
   // Close the file
