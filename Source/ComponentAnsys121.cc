@@ -39,7 +39,6 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   }
 
   // Read the material list.
-  m_nMaterials = 0;
   int il = 0;
   unsigned int icurrmat = 0;
   bool readerror = false;
@@ -73,7 +72,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
       token = strtok(NULL, " ");
       token = strtok(NULL, " ");
       token = strtok(NULL, " ");
-      m_nMaterials = ReadInteger(token, -1, readerror);
+      const unsigned int nMaterials = ReadInteger(token, -1, readerror);
       if (readerror) {
         std::cerr << m_className << "::Initialise:\n";
         std::cerr << "    Error reading file " << mplist << " (line " << il
@@ -82,14 +81,14 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
         ok = false;
         return false;
       }
-      m_materials.resize(m_nMaterials);
-      for (unsigned int i = 0; i < m_nMaterials; ++i) {
+      m_materials.resize(nMaterials);
+      for (unsigned int i = 0; i < nMaterials; ++i) {
         m_materials[i].ohm = -1;
         m_materials[i].eps = -1;
         m_materials[i].medium = nullptr;
       }
       if (m_debug) {
-        std::cout << m_className << "::Initialise: " << m_nMaterials
+        std::cout << m_className << "::Initialise: " << nMaterials
                   << " materials.\n";
       }
     } else if (strcmp(token, "MATERIAL") == 0) {
@@ -126,7 +125,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
       il++;
       token = NULL;
       token = strtok(line, " ");
-      if (icurrmat < 1 || icurrmat > m_nMaterials) {
+      if (icurrmat < 1 || icurrmat > m_materials.size()) {
         std::cerr << m_className << "::Initialise:\n";
         std::cerr << "    Found out-of-range current material index "
                   << icurrmat << "\n";
@@ -173,7 +172,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
         fmplist.close();
         ok = false;
         return false;
-      } else if (imat < 1 || imat > (int)m_nMaterials) {
+      } else if (imat < 1 || imat > (int)m_materials.size()) {
         std::cerr << m_className << "::Initialise:\n";
         std::cerr << "    Found out-of-range current material index " << imat
                   << "\n";
@@ -210,7 +209,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   // Find the lowest epsilon, check for eps = 0, set default drift media
   double epsmin = -1;
   unsigned int iepsmin = 0;
-  for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
+  for (unsigned int imat = 0; imat < m_materials.size(); ++imat) {
     if (m_materials[imat].eps < 0) continue;
     if (m_materials[imat].eps == 0) {
       std::cerr << m_className << "::Initialise:\n";
@@ -230,7 +229,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
     std::cerr << "    in material list " << mplist << ".\n";
     ok = false;
   } else {
-    for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
+    for (unsigned int imat = 0; imat < m_materials.size(); ++imat) {
       if (imat == iepsmin) {
         m_materials[imat].driftmedium = true;
       } else {
@@ -241,7 +240,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
 
   // Tell how many lines read
   std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Read properties of " << m_nMaterials
+  std::cout << "    Read properties of " << m_materials.size()
             << " materials from file " << mplist << ".\n";
   if (m_debug) PrintMaterials();
 
@@ -257,8 +256,6 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   }
   // Read the element list
   m_elements.clear();
-  nElements = 0;
-
   int ndegenerate = 0;
   int nbackground = 0;
   il = 0;
@@ -319,18 +316,19 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
       felist.close();
       ok = false;
       return false;
-    } else if (ielem - 1 != nElements + nbackground) {
+    } else if (ielem - 1 != (int)m_elements.size() + nbackground) {
       std::cerr << m_className << "::Initialise:\n";
       std::cerr << "    Synchronisation lost on file " << elist << " (line "
                 << il << ").\n";
-      std::cerr << "    Element: " << ielem << " (expected " << nElements
-                << "), material: " << imat << ", nodes: (" << in0 << ", " << in1
+      std::cerr << "    Element: " << ielem << " (expected " 
+                << m_elements.size() << "), material: " << imat 
+                << ", nodes: (" << in0 << ", " << in1
                 << ", " << in2 << ", " << in3 << ", " << in4 << ", " << in5
                 << ", " << in6 << ", " << in7 << ")\n";
       ok = false;
     }
     // Check the material number and ensure that epsilon is non-negative
-    if (imat < 1 || imat > (int)m_nMaterials) {
+    if (imat < 1 || imat > (int)m_materials.size()) {
       std::cerr << m_className << "::Initialise:\n";
       std::cerr << "   Out-of-range material number on file " << elist
                 << " (line " << il << ").\n";
@@ -401,14 +399,12 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
       newElement.emap[7] = in7 - 1;
     }
     m_elements.push_back(std::move(newElement));
-    ++nElements;
   }
   // Close the file
   felist.close();
   // Tell how many lines read
   std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Read " << nElements << " elements from file " << elist
-            << ",\n";
+  std::cout << "    Read " << m_elements.size() << " elements,\n";
   std::cout << "    highest node number: " << highestnode << ",\n";
   std::cout << "    degenerate elements: " << ndegenerate << ",\n";
   std::cout << "    background elements skipped: " << nbackground << ".\n";
@@ -436,7 +432,6 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   }
   // Read the node list
   m_nodes.clear();
-  nNodes = 0;
   il = 0;
   while (fnlist.getline(line, size, '\n')) {
     il++;
@@ -479,11 +474,11 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
       return false;
     }
     // Check synchronisation
-    if (inode - 1 != nNodes) {
+    if (inode - 1 != (int)m_nodes.size()) {
       std::cerr << m_className << "::Initialise:\n";
       std::cerr << "    Synchronisation lost on file " << nlist << " (line "
                 << il << ").\n";
-      std::cerr << "    Node: " << inode << " (expected " << nNodes
+      std::cerr << "    Node: " << inode << " (expected " << m_nodes.size()
                 << "), (x,y,z) = (" << xnode << ", " << ynode << ", " << znode
                 << ")\n";
       ok = false;
@@ -495,19 +490,18 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
     newNode.y = ynode * funit;
     newNode.z = znode * funit;
     m_nodes.push_back(std::move(newNode));
-    ++nNodes;
   }
   // Close the file
   fnlist.close();
   // Tell how many lines read
-  std::cout << m_className << "::Initialise:\n";
-  std::cout << "    Read " << nNodes << " nodes from file " << nlist << ".\n";
+  std::cout << m_className << "::Initialise:\n"
+            << "    Read " << m_nodes.size() << " nodes.\n";
   // Check number of nodes
-  if (nNodes != highestnode) {
+  if ((int)m_nodes.size() != highestnode) {
     std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Number of nodes read (" << nNodes << ") on " << nlist
-              << "\n";
-    std::cerr << "    does not match element list (" << highestnode << ").\n";
+    std::cerr << "    Number of nodes read (" << m_nodes.size() 
+              << ") on " << nlist << "\n"
+              << "    does not match element list (" << highestnode << ").\n";
     ok = false;
   }
 
@@ -523,7 +517,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   }
   // Read the voltage list
   il = 0;
-  int nread = 0;
+  unsigned int nread = 0;
   readerror = false;
   while (fprnsol.getline(line, size, '\n')) {
     il++;
@@ -563,7 +557,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
       return false;
     }
     // Check node number and store if OK
-    if (inode < 1 || inode > nNodes) {
+    if (inode < 1 || inode > (int)m_nodes.size()) {
       std::cerr << m_className << "::Initialise:\n";
       std::cerr << "    Node number " << inode << " out of range\n";
       std::cerr << "    on potential file " << prnsol << " (line " << il
@@ -581,11 +575,11 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   std::cout << "    Read " << nread << " potentials from file " << prnsol
             << ".\n";
   // Check number of nodes
-  if (nread != nNodes) {
+  if (nread != m_nodes.size()) {
     std::cerr << m_className << "::Initialise:\n";
     std::cerr << "    Number of nodes read (" << nread << ") on potential file "
               << prnsol << " does not\n"
-              << "    match the node list (" << nNodes << ").\n";
+              << "    match the node list (" << m_nodes.size() << ").\n";
     ok = false;
   }
   // Set the ready flag
@@ -601,7 +595,6 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   // Remove weighting fields (if any).
   m_wfields.clear();
   m_wfieldsOk.clear();
-  nWeightingFields = 0;
 
   // Establish the ranges
   SetRange();
@@ -629,6 +622,7 @@ bool ComponentAnsys121::SetWeightingField(std::string prnsol,
   }
 
   // Check if a weighting field with the same label already exists.
+  int nWeightingFields = m_wfields.size();
   int iw = nWeightingFields;
   for (int i = nWeightingFields; i--;) {
     if (m_wfields[i] == label) {
@@ -640,8 +634,8 @@ bool ComponentAnsys121::SetWeightingField(std::string prnsol,
     ++nWeightingFields;
     m_wfields.resize(nWeightingFields);
     m_wfieldsOk.resize(nWeightingFields);
-    for (int j = nNodes; j--;) {
-      m_nodes[j].w.resize(nWeightingFields);
+    for (auto& node : m_nodes) {
+      node.w.resize(nWeightingFields);
     }
   } else {
     std::cout << m_className << "::SetWeightingField:\n";
@@ -657,7 +651,7 @@ bool ComponentAnsys121::SetWeightingField(std::string prnsol,
   bool ok = true;
   // Read the voltage list.
   int il = 0;
-  int nread = 0;
+  unsigned int nread = 0;
   bool readerror = false;
   while (fprnsol.getline(line, size, '\n')) {
     il++;
@@ -693,7 +687,7 @@ bool ComponentAnsys121::SetWeightingField(std::string prnsol,
       return false;
     }
     // Check node number and store if OK.
-    if (inode < 1 || inode > nNodes) {
+    if (inode < 1 || inode > (int)m_nodes.size()) {
       std::cerr << m_className << "::SetWeightingField:\n";
       std::cerr << "    Node number " << inode << " out of range\n";
       std::cerr << "    on potential file " << prnsol << " (line " << il
@@ -711,11 +705,11 @@ bool ComponentAnsys121::SetWeightingField(std::string prnsol,
   std::cout << "    Read " << nread << " potentials from file " << prnsol
             << ".\n";
   // Check the number of nodes.
-  if (nread != nNodes) {
+  if (nread != m_nodes.size()) {
     std::cerr << m_className << "::SetWeightingField:\n";
     std::cerr << "    Number of nodes read (" << nread << ") "
               << "    on potential file " << prnsol << "\n";
-    std::cerr << "    does not match the node list (" << nNodes << ").\n";
+    std::cerr << "    does not match the node list (" << m_nodes.size() << ").\n";
     ok = false;
   }
 
@@ -892,6 +886,7 @@ void ComponentAnsys121::WeightingField(const double xin, const double yin,
   // Look for the label.
   int iw = 0;
   bool found = false;
+  const int nWeightingFields = m_wfields.size();
   for (int i = nWeightingFields; i--;) {
     if (m_wfields[i] == label) {
       iw = i;
@@ -1008,6 +1003,7 @@ double ComponentAnsys121::WeightingPotential(const double xin, const double yin,
   // Look for the label.
   int iw = 0;
   bool found = false;
+  const int nWeightingFields = m_wfields.size();
   for (int i = nWeightingFields; i--;) {
     if (m_wfields[i] == label) {
       iw = i;
@@ -1098,7 +1094,7 @@ Medium* ComponentAnsys121::GetMedium(const double xin, const double yin,
     return nullptr;
   }
   const Element& element = m_elements[imap];
-  if (element.matmap >= m_nMaterials) {
+  if (element.matmap >= m_materials.size()) {
     if (m_debug) {
       std::cerr << m_className << "::GetMedium:\n";
       std::cerr << "    Point (" << x << ", " << y << ")"

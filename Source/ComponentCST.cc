@@ -55,7 +55,6 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   }
 
   // Read the material list
-  m_nMaterials = 0;
   int il = 0;
   bool readerror = false;
   while (fmplist.getline(line, size, '\n')) {
@@ -71,7 +70,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
     // ensure it does not exceed the maximum and initialize the list
     if (strcmp(token, "Materials") == 0) {
       token = strtok(NULL, " ");
-      m_nMaterials = ReadInteger(token, -1, readerror);
+      const int nMaterials = ReadInteger(token, -1, readerror);
       if (readerror) {
         std::cerr << m_className << "::Initialise:" << std::endl;
         std::cerr << "    Error reading file " << mplist << " (line " << il
@@ -80,16 +79,15 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
         ok = false;
         return false;
       }
-      m_materials.resize(m_nMaterials);
-      for (unsigned int i = 0; i < m_nMaterials; ++i) {
-        m_materials[i].ohm = -1;
-        m_materials[i].eps = -1;
-        m_materials[i].medium = nullptr;
+      m_materials.resize(nMaterials);
+      for (auto& material : m_materials) {
+        material.ohm = -1;
+        material.eps = -1;
+        material.medium = nullptr;
       }
       if (m_debug) {
         std::cout << m_className << "::Initialise:" << std::endl;
-        std::cout << "    Number of materials: " << m_nMaterials << ""
-                  << std::endl;
+        std::cout << "    Number of materials: " << nMaterials << "\n";
       }
     } else if (strcmp(token, "Material") == 0) {
       token = strtok(NULL, " ");
@@ -101,7 +99,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
         fmplist.close();
         ok = false;
         return false;
-      } else if (imat < 1 || imat > (int)m_nMaterials) {
+      } else if (imat < 1 || imat > (int)m_materials.size()) {
         std::cerr << m_className << "::Initialise:" << std::endl;
         std::cerr << "    Found out-of-range material index " << imat << "in"
                   << std::endl;
@@ -170,7 +168,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   // Find the lowest epsilon, check for eps = 0, set default drift media
   double epsmin = -1.;
   unsigned int iepsmin = 0;
-  for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
+  for (unsigned int imat = 0; imat < m_materials.size(); ++imat) {
     if (m_materials[imat].eps < 0) continue;
     if (m_materials[imat].eps == 0) {
       std::cout << m_className << "::Initialise:" << std::endl;
@@ -190,7 +188,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
     std::cerr << "     material list " << mplist.c_str() << "." << std::endl;
     ok = false;
   } else {
-    for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
+    for (unsigned int imat = 0; imat < m_materials.size(); ++imat) {
       if (imat == iepsmin) {
         m_materials[imat].driftmedium = true;
       } else {
@@ -200,7 +198,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   }
   // Tell how many lines read
   std::cout << m_className << "::Initialise:" << std::endl;
-  std::cout << "    Read properties of " << m_nMaterials << " materials"
+  std::cout << "    Read properties of " << m_materials.size() << " materials"
             << std::endl;
   std::cout << "    from file " << mplist << "." << std::endl;
   if (m_debug) PrintMaterials();
@@ -229,7 +227,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
     return false;
   }
   // Read the node list
-  nNodes = 0;
+  m_nNodes = 0;
   il = 0;
   int xlines = 0, ylines = 0, zlines = 0;
   int lines_type = -1;
@@ -332,12 +330,12 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   m_nx = m_xlines.size();
   m_ny = m_ylines.size();
   m_nz = m_zlines.size();
-  nNodes = m_nx * m_ny * m_nz;
-  nElements = (m_nx - 1) * (m_ny - 1) * (m_nz - 1);
+  m_nNodes = m_nx * m_ny * m_nz;
+  m_nElements = (m_nx - 1) * (m_ny - 1) * (m_nz - 1);
 
   // Tell how many lines read
   std::cout << m_className << "::Initialise:" << std::endl;
-  std::cout << "    Read " << nNodes << " nodes from file " << nlist << "."
+  std::cout << "    Read " << m_nNodes << " nodes from file " << nlist << "."
             << std::endl;
   // Check number of nodes
 
@@ -352,7 +350,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
     return false;
   }
   // Read the element list
-  m_elementMaterial.resize(nElements);
+  m_elementMaterial.resize(m_nElements);
   il = 0;
   while (felist.getline(line, size, '\n')) {
     il++;
@@ -380,13 +378,13 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
       std::cerr << "    Error reading file " << elist << " (line " << il << ")."
                 << std::endl;
       std::cerr << "    The element index (" << ielem
-                << ") is not in the expected range: 0 - " << nElements
+                << ") is not in the expected range: 0 - " << m_nElements
                 << std::endl;
       ok = false;
     }
     // Check the material number and ensure that epsilon is non-negative
     //    int check_mat = imat;
-    if (imat < 1 || imat > m_nMaterials) {
+    if (imat < 1 || imat > m_materials.size()) {
       std::cerr << m_className << "::Initialise:" << std::endl;
       std::cerr << "   Out-of-range material number on file " << elist
                 << " (line " << il << ")." << std::endl;
@@ -408,11 +406,10 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   felist.close();
   // Tell how many lines read
   std::cout << m_className << "::Initialise:" << std::endl;
-  std::cout << "    Read " << nElements << " elements from file " << elist
-            << "," << std::endl;
+  std::cout << "    Read " << m_nElements << " elements.\n";
 
   // Open the voltage list
-  m_potential.resize(nNodes);
+  m_potential.resize(m_nNodes);
   std::ifstream fprnsol;
   fprnsol.open(prnsol.c_str(), std::ios::in);
   if (fprnsol.fail()) {
@@ -449,7 +446,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
       std::cerr << "    Error reading file " << prnsol << " (line " << il
                 << ")." << std::endl;
       std::cerr << "    The node index (" << inode - 1
-                << ") is not in the expected range: 0 - " << nNodes
+                << ") is not in the expected range: 0 - " << m_nNodes
                 << std::endl;
       ok = false;
     }
@@ -458,15 +455,15 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   fprnsol.close();
   // Tell how many lines read
   std::cout << m_className << "::Initialise:" << std::endl;
-  std::cout << "    Read " << nread << "/" << nNodes
+  std::cout << "    Read " << nread << "/" << m_nNodes
             << " (expected) potentials from file " << prnsol << "."
             << std::endl;
   // Check number of nodes
-  if (nread != nNodes) {
+  if (nread != (int)m_nNodes) {
     std::cerr << m_className << "::Initialise:" << std::endl;
     std::cerr << "    Number of nodes read (" << nread << ") on potential file "
               << prnsol << " does not" << std::endl;
-    std::cerr << "    match the node list (" << nNodes << ")." << std::endl;
+    std::cerr << "    match the node list (" << m_nNodes << ").\n";
     ok = false;
   }
   // Set the ready flag
@@ -536,6 +533,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   int e_s = 0, e_x = 0, e_y = 0, e_z = 0;
   int e_m = 0;
 
+  int nMaterials = 0;
   int filled = 0;
   filled = std::sscanf(
       header,
@@ -548,7 +546,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
        std::string("elements_material=%d\n") + std::string("n_materials=%d\n"))
           .c_str(),
       &nx, &ny, &nz, &m_x, &m_y, &m_z, &n_s, &n_x, &n_y, &n_z, &e_s, &e_x, &e_y,
-      &e_z, &e_m, &m_nMaterials);
+      &e_z, &e_m, &nMaterials);
   if (filled != 16) {
     fclose(f);
     std::cerr << m_className << "::Initialise:" << std::endl;
@@ -558,7 +556,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   }
   if (fileSize < 1000 + (m_x + m_y + m_z) * 8 +
                      (n_s + n_x + n_y + n_z + e_s + e_x + e_y + e_z) * 4 +
-                     e_m * 1 + (int)m_nMaterials * 20) {
+                     e_m * 1 + (int)nMaterials * 20) {
     fclose(f);
     ok = false;
   }
@@ -576,14 +574,14 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
     std::cout << "  Field (scalar): " << e_s << "\t Field (x): " << e_x
               << "\t Field (y): " << e_y << "\t Field (z): " << e_z
               << std::endl;
-    std::cout << "  Elements: " << e_m << "\t Materials: " << m_nMaterials
+    std::cout << "  Elements: " << e_m << "\t Materials: " << nMaterials
               << std::endl;
   }
   m_nx = m_x;
   m_ny = m_y;
   m_nz = m_z;
-  nNodes = m_nx * m_ny * m_nz;
-  nElements = (m_nx - 1) * (m_ny - 1) * (m_nz - 1);
+  m_nNodes = m_nx * m_ny * m_nz;
+  m_nElements = (m_nx - 1) * (m_ny - 1) * (m_nz - 1);
 
   m_xlines.resize(m_x);
   m_ylines.resize(m_y);
@@ -591,7 +589,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   m_potential.resize(n_s);
   m_elementMaterial.resize(e_m);
   //	elements_scalar.resize(e_s);
-  m_materials.resize(m_nMaterials);
+  m_materials.resize(nMaterials);
   result = fread(m_xlines.data(), sizeof(double), m_xlines.size(), f);
   if (result != m_xlines.size()) {
     fputs("Reading error while reading xlines.", stderr);
@@ -733,7 +731,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
 
 bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
                                      bool isBinary) {
-  std::vector<float> potentials(nNodes);
+  std::vector<float> potentials(m_nNodes);
   if (!m_ready) {
     std::cerr << m_className << "::SetWeightingField:" << std::endl;
     std::cerr << "    No valid field map is present." << std::endl;
@@ -813,6 +811,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
     int e_s = 0, e_x = 0, e_y = 0, e_z = 0;
     int e_m = 0;
 
+    int nMaterials = 0;
     int filled = 0;
     filled = std::sscanf(
         header,
@@ -826,7 +825,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
          std::string("n_materials=%d\n"))
             .c_str(),
         &nx, &ny, &nz, &m_x, &m_y, &m_z, &nread, &n_x, &n_y, &n_z, &e_s, &e_x,
-        &e_y, &e_z, &e_m, &m_nMaterials);
+        &e_y, &e_z, &e_m, &nMaterials);
     if (filled != 16) {
       fclose(f);
       std::cerr << m_className << "::SetWeightingField:" << std::endl;
@@ -836,7 +835,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
     }
     if (fileSize < 1000 + (m_x + m_y + m_z) * 8 +
                        (nread + n_x + n_y + n_z + e_s + e_x + e_y + e_z) * 4 +
-                       e_m * 1 + (int)m_nMaterials * 20) {
+                       e_m * 1 + (int)nMaterials * 20) {
       fclose(f);
       ok = false;
     }
@@ -855,7 +854,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
       std::cout << "  Field (scalar): " << e_s << "\t Field (x): " << e_x
                 << "\t Field (y): " << e_y << "\t Field (z): " << e_z
                 << std::endl;
-      std::cout << "  Elements: " << e_m << "\t Materials: " << m_nMaterials
+      std::cout << "  Elements: " << e_m << "\t Materials: " << nMaterials
                 << std::endl;
     }
     // skip everything, but the potential
@@ -919,15 +918,15 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
   }
   // Tell how many lines read
   std::cout << m_className << "::SetWeightingField:" << std::endl;
-  std::cout << "    Read " << nread << "/" << nNodes
+  std::cout << "    Read " << nread << "/" << m_nNodes
             << " (expected) potentials from file " << prnsol << "."
             << std::endl;
   // Check number of nodes
-  if (nread != nNodes) {
+  if (nread != (int)m_nNodes) {
     std::cerr << m_className << "::SetWeightingField:" << std::endl;
     std::cerr << "    Number of nodes read (" << nread << ")"
               << " on potential file (" << prnsol << ")" << std::endl;
-    std::cerr << "     does not match the node list (" << nNodes << ")."
+    std::cerr << "     does not match the node list (" << m_nNodes << ")."
               << std::endl;
     ok = false;
   }
@@ -1263,7 +1262,7 @@ void ComponentCST::UpdatePeriodicity() {
 
 void ComponentCST::GetAspectRatio(const unsigned int element, double& dmin,
                                   double& dmax) {
-  if ((int)element >= nElements) {
+  if (element >= m_nElements) {
     dmin = dmax = 0.;
     return;
   }
@@ -1279,7 +1278,7 @@ void ComponentCST::GetAspectRatio(const unsigned int element, double& dmin,
 }
 
 double ComponentCST::GetElementVolume(const unsigned int element) {
-  if ((int)element >= nElements) return 0.;
+  if (element >= m_nElements) return 0.;
   unsigned int i, j, k;
   Element2Index(element, i, j, k);
   const double volume = fabs((m_xlines.at(i + 1) - m_xlines.at(i)) *

@@ -29,11 +29,12 @@ void ComponentFieldMap::PrintMaterials() {
     return;
   }
 
+  const size_t nMaterials = m_materials.size();
   std::cout << m_className << "::PrintMaterials:\n"
-            << "    Currently " << m_nMaterials << " materials are defined.\n"
+            << "    Currently " << nMaterials << " materials are defined.\n"
             << "      Index Permittivity  Resistivity Notes\n";
-  for (unsigned int i = 0; i < m_nMaterials; ++i) {
-    printf("      %5d %12g %12g", i, m_materials[i].eps, m_materials[i].ohm);
+  for (size_t i = 0; i < nMaterials; ++i) {
+    printf("      %5zu %12g %12g", i, m_materials[i].eps, m_materials[i].ohm);
     if (m_materials[i].medium) {
       std::string name = m_materials[i].medium->GetName();
       std::cout << " " << name;
@@ -53,7 +54,7 @@ void ComponentFieldMap::DriftMedium(const unsigned int imat) {
   if (!m_ready) PrintNotReady("DriftMedium");
 
   // Check value
-  if (imat >= m_nMaterials) {
+  if (imat >= m_materials.size()) {
     std::cerr << m_className << "::DriftMedium: Index out of range.\n";
     return;
   }
@@ -67,7 +68,7 @@ void ComponentFieldMap::NotDriftMedium(const unsigned int imat) {
   if (!m_ready) PrintNotReady("NotDriftMedium");
 
   // Check value
-  if (imat >= m_nMaterials) {
+  if (imat >= m_materials.size()) {
     std::cerr << m_className << "::NotDriftMedium: Index out of range.\n";
     return;
   }
@@ -77,7 +78,7 @@ void ComponentFieldMap::NotDriftMedium(const unsigned int imat) {
 }
 
 double ComponentFieldMap::GetPermittivity(const unsigned int imat) const {
-  if (imat >= m_nMaterials) {
+  if (imat >= m_materials.size()) {
     std::cerr << m_className << "::GetPermittivity: Index out of range.\n";
     return -1.;
   }
@@ -86,7 +87,7 @@ double ComponentFieldMap::GetPermittivity(const unsigned int imat) const {
 }
 
 double ComponentFieldMap::GetConductivity(const unsigned int imat) const {
-  if (imat >= m_nMaterials) {
+  if (imat >= m_materials.size()) {
     std::cerr << m_className << "::GetConductivity: Index out of range.\n";
     return -1.;
   }
@@ -95,14 +96,13 @@ double ComponentFieldMap::GetConductivity(const unsigned int imat) const {
 }
 
 void ComponentFieldMap::SetMedium(const unsigned int imat, Medium* m) {
-  if (imat >= m_nMaterials) {
-    std::cerr << m_className << "::SetMedium:\n";
-    std::cerr << "    Material index " << imat << " is out of range.\n";
+  if (imat >= m_materials.size()) {
+    std::cerr << m_className << "::SetMedium: Index out of range.\n";
     return;
   }
 
   if (!m) {
-    std::cerr << m_className << "::SetMedium:    Null pointer.\n";
+    std::cerr << m_className << "::SetMedium: Null pointer.\n";
     return;
   }
 
@@ -115,9 +115,8 @@ void ComponentFieldMap::SetMedium(const unsigned int imat, Medium* m) {
 }
 
 Medium* ComponentFieldMap::GetMedium(const unsigned int imat) const {
-  if (imat >= m_nMaterials) {
-    std::cerr << m_className << "::GetMedium:\n"
-              << "    Material index " << imat << " is out of range.\n";
+  if (imat >= m_materials.size()) {
+    std::cerr << m_className << "::GetMedium: Index out of range.\n";
     return nullptr;
   }
 
@@ -126,9 +125,8 @@ Medium* ComponentFieldMap::GetMedium(const unsigned int imat) const {
 
 bool ComponentFieldMap::GetElement(const unsigned int i, double& vol,
                                    double& dmin, double& dmax) {
-  if ((int)i >= nElements) {
-    std::cerr << m_className << "::GetElement:\n";
-    std::cerr << "    Element index (" << i << ") out of range.\n";
+  if (i >= m_elements.size()) {
+    std::cerr << m_className << "::GetElement: Index out of range.\n";
     return false;
   }
 
@@ -192,7 +190,7 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
 
   // Number of elements to scan.
   // With tetra tree disabled, all elements are scanned.
-  const int numElemToSearch = m_useTetrahedralTree ? tetList.size() : nElements;
+  const int numElemToSearch = m_useTetrahedralTree ? tetList.size() : m_elements.size();
   for (int i = 0; i < numElemToSearch; ++i) {
     const int idxToElemList = m_useTetrahedralTree ? tetList[i] : i;
     const Element& element = m_elements[idxToElemList];
@@ -342,7 +340,7 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
   }
   // Number of elements to scan.
   // With tetra tree disabled, all elements are scanned.
-  const int numElemToSearch = m_useTetrahedralTree ? tetList.size() : nElements;
+  const int numElemToSearch = m_useTetrahedralTree ? tetList.size() : m_elements.size();
   // Verify the count of volumes that contain the point.
   int nfound = 0;
   int imap = -1;
@@ -442,7 +440,8 @@ int ComponentFieldMap::FindElementCube(const double x, const double y,
 
   // Default element loop
   if (imap == -1) {
-    for (int i = 0; i < nElements; ++i) {
+    const size_t nElements = m_elements.size();
+    for (size_t i = 0; i < nElements; ++i) {
       const Element& element = m_elements[i];
       const Node& n3 = m_nodes[element.emap[3]];
       if (x < n3.x || y < n3.y || z < n3.z) continue;
@@ -1941,14 +1940,8 @@ void ComponentFieldMap::SetRange() {
   m_setang.fill(false);
 
   // Make sure the required data is available.
-  if (!m_ready || nNodes < 1) {
-    std::cerr << m_className << "::SetRange:\n";
-    std::cerr << "    Field map not yet set.\n";
-    return;
-  }
-  if (nNodes < 1) {
-    std::cerr << m_className << "::SetRange:\n";
-    std::cerr << "    Number of nodes < 1.\n";
+  if (!m_ready || m_nodes.empty()) {
+    std::cerr << m_className << "::SetRange: Field map not yet set.\n";
     return;
   }
 

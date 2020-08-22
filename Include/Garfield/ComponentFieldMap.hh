@@ -45,7 +45,7 @@ class ComponentFieldMap : public ComponentBase {
   /// Flag a field map materials as a non-drift medium.
   void NotDriftMedium(const unsigned int imat);
   /// Return the number of materials in the field map.
-  unsigned int GetNumberOfMaterials() const { return m_nMaterials; }
+  unsigned int GetNumberOfMaterials() const { return m_materials.size(); }
   /// Return the permittivity of a field map material.
   double GetPermittivity(const unsigned int imat) const;
   /// Return the conductivity of a field map material.
@@ -56,10 +56,10 @@ class ComponentFieldMap : public ComponentBase {
   Medium* GetMedium(const unsigned int i) const;
   using ComponentBase::GetMedium;
 
-  unsigned int GetNumberOfMedia() const { return m_nMaterials; }
+  unsigned int GetNumberOfMedia() const { return m_materials.size(); }
 
   /// Return the number of mesh elements.
-  int GetNumberOfElements() const { return nElements; }
+  unsigned int GetNumberOfElements() const { return m_elements.size(); }
   /// Return the volume and aspect ratio of a mesh element.
   bool GetElement(const unsigned int i, double& vol, double& dmin,
                   double& dmax);
@@ -87,7 +87,6 @@ class ComponentFieldMap : public ComponentBase {
   bool m_is3d = true;
 
   // Elements
-  int nElements = -1;
   struct Element {
     // Nodes
     int emap[10];
@@ -100,7 +99,6 @@ class ComponentFieldMap : public ComponentBase {
   std::vector<Element> m_elements;
 
   // Nodes
-  int nNodes = -1;
   struct Node {
     // Coordinates
     double x, y, z;
@@ -112,7 +110,6 @@ class ComponentFieldMap : public ComponentBase {
   std::vector<Node> m_nodes;
 
   // Materials
-  unsigned int m_nMaterials = 0;
   struct Material {
     // Permittivity
     double eps;
@@ -124,7 +121,6 @@ class ComponentFieldMap : public ComponentBase {
   };
   std::vector<Material> m_materials;
 
-  int nWeightingFields = 0;
   std::vector<std::string> m_wfields;
   std::vector<bool> m_wfieldsOk;
 

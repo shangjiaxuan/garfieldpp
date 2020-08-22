@@ -79,8 +79,9 @@ bool ComponentComsol::Initialise(const std::string& mesh,
               << "    Could not open materials file " << mplist << ".\n";
     return false;
   }
-  fmplist >> m_nMaterials;
-  for (unsigned int i = 0; i < m_nMaterials; ++i) {
+  unsigned int nMaterials;
+  fmplist >> nMaterials;
+  for (unsigned int i = 0; i < nMaterials; ++i) {
     Material newMaterial;
     newMaterial.driftmedium = true;
     newMaterial.medium = nullptr;
@@ -95,7 +96,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     newMaterial.medium = nullptr;
     newMaterial.eps = newMaterial.ohm = -1;
     m_materials.push_back(std::move(newMaterial));
-    m_nMaterials++;
+    nMaterials++;
   }
   std::map<int, int> domain2material;
   int d2msize;
@@ -125,7 +126,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
       return false;
     }
   } while (!ends_with(line, "# number of mesh points"));
-  nNodes = readInt(line);
+  const int nNodes = readInt(line);
 
   std::cout << m_className << "::Initialise: " << nNodes << " nodes.\n";
   do {
@@ -161,7 +162,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
       return false;
     }
   } while (!ends_with(line, "# number of elements"));
-  nElements = readInt(line);
+  const int nElements = readInt(line);
   m_elements.clear();
   std::cout << m_className << "::Initialise: " << nElements << " elements.\n";
   std::getline(fmesh, line);
@@ -185,11 +186,11 @@ bool ComponentComsol::Initialise(const std::string& mesh,
       return false;
     }
   } while (line.find("# Geometric entity indices") == std::string::npos);
-  for (int i = 0; i < nElements; ++i) {
+  for (auto& element : m_elements) {
     int domain;
     fmesh >> domain;
-    m_elements[i].matmap = domain2material.count(domain) ? domain2material[domain]
-                                                       : m_nMaterials - 1;
+    element.matmap = domain2material.count(domain) ? domain2material[domain]
+                                                   : nMaterials - 1;
   }
   fmesh.close();
 
@@ -218,14 +219,16 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   sline >> token;  // z
   sline >> token;  // V
   sline >> token;  // (V)
+  m_wfields.clear();
+  m_wfieldsOk.clear();
   while (sline >> token) {
     std::cout << m_className << "::Initialise:\n"
               << "    Reading data for weighting field " << token << ".\n";
-    nWeightingFields++;
     m_wfields.push_back(token);
     m_wfieldsOk.push_back(true);
     sline >> token;  // (V)
   }
+  const size_t nWeightingFields = m_wfields.size();
 
   const unsigned int nPrint =
       std::pow(10, static_cast<unsigned int>(
@@ -234,8 +237,8 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   PrintProgress(0.);
   // Build a k-d tree from the node coordinates.
   std::vector<std::vector<double> > points;
-  for (int i = 0; i < nNodes; ++i) {
-    std::vector<double> point = {m_nodes[i].x, m_nodes[i].y, m_nodes[i].z};
+  for (const auto& node : m_nodes) {
+    std::vector<double> point = {node.x, node.y, node.z};
     points.push_back(std::move(point));
   }
   KDTree kdtree(points);
@@ -247,7 +250,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     y *= m_unit;
     z *= m_unit;
     std::vector<double> w;
-    for (int j = 0; j < nWeightingFields; ++j) {
+    for (size_t j = 0; j < nWeightingFields; ++j) {
       double p;
       ffield >> p;
       w.push_back(p);
@@ -305,6 +308,7 @@ bool ComponentComsol::SetWeightingField(const std::string& field,
   }
 
   // Check if a weighting field with the same label already exists.
+  int nWeightingFields = m_wfields.size();
   int iw = nWeightingFields;
   for (int i = nWeightingFields; i--;) {
     if (m_wfields[i] == label) {
@@ -316,8 +320,8 @@ bool ComponentComsol::SetWeightingField(const std::string& field,
     ++nWeightingFields;
     m_wfields.resize(nWeightingFields);
     m_wfieldsOk.resize(nWeightingFields);
-    for (int j = 0; j < nNodes; ++j) {
-      m_nodes[j].w.resize(nWeightingFields);
+    for (auto& node : m_nodes) {
+      node.w.resize(nWeightingFields);
     }
   } else {
     std::cout << m_className << "::SetWeightingField:\n"
@@ -328,8 +332,8 @@ bool ComponentComsol::SetWeightingField(const std::string& field,
 
   // Build a k-d tree from the node coordinates.
   std::vector<std::vector<double> > points;
-  for (int i = 0; i < nNodes; ++i) {
-    std::vector<double> point = {m_nodes[i].x, m_nodes[i].y, m_nodes[i].z};
+  for (const auto& node : m_nodes) {
+    std::vector<double> point = {node.x, node.y, node.z};
     points.push_back(std::move(point));
   }
   KDTree kdtree(points);
@@ -344,6 +348,7 @@ bool ComponentComsol::SetWeightingField(const std::string& field,
       return false;
     }
   } while (line.find(hdr) == std::string::npos);
+  const int nNodes = m_nodes.size();
   for (int i = 0; i < nNodes; ++i) {
     double x, y, z, v;
     ffield >> x >> y >> z >> v;
@@ -489,6 +494,7 @@ void ComponentComsol::WeightingField(const double xin, const double yin,
   // Look for the label.
   int iw = 0;
   bool found = false;
+  const int nWeightingFields = m_wfields.size();
   for (int i = nWeightingFields; i--;) {
     if (m_wfields[i] == label) {
       iw = i;
@@ -582,6 +588,7 @@ double ComponentComsol::WeightingPotential(const double xin, const double yin,
   // Look for the label.
   int iw = 0;
   bool found = false;
+  const int nWeightingFields = m_wfields.size();
   for (int i = nWeightingFields; i--;) {
     if (m_wfields[i] == label) {
       iw = i;
@@ -662,7 +669,7 @@ Medium* ComponentComsol::GetMedium(const double xin, const double yin,
     return nullptr;
   }
   const Element& element = m_elements[imap];
-  if (element.matmap >= m_nMaterials) {
+  if (element.matmap >= m_materials.size()) {
     if (m_debug) {
       std::cerr << m_className << "::GetMedium:\n"
                 << "    Point (" << x << ", " << y << ", " << z

@@ -84,9 +84,9 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   // Read the header to get the number of nodes and elements.
   fheader.getline(line, size, '\n');
   token = strtok(line, " ");
-  nNodes = ReadInteger(token, 0, readerror);
+  const int nNodes = ReadInteger(token, 0, readerror);
   token = strtok(NULL, " ");
-  nElements = ReadInteger(token, 0, readerror);
+  const int nElements = ReadInteger(token, 0, readerror);
   std::cout << hdr << "\n    Read " << nNodes << " nodes and " << nElements
             << " elements from file " << header << ".\n";
   if (readerror) {
@@ -213,14 +213,14 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     ok = false;
     return false;
   }
-  m_nMaterials = ReadInteger(token, 0, readerror);
-  m_materials.resize(m_nMaterials);
-  for (unsigned int i = 0; i < m_nMaterials; ++i) {
-    m_materials[i].ohm = -1;
-    m_materials[i].eps = -1;
-    m_materials[i].medium = nullptr;
+  const unsigned int nMaterials = ReadInteger(token, 0, readerror);
+  m_materials.resize(nMaterials);
+  for (auto& material : m_materials) {
+    material.ohm = -1;
+    material.eps = -1;
+    material.medium = nullptr;
   }
-  for (il = 2; il < ((int)m_nMaterials + 2); il++) {
+  for (il = 2; il < ((int)nMaterials + 2); il++) {
     fmplist.getline(line, size, '\n');
     token = strtok(line, " ");
     ReadInteger(token, -1, readerror);
@@ -234,7 +234,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     }
     m_materials[il - 2].eps = dc;
     std::cout << hdr << "\n    Set material " << il - 2 << " of "
-              << m_nMaterials << " to eps " << dc << ".\n";
+              << nMaterials << " to eps " << dc << ".\n";
   }
 
   // Close the materials file.
@@ -243,7 +243,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   // Find the lowest epsilon, check for eps = 0, set default drift media.
   double epsmin = -1.;
   unsigned int iepsmin = 0;
-  for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
+  for (unsigned int imat = 0; imat < nMaterials; ++imat) {
     if (m_materials[imat].eps < 0) continue;
     if (m_materials[imat].eps == 0) {
       std::cerr << hdr << "\n    Material " << imat
@@ -261,7 +261,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
               << "    in material list " << mplist << ".\n";
     ok = false;
   } else {
-    for (unsigned int imat = 0; imat < m_nMaterials; ++imat) {
+    for (unsigned int imat = 0; imat < nMaterials; ++imat) {
       m_materials[imat].driftmedium = imat == iepsmin ? true : false;
     }
   }
@@ -320,7 +320,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     }
 
     // Check the material number and ensure that epsilon is non-negative.
-    if (imat < 0 || imat > (int)m_nMaterials) {
+    if (imat < 0 || imat > (int)nMaterials) {
       std::cerr << hdr << "\n    Out-of-range material number on file " << elist
                 << " (line " << il << ").\n";
       std::cerr << "    Element: " << il << ", material: " << imat << "\n";
@@ -426,7 +426,6 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   // Remove weighting fields (if any).
   m_wfields.clear();
   m_wfieldsOk.clear();
-  nWeightingFields = 0;
 
   // Establish the ranges.
   SetRange();
@@ -454,6 +453,7 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
   }
 
   // Check if a weighting field with the same label already exists.
+  int nWeightingFields = m_wfields.size();
   int iw = nWeightingFields;
   for (int i = nWeightingFields; i--;) {
     if (m_wfields[i] == label) {
@@ -465,8 +465,8 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
     ++nWeightingFields;
     m_wfields.resize(nWeightingFields);
     m_wfieldsOk.resize(nWeightingFields);
-    for (int j = nNodes; j--;) {
-      m_nodes[j].w.resize(nWeightingFields);
+    for (auto& node : m_nodes) {
+      node.w.resize(nWeightingFields);
     }
   } else {
     std::cout << hdr << "\n    Replacing existing weighting field " << label
@@ -500,6 +500,7 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
   }
 
   // Read past the permutation map (number of lines = nNodes).
+  const int nNodes = m_nodes.size();
   for (int tl = 0; tl < nNodes; tl++) {
     fwvolt.getline(line, size, '\n');
     il++;
@@ -678,6 +679,7 @@ void ComponentElmer2D::WeightingField(const double xin, const double yin,
   // Look for the label.
   int iw = 0;
   bool found = false;
+  const int nWeightingFields = m_wfields.size();
   for (int i = nWeightingFields; i--;) {
     if (m_wfields[i] == label) {
       iw = i;
@@ -782,6 +784,7 @@ double ComponentElmer2D::WeightingPotential(const double xin, const double yin,
   // Look for the label.
   int iw = 0;
   bool found = false;
+  const int nWeightingFields = m_wfields.size();
   for (int i = nWeightingFields; i--;) {
     if (m_wfields[i] == label) {
       iw = i;
@@ -870,7 +873,7 @@ Medium* ComponentElmer2D::GetMedium(const double xin, const double yin,
     return nullptr;
   }
   const Element& element = m_elements[imap];
-  if (element.matmap >= m_nMaterials) {
+  if (element.matmap >= m_materials.size()) {
     if (m_debug) {
       std::cerr << m_className << "::GetMedium:\n    Point (" << x << ", " << y
                 << ", " << z << ") has out of range material number " << imap
