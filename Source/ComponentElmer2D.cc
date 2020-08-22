@@ -60,7 +60,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   bool ok = true;
 
   // Buffer for reading
-  const int size = 100;
+  constexpr int size = 100;
   char line[size];
 
   // Open the header.
@@ -448,30 +448,15 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
   }
 
   // Check if a weighting field with the same label already exists.
-  int nWeightingFields = m_wfields.size();
-  int iw = nWeightingFields;
-  for (int i = nWeightingFields; i--;) {
-    if (m_wfields[i] == label) {
-      iw = i;
-      break;
-    }
+  const size_t iw = GetOrCreateWeightingFieldIndex(label);
+  if (iw + 1 != m_wfields.size()) {
+    std::cout << m_className << "::SetWeightingField:\n"
+              << "    Replacing existing weighting field " << label << ".\n";
   }
-  if (iw == nWeightingFields) {
-    ++nWeightingFields;
-    m_wfields.resize(nWeightingFields);
-    m_wfieldsOk.resize(nWeightingFields);
-    for (auto& node : m_nodes) {
-      node.w.resize(nWeightingFields);
-    }
-  } else {
-    std::cout << hdr << "\n    Replacing existing weighting field " << label
-              << ".\n";
-  }
-  m_wfields[iw] = label;
   m_wfieldsOk[iw] = false;
 
   // Temporary variables for use in file reading
-  const int size = 100;
+  constexpr int size = 100;
   char line[size];
   char* token = NULL;
   bool readerror = false;
@@ -672,19 +657,9 @@ void ComponentElmer2D::WeightingField(const double xin, const double yin,
   if (!m_ready) return;
 
   // Look for the label.
-  int iw = 0;
-  bool found = false;
-  const int nWeightingFields = m_wfields.size();
-  for (int i = nWeightingFields; i--;) {
-    if (m_wfields[i] == label) {
-      iw = i;
-      found = true;
-      break;
-    }
-  }
-
+  const int iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (!found) return;
+  if (iw < 0) return;
   // Check if the weighting field is properly initialised.
   if (!m_wfieldsOk[iw]) return;
 
@@ -777,19 +752,9 @@ double ComponentElmer2D::WeightingPotential(const double xin, const double yin,
   if (!m_ready) return 0.;
 
   // Look for the label.
-  int iw = 0;
-  bool found = false;
-  const int nWeightingFields = m_wfields.size();
-  for (int i = nWeightingFields; i--;) {
-    if (m_wfields[i] == label) {
-      iw = i;
-      found = true;
-      break;
-    }
-  }
-
+  const int iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (!found) return 0.;
+  if (iw < 0) return 0.;
   // Check if the weighting field is properly initialised.
   if (!m_wfieldsOk[iw]) return 0.;
 

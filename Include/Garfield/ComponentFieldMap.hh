@@ -190,6 +190,9 @@ class ComponentFieldMap : public ComponentBase {
   virtual void GetAspectRatio(const unsigned int i, double& dmin,
                               double& dmax) = 0;
 
+  int GetWeightingFieldIndex(const std::string& label) const;
+  size_t GetOrCreateWeightingFieldIndex(const std::string& label);
+
   void PrintWarning(const std::string& header) {
     if (!m_warning || m_nWarnings > 10) return;
     std::cerr << m_className << "::" << header << ":\n"

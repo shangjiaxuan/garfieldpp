@@ -681,26 +681,11 @@ bool ComponentAnsys123::SetWeightingField(std::string prnsol,
   }
 
   // Check if a weighting field with the same label already exists.
-  int nWeightingFields = m_wfields.size();
-  int iw = nWeightingFields;
-  for (int i = nWeightingFields; i--;) {
-    if (m_wfields[i] == label) {
-      iw = i;
-      break;
-    }
+  const size_t iw = GetOrCreateWeightingFieldIndex(label);
+  if (iw + 1 != m_wfields.size()) {
+    std::cout << m_className << "::SetWeightingField:\n"
+              << "    Replacing existing weighting field " << label << ".\n";
   }
-  if (iw == nWeightingFields) {
-    ++nWeightingFields;
-    m_wfields.resize(nWeightingFields);
-    m_wfieldsOk.resize(nWeightingFields);
-    for (auto& node : m_nodes) {
-      node.w.resize(nWeightingFields);
-    }
-  } else {
-    std::cout << m_className << "::SetWeightingField:\n";
-    std::cout << "    Replacing existing weighting field " << label << ".\n";
-  }
-  m_wfields[iw] = label;
   m_wfieldsOk[iw] = false;
 
   // Buffer for reading
@@ -925,19 +910,9 @@ void ComponentAnsys123::WeightingField(const double xin, const double yin,
   if (!m_ready) return;
 
   // Look for the label.
-  int iw = 0;
-  bool found = false;
-  const int nWeightingFields = m_wfields.size();
-  for (int i = nWeightingFields; i--;) {
-    if (m_wfields[i] == label) {
-      iw = i;
-      found = true;
-      break;
-    }
-  }
-
+  const int iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (!found) return;
+  if (iw < 0) return;
   // Check if the weighting field is properly initialised.
   if (!m_wfieldsOk[iw]) return;
 
@@ -1024,19 +999,9 @@ double ComponentAnsys123::WeightingPotential(const double xin, const double yin,
   if (!m_ready) return 0.;
 
   // Look for the label.
-  int iw = 0;
-  bool found = false;
-  const int nWeightingFields = m_wfields.size();
-  for (int i = nWeightingFields; i--;) {
-    if (m_wfields[i] == label) {
-      iw = i;
-      found = true;
-      break;
-    }
-  }
-
+  const int iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (!found) return 0.;
+  if (iw < 0) return 0.;
   // Check if the weighting field is properly initialised.
   if (!m_wfieldsOk[iw]) return 0.;
 

@@ -2401,6 +2401,33 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   return true;
 }
 
+int ComponentFieldMap::GetWeightingFieldIndex(const std::string& label) const {
+
+  const size_t nWeightingFields = m_wfields.size();
+  for (size_t i = 0; i < nWeightingFields; ++i) {
+    if (m_wfields[i] == label) return i;
+  }
+  return -1;
+}
+
+size_t ComponentFieldMap::GetOrCreateWeightingFieldIndex(
+    const std::string& label) {
+
+  // Check if a weighting field with the same label already exists.
+  size_t nWeightingFields = m_wfields.size();
+  for (size_t i = 0; i < nWeightingFields; ++i) {
+    if (m_wfields[i] == label) return i;
+  }
+  ++nWeightingFields;
+  m_wfields.resize(nWeightingFields);
+  m_wfieldsOk.resize(nWeightingFields);
+  for (auto& node : m_nodes) {
+    node.w.resize(nWeightingFields);
+  }
+  m_wfields.back() = label;
+  return nWeightingFields - 1;
+}
+
 void ComponentFieldMap::PrintElement(const std::string& header, const double x,
                                      const double y, const double z,
                                      const double t1, const double t2,
