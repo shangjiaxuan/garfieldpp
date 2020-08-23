@@ -8592,9 +8592,10 @@ double ComponentAnalyticField::WpotStripXy(const double xpos, const double ypos,
 }
 
 void ComponentAnalyticField::WfieldPixel(const double xpos, const double ypos,
-                                         const double zpos, double& ex,
-                                         double& ey, double& ez,
-                                         const int ip, const Pixel& pixel) const {
+                                         const double zpos, 
+                                         double& ex, double& ey, double& ez,
+                                         const int ip, 
+                                         const Pixel& pixel) const {
   //-----------------------------------------------------------------------
   //   Weighting field for pixels.
   //-----------------------------------------------------------------------
@@ -8607,7 +8608,6 @@ void ComponentAnalyticField::WfieldPixel(const double xpos, const double ypos,
   // Initialise the weighting field.
   ex = ey = ez = 0.;
 
-  const double d = pixel.gap;
   // Transform to standard coordinates.
   double x = 0., y = 0., z = 0.;
 
@@ -8658,6 +8658,7 @@ void ComponentAnalyticField::WfieldPixel(const double xpos, const double ypos,
 
   // Calculate number of terms needed to have sufficiently small error.
   const double maxError = 1.e-5;
+  const double d = pixel.gap;
   const double d3 = d * d * d;
   const unsigned int nz = std::ceil(sqrt(wx * wy / (8 * Pi * d3 * maxError)));
   const unsigned int nx = std::ceil(sqrt(wy * z / (4 * Pi * d3 * maxError)));
@@ -8777,8 +8778,6 @@ void ComponentAnalyticField::WfieldPixel(const double xpos, const double ypos,
 double ComponentAnalyticField::WpotPixel(const double xpos, const double ypos,
                                          const double zpos, 
                                          const int ip, const Pixel& pixel) const {
-  double volt = 0.;
-  const double d = pixel.gap;
   // Transform to standard coordinates.
   double x = 0., y = 0., z = 0.;
 
@@ -8824,11 +8823,10 @@ double ComponentAnalyticField::WpotPixel(const double xpos, const double ypos,
 
   // Calculate number of terms needed to have sufficiently small error.
   const double maxError = 1.e-5;
+  const double d = pixel.gap;
   const double d3 = d * d * d;
-  const unsigned int nz = std::ceil(sqrt(wx * wy / (8 * Pi * d3 * maxError)));
-  const unsigned int nx = std::ceil(sqrt(wy * z / (4 * Pi * d3 * maxError)));
-  const unsigned int ny = std::ceil(sqrt(wx * z / (4 * Pi * d3 * maxError)));
-  const unsigned int nn = std::max(ny, std::max(nx, nz));
+  const unsigned int nn = std::ceil(sqrt(wx * wy * z / (8 * Pi * d3 * maxError)));
+  double volt = 0.;
   for (unsigned int i = 1; i <= nn; ++i) {
     const double u1 = 2 * i * d - z;
     const double u2 = 2 * i * d + z;
@@ -8854,10 +8852,10 @@ double ComponentAnalyticField::WpotPixel(const double xpos, const double ypos,
   const double x1y2 = sqrt(x1s + y2s + zs);
   const double x2y1 = sqrt(x2s + y1s + zs);
   const double x2y2 = sqrt(x2s + y2s + zs);
-  constexpr double invTwoPi = 1. / TwoPi;
 
   volt += atan(x1 * y1 / (z * x1y1)) + atan(x2 * y2 / (z * x2y2)) -
           atan(x1 * y2 / (z * x1y2)) - atan(x2 * y1 / (z * x2y1));
+  constexpr double invTwoPi = 1. / TwoPi;
   return volt * invTwoPi;
 }
 
