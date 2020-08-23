@@ -60,17 +60,13 @@ class ComponentAnalyticField : public ComponentBase {
                       double& wx, double& wy, double& wz,
                       const std::string& label) override {
     wx = wy = wz = 0.;
-    double volt = 0.;
     if (!m_sigset) PrepareSignals();
-    Wfield(x, y, z, wx, wy, wz, volt, label, false);
+    Wfield(x, y, z, wx, wy, wz, label);
   }
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override {
-    double wx = 0., wy = 0., wz = 0.;
-    double volt = 0.;
     if (!m_sigset) PrepareSignals();
-    Wfield(x, y, z, wx, wy, wz, volt, label, true);
-    return volt;
+    return Wpot(x, y, z, label);
   }
 
   bool GetBoundingBox(double& x0, double& y0, double& z0, double& x1,
@@ -573,68 +569,85 @@ class ComponentAnalyticField : public ComponentBase {
   void Field3dD10(const double x, const double y, const double z, double& ex,
                   double& ey, double& ez, double& volt);
   // Evaluation of the weighting field
-  bool Wfield(const double xpos, const double ypos, const double zpos,
-              double& ex, double& ey, double& ez, double& volt,
-              const std::string& label, const bool opt) const;
+  bool Wfield(const double x, const double y, const double z,
+              double& ex, double& ey, double& ez, 
+              const std::string& label) const;
   void WfieldWireA00(const double xpos, const double ypos, double& ex,
-                     double& ey, double& volt, const int mx, const int my,
-                     const int sw, const bool opt) const;
+                     double& ey, const int mx, const int my, 
+                     const int sw) const;
   void WfieldWireB2X(const double xpos, const double ypos, double& ex,
-                     double& ey, double& volt, const int my, const int sw,
-                     const bool opt) const;
+                     double& ey, const int my, const int sw) const;
   void WfieldWireB2Y(const double xpos, const double ypos, double& ex,
-                     double& ey, double& volt, const int mx, const int sw,
-                     const bool opt) const;
+                     double& ey, const int mx, const int sw) const;
   void WfieldWireC2X(const double xpos, const double ypos, double& ex,
-                     double& ey, double& volt, const int sw,
-                     const bool opt) const;
+                     double& ey, const int sw) const;
   void WfieldWireC2Y(const double xpos, const double ypos, double& ex,
-                     double& ey, double& volt, const int sw,
-                     const bool opt) const;
+                     double& ey, const int sw) const;
   void WfieldWireC30(const double xpos, const double ypos, double& ex,
-                     double& ey, double& volt, const int sw,
-                     const bool opt) const;
+                     double& ey, const int sw) const;
   void WfieldWireD10(const double xpos, const double ypos, double& ex,
-                     double& ey, double& volt, const int sw,
-                     const bool opt) const;
+                     double& ey, const int sw) const;
   void WfieldWireD30(const double xpos, const double ypos, double& ex,
-                     double& ey, double& volt, const int sw,
-                     const bool opt) const;
+                     double& ey, const int sw) const;
   void WfieldPlaneA00(const double xpos, const double ypos, double& ex,
-                      double& ey, double& volt, const int mx, const int my,
-                      const int iplane, const bool opt) const;
+                      double& ey, const int mx, const int my,
+                      const int iplane) const;
   void WfieldPlaneB2X(const double xpos, const double ypos, double& ex,
-                      double& ey, double& volt, const int my, const int iplane,
-                      const bool opt) const;
+                      double& ey, const int my, const int iplane) const;
   void WfieldPlaneB2Y(const double xpos, const double ypos, double& ex,
-                      double& ey, double& volt, const int mx, const int iplane,
-                      const bool opt) const;
+                      double& ey, const int mx, const int iplane) const;
   void WfieldPlaneC2X(const double xpos, const double ypos, double& ex,
-                      double& ey, double& volt, const int iplane,
-                      const bool opt) const;
+                      double& ey, const int iplane) const;
   void WfieldPlaneC2Y(const double xpos, const double ypos, double& ex,
-                      double& ey, double& volt, const int iplane,
-                      const bool opt) const;
+                      double& ey, const int iplane) const;
   void WfieldPlaneC30(const double xpos, const double ypos, double& ex,
-                      double& ey, double& volt, const int iplane,
-                      const bool opt) const;
+                      double& ey, const int iplane) const;
   void WfieldPlaneD10(const double xpos, const double ypos, double& ex,
-                      double& ey, double& volt, const int iplane,
-                      const bool opt) const;
+                      double& ey, const int iplane) const;
   void WfieldPlaneD30(const double xpos, const double ypos, double& ex,
-                      double& ey, double& volt, const int iplane,
-                      const bool opt) const;
+                      double& ey, const int iplane) const;
   void WfieldStripZ(const double xpos, const double ypos, double& ex,
-                    double& ey, double& volt, const int ip, const Strip& strip,
-                    const bool opt) const;
+                    double& ey, const int ip, const Strip& strip) const;
   void WfieldStripXy(const double xpos, const double ypos, const double zpos,
-                     double& ex, double& ey, double& ez, double& volt,
-                     const int ip, const Strip& strip, const bool opt) const;
+                     double& ex, double& ey, double& ez, 
+                     const int ip, const Strip& strip) const;
   void WfieldPixel(const double xpos, const double ypos, const double zpos,
-                   double& ex, double& ey, double& ez, double& volt,
-                   const int ip, const Pixel& pixel, const bool opt) const;
+                   double& ex, double& ey, double& ez,
+                   const int ip, const Pixel& pixel) const;
 
-  // Functions for calculating the electric field at a given wire position,
+  // Evaluation of the weighting potential.
+  double Wpot(const double x, const double y, const double z,
+              const std::string& label) const;
+  double WpotWireA00(const double x, const double y, 
+                     const int mx, const int my, const int sw) const;
+  double WpotWireB2X(const double x, const double y, 
+                     const int my, const int sw) const;
+  double WpotWireB2Y(const double x, const double y, 
+                     const int mx, const int sw) const;
+  double WpotWireC2X(const double x, const double y, const int sw) const;
+  double WpotWireC2Y(const double x, const double y, const int sw) const;
+  double WpotWireC30(const double x, const double y, const int sw) const;
+  double WpotWireD10(const double x, const double y, const int sw) const;
+  double WpotWireD30(const double x, const double y, const int sw) const;
+  double WpotPlaneA00(const double x, const double y, 
+                      const int mx, const int my, const int ip) const;
+  double WpotPlaneB2X(const double x, const double y, 
+                      const int my, const int ip) const;
+  double WpotPlaneB2Y(const double x, const double y, 
+                      const int mx, const int ip) const;
+  double WpotPlaneC2X(const double x, const double y, const int ip) const;
+  double WpotPlaneC2Y(const double x, const double y, const int ip) const;
+  double WpotPlaneC30(const double x, const double y, const int ip) const;
+  double WpotPlaneD10(const double x, const double y, const int ip) const;
+  double WpotPlaneD30(const double x, const double y, const int ip) const;
+  double WpotStripZ(const double x, const double y,
+                    const int ip, const Strip& strip) const;
+  double WpotStripXy(const double x, const double y, const double z,
+                     const int ip, const Strip& strip) const;
+  double WpotPixel(const double x, const double y, const double z,
+                   const int ip, const Pixel& pixel) const;
+  
+// Functions for calculating the electric field at a given wire position,
   // as if the wire itself were not there but with the presence
   // of its mirror images.
   void FieldAtWireA00(const double xpos, const double ypos, double& ex,
