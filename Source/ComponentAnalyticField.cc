@@ -1275,7 +1275,8 @@ void ComponentAnalyticField::AddStripOnPlanePhi(const char dir,
 
 void ComponentAnalyticField::AddPixelOnPlaneX(
     const double x, const double ymin, const double ymax, const double zmin,
-    const double zmax, const std::string& label, const double gap) {
+    const double zmax, const std::string& label, const double gap,
+    const double rot) {
   if (m_polar || (!m_ynplan[0] && !m_ynplan[1])) {
     std::cerr << m_className << "::AddPixelOnPlaneX:\n"
               << "    There are no planes at constant x.\n";
@@ -1288,14 +1289,18 @@ void ComponentAnalyticField::AddPixelOnPlaneX(
     return;
   }
 
-  Pixel newPixel;
-  newPixel.type = label;
-  newPixel.ind = -1;
-  newPixel.smin = std::min(ymin, ymax);
-  newPixel.smax = std::max(ymin, ymax);
-  newPixel.zmin = std::min(zmin, zmax);
-  newPixel.zmax = std::max(zmin, zmax);
-  newPixel.gap = gap > Small ? gap : -1.;
+  Pixel pixel;
+  pixel.type = label;
+  pixel.ind = -1;
+  pixel.smin = std::min(ymin, ymax);
+  pixel.smax = std::max(ymin, ymax);
+  pixel.zmin = std::min(zmin, zmax);
+  pixel.zmax = std::max(zmin, zmax);
+  pixel.gap = gap > Small ? gap : -1.;
+  if (fabs(rot) > 1.e-9) {
+    pixel.cphi = cos(rot);
+    pixel.sphi = sin(rot);
+  }
 
   int iplane = 0;
   if (m_ynplan[1]) {
@@ -1304,12 +1309,13 @@ void ComponentAnalyticField::AddPixelOnPlaneX(
     if (d1 < d0) iplane = 1;
   }
 
-  m_planes[iplane].pixels.push_back(std::move(newPixel));
+  m_planes[iplane].pixels.push_back(std::move(pixel));
 }
 
 void ComponentAnalyticField::AddPixelOnPlaneY(
     const double y, const double xmin, const double xmax, const double zmin,
-    const double zmax, const std::string& label, const double gap) {
+    const double zmax, const std::string& label, const double gap,
+    const double rot) {
   if (m_polar || (!m_ynplan[2] && !m_ynplan[3])) {
     std::cerr << m_className << "::AddPixelOnPlaneY:\n"
               << "    There are no planes at constant y.\n";
@@ -1322,14 +1328,18 @@ void ComponentAnalyticField::AddPixelOnPlaneY(
     return;
   }
 
-  Pixel newPixel;
-  newPixel.type = label;
-  newPixel.ind = -1;
-  newPixel.smin = std::min(xmin, xmax);
-  newPixel.smax = std::max(xmin, xmax);
-  newPixel.zmin = std::min(zmin, zmax);
-  newPixel.zmax = std::max(zmin, zmax);
-  newPixel.gap = gap > Small ? gap : -1.;
+  Pixel pixel;
+  pixel.type = label;
+  pixel.ind = -1;
+  pixel.smin = std::min(xmin, xmax);
+  pixel.smax = std::max(xmin, xmax);
+  pixel.zmin = std::min(zmin, zmax);
+  pixel.zmax = std::max(zmin, zmax);
+  pixel.gap = gap > Small ? gap : -1.;
+  if (fabs(rot) > 1.e-9) {
+    pixel.cphi = cos(rot);
+    pixel.sphi = sin(rot);
+  }
 
   int iplane = 2;
   if (m_ynplan[3]) {
@@ -1338,7 +1348,7 @@ void ComponentAnalyticField::AddPixelOnPlaneY(
     if (d1 < d0) iplane = 3;
   }
 
-  m_planes[iplane].pixels.push_back(std::move(newPixel));
+  m_planes[iplane].pixels.push_back(std::move(pixel));
 }
 
 void ComponentAnalyticField::AddPixelOnPlaneR(
@@ -1357,16 +1367,16 @@ void ComponentAnalyticField::AddPixelOnPlaneR(
     return;
   }
 
-  Pixel newPixel;
-  newPixel.type = label;
-  newPixel.ind = -1;
+  Pixel pixel;
+  pixel.type = label;
+  pixel.ind = -1;
   const double smin = phimin * DegreeToRad;
   const double smax = phimax * DegreeToRad;
-  newPixel.smin = std::min(smin, smax);
-  newPixel.smax = std::max(smin, smax);
-  newPixel.zmin = std::min(zmin, zmax);
-  newPixel.zmax = std::max(zmin, zmax);
-  newPixel.gap = gap > Small ? gap : -1.;
+  pixel.smin = std::min(smin, smax);
+  pixel.smax = std::max(smin, smax);
+  pixel.zmin = std::min(zmin, zmax);
+  pixel.zmax = std::max(zmin, zmax);
+  pixel.gap = gap > Small ? gap : -1.;
 
   int iplane = 0;
   if (m_ynplan[1]) {
@@ -1376,7 +1386,7 @@ void ComponentAnalyticField::AddPixelOnPlaneR(
     if (d1 < d0) iplane = 1;
   }
 
-  m_planes[iplane].pixels.push_back(std::move(newPixel));
+  m_planes[iplane].pixels.push_back(std::move(pixel));
 }
 
 void ComponentAnalyticField::AddPixelOnPlanePhi(
@@ -1399,16 +1409,16 @@ void ComponentAnalyticField::AddPixelOnPlanePhi(
               << "    Radius must be greater than zero.\n";
     return;
   }
-  Pixel newPixel;
-  newPixel.type = label;
-  newPixel.ind = -1;
+  Pixel pixel;
+  pixel.type = label;
+  pixel.ind = -1;
   const double smin = log(rmin);
   const double smax = log(rmax);
-  newPixel.smin = std::min(smin, smax);
-  newPixel.smax = std::max(smin, smax);
-  newPixel.zmin = std::min(zmin, zmax);
-  newPixel.zmax = std::max(zmin, zmax);
-  newPixel.gap = gap > Small ? DegreeToRad * gap : -1.;
+  pixel.smin = std::min(smin, smax);
+  pixel.smax = std::max(smin, smax);
+  pixel.zmin = std::min(zmin, zmax);
+  pixel.zmax = std::max(zmin, zmax);
+  pixel.gap = gap > Small ? DegreeToRad * gap : -1.;
 
   int iplane = 2;
   if (m_ynplan[3]) {
@@ -1417,7 +1427,7 @@ void ComponentAnalyticField::AddPixelOnPlanePhi(
     if (d1 < d0) iplane = 3;
   }
 
-  m_planes[iplane].pixels.push_back(std::move(newPixel));
+  m_planes[iplane].pixels.push_back(std::move(pixel));
 }
 
 void ComponentAnalyticField::EnableDipoleTerms(const bool on) {
@@ -8640,6 +8650,14 @@ void ComponentAnalyticField::WfieldPixel(const double xpos, const double ypos,
     default:
       return;
   }
+  // If needed, rotate into place.
+  const bool rot = fabs(pixel.sphi) > 1.e-9;
+  if (rot) {
+    const double xx = x;
+    const double yy = y;
+    x = pixel.cphi * xx + pixel.sphi * yy;
+    y = -pixel.sphi * xx + pixel.cphi * yy;
+  }
   // if (z < 0.) std::cerr << " z = " << z << std::endl;
   // Make sure we are in the fiducial part of the weighting map.
   // Commenting out this lines either breaks the simulation or the plot!
@@ -8748,8 +8766,8 @@ void ComponentAnalyticField::WfieldPixel(const double xpos, const double ypos,
   ez *= invTwoPi;
 
   // Rotate the field back to the original coordinates.
-  const double fx = ex;
-  const double fy = ey;
+  const double fx = rot ? pixel.cphi * ex - pixel.sphi * ey : ex; 
+  const double fy = rot ? pixel.sphi * ex + pixel.cphi * ey : ey;
   const double fz = ez;
   switch (ip) {
     case 0:
@@ -8809,6 +8827,13 @@ double ComponentAnalyticField::WpotPixel(const double xpos, const double ypos,
       break;
     default:
       return 0.;
+  }
+  // If needed, rotate into place.
+  if (fabs(pixel.sphi) > 1.e-9) {
+    const double xx = x;
+    const double yy = y;
+    x = pixel.cphi * xx + pixel.sphi * yy;
+    y = -pixel.sphi * xx + pixel.cphi * yy;
   }
 
   // Define shorthand notations and common terms.

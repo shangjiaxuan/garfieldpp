@@ -104,7 +104,14 @@ class ComponentAnalyticField : public ComponentBase {
   /// Add a plane at constant phi.
   void AddPlanePhi(const double phi, const double voltage,
                    const std::string& label);
-  /// Add a strip in the y or z direction on an existing plane at constant x.
+  /** Add a strip in the y or z direction on an existing plane at constant x.
+    * \param direction 'y' or 'z'.
+    * \param x coordinate of the plane.
+    * \param smin lower limit of the strip in y or z.
+    * \param smax upper limit of the strip in y or z.
+    * \param label weighting field identifier.
+    * \param gap distance to the opposite plane (optional).
+    */
   void AddStripOnPlaneX(const char direction, const double x, const double smin,
                         const double smax, const std::string& label,
                         const double gap = -1.);
@@ -120,14 +127,24 @@ class ComponentAnalyticField : public ComponentBase {
   void AddStripOnPlanePhi(const char direction, const double phi, const double smin,
                           const double smax, const std::string& label,
                           const double gap = -1.);
-  /// Add a pixel on an existing plane at constant x.
+  /** Add a pixel on an existing plane at constant x.
+    * \param x coordinate of the plane.
+    * \param ymin lower limit of the pixel cell in y,
+    * \param ymax upper limit of the pixel cell in y.
+    * \param zmin lower limit of the pixel cell in z.
+    * \param zmax upper limit of the pixel cell in z.
+    * \param gap distance to the opposite plane (optional).
+    * \param rot rotation angle (rad) of the pixel (optional).
+    */
   void AddPixelOnPlaneX(const double x, const double ymin, const double ymax,
                         const double zmin, const double zmax,
-                        const std::string& label, const double gap = -1.);
+                        const std::string& label, const double gap = -1.,
+                        const double rot = 0.);
   /// Add a pixel on an existing plane at constant y.
   void AddPixelOnPlaneY(const double y, const double xmin, const double xmax,
                         const double zmin, const double zmax,
-                        const std::string& label, const double gap = -1.);
+                        const std::string& label, const double gap = -1.,
+                        const double rot = 0.);
   /// Add a pixel on an existing plane at constant radius.
   void AddPixelOnPlaneR(const double r, 
                         const double phimin, const double phimax,
@@ -423,7 +440,9 @@ class ComponentAnalyticField : public ComponentBase {
     int ind;            ///< Readout group.
     double smin, smax;  ///< Coordinates in x/y.
     double zmin, zmax;  ///< Coordinates in z.
-    double gap;         ///< Distance to the opposite electrode.
+    double gap = -1.;   ///< Distance to the opposite electrode.
+    double cphi = 1.;   ///< Rotation.
+    double sphi = 0.;   ///< Rotation.
   };
 
   struct Plane {
