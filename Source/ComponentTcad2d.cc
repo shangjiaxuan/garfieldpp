@@ -1712,6 +1712,25 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
       ++iLine;
       gridfile >> type;
       switch (type) {
+	case 0:
+          // Point
+          gridfile >> edge0 ;
+          if (edge0 < 0) edge0 = -edge0 - 1;
+          // Make sure the indices are not out of range.
+          if (edge0 >= nEdges) {
+            std::cerr << m_className << "::LoadGrid:\n"
+                      << "    Error reading file " << gridfilename << " (line "
+                      << iLine << ").\n"
+                      << "    Edge index out of range.\n";
+            Cleanup();
+            gridfile.close();
+            return false;
+          }
+
+          m_elements[j].vertex[0] = edgeP1[edge0];
+
+
+          break;
         case 1:
           // Line
           gridfile >> edge0 >> edge1;
