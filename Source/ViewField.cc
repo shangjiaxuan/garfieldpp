@@ -136,8 +136,8 @@ void ViewField::Plot(const std::string& option, const std::string& drawopt) {
 
 void ViewField::PlotProfile(const double x0, const double y0, const double z0,
                             const double x1, const double y1, const double z1,
-                            const std::string& option) {
-  DrawProfile(x0, y0, z0, x1, y1, z1, option, false, "");
+                            const std::string& option, const bool normalised) {
+  DrawProfile(x0, y0, z0, x1, y1, z1, option, false, "", normalised);
 }
 
 void ViewField::PlotWeightingField(const std::string& label,
@@ -155,8 +155,9 @@ void ViewField::PlotProfileWeightingField(const std::string& label,
                                           const double x0, const double y0,
                                           const double z0, const double x1,
                                           const double y1, const double z1,
-                                          const std::string& option) {
-  DrawProfile(x0, y0, z0, x1, y1, z1, option, true, label);
+                                          const std::string& option,
+                                          const bool normalised) {
+  DrawProfile(x0, y0, z0, x1, y1, z1, option, true, label, normalised);
 }
 
 
@@ -314,7 +315,8 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
 void ViewField::DrawProfile(const double x0, const double y0, const double z0,
                             const double x1, const double y1, const double z1,
                             const std::string& option, 
-                            const bool wfield, const std::string& electrode) {
+                            const bool wfield, const std::string& electrode,
+                            const bool normalised) {
   if (!m_sensor && !m_component) {
     std::cerr << m_className << "::DrawProfile:\n"
               << "    Neither sensor nor component are defined.\n";
@@ -322,9 +324,9 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
   }
 
   // Check the distance between the two points.
-  const double dx = x1 - x0;
-  const double dy = y1 - y0;
-  const double dz = z1 - z0;
+  double dx = x1 - x0;
+  double dy = y1 - y0;
+  double dz = z1 - z0;
   if (dx * dx + dy * dy + dz * dz <= 0.) {
     std::cerr << m_className << "::DrawProfile:\n"
               << "    Start and end points coincide.\n";
@@ -350,6 +352,11 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
     t0 = z0;
     t1 = z1;
     dir = 2;
+  } else if (!normalised) {
+    t1 = sqrt(dx * dx + dy * dy + dz * dz);
+    dx /= t1;
+    dy /= t1;
+    dz /= t1; 
   }
 
   auto eval = [this, par, wfield, electrode, dir, 
@@ -425,6 +432,8 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
     labels = ";#it{y} [cm];";
   } else if (dir == 2) {
     labels = ";#it{z} [cm];";
+  } else if (!normalised) {
+    labels = ";distance [cm];";
   }
   if (par == Parameter::Potential) {
     labels += "#phi";

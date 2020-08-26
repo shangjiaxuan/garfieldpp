@@ -1202,12 +1202,15 @@ The function
 \begin{lstlisting}
 void PlotProfile(const double x0, const double y0, const double z0,
                  const double x1, const double y1, const double z1,
-                 const std::string& option = "v");
+                 const std::string& option = "v",
+                 const bool normalised = true);
 \end{lstlisting}
 plots the potential or field (depending on the parameter \texttt{option}) 
 along the line  
 \(\left(x_{0}, y_{0}, z_{0}\right) \rightarrow 
   \left(x_{1}, y_{1}, z_{1}\right)\).
+With the flag \texttt{normalised} set to \texttt{true} (default), 
+normalised coordinates $\left[0, 1\right]$ are used for the $x$-axis. 
 
 Similar functions are available for visualizing weighting potentials and fields.
 \begin{lstlisting}
@@ -1217,7 +1220,8 @@ void PlotWeightingField(const std::string& label, const std::string& option,
 void PlotProfileWeightingField(const std::string& label,
                    const double x0, const double y0, const double z0,
                    const double x1, const double y1, const double z1,
-                   const std::string& option = "v");
+                   const std::string& option = "v",
+                   const bool normalised = true);
 \end{lstlisting}
 \begin{description}
   \item[label] identifier of the electrode for which to plot the weighting field/potential.
