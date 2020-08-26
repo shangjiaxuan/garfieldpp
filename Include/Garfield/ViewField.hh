@@ -57,10 +57,12 @@ class ViewField : public ViewBase {
     * \param x0,y0,z0 starting point
     * \param x1,y1,z1 end point
     * \param option quantity to be plotted (see PlotContour)
+    * \param normalised flag whether to use normalised x-axis coordinates
     **/
   void PlotProfile(const double x0, const double y0, const double z0,
                    const double x1, const double y1, const double z1,
-                   const std::string& option = "v");
+                   const std::string& option = "v",
+                   const bool normalised = true);
 
   /** Make a contour plot of the weighting potential or field.
     * \param label identifier of the electrode
@@ -81,12 +83,14 @@ class ViewField : public ViewBase {
     * \param x0,y0,z0 starting point
     * \param x1,y1,z1 end point
     * \param option quantity to be plotted (see PlotContour)
+    * \param normalised flag whether to use normalised x-axis coordinates
     **/
   void PlotProfileWeightingField(const std::string& label, const double x0,
                                  const double y0, const double z0,
                                  const double x1, const double y1,
                                  const double z1,
-                                 const std::string& option = "v");
+                                 const std::string& option = "v",
+                                 const bool normalised = true);
   /// Determine the range of the potential/field automatically (true)
   /// or set it explicitly (false). 
   void EnableAutoRange(const bool on = true, 
@@ -154,7 +158,7 @@ class ViewField : public ViewBase {
   void DrawProfile(const double x0, const double y0, const double z0,
                    const double x1, const double y1, const double z1,
                    const std::string& option, const bool wfield,
-                   const std::string& electrode);
+                   const std::string& electrode, const bool normalised);
   Parameter GetPar(const std::string& option, std::string& title) const;
   double Field(const double x, const double y, const double z,
                const Parameter par) const;
