@@ -629,6 +629,7 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   std::vector<int> nElementsRegion(nRegions, 0);
 
   // Count the different element shapes.
+  unsigned int nPoints = 0;
   unsigned int nLines = 0;
   unsigned int nTriangles = 0;
   unsigned int nRectangles = 0;
@@ -645,9 +646,12 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   const unsigned int nElements = m_elements.size();
   for (unsigned int i = 0; i < nElements; ++i) {
     const Element& element = m_elements[i];
-    if (element.type == 1) {
+    if (element.type == 0) {
+      ++nPoints;
+    } else if (element.type == 1) {
       ++nLines;
       if (element.vertex[0] == element.vertex[1]) {
+
         degenerateElements.push_back(i);
         ++nDegenerate;
       }
@@ -708,6 +712,9 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   }
 
   std::cout << "    Number of elements: " << nElements << "\n";
+  if (nPoints > 0) {
+    std::cout << "      " << nPoints << " lines\n";
+  }
   if (nLines > 0) {
     std::cout << "      " << nLines << " lines\n";
   }
@@ -943,7 +950,9 @@ bool ComponentTcad2d::GetElement(const unsigned int i, double& vol,
   }
 
   const Element& element = m_elements[i];
-  if (element.type == 1) {
+  if (element.type == 0) {
+    dmin = dmax = vol = 0;
+  } else if (element.type == 1) {
     const Vertex& v0 = m_vertices[element.vertex[0]];
     const Vertex& v1 = m_vertices[element.vertex[1]];
     const double dx = v1.x - v0.x;
@@ -1712,6 +1721,22 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
       ++iLine;
       gridfile >> type;
       switch (type) {
+        case 0:
+          // Point
+          gridfile >> edge0 ;
+          // if (edge0 < 0) edge0 = -edge0 - 1;
+          // Make sure the indices are not out of range.
+          if (edge0 >= nEdges) {
+            std::cerr << m_className << "::LoadGrid:\n"
+                      << "    Error reading file " << gridfilename << " (line "
+                      << iLine << ").\n"
+                      << "    Edge index out of range.\n";
+            Cleanup();
+            gridfile.close();
+            return false;
+          }
+          m_elements[j].vertex[0] = edgeP1[edge0];
+          break;
         case 1:
           // Line
           gridfile >> edge0 >> edge1;
@@ -2016,6 +2041,8 @@ bool ComponentTcad2d::CheckElement(const double x, const double y,
                                    const Element& element,
                                    std::array<double, nMaxVertices>& w) const {
   switch (element.type) {
+    case 0:
+      return CheckPoint(x, y, element, w);
     case 1:
       return CheckLine(x, y, element, w);
     case 2:
@@ -2098,6 +2125,15 @@ bool ComponentTcad2d::CheckLine(const double x, const double y,
     return true;
   }
   return false;
+}
+
+bool ComponentTcad2d::CheckPoint(const double x, const double y,
+                                 const Element& element,
+                                 std::array<double, nMaxVertices>& w) const {
+  const Vertex& v0 = m_vertices[element.vertex[0]];
+  if (x != v0.x || y != v0.y) return false;
+  w[0] = 1;
+  return true;
 }
 
 void ComponentTcad2d::Reset() {

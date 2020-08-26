@@ -234,6 +234,8 @@ class ComponentTcad2d : public ComponentBase {
                      std::array<double, nMaxVertices>& w) const;
   bool CheckLine(const double x, const double y, const Element& element,
                  std::array<double, nMaxVertices>& w) const;
+  bool CheckPoint(const double x, const double y, const Element& element,
+                  std::array<double, nMaxVertices>& w) const;
 
   bool LoadGrid(const std::string& gridfilename);
   bool LoadData(const std::string& datafilename);
