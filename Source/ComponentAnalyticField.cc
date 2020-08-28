@@ -7419,7 +7419,7 @@ double ComponentAnalyticField::WpotWireC2X(const double xpos, const double ypos,
         m_coplax - m_sx * int(round((m_coplax - m_w[i].x) / m_sx));
     // Mirror contribution.
     zeta = m_zmult * std::complex<double>(2. * cx - xpos - m_w[i].x, yy);
-    if (fabs(imag(zeta) > 15.)) {
+    if (fabs(imag(zeta)) > 15.) {
       volt += qw * (fabs(imag(zeta)) - CLog2);
     } else {
       const auto zterm = Th1(zeta, m_p1, m_p2);
@@ -8258,7 +8258,7 @@ double ComponentAnalyticField::WpotPlaneC30(const double xpos,
     }
     // Mirror contribution from both the x and the y plane.
     zeta = m_zmult * std::complex<double>(xxmirr, yymirr);
-    if (fabs(imag(zeta) > 15.)) {
+    if (fabs(imag(zeta)) > 15.) {
       volt -= m_qplane[ip][i] * (fabs(imag(zeta)) - CLog2);
     } else {
       const auto zterm = Th1(zeta, m_p1, m_p2);
