@@ -548,30 +548,21 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   m_pMax = m_pMin = m_vertices[m_elements[0].vertex[0]].p;
   for (auto& element : m_elements) {
     const Vertex& v0 = m_vertices[element.vertex[0]];
-    const Vertex& v1 = m_vertices[element.vertex[1]];
-    double xmin = std::min(v0.x, v1.x);
-    double xmax = std::max(v0.x, v1.x);
-    double ymin = std::min(v0.y, v1.y);
-    double ymax = std::max(v0.y, v1.y);
-    m_pMin = std::min(m_pMin, std::min(v0.p, v1.p));
-    m_pMax = std::max(m_pMax, std::max(v0.p, v1.p));
-    if (element.type > 1) {
-      const Vertex& v2 = m_vertices[element.vertex[2]];
-      xmin = std::min(xmin, v2.x);
-      xmax = std::max(xmax, v2.x);
-      ymin = std::min(ymin, v2.y);
-      ymax = std::max(ymax, v2.y);
-      m_pMin = std::min(m_pMin, v2.p);
-      m_pMax = std::max(m_pMax, v2.p);
-    }
-    if (element.type > 2) {
-      const Vertex& v3 = m_vertices[element.vertex[3]];
-      xmin = std::min(xmin, v3.x);
-      xmax = std::max(xmax, v3.x);
-      ymin = std::min(ymin, v3.y);
-      ymax = std::max(ymax, v3.y);
-      m_pMin = std::min(m_pMin, v3.p);
-      m_pMax = std::max(m_pMax, v3.p);
+    double xmin = v0.x;
+    double xmax = v0.x;
+    double ymin = v0.y;
+    double ymax = v0.y;
+    m_pMin = std::min(m_pMin, v0.p);
+    m_pMax = std::max(m_pMax, v0.p);
+    const unsigned int nVertices = element.type + 2;
+    for (unsigned int j = 0; j < nVertices; ++j) {
+      const Vertex& v = m_vertices[element.vertex[j]];
+      xmin = std::min(xmin, v.x);
+      xmax = std::max(xmax, v.x);
+      ymin = std::min(ymin, v.y);
+      ymax = std::max(ymax, v.y);
+      m_pMin = std::min(m_pMin, v.p);
+      m_pMax = std::max(m_pMax, v.p);
     }
     constexpr double tol = 1.e-6;
     element.xmin = xmin - tol;
@@ -651,7 +642,6 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
     } else if (element.type == 1) {
       ++nLines;
       if (element.vertex[0] == element.vertex[1]) {
-
         degenerateElements.push_back(i);
         ++nDegenerate;
       }
@@ -713,7 +703,7 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
 
   std::cout << "    Number of elements: " << nElements << "\n";
   if (nPoints > 0) {
-    std::cout << "      " << nPoints << " lines\n";
+    std::cout << "      " << nPoints << " points\n";
   }
   if (nLines > 0) {
     std::cout << "      " << nLines << " lines\n";
@@ -1687,8 +1677,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
   }
 
   // Get the elements.
-  int edge0, edge1, edge2, edge3;
-  int type;
   unsigned int nElements = 0;
   while (!gridfile.fail()) {
     std::string line;
@@ -1719,60 +1707,54 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
       for (int k = nMaxVertices; k--;) m_elements[j].vertex[k] = -1;
       m_elements[j].neighbours.clear();
       ++iLine;
+      int type;
       gridfile >> type;
+      int p0, p1, p2, p3;
       switch (type) {
         case 0:
           // Point
-          gridfile >> edge0 ;
-          // if (edge0 < 0) edge0 = -edge0 - 1;
+          gridfile >> p0 ;
           // Make sure the indices are not out of range.
-          if (edge0 >= nEdges) {
+          if (p0 >= (int)nVertices) {
             std::cerr << m_className << "::LoadGrid:\n"
                       << "    Error reading file " << gridfilename << " (line "
                       << iLine << ").\n"
-                      << "    Edge index out of range.\n";
+                      << "    Vertex index out of range.\n";
             Cleanup();
             gridfile.close();
             return false;
           }
-          m_elements[j].vertex[0] = edgeP1[edge0];
+          m_elements[j].vertex[0] = p0;
           break;
         case 1:
           // Line
-          gridfile >> edge0 >> edge1;
-          if (edge0 < 0) edge0 = -edge0 - 1;
-          if (edge1 < 0) edge1 = -edge1 - 1;
+          gridfile >> p0 >> p1;
+          if (p0 < 0) p0 = -p0 - 1;
+          if (p1 < 0) p1 = -p1 - 1;
           // Make sure the indices are not out of range.
-          if (edge0 >= nEdges || edge1 >= nEdges) {
+          if (p0 >= (int)nVertices || p1 >= (int)nVertices) {
             std::cerr << m_className << "::LoadGrid:\n"
                       << "    Error reading file " << gridfilename << " (line "
                       << iLine << ").\n"
-                      << "    Edge index out of range.\n";
+                      << "    Vertex index out of range.\n";
             Cleanup();
             gridfile.close();
             return false;
           }
-          // Get the vertices of this element.
-          // Negative edge index means that the sequence of the two points
-          // is supposed to be inverted.
-          // The actual index is then given by "-index - 1".
-          // Orientt the line such that the first point is on the left.
-          if (m_vertices[edgeP1[edge0]].x > m_vertices[edgeP2[edge0]].x) {
-            m_elements[j].vertex[0] = edgeP2[edge0];
-            m_elements[j].vertex[1] = edgeP1[edge0];
-          } else {
-            m_elements[j].vertex[0] = edgeP1[edge0];
-            m_elements[j].vertex[1] = edgeP2[edge0];
-          }
+          m_elements[j].vertex[0] = p0;
+          m_elements[j].vertex[1] = p1;
           break;
         case 2:
           // Triangle
-          gridfile >> edge0 >> edge1 >> edge2;
+          gridfile >> p0 >> p1 >> p2;
+          // Negative edge index means that the sequence of the two points
+          // is supposed to be inverted.
+          // The actual index is then given by "-index - 1".
+          if (p0 < 0) p0 = -p0 - 1;
+          if (p1 < 0) p1 = -p1 - 1;
+          if (p2 < 0) p2 = -p2 - 1;
           // Make sure the indices are not out of range.
-          if (edge0 < 0) edge0 = -edge0 - 1;
-          if (edge1 < 0) edge1 = -edge1 - 1;
-          if (edge2 < 0) edge2 = -edge2 - 1;
-          if (edge0 >= nEdges || edge1 >= nEdges || edge2 >= nEdges) {
+          if (p0 >= nEdges || p1 >= nEdges || p2 >= nEdges) {
             std::cerr << m_className << "::LoadGrid:\n"
                       << "    Error reading file " << gridfilename << " (line "
                       << iLine << ").\n"
@@ -1781,19 +1763,19 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
             gridfile.close();
             return false;
           }
-          m_elements[j].vertex[0] = edgeP1[edge0];
-          m_elements[j].vertex[1] = edgeP2[edge0];
-          if (edgeP1[edge1] != m_elements[j].vertex[0] &&
-              edgeP1[edge1] != m_elements[j].vertex[1]) {
-            m_elements[j].vertex[2] = edgeP1[edge1];
+          m_elements[j].vertex[0] = edgeP1[p0];
+          m_elements[j].vertex[1] = edgeP2[p0];
+          if (edgeP1[p1] != m_elements[j].vertex[0] &&
+              edgeP1[p1] != m_elements[j].vertex[1]) {
+            m_elements[j].vertex[2] = edgeP1[p1];
           } else {
-            m_elements[j].vertex[2] = edgeP2[edge1];
+            m_elements[j].vertex[2] = edgeP2[p1];
           }
           // Rearrange vertices such that point 0 is on the left.
           while (m_vertices[m_elements[j].vertex[0]].x >
-                     m_vertices[m_elements[j].vertex[1]].x ||
+                 m_vertices[m_elements[j].vertex[1]].x ||
                  m_vertices[m_elements[j].vertex[0]].x >
-                     m_vertices[m_elements[j].vertex[2]].x) {
+                 m_vertices[m_elements[j].vertex[2]].x) {
             const int tmp = m_elements[j].vertex[0];
             m_elements[j].vertex[0] = m_elements[j].vertex[1];
             m_elements[j].vertex[1] = m_elements[j].vertex[2];
@@ -1802,11 +1784,11 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
           break;
         case 3:
           // Rectangle
-          gridfile >> edge0 >> edge1 >> edge2 >> edge3;
+          gridfile >> p0 >> p1 >> p2 >> p3;
           // Make sure the indices are not out of range.
-          if (edge0 >= nEdges || -edge0 - 1 >= nEdges || edge1 >= nEdges ||
-              -edge1 - 1 >= nEdges || edge2 >= nEdges || -edge2 - 1 >= nEdges ||
-              edge3 >= nEdges || -edge3 - 1 >= nEdges) {
+          if (p0 >= nEdges || -p0 - 1 >= nEdges || p1 >= nEdges ||
+              -p1 - 1 >= nEdges || p2 >= nEdges || -p2 - 1 >= nEdges ||
+              p3 >= nEdges || -p3 - 1 >= nEdges) {
             std::cerr << m_className << "::LoadGrid:\n"
                       << "    Error reading file " << gridfilename << " (line "
                       << iLine << ").\n"
@@ -1815,30 +1797,30 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
             gridfile.close();
             return false;
           }
-          if (edge0 >= 0)
-            m_elements[j].vertex[0] = edgeP1[edge0];
+          if (p0 >= 0)
+            m_elements[j].vertex[0] = edgeP1[p0];
           else
-            m_elements[j].vertex[0] = edgeP2[-edge0 - 1];
-          if (edge1 >= 0)
-            m_elements[j].vertex[1] = edgeP1[edge1];
+            m_elements[j].vertex[0] = edgeP2[-p0 - 1];
+          if (p1 >= 0)
+            m_elements[j].vertex[1] = edgeP1[p1];
           else
-            m_elements[j].vertex[1] = edgeP2[-edge1 - 1];
-          if (edge2 >= 0)
-            m_elements[j].vertex[2] = edgeP1[edge2];
+            m_elements[j].vertex[1] = edgeP2[-p1 - 1];
+          if (p2 >= 0)
+            m_elements[j].vertex[2] = edgeP1[p2];
           else
-            m_elements[j].vertex[2] = edgeP2[-edge2 - 1];
-          if (edge3 >= 0)
-            m_elements[j].vertex[3] = edgeP1[edge3];
+            m_elements[j].vertex[2] = edgeP2[-p2 - 1];
+          if (p3 >= 0)
+            m_elements[j].vertex[3] = edgeP1[p3];
           else
-            m_elements[j].vertex[3] = edgeP2[-edge3 - 1];
+            m_elements[j].vertex[3] = edgeP2[-p3 - 1];
 
           // Rearrange vertices such that point 0 is on the left.
           while (m_vertices[m_elements[j].vertex[0]].x >
-                     m_vertices[m_elements[j].vertex[1]].x ||
+                 m_vertices[m_elements[j].vertex[1]].x ||
                  m_vertices[m_elements[j].vertex[0]].x >
-                     m_vertices[m_elements[j].vertex[2]].x ||
+                 m_vertices[m_elements[j].vertex[2]].x ||
                  m_vertices[m_elements[j].vertex[0]].x >
-                     m_vertices[m_elements[j].vertex[3]].x) {
+                 m_vertices[m_elements[j].vertex[3]].x) {
             const int tmp = m_elements[j].vertex[0];
             m_elements[j].vertex[0] = m_elements[j].vertex[1];
             m_elements[j].vertex[1] = m_elements[j].vertex[2];
@@ -1863,9 +1845,9 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     break;
   }
   if (gridfile.eof()) {
-    std::cerr << m_className << "::LoadGrid:\n";
-    std::cerr << "    Could not find section 'Elements' in file\n";
-    std::cerr << "    " << gridfilename << ".\n";
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Could not find section 'Elements' in file "
+              << gridfilename << ".\n";
     Cleanup();
     gridfile.close();
     return false;
@@ -1937,8 +1919,8 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
 
   gridfile.close();
   if (gridfile.fail() && !gridfile.eof()) {
-    std::cerr << m_className << "::LoadGrid:\n";
-    std::cerr << "    Error reading file " << gridfilename << ".\n";
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Error reading file " << gridfilename << ".\n";
     Cleanup();
     return false;
   }
@@ -1951,7 +1933,7 @@ void ComponentTcad2d::FindNeighbours() {
   std::vector<std::vector<bool> > adjacent(nElements,
                                            std::vector<bool>(nElements, false));
 
-  const double tol = 5.e-4;
+  constexpr double tol = 5.e-4;
   for (unsigned int i = 0; i < nElements; ++i) {
     const Element& ei = m_elements[i];
     for (unsigned int j = 0; j < nElements; ++j) {
