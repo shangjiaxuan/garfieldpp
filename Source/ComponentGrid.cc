@@ -61,9 +61,7 @@ void PrintProgress(const double f) {
 
 namespace Garfield {
 
-ComponentGrid::ComponentGrid() : ComponentBase() {
-  m_className = "ComponentGrid";
-}
+ComponentGrid::ComponentGrid() : Component("Grid") {}
 
 void ComponentGrid::ElectricField(const double x, const double y,
                                   const double z, double& ex, double& ey,
@@ -179,7 +177,7 @@ void ComponentGrid::MagneticField(const double x, const double y,
                                   double& bz, int& status) {
   status = 0;
   if (m_bfields.empty()) {
-    return ComponentBase::MagneticField(x, y, z, bx, by, bz, status);
+    return Component::MagneticField(x, y, z, bx, by, bz, status);
   }
 
   double p = 0.;
@@ -355,7 +353,7 @@ bool ComponentGrid::LoadMagneticField(const std::string& fname,
   return true;
 }
 
-bool ComponentGrid::SaveElectricField(ComponentBase* cmp,
+bool ComponentGrid::SaveElectricField(Component* cmp,
                                       const std::string& filename,
                                       const std::string& format) {
   if (!cmp) {
@@ -427,7 +425,7 @@ bool ComponentGrid::SaveElectricField(ComponentBase* cmp,
   return true;
 }
 
-bool ComponentGrid::SaveWeightingField(ComponentBase* cmp,
+bool ComponentGrid::SaveWeightingField(Component* cmp,
                                        const std::string& id,
                                        const std::string& filename,
                                        const std::string& format) {

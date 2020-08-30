@@ -6,7 +6,7 @@
 namespace Garfield {
 
 class Sensor;
-class ComponentBase;
+class Component;
 
 /// Draw equal time contour lines.
 
@@ -20,7 +20,7 @@ class ViewIsochrons : public ViewBase {
   /// Set the sensor.
   void SetSensor(Sensor* s);
   /// Set the component.
-  void SetComponent(ComponentBase* c);
+  void SetComponent(Component* c);
 
   /** Draw equal time contour lines.
     * \param tstep Time interval. 
@@ -65,7 +65,7 @@ class ViewIsochrons : public ViewBase {
 
  private:
   Sensor* m_sensor = nullptr;
-  ComponentBase* m_component = nullptr;
+  Component* m_component = nullptr;
 
   enum class Particle { Electron = 0, Ion };
   // Type of particle to be used for computing drift lines.

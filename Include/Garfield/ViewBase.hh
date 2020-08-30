@@ -11,7 +11,7 @@
 namespace Garfield {
 
 class Sensor;
-class ComponentBase;
+class Component;
 
 /// Base class for visualization classes.
 
@@ -135,7 +135,7 @@ class ViewBase {
 
   bool PlotLimits(Sensor* sensor, double& xmin, double& ymin,
                   double& xmax, double& ymax) const;
-  bool PlotLimits(ComponentBase* cmp, double& xmin, double& ymin,
+  bool PlotLimits(Component* cmp, double& xmin, double& ymin,
                   double& xmax, double& ymax) const;
   bool PlotLimitsFromUserBox(double& xmin, double& ymin, 
                              double& xmax, double& ymax) const;

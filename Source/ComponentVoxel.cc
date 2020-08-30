@@ -11,9 +11,7 @@
 
 namespace Garfield {
 
-ComponentVoxel::ComponentVoxel() : ComponentBase() {
-  m_className = "ComponentVoxel";
-}
+ComponentVoxel::ComponentVoxel() : Component("Voxel") {}
 
 void ComponentVoxel::ElectricField(const double x, const double y,
                                    const double z, double& ex, double& ey,
@@ -136,7 +134,7 @@ void ComponentVoxel::MagneticField(const double x, const double y,
                                    double& bz, int& status) {
   status = 0;
   if (!m_hasBfield) {
-    return ComponentBase::MagneticField(x, y, z, bx, by, bz, status);
+    return Component::MagneticField(x, y, z, bx, by, bz, status);
   }
 
   int region = -1;

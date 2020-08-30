@@ -3,13 +3,13 @@
 
 #include <array>
 
-#include "ComponentBase.hh"
+#include "Component.hh"
 
 namespace Garfield {
 
 /// Interpolation in a two-dimensional field map created by Sentaurus Device.
 
-class ComponentTcad2d : public ComponentBase {
+class ComponentTcad2d : public Component {
  public:
   /// Constructor
   ComponentTcad2d();

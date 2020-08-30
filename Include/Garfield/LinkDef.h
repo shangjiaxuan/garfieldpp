@@ -23,7 +23,7 @@
 #pragma link C++ class Garfield::GeometrySimple;
 #pragma link C++ class Garfield::GeometryRoot;
 
-#pragma link C++ class Garfield::ComponentBase;
+#pragma link C++ class Garfield::Component;
 #pragma link C++ class Garfield::ComponentAnalyticField;
 #pragma link C++ class Garfield::ComponentFieldMap;
 #pragma link C++ class Garfield::ComponentAnsys123;

@@ -246,8 +246,7 @@ double MirrorCoordinate(const double x, const double xp, const double xw,
 
 namespace Garfield {
 
-ComponentAnalyticField::ComponentAnalyticField() : ComponentBase() {
-  m_className = "ComponentAnalyticField";
+ComponentAnalyticField::ComponentAnalyticField() : Component("AnalyticField") {
   CellInit();
 }
 

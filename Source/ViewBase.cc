@@ -7,7 +7,7 @@
 #include <TGraph.h>
 
 #include "Garfield/Sensor.hh"
-#include "Garfield/ComponentBase.hh"
+#include "Garfield/Component.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/ViewBase.hh"
@@ -623,7 +623,7 @@ bool ViewBase::PlotLimits(Sensor* sensor,
   return PlotLimits(bbmin, bbmax, xmin, ymin, xmax, ymax);
 }
 
-bool ViewBase::PlotLimits(ComponentBase* cmp, 
+bool ViewBase::PlotLimits(Component* cmp, 
                           double& xmin, double& ymin, 
                           double& xmax, double& ymax) const {
 

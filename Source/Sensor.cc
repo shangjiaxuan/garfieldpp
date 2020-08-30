@@ -311,7 +311,7 @@ double Sensor::IntegrateFluxLine(
   return q;
 }
 
-void Sensor::AddComponent(ComponentBase* cmp) {
+void Sensor::AddComponent(Component* cmp) {
   if (!cmp) {
     std::cerr << m_className << "::AddComponent: Null pointer.\n";
     return;
@@ -320,7 +320,7 @@ void Sensor::AddComponent(ComponentBase* cmp) {
   m_components.push_back(std::make_pair(cmp, true));
 }
 
-ComponentBase* Sensor::GetComponent(const unsigned int i) {
+Component* Sensor::GetComponent(const unsigned int i) {
   if (i >= m_components.size()) {
     std::cerr << m_className << "::GetComponent: Index out of range.\n";
     return nullptr;
@@ -336,7 +336,7 @@ void Sensor::EnableComponent(const unsigned int i, const bool on) {
   m_components[i].second = on;
 }
 
-void Sensor::AddElectrode(ComponentBase* cmp, const std::string& label) {
+void Sensor::AddElectrode(Component* cmp, const std::string& label) {
   if (!cmp) {
     std::cerr << m_className << "::AddElectrode: Null pointer.\n";
     return;

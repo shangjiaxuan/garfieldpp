@@ -8,7 +8,7 @@
 namespace Garfield {
 
 class Sensor;
-class ComponentBase;
+class Component;
 
 /// Visualize the potential or electric field of a component or sensor.
 
@@ -22,7 +22,7 @@ class ViewField : public ViewBase {
   /// Set the sensor for which to plot the field.
   void SetSensor(Sensor* s);
   /// Set the component for which to plot the field.
-  void SetComponent(ComponentBase* c);
+  void SetComponent(Component* c);
 
   /// Set the plot limits for the potential.
   void SetVoltageRange(const double vmin, const double vmax);
@@ -137,7 +137,7 @@ class ViewField : public ViewBase {
 
   // Sensor
   Sensor* m_sensor = nullptr;
-  ComponentBase* m_component = nullptr;
+  Component* m_component = nullptr;
 
   // Function range
   double m_vmin = 0., m_vmax = 100.;

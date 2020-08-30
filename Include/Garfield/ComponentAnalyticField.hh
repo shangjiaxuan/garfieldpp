@@ -4,7 +4,7 @@
 #include <cmath>
 #include <complex>
 
-#include "ComponentBase.hh"
+#include "Component.hh"
 #include "FundamentalConstants.hh"
 
 namespace Garfield {
@@ -12,7 +12,7 @@ namespace Garfield {
 /// Semi-analytic calculation of two-dimensional configurations
 /// consisting of wires, planes, and tubes.
 
-class ComponentAnalyticField : public ComponentBase {
+class ComponentAnalyticField : public Component {
  public:
   /// Constructor
   ComponentAnalyticField();

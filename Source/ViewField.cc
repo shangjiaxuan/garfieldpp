@@ -10,7 +10,7 @@
 #include <TF2.h>
 #include <TH1F.h>
 
-#include "Garfield/ComponentBase.hh"
+#include "Garfield/Component.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/Random.hh"
 #include "Garfield/Sensor.hh"
@@ -78,7 +78,7 @@ void ViewField::SetSensor(Sensor* s) {
   m_component = nullptr;
 }
 
-void ViewField::SetComponent(ComponentBase* c) {
+void ViewField::SetComponent(Component* c) {
   if (!c) {
     std::cerr << m_className << "::SetComponent: Null pointer.\n";
     return;

@@ -12,9 +12,7 @@
 namespace Garfield {
 
 ComponentFieldMap::ComponentFieldMap(const std::string& name) 
-    : ComponentBase() {
-  m_className = "Component" + name;
-}
+    : Component(name) {}
 
 ComponentFieldMap::~ComponentFieldMap() {
   if (m_tetTree) delete m_tetTree;

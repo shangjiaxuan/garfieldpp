@@ -2,7 +2,7 @@
 #define G_COMPONENT_FIELD_MAP_H
 
 #include <iostream>
-#include "ComponentBase.hh"
+#include "Component.hh"
 #include "TMatrixD.h"
 #include "TetrahedralTree.hh"
 
@@ -10,7 +10,7 @@ namespace Garfield {
 
 /// Base class for components based on finite-element field maps.
 
-class ComponentFieldMap : public ComponentBase {
+class ComponentFieldMap : public Component {
  public:
   /// Default constructor.
   ComponentFieldMap() = delete;
@@ -56,7 +56,7 @@ class ComponentFieldMap : public ComponentBase {
   void SetMedium(const unsigned int imat, Medium* medium);
   /// Return the Medium associated to a field map material.
   Medium* GetMedium(const unsigned int i) const;
-  using ComponentBase::GetMedium;
+  using Component::GetMedium;
 
   unsigned int GetNumberOfMedia() const { return m_materials.size(); }
 

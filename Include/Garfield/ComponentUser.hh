@@ -3,13 +3,13 @@
 
 #include <functional>
 
-#include "ComponentBase.hh"
+#include "Component.hh"
 
 namespace Garfield {
 
 /// Simple component with electric field given by a user function.
 
-class ComponentUser : public ComponentBase {
+class ComponentUser : public Component {
  public:
   /// Constructor
   ComponentUser();
