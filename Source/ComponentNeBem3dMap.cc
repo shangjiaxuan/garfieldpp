@@ -10,9 +10,7 @@
 
 namespace Garfield {
 
-ComponentNeBem3dMap::ComponentNeBem3dMap() : ComponentBase() {
-  m_className = "ComponentNeBem3dMap";
-}
+ComponentNeBem3dMap::ComponentNeBem3dMap() : Component("NeBem3dMap") {}
 
 void ComponentNeBem3dMap::ElectricField(const double x, const double y,
                                         const double z, double& ex, double& ey,
@@ -374,7 +372,7 @@ void ComponentNeBem3dMap::MagneticField(const double x, const double y,
                                         const double z, double& bx, double& by,
                                         double& bz, int& status) {
   if (!m_hasBfield) {
-    return ComponentBase::MagneticField(x, y, z, bx, by, bz, status);
+    return Component::MagneticField(x, y, z, bx, by, bz, status);
   }
 
   // Get the mesh element.

@@ -2,13 +2,15 @@
 #include <cmath>
 
 #include "Garfield/FundamentalConstants.hh"
-#include "Garfield/ComponentBase.hh"
+#include "Garfield/Component.hh"
 
 namespace Garfield {
 
-ComponentBase::ComponentBase() {}
+Component::Component(const std::string& name) {
+  m_className = "Component" + name;
+}
 
-void ComponentBase::SetGeometry(Geometry* geo) {
+void Component::SetGeometry(Geometry* geo) {
   // Make sure the geometry is defined
   if (!geo) {
     std::cerr << m_className << "::SetGeometry: Null pointer.\n";
@@ -18,18 +20,18 @@ void ComponentBase::SetGeometry(Geometry* geo) {
   m_geometry = geo;
 }
 
-Medium* ComponentBase::GetMedium(const double x, const double y,
+Medium* Component::GetMedium(const double x, const double y,
                                  const double z) {
   if (!m_geometry) return nullptr;
   return m_geometry->GetMedium(x, y, z);
 }
 
-void ComponentBase::Clear() {
+void Component::Clear() {
   m_geometry = nullptr;
   Reset();
 }
 
-void ComponentBase::WeightingField(const double /*x*/, const double /*y*/,
+void Component::WeightingField(const double /*x*/, const double /*y*/,
                                    const double /*z*/, double& wx, double& wy,
                                    double& wz, const std::string& /*label*/) {
   if (m_debug) {
@@ -38,7 +40,7 @@ void ComponentBase::WeightingField(const double /*x*/, const double /*y*/,
   wx = wy = wz = 0.;
 }
 
-void ComponentBase::DelayedWeightingField(const double /*x*/, 
+void Component::DelayedWeightingField(const double /*x*/, 
                                           const double /*y*/,
                                           const double /*z*/, 
                                           const double /*t*/,
@@ -51,7 +53,7 @@ void ComponentBase::DelayedWeightingField(const double /*x*/,
   wx = wy = wz = 0.;
 }
 
-double ComponentBase::WeightingPotential(const double /*x*/, const double /*y*/,
+double Component::WeightingPotential(const double /*x*/, const double /*y*/,
                                          const double /*z*/,
                                          const std::string& /*label*/) {
   if (m_debug) {
@@ -61,7 +63,7 @@ double ComponentBase::WeightingPotential(const double /*x*/, const double /*y*/,
   return 0.;
 }
 
-void ComponentBase::MagneticField(const double x, const double y,
+void Component::MagneticField(const double x, const double y,
                                   const double z, double& bx, double& by,
                                   double& bz, int& status) {
   bx = m_b0[0];
@@ -75,18 +77,18 @@ void ComponentBase::MagneticField(const double x, const double y,
   status = 0;
 }
 
-void ComponentBase::SetMagneticField(const double bx, const double by,
+void Component::SetMagneticField(const double bx, const double by,
                                      const double bz) {
   m_b0 = {bx, by, bz};
 }
 
-bool ComponentBase::GetBoundingBox(double& xmin, double& ymin, double& zmin,
+bool Component::GetBoundingBox(double& xmin, double& ymin, double& zmin,
                                    double& xmax, double& ymax, double& zmax) {
   if (!m_geometry) return false;
   return m_geometry->GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax);
 }
 
-bool ComponentBase::IsWireCrossed(const double /*x0*/, const double /*y0*/,
+bool Component::IsWireCrossed(const double /*x0*/, const double /*y0*/,
                                   const double /*z0*/, const double /*x1*/,
                                   const double /*y1*/, const double /*z1*/,
                                   double& /*xc*/, double& /*yc*/, 
@@ -95,7 +97,7 @@ bool ComponentBase::IsWireCrossed(const double /*x0*/, const double /*y0*/,
   return false;
 }
 
-bool ComponentBase::IsInTrapRadius(const double /*q0*/, const double x0,
+bool Component::IsInTrapRadius(const double /*q0*/, const double x0,
                                    const double y0, const double /*z0*/,
                                    double& xw, double& yw, double& rw) {
   xw = x0;
@@ -104,7 +106,7 @@ bool ComponentBase::IsInTrapRadius(const double /*q0*/, const double x0,
   return false;
 }
 
-double ComponentBase::IntegrateFluxCircle(const double xc, const double yc, 
+double Component::IntegrateFluxCircle(const double xc, const double yc, 
                                           const double r, 
                                           const unsigned int nI) {
   // FLDIN2, FCHK3
@@ -144,7 +146,7 @@ double ComponentBase::IntegrateFluxCircle(const double xc, const double yc,
   return h * s * VacuumPermittivity;
 }
 
-double ComponentBase::IntegrateFluxSphere(const double xc, const double yc, 
+double Component::IntegrateFluxSphere(const double xc, const double yc, 
                                           const double zc, const double r,
                                           const unsigned int nI) {
   // FLDIN3, FCHK2, FCHK1
@@ -203,7 +205,7 @@ double ComponentBase::IntegrateFluxSphere(const double xc, const double yc,
   return ht * s2 * VacuumPermittivity;
 }
 
-double ComponentBase::IntegrateFluxParallelogram(
+double Component::IntegrateFluxParallelogram(
     const double x0, const double y0, const double z0,
     const double dx1, const double dy1, const double dz1,
     const double dx2, const double dy2, const double dz2,
@@ -275,7 +277,7 @@ double ComponentBase::IntegrateFluxParallelogram(
   return hv * s2;
 }
 
-double ComponentBase::IntegrateFluxLine(
+double Component::IntegrateFluxLine(
     const double x0, const double y0, const double z0,
     const double x1, const double y1, const double z1,
     const double xp, const double yp, const double zp,

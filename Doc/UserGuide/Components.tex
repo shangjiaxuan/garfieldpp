@@ -1,5 +1,5 @@
 The calculation of electric fields is done by classes 
-derived from the abstract base class \texttt{ComponentBase}. 
+derived from the abstract base class \texttt{Component}. 
 The key functions are 
 \begin{lstlisting}
 void ElectricField(const double x, const double y, const double z,
@@ -1230,7 +1230,7 @@ void PlotProfileWeightingField(const std::string& label,
 The component or sensor from which to retrieve the field to be plotted 
 is set by means of
 \begin{lstlisting}
-void SetComponent(ComponentBase* c);
+void SetComponent(Component* c);
 void SetSensor(Sensor* s);
 \end{lstlisting}
 
@@ -1298,7 +1298,7 @@ void SetWeightingFieldRange(const double wmin, const double wmax);
 \end{lstlisting}
 
 \section{Inspecting the field}
-\texttt{ComponentBase} provides functions for inspecting the field, 
+\texttt{Component} provides functions for inspecting the field, 
 in particular for determining the electric flux over a surface.
 \begin{lstlisting}
 double IntegrateFluxSphere(const double xc, const double yc, const double zc,
@@ -1351,8 +1351,8 @@ Superpositions of several electric, magnetic and weighting fields are also possi
 
 Components are added using
 \begin{lstlisting}
-void AddComponent(ComponentBase* comp);
-void AddElectrode(ComponentBase* comp, std::string label);
+void AddComponent(Component* comp);
+void AddElectrode(Component* comp, std::string label);
 \end{lstlisting}
 While \texttt{AddComponent} tells the \texttt{Sensor} that the 
 respective \texttt{Component} should be included in the calculation 

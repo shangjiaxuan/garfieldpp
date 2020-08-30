@@ -26,7 +26,7 @@ by the drift of electrons and ions/holes are:
   Tell the \texttt{Sensor} that you want to use this 
   weighting field/potential for the signal calculation. 
 \begin{lstlisting}
-void Sensor::AddElectrode(ComponentBase* cmp, std::string label);
+void Sensor::AddElectrode(Component* cmp, std::string label);
 \end{lstlisting}
   where \texttt{cmp} is a pointer to the \texttt{Component} 
   which calculates the weighting field/potential, and \texttt{label} 

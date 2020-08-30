@@ -381,9 +381,7 @@ namespace Garfield {
 
 ComponentNeBem3d* gComponentNeBem3d = nullptr;
 
-ComponentNeBem3d::ComponentNeBem3d() : ComponentBase() {
-  m_className = "ComponentNeBem3d";
-}
+ComponentNeBem3d::ComponentNeBem3d() : Component("NeBem3d") {}
 
 void ComponentNeBem3d::ElectricField(const double x, const double y,
                                      const double z, double& ex, double& ey,

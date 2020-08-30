@@ -11,9 +11,7 @@
 
 namespace Garfield {
 
-ComponentTcad3d::ComponentTcad3d() : ComponentBase() {
-  m_className = "ComponentTcad3d";
-
+ComponentTcad3d::ComponentTcad3d() : Component("Tcad3d") {
   m_regions.reserve(10);
   m_vertices.reserve(10000);
   m_elements.reserve(10000);

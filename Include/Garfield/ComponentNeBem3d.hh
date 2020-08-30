@@ -3,13 +3,13 @@
 
 #include <map>
 
-#include "ComponentBase.hh"
+#include "Component.hh"
 
 namespace Garfield {
 
 /// Interface to neBEM.
 
-class ComponentNeBem3d : public ComponentBase {
+class ComponentNeBem3d : public Component {
  public:
   /// Constructor
   ComponentNeBem3d();

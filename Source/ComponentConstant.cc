@@ -5,9 +5,7 @@
 
 namespace Garfield {
 
-ComponentConstant::ComponentConstant() : ComponentBase() {
-  m_className = "ComponentConstant";
-}
+ComponentConstant::ComponentConstant() : Component("Constant") {}
 
 void ComponentConstant::ElectricField(const double x, const double y,
                                       const double z, double& ex, double& ey,

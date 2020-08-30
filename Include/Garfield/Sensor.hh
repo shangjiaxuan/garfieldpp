@@ -4,7 +4,7 @@
 #include <vector>
 #include <utility>
 
-#include "ComponentBase.hh"
+#include "Component.hh"
 #include "Shaper.hh"
 
 namespace Garfield {
@@ -19,16 +19,16 @@ class Sensor {
   ~Sensor() {}
 
   /// Add a component.
-  void AddComponent(ComponentBase* comp);
+  void AddComponent(Component* comp);
   /// Get the number of components attached to the sensor.
   unsigned int GetNumberOfComponents() const { return m_components.size(); }
   /// Retrieve the pointer to a given component.
-  ComponentBase* GetComponent(const unsigned int i);
+  Component* GetComponent(const unsigned int i);
   /// Activate/deactivate a given component. 
   void EnableComponent(const unsigned int i, const bool on);
 
   /// Add an electrode.
-  void AddElectrode(ComponentBase* comp, const std::string& label);
+  void AddElectrode(Component* comp, const std::string& label);
   /// Get the number of electrodes attached to the sensor.
   unsigned int GetNumberOfElectrodes() const { return m_electrodes.size(); }
   /// Remove all components, electrodes and reset the sensor.
@@ -213,7 +213,7 @@ class Sensor {
                         const double z1);
 
   /// Determine whether a line between two points has crossed a wire,
-  /// calls ComponentBase::IsWireCrossed.
+  /// calls Component::IsWireCrossed.
   bool IsWireCrossed(const double x0, const double y0, const double z0,
                      const double x1, const double y1, const double z1,
                      double& xc, double& yc, double& zc, 
@@ -233,11 +233,11 @@ class Sensor {
   std::string m_className = "Sensor";
 
   /// Components
-  std::vector<std::pair<ComponentBase*, bool> > m_components;
-  ComponentBase* m_lastComponent = nullptr;
+  std::vector<std::pair<Component*, bool> > m_components;
+  Component* m_lastComponent = nullptr;
 
   struct Electrode {
-    ComponentBase* comp;
+    Component* comp;
     std::string label;
     std::vector<double> signal;
     std::vector<double> electronsignal;

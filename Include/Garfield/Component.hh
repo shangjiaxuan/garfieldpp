@@ -1,5 +1,5 @@
-#ifndef G_COMPONENT_BASE_H
-#define G_COMPONENT_BASE_H
+#ifndef G_COMPONENT_H
+#define G_COMPONENT_H
 
 #include <array>
 #include <string>
@@ -10,12 +10,14 @@ namespace Garfield {
 
 /// Abstract base class for components.
 
-class ComponentBase {
+class Component {
  public:
+  /// Default constructor.
+  Component() = delete;
   /// Constructor
-  ComponentBase();
+  Component(const std::string& name);
   /// Destructor
-  virtual ~ComponentBase() {}
+  virtual ~Component() {}
 
   /// Define the geometry.
   virtual void SetGeometry(Geometry* geo);
@@ -305,7 +307,7 @@ class ComponentBase {
 
  protected:
   /// Class name.
-  std::string m_className = "ComponentBase";
+  std::string m_className = "Component";
 
   /// Pointer to the geometry.
   Geometry* m_geometry = nullptr;

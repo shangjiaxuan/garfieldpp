@@ -9,7 +9,7 @@
 #include <TH1F.h>
 
 #include "Garfield/Sensor.hh"
-#include "Garfield/ComponentBase.hh"
+#include "Garfield/Component.hh"
 #include "Garfield/DriftLineRKF.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/ViewIsochrons.hh"
@@ -144,7 +144,7 @@ void ViewIsochrons::SetSensor(Sensor* s) {
   m_component = nullptr;
 }
 
-void ViewIsochrons::SetComponent(ComponentBase* c) {
+void ViewIsochrons::SetComponent(Component* c) {
   if (!c) {
     std::cerr << m_className << "::SetComponent: Null pointer.\n";
     return;

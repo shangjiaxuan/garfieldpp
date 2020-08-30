@@ -1,13 +1,13 @@
 #ifndef G_COMPONENT_VOXEL_H
 #define G_COMPONENT_VOXEL_H
 
-#include "ComponentBase.hh"
+#include "Component.hh"
 
 namespace Garfield {
 
 /// Component for interpolating field maps stored in a regular mesh.
 
-class ComponentVoxel : public ComponentBase {
+class ComponentVoxel : public Component {
  public:
   /// Constructor
   ComponentVoxel();

@@ -208,9 +208,7 @@ namespace Garfield {
 const double ComponentNeBem2d::InvEpsilon0 = 1. / VacuumPermittivity;
 const double ComponentNeBem2d::InvTwoPiEpsilon0 = 1. / TwoPiEpsilon0;
 
-ComponentNeBem2d::ComponentNeBem2d() : ComponentBase() {
-  m_className = "ComponentNeBem2d";
-}
+ComponentNeBem2d::ComponentNeBem2d() : Component("NeBem2d") {}
 
 void ComponentNeBem2d::ElectricField(const double x, const double y,
                                      const double z, double& ex, double& ey,

@@ -4,9 +4,7 @@
 
 namespace Garfield {
 
-ComponentUser::ComponentUser() : ComponentBase() {
-  m_className = "ComponentUser";
-}
+ComponentUser::ComponentUser() : Component("User") {}
 
 void ComponentUser::ElectricField(const double x, const double y,
                                   const double z, double& ex, double& ey,

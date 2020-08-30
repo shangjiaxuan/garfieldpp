@@ -678,7 +678,7 @@ bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium,
     // We assume there is only one component with a velocity map.
     const unsigned int nComponents = m_sensor->GetNumberOfComponents();
     for (unsigned int i = 0; i < nComponents; ++i) {
-      ComponentBase* cmp = m_sensor->GetComponent(i);
+      auto cmp = m_sensor->GetComponent(i);
       if (!cmp->HasVelocityMap()) continue;
       if (particle == Particle::Electron) {
         ok = cmp->ElectronVelocity(x[0], x[1], x[2], v[0], v[1], v[2]);
@@ -740,7 +740,7 @@ double AvalancheMC::GetAttachment(const Particle particle, Medium* medium,
   if (m_useAttachmentMap) {
     const unsigned int nComponents = m_sensor->GetNumberOfComponents();
     for (unsigned int i = 0; i < nComponents; ++i) {
-      ComponentBase* cmp = m_sensor->GetComponent(i);
+      auto cmp = m_sensor->GetComponent(i);
       if (!cmp->HasAttachmentMap()) continue;
       if (particle == Particle::Electron) {
         if (!cmp->ElectronAttachment(x[0], x[1], x[2], eta)) continue;

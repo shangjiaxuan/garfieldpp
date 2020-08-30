@@ -1,13 +1,13 @@
 #ifndef G_COMPONENT_GRID_H
 #define G_COMPONENT_GRID_H
 
-#include "ComponentBase.hh"
+#include "Component.hh"
 
 namespace Garfield {
 
 /// Component for interpolating field maps on a regular mesh.
 
-class ComponentGrid : public ComponentBase {
+class ComponentGrid : public Component {
  public:
   /// Constructor
   ComponentGrid();
@@ -102,7 +102,7 @@ class ComponentGrid : public ComponentBase {
    * \param filename name of the text file
    * \param format "xy", "xyz", "ij" or "ijk", see @ref LoadElectricField
    */
-  bool SaveElectricField(ComponentBase* cmp, const std::string& filename,
+  bool SaveElectricField(Component* cmp, const std::string& filename,
                          const std::string& format);
   /** Export the weighting field and potential of a component to a text file.
    * \param cmp Component object for which to export the field/potential
@@ -110,7 +110,7 @@ class ComponentGrid : public ComponentBase {
    * \param filename name of the text file
    * \param format "xy", "xyz", "ij" or "ijk", see @ref LoadElectricField
    */
-  bool SaveWeightingField(ComponentBase* cmp, const std::string& id,
+  bool SaveWeightingField(Component* cmp, const std::string& id,
                           const std::string& filename,
                           const std::string& format);
 
