@@ -1386,13 +1386,13 @@ bool MediumMagboltz::Mixer(const bool verbose) {
     Magboltz::mix2_.eroot[iemax] = sqrt((iemax + 0.5) * m_eStep);
     char name[25];
     // Number of inelastic cross-sections
-    std::int64_t nIn = 0;
+    static std::int64_t nIn = 0;
     // Number of ionisation cross-sections
-    std::int64_t nIon = 0;
+    static std::int64_t nIon = 0;
     // Number of attachment cross-sections
-    std::int64_t nAtt = 1;
+    static std::int64_t nAtt = 0;
     // Number of "null-collision" cross-sections
-    std::int64_t nNull = 0;
+    static std::int64_t nNull = 0;
     // Virial coefficient (not used).
     static double virial = 0.;
     // Thresholds/characteristic energies.
