@@ -343,8 +343,6 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
     } else {
       // Drift and diffusion. Determine the time step.
       double dt = 0.;
-      // Coefficient for collision-time stepping.
-      constexpr double c1 = ElectronMass / (SpeedOfLight * SpeedOfLight);
       switch (m_stepModel) {
         case StepModel::FixedTime:
           dt = m_tMc;
@@ -353,7 +351,14 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
           dt = m_dMc / vmag;
           break;
         case StepModel::CollisionTime:
-          dt = -m_nMc * (c1 * vmag / emag) * log(RndmUniformPos());
+          if (particle == Particle::Ion) {
+            constexpr double c1 = AtomicMassUnitElectronVolt / 
+              (SpeedOfLight * SpeedOfLight);
+            dt = -m_nMc * (c1 * vmag / emag) * log(RndmUniformPos());
+          } else { 
+            constexpr double c1 = ElectronMass / (SpeedOfLight * SpeedOfLight);
+            dt = -m_nMc * (c1 * vmag / emag) * log(RndmUniformPos());
+          }
           break;
         case StepModel::UserDistance:
           dt = m_fStep(x0[0], x0[1], x0[2]) / vmag;
