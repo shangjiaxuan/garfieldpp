@@ -1,5 +1,3 @@
-// Copied and modified ComponentAnsys123.cc
-
 #include <math.h>
 #include <stdlib.h>
 #include <fstream>
@@ -124,7 +122,8 @@ bool ComponentComsol::Initialise(const std::string& mesh,
       fmesh.close();
       return false;
     }
-  } while (!ends_with(line, "# number of mesh points"));
+  } while (!ends_with(line, "# number of mesh points") && 
+           !ends_with(line, "# number of mesh vertices"));
   const int nNodes = readInt(line);
 
   std::cout << m_className << "::Initialise: " << nNodes << " nodes.\n";
@@ -135,7 +134,8 @@ bool ComponentComsol::Initialise(const std::string& mesh,
       fmesh.close();
       return false;
     }
-  } while (line.find("# Mesh point coordinates") == std::string::npos);
+  } while (line.find("# Mesh point coordinates") == std::string::npos &&
+           line.find("# Mesh vertex coordinates") == std::string::npos);
   for (int i = 0; i < nNodes; ++i) {
     Node newNode;
     fmesh >> newNode.x >> newNode.y >> newNode.z;
