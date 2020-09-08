@@ -154,7 +154,6 @@ class ComponentGrid : public Component {
   /** Import a map of electron drift velocities from a file.
    * \param fname name of the text file.
    * \param fmt format string ("XY", "XYZ", "IJ", "IJK").
-   * \param col column in the file with the x-component of the velocity.
    * \param scaleX scaling factor to be applied to the coordinates.
    * \param scaleV scaling factor to be applied to the velocity components.
    */ 

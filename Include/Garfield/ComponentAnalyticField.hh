@@ -133,6 +133,7 @@ class ComponentAnalyticField : public Component {
     * \param ymax upper limit of the pixel cell in y.
     * \param zmin lower limit of the pixel cell in z.
     * \param zmax upper limit of the pixel cell in z.
+    * \param label weighting field identifier.
     * \param gap distance to the opposite plane (optional).
     * \param rot rotation angle (rad) of the pixel (optional).
     */
