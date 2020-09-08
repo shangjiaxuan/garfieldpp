@@ -82,6 +82,12 @@ class ComponentFieldMap : public Component {
     m_useTetrahedralTree = on;
   }
 
+  /// Enable or disable warnings that the calculation of the local
+  /// coordinates did not achieve the requested precision. 
+  void EnableConvergenceWarnings(const bool on = true) {
+    m_printConvergenceWarnings = on;
+  }
+
   friend class ViewFEMesh;
 
  protected:
@@ -148,6 +154,10 @@ class ComponentFieldMap : public Component {
   // Warnings flag
   bool m_warning = false;
   unsigned int m_nWarnings = 0;
+
+  // Print warnings about failed convergence when refining 
+  // isoparametric coordinates. 
+  bool m_printConvergenceWarnings = true;
 
   // Get the scaling factor for a given length unit.
   static double ScalingFactor(std::string unit);

@@ -1043,10 +1043,12 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
     const double ymin = std::min({n0.y, n1.y, n2.y});
     const double ymax = std::max({n0.y, n1.y, n2.y});
     if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
-      std::cout << m_className << "::Coordinates3:\n";
-      std::cout << "    No convergence achieved "
-                << "when refining internal isoparametric coordinates\n"
-                << "    at position (" << x << ", " << y << ").\n";
+      if (m_printConvergenceWarnings) {
+        std::cout << m_className << "::Coordinates3:\n"
+                  << "    No convergence achieved "
+                  << "when refining internal isoparametric coordinates\n"
+                  << "    at position (" << x << ", " << y << ").\n";
+      }
       t1 = t2 = t3 = t4 = 0;
       return ifail;
     }
@@ -1357,10 +1359,12 @@ int ComponentFieldMap::Coordinates5(const double x, const double y,
     double ymin = std::min({n0.y, n1.y, n2.y, n3.y, n4.y, n5.y, n6.y, n7.y});
     double ymax = std::max({n0.y, n1.y, n2.y, n3.y, n4.y, n5.y, n6.y, n7.y});
     if (x >= xmin && x <= xmax && y >= ymin && y <= ymax) {
-      std::cout << m_className << "::Coordinates5:\n"
-                << "    No convergence achieved "
-                << "when refining internal isoparametric coordinates\n"
-                << "    at position (" << x << ", " << y << ").\n";
+      if (m_printConvergenceWarnings) {
+        std::cout << m_className << "::Coordinates5:\n"
+                  << "    No convergence achieved "
+                  << "when refining internal isoparametric coordinates\n"
+                  << "    at position (" << x << ", " << y << ").\n";
+      }
       t1 = t2 = 0;
       return ifail;
     }
@@ -1619,10 +1623,13 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
     const double zmax = std::max({n0.z, n1.z, n2.z, n3.z});
     if (x >= xmin && x <= xmax && y >= ymin && y <= ymax && z >= zmin &&
         z <= zmax) {
-      std::cout << m_className << "::Coordinates13:\n"
-                << "    No convergence achieved "
-                << "when refining internal isoparametric coordinates\n"
-                << "    at position (" << x << ", " << y << ", " << z << ").\n";
+      if (m_printConvergenceWarnings) {
+        std::cout << m_className << "::Coordinates13:\n"
+                  << "    No convergence achieved "
+                  << "when refining internal isoparametric coordinates\n"
+                  << "    at position (" << x << ", " << y << ", " << z 
+                  << ").\n";
+      }
       t1 = t2 = t3 = t4 = -1;
       return ifail;
     }

@@ -335,6 +335,16 @@ c2->SetLogy();
 hSize->Draw();
 \end{lstlisting}
 
+Since Ansys uses curved elements, an iterative procedure is used for 
+determining the local coordinates of a point within an element. 
+This search can sometimes fail to achieve the requested precision.
+In this case, the first-order approximation is used, and (by default) 
+a warning message is printed out. These messages can be switched on or off 
+using 
+\begin{lstlisting}
+void EnableConvergenceWarnings(const bool on);
+\end{lstlisting}
+
 \subsection{Synopsys TCAD}
 
 Electric fields calculated using the device simulation program 
@@ -971,11 +981,14 @@ Similarly, pixels can be defined using
 \begin{lstlisting}
 void AddPixelOnPlaneX(const double x, const double ymin, const double ymax,
                       const double zmin, const double zmax,
-                      const std::string& label, const double gap = -1.);
+                      const std::string& label, const double gap = -1., 
+                      const double rot = 0.);
 void AddPixelOnPlaneY(const double y, const double xmin, const double xmax,
                       const double zmin, const double zmax,
-                      const std::string& label, const double gap = -1.);
+                      const std::string& label, const double gap = -1.,
+                      const double rot = 0.);
 \end{lstlisting}
+The last (optional) parameter specifies the rotation angle (in rad) of the pixel in the plane.
 Pixel weighting fields are calculated using the expressions given in 
 Ref.~\cite{Riegler2014}.
 
