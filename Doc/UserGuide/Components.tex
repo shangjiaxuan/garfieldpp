@@ -335,6 +335,16 @@ c2->SetLogy();
 hSize->Draw();
 \end{lstlisting}
 
+Since Ansys uses curved elements, an iterative procedure is used for 
+determining the local coordinates of a point within an element. 
+This search can sometimes fail to achieve the requested precision.
+In this case, the first-order approximation is used, and (by default) 
+a warning message is printed out. These messages can be switched on or off 
+using 
+\begin{lstlisting}
+void EnableConvergenceWarnings(const bool on);
+\end{lstlisting}
+
 \subsection{Synopsys TCAD}
 
 Electric fields calculated using the device simulation program 
