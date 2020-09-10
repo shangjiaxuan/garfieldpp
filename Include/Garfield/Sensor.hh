@@ -26,6 +26,8 @@ class Sensor {
   Component* GetComponent(const unsigned int i);
   /// Activate/deactivate a given component. 
   void EnableComponent(const unsigned int i, const bool on);
+  /// Activate/deactivate use of the magnetic field of a given component. 
+  void EnableMagneticField(const unsigned int i, const bool on);
 
   /// Add an electrode.
   void AddElectrode(Component* comp, const std::string& label);
@@ -233,7 +235,7 @@ class Sensor {
   std::string m_className = "Sensor";
 
   /// Components
-  std::vector<std::pair<Component*, bool> > m_components;
+  std::vector<std::tuple<Component*, bool, bool> > m_components;
   Component* m_lastComponent = nullptr;
 
   struct Electrode {
