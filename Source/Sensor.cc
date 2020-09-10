@@ -75,8 +75,8 @@ void Sensor::ElectricField(const double x, const double y, const double z,
   int stat = 0;
   // Add up electric field contributions from all components.
   for (const auto& cmp : m_components) {
-    if (!cmp.second) continue;
-    cmp.first->ElectricField(x, y, z, fx, fy, fz, p, med, stat);
+    if (!std::get<1>(cmp)) continue;
+    std::get<0>(cmp)->ElectricField(x, y, z, fx, fy, fz, p, med, stat);
     if (status != 0) {
       status = stat;
       medium = med;
@@ -101,8 +101,8 @@ void Sensor::ElectricField(const double x, const double y, const double z,
   int stat = 0;
   // Add up electric field contributions from all components.
   for (const auto& cmp : m_components) {
-    if (!cmp.second) continue; 
-    cmp.first->ElectricField(x, y, z, fx, fy, fz, med, stat);
+    if (!std::get<1>(cmp)) continue; 
+    std::get<0>(cmp)->ElectricField(x, y, z, fx, fy, fz, med, stat);
     if (status != 0) {
       status = stat;
       medium = med;
@@ -121,8 +121,8 @@ void Sensor::MagneticField(const double x, const double y, const double z,
   double fx = 0., fy = 0., fz = 0.;
   // Add up contributions.
   for (const auto& cmp : m_components) {
-    if (!cmp.second) continue;
-    cmp.first->MagneticField(x, y, z, fx, fy, fz, status);
+    if (!std::get<2>(cmp)) continue;
+    std::get<0>(cmp)->MagneticField(x, y, z, fx, fy, fz, status);
     if (status != 0) continue;
     bx += fx;
     by += fy;
@@ -172,10 +172,10 @@ bool Sensor::GetMedium(const double x, const double y, const double z,
   }
 
   for (const auto& cmp : m_components) {
-    if (!cmp.second) continue;
-    m = cmp.first->GetMedium(x, y, z);
+    if (!std::get<1>(cmp)) continue;
+    m = std::get<0>(cmp)->GetMedium(x, y, z);
     if (m) {
-      m_lastComponent = cmp.first;
+      m_lastComponent = std::get<0>(cmp);
       return true;
     }
   }
@@ -278,9 +278,9 @@ bool Sensor::IsWireCrossed(const double x0, const double y0, const double z0,
                            double& xc, double& yc, double& zc, 
                            const bool centre, double& rc) {
   for (const auto& cmp : m_components) {
-    if (!cmp.second) continue;
-    if (cmp.first->IsWireCrossed(x0, y0, z0, x1, y1, z1, 
-                                 xc, yc, zc, centre, rc)) {
+    if (!std::get<1>(cmp)) continue;
+    if (std::get<0>(cmp)->IsWireCrossed(x0, y0, z0, x1, y1, z1, 
+                                        xc, yc, zc, centre, rc)) {
       return true;
     }
   }
@@ -290,8 +290,10 @@ bool Sensor::IsWireCrossed(const double x0, const double y0, const double z0,
 bool Sensor::IsInTrapRadius(const double q0, const double x0, const double y0,
                             double z0, double& xw, double& yw, double& rw) {
   for (const auto& cmp : m_components) {
-    if (!cmp.second) continue;
-    if (cmp.first->IsInTrapRadius(q0, x0, y0, z0, xw, yw, rw)) return true;
+    if (!std::get<1>(cmp)) continue;
+    if (std::get<0>(cmp)->IsInTrapRadius(q0, x0, y0, z0, xw, yw, rw)) {
+      return true;
+    }
   }
   return false;
 }
@@ -304,9 +306,9 @@ double Sensor::IntegrateFluxLine(
 
   double q = 0.;
   for (const auto& cmp : m_components) {
-    if (!cmp.second) continue;
-    q += cmp.first->IntegrateFluxLine(x0, y0, z0, x1, y1, z1,
-                                      xp, yp, zp, nI, isign);
+    if (!std::get<1>(cmp)) continue;
+    q += std::get<0>(cmp)->IntegrateFluxLine(x0, y0, z0, x1, y1, z1,
+                                             xp, yp, zp, nI, isign);
   }
   return q;
 }
@@ -317,7 +319,7 @@ void Sensor::AddComponent(Component* cmp) {
     return;
   }
 
-  m_components.push_back(std::make_pair(cmp, true));
+  m_components.push_back(std::make_tuple(cmp, true, true));
 }
 
 Component* Sensor::GetComponent(const unsigned int i) {
@@ -325,7 +327,7 @@ Component* Sensor::GetComponent(const unsigned int i) {
     std::cerr << m_className << "::GetComponent: Index out of range.\n";
     return nullptr;
   };
-  return m_components[i].first;
+  return std::get<0>(m_components[i]);
 }
 
 void Sensor::EnableComponent(const unsigned int i, const bool on) {
@@ -333,7 +335,15 @@ void Sensor::EnableComponent(const unsigned int i, const bool on) {
     std::cerr << m_className << "::EnableComponent: Index out of range.\n";
     return;
   };
-  m_components[i].second = on;
+  std::get<1>(m_components[i]) = on;
+}
+
+void Sensor::EnableMagneticField(const unsigned int i, const bool on) {
+  if (i >= m_components.size()) {
+    std::cerr << m_className << "::EnableMagneticField: Index out of range.\n";
+    return;
+  };
+  std::get<2>(m_components[i]) = on;
 }
 
 void Sensor::AddElectrode(Component* cmp, const std::string& label) {
@@ -386,9 +396,9 @@ bool Sensor::GetVoltageRange(double& vmin, double& vmax) {
   bool set = false;
   // Loop over the components.
   for (const auto& cmp : m_components) {
-    if (!cmp.second) continue;
+    if (!std::get<1>(cmp)) continue;
     double umin = 0., umax = 0.;
-    if (!cmp.first->GetVoltageRange(umin, umax)) continue;
+    if (!std::get<0>(cmp)->GetVoltageRange(umin, umax)) continue;
     if (set) {
       vmin = std::min(umin, vmin);
       vmax = std::max(umax, vmax);
@@ -1402,8 +1412,8 @@ bool Sensor::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   // Loop over the fields
   double x0, y0, z0, x1, y1, z1;
   for (const auto& cmp : m_components) {
-    if (!cmp.second) continue;
-    if (!cmp.first->GetBoundingBox(x0, y0, z0, x1, y1, z1)) continue;
+    if (!std::get<1>(cmp)) continue;
+    if (!std::get<0>(cmp)->GetBoundingBox(x0, y0, z0, x1, y1, z1)) continue;
     if (set) {
       if (x0 < xmin) xmin = x0;
       if (y0 < ymin) ymin = y0;
