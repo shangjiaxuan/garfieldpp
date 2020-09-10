@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <utility>
+#include <tuple>
 
 #include "Component.hh"
 #include "Shaper.hh"
