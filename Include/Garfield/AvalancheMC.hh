@@ -186,7 +186,8 @@ class AvalancheMC {
   struct DriftPoint {
     std::array<double, 3> x;  ///< Position.
     double t;                 ///< Time.
-    unsigned int ne, nh, ni;  ///< Number of secondaries produced at this point.
+    Particle particle;        ///< Charge carrier type.
+    unsigned int n;           ///< Number of charge carriers.
   };
   /// Current drift line
   std::vector<DriftPoint> m_drift;
@@ -267,22 +268,21 @@ class AvalancheMC {
   /// Compute a drift line with starting point (x0, y0, z0).
   bool DriftLine(const double x0, const double y0, const double z0,
                  const double t0, const Particle particle,
+                 std::vector<DriftPoint>& secondaries,
                  const bool aval = false);
   /// Compute an avalanche with starting point (x0, y0, z0).
   bool Avalanche(const double x0, const double y0, const double z0,
                  const double t0, const unsigned int ne, const unsigned int nh,
-                 const unsigned int ni, const bool withElectrons,
-                 const bool withHoles);
+                 const bool withElectrons, const bool withHoles);
 
   void AddPoint(const std::array<double, 3>& x, const double t,
-                const unsigned int ne, const unsigned int nh,
-                const unsigned int ni, std::vector<DriftPoint>& points) {
+                const Particle particle, const unsigned int n, 
+                std::vector<DriftPoint>& points) {
     DriftPoint point;
     point.x = x;
     point.t = t;
-    point.ne = ne;
-    point.nh = nh;
-    point.ni = ni;
+    point.particle = particle;
+    point.n = n;
     points.push_back(std::move(point));
   }
   void AddEndPoint(const std::array<double, 3>& x0, const double t0,
@@ -339,6 +339,7 @@ class AvalancheMC {
   /// Compute multiplication and losses along the current drift line.
   bool ComputeGainLoss(const Particle particle,
                        std::vector<DriftPoint>& driftLine, int& status,
+                       std::vector<DriftPoint>& secondaries,
                        const bool semiconductor = false);
   /// Compute Townsend and attachment coefficients along the current drift line.
   bool ComputeAlphaEta(const Particle particle,
