@@ -881,6 +881,7 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
           point.x[2] = f0 * driftLine[i].x[2] + f1 * driftLine[i + 1].x[2];
           point.t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
           point.particle = other;
+          point.n = 1;
           secondaries.push_back(std::move(point));
         } 
       }
