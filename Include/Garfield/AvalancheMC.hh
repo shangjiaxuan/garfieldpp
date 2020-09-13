@@ -265,14 +265,14 @@ class AvalancheMC {
 
   bool m_debug = false;
 
-  /// Compute a drift line with starting point (x0, y0, z0).
-  bool DriftLine(const double x0, const double y0, const double z0,
-                 const double t0, const Particle particle,
+  /// Compute a drift line with starting point x0.
+  bool DriftLine(const std::array<double, 3>& x0, const double t0,
+                 const Particle particle,
                  std::vector<DriftPoint>& secondaries,
                  const bool aval = false);
-  /// Compute an avalanche with starting point (x0, y0, z0).
-  bool Avalanche(const double x0, const double y0, const double z0,
-                 const double t0, const unsigned int ne, const unsigned int nh,
+  /// Compute an avalanche with starting point x0.
+  bool Avalanche(const std::array<double, 3>& x0, const double t0, 
+                 const unsigned int ne, const unsigned int nh,
                  const bool withElectrons, const bool withHoles);
 
   void AddPoint(const std::array<double, 3>& x, const double t,
