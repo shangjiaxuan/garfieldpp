@@ -198,7 +198,8 @@ bool AvalancheMC::DriftElectron(const double x0, const double y0,
   m_nHoles = 0;
   m_nIons = 0;
 
-  return DriftLine(x0, y0, z0, t0, Particle::Electron);
+  std::vector<DriftPoint> secondaries;
+  return DriftLine({x0, y0, z0}, t0, Particle::Electron, secondaries);
 }
 
 bool AvalancheMC::DriftHole(const double x0, const double y0, const double z0,
@@ -216,7 +217,8 @@ bool AvalancheMC::DriftHole(const double x0, const double y0, const double z0,
   m_nHoles = 1;
   m_nIons = 0;
 
-  return DriftLine(x0, y0, z0, t0, Particle::Hole);
+  std::vector<DriftPoint> secondaries;
+  return DriftLine({x0, y0, z0}, t0, Particle::Hole, secondaries);
 }
 
 bool AvalancheMC::DriftIon(const double x0, const double y0, const double z0,
@@ -234,16 +236,18 @@ bool AvalancheMC::DriftIon(const double x0, const double y0, const double z0,
   m_nHoles = 0;
   m_nIons = 1;
 
-  return DriftLine(x0, y0, z0, t0, Particle::Ion);
+  std::vector<DriftPoint> secondaries;
+  return DriftLine({x0, y0, z0}, t0, Particle::Ion, secondaries);
 }
 
-bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
-                            const double ti, const Particle particle,
+bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
+                            const Particle particle,
+                            std::vector<DriftPoint>& secondaries,
                             const bool aval) {
   // Reset the drift line.
   m_drift.clear();
   // Check the initial position.
-  std::array<double, 3> x0 = {xi, yi, zi};
+  std::array<double, 3> x0 = xi;
   std::array<double, 3> e0 = {0., 0., 0.};
   std::array<double, 3> b0 = {0., 0., 0.};
   Medium* medium = nullptr;
@@ -262,7 +266,7 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
   // Stop here if initial position or time are invalid.
   if (status != 0) return false;
   // Add the first point to the line.
-  AddPoint(x0, t0, 0, 0, 0, m_drift);
+  AddPoint(x0, t0, particle, 1, m_drift);
   if (m_debug) {
     std::cout << m_className + "::DriftLine: Starting at "
               << PrintVec(x0) + ".\n";
@@ -414,7 +418,7 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
                   << PrintVec(x1) + ".\n";
       }
       // Add the point to the drift line.
-      AddPoint(x1, t1, 0, 0, 0, m_drift);
+      AddPoint(x1, t1, particle, 1, m_drift);
       break;
     }
     // Check if the particle has crossed a wire.
@@ -432,7 +436,7 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
       std::array<double, 3> d1 = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
       const double tc = t0 + (t1 - t0) * Mag(dc) / Mag(d1);
       // Add the point to the drift line.
-      AddPoint(xc, tc, 0, 0, 0, m_drift);
+      AddPoint(xc, tc, particle, 1, m_drift);
       break;
     }
 
@@ -441,7 +445,7 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
       status = StatusOutsideTimeWindow;
     }
     // Add the point to the drift line.
-    AddPoint(x1, t1, 0, 0, 0, m_drift);
+    AddPoint(x1, t1, particle, 1, m_drift);
     // Update the current position and time.
     x0 = x1;
     t0 = t1;
@@ -455,7 +459,7 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
   if ((particle == Particle::Electron || particle == Particle::Hole) &&
       (aval || m_useAttachment) &&
       (m_sizeCut == 0 || m_nElectrons < m_sizeCut)) {
-    ComputeGainLoss(particle, m_drift, status, semiconductor);
+    ComputeGainLoss(particle, m_drift, status, secondaries, semiconductor);
     if (status == StatusAttached && m_debug) {
       std::cout << m_className + "::DriftLine: Attached at "
                 << PrintVec(m_drift.back().x) + ".\n";
@@ -467,7 +471,7 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
               << PrintVec(m_drift.back().x) + ".\n";
   }
   // Create an "endpoint".
-  AddEndPoint({xi, yi, zi}, ti, m_drift.back().x, m_drift.back().t,
+  AddEndPoint(xi, ti, m_drift.back().x, m_drift.back().t,
               status, particle);
 
   if (m_debug) {
@@ -493,11 +497,11 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
     // Register the new drift line and get its ID.
     int id;
     if (particle == Particle::Electron) {
-      m_viewer->NewElectronDriftLine(nPoints, id, xi, yi, zi);
+      m_viewer->NewElectronDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
     } else if (particle == Particle::Hole) {
-      m_viewer->NewHoleDriftLine(nPoints, id, xi, yi, zi);
+      m_viewer->NewHoleDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
     } else {
-      m_viewer->NewIonDriftLine(nPoints, id, xi, yi, zi);
+      m_viewer->NewIonDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
     }
     // Set the points along the trajectory.
     for (unsigned int i = 0; i < nPoints; ++i) {
@@ -513,24 +517,23 @@ bool AvalancheMC::DriftLine(const double xi, const double yi, const double zi,
 bool AvalancheMC::AvalancheElectron(const double x0, const double y0,
                                     const double z0, const double t0,
                                     const bool holes) {
-  return Avalanche(x0, y0, z0, t0, 1, 0, 0, true, holes);
+  return Avalanche({x0, y0, z0}, t0, 1, 0, true, holes);
 }
 
 bool AvalancheMC::AvalancheHole(const double x0, const double y0,
                                 const double z0, const double t0,
                                 const bool electrons) {
-  return Avalanche(x0, y0, z0, t0, 0, 1, 0, electrons, true);
+  return Avalanche({x0, y0, z0}, t0, 0, 1, electrons, true);
 }
 
 bool AvalancheMC::AvalancheElectronHole(const double x0, const double y0,
                                         const double z0, const double t0) {
-  return Avalanche(x0, y0, z0, t0, 1, 1, 0, true, true);
+  return Avalanche({x0, y0, z0}, t0, 1, 1, true, true);
 }
 
-bool AvalancheMC::Avalanche(const double x0, const double y0, const double z0,
-                            const double t0, const unsigned int ne0,
-                            const unsigned int nh0, const unsigned int ni0,
-                            const bool withElectrons, const bool withHoles) {
+bool AvalancheMC::Avalanche(const std::array<double, 3>& x0, const double t0,
+                            const unsigned int ne, const unsigned int nh,
+                            const bool withE, const bool withH) {
   // -----------------------------------------------------------------------
   //   DLCMCA - Subroutine that computes a drift line using a Monte-Carlo
   //            technique to take account of diffusion and of avalanche
@@ -547,95 +550,40 @@ bool AvalancheMC::Avalanche(const double x0, const double y0, const double z0,
     return false;
   }
 
-  // Add the first point to the list.
+  m_nElectrons = ne;
+  m_nHoles = nh;
+  m_nIons = 0;
+
+  // Add the first point(s) to the list.
   std::vector<DriftPoint> aval;
-  std::array<double, 3> xi = {x0, y0, z0};
-  AddPoint(xi, t0, ne0, nh0, ni0, aval);
+  if (ne > 0) AddPoint(x0, t0, Particle::Electron, ne, aval);
+  if (nh > 0) AddPoint(x0, t0, Particle::Hole, nh, aval);
 
-  m_nElectrons = ne0;
-  m_nHoles = nh0;
-  m_nIons = ni0;
-
-  if (!withHoles && !withElectrons) {
+  if (!withH && !withE) {
     std::cerr << m_className + "::Avalanche: "
               << "Neither electron nor hole/ion component requested.\n";
   }
 
-  std::vector<DriftPoint> newAval;
+  std::vector<DriftPoint> secondaries;
   while (!aval.empty()) {
     for (const auto& point : aval) {
-      // No need to simulate a drift line if the point is outside 
-      // the time window.
+      if (!withE && point.particle == Particle::Electron) continue;
+      if (!withH && point.particle != Particle::Electron) continue; 
+      // Skip points outside the time window.
       if (m_hasTimeWindow && (point.t < m_tMin || point.t > m_tMax)) {
-        if (withElectrons) {
-          for (unsigned int i = 0; i < point.ne; ++i) {
-            AddEndPoint(point.x, point.t, point.x, point.t,
-                        StatusOutsideTimeWindow, Particle::Electron);
-          }
-        }
-        if (withHoles) {
-          for (unsigned int i = 0; i < point.ni; ++i) {
-            AddEndPoint(point.x, point.t, point.x, point.t,
-                        StatusOutsideTimeWindow, Particle::Ion);
-          }
-          for (unsigned int i = 0; i < point.nh; ++i) {
-            AddEndPoint(point.x, point.t, point.x, point.t,
-                        StatusOutsideTimeWindow, Particle::Hole);
-          }
+        for (unsigned int i = 0; i < point.n; ++i) {
+          AddEndPoint(point.x, point.t, point.x, point.t,
+                      StatusOutsideTimeWindow, point.particle);
         }
         continue;
       }
-      if (withElectrons) {
-        // Loop over the electrons at this location.
-        const unsigned int ne = point.ne;
-        for (unsigned int i = 0; i < ne; ++i) {
-          // Compute an electron drift line.
-          if (!DriftLine(point.x[0], point.x[1], point.x[2], point.t,
-                         Particle::Electron, true)) {
-            continue;
-          }
-          // Loop over the drift line.
-          const unsigned int nPoints = m_drift.size();
-          for (unsigned int j = 0; j < nPoints - 1; ++j) {
-            const auto& p = m_drift[j];
-            if (p.ne == 0 && p.nh == 0 && p.ni == 0) continue;
-            // Add the point to the table.
-            AddPoint(m_drift[j + 1].x, m_drift[j + 1].t, p.ne, p.nh, p.ni,
-                     newAval);
-          }
-        }
-      }
-
-      if (!withHoles) continue;
-      // Loop over the ions at this location.
-      const unsigned int ni = point.ni;
-      for (unsigned int i = 0; i < ni; ++i) {
-        // Compute an ion drift line.
-        DriftLine(point.x[0], point.x[1], point.x[2], point.t, Particle::Ion,
-                  false);
-      }
-
-      // Loop over the holes at this location.
-      const unsigned int nh = point.nh;
-      for (unsigned int i = 0; i < nh; ++i) {
-        // Compute a hole drift line.
-        if (!DriftLine(point.x[0], point.x[1], point.x[2], point.t,
-                       Particle::Hole, true)) {
-          continue;
-        }
-        // Loop over the drift line.
-        const unsigned int nPoints = m_drift.size();
-        for (unsigned int j = 0; j < nPoints - 1; ++j) {
-          const auto& p = m_drift[j];
-          if (p.ne == 0 && p.nh == 0 && p.ni == 0) continue;
-          // Add the point to the table.
-          AddPoint(m_drift[j + 1].x, m_drift[j + 1].t, p.ne, p.nh, p.ni,
-                   newAval);
-        }
+      for (unsigned int i = 0; i < point.n; ++i) {
+        // Compute a drift line.
+        DriftLine(point.x, point.t, point.particle, secondaries, true);
       }
     }
-    aval.swap(newAval);
-    newAval.clear();
+    aval.swap(secondaries);
+    secondaries.clear();
   }
   return true;
 }
@@ -871,31 +819,35 @@ void AvalancheMC::Terminate(const std::array<double, 3>& x0, const double t0,
 
 bool AvalancheMC::ComputeGainLoss(const Particle particle,
                                   std::vector<DriftPoint>& driftLine,
-                                  int& status, const bool semiconductor) {
-  const unsigned int nPoints = driftLine.size();
+                                  int& status, std::vector<DriftPoint>& secondaries, 
+                                  const bool semiconductor) {
+  const size_t nPoints = driftLine.size();
   std::vector<double> alps(nPoints, 0.);
   std::vector<double> etas(nPoints, 0.);
   // Compute the integrated Townsend and attachment coefficients.
   if (!ComputeAlphaEta(particle, driftLine, alps, etas)) return false;
 
-  // Subdivision of a step
+  // Opposite-charge particle produced in the avalanche.
+  Particle other = Particle::Electron;
+  if (particle == Particle::Electron) {
+    other = semiconductor ? Particle::Hole : Particle::Ion;
+  } 
+  // Subdivision of a step.
   constexpr double probth = 0.01;
-
   // Loop over the drift line.
-  for (unsigned int i = 0; i < nPoints - 1; ++i) {
-    driftLine[i].ne = 0;
-    driftLine[i].nh = 0;
-    driftLine[i].ni = 0;
+  for (size_t i = 0; i < nPoints - 1; ++i) {
     // Compute the number of subdivisions.
     const int nDiv = std::max(int((alps[i] + etas[i]) / probth), 1);
     // Compute the probabilities for gain and loss.
     const double p = std::max(alps[i] / nDiv, 0.);
     const double q = std::max(etas[i] / nDiv, 0.);
-    // Set initial number of electrons/ions.
+    // Start with the initial electron (or hole).
     int ne = 1;
-    int ni = 0;
     // Loop over the subdivisions.
     for (int j = 0; j < nDiv; ++j) {
+      // Count the number of ions/holes (or electrons) produced 
+      // along this subdivision.
+      int ni = 0;
       if (ne > 100) {
         // Gaussian approximation.
         const int gain = int(ne * p + RndmGaussian() * sqrt(ne * p * (1. - p)));
@@ -912,7 +864,28 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
           if (RndmUniform() < q) --ne;
         }
       }
-      // Check if the particle has survived.
+      if (ni > 0) {
+        if (other == Particle::Hole) {
+          m_nHoles += ni;
+        } else if (other == Particle::Ion) {
+          m_nIons += ni;
+        } else {
+          m_nElectrons += ni;
+        } 
+        for (int k = 0; k < ni; ++k) {
+          const double f0 = (j + RndmUniform()) / nDiv;
+          const double f1 = 1. - f0;
+          DriftPoint point;
+          point.x[0] = f0 * driftLine[i].x[0] + f1 * driftLine[i + 1].x[0]; 
+          point.x[1] = f0 * driftLine[i].x[1] + f1 * driftLine[i + 1].x[1]; 
+          point.x[2] = f0 * driftLine[i].x[2] + f1 * driftLine[i + 1].x[2];
+          point.t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
+          point.particle = other;
+          point.n = 1;
+          secondaries.push_back(std::move(point));
+        } 
+      }
+      // Check if the electron (or hole) has survived.
       if (ne <= 0) {
         status = StatusAttached;
         if (particle == Particle::Electron) {
@@ -922,41 +895,27 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
         } else {
           --m_nIons;
         }
+        const double f0 = (j + 0.5) / nDiv;
+        const double f1 = 1. - f0;
+        const auto x0 = driftLine[i].x;
+        const auto x1 = driftLine[i + 1].x;
         driftLine.resize(i + 2);
-        driftLine[i + 1].x[0] =
-            0.5 * (driftLine[i].x[0] + driftLine[i + 1].x[0]);
-        driftLine[i + 1].x[1] =
-            0.5 * (driftLine[i].x[1] + driftLine[i + 1].x[1]);
-        driftLine[i + 1].x[2] =
-            0.5 * (driftLine[i].x[2] + driftLine[i + 1].x[2]);
+        for (size_t k = 0; k < 3; ++k) {
+          driftLine[i + 1].x[k] = f0 * x0[k] + f1 * x1[k];
+        }
+        driftLine[i + 1].t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
         break;
       }
     }
-    // If at least one new electron has been created,
-    // add the new electrons to the table.
+    // Add the new electrons to the table.
     if (ne > 1) {
+      DriftPoint point = driftLine[i + 1];
+      point.n = ne - 1; 
+      secondaries.push_back(std::move(point));
       if (particle == Particle::Electron) {
-        driftLine[i].ne = ne - 1;
         m_nElectrons += ne - 1;
       } else if (particle == Particle::Hole) {
-        driftLine[i].nh = ne - 1;
         m_nHoles += ne - 1;
-      } else {
-        driftLine[i].ni = ne - 1;
-      }
-    }
-    if (ni > 0) {
-      if (particle == Particle::Electron) {
-        if (semiconductor) {
-          driftLine[i].nh = ni;
-          m_nHoles += ni;
-        } else {
-          driftLine[i].ni = ni;
-          m_nIons += ni;
-        }
-      } else {
-        driftLine[i].ne = ni;
-        m_nElectrons += ni;
       }
     }
     // If trapped, exit the loop over the drift line.
