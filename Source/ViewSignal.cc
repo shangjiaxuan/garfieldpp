@@ -44,7 +44,7 @@ void ViewSignal::SetRangeY(const double ymin, const double ymax) {
 
 void ViewSignal::PlotSignal(const std::string& label, const bool total,
                             const bool electron, const bool ion,
-                            const bool delayed) {
+                            const bool delayed, const bool same) {
   if (!m_sensor) {
     std::cerr << m_className << "::PlotSignal: Sensor is not defined.\n";
     return;
@@ -64,6 +64,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
   if (ylabel.empty()) {
     ylabel = m_sensor->IsIntegrated(label) ? "signal [fC]" : "signal [fC / ns]";
   }
+  unsigned int nPlots = same ? 1 : 0;
   if (total) {
     const auto hname = FindUnusedHistogramName("hSignal_");
     m_hSignal.reset(new TH1D(hname.c_str(), "", nBins, t0, t1));
@@ -75,7 +76,9 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       const double sig = m_sensor->GetSignal(label, i);
       m_hSignal->SetBinContent(i + 1, sig);
     }
-    m_hSignal->DrawCopy("");
+    const std::string opt = nPlots > 0 ? "same" : "";
+    m_hSignal->DrawCopy(opt.c_str());
+    ++nPlots;
     if (m_userRangeX) m_hSignal->SetAxisRange(m_xmin, m_xmax, "X");
     if (m_userRangeY) m_hSignal->SetAxisRange(m_ymin, m_ymax, "Y");
 
@@ -126,7 +129,9 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       const double sig = m_sensor->GetElectronSignal(label, i);
       m_hSignalElectrons->SetBinContent(i + 1, sig);
     }
-    m_hSignalElectrons->DrawCopy("same");
+    const std::string opt = nPlots > 0 ? "same" : "";
+    m_hSignalElectrons->DrawCopy(opt.c_str());
+    ++nPlots;
     if (!total) {
       if (m_userRangeX) m_hSignalElectrons->SetAxisRange(m_xmin, m_xmax, "X");
       if (m_userRangeY) m_hSignalElectrons->SetAxisRange(m_ymin, m_ymax, "Y");
@@ -156,7 +161,9 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
       const double sig = m_sensor->GetIonSignal(label, i);
       m_hSignalIons->SetBinContent(i + 1, sig);
     }
-    m_hSignalIons->DrawCopy("same");
+    const std::string opt = nPlots > 0 ? "same" : "";
+    m_hSignalIons->DrawCopy(opt.c_str());
+    ++nPlots;
     if (!(total || electron)) {
       if (m_userRangeX) m_hSignalIons->SetAxisRange(m_xmin, m_xmax, "X");
       if (m_userRangeY) m_hSignalIons->SetAxisRange(m_ymin, m_ymax, "Y");

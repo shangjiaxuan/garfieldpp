@@ -32,10 +32,11 @@ class ViewSignal : public ViewBase {
     * \param electron Flag whether to plot the electron-induced signal.
     * \param ion Flag whether to plot the ion/hole-induced signal.
     * \param delayed Flag whether to plot the delayed signal component.
+    * \param same Flag to keep existing plots on the canvas or not.
     */
   void PlotSignal(const std::string& label, const bool total = true,
                   const bool electron = false, const bool ion = false, 
-                  const bool delayed = false);
+                  const bool delayed = false, const bool same = false);
 
   /** Retrieve the histogram for the induced signal.
     * \param h histogram to be returned
