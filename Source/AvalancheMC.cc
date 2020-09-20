@@ -756,9 +756,10 @@ void AvalancheMC::StepRKF(const Particle particle,
     return;
   }
 
-  // Compute the mean velocity.
+  // Compute the mean velocity and endpoint of the step.
   for (unsigned int k = 0; k < 3; ++k) {
     vf[k] = ci0 * v0[k] + ci1 * v1[k] + ci2 * v2[k];
+    xf[k] = x0[k] + dt * vf[k];
   }
 }
 
