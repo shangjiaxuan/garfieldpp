@@ -641,7 +641,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   bool bad = false;
   while (!infile.fail()) {
     // Read one line.
-    std::getline(infile, line);
+    if (!std::getline(infile, line)) break;
     ++nLines;
     // Strip white space from the beginning of the line.
     ltrim(line);
@@ -665,8 +665,8 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
       y *= scaleX;
       if (!found[0]) xmin = std::min(x, xmin);
       if (!found[1]) ymin = std::min(y, ymin);
-      if (!found[3]) xmax = std::max(x, xmin);
-      if (!found[4]) ymax = std::max(y, ymin);
+      if (!found[3]) xmax = std::max(x, xmax);
+      if (!found[4]) ymax = std::max(y, ymax);
       xLines.insert(x);
       yLines.insert(y);
     } else if (fmt == 2) {
@@ -830,12 +830,16 @@ bool ComponentGrid::LoadData(
       }
       x *= scaleX;
       y *= scaleX;
-      const double u = std::round((x - m_xMin) / m_dx);
-      const double v = std::round((y - m_yMin) / m_dy);
-      i = u < 0. ? 0 : static_cast<unsigned int>(u);
-      j = v < 0. ? 0 : static_cast<unsigned int>(v);
-      if (i >= m_nX) i = m_nX - 1;
-      if (j >= m_nY) j = m_nY - 1;
+      if (m_nX > 1) {
+        const double u = std::round((x - m_xMin) / m_dx);
+        i = u < 0. ? 0 : static_cast<unsigned int>(u);
+        if (i >= m_nX) i = m_nX - 1;
+      }
+      if (m_nY > 1) {
+        const double v = std::round((y - m_yMin) / m_dy);
+        j = v < 0. ? 0 : static_cast<unsigned int>(v);
+        if (j >= m_nY) j = m_nY - 1;
+      }
     } else if (fmt == 2) {
       // "XYZ"
       double x, y, z;
@@ -848,15 +852,21 @@ bool ComponentGrid::LoadData(
       x *= scaleX;
       y *= scaleX;
       z *= scaleX;
-      const double u = std::round((x - m_xMin) / m_dx);
-      const double v = std::round((y - m_yMin) / m_dy);
-      const double w = std::round((z - m_zMin) / m_dz);
-      i = u < 0. ? 0 : static_cast<unsigned int>(u);
-      j = v < 0. ? 0 : static_cast<unsigned int>(v);
-      j = w < 0. ? 0 : static_cast<unsigned int>(w);
-      if (i >= m_nX) i = m_nX - 1;
-      if (j >= m_nY) j = m_nY - 1;
-      if (k >= m_nZ) k = m_nZ - 1;
+      if (m_nX > 1) {
+        const double u = std::round((x - m_xMin) / m_dx);
+        i = u < 0. ? 0 : static_cast<unsigned int>(u);
+        if (i >= m_nX) i = m_nX - 1;
+      }
+      if (m_nY > 1) {
+        const double v = std::round((y - m_yMin) / m_dy);
+        j = v < 0. ? 0 : static_cast<unsigned int>(v);
+        if (j >= m_nY) j = m_nY - 1;
+      }
+      if (m_nZ > 1) {
+        const double w = std::round((z - m_zMin) / m_dz);
+        k = w < 0. ? 0 : static_cast<unsigned int>(w);
+        if (k >= m_nZ) k = m_nZ - 1;
+      }
     } else if (fmt == 3) {
       // "IJ"
       data >> i >> j;
@@ -885,15 +895,21 @@ bool ComponentGrid::LoadData(
       x *= scaleX;
       y *= scaleX;
       z *= scaleX;
-      const double u = std::round((x - m_xMin) / m_dx);
-      const double v = std::round((y - m_yMin) / m_dy);
-      const double w = std::round((z - m_zMin) / m_dz);
-      i = u < 0. ? 0 : static_cast<unsigned int>(u);
-      j = v < 0. ? 0 : static_cast<unsigned int>(v);
-      j = w < 0. ? 0 : static_cast<unsigned int>(w);
-      if (i >= m_nX) i = m_nX - 1;
-      if (j >= m_nY) j = m_nY - 1;
-      if (k >= m_nZ) k = m_nZ - 1;
+      if (m_nX > 1) {
+        const double u = std::round((x - m_xMin) / m_dx);
+        i = u < 0. ? 0 : static_cast<unsigned int>(u);
+        if (i >= m_nX) i = m_nX - 1;
+      }
+      if (m_nY > 1) {
+        const double v = std::round((y - m_yMin) / m_dy);
+        j = v < 0. ? 0 : static_cast<unsigned int>(v);
+        if (j >= m_nY) j = m_nY - 1;
+      }
+      if (m_nZ > 1) {
+        const double w = std::round((z - m_zMin) / m_dz);
+        k = w < 0. ? 0 : static_cast<unsigned int>(w);
+        if (k >= m_nZ) k = m_nZ - 1;
+      }
     }
     // Check the indices.
     if (i >= m_nX || j >= m_nY || k >= m_nZ) {
@@ -1459,12 +1475,16 @@ bool ComponentGrid::LoadData(
       }
       x *= scaleX;
       y *= scaleX;
-      const double u = std::round((x - m_xMin) / m_dx);
-      const double v = std::round((y - m_yMin) / m_dy);
-      i = u < 0. ? 0 : static_cast<unsigned int>(u);
-      j = v < 0. ? 0 : static_cast<unsigned int>(v);
-      if (i >= m_nX) i = m_nX - 1;
-      if (j >= m_nY) j = m_nY - 1;
+      if (m_nX > 1) {
+        const double u = std::round((x - m_xMin) / m_dx);
+         i = u < 0. ? 0 : static_cast<unsigned int>(u);
+         if (i >= m_nX) i = m_nX - 1;
+      }
+      if (m_nY > 1) {
+        const double v = std::round((y - m_yMin) / m_dy);
+        j = v < 0. ? 0 : static_cast<unsigned int>(v);
+        if (j >= m_nY) j = m_nY - 1;
+      }
     } else if (fmt == 2) {
       // "XYZ"
       double x, y, z;
@@ -1477,15 +1497,21 @@ bool ComponentGrid::LoadData(
       x *= scaleX;
       y *= scaleX;
       z *= scaleX;
-      const double u = std::round((x - m_xMin) / m_dx);
-      const double v = std::round((y - m_yMin) / m_dy);
-      const double w = std::round((z - m_zMin) / m_dz);
-      i = u < 0. ? 0 : static_cast<unsigned int>(u);
-      j = v < 0. ? 0 : static_cast<unsigned int>(v);
-      j = w < 0. ? 0 : static_cast<unsigned int>(w);
-      if (i >= m_nX) i = m_nX - 1;
-      if (j >= m_nY) j = m_nY - 1;
-      if (k >= m_nZ) k = m_nZ - 1;
+      if (m_nX > 1) {
+        const double u = std::round((x - m_xMin) / m_dx);
+        i = u < 0. ? 0 : static_cast<unsigned int>(u);
+        if (i >= m_nX) i = m_nX - 1;
+      }
+      if (m_nY > 1) {
+        const double v = std::round((y - m_yMin) / m_dy);
+        j = v < 0. ? 0 : static_cast<unsigned int>(v); 
+        if (j >= m_nY) j = m_nY - 1;
+      }
+      if (m_nZ > 1) {
+        const double w = std::round((z - m_zMin) / m_dz);
+        k = w < 0. ? 0 : static_cast<unsigned int>(w);
+        if (k >= m_nZ) k = m_nZ - 1;
+      }
     } else if (fmt == 3) {
       // "IJ"
       data >> i >> j;
@@ -1514,15 +1540,21 @@ bool ComponentGrid::LoadData(
       x *= scaleX;
       y *= scaleX;
       z *= scaleX;
-      const double u = std::round((x - m_xMin) / m_dx);
-      const double v = std::round((y - m_yMin) / m_dy);
-      const double w = std::round((z - m_zMin) / m_dz);
-      i = u < 0. ? 0 : static_cast<unsigned int>(u);
-      j = v < 0. ? 0 : static_cast<unsigned int>(v);
-      j = w < 0. ? 0 : static_cast<unsigned int>(w);
-      if (i >= m_nX) i = m_nX - 1;
-      if (j >= m_nY) j = m_nY - 1;
-      if (k >= m_nZ) k = m_nZ - 1;
+      if (m_nX > 1) {
+        const double u = std::round((x - m_xMin) / m_dx);
+        i = u < 0. ? 0 : static_cast<unsigned int>(u);
+        if (i >= m_nX) i = m_nX - 1;
+      }
+      if (m_nY > 1) {
+        const double v = std::round((y - m_yMin) / m_dy);
+        j = v < 0. ? 0 : static_cast<unsigned int>(v);
+        if (j >= m_nY) j = m_nY - 1;
+      }
+      if (m_nZ > 1) {
+        const double w = std::round((z - m_zMin) / m_dz);
+        k = w < 0. ? 0 : static_cast<unsigned int>(w);
+        if (k >= m_nZ) k = m_nZ - 1;
+      }
     }
     // Check the indices.
     if (i >= m_nX || j >= m_nY || k >= m_nZ) {
