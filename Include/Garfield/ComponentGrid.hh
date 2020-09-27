@@ -1,6 +1,8 @@
 #ifndef G_COMPONENT_GRID_H
 #define G_COMPONENT_GRID_H
 
+#include <vector>
+
 #include "Component.hh"
 
 namespace Garfield {
@@ -175,6 +177,15 @@ class ComponentGrid : public Component {
   bool HoleVelocity(const double x, const double y, const double z,
                     double& vx, double& vy, double& vz) override;
  private:
+  enum class Format {
+    Unknown,
+    XY,
+    XYZ,
+    IJ,
+    IJK,
+    YXZ
+  };
+
   Medium* m_medium = nullptr;
   struct Node {
     double fx, fy, fz;  ///< Field
@@ -200,18 +211,16 @@ class ComponentGrid : public Component {
   std::vector<std::vector<std::vector<bool> > > m_active;
 
   // Dimensions of the mesh
-  unsigned int m_nX = 0, m_nY = 0, m_nZ = 0;
-  double m_xMin = 0., m_yMin = 0., m_zMin = 0.;
-  double m_xMax = 0., m_yMax = 0., m_zMax = 0.;
-  double m_dx = 0., m_dy = 0., m_dz = 0.;
+  std::array<unsigned int, 3> m_nX = {{1, 1, 1}};
+  std::array<double, 3> m_xMin = {{0., 0., 0.}};
+  std::array<double, 3> m_xMax = {{0., 0., 0.}};
+  std::array<double, 3> m_sX = {{0., 0., 0.}};
 
   bool m_hasMesh = false;
   bool m_hasPotential = false;
 
   // Offset for weighting field
-  double m_wField_xOffset = 0.;
-  double m_wField_yOffset = 0.;
-  double m_wField_zOffset = 0.;
+  std::array<double, 3> m_wFieldOffset = {{0., 0., 0.}};
 
   // Voltage range
   double m_pMin = 0., m_pMax = 0.;
@@ -249,6 +258,8 @@ class ComponentGrid : public Component {
                 bool& isMirrored) const;
   /// Set the dimensions of a table according to the mesh.
   void Initialise(std::vector<std::vector<std::vector<Node> > >& fields);
+  /// Decode a format string.
+  Format GetFormat(std::string fmt);
 };
 }  // namespace Garfield
 #endif

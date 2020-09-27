@@ -14,23 +14,6 @@
 
 namespace {
 
-unsigned int GetFormat(std::string format) {
-  std::transform(format.begin(), format.end(), format.begin(), toupper);
-  unsigned int fmt = 0;
-  if (format == "XY") {
-    fmt = 1;
-  } else if (format == "XYZ") {
-    fmt = 2;
-  } else if (format == "IJ") {
-    fmt = 3;
-  } else if (format == "IJK") {
-    fmt = 4;
-  } else if (format == "YXZ") {
-    fmt = 5;
-  }
-  return fmt;
-}
-
 void PrintError(const std::string& fcn, const unsigned int line,
                 const std::string& par) {
   std::cerr << fcn << ": Error reading line " << line << ".\n"
@@ -55,6 +38,13 @@ void PrintProgress(const double f) {
   }
   bar += "]";
   std::cout << bar << "\r" << std::flush;
+}
+
+bool IsComment(const std::string& line) {
+  if (line.empty()) return false;
+  if (line[0] == '#') return true;
+  if (line.size() > 1 && (line[0] == '/' && line[1] == '/')) return true;
+  return false;
 }
 
 }  // namespace
@@ -103,9 +93,9 @@ void ComponentGrid::WeightingField(const double x, const double y,
                                    double& wz, const std::string& /*label*/) {
   wx = wy = wz = 0.;
   if (m_wfields.empty()) return;
-  const double xx = x - m_wField_xOffset;
-  const double yy = y - m_wField_yOffset;
-  const double zz = z - m_wField_zOffset;
+  const double xx = x - m_wFieldOffset[0];
+  const double yy = y - m_wFieldOffset[1];
+  const double zz = z - m_wFieldOffset[2];
   double wp = 0.;
   bool active = true;
   GetField(xx, yy, zz, m_wfields, wx, wy, wz, wp, active);
@@ -115,9 +105,9 @@ double ComponentGrid::WeightingPotential(const double x, const double y,
                                          const double z,
                                          const std::string& /*label*/) {
   if (m_wfields.empty()) return 0.;
-  const double xx = x - m_wField_xOffset;
-  const double yy = y - m_wField_yOffset;
-  const double zz = z - m_wField_zOffset;
+  const double xx = x - m_wFieldOffset[0];
+  const double yy = y - m_wFieldOffset[1];
+  const double zz = z - m_wFieldOffset[2];
   double wx = 0., wy = 0., wz = 0.;
   double wp = 0.;
   bool active = true;
@@ -134,9 +124,9 @@ void ComponentGrid::DelayedWeightingField(const double x, const double y,
   // Assume no weighting field for times outside the range of available maps.
   if (t < m_wdtimes.front() || t > m_wdtimes.back()) return;
 
-  const double xx = x - m_wField_xOffset;
-  const double yy = y - m_wField_yOffset;
-  const double zz = z - m_wField_zOffset;
+  const double xx = x - m_wFieldOffset[0];
+  const double yy = y - m_wFieldOffset[1];
+  const double zz = z - m_wFieldOffset[2];
 
   const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
   const auto it0 = std::prev(it1);
@@ -167,9 +157,7 @@ void ComponentGrid::DelayedWeightingField(const double x, const double y,
 
 void ComponentGrid::SetWeightingFieldOffset(const double x, const double y,
                                             const double z) {
-  m_wField_xOffset = x;
-  m_wField_yOffset = y;
-  m_wField_zOffset = z;
+  m_wFieldOffset = {x, y, z};
 }
 
 void ComponentGrid::MagneticField(const double x, const double y,
@@ -195,34 +183,29 @@ Medium* ComponentGrid::GetMedium(const double x, const double y,
     return nullptr;
   }
 
-  if (!m_periodic[0] && !m_mirrorPeriodic[0] && (x < m_xMin || x > m_xMax)) {
-    return nullptr;
-  }
-  if (!m_periodic[1] && !m_mirrorPeriodic[1] && (y < m_yMin || x > m_yMax)) {
-    return nullptr;
-  }
-  if (!m_periodic[2] && !m_mirrorPeriodic[2] && (z < m_zMin || x > m_zMax)) {
-    return nullptr;
+  std::array<double, 3> xx = {x, y, z};
+  for (size_t i = 0; i < 3; ++i) {
+    if (m_periodic[i] || m_mirrorPeriodic[i]) continue;
+    if (xx[i] < m_xMin[i] || xx[i] > m_xMax[i]) {
+      return nullptr;
+    }
   }
   if (m_active.empty()) return m_medium;
-
-  bool mirrored = false;
-  const double xx =
-      Reduce(x, m_xMin, m_xMax, m_periodic[0], m_mirrorPeriodic[0], mirrored);
-  const double yy =
-      Reduce(y, m_yMin, m_yMax, m_periodic[1], m_mirrorPeriodic[1], mirrored);
-  const double zz =
-      Reduce(z, m_zMin, m_zMax, m_periodic[2], m_mirrorPeriodic[2], mirrored);
+  for (size_t i = 0; i < 3; ++i) {
+    bool mirrored = false;
+    xx[i] = Reduce(xx[i], m_xMin[i], m_xMax[i], 
+                   m_periodic[i], m_mirrorPeriodic[i], mirrored);
+  }
   // Get the indices.
-  const double sx = (xx - m_xMin) / m_dx;
-  const double sy = (yy - m_yMin) / m_dy;
-  const double sz = (zz - m_zMin) / m_dz;
+  const double sx = (xx[0] - m_xMin[0]) * m_sX[0];
+  const double sy = (xx[1] - m_xMin[1]) * m_sX[1];
+  const double sz = (xx[2] - m_xMin[2]) * m_sX[2];
   const unsigned int i0 = static_cast<unsigned int>(std::floor(sx));
   const unsigned int j0 = static_cast<unsigned int>(std::floor(sy));
   const unsigned int k0 = static_cast<unsigned int>(std::floor(sz));
-  const unsigned int i1 = std::min(i0 + 1, m_nX - 1);
-  const unsigned int j1 = std::min(j0 + 1, m_nY - 1);
-  const unsigned int k1 = std::min(k0 + 1, m_nZ - 1);
+  const unsigned int i1 = std::min(i0 + 1, m_nX[0] - 1);
+  const unsigned int j1 = std::min(j0 + 1, m_nX[1] - 1);
+  const unsigned int k1 = std::min(k0 + 1, m_nX[2] - 1);
   if (m_active[i0][j0][k0] && m_active[i0][j0][k1] && m_active[i0][j1][k0] &&
       m_active[i0][j1][k1] && m_active[i1][j0][k0] && m_active[i1][j0][k1] &&
       m_active[i1][j1][k0] && m_active[i1][j1][k1]) {
@@ -252,18 +235,23 @@ bool ComponentGrid::SetMesh(const unsigned int nx, const unsigned int ny,
     std::cerr << m_className << "::SetMesh: Invalid z range.\n";
     return false;
   }
-  m_nX = nx;
-  m_nY = ny;
-  m_nZ = nz;
-  m_xMin = xmin;
-  m_yMin = ymin;
-  m_zMin = zmin;
-  m_xMax = xmax;
-  m_yMax = ymax;
-  m_zMax = zmax;
-  m_dx = m_nX > 1 ? (m_xMax - m_xMin) / (m_nX - 1) : (m_xMax - m_xMin);
-  m_dy = m_nY > 1 ? (m_yMax - m_yMin) / (m_nY - 1) : (m_yMax - m_yMin);
-  m_dz = m_nZ > 1 ? (m_zMax - m_zMin) / (m_nZ - 1) : (m_zMax - m_zMin);
+  m_nX[0] = nx;
+  m_nX[1] = ny;
+  m_nX[2] = nz;
+  m_xMin[0] = xmin;
+  m_xMin[1] = ymin;
+  m_xMin[2] = zmin;
+  m_xMax[0] = xmax;
+  m_xMax[1] = ymax;
+  m_xMax[2] = zmax;
+  constexpr double tol = 1.e-10;
+  for (size_t i = 0; i < 3; ++i) {
+    if (m_xMax[i] - m_xMin[i] > tol) {
+      m_sX[i] = std::max(m_nX[i] - 1., 1.) / (m_xMax[i] - m_xMin[i]);
+    } else {
+      m_sX[i] = 0.;
+    }
+  }
   m_hasMesh = true;
   return true;
 }
@@ -273,15 +261,15 @@ bool ComponentGrid::GetMesh(unsigned int& nx, unsigned int& ny,
                             double& ymin, double& ymax, double& zmin,
                             double& zmax) const {
   if (!m_hasMesh) return false;
-  nx = m_nX;
-  ny = m_nY;
-  nz = m_nZ;
-  xmin = m_xMin;
-  ymin = m_yMin;
-  zmin = m_zMin;
-  xmax = m_xMax;
-  ymax = m_yMax;
-  zmax = m_zMax;
+  nx = m_nX[0];
+  ny = m_nX[1];
+  nz = m_nX[2];
+  xmin = m_xMin[0];
+  ymin = m_xMin[1];
+  zmin = m_xMin[2];
+  xmax = m_xMax[0];
+  ymax = m_xMax[1];
+  zmax = m_xMax[2];
   return true;
 }
 
@@ -292,8 +280,8 @@ bool ComponentGrid::LoadElectricField(const std::string& fname,
                                       const double scaleP) {
   m_ready = false;
   m_hasPotential = false;
-  m_active.assign(m_nX, std::vector<std::vector<bool> >(
-                            m_nY, std::vector<bool>(m_nZ, true)));
+  m_active.assign(m_nX[0], std::vector<std::vector<bool> >(
+                            m_nX[1], std::vector<bool>(m_nX[2], true)));
   // Read the file.
   m_pMin = withP ? +1. : 0.;
   m_pMax = withP ? -1. : 0.;
@@ -364,8 +352,8 @@ bool ComponentGrid::SaveElectricField(Component* cmp,
     std::cerr << m_className << "::SaveElectricField: Mesh not set.\n";
     return false;
   }
-  const unsigned int fmt = GetFormat(format);
-  if (fmt == 0) {
+  const auto fmt = GetFormat(format);
+  if (fmt == Format::Unknown) {
     std::cerr << m_className << "::SaveElectricField:\n"
               << "    Unknown format (" << format << ").\n";
     return false;
@@ -381,35 +369,38 @@ bool ComponentGrid::SaveElectricField(Component* cmp,
             << "    Exporting field/potential to " << filename << ".\n"
             << "    Be patient...\n";
   PrintProgress(0.);
-  outfile << "# XMIN = " << m_xMin << ", XMAX = " << m_xMax << ", NX = " << m_nX
-          << "\n";
-  outfile << "# YMIN = " << m_yMin << ", YMAX = " << m_yMax << ", NY = " << m_nY
-          << "\n";
-  outfile << "# ZMIN = " << m_zMin << ", ZMAX = " << m_zMax << ", NZ = " << m_nZ
-          << "\n";
+  outfile << "# XMIN = " << m_xMin[0] << ", XMAX = " << m_xMax[0] 
+          << ", NX = " << m_nX[0] << "\n";
+  outfile << "# YMIN = " << m_xMin[1] << ", YMAX = " << m_xMax[1] 
+          << ", NY = " << m_nX[1] << "\n";
+  outfile << "# ZMIN = " << m_xMin[2] << ", ZMAX = " << m_xMax[2] 
+          << ", NZ = " << m_nX[2] << "\n";
 
-  const unsigned int nValues = m_nX * m_nY * m_nZ;
+  const unsigned int nValues = m_nX[0] * m_nX[1] * m_nX[2];
   const unsigned int nPrint =
       std::pow(10, static_cast<unsigned int>(
                        std::max(std::floor(std::log10(nValues)) - 1, 1.)));
   unsigned int nLines = 0;
   Medium* medium = nullptr;
   int status = 0;
-  for (unsigned int i = 0; i < m_nX; ++i) {
-    const double x = m_xMin + i * m_dx;
-    for (unsigned int j = 0; j < m_nY; ++j) {
-      const double y = m_yMin + j * m_dy;
-      for (unsigned int k = 0; k < m_nZ; ++k) {
-        const double z = m_zMin + k * m_dz;
-        if (fmt == 1) {
+  const double dx = (m_xMax[0] - m_xMin[0]) / std::max(m_nX[0] - 1., 1.);
+  const double dy = (m_xMax[1] - m_xMin[1]) / std::max(m_nX[1] - 1., 1.);
+  const double dz = (m_xMax[2] - m_xMin[2]) / std::max(m_nX[2] - 1., 1.);
+  for (unsigned int i = 0; i < m_nX[0]; ++i) {
+    const double x = m_xMin[0] + i * dx;
+    for (unsigned int j = 0; j < m_nX[1]; ++j) {
+      const double y = m_xMin[1] + j * dy;
+      for (unsigned int k = 0; k < m_nX[2]; ++k) {
+        const double z = m_xMin[2] + k * dz;
+        if (fmt == Format::XY) {
           outfile << x << "  " << y << "  ";
-        } else if (fmt == 2) {
+        } else if (fmt == Format::XYZ) {
           outfile << x << "  " << y << "  " << z << "  ";
-        } else if (fmt == 3) {
+        } else if (fmt == Format::IJ) {
           outfile << i << "  " << j << "  ";
-        } else if (fmt == 4) {
+        } else if (fmt == Format::IJK) {
           outfile << i << "  " << j << "  " << k << "  ";
-        } else if (fmt == 5) {
+        } else if (fmt == Format::YXZ) {
           outfile << y << "  " << x << "  " << z << "  ";
         }
         double ex = 0., ey = 0., ez = 0., v = 0.;
@@ -437,8 +428,8 @@ bool ComponentGrid::SaveWeightingField(Component* cmp,
     std::cerr << m_className << "::SaveWeightingField: Mesh not set.\n";
     return false;
   }
-  const unsigned int fmt = GetFormat(format);
-  if (fmt == 0) {
+  const auto fmt = GetFormat(format);
+  if (fmt == Format::Unknown) {
     std::cerr << m_className << "::SaveWeightingField:\n"
               << "    Unknown format (" << format << ").\n";
     return false;
@@ -454,32 +445,35 @@ bool ComponentGrid::SaveWeightingField(Component* cmp,
             << "    Exporting field/potential to " << filename << ".\n"
             << "    Be patient...\n";
   PrintProgress(0.);
-  outfile << "# XMIN = " << m_xMin << ", XMAX = " << m_xMax << ", NX = " << m_nX
-          << "\n";
-  outfile << "# YMIN = " << m_yMin << ", YMAX = " << m_yMax << ", NY = " << m_nY
-          << "\n";
-  outfile << "# ZMIN = " << m_zMin << ", ZMAX = " << m_zMax << ", NZ = " << m_nZ
-          << "\n";
-  const unsigned int nValues = m_nX * m_nY * m_nZ;
+  outfile << "# XMIN = " << m_xMin[0] << ", XMAX = " << m_xMax[0] 
+          << ", NX = " << m_nX[0] << "\n";
+  outfile << "# YMIN = " << m_xMin[1] << ", YMAX = " << m_xMax[1] 
+          << ", NY = " << m_nX[1] << "\n";
+  outfile << "# ZMIN = " << m_xMin[2] << ", ZMAX = " << m_xMax[2] 
+          << ", NZ = " << m_nX[2] << "\n";
+  const unsigned int nValues = m_nX[0] * m_nX[1] * m_nX[2];
   const unsigned int nPrint =
       std::pow(10, static_cast<unsigned int>(
                        std::max(std::floor(std::log10(nValues)) - 1, 1.)));
   unsigned int nLines = 0;
-  for (unsigned int i = 0; i < m_nX; ++i) {
-    const double x = m_xMin + i * m_dx;
-    for (unsigned int j = 0; j < m_nY; ++j) {
-      const double y = m_yMin + j * m_dy;
-      for (unsigned int k = 0; k < m_nZ; ++k) {
-        const double z = m_zMin + k * m_dz;
-        if (fmt == 1) {
+  const double dx = (m_xMax[0] - m_xMin[0]) / std::max(m_nX[0] - 1., 1.);
+  const double dy = (m_xMax[1] - m_xMin[1]) / std::max(m_nX[1] - 1., 1.);
+  const double dz = (m_xMax[2] - m_xMin[2]) / std::max(m_nX[2] - 1., 1.);
+  for (unsigned int i = 0; i < m_nX[0]; ++i) {
+    const double x = m_xMin[0] + i * dx;
+    for (unsigned int j = 0; j < m_nX[1]; ++j) {
+      const double y = m_xMin[1] + j * dy;
+      for (unsigned int k = 0; k < m_nX[2]; ++k) {
+        const double z = m_xMin[2] + k * dz;
+        if (fmt == Format::XY) {
           outfile << x << "  " << y << "  ";
-        } else if (fmt == 2) {
+        } else if (fmt == Format::XYZ) {
           outfile << x << "  " << y << "  " << z << "  ";
-        } else if (fmt == 3) {
+        } else if (fmt == Format::IJ) {
           outfile << i << "  " << j << "  ";
-        } else if (fmt == 4) {
+        } else if (fmt == Format::IJK) {
           outfile << i << "  " << j << "  " << k << "  ";
-        } else if (fmt == 5) {
+        } else if (fmt == Format::YXZ) {
           outfile << y << "  " << x << "  " << z << "  ";
         }
         double wx = 0., wy = 0., wz = 0.;
@@ -498,8 +492,8 @@ bool ComponentGrid::SaveWeightingField(Component* cmp,
 
 bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
                              const double scaleX) {
-  const unsigned int fmt = GetFormat(format);
-  if (fmt == 0) {
+  const auto fmt = GetFormat(format);
+  if (fmt == Format::Unknown) {
     std::cerr << m_className << "::LoadMesh:\n"
               << "    Unknown format (" << format << ").\n";
     return false;
@@ -531,9 +525,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
     // Skip empty lines.
     if (line.empty()) continue;
     // Skip lines that are not comments.
-    if (line[0] != '#' && !(line[0] == '/' && line[1] == '/')) {
-      continue;
-    }
+    if (!IsComment(line)) continue;
     std::size_t pos0 = 0;
     std::size_t pos1 = line.find("=", pos0);
     while (pos1 != std::string::npos) {
@@ -576,7 +568,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   }
   infile.close();
 
-  if (fmt == 1 || fmt == 3) {
+  if (fmt == Format::XY || fmt == Format::IJ) {
     // Try to complement missing information on the z-range.
     if (!found[8]) {
       nz = 1;
@@ -605,13 +597,13 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
     return SetMesh(nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax);
   }
 
-  if ((fmt == 3 || fmt == 4) && !(found[0] && found[3])) {
+  if ((fmt == Format::IJ || fmt == Format::IJK) && !(found[0] && found[3])) {
     std::cerr << m_className << "::LoadMesh: x-limits not found.\n";
     return false;
-  } else if ((fmt == 3 || fmt == 4) && !(found[1] && found[4])) {
+  } else if ((fmt == Format::IJ || fmt == Format::IJK) && !(found[1] && found[4])) {
     std::cerr << m_className << "::LoadMesh: y-limits not found.\n";
     return false;
-  } else if (fmt == 4 && !(found[2] && found[5])) {
+  } else if (fmt == Format::IJK && !(found[2] && found[5])) {
     std::cerr << m_className << "::LoadMesh: z-limits not found.\n";
     return false;
   }
@@ -648,12 +640,10 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
     // Skip empty lines.
     if (line.empty()) continue;
     // Skip comments.
-    if (line[0] == '#') continue;
-    if (line[0] == '/' && line[1] == '/') continue;
+    if (IsComment(line)) continue;
     std::istringstream data;
     data.str(line);
-    if (fmt == 1) {
-      // "XY"
+    if (fmt == Format::XY) {
       double x, y;
       data >> x >> y;
       if (data.fail()) {
@@ -669,8 +659,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
       if (!found[4]) ymax = std::max(y, ymax);
       xLines.insert(x);
       yLines.insert(y);
-    } else if (fmt == 2) {
-      // "XYZ"
+    } else if (fmt == Format::XYZ) {
       double x, y, z;
       data >> x >> y >> z;
       if (data.fail()) {
@@ -690,8 +679,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
       xLines.insert(x);
       yLines.insert(y);
       zLines.insert(z);
-    } else if (fmt == 3) {
-      // "IJ"
+    } else if (fmt == Format::IJ) {
       unsigned int i = 0, j = 0;
       data >> i >> j;
       if (data.fail()) {
@@ -701,8 +689,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
       }
       if (!found[6]) nx = std::max(nx, i);
       if (!found[7]) ny = std::max(ny, j);
-    } else if (fmt == 4) {
-      // "IJK"
+    } else if (fmt == Format::IJK) {
       unsigned int i = 0, j = 0, k = 0;
       data >> i >> j >> k;
       if (data.fail()) {
@@ -713,8 +700,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
       if (!found[6]) nx = std::max(nx, i);
       if (!found[7]) ny = std::max(ny, j);
       if (!found[8]) nz = std::max(nz, k);
-    } else if (fmt == 5) {
-      // "YXZ"
+    } else if (fmt == Format::YXZ) {
       double x, y, z;
       data >> y >> x >> z;
       if (data.fail()) {
@@ -740,7 +726,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   infile.close();
   if (bad) return false;
 
-  if (fmt == 1 || fmt == 2 || fmt == 5) {
+  if (fmt == Format::XY || fmt == Format::XYZ || fmt == Format::YXZ) {
     if (!found[6]) nx = xLines.size();
     if (!found[7]) ny = yLines.size();
     if (!found[8]) nz = zLines.size();
@@ -751,7 +737,9 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   std::printf("%12.6f < y [cm] < %12.6f, %5u points\n", ymin, ymax, ny);
   std::printf("%12.6f < z [cm] < %12.6f, %5u points\n", zmin, zmax, nz);
   unsigned int nExpected = nx * ny;
-  if (fmt == 2 || fmt == 4 || fmt == 5) nExpected *= nz;
+  if (fmt == Format::XYZ || fmt == Format::IJK || fmt == Format::YXZ) {
+    nExpected *= nz;
+  }
   if (nExpected != nValues) {
     std::cerr << m_className << "::LoadMesh:\n"
               << "   Warning: Expected " << nExpected << " lines, read "
@@ -772,8 +760,8 @@ bool ComponentGrid::LoadData(
     }
   }
 
-  const unsigned int fmt = GetFormat(format);
-  if (fmt == 0) {
+  const auto fmt = GetFormat(format);
+  if (fmt == Format::Unknown) {
     std::cerr << m_className << "::LoadData:\n"
               << "    Unknown format (" << format << ").\n";
     return false;
@@ -785,8 +773,8 @@ bool ComponentGrid::LoadData(
   unsigned int nValues = 0;
   // Keep track of which elements have been read.
   std::vector<std::vector<std::vector<bool> > > isSet(
-      m_nX,
-      std::vector<std::vector<bool> >(m_nY, std::vector<bool>(m_nZ, false)));
+      m_nX[0],
+      std::vector<std::vector<bool> >(m_nX[1], std::vector<bool>(m_nX[2], false)));
 
   std::ifstream infile;
   infile.open(filename.c_str(), std::ios::in);
@@ -808,8 +796,7 @@ bool ComponentGrid::LoadData(
     // Skip empty lines.
     if (line.empty()) continue;
     // Skip comments.
-    if (line[0] == '#') continue;
-    if (line[0] == '/' && line[1] == '/') continue;
+    if (IsComment(line)) continue;
     unsigned int i = 0;
     unsigned int j = 0;
     unsigned int k = 0;
@@ -819,8 +806,7 @@ bool ComponentGrid::LoadData(
     double p = 0.;
     std::istringstream data;
     data.str(line);
-    if (fmt == 1) {
-      // "XY"
+    if (fmt == Format::XY) {
       double x, y;
       data >> x >> y;
       if (data.fail()) {
@@ -830,18 +816,17 @@ bool ComponentGrid::LoadData(
       }
       x *= scaleX;
       y *= scaleX;
-      if (m_nX > 1) {
-        const double u = std::round((x - m_xMin) / m_dx);
+      if (m_nX[0] > 1) {
+        const double u = std::round((x - m_xMin[0]) * m_sX[0]);
         i = u < 0. ? 0 : static_cast<unsigned int>(u);
-        if (i >= m_nX) i = m_nX - 1;
+        if (i >= m_nX[0]) i = m_nX[0] - 1;
       }
-      if (m_nY > 1) {
-        const double v = std::round((y - m_yMin) / m_dy);
+      if (m_nX[1] > 1) {
+        const double v = std::round((y - m_xMin[1]) * m_sX[1]);
         j = v < 0. ? 0 : static_cast<unsigned int>(v);
-        if (j >= m_nY) j = m_nY - 1;
+        if (j >= m_nX[1]) j = m_nX[1] - 1;
       }
-    } else if (fmt == 2) {
-      // "XYZ"
+    } else if (fmt == Format::XYZ) {
       double x, y, z;
       data >> x >> y >> z;
       if (data.fail()) {
@@ -852,39 +837,36 @@ bool ComponentGrid::LoadData(
       x *= scaleX;
       y *= scaleX;
       z *= scaleX;
-      if (m_nX > 1) {
-        const double u = std::round((x - m_xMin) / m_dx);
+      if (m_nX[0] > 1) {
+        const double u = std::round((x - m_xMin[0]) * m_sX[0]);
         i = u < 0. ? 0 : static_cast<unsigned int>(u);
-        if (i >= m_nX) i = m_nX - 1;
+        if (i >= m_nX[0]) i = m_nX[0] - 1;
       }
-      if (m_nY > 1) {
-        const double v = std::round((y - m_yMin) / m_dy);
+      if (m_nX[1] > 1) {
+        const double v = std::round((y - m_xMin[1]) * m_sX[1]);
         j = v < 0. ? 0 : static_cast<unsigned int>(v);
-        if (j >= m_nY) j = m_nY - 1;
+        if (j >= m_nX[1]) j = m_nX[1] - 1;
       }
-      if (m_nZ > 1) {
-        const double w = std::round((z - m_zMin) / m_dz);
+      if (m_nX[2] > 1) {
+        const double w = std::round((z - m_xMin[2]) * m_sX[2]);
         k = w < 0. ? 0 : static_cast<unsigned int>(w);
-        if (k >= m_nZ) k = m_nZ - 1;
+        if (k >= m_nX[2]) k = m_nX[2] - 1;
       }
-    } else if (fmt == 3) {
-      // "IJ"
+    } else if (fmt == Format::IJ) {
       data >> i >> j;
       if (data.fail()) {
         PrintError(m_className + "::LoadData", nLines, "indices");
         bad = true;
         break;
       }
-    } else if (fmt == 4) {
-      // "IJK"
+    } else if (fmt == Format::IJK) {
       data >> i >> j >> k;
       if (data.fail()) {
         PrintError(m_className + "::LoadData", nLines, "indices");
         bad = true;
         break;
       }
-    } else if (fmt == 5) {
-      // "YXZ"
+    } else if (fmt == Format::YXZ) {
       double x, y, z;
       data >> y >> x >> z;
       if (data.fail()) {
@@ -895,24 +877,24 @@ bool ComponentGrid::LoadData(
       x *= scaleX;
       y *= scaleX;
       z *= scaleX;
-      if (m_nX > 1) {
-        const double u = std::round((x - m_xMin) / m_dx);
+      if (m_nX[0] > 1) {
+        const double u = std::round((x - m_xMin[0]) * m_sX[0]);
         i = u < 0. ? 0 : static_cast<unsigned int>(u);
-        if (i >= m_nX) i = m_nX - 1;
+        if (i >= m_nX[0]) i = m_nX[0] - 1;
       }
-      if (m_nY > 1) {
-        const double v = std::round((y - m_yMin) / m_dy);
+      if (m_nX[1] > 1) {
+        const double v = std::round((y - m_xMin[1]) * m_sX[1]);
         j = v < 0. ? 0 : static_cast<unsigned int>(v);
-        if (j >= m_nY) j = m_nY - 1;
+        if (j >= m_nX[1]) j = m_nX[1] - 1;
       }
-      if (m_nZ > 1) {
-        const double w = std::round((z - m_zMin) / m_dz);
+      if (m_nX[2] > 1) {
+        const double w = std::round((z - m_xMin[2]) * m_sX[2]);
         k = w < 0. ? 0 : static_cast<unsigned int>(w);
-        if (k >= m_nZ) k = m_nZ - 1;
+        if (k >= m_nX[2]) k = m_nX[2] - 1;
       }
     }
     // Check the indices.
-    if (i >= m_nX || j >= m_nY || k >= m_nZ) {
+    if (i >= m_nX[0] || j >= m_nX[1] || k >= m_nX[2]) {
       std::cerr << m_className << "::LoadData:\n"
                 << "    Error reading line " << nLines << ".\n"
                 << "    Index (" << i << ", " << j << ", " << k
@@ -927,11 +909,11 @@ bool ComponentGrid::LoadData(
       continue;
     }
     // Get the field values.
-    if (fmt == 1 || fmt == 3) {
+    if (fmt == Format::XY || fmt == Format::IJ) {
       // Two-dimensional field-map
       fz = 0.;
       data >> fx >> fy;
-    } else if (fmt == 5) {
+    } else if (fmt == Format::YXZ) {
       data >> fy >> fx >> fz;
     } else {
       data >> fx >> fy >> fz;
@@ -971,9 +953,9 @@ bool ComponentGrid::LoadData(
       }
     }
     const bool isActive = flag == 0 ? false : true;
-    if (fmt == 1 || fmt == 3) {
+    if (fmt == Format::XY || fmt == Format::IJ) {
       // Two-dimensional field-map
-      for (unsigned int kk = 0; kk < m_nZ; ++kk) {
+      for (unsigned int kk = 0; kk < m_nX[2]; ++kk) {
         fields[i][j][kk].fx = fx;
         fields[i][j][kk].fy = fy;
         fields[i][j][kk].fz = fz;
@@ -994,8 +976,10 @@ bool ComponentGrid::LoadData(
   if (bad) return false;
   std::cout << m_className << "::LoadData:\n"
             << "    Read " << nValues << " values from " << filename << ".\n";
-  unsigned int nExpected = m_nX * m_nY;
-  if (fmt == 2 || fmt == 4 || fmt == 5) nExpected *= m_nZ;
+  unsigned int nExpected = m_nX[0] * m_nX[1];
+  if (fmt == Format::XYZ || fmt == Format::IJK || fmt == Format::YXZ) {
+    nExpected *= m_nX[2];
+  }
   if (nExpected != nValues) {
     std::cerr << m_className << "::LoadData:\n"
               << "   Expected " << nExpected << " values.\n";
@@ -1010,24 +994,24 @@ bool ComponentGrid::GetBoundingBox(double& xmin, double& ymin, double& zmin,
     xmin = -INFINITY;
     xmax = +INFINITY;
   } else {
-    xmin = m_xMin;
-    xmax = m_xMax;
+    xmin = m_xMin[0];
+    xmax = m_xMax[0];
   }
 
   if (m_periodic[1] || m_mirrorPeriodic[1]) {
     ymin = -INFINITY;
     ymax = +INFINITY;
   } else {
-    ymin = m_yMin;
-    ymax = m_yMax;
+    ymin = m_xMin[1];
+    ymax = m_xMax[1];
   }
 
   if (m_periodic[2] || m_mirrorPeriodic[2]) {
     zmin = -INFINITY;
     zmax = +INFINITY;
   } else {
-    zmin = m_zMin;
-    zmax = m_zMax;
+    zmin = m_xMin[2];
+    zmax = m_xMax[2];
   }
   return true;
 }
@@ -1050,9 +1034,9 @@ bool ComponentGrid::GetElectricFieldRange(double& exmin, double& exmax,
   exmin = exmax = m_efields[0][0][0].fx;
   eymin = eymax = m_efields[0][0][0].fy;
   ezmin = ezmax = m_efields[0][0][0].fz;
-  for (unsigned int i = 0; i < m_nX; ++i) {
-    for (unsigned int j = 0; j < m_nY; ++j) {
-      for (unsigned int k = 0; k < m_nZ; ++k) {
+  for (unsigned int i = 0; i < m_nX[0]; ++i) {
+    for (unsigned int j = 0; j < m_nX[1]; ++j) {
+      for (unsigned int k = 0; k < m_nX[2]; ++k) {
         const Node& node = m_efields[i][j][k];
         if (node.fx < exmin) exmin = node.fx;
         if (node.fx > exmax) exmax = node.fx;
@@ -1084,32 +1068,26 @@ bool ComponentGrid::GetField(
 
   // Reduce the point to the basic cell (in case of periodicity) and
   // check if it is inside the mesh.
-  bool xMirrored = false;
-  const double x =
-      Reduce(xi, m_xMin, m_xMax, m_periodic[0], m_mirrorPeriodic[0], xMirrored);
-  if (x < m_xMin || x > m_xMax) return false;
-  bool yMirrored = false;
-  const double y =
-      Reduce(yi, m_yMin, m_yMax, m_periodic[1], m_mirrorPeriodic[1], yMirrored);
-  if (y < m_yMin || y > m_yMax) return false;
-  bool zMirrored = false;
-  const double z =
-      Reduce(zi, m_zMin, m_zMax, m_periodic[2], m_mirrorPeriodic[2], zMirrored);
-  if (z < m_zMin || z > m_zMax) return false;
-
+  std::array<bool, 3> mirrored = {false, false, false};
+  std::array<double, 3> xx = {xi, yi, zi};
+  for (size_t i = 0; i < 3; ++i) {
+    xx[i] = Reduce(xx[i], m_xMin[i], m_xMax[i], 
+                   m_periodic[i], m_mirrorPeriodic[i], mirrored[i]);
+    if (xx[i] < m_xMin[i] || xx[i] > m_xMax[i]) return false;
+  }
   // Get the indices.
-  const double sx = (x - m_xMin) / m_dx;
-  const double sy = (y - m_yMin) / m_dy;
-  const double sz = (z - m_zMin) / m_dz;
+  const double sx = (xx[0] - m_xMin[0]) * m_sX[0];
+  const double sy = (xx[1] - m_xMin[1]) * m_sX[1];
+  const double sz = (xx[2] - m_xMin[2]) * m_sX[2];
   const unsigned int i0 = static_cast<unsigned int>(std::floor(sx));
   const unsigned int j0 = static_cast<unsigned int>(std::floor(sy));
   const unsigned int k0 = static_cast<unsigned int>(std::floor(sz));
   const double ux = sx - i0;
   const double uy = sy - j0;
   const double uz = sz - k0;
-  const unsigned int i1 = std::min(i0 + 1, m_nX - 1);
-  const unsigned int j1 = std::min(j0 + 1, m_nY - 1);
-  const unsigned int k1 = std::min(k0 + 1, m_nZ - 1);
+  const unsigned int i1 = std::min(i0 + 1, m_nX[0] - 1);
+  const unsigned int j1 = std::min(j0 + 1, m_nX[1] - 1);
+  const unsigned int k1 = std::min(k0 + 1, m_nX[2] - 1);
   const double vx = 1. - ux;
   const double vy = 1. - uy;
   const double vz = 1. - uz;
@@ -1160,9 +1138,9 @@ bool ComponentGrid::GetField(
           vz +
       ((n001.v * vx + n101.v * ux) * vy + (n011.v * vx + n111.v * ux) * uy) *
           uz;
-  if (xMirrored) fx = -fx;
-  if (yMirrored) fy = -fy;
-  if (zMirrored) fz = -fz;
+  if (mirrored[0]) fx = -fx;
+  if (mirrored[1]) fy = -fy;
+  if (mirrored[2]) fz = -fz;
   return true;
 }
 
@@ -1178,7 +1156,7 @@ bool ComponentGrid::GetElectricField(const unsigned int i, const unsigned int j,
     PrintNotReady(m_className + "::GetElectricField");
     return false;
   }
-  if (i >= m_nX || j >= m_nY || k >= m_nZ) {
+  if (i >= m_nX[0] || j >= m_nX[1] || k >= m_nX[2]) {
     std::cerr << m_className << "::GetElectricField: Index out of range.\n";
     return false;
   }
@@ -1198,11 +1176,11 @@ void ComponentGrid::Print() {
     return;
   }
   std::printf("    %15.8f < x [cm] < %15.8f, %10u nodes\n", 
-              m_xMin, m_xMax, m_nX); 
+              m_xMin[0], m_xMax[0], m_nX[0]); 
   std::printf("    %15.8f < y [cm] < %15.8f, %10u nodes\n", 
-              m_yMin, m_yMax, m_nY); 
+              m_xMin[1], m_xMax[1], m_nX[1]); 
   std::printf("    %15.8f < z [cm] < %15.8f, %10u nodes\n", 
-              m_zMin, m_zMax, m_nZ);
+              m_xMin[2], m_xMax[2], m_nX[2]);
   if (m_efields.empty() && m_bfields.empty() && 
       m_wfields.empty() && m_wdfields.empty() && 
       m_eAttachment.empty() && m_hAttachment.empty() &&
@@ -1245,9 +1223,10 @@ void ComponentGrid::Reset() {
 
   m_active.clear();
 
-  m_nX = m_nY = m_nZ = 0;
-  m_xMin = m_yMin = m_zMin = 0.;
-  m_xMax = m_yMax = m_zMax = 0.;
+  m_nX.fill(1);
+  m_xMin.fill(0.);
+  m_xMax.fill(0.);
+  m_sX[0] = m_sX[1] = m_sX[2] = 0.;
   m_pMin = m_pMax = 0.;
   m_medium = nullptr;
 
@@ -1255,9 +1234,7 @@ void ComponentGrid::Reset() {
   m_hasPotential = false;
   m_ready = false;
 
-  m_wField_xOffset = 0.;
-  m_wField_yOffset = 0.;
-  m_wField_zOffset = 0.;
+  m_wFieldOffset.fill(0.);
 }
 
 void ComponentGrid::UpdatePeriodicity() {
@@ -1267,7 +1244,7 @@ void ComponentGrid::UpdatePeriodicity() {
   }
 
   // Check for conflicts.
-  for (unsigned int i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < 3; ++i) {
     if (m_periodic[i] && m_mirrorPeriodic[i]) {
       std::cerr << m_className << "::UpdatePeriodicity:\n"
                 << "    Both simple and mirror periodicity requested. Reset.\n";
@@ -1313,12 +1290,12 @@ double ComponentGrid::Reduce(const double xin, const double xmin,
 
 void ComponentGrid::Initialise(
     std::vector<std::vector<std::vector<Node> > >& fields) {
-  fields.resize(m_nX);
-  for (unsigned int i = 0; i < m_nX; ++i) {
-    fields[i].resize(m_nY);
-    for (unsigned int j = 0; j < m_nY; ++j) {
-      fields[i][j].resize(m_nZ);
-      for (unsigned int k = 0; k < m_nZ; ++k) {
+  fields.resize(m_nX[0]);
+  for (unsigned int i = 0; i < m_nX[0]; ++i) {
+    fields[i].resize(m_nX[1]);
+    for (unsigned int j = 0; j < m_nX[1]; ++j) {
+      fields[i][j].resize(m_nX[2]);
+      for (unsigned int k = 0; k < m_nX[2]; ++k) {
         fields[i][j][k].fx = 0.;
         fields[i][j][k].fy = 0.;
         fields[i][j][k].fz = 0.;
@@ -1401,15 +1378,15 @@ bool ComponentGrid::LoadData(
     }
   }
 
-  const unsigned int fmt = GetFormat(format);
-  if (fmt == 0) {
+  const auto fmt = GetFormat(format);
+  if (fmt == Format::Unknown) {
     std::cerr << m_className << "::LoadData:\n"
               << "    Unknown format (" << format << ").\n";
     return false;
   }
   // Check the column index.
   unsigned int offset = 0;
-  if (fmt == 1 || fmt == 3) {
+  if (fmt == Format::XY || fmt == Format::IJ) {
     if (col < 2) {
       std::cerr << m_className << "::LoadData:\n"
                 << "    Unexpected column index (" << col << ").\n";
@@ -1427,14 +1404,14 @@ bool ComponentGrid::LoadData(
 
   // Set up the grid.
   tab.assign(
-      m_nX, 
-      std::vector<std::vector<double> >(m_nY, std::vector<double>(m_nZ, 0.)));
+      m_nX[0], 
+      std::vector<std::vector<double> >(m_nX[1], std::vector<double>(m_nX[2], 0.)));
 
   unsigned int nValues = 0;
   // Keep track of which elements have been read.
   std::vector<std::vector<std::vector<bool> > > isSet(
-      m_nX,
-      std::vector<std::vector<bool> >(m_nY, std::vector<bool>(m_nZ, false)));
+      m_nX[0],
+      std::vector<std::vector<bool> >(m_nX[1], std::vector<bool>(m_nX[2], false)));
 
   std::ifstream infile;
   infile.open(filename.c_str(), std::ios::in);
@@ -1456,16 +1433,14 @@ bool ComponentGrid::LoadData(
     // Skip empty lines.
     if (line.empty()) continue;
     // Skip comments.
-    if (line[0] == '#') continue;
-    if (line[0] == '/' && line[1] == '/') continue;
+    if (IsComment(line)) continue;
     unsigned int i = 0;
     unsigned int j = 0;
     unsigned int k = 0;
     double val = 0;
     std::istringstream data;
     data.str(line);
-    if (fmt == 1) {
-      // "XY"
+    if (fmt == Format::XY) {
       double x, y;
       data >> x >> y;
       if (data.fail()) {
@@ -1475,18 +1450,17 @@ bool ComponentGrid::LoadData(
       }
       x *= scaleX;
       y *= scaleX;
-      if (m_nX > 1) {
-        const double u = std::round((x - m_xMin) / m_dx);
+      if (m_nX[0] > 1) {
+        const double u = std::round((x - m_xMin[0]) * m_sX[0]);
          i = u < 0. ? 0 : static_cast<unsigned int>(u);
-         if (i >= m_nX) i = m_nX - 1;
+         if (i >= m_nX[0]) i = m_nX[0] - 1;
       }
-      if (m_nY > 1) {
-        const double v = std::round((y - m_yMin) / m_dy);
+      if (m_nX[1] > 1) {
+        const double v = std::round((y - m_xMin[1]) * m_sX[1]);
         j = v < 0. ? 0 : static_cast<unsigned int>(v);
-        if (j >= m_nY) j = m_nY - 1;
+        if (j >= m_nX[1]) j = m_nX[1] - 1;
       }
-    } else if (fmt == 2) {
-      // "XYZ"
+    } else if (fmt == Format::XYZ) {
       double x, y, z;
       data >> x >> y >> z;
       if (data.fail()) {
@@ -1497,39 +1471,36 @@ bool ComponentGrid::LoadData(
       x *= scaleX;
       y *= scaleX;
       z *= scaleX;
-      if (m_nX > 1) {
-        const double u = std::round((x - m_xMin) / m_dx);
+      if (m_nX[0] > 1) {
+        const double u = std::round((x - m_xMin[0]) * m_sX[0]);
         i = u < 0. ? 0 : static_cast<unsigned int>(u);
-        if (i >= m_nX) i = m_nX - 1;
+        if (i >= m_nX[0]) i = m_nX[0] - 1;
       }
-      if (m_nY > 1) {
-        const double v = std::round((y - m_yMin) / m_dy);
+      if (m_nX[1] > 1) {
+        const double v = std::round((y - m_xMin[1]) * m_sX[1]);
         j = v < 0. ? 0 : static_cast<unsigned int>(v); 
-        if (j >= m_nY) j = m_nY - 1;
+        if (j >= m_nX[1]) j = m_nX[1] - 1;
       }
-      if (m_nZ > 1) {
-        const double w = std::round((z - m_zMin) / m_dz);
+      if (m_nX[2] > 1) {
+        const double w = std::round((z - m_xMin[2]) * m_sX[2]);
         k = w < 0. ? 0 : static_cast<unsigned int>(w);
-        if (k >= m_nZ) k = m_nZ - 1;
+        if (k >= m_nX[2]) k = m_nX[2] - 1;
       }
-    } else if (fmt == 3) {
-      // "IJ"
+    } else if (fmt == Format::IJ) {
       data >> i >> j;
       if (data.fail()) {
         PrintError(m_className + "::LoadData", nLines, "indices");
         bad = true;
         break;
       }
-    } else if (fmt == 4) {
-      // "IJK"
+    } else if (fmt == Format::IJK) {
       data >> i >> j >> k;
       if (data.fail()) {
         PrintError(m_className + "::LoadData", nLines, "indices");
         bad = true;
         break;
       }
-    } else if (fmt == 5) {
-      // "YXZ"
+    } else if (fmt == Format::YXZ) {
       double x, y, z;
       data >> y >> x >> z;
       if (data.fail()) {
@@ -1540,24 +1511,24 @@ bool ComponentGrid::LoadData(
       x *= scaleX;
       y *= scaleX;
       z *= scaleX;
-      if (m_nX > 1) {
-        const double u = std::round((x - m_xMin) / m_dx);
+      if (m_nX[0] > 1) {
+        const double u = std::round((x - m_xMin[0]) * m_sX[0]);
         i = u < 0. ? 0 : static_cast<unsigned int>(u);
-        if (i >= m_nX) i = m_nX - 1;
+        if (i >= m_nX[0]) i = m_nX[0] - 1;
       }
-      if (m_nY > 1) {
-        const double v = std::round((y - m_yMin) / m_dy);
+      if (m_nX[1] > 1) {
+        const double v = std::round((y - m_xMin[1]) * m_sX[1]);
         j = v < 0. ? 0 : static_cast<unsigned int>(v);
-        if (j >= m_nY) j = m_nY - 1;
+        if (j >= m_nX[1]) j = m_nX[1] - 1;
       }
-      if (m_nZ > 1) {
-        const double w = std::round((z - m_zMin) / m_dz);
+      if (m_nX[2] > 1) {
+        const double w = std::round((z - m_xMin[2]) * m_sX[2]);
         k = w < 0. ? 0 : static_cast<unsigned int>(w);
-        if (k >= m_nZ) k = m_nZ - 1;
+        if (k >= m_nX[2]) k = m_nX[2] - 1;
       }
     }
     // Check the indices.
-    if (i >= m_nX || j >= m_nY || k >= m_nZ) {
+    if (i >= m_nX[0] || j >= m_nX[1] || k >= m_nX[2]) {
       std::cerr << m_className << "::LoadData:\n"
                 << "    Error reading line " << nLines << ".\n"
                 << "    Index (" << i << ", " << j << ", " << k
@@ -1595,9 +1566,9 @@ bool ComponentGrid::LoadData(
       break;
     }
 
-    if (fmt == 1 || fmt == 3) {
+    if (fmt == Format::XY || fmt == Format::IJ) {
       // Two-dimensional map
-      for (unsigned int kk = 0; kk < m_nZ; ++kk) {
+      for (unsigned int kk = 0; kk < m_nX[2]; ++kk) {
         tab[i][j][kk] = val;
         isSet[i][j][kk] = true;
       }
@@ -1611,8 +1582,10 @@ bool ComponentGrid::LoadData(
   if (bad) return false;
   std::cout << m_className << "::LoadData:\n"
             << "    Read " << nValues << " values from " << filename << ".\n";
-  unsigned int nExpected = m_nX * m_nY;
-  if (fmt == 2 || fmt == 4 || fmt == 5) nExpected *= m_nZ;
+  unsigned int nExpected = m_nX[0] * m_nX[1];
+  if (fmt == Format::XYZ || fmt == Format::IJK || fmt == Format::YXZ) {
+    nExpected *= m_nX[2];
+  }
   if (nExpected != nValues) {
     std::cerr << m_className << "::LoadData:\n"
               << "   Expected " << nExpected << " values.\n";
@@ -1632,30 +1605,30 @@ bool ComponentGrid::GetData(
   // check if it is inside the mesh.
   bool xMirrored = false;
   const double x =
-      Reduce(xi, m_xMin, m_xMax, m_periodic[0], m_mirrorPeriodic[0], xMirrored);
-  if (x < m_xMin || x > m_xMax) return false;
+      Reduce(xi, m_xMin[0], m_xMax[0], m_periodic[0], m_mirrorPeriodic[0], xMirrored);
+  if (x < m_xMin[0] || x > m_xMax[0]) return false;
   bool yMirrored = false;
   const double y =
-      Reduce(yi, m_yMin, m_yMax, m_periodic[1], m_mirrorPeriodic[1], yMirrored);
-  if (y < m_yMin || y > m_yMax) return false;
+      Reduce(yi, m_xMin[1], m_xMax[1], m_periodic[1], m_mirrorPeriodic[1], yMirrored);
+  if (y < m_xMin[1] || y > m_xMax[1]) return false;
   bool zMirrored = false;
   const double z =
-      Reduce(zi, m_zMin, m_zMax, m_periodic[2], m_mirrorPeriodic[2], zMirrored);
-  if (z < m_zMin || z > m_zMax) return false;
+      Reduce(zi, m_xMin[2], m_xMax[2], m_periodic[2], m_mirrorPeriodic[2], zMirrored);
+  if (z < m_xMin[2] || z > m_xMax[2]) return false;
 
   // Get the indices.
-  const double sx = (x - m_xMin) / m_dx;
-  const double sy = (y - m_yMin) / m_dy;
-  const double sz = (z - m_zMin) / m_dz;
+  const double sx = (x - m_xMin[0]) * m_sX[0];
+  const double sy = (y - m_xMin[1]) * m_sX[1];
+  const double sz = (z - m_xMin[2]) * m_sX[2];
   const unsigned int i0 = static_cast<unsigned int>(std::floor(sx));
   const unsigned int j0 = static_cast<unsigned int>(std::floor(sy));
   const unsigned int k0 = static_cast<unsigned int>(std::floor(sz));
   const double ux = sx - i0;
   const double uy = sy - j0;
   const double uz = sz - k0;
-  const unsigned int i1 = std::min(i0 + 1, m_nX - 1);
-  const unsigned int j1 = std::min(j0 + 1, m_nY - 1);
-  const unsigned int k1 = std::min(k0 + 1, m_nZ - 1);
+  const unsigned int i1 = std::min(i0 + 1, m_nX[0] - 1);
+  const unsigned int j1 = std::min(j0 + 1, m_nX[1] - 1);
+  const unsigned int k1 = std::min(k0 + 1, m_nX[2] - 1);
   const double vx = 1. - ux;
   const double vy = 1. - uy;
   const double vz = 1. - uz;
@@ -1703,4 +1676,21 @@ bool ComponentGrid::HoleAttachment(const double x, const double y,
   }
   return GetData(x, y, z, m_hAttachment, att);
 }
+
+ComponentGrid::Format ComponentGrid::GetFormat(std::string format) {
+  std::transform(format.begin(), format.end(), format.begin(), toupper);
+  if (format == "XY") {
+    return Format::XY;
+  } else if (format == "XYZ") {
+    return Format::XYZ;
+  } else if (format == "IJ") {
+    return Format::IJ;
+  } else if (format == "IJK") {
+    return Format::IJK;
+  } else if (format == "YXZ") {
+    return Format::YXZ;
+  }
+  return Format::Unknown;
+}
+
 }  // namespace Garfield
