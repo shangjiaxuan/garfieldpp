@@ -518,7 +518,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   unsigned int nLines = 0;
   while (!infile.fail()) {
     // Read one line.
-    std::getline(infile, line);
+    if (!std::getline(infile, line)) break;
     ++nLines;
     // Strip white space from the beginning of the line.
     ltrim(line);
@@ -789,7 +789,7 @@ bool ComponentGrid::LoadData(
   bool bad = false;
   while (!infile.fail()) {
     // Read one line.
-    std::getline(infile, line);
+    if (!std::getline(infile, line)) break;
     ++nLines;
     // Strip white space from beginning of line.
     ltrim(line);
@@ -1426,7 +1426,7 @@ bool ComponentGrid::LoadData(
   bool bad = false;
   while (!infile.fail()) {
     // Read one line.
-    std::getline(infile, line);
+    if (!std::getline(infile, line)) break;
     ++nLines;
     // Strip white space from beginning of line.
     ltrim(line);
