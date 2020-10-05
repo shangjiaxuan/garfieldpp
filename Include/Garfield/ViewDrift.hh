@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <utility>
+#include <mutex>
 
 #include <Rtypes.h>
 
@@ -83,6 +84,7 @@ class ViewDrift : public ViewBase {
   friend class ViewFEMesh;
 
  private:
+  std::mutex m_mutex;
 
   enum class Particle {
     Electron,

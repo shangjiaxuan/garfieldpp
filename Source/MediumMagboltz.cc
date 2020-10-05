@@ -1248,6 +1248,8 @@ int MediumMagboltz::GetGasNumberMagboltz(const std::string& input) const {
 }
 
 bool MediumMagboltz::Mixer(const bool verbose) {
+
+  std::lock_guard<std::mutex> guard(m_mutex);
   // Set constants and parameters in Magboltz common blocks.
   Magboltz::cnsts_.echarg = ElementaryCharge * 1.e-15;
   Magboltz::cnsts_.emass = ElectronMassGramme;

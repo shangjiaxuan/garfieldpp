@@ -1,6 +1,7 @@
 #ifndef G_MEDIUM_MAGBOLTZ_9
 #define G_MEDIUM_MAGBOLTZ_9
 
+#include <mutex>
 #include <array>
 
 #include "MagboltzInterface.hh"
@@ -178,6 +179,9 @@ class MediumMagboltz : public MediumGas {
   static const int DxcTypeRad;
   static const int DxcTypeCollIon;
   static const int DxcTypeCollNonIon;
+
+  /// Mutex.
+  std::mutex m_mutex;
 
   /// Simulate thermal motion of the gas or not (when running Magboltz).
   bool m_useGasMotion = false;
