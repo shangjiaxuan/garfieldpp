@@ -52,6 +52,7 @@ void ViewDrift::SetCollisionMarkerSize(const double size) {
 void ViewDrift::NewElectronDriftLine(const unsigned int np, int& id,
                                      const float x0, const float y0,
                                      const float z0) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   // Create a new electron drift line and add it to the list.
   std::array<float, 3> p = {x0, y0, z0};
   std::vector<std::array<float, 3> > dl(std::max(1U, np), p);
@@ -63,7 +64,7 @@ void ViewDrift::NewElectronDriftLine(const unsigned int np, int& id,
 void ViewDrift::NewHoleDriftLine(const unsigned int np, int& id,
                                  const float x0, const float y0,
                                  const float z0) {
-
+  std::lock_guard<std::mutex> guard(m_mutex);
   std::array<float, 3> p = {x0, y0, z0};
   std::vector<std::array<float, 3> > dl(std::max(1U, np), p);
   m_driftLines.push_back(std::make_pair(std::move(dl), Particle::Hole));
@@ -73,7 +74,7 @@ void ViewDrift::NewHoleDriftLine(const unsigned int np, int& id,
 
 void ViewDrift::NewIonDriftLine(const unsigned int np, int& id, const float x0,
                                 const float y0, const float z0) {
-
+  std::lock_guard<std::mutex> guard(m_mutex);
   std::array<float, 3> p = {x0, y0, z0};
   std::vector<std::array<float, 3> > dl(std::max(1U, np), p);
   m_driftLines.push_back(std::make_pair(std::move(dl), Particle::Ion));
@@ -83,6 +84,7 @@ void ViewDrift::NewIonDriftLine(const unsigned int np, int& id, const float x0,
 
 void ViewDrift::AddPhoton(const float x0, const float y0, const float z0, 
                           const float x1, const float y1, const float z1) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   std::array<float, 3> p0 = {x0, y0, z0};
   std::array<float, 3> p1 = {x1, y1, z1};
   m_photons.push_back({p0, p1});
@@ -91,6 +93,7 @@ void ViewDrift::AddPhoton(const float x0, const float y0, const float z0,
 void ViewDrift::NewChargedParticleTrack(const unsigned int np, int& id,
                                         const float x0, const float y0,
                                         const float z0) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   // Create a new track and add it to the list.
   std::vector<std::array<float, 3> > track(std::max(1U, np));
   track[0] = {x0, y0, z0};
@@ -102,6 +105,7 @@ void ViewDrift::NewChargedParticleTrack(const unsigned int np, int& id,
 void ViewDrift::SetDriftLinePoint(const unsigned int iL, const unsigned int iP,
                                   const float x, const float y,
                                   const float z) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   if (iL >= m_driftLines.size() || iP >= m_driftLines[iL].first.size()) {
     std::cerr << m_className << "::SetDriftLinePoint: Index out of range.\n";
     return;
@@ -111,6 +115,7 @@ void ViewDrift::SetDriftLinePoint(const unsigned int iL, const unsigned int iP,
 
 void ViewDrift::AddDriftLinePoint(const unsigned int iL, const float x,
                                   const float y, const float z) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   if (iL >= m_driftLines.size()) {
     std::cerr << m_className << "::AddDriftLinePoint: Index out of range.\n";
     return;
@@ -121,6 +126,7 @@ void ViewDrift::AddDriftLinePoint(const unsigned int iL, const float x,
 
 void ViewDrift::SetTrackPoint(const unsigned int iL, const unsigned int iP,
                               const float x, const float y, const float z) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   if (iL >= m_tracks.size() || iP >= m_tracks[iL].size()) {
     std::cerr << m_className << "::SetTrackPoint: Index out of range.\n";
     return;
@@ -130,6 +136,7 @@ void ViewDrift::SetTrackPoint(const unsigned int iL, const unsigned int iP,
 
 void ViewDrift::AddTrackPoint(const unsigned int iL, const float x,
                               const float y, const float z) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   if (iL >= m_tracks.size()) {
     std::cerr << m_className << "::AddTrackPoint: Index out of range.\n";
     return;
@@ -139,16 +146,19 @@ void ViewDrift::AddTrackPoint(const unsigned int iL, const float x,
 }
 
 void ViewDrift::AddExcitation(const float x, const float y, const float z) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   std::array<float, 3> p = {x, y, z};
   m_exc.push_back(std::move(p));
 }
 
 void ViewDrift::AddIonisation(const float x, const float y, const float z) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   std::array<float, 3> p = {x, y, z};
   m_ion.push_back(std::move(p));
 }
 
 void ViewDrift::AddAttachment(const float x, const float y, const float z) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   std::array<float, 3> p = {x, y, z};
   m_ion.push_back(std::move(p));
 }
