@@ -101,6 +101,7 @@ bool MediumMagboltz::SetMaxElectronEnergy(const double e) {
   }
   m_eMax = e;
 
+  std::lock_guard<std::mutex> guard(m_mutex);
   // Determine the energy interval size.
   m_eStep = std::min(m_eMax, m_eHigh) / Magboltz::nEnergySteps;
 
