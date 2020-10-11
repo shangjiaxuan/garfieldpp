@@ -142,8 +142,8 @@ class ComponentTcad3d : public Component {
   double m_pMax = 0.;
 
   // Bounding box
-  double m_xMinBB, m_yMinBB, m_zMinBB;
-  double m_xMaxBB, m_yMaxBB, m_zMaxBB;
+  double m_xMinBB = 0., m_yMinBB = 0., m_zMinBB = 0.;
+  double m_xMaxBB = 0., m_yMaxBB = 0., m_zMaxBB = 0.;
 
   // Element from the previous call
   int m_lastElement = 0;
