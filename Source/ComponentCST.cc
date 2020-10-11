@@ -19,9 +19,6 @@ ComponentCST::ComponentCST() : ComponentFieldMap("CST") {
   // Default bounding box
   m_minBoundingBox[2] = -50.;
   m_maxBoundingBox[2] = 50.;
-  m_xlines.clear();
-  m_ylines.clear();
-  m_zlines.clear();
   m_deleteBackground = false;
 }
 
@@ -42,10 +39,10 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   std::ifstream fmplist;
   fmplist.open(mplist.c_str(), std::ios::in);
   if (fmplist.fail()) {
-    std::cerr << m_className << "::Initialise:" << std::endl;
-    std::cerr << "    Could not open material file " << mplist
-              << " for reading." << std::endl;
-    std::cerr << "    The file perhaps does not exist." << std::endl;
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Could not open material file " << mplist
+              << " for reading.\n"
+              << "    The file perhaps does not exist." << std::endl;
     return false;
   }
 
@@ -67,11 +64,10 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
       token = strtok(NULL, " ");
       const int nMaterials = ReadInteger(token, -1, readerror);
       if (readerror) {
-        std::cerr << m_className << "::Initialise:" << std::endl;
-        std::cerr << "    Error reading file " << mplist << " (line " << il
+        std::cerr << m_className << "::Initialise:\n"
+                  << "    Error reading file " << mplist << " (line " << il
                   << ")." << std::endl;
         fmplist.close();
-        ok = false;
         return false;
       }
       m_materials.resize(nMaterials);
@@ -90,16 +86,13 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
       if (readerror) {
         std::cerr << m_className << "::Initialise:" << std::endl;
         std::cerr << "     Error reading file " << mplist << " (line " << il
-                  << "." << std::endl;
+                  << ").\n";
         fmplist.close();
-        ok = false;
         return false;
       } else if (imat < 1 || imat > (int)m_materials.size()) {
-        std::cerr << m_className << "::Initialise:" << std::endl;
-        std::cerr << "    Found out-of-range material index " << imat << "in"
-                  << std::endl;
-        std::cerr << "    material properties file " << mplist << "."
-                  << std::endl;
+        std::cerr << m_className << "::Initialise:\n"
+                  << "    Found out-of-range material index " << imat << "in\n"
+                  << "    material properties file " << mplist << ".\n";
         ok = false;
       } else {
         token = strtok(NULL, " ");
@@ -109,11 +102,10 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
         } else if (strcmp(token, "RSVX") == 0) {
           itype = 2;
         } else {
-          std::cerr << m_className << "::Initialise:" << std::endl;
-          std::cerr << "    Found unknown material property flag " << token
-                    << "" << std::endl;
-          std::cerr << "    on material properties file " << mplist << "(line "
-                    << il << ")." << std::endl;
+          std::cerr << m_className << "::Initialise:\n"
+                    << "    Unknown material property flag " << token << "\n"
+                    << "    in material properties file " << mplist 
+                    << " (line " << il << ").\n";
           ok = false;
         }
         token = strtok(NULL, " ");
@@ -123,11 +115,10 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
           m_materials[imat - 1].ohm = ReadDouble(token, -1, readerror);
           token = strtok(NULL, " ");
           if (strcmp(token, "PERX") != 0) {
-            std::cerr << m_className << "::Initialise:" << std::endl;
-            std::cerr << "   Found unknown material property falg " << token
-                      << "" << std::endl;
-            std::cerr << "   on material file " << mplist << " (material "
-                      << imat << ").\n)";
+            std::cerr << m_className << "::Initialise:\n"
+                      << "   Unknown material property flag " << token << "\n"
+                      << "   in material file " << mplist << " (material "
+                      << imat << ").\n";
             ok = false;
           } else {
             token = strtok(NULL, " ");
@@ -135,11 +126,10 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
           }
         }
         if (readerror) {
-          std::cerr << m_className << "::Initialise:" << std::endl;
-          std::cerr << "     Error reading file " << mplist << "(line " << il
-                    << ")." << std::endl;
+          std::cerr << m_className << "::Initialise:\n"
+                    << "     Error reading file " << mplist 
+                    << " (line " << il << ")." << std::endl;
           fmplist.close();
-          ok = false;
           return false;
         }
         if (m_debug) {
@@ -177,10 +167,9 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
     }
   }
   if (epsmin < 0.) {
-    std::cerr << m_className << "::Initialise:" << std::endl;
-    std::cerr << "     No material with positive permittivity found in"
-              << std::endl;
-    std::cerr << "     material list " << mplist.c_str() << "." << std::endl;
+    std::cerr << m_className << "::Initialise:\n"
+              << "     No material with positive permittivity found in\n"
+              << "     material list " << mplist << ".\n";
     ok = false;
   } else {
     for (unsigned int imat = 0; imat < m_materials.size(); ++imat) {
@@ -192,10 +181,9 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
     }
   }
   // Tell how many lines read
-  std::cout << m_className << "::Initialise:" << std::endl;
-  std::cout << "    Read properties of " << m_materials.size() << " materials"
-            << std::endl;
-  std::cout << "    from file " << mplist << "." << std::endl;
+  std::cout << m_className << "::Initialise:\n"
+            << "    Read properties of " << m_materials.size() << " materials\n"
+            << "    from file " << mplist << "." << std::endl;
   if (m_debug) PrintMaterials();
 
   // Check the value of the unit
@@ -215,10 +203,9 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   std::ifstream fnlist;
   fnlist.open(nlist.c_str(), std::ios::in);
   if (fnlist.fail()) {
-    std::cerr << m_className << "::Initialise:" << std::endl;
-    std::cerr << "    Could not open nodes file " << nlist << " for reading."
-              << std::endl;
-    std::cerr << "    The file perhaps does not exist." << std::endl;
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Could not open nodes file " << nlist << " for reading.\n"
+              << "    The file perhaps does not exist." << std::endl;
     return false;
   }
   // Read the node list
@@ -253,27 +240,24 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
     if (strcmp(token, "x-lines\n") == 0 || strcmp(token, "x-lines") == 0) {
       lines_type = 1;
       if (m_debug) {
-        std::cout << m_className << "::Initialise:" << std::endl;
-        std::cout << "    Reading x-lines from file  " << nlist << "."
-                  << std::endl;
+        std::cout << m_className << "::Initialise:\n"
+                  << "    Reading x-lines from file  " << nlist << ".\n";
       }
       continue;
     }
     if (strcmp(token, "y-lines\n") == 0 || strcmp(token, "y-lines") == 0) {
       lines_type = 2;
       if (m_debug) {
-        std::cout << m_className << "::Initialise:" << std::endl;
-        std::cout << "    Reading y-lines from file  " << nlist << "."
-                  << std::endl;
+        std::cout << m_className << "::Initialise:\n"
+                  << "    Reading y-lines from file  " << nlist << ".\n";
       }
       continue;
     }
     if (strcmp(token, "z-lines\n") == 0 || strcmp(token, "z-lines") == 0) {
       lines_type = 3;
       if (m_debug) {
-        std::cout << m_className << "::Initialise:" << std::endl;
-        std::cout << "    Reading z-lines from file  " << nlist << "."
-                  << std::endl;
+        std::cout << m_className << "::Initialise:\n"
+                  << "    Reading z-lines from file  " << nlist << ".\n";
       }
       continue;
     }
@@ -297,11 +281,10 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   }
   // Check syntax
   if (readerror) {
-    std::cerr << m_className << "::Initialise:" << std::endl;
-    std::cerr << "    Error reading file " << nlist << " (line " << il << ")."
-              << std::endl;
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Error reading file " << nlist 
+              << " (line " << il << ").\n";
     fnlist.close();
-    ok = false;
     return false;
   }
   // Close the file
@@ -496,8 +479,8 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   }
   FILE* f = fopen(dataFile.c_str(), "rb");
   if (f == nullptr) {
-    std::cerr << m_className << "::Initialise:" << std::endl;
-    std::cerr << "    Could not open file:" << dataFile.c_str() << std::endl;
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Could not open file " << dataFile << std::endl;
     return false;
   }
 
@@ -507,16 +490,14 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
 
   if (fileSize < 1000) {
     fclose(f);
-    std::cerr << m_className << "::Initialise:" << std::endl;
-    std::cerr << "     Error. The file is extremely short and does not seem to "
-                 "contain a header or data."
-              << std::endl;
-    ok = false;
+    std::cerr << m_className << "::Initialise:\n"
+              << "     Error. The file is extremely short and does not seem to "
+              << "contain a header or data." << std::endl;
+    return false;
   }
 
   char header[headerSize];
-  size_t result;
-  result = fread(header, sizeof(char), headerSize, f);
+  size_t result = fread(header, sizeof(char), headerSize, f);
   if (result != headerSize) {
     fputs("Reading error while reading header.", stderr);
     exit(3);
@@ -544,16 +525,17 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
       &e_z, &e_m, &nMaterials);
   if (filled != 16) {
     fclose(f);
-    std::cerr << m_className << "::Initialise:" << std::endl;
-    std::cerr << "    Error. File header of " << dataFile.c_str()
-              << " is broken." << std::endl;
-    ok = false;
+    std::cerr << m_className << "::Initialise:\n"
+              << "    File header of " << dataFile << " is broken.\n";
+    return false;
   }
   if (fileSize < 1000 + (m_x + m_y + m_z) * 8 +
                      (n_s + n_x + n_y + n_z + e_s + e_x + e_y + e_z) * 4 +
                      e_m * 1 + (int)nMaterials * 20) {
     fclose(f);
-    ok = false;
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Unexpected file size.\n";
+    return false;
   }
   if (m_debug) {
     std::cout << m_className << "::Initialise:" << std::endl;
@@ -787,9 +769,8 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
       fclose(f);
       std::cerr << m_className << "::SetWeightingField:" << std::endl;
       std::cerr << "     Error. The file is extremely short and does not seem "
-                   "to contain a header or data."
-                << std::endl;
-      ok = false;
+                   "to contain a header or data.\n";
+      return false;
     }
 
     char header[headerSize];
@@ -823,16 +804,17 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
         &e_y, &e_z, &e_m, &nMaterials);
     if (filled != 16) {
       fclose(f);
-      std::cerr << m_className << "::SetWeightingField:" << std::endl;
-      std::cerr << "    Error. File header of " << prnsol.c_str()
-                << " is broken." << std::endl;
-      ok = false;
+      std::cerr << m_className << "::SetWeightingField:\n"
+                << "    File header of " << prnsol << " is broken.\n";
+      return false;
     }
     if (fileSize < 1000 + (m_x + m_y + m_z) * 8 +
                        (nread + n_x + n_y + n_z + e_s + e_x + e_y + e_z) * 4 +
                        e_m * 1 + (int)nMaterials * 20) {
       fclose(f);
-      ok = false;
+      std::cerr << m_className << "::SetWeightingField:\n"
+                << "    Unexpected file size.\n";
+      return false;
     }
     if (m_debug) {
       std::cout << m_className << "::SetWeightingField:" << std::endl;
