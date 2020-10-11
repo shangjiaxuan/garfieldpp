@@ -218,8 +218,7 @@ void MediumGaAs::UpdateTransportParameters() {
   // Update the saturation velocity.
   //  - M. J. Littlejohn, J. R. Hauser, T. H. Glisson, 
   //    J. Appl. Phys. 48 (1977), 4587
-  m_eSatVel = std::max(1.13e-2 - 3.6e-3 * t, 5.e-4);
-  m_hSatVel = std::max(1.13e-2 - 3.6e-3 * t, 5.e-4);
+  m_eSatVel = m_hSatVel = std::max(1.13e-2 - 3.6e-3 * t, 5.e-4);
 
   // Update the impact ionization parameters.
   // Selberherr model parameters from Silvaco Atlas.
