@@ -114,10 +114,9 @@ void Track::SetBetaGamma(const double bg) {
 }
 
 void Track::SetBeta(const double beta) {
-  if (beta <= 0. && beta >= 1.) {
-    std::cerr << m_className << "::SetBeta:\n";
-    std::cerr << "    Particle speed must be between zero"
-              << " and speed of light.\n";
+  if (beta <= 0. || beta >= 1.) {
+    std::cerr << m_className << "::SetBeta:\n"
+              << "    Beta must be between zero and one.\n";
     return;
   }
 
@@ -128,8 +127,8 @@ void Track::SetBeta(const double beta) {
 
 void Track::SetGamma(const double gamma) {
   if (gamma <= 1.) {
-    std::cerr << m_className << "::SetGamma:\n";
-    std::cerr << "    Particle speed must be greater than zero.\n";
+    std::cerr << m_className << "::SetGamma:\n"
+              << "    Gamma must be greater than one.\n";
     return;
   }
 
@@ -140,8 +139,8 @@ void Track::SetGamma(const double gamma) {
 
 void Track::SetMomentum(const double p) {
   if (p <= 0.) {
-    std::cerr << m_className << "::SetMomentum:\n";
-    std::cerr << "    Particle momentum must be greater than zero.\n";
+    std::cerr << m_className << "::SetMomentum:\n"
+              << "    Particle momentum must be greater than zero.\n";
     return;
   }
 
@@ -153,8 +152,8 @@ void Track::SetMomentum(const double p) {
 
 void Track::SetKineticEnergy(const double ekin) {
   if (ekin <= 0.) {
-    std::cerr << m_className << "::SetKineticEnergy:\n";
-    std::cerr << "    Kinetic energy must be greater than zero.\n";
+    std::cerr << m_className << "::SetKineticEnergy:\n"
+              << "    Kinetic energy must be greater than zero.\n";
     return;
   }
 
@@ -166,8 +165,7 @@ void Track::SetKineticEnergy(const double ekin) {
 
 void Track::SetSensor(Sensor* s) {
   if (!s) {
-    std::cerr << m_className << "::SetSensor:\n";
-    std::cerr << "    Sensor pointer is null.\n";
+    std::cerr << m_className << "::SetSensor: Null pointer.\n";
     return;
   }
 
@@ -176,8 +174,7 @@ void Track::SetSensor(Sensor* s) {
 
 void Track::EnablePlotting(ViewDrift* view) {
   if (!view) {
-    std::cerr << m_className << "::EnablePlotting:\n";
-    std::cerr << "    Pointer is null.\n";
+    std::cerr << m_className << "::EnablePlotting: Null pointer.\n";
     return;
   }
 
@@ -187,7 +184,7 @@ void Track::EnablePlotting(ViewDrift* view) {
 
 void Track::DisablePlotting() {
   m_usePlotting = false;
-  m_viewer = NULL;
+  m_viewer = nullptr;
 }
 
 void Track::PlotNewTrack(const double x0, const double y0, const double z0) {
@@ -198,8 +195,7 @@ void Track::PlotNewTrack(const double x0, const double y0, const double z0) {
 
 void Track::PlotCluster(const double x0, const double y0, const double z0) {
   if (m_plotId < 0 || !m_usePlotting || !m_viewer) {
-    std::cerr << m_className << "::PlotCluster:\n";
-    std::cerr << "    No track set. Program bug!\n";
+    std::cerr << m_className << "::PlotCluster: No track set. Program bug!\n";
     return;
   }
   m_viewer->AddTrackPoint(m_plotId, x0, y0, z0);
