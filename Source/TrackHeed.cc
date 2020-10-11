@@ -334,6 +334,7 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
       if (!photon) {
         std::cerr << m_className << "::GetCluster:\n"
                   << "    Particle is neither an electron nor a photon.\n";
+        continue;
       }
       extra += photon->m_energy * 1.e6;
       const double x = photon->position().x * 0.1 + m_cX;
