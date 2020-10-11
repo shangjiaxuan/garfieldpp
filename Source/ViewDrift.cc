@@ -21,7 +21,7 @@ ViewDrift::ViewDrift() : ViewBase("ViewDrift") {
   m_tracks.reserve(100);
   m_exc.reserve(1000);
   m_ion.reserve(1000);
-  m_ion.reserve(1000);
+  m_att.reserve(1000);
 }
 
 void ViewDrift::Clear() {
@@ -30,7 +30,7 @@ void ViewDrift::Clear() {
 
   m_exc.clear();
   m_ion.clear();
-  m_ion.clear();
+  m_att.clear();
 }
 
 void ViewDrift::SetClusterMarkerSize(const double size) {
@@ -304,77 +304,84 @@ void ViewDrift::Plot3d(const bool axis, const bool ogl) {
     if (ogl) pad->GetViewer3D("ogl");
   }
   for (const auto& driftLine : m_driftLines) {
-    TPolyLine3D* pl = new TPolyLine3D(driftLine.first.size());
+    std::vector<float> points;
     for (const auto& p : driftLine.first) {
-      pl->SetNextPoint(p[0], p[1], p[2]);
+      points.push_back(p[0]);
+      points.push_back(p[1]);
+      points.push_back(p[2]);
     }
+    TPolyLine3D pl;
     if (driftLine.second == Particle::Electron) {
-      pl->SetLineColor(m_colElectron);
+      pl.SetLineColor(m_colElectron);
     } else if (driftLine.second == Particle::Hole) {
-      pl->SetLineColor(m_colHole);
+      pl.SetLineColor(m_colHole);
     } else {
-      pl->SetLineColor(m_colIon);
+      pl.SetLineColor(m_colIon);
     }
-    pl->SetLineWidth(1);
-    pl->SetBit(kCanDelete);
-    pl->Draw("same");
+    pl.SetLineWidth(1);
+    const int nP = driftLine.first.size();
+    pl.DrawPolyLine(nP, points.data(), "same");
   }
 
   for (const auto& track : m_tracks) {
-    const unsigned int nPoints = track.size();
-    TPolyLine3D* pl = new TPolyLine3D(nPoints);
+    std::vector<float> points;
     for (const auto& p : track) {
-      pl->SetNextPoint(p[0], p[1], p[2]);
+      points.push_back(p[0]);
+      points.push_back(p[1]);
+      points.push_back(p[2]);
     }
-    pl->SetLineColor(m_colTrack);
-    pl->SetLineWidth(1);
-    pl->SetBit(kCanDelete);
-    pl->Draw("same");
+    TPolyLine3D pl;
+    pl.SetLineColor(m_colTrack);
+    pl.SetLineWidth(1);
+    const int nP = track.size();
+    pl.DrawPolyLine(nP, points.data(), "same");
     if (!m_drawClusters) continue;
-    TPolyMarker3D* pm = new TPolyMarker3D(nPoints, 20);
-    for (const auto& p : track) {
-      pm->SetNextPoint(p[0], p[1], p[2]);
-    }
-    pm->SetMarkerColor(m_colTrack);
-    pm->SetMarkerSize(m_markerSizeCluster);
-    pm->SetBit(kCanDelete);
-    pm->Draw("same");
+    TPolyMarker3D pm;
+    pm.SetMarkerColor(m_colTrack);
+    pm.SetMarkerSize(m_markerSizeCluster);
+    pm.DrawPolyMarker(nP, points.data(), 20, "same");
   }
 
   if (!m_exc.empty()) {
-    const unsigned int nP = m_exc.size();
-    TPolyMarker3D* pm = new TPolyMarker3D(nP, 20);
-    for (unsigned int i = 0; i < nP; ++i) {
-      pm->SetPoint(i, m_exc[i][0], m_exc[i][1], m_exc[i][2]);
+    const size_t nP = m_exc.size();
+    std::vector<float> points;
+    for (size_t i = 0; i < nP; ++i) {
+      points.push_back(m_exc[i][0]);
+      points.push_back(m_exc[i][1]);
+      points.push_back(m_exc[i][2]);
     }
-    pm->SetMarkerColor(m_colExcitation);
-    pm->SetMarkerSize(m_markerSizeCollision);
-    pm->SetBit(kCanDelete);
-    pm->Draw("same");
+    TPolyMarker3D pm;
+    pm.SetMarkerColor(m_colExcitation);
+    pm.SetMarkerSize(m_markerSizeCollision);
+    pm.DrawPolyMarker(nP, points.data(), 20, "same");
   }
 
   if (!m_ion.empty()) {
-    const unsigned int nP = m_ion.size();
-    TPolyMarker3D* pm = new TPolyMarker3D(nP, 20);
-    for (unsigned int i = 0; i < nP; ++i) {
-      pm->SetPoint(i, m_ion[i][0], m_ion[i][1], m_ion[i][2]);
+    const size_t nP = m_ion.size();
+    std::vector<float> points;
+    for (size_t i = 0; i < nP; ++i) {
+      points.push_back(m_ion[i][0]);
+      points.push_back(m_ion[i][1]);
+      points.push_back(m_ion[i][2]);
     }
-    pm->SetMarkerColor(m_colIonisation);
-    pm->SetMarkerSize(m_markerSizeCollision);
-    pm->SetBit(kCanDelete);
-    pm->Draw("same");
+    TPolyMarker3D pm;
+    pm.SetMarkerColor(m_colIonisation);
+    pm.SetMarkerSize(m_markerSizeCollision);
+    pm.DrawPolyMarker(nP, points.data(), 20, "same");
   }
 
   if (!m_att.empty()) {
-    const unsigned int nP = m_att.size();
-    TPolyMarker3D* pm = new TPolyMarker3D(nP, 20);
-    for (unsigned int i = 0; i < nP; ++i) {
-      pm->SetPoint(i, m_att[i][0], m_att[i][1], m_att[i][2]);
+    const size_t nP = m_att.size();
+    std::vector<float> points;
+    for (size_t i = 0; i < nP; ++i) {
+      points.push_back(m_att[i][0]);
+      points.push_back(m_att[i][1]);
+      points.push_back(m_att[i][2]);
     }
-    pm->SetMarkerColor(m_colAttachment);
-    pm->SetMarkerSize(m_markerSizeCollision);
-    pm->SetBit(kCanDelete);
-    pm->Draw("same");
+    TPolyMarker3D pm;
+    pm.SetMarkerColor(m_colAttachment);
+    pm.SetMarkerSize(m_markerSizeCollision);
+    pm.DrawPolyMarker(nP, points.data(), 20, "same");
   }
   pad->Update();
 
