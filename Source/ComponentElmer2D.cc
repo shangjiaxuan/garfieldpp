@@ -205,7 +205,6 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     std::cerr << hdr << "\n    Error reading number of materials from "
               << mplist << ".\n";
     fmplist.close();
-    ok = false;
     return false;
   }
   const unsigned int nMaterials = ReadInteger(token, 0, readerror);
@@ -224,7 +223,6 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     if (readerror) {
       PrintErrorReadingFile(hdr, mplist, il);
       fmplist.close();
-      ok = false;
       return false;
     }
     m_materials[il - 2].eps = dc;
@@ -310,7 +308,6 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     if (readerror) {
       PrintErrorReadingFile(hdr, elist, il);
       felems.close();
-      ok = false;
       return false;
     }
 
@@ -436,9 +433,6 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
     return false;
   }
 
-  // Keep track of the success.
-  bool ok = true;
-
   // Open the voltage list.
   std::ifstream fwvolt;
   fwvolt.open(wvolt.c_str(), std::ios::in);
@@ -475,7 +469,6 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
     std::cerr << hdr << "\n    Error reading past header of potentials file "
               << wvolt << ".\n";
     fwvolt.close();
-    ok = false;
     return false;
   }
 
@@ -495,7 +488,6 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
     if (readerror) {
       PrintErrorReadingFile(hdr, wvolt, il);
       fwvolt.close();
-      ok = false;
       return false;
     }
     // Place the weighting potential at its appropriate node and index.
@@ -507,12 +499,7 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
   std::cout << hdr << "\n    Read potentials from file " << wvolt << ".\n";
 
   // Set the ready flag.
-  m_wfieldsOk[iw] = ok;
-  if (!ok) {
-    std::cerr << hdr << "\n    Field map could not "
-              << "be read and cannot be interpolated.\n";
-    return false;
-  }
+  m_wfieldsOk[iw] = true;
   return true;
 }
 
