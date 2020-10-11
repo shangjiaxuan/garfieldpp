@@ -95,7 +95,7 @@ class TrackSrim : public Track {
   /// Fano factor [-]
   double m_fano = -1.;
   /// Charge of ion
-  double m_qion;
+  double m_qion = 1.;
   /// Mass of ion [MeV]
   double m_mion = -1.;
   /// A and Z of the gas
@@ -118,7 +118,7 @@ class TrackSrim : public Track {
   std::vector<double> m_longstraggle;
 
   /// Index of the next cluster to be returned
-  unsigned int m_currcluster;
+  unsigned int m_currcluster = 0;
   /// Fluctuation model (0 = none, 1 = Landau, 2 = Vavilov,
   ///                    3 = Gaussian, 4 = Combined)
   unsigned int m_model = 4;
