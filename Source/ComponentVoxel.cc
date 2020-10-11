@@ -658,7 +658,7 @@ void ComponentVoxel::SetMedium(const unsigned int i, Medium* m) {
 }
 
 Medium* ComponentVoxel::GetMedium(const unsigned int i) const {
-  if (i > m_media.size()) {
+  if (i >= m_media.size()) {
     std::cerr << m_className << "::GetMedium: Index out of range.\n";
     return nullptr;
   }
