@@ -583,9 +583,8 @@ bool MediumGas::ReadHeader(std::ifstream& gasfile, int& version,
 
   gasok.reset();
   bool done = false;
-  while (!done) {
-    char line[256];
-    gasfile.getline(line, 256);
+  char line[256];
+  while (gasfile.getline(line, 256)) {
     const bool quotes = (strstr(line, "\"") != NULL);
     if (strncmp(line, " The gas tables follow:", 8) == 0 ||
         strncmp(line, "The gas tables follow:", 7) == 0) {
@@ -749,7 +748,7 @@ bool MediumGas::ReadHeader(std::ifstream& gasfile, int& version,
       token = strtok(NULL, " :,%");
     }
   }
-  return true;
+  return done;
 }
 
 void MediumGas::ReadRecord3D(std::ifstream& gasfile, 
