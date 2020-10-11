@@ -144,7 +144,8 @@ class ComponentFieldMap : public Component {
   std::array<double, 3> m_mapna;
   std::array<double, 3> m_cells;
 
-  double m_mapvmin, m_mapvmax;
+  double m_mapvmin = 0.;
+  double m_mapvmax = 0.;
 
   std::array<bool, 3> m_setang;
 
@@ -238,7 +239,7 @@ class ComponentFieldMap : public Component {
                    const Element& element) const;
   /// Calculate local coordinates for linear quadrilaterals.
   int Coordinates4(const double x, const double y, const double z, double& t1,
-                   double& t2, double& t3, double& t4, double jac[4][4],
+                   double& t2, double& t3, double& t4, 
                    double& det, const Element& element) const;
   /// Calculate local coordinates for curved quadratic quadrilaterals.
   int Coordinates5(const double x, const double y, const double z, double& t1,
