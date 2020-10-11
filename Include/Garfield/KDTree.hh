@@ -109,11 +109,14 @@ private:
   friend class KDTree;
 
   // Dimension to cut.
-  size_t cut_dim; 
+  size_t cut_dim = 0; 
   // Cut value.
-  double cut_val, cut_val_left, cut_val_right;  
+  double cut_val = 0.;
+  double cut_val_left = 0.;
+  double cut_val_right = 0.;
   // Extents in index array for searching
-  int m_l, m_u;  
+  int m_l = 0;
+  int m_u = 0;
   // [min,max] of the box enclosing all points
   std::vector<std::array<double, 2> > box; 
 
