@@ -757,10 +757,9 @@ bool ComponentTcad3d::LoadData(const std::string& datafilename) {
     m_vertices[i].ey = 0.;
     m_vertices[i].ez = 0.;
   }
-  while (!datafile.fail()) {
-    // Read one line.
-    std::string line;
-    std::getline(datafile, line);
+  // Read the file line by line.
+  std::string line;
+  while (std::getline(datafile, line)) {
     // Strip white space from beginning of line.
     ltrim(line);
     // Find data section.
@@ -935,10 +934,9 @@ bool ComponentTcad3d::LoadWeightingField(const std::string& datafilename,
 
   const unsigned int nVertices = m_vertices.size();
   bool ok = true;
-  while (!datafile.fail()) {
-    // Read one line.
-    std::string line;
-    std::getline(datafile, line);
+  // Read the file line by line.
+  std::string line;
+  while (std::getline(datafile, line)) {
     // Strip white space from beginning of line.
     ltrim(line);
     // Find data section.
@@ -1080,10 +1078,9 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
 
   // Get the number of regions.
   unsigned int nRegions = 0;
-  while (!gridfile.fail()) {
-    // Read one line.
-    std::string line;
-    std::getline(gridfile, line);
+  // Read the file line by line.
+  std::string line;
+  while (std::getline(gridfile, line)) {
     ++iLine;
     // Strip white space from the beginning of the line.
     ltrim(line);
@@ -1134,9 +1131,7 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
   }
 
   // Get the region names.
-  while (!gridfile.fail()) {
-    std::string line;
-    std::getline(gridfile, line);
+  while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
     // Find entry 'regions'.
@@ -1184,9 +1179,7 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
 
   // Get the vertices.
   unsigned int nVertices = 0;
-  while (!gridfile.fail()) {
-    std::string line;
-    std::getline(gridfile, line);
+  while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
     // Find section 'Vertices'.
@@ -1239,9 +1232,7 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
   // Temporary arrays for storing edge points.
   std::vector<int> edgeP1;
   std::vector<int> edgeP2;
-  while (!gridfile.fail()) {
-    std::string line;
-    std::getline(gridfile, line);
+  while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
     // Find section 'Edges'.
@@ -1309,9 +1300,7 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
   // Get the "faces".
   int nFaces = 0;
   std::vector<Face> faces;
-  while (!gridfile.fail()) {
-    std::string line;
-    std::getline(gridfile, line);
+  while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
     // Find section 'Faces'.
@@ -1368,9 +1357,7 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
 
   // Get the elements.
   int nElements = 0;
-  while (!gridfile.fail()) {
-    std::string line;
-    std::getline(gridfile, line);
+  while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
     // Find section 'Elements'.
@@ -1542,10 +1529,7 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
   }
 
   // Assign regions to elements.
-  std::string name;
-  while (!gridfile.fail()) {
-    std::string line;
-    std::getline(gridfile, line);
+  while (std::getline(gridfile, line)) {
     ltrim(line);
     // Find section 'Region'.
     if (line.substr(0, 6) != "Region") continue;
@@ -1562,6 +1546,7 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
+    std::string name;
     data >> name;
     data.clear();
     const int index = FindRegion(name);

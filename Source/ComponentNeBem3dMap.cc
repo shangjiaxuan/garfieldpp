@@ -813,9 +813,8 @@ bool ComponentNeBem3dMap::LoadData(const std::string& filename,
   std::string line;
   unsigned int nLines = 0;
   bool bad = false;
-  while (!infile.fail()) {
-    // Read one line.
-    std::getline(infile, line);
+  // Read the file line by line.
+  while (std::getline(infile, line)) {
     ++nLines;
     // Strip white space from beginning of line.
     ltrim(line);
