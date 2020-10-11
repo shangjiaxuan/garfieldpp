@@ -230,8 +230,8 @@ class PhenoPhotoAbsCS : public PhotoAbsCS {
   PhenoPhotoAbsCS* copy() const override { return new PhenoPhotoAbsCS(*this); }
 
  private:
-  double power;
-  double factor;
+  double power = 0.;
+  double factor = 0.;
 };
 
 /// Sampling of secondary particles.
@@ -546,17 +546,17 @@ class ExAtomPhotoAbsCS : public AtomPhotoAbsCS {
   std::vector<std::shared_ptr<PhotoAbsCS> > m_acs;
 
   // 3 variables for printing listings
-  double integ_abs_before_corr;
-  double integ_abs_after_corr;
-  double integ_ioniz_after_corr;
+  double integ_abs_before_corr = 0.;
+  double integ_abs_after_corr = 0.;
+  double integ_ioniz_after_corr = 0.;
   /// Excitation cross-section (assumed in the lowest shell).
-  double height_of_excitation;
+  double height_of_excitation = 0.;
   /// Boundaries of excitation.
-  double exener[2];
+  double exener[2] = {0., 0.};
 
-  double minimal_threshold;     // make shifts if necessary
+  double minimal_threshold = 0.; 
   // The shells are corrected on the minimal_threshold "on the fly".
-  // It the threshold of the atomic shell is less then minimal_threshold,
+  // If the threshold of the atomic shell is less then minimal_threshold,
   // the difference is subtracted from the energy for which
   // the cross section is requested.
   // exener[2] is corrected at initialization in first main constructor.

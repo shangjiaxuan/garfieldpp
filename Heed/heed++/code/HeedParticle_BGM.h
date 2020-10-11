@@ -16,7 +16,7 @@ class HeedParticle_BGM : public eparticle {
   /// Default constructor.
   HeedParticle_BGM() : eparticle() {}
   /// Constructor.
-  /// if fs_loss_only == 1 - only transfer energy and
+  /// if fs_loss_only == true - only transfer energy and
   /// no other physics: no deposition of clusters,
   /// no generation of virtual photons.
   /// Thus it is just a PAI without even clusters
@@ -35,10 +35,10 @@ class HeedParticle_BGM : public eparticle {
   void physics(std::vector<gparticle*>& secondaries) override;
 
  private:
-  bool m_print_listing;
-  long m_particle_number;
+  bool m_print_listing = false;
+  long m_particle_number = 0;
 
-  bool m_loss_only;
+  bool m_loss_only = false;
   std::vector<double> m_etransf;
   std::vector<long> m_natom;
   std::vector<long> m_nshell;

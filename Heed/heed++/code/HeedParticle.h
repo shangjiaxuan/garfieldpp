@@ -35,7 +35,7 @@ class HeedParticle : public eparticle {
 
  private:
   bool m_print_listing = false;
-  long m_particle_number;
+  long m_particle_number = 0;
 
   bool m_loss_only = false;
   std::vector<double> m_etransf;
