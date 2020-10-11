@@ -608,7 +608,7 @@ class MolecPhotoAbsCS {
   double get_integral_ICS(double energy1, double energy2) const;
 
   /// Sum up the atomic numbers of all atoms in the molecule.
-  int get_total_Z() const;
+  size_t get_total_Z() const;
   /// Retrieve W value [MeV].
   double get_W() const { return W; }
   /// Retrieve Fano factor.

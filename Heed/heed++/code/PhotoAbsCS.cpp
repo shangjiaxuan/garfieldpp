@@ -1116,8 +1116,7 @@ ExAtomPhotoAbsCS::ExAtomPhotoAbsCS(int fZ,
   // It is not clear whether it is right, perhaps this is one of possible ways
   if (ener[0] < thr[qshell - 1]) {
     for (long ne = 0; ne < qe && (ener[ne] < thr[qshell - 1] ||
-                                  (ener[ne] >= thr[qshell - 1] && ne > 1 &&
-                                   CS[ne - 1] <= CS[ne - 2]));
+                                  (ne > 1 && CS[ne - 1] <= CS[ne - 2]));
          ne++) {
       if (ne > 0) left_CS[ne - 1] = 0.0;
       nce = ne;
@@ -1910,11 +1909,11 @@ double MolecPhotoAbsCS::get_integral_ICS(double en1, double en2) const {
   return s;
 }
 
-int MolecPhotoAbsCS::get_total_Z() const {
-  mfunname("int MolecPhotoAbsCS::get_total_Z() const");
-  const long q = qatom_ps.size();
-  int s = 0;
-  for (long n = 0; n < q; n++) {
+size_t MolecPhotoAbsCS::get_total_Z() const {
+  mfunname("size_t MolecPhotoAbsCS::get_total_Z() const");
+  const size_t q = qatom_ps.size();
+  size_t s = 0;
+  for (size_t n = 0; n < q; n++) {
     s += qatom_ps[n] * atom[n]->get_Z();
   }
   return s;
