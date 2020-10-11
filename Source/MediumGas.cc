@@ -2723,9 +2723,6 @@ bool MediumGas::GetGasInfo(const std::string& gasname, double& a,
   } else if (gasname == "nC5H12") {
     a = 5 * 12.0107 + 12 * 1.00794;
     z = 5 * 6 + 12;
-  } else if (gasname == "N2") {
-    a = 2 * 14.0067;
-    z = 2 * 7;
   } else if (gasname == "GeH4") {
     a = 72.64 + 4 * 1.00794;
     z = 32 + 4;
