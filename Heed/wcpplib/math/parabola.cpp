@@ -19,7 +19,7 @@ namespace Heed {
 
 Parabola::Parabola(const Parabola& f) { *this = f; }
 
-Parabola::Parabola(double x[3], double y[3]) : s_det(0), s_dxzero(0) {
+Parabola::Parabola(double x[3], double y[3]) {
   mfunname("Parabola::Parabola(double x[3], double y[3])");
 
   check_econd12a(x[0], ==, x[1], "x[2]=" << x[2] << " y[0]=" << y[0] << " y[1]="
@@ -152,8 +152,7 @@ Parabola::Parabola(double x1, double x2, double x3, double y1, double y2,
   }
 }
 
-Parabola::Parabola(double x[3], double y[3], int /*ii*/) 
-    : s_det(0), s_dxzero(0) {
+Parabola::Parabola(double x[3], double y[3], int /*ii*/) { 
   mfunname("Parabola::Parabola(double x[3], double y[3], int)");
 
   check_econd12(x[0], ==, x[1], mcerr);

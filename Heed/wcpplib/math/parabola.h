@@ -38,14 +38,14 @@ class Parabola {
   }
 
   /// Default constructor.
-  Parabola() : da(0.0), db(0.0), dc(0.0), s_det(0), s_dxzero(0) {}
+  Parabola() = default;
   /// Constructor from coefficients.
   Parabola(double fa, double fb, double fc)
-      : da(fa), db(fb), dc(fc), s_det(0), s_dxzero(0) {}
+      : da(fa), db(fb), dc(fc) {}
   /// Constructor from three points.
   Parabola(double x[3], double y[3]);
   /// Constructor from three points. 
-  /// At the third one, the  derivative of the function is supplied instead of
+  /// At the third one, the derivative of the function is supplied instead of
   /// the function. 
   Parabola(double x[3], double y[3], int);
   /// Constructor from three points.
@@ -73,11 +73,11 @@ class Parabola {
   }
 
  private:
-  double da, db, dc;
-  mutable int s_det;
-  mutable double det;
-  mutable int s_dxzero;
-  mutable int qdxzero;
+  double da = 0., db = 0., dc = 0.;
+  mutable int s_det = 0;
+  mutable double det = 0.;
+  mutable int s_dxzero = 0;
+  mutable int qdxzero = 0;
   mutable double dxzero[2];
 };
 
