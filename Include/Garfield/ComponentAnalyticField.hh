@@ -438,9 +438,9 @@ class ComponentAnalyticField : public Component {
 
   struct Pixel {
     std::string type;   ///< Label.
-    int ind;            ///< Readout group.
-    double smin, smax;  ///< Coordinates in x/y.
-    double zmin, zmax;  ///< Coordinates in z.
+    int ind = 0;        ///< Readout group.
+    double smin = 0., smax = 0.;  ///< Coordinates in x/y.
+    double zmin = 0., zmax = 0.;  ///< Coordinates in z.
     double gap = -1.;   ///< Distance to the opposite electrode.
     double cphi = 1.;   ///< Rotation.
     double sphi = 0.;   ///< Rotation.
