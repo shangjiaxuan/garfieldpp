@@ -1093,17 +1093,10 @@ bool MediumSilicon::GetElectronCollision(
     pstar *= sqrt(3. / (1. / m_mLongL + 2. / m_mTransL));
     RndmDirection(px, py, pz, pstar);
     return true;
-  } else {
-    const double pstar = sqrt(2. * ElectronMass * e1);
-    RndmDirection(px, py, pz, pstar);
-    return true;
   }
-
-  std::cerr << m_className << "::GetElectronCollision:"
-            << "   Band index (" << band << ") out of range.\n";
-  e1 = e;
-  type = 0;
-  return false;
+  const double pstar = sqrt(2. * ElectronMass * e1);
+  RndmDirection(px, py, pz, pstar);
+  return true;
 }
 
 void MediumSilicon::ResetCollisionCounters() {

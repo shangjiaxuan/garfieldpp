@@ -591,9 +591,11 @@ bool TrackSrim::EstimateRange(const double ekin, const double step,
     // See how well we are doing.
     PreciseLoss(st3, ekin, deem, dehd);
     const double de3 = deem + dehd;
-    if (m_debug) printf("\tStep 1 = %g cm, dE 1 = %g MeV\n", st1, de1 - ekin);
-    if (m_debug) printf("\tStep 2 = %g cm, dE 2 = %g MeV\n", st2, de2 - ekin);
-    if (m_debug) printf("\tStep 3 = %g cm, dE 3 = %g MeV\n", st3, de3 - ekin);
+    if (m_debug) {
+      std::printf("\tStep 1 = %g cm, dE 1 = %g MeV\n", st1, de1 - ekin);
+      std::printf("\tStep 2 = %g cm, dE 2 = %g MeV\n", st2, de2 - ekin);
+      std::printf("\tStep 3 = %g cm, dE 3 = %g MeV\n", st3, de3 - ekin);
+    }
     //  Update the estimates above and below.
     if (de3 > ekin) {
       st1 = st3;

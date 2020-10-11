@@ -252,9 +252,9 @@ class MediumSilicon : public Medium {
   int m_ieMinG = 0;
 
   // Electron scattering rates
-  double m_cfNullElectronsX;
-  double m_cfNullElectronsL;
-  double m_cfNullElectronsG;
+  double m_cfNullElectronsX = 0.;
+  double m_cfNullElectronsL = 0.;
+  double m_cfNullElectronsG = 0.;
   std::vector<double> m_cfTotElectronsX;
   std::vector<double> m_cfTotElectronsL;
   std::vector<double> m_cfTotElectronsG;
@@ -270,7 +270,7 @@ class MediumSilicon : public Medium {
   std::vector<int> m_scatTypeElectronsG;
 
   // Hole scattering rates
-  double m_cfNullHoles;
+  double m_cfNullHoles = 0.;
   std::vector<double> m_cfTotHoles;
   std::vector<std::vector<double> > m_cfHoles;
   std::vector<double> m_energyLossHoles;

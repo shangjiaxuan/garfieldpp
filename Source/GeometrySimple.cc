@@ -23,19 +23,19 @@ void GeometrySimple::AddSolid(Solid* solid, Medium* medium) {
   }
 
   if (m_hasBoundingBox) {
-    m_xMinBoundingBox = std::min(m_xMinBoundingBox, xmin);
-    m_yMinBoundingBox = std::min(m_yMinBoundingBox, ymin);
-    m_zMinBoundingBox = std::min(m_zMinBoundingBox, zmin);
-    m_xMaxBoundingBox = std::max(m_xMaxBoundingBox, xmax);
-    m_yMaxBoundingBox = std::max(m_yMaxBoundingBox, ymax);
-    m_zMaxBoundingBox = std::max(m_zMaxBoundingBox, zmax);
+    m_bbMin[0] = std::min(m_bbMin[0], xmin);
+    m_bbMin[1] = std::min(m_bbMin[1], ymin);
+    m_bbMin[2] = std::min(m_bbMin[2], zmin);
+    m_bbMax[0] = std::max(m_bbMax[0], xmax);
+    m_bbMax[1] = std::max(m_bbMax[1], ymax);
+    m_bbMax[2] = std::max(m_bbMax[2], zmax);
   } else {
-    m_xMinBoundingBox = xmin;
-    m_yMinBoundingBox = ymin;
-    m_zMinBoundingBox = zmin;
-    m_xMaxBoundingBox = xmax;
-    m_yMaxBoundingBox = ymax;
-    m_zMaxBoundingBox = zmax;
+    m_bbMin[0] = xmin;
+    m_bbMin[1] = ymin;
+    m_bbMin[2] = zmin;
+    m_bbMax[0] = xmax;
+    m_bbMax[1] = ymax;
+    m_bbMax[2] = zmax;
     m_hasBoundingBox = true;
   }
 
@@ -142,9 +142,9 @@ bool GeometrySimple::IsInBoundingBox(const double x, const double y,
     return true;
   }
 
-  if (x >= m_xMinBoundingBox && x <= m_xMaxBoundingBox &&
-      y >= m_yMinBoundingBox && y <= m_yMaxBoundingBox &&
-      z >= m_zMinBoundingBox && z <= m_zMaxBoundingBox)
+  if (x >= m_bbMin[0] && x <= m_bbMax[0] &&
+      y >= m_bbMin[1] && y <= m_bbMax[1] &&
+      z >= m_bbMin[2] && z <= m_bbMax[2])
     return true;
   return false;
 }

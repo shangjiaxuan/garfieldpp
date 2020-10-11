@@ -73,7 +73,6 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
         std::cerr << "    Error reading file " << mplist << " (line " << il
                   << ").\n";
         fmplist.close();
-        ok = false;
         return false;
       }
       m_materials.resize(nMaterials);
@@ -96,7 +95,6 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
         std::cerr << "    Error reading file " << mplist << " (line " << il
                   << ").\n";
         fmplist.close();
-        ok = false;
         return false;
       }
       icurrmat = imat;
@@ -137,7 +135,6 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
         std::cerr << "    Error reading file " << mplist << " line " << il
                   << ").\n";
         fmplist.close();
-        ok = false;
         return false;
       }
     } else if (strcmp(token, "PROPERTY") == 0) {
@@ -165,7 +162,6 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
         std::cerr << "    Error reading file " << mplist << " (line " << il
                   << ").\n";
         fmplist.close();
-        ok = false;
         return false;
       } else if (imat < 1 || imat > (int)m_materials.size()) {
         std::cerr << m_className << "::Initialise:\n";
@@ -190,7 +186,6 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
           std::cerr << "    Error reading file " << mplist << " (line " << il
                     << ").\n";
           fmplist.close();
-          ok = false;
           return false;
         }
       }
@@ -333,7 +328,6 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       std::cerr << "    Error reading file " << elist << " (line " << il
                 << ").\n";
       felist.close();
-      ok = false;
       return false;
     } else if (ielem - 1 != (int)m_elements.size() + nbackground) {
       std::cerr << m_className << "::Initialise:\n";
@@ -516,7 +510,6 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       std::cerr << "    Error reading file " << nlist << " (line " << il
                 << ").\n";
       fnlist.close();
-      ok = false;
       return false;
     }
     // Check synchronisation
@@ -612,7 +605,6 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       std::cerr << "    Error reading file " << prnsol << " (line << " << il
                 << ").\n";
       fprnsol.close();
-      ok = false;
       return false;
     }
     // Check node number and store if OK

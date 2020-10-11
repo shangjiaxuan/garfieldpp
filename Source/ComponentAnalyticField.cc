@@ -4579,7 +4579,7 @@ void ComponentAnalyticField::ConformalMap(const std::complex<double>& z,
     // Z coincides with the centre. Results are trivial.
     ww = 0;
     wd = m_kappa;
-  } else if (abs(z) < 0.75) {
+  } else if (std::abs(z) < 0.75) {
     // Z is close to the centre. Series expansion.
     std::complex<double> zterm = pow(m_kappa * z, m_ntube);
     std::complex<double> wdsum = 0.;
@@ -6093,7 +6093,7 @@ bool ComponentAnalyticField::SetupWireSignals() {
   }
 
   // Have them fourier transformed (singly periodic case).
-  if ((m_fperx && !m_fpery) || (m_fpery && !m_fperx)) {
+  if (m_fperx != m_fpery) {
     for (unsigned int i = 0; i < m_nWires; ++i) {
       for (int m = -m_nFourier / 2; m < m_nFourier / 2; ++m) {
         // CALL IONIO(M,M,2,I,IFAIL)
@@ -6193,7 +6193,7 @@ bool ComponentAnalyticField::SetupWireSignals() {
   }
 
   // And transform the matrices back to the original domain.
-  if ((m_fperx && !m_fpery) || (m_fpery && !m_fperx)) {
+  if (m_fperx != m_fpery) {
     for (unsigned int i = 0; i < m_nWires; ++i) {
       for (int m = -m_nFourier / 2; m < m_nFourier / 2; ++m) {
         // CALL IONIO(M,M,2,I,IFAIL)
@@ -6969,7 +6969,7 @@ double ComponentAnalyticField::Wpot(const double xin, const double yin,
   double xpos = xin, ypos = yin;
   if (m_polar) Cartesian2Internal(xin, yin, xpos, ypos);
   // Stop here if there are no weighting fields defined.
-  if (m_readout.empty()) return false;
+  if (m_readout.empty()) return 0.;
   if (!m_sigset) {
     std::cerr << m_className << "::Wpot: No weighting potentials available.\n";
     return 0.;

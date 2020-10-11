@@ -1,6 +1,7 @@
 #ifndef G_GEOMETRY_SIMPLE_H
 #define G_GEOMETRY_SIMPLE_H
 
+#include <array>
 #include <vector>
 
 #include "Geometry.hh"
@@ -41,12 +42,12 @@ class GeometrySimple : public Geometry {
   bool IsInBoundingBox(const double x, const double y, const double z) const;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) override {
-    xmin = m_xMinBoundingBox;
-    ymin = m_yMinBoundingBox;
-    zmin = m_zMinBoundingBox;
-    xmax = m_xMaxBoundingBox;
-    ymax = m_yMaxBoundingBox;
-    zmax = m_zMaxBoundingBox;
+    xmin = m_bbMin[0];
+    ymin = m_bbMin[1];
+    zmin = m_bbMin[2];
+    xmax = m_bbMax[0];
+    ymax = m_bbMax[1];
+    zmax = m_bbMax[2];
     return true;
   }
 
@@ -61,8 +62,8 @@ class GeometrySimple : public Geometry {
 
   // Bounding box ranges
   bool m_hasBoundingBox = false;
-  double m_xMinBoundingBox, m_yMinBoundingBox, m_zMinBoundingBox;
-  double m_xMaxBoundingBox, m_yMaxBoundingBox, m_zMaxBoundingBox;
+  std::array<double, 3> m_bbMin = {{0., 0., 0.}};
+  std::array<double, 3> m_bbMax = {{0., 0., 0.}};
 
   /// Switch on/off debugging messages.
   bool m_debug = false;

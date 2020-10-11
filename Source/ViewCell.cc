@@ -461,8 +461,10 @@ void ViewCell::PlotTube(const double x0, const double y0,
   } else {
     tube = m_geo->MakePgon("Tube", m_geo->GetMedium("Metal"), 0., 360., n, 2);
     TGeoPgon* pgon = dynamic_cast<TGeoPgon*>(tube->GetShape());
-    pgon->DefineSection(0, -lz, r1, r2);
-    pgon->DefineSection(1, +lz, r1, r2);
+    if (pgon) {
+      pgon->DefineSection(0, -lz, r1, r2);
+      pgon->DefineSection(1, +lz, r1, r2);
+    }
   }
   tube->SetLineColor(kGreen + 2);
   tube->SetTransparency(75);

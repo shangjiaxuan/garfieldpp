@@ -1648,7 +1648,6 @@ double ComponentNeBem2d::BoxPotential(const double a, const double b,
 void ComponentNeBem2d::BoxField(const double a, const double b,
                                 const double x, const double y,
                                 double& ex, double& ey) const {
-  ex = ey = 0.;
   const std::array<double, 2> dx = {x - a, x + a};
   const std::array<double, 2> dy = {y - b, y + b};
   const std::array<double, 2> dx2 = {dx[0] * dx[0], dx[1] * dx[1]};

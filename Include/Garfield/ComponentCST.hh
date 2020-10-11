@@ -234,24 +234,24 @@ class ComponentCST : public ComponentFieldMap {
   std::vector<double> m_xlines;  ///< x positions in used in the CST mesh
   std::vector<double> m_ylines;  ///< y positions in used in the CST mesh
   std::vector<double> m_zlines;  ///< z positions in used in the CST mesh
-  std::vector<float>
-      m_potential;  ///< Potentials resulting from the CST simulation.
-  std::map<std::string, std::vector<float> >
-      m_weightingFields;  ///<Map of weighting field potentials
-  std::vector<unsigned char> m_elementMaterial;  ///< This is the material id
-                                                 ///for each element. unsigned
-                                                 ///char is used since it uses
-                                                 ///only 1byte
-  unsigned int m_nx;  ///< Number of mesh lines in x direction
-  unsigned int m_ny;  ///< Number of mesh lines in y direction
-  unsigned int m_nz;  ///< Number of mesh lines in z direction
+  /// Potentials resulting from the CST simulation.
+  std::vector<float> m_potential;  
+  /// Map of weighting field potentials
+  std::map<std::string, std::vector<float> > m_weightingFields;  
+  /// Material id for each element (unsigned char since it uses only 1 byte)
+  std::vector<unsigned char> m_elementMaterial;  
+
+  unsigned int m_nx = 0;  ///< Number of mesh lines in x direction
+  unsigned int m_ny = 0;  ///< Number of mesh lines in y direction
+  unsigned int m_nz = 0;  ///< Number of mesh lines in z direction
   unsigned int m_nElements = 0; ///< Number of elements
   unsigned int m_nNodes = 0;    ///< Number of nodes
   // If true x,y,z fields of this component are disabled (e=0 V/cm).
   bool disableFieldComponent[3] = {false, false, false};
   bool doShaping = false;
-  static const unsigned int headerSize =
-      1000;  ///< Size of the header in binary files used in the CST export
+  /// Size of the header in binary files used in the CST export
+  static const unsigned int headerSize = 1000;  
+
   void ElectricFieldBinary(const double x, const double y, const double z,
                            double& ex, double& ey, double& ez, double& v,
                            Medium*& m, int& status,

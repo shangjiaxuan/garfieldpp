@@ -583,9 +583,8 @@ bool MediumGas::ReadHeader(std::ifstream& gasfile, int& version,
 
   gasok.reset();
   bool done = false;
-  while (!done) {
-    char line[256];
-    gasfile.getline(line, 256);
+  char line[256];
+  while (gasfile.getline(line, 256)) {
     const bool quotes = (strstr(line, "\"") != NULL);
     if (strncmp(line, " The gas tables follow:", 8) == 0 ||
         strncmp(line, "The gas tables follow:", 7) == 0) {
@@ -749,7 +748,7 @@ bool MediumGas::ReadHeader(std::ifstream& gasfile, int& version,
       token = strtok(NULL, " :,%");
     }
   }
-  return true;
+  return done;
 }
 
 void MediumGas::ReadRecord3D(std::ifstream& gasfile, 
@@ -2723,9 +2722,6 @@ bool MediumGas::GetGasInfo(const std::string& gasname, double& a,
   } else if (gasname == "nC5H12") {
     a = 5 * 12.0107 + 12 * 1.00794;
     z = 5 * 6 + 12;
-  } else if (gasname == "N2") {
-    a = 2 * 14.0067;
-    z = 2 * 7;
   } else if (gasname == "GeH4") {
     a = 72.64 + 4 * 1.00794;
     z = 32 + 4;

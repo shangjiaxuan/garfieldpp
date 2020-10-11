@@ -36,6 +36,11 @@ double Mag2(const double x, const double y) {
   return x * x + y * y;
 }
 
+double Dist(const std::array<double, 3>& x0,
+            const std::array<double, 3>& x1) {
+
+  return Mag(x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]);
+}
 }
 
 namespace Garfield {
@@ -1305,14 +1310,8 @@ double DriftLineRKF::IntegrateDiffusion(const std::array<double, 3>& xi,
   double var1 = sigma1 * sigma1;
 
   double integral = 0.;
-  bool done = false;
-  while (!done) {
-    // Check if we are close to the end point.
-    if (Mag(xe[0] - x0[0], xe[1] - x0[1], xe[2] - x0[2]) < 1.e-6) {
-      done = true;
-      break;
-    }
-    const double d = Mag(x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]);
+  while (Dist(xe, x0) > 1.e-6) {
+    const double d = Dist(x1, x0);
     if (d < 1.e-6) {
       // Step length has become very small.
       if (m_debug) {
@@ -1429,14 +1428,8 @@ double DriftLineRKF::IntegrateAlpha(const std::array<double, 3>& xi,
     return 0.;
   }
   double integral = 0.;
-  bool done = false;
-  while (!done) {
-    // Check if we are close to the end point.
-    if (Mag(xe[0] - x0[0], xe[1] - x0[1], xe[2] - x0[2]) < 1.e-6) {
-      done = true;
-      break;
-    }
-    const double d = Mag(x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]);
+  while (Dist(xe, x0) > 1.e-6) {
+    const double d = Dist(x1, x0);
     if (d < 1.e-6) {
       // Step length has become very small.
       if (m_debug) {
@@ -1525,14 +1518,8 @@ double DriftLineRKF::IntegrateEta(const std::array<double, 3>& xi,
     return 0.;
   }
   double integral = 0.;
-  bool done = false;
-  while (!done) {
-    // Check if we are close to the end point.
-    if (Mag(xe[0] - x0[0], xe[1] - x0[1], xe[2] - x0[2]) < 1.e-6) {
-      done = true;
-      break;
-    }
-    const double d = Mag(x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]);
+  while (Dist(xe, x0) > 1.e-6) {
+    const double d = Dist(x1, x0);
     if (d < 1.e-6) {
       // Step length has become very small.
       if (m_debug) {
