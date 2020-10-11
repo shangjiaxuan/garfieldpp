@@ -138,8 +138,7 @@ int EqualStepCoorMesh<T>::get_interval(T x, long& n1) const {
   }
   n1 = long((x - xmin) / step);
   if (n1 < 0) {
-    mcerr << "ERROR in EqualStepCoorMesh<T>::get_interval:\n"
-          << "n1 < 0 \n";
+    mcerr << "ERROR in EqualStepCoorMesh<T>::get_interval: n1 < 0\n";
     print(mcerr);
     Iprintn(mcerr, x);
     Iprintn(mcerr, n1);
@@ -586,6 +585,13 @@ int PointCoorMesh<T, D>::get_interval(T x, long& n1, T& b1, long& n2,
 // n1 = t_find_interval< T , T* >(x, q, &amesh);
 #endif
   n2 = n1 + 1;
+  if (n1 < 0 || n1 >= q || n2 < 0 || n2 >= q) {
+    mcerr << "ERROR in PointCoorMesh<T,D>::get_interval:\n"
+          << "n1 < 0 || n1 >= q || n2 < 0 || n2 >= q\n";
+    print(mcerr);
+    Iprint2n(mcerr, n1, n2);
+    spexit(mcerr);
+  }
 #ifndef TLINE_REDUCE_TO_RAW_ARR
   b1 = (*amesh)[n1];
   b2 = (*amesh)[n2];
@@ -593,13 +599,11 @@ int PointCoorMesh<T, D>::get_interval(T x, long& n1, T& b1, long& n2,
   b1 = amesh[n1];
   b2 = amesh[n2];
 #endif
-  if (n1 < 0 || n1 >= q || n2 < 0 || n2 >= q || b1 < xmin || b1 > xmax ||
-      b2 < xmin || b2 > xmax) {
+  if (b1 < xmin || b1 > xmax || b2 < xmin || b2 > xmax) {
     mcerr << "ERROR in PointCoorMesh<T,D>::get_interval:\n"
-          << "n1 < 0 || n1 >= q || n2 < 0 || n2 >= q || b1 < xmin || b1 > xmax "
-             "|| b2 < xmin || b2 > xmax\n";
+          << "b1 < xmin || b1 > xmax || b2 < xmin || b2 > xmax\n";
     print(mcerr);
-    Iprint4n(mcerr, n1, n2, b1, b2);
+    Iprint2n(mcerr, b1, b2);
     spexit(mcerr);
   }
   n_old = n1;
@@ -649,6 +653,13 @@ int PointCoorMesh<T, D>::get_interval_extrap(T x, long& n1, T& b1, long& n2,
 // n1 = t_find_interval< T , T* >(x, q, &amesh);
 #endif
     n2 = n1 + 1;
+    if (n1 < 0 || n1 >= q || n2 < 0 || n2 >= q) {
+      mcerr << "ERROR in PointCoorMesh<T,D>::get_interval:\n"
+            << "n1 < 0 || n1 >= q || n2 < 0 || n2 >= q\n";
+      print(mcerr);
+      Iprint2n(mcerr, n1, n2);
+      spexit(mcerr);
+    }
 #ifndef TLINE_REDUCE_TO_RAW_ARR
     b1 = (*amesh)[n1];
     b2 = (*amesh)[n2];
@@ -656,13 +667,11 @@ int PointCoorMesh<T, D>::get_interval_extrap(T x, long& n1, T& b1, long& n2,
     b1 = amesh[n1];
     b2 = amesh[n2];
 #endif
-    if (n1 < 0 || n1 >= q || n2 < 0 || n2 >= q || b1 < xmin || b1 > xmax ||
-        b2 < xmin || b2 > xmax) {
+    if (b1 < xmin || b1 > xmax || b2 < xmin || b2 > xmax) {
       mcerr << "ERROR in PointCoorMesh<T,D>::get_interval:\n"
-            << "n1 < 0 || n1 >= q || n2 < 0 || n2 >= q || b1 < xmin || b1 > "
-               "xmax || b2 < xmin || b2 > xmax\n";
+            << "b1 < xmin || b1 > xmax || b2 < xmin || b2 > xmax\n";
       print(mcerr);
-      Iprint4n(mcerr, n1, n2, b1, b2);
+      Iprint2n(mcerr, b1, b2);
       spexit(mcerr);
     }
     n_old = n1;
