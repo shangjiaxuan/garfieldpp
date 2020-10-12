@@ -186,7 +186,7 @@ class rectangle : public polygon {
   /// Directions of sides, unit length
   vec dir2;       
   // Dimensions
-  vfloat dim[2];  
+  vfloat dim[2] = {0., 0.};
   rectangle() : polygon() {}
   rectangle(const point& fpiv, vec fdir[2], vfloat fdim[2], vfloat prec);
   // Prec is used to check that sides are perpendicular and

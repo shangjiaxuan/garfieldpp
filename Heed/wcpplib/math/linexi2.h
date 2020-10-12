@@ -67,17 +67,5 @@ class linexi2 : public linexi2_coor {
 };
 std::ostream& operator<<(std::ostream& file, const linexi2& l);
 
-class linexi2B : public linexi2 {
- public:
-  double** B;
-  linexi2B(linexi2& lx);
-  ~linexi2B() { delete B; }
-  void copy(const linexi2B& lxB);
-  linexi2B(const linexi2B& lxB);
-  linexi2B& operator=(const linexi2B& lxB) {
-    copy(lxB);
-    return *this;
-  }
-};
 }
 #endif

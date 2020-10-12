@@ -415,7 +415,6 @@ std::ostream& operator<<(std::ostream& file, const polygon& p) {
   Ifile << "polygon:\n";
   indn.n += 2;
   Ifile << "s_convex=" << p.s_convex << '\n';
-  // file << statcast(const polyline_pl&, p);
   file << static_cast<const polyline_pl&>(p);
   indn.n -= 2;
   return file;

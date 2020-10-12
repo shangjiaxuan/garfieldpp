@@ -175,9 +175,8 @@ namespace Heed {
 
 class indentation {
  public:
-  int n;  // current number of blanks to print
-  int s_not;
-  indentation(void) { n = 0; }
+  int n = 0;  // current number of blanks to print
+  int s_not = 1;
 };
 
 extern indentation indn;

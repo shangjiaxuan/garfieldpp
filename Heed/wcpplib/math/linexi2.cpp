@@ -72,22 +72,4 @@ std::ostream& operator<<(std::ostream& file, const linexi2& l) {
     Ifile << "n=" << n << " x=" << l.ax[n] << " y=" << l.ay[n] << '\n';
   return file;
 }
-linexi2B::linexi2B(linexi2& lx) : linexi2(lx) {
-  mfunname("linexi2B::linexi2B(linexi2& lx)");
-  B = (double**)new double[lx.qlr * lx.qlr];
-  for (long i = 0; i < qlr; i++)
-    for (long m = 0; m < qlr; m++)
-      B[i][m] = (ax[i] - x_mean) * (ax[m] - x_mean) / Dx + 1;
-}
-void linexi2B::copy(const linexi2B& lxB) {
-  *this = (linexi2&)lxB;  // '=' redefined
-  for (long i = 0; i < qlr; i++)
-    for (long m = 0; m < qlr; m++) B[i][m] = lxB.B[i][m];
-}
-linexi2B::linexi2B(const linexi2B& lxB) : linexi2((linexi2&)lxB) {
-  mfunname("linexi2B::linexi2B(const linexi2B& lxB)");
-  B = (double**)new double[lxB.qlr * lxB.qlr];
-  for (long i = 0; i < qlr; i++)
-    for (long m = 0; m < qlr; m++) B[i][m] = lxB.B[i][m];
-}
 }
