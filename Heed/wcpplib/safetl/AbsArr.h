@@ -1612,13 +1612,7 @@ class DynArr : public RegPassivePtr {
         spexit(mcerr);
       }
 #ifdef ALR_CHECK_EACH_BOUND
-      if (n >= 0 && n < arr.qel.acu(q_deref_ind)) {
-#endif
-        current_pos += n * arr.get_cum_qel().acu(q_deref_ind);
-        q_deref_ind++;
-        return *this;
-#ifdef ALR_CHECK_EACH_BOUND
-      } else {
+      if (n < 0 || n >= arr.qel.acu(q_deref_ind)) {
         mcerr << "Error in IndexingProvider<D>& "
                  "IndexingProvider::operator[](long n): n < 0 || n >= "
                  "qel.acu(q_deref_ind)\n";
@@ -1628,6 +1622,9 @@ class DynArr : public RegPassivePtr {
         spexit(mcerr);
       }
 #endif
+      current_pos += n * arr.get_cum_qel().acu(q_deref_ind);
+      q_deref_ind++;
+      return *this;
     }
 
     inline const IndexingProvider<D>& operator[](long n) const {
@@ -1640,13 +1637,7 @@ class DynArr : public RegPassivePtr {
         spexit(mcerr);
       }
 #ifdef ALR_CHECK_EACH_BOUND
-      if (n >= 0 && n < arr.qel.acu(q_deref_ind)) {
-#endif
-        current_pos += n * arr.get_cum_qel().acu(q_deref_ind);
-        q_deref_ind++;
-        return *this;
-#ifdef ALR_CHECK_EACH_BOUND
-      } else {
+      if (n < 0 || n >= arr.qel.acu(q_deref_ind)) {
         mcerr << "Error in IndexingProvider<D>& "
                  "IndexingProvider::operator[](long n): n < 0 || n >= "
                  "qel.acu(q_deref_ind)\n";
@@ -1656,6 +1647,9 @@ class DynArr : public RegPassivePtr {
         spexit(mcerr);
       }
 #endif
+      current_pos += n * arr.get_cum_qel().acu(q_deref_ind);
+      q_deref_ind++;
+      return *this;
     }
   };
 
@@ -1672,11 +1666,7 @@ class DynArr : public RegPassivePtr {
       spexit(mcerr);
     }
 #ifdef ALR_CHECK_EACH_BOUND
-    if (n >= 0 && n < qel.acu(0)) {
-#endif
-      return IndexingProvider<T>(*this, 1, n * cum_qel.acu(0));
-#ifdef ALR_CHECK_EACH_BOUND
-    } else {
+    if (n < 0 || n >= qel.acu(0)) {
       mcerr << "Error in IndexingProvider<T> DynArr::operator[](long n): n < 0 "
                "|| n >= qel.acu(0)\n";
       Iprint2n(mcout, n, qel.acu(0));
@@ -1685,6 +1675,7 @@ class DynArr : public RegPassivePtr {
       spexit(mcerr);
     }
 #endif
+    return IndexingProvider<T>(*this, 1, n * cum_qel.acu(0));
   }
 
   inline const IndexingProvider<T> operator[](long n) const {
@@ -1696,14 +1687,7 @@ class DynArr : public RegPassivePtr {
       spexit(mcerr);
     }
 #ifdef ALR_CHECK_EACH_BOUND
-    if (n >= 0 && n < qel.acu(0)) {
-#endif
-      // DynArr<T>* temp = static_cast<DynArr<T>* >(this);
-      DynArr<T>* temp = const_cast<DynArr<T>*>(this);
-      //	static_cast<const IndexingProvider<T> >(*this);
-      return IndexingProvider<T>(*temp, 1, n * cum_qel.acu(0));
-#ifdef ALR_CHECK_EACH_BOUND
-    } else {
+    if (n < 0 || n >= qel.acu(0)) {
       mcerr << "Error in IndexingProvider<T> DynArr::operator[](long n): n < 0 "
                "|| n >= qel.acu(0)\n";
       Iprint2n(mcout, n, qel.acu(0));
@@ -1712,6 +1696,8 @@ class DynArr : public RegPassivePtr {
       spexit(mcerr);
     }
 #endif
+    DynArr<T>* temp = const_cast<DynArr<T>*>(this);
+    return IndexingProvider<T>(*temp, 1, n * cum_qel.acu(0));
   }
 
   T& ac(long i) {
