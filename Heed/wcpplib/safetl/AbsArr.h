@@ -496,10 +496,7 @@ DynLinArr<T>& DynLinArr<T>::operator=(const DynLinArr<D>& f) {
   mcout << "DynLinArr<T>& DynLinArr<T>::operator=(const DynLinArr<D>& f) is "
            "working\n";
 #endif
-  // if(this != &f)
-  //{
-  // mcout<<"DynLinArr<T>& operator=(const DynLinArr<T>& f): long(el)="
-  //<<long(el)<<'\n';
+  if (this == &f) return *this;
   check();
   f.check();
   // First of all we allocate memory and copy to there
@@ -2313,6 +2310,7 @@ DynArr<T>& DynArr<T>::operator=(const DynArr<D>& f) {
 #ifdef DEBUG_DYNLINARR
   mcout << "DynArr<T>& DynArr<T>::operator=(const DynArr<D>& f)\n";
 #endif
+  if (this == &f) return *this;
   check();
   f.check();
   DynLinArr<long> fqel = f.get_qel();
