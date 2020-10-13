@@ -47,12 +47,6 @@ int neBEMSetDefaults(void) {
   OptDeviceFile = 0;
   strcpy(DeviceInputFile, "");
 
-  OptGnuplot = 0;
-  OptGnuplotPrimitives = 0;
-  OptGnuplotElements = 0;
-  OptPrimitiveFiles = 0;
-  OptElementFiles = 0;
-
   OptPrintPrimaryDetails = 0;
   OptPrintVolumeDetails = 0;
   OptPrintVertexAndNormal = 0;
@@ -107,10 +101,10 @@ int ReadInitFile(char filename[]) {
   fscanf(finit, "BCCntr: %d\n", &BCCntr);
   fscanf(finit, "PPCntr: %d\n", &PPCntr);
 
-  fscanf(finit, "DeviceOutDir: %s\n", DeviceOutDir);
+  fscanf(finit, "DeviceOutDir: %255s\n", DeviceOutDir);
 
   fscanf(finit, "OptDeviceFile: %d\n", &OptDeviceFile);
-  fscanf(finit, "DeviceInputFile: %s\n", DeviceInputFile);
+  fscanf(finit, "DeviceInputFile: %255s\n", DeviceInputFile);
 
   fscanf(finit, "OptPrintPrimaryDetails: %d\n", &OptPrintPrimaryDetails);
   fscanf(finit, "OptPrintVolumeDetails: %d\n", &OptPrintVolumeDetails);
