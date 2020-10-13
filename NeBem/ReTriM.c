@@ -271,23 +271,20 @@ int AnalyzeSurface(int prim, int *NbSegCoord1, int *NbSegCoord2) {
 
     nb1 = (int)(l1 / ElementLengthRqstd);
     if ((nb1 > MinNbElementsOnLength) &&
-        (nb1 < MaxNbElementsOnLength)) {  // nothing to be done
-    }
-    // Check whether the l1 of the wire primitive is long enough
-    else if (nb1 < MINDIST) {
+        (nb1 < MaxNbElementsOnLength)) {  
+      // nothing to be done
+    } else if (l1 < MINDIST) {
       fprintf(fMeshLog, "Length1 too small on primitive %d!\n", prim);
       nb1 = 1;
-    }
-    // Need to have at least MinNbElementsOnLength elements per wire primitive
-    else if (nb1 < MinNbElementsOnLength) {
+    } else if (nb1 < MinNbElementsOnLength) {
+      // Need to have at least MinNbElementsOnLength elements per wire primitive
       nb1 = MinNbElementsOnLength;
       double ellength = l1 / (double)nb1;
-      if (ellength <
-          MINDIST)  // which may not be possible if the length is small
-      {
+      // which may not be possible if the length is small
+      if (ellength < MINDIST) {
         nb1 = (int)(l1 / MINDIST);
-        if (nb1 < 1)  // However, it is necessary to have at least one element!
-        {
+        // However, it is necessary to have at least one element!
+        if (nb1 < 1) {
           fprintf(fMeshLog, "Length1 very small on primitive %d!\n", prim);
           nb1 = 1;
         }
@@ -304,23 +301,20 @@ int AnalyzeSurface(int prim, int *NbSegCoord1, int *NbSegCoord2) {
 
     nb2 = (int)(l2 / ElementLengthRqstd);
     if ((nb2 > MinNbElementsOnLength) &&
-        (nb2 < MaxNbElementsOnLength)) {  // nothing to be done
-    }
-    // Check whether the l2 of the wire primitive is long enough
-    else if (nb2 < MINDIST) {
+        (nb2 < MaxNbElementsOnLength)) {
+      // nothing to be done
+    } else if (l2 < MINDIST) {
       fprintf(fMeshLog, "Length2 element too small on primitive %d!\n", prim);
       nb2 = 1;
-    }
-    // Need to have at least MinNbElementsOnLength elements per wire primitive
-    else if (nb2 < MinNbElementsOnLength) {
+    } else if (nb2 < MinNbElementsOnLength) {
+      // Need to have at least MinNbElementsOnLength elements per wire primitive
       nb2 = MinNbElementsOnLength;
       double ellength = l2 / (double)nb2;
-      if (ellength <
-          MINDIST)  // which may not be possible if the length is small
-      {
+      // which may not be possible if the length is small
+      if (ellength < MINDIST) {
+        // However, it is necessary to have at least one element!
         nb2 = (int)(l2 / MINDIST);
-        if (nb2 < 1)  // However, it is necessary to have at least one element!
-        {
+        if (nb2 < 1) {
           fprintf(fMeshLog, "Length2 element very small on primitive %d!\n",
                   prim);
           nb2 = 1;
@@ -360,8 +354,8 @@ int AnalyzeSurface(int prim, int *NbSegCoord1, int *NbSegCoord2) {
     l2 = sqrt(l2);
 
     if (l1 > l2) {
-      if (nb2 > nb1)  // swap numbers to allow larger number to larger side
-      {
+      if (nb2 > nb1) { 
+        // swap numbers to allow larger number to larger side
         int tmpnb = nb1;
         nb1 = nb2;
         nb2 = tmpnb;
@@ -652,6 +646,7 @@ int DiscretizeWire(int prim, int nvertex, double xvert[], double yvert[],
     fgpElem = fopen(gpElem, "w");
     if (fgpElem == NULL) {
       neBEMMessage("DiscretizeWire - OutgpElem");
+      if (fElem) fclose(fElem);
       return -1;
     }
   }
@@ -678,6 +673,8 @@ int DiscretizeWire(int prim, int nvertex, double xvert[], double yvert[],
     ++EleCntr;
     if (EleCntr > NbElements) {
       neBEMMessage("DiscretizeWire - EleCntr more than NbElements!");
+      if (fgpElem) fclose(fgpElem);
+      if (fElem) fclose(fElem);
       return -1;
     }
 
@@ -1015,6 +1012,7 @@ int DiscretizeTriangle(int prim, int nvertex, double xvert[], double yvert[],
     // assert(fgpElem != NULL);
     if (fgpElem == NULL) {
       neBEMMessage("DiscretizeTriangle - OutgpElem");
+      if (fElem) fclose(fElem);
       return -1;
     }
     // gnuplot friendly file outputs for elements on primitive
@@ -1025,6 +1023,8 @@ int DiscretizeTriangle(int prim, int nvertex, double xvert[], double yvert[],
     fgpMesh = fopen(gpMesh, "w");
     if (fgpMesh == NULL) {
       neBEMMessage("DiscretizeTriangle - OutgpMesh");
+      fclose(fgpElem);
+      if (fElem) fclose(fElem);
       return -1;
     }
   }
@@ -1153,6 +1153,8 @@ int DiscretizeTriangle(int prim, int nvertex, double xvert[], double yvert[],
     ++EleCntr;
     if (EleCntr > NbElements) {
       neBEMMessage("DiscretizeTriangle - EleCntr more than NbElements 1!");
+      if (fgpElem) fclose(fgpElem);
+      if (fgpMesh) fclose(fgpMesh);
       return -1;
     }
 
@@ -1766,6 +1768,7 @@ int DiscretizeRectangle(int prim, int nvertex, double xvert[], double yvert[],
     // assert(fgpElem != NULL);
     if (fgpElem == NULL) {
       neBEMMessage("DiscretizeRectangle - OutgpElem");
+      if (fElem) fclose(fElem);
       return -1;
     }
     // gnuplot friendly file outputs for elements on primitive
@@ -1776,6 +1779,7 @@ int DiscretizeRectangle(int prim, int nvertex, double xvert[], double yvert[],
     fgpMesh = fopen(gpMesh, "w");
     if (fgpMesh == NULL) {
       neBEMMessage("DiscretizeRectangle - OutgpMesh");
+      fclose(fgpElem);
       return -1;
     }
   }  // if OptGnuplot && OptElements
@@ -1888,6 +1892,7 @@ int DiscretizeRectangle(int prim, int nvertex, double xvert[], double yvert[],
       ++EleCntr;
       if (EleCntr > NbElements) {
         neBEMMessage("DiscretizeRectangle - EleCntr more than NbElements!");
+        if (fgpMesh) fclose(fgpMesh);
         return -1;
       }
 
@@ -2126,9 +2131,6 @@ int BoundaryConditions(void) {
     // Note this condition is pure geometry, not electric!
     switch (PrimType[prim]) {
       case 2:
-        (EleArr + ele - 1)->BC.Value = ApplPot[prim];
-        break;
-
       case 3:  // for floating conductor and for dielectric-dielectric intfc
       case 4:  // the BC is zero (may be modified due to known charges, later)
         (EleArr + ele - 1)->BC.Value = ApplPot[prim];
