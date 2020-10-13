@@ -449,79 +449,6 @@ int LHMatrix(void) {
                 "Mirror not correctly implemented in this version of neBEM "
                 "...\n");
             exit(0);
-
-            Point3D fldpt, srcpt;
-            DirnCosn3D DirCos;
-
-            fldpt.X = xfld;
-            fldpt.Y = yfld;
-            fldpt.Z = zfld;
-            srcpt.X = xsrc;
-            srcpt.Y = ysrc;
-            srcpt.Z = zsrc;
-
-            if (MirrorTypeX[primsrc]) {
-              MirrorTypeY[primsrc] = 0;
-              MirrorTypeZ[primsrc] = 0;
-            }
-            if (MirrorTypeY[primsrc])  // no point checking MirrorTypeX
-              MirrorTypeZ[primsrc] = 0;
-
-            // If the reflection is other than that of an element (a known space
-            // charge, for example), elesrc should be 0 and no question of
-            // reflection of DC would arise. However, if the space charge is
-            // itself distributed on a surface or in a volume, reflection of DC
-            // etc will be important. What happens when reflection of an wire is
-            // considered? At a later stage, reflection and periodicity should
-            // become a property of an element and should be computed through a
-            // single call of ComputeInfluence
-            if (MirrorTypeX[primsrc]) {
-              localP = ReflectOnMirror('X', elesrc, srcpt, fldpt,
-                                       MirrorDistXFromOrigin[primsrc], &DirCos);
-              double AddnalInfl =
-                  ComputeInfluence(elefld, elesrc, &localP, &DirCos);
-
-              if (MirrorTypeX[primsrc] ==
-                  1)  // element having opposite charge density
-                Inf[elefld][elesrc] -= AddnalInfl;  // classical image charge
-              if (MirrorTypeX[primsrc] ==
-                  2)  // element having same charge density
-                Inf[elefld][elesrc] += AddnalInfl;
-            }
-
-            if (MirrorTypeY[primsrc]) {
-              localP = ReflectOnMirror('Y', elesrc, srcpt, fldpt,
-                                       MirrorDistYFromOrigin[primsrc], &DirCos);
-              double AddnalInfl =
-                  ComputeInfluence(elefld, elesrc, &localP, &DirCos);
-
-              if (MirrorTypeY[primsrc] ==
-                  1)  // element having opposite charge density
-                Inf[elefld][elesrc] -= AddnalInfl;  // classical image charge
-              if (MirrorTypeY[primsrc] ==
-                  2)  // element having same charge density
-                Inf[elefld][elesrc] += AddnalInfl;
-            }
-
-            if (MirrorTypeZ[primsrc]) {
-              localP = ReflectOnMirror('Z', elesrc, srcpt, fldpt,
-                                       MirrorDistZFromOrigin[primsrc], &DirCos);
-              double AddnalInfl =
-                  ComputeInfluence(elefld, elesrc, &localP, &DirCos);
-
-              if (MirrorTypeZ[primsrc] ==
-                  1)  // element having opposite charge density
-                Inf[elefld][elesrc] -= AddnalInfl;  // classical image charge
-              if (MirrorTypeZ[primsrc] ==
-                  2)  // element having same charge density
-                Inf[elefld][elesrc] += AddnalInfl;
-            }
-
-            if (DebugLevel == 301) {
-              printf("After reflection of basic device =>\n");
-              printf("elefld: %d, elesrc: %d, Influence: %.16lg\n", elefld,
-                     elesrc, Inf[elefld][elesrc]);
-            }
           }  // reflections of basic device, taken care of
 
           DebugISLES =
@@ -2606,10 +2533,9 @@ int Solve(void) {
 
   // Update the element structure array and write the solution in a file
   char SolnFile[256];
-  FILE *fSoln;
   strcpy(SolnFile, BCOutDir);
   strcat(SolnFile, "/Soln.out");
-  fSoln = fopen(SolnFile, "w");
+  FILE* fSoln = fopen(SolnFile, "w");
   if (fSoln == NULL) {
     neBEMMessage("Solve - SolnFile");
     return -1;
@@ -2639,15 +2565,14 @@ int Solve(void) {
 
   // Find primitive related charge densities
   char PrimSolnFile[256];
-  FILE *fPrimSoln;
   strcpy(PrimSolnFile, BCOutDir);
   strcat(PrimSolnFile, "/PrimSoln.out");
-  fPrimSoln = fopen(PrimSolnFile, "w");
+  FILE *fPrimSoln = fopen(PrimSolnFile, "w");
   if (fPrimSoln == NULL) {
     neBEMMessage("Solve - PrimSolnFile");
     return -1;
   }
-  fprintf(fSoln, "#PrimNb\tEleBgn\tEleEnd\tX\tY\tZ\tAvChDen\tAvAsgndChDen\n");
+  fprintf(fPrimSoln, "#PrimNb\tEleBgn\tEleEnd\tX\tY\tZ\tAvChDen\tAvAsgndChDen\n");
   // OMPCheck - may be parallelized
   for (int prim = 1; prim <= NbPrimitives; ++prim) {
     double area = 0.0;  // need area of the primitive as well!
@@ -2693,8 +2618,8 @@ int Solve(void) {
     // reamins uncomputed. Then the question of re-computation or reading it
     // from a file (formatted / unformatted) arises.
     if (!InfluenceMatrixFlag) {
-      if (TimeStep != 1)  // influence matrix to be computed only in the
-      {                   // first time step
+      if (TimeStep != 1) {
+        // influence matrix to be computed only in the first time step
         printf("Influence matrix in memory ...\n");
       } else {
         printf("Influence matrix NOT in memory ...\n");
@@ -2715,10 +2640,9 @@ int Solve(void) {
               "reading influence coefficient matrix from formatted file...\n");
 
           char InflFile[256];
-          FILE *fInf;
           strcpy(InflFile, MeshOutDir);
           strcat(InflFile, "/Infl.out");
-          fInf = fopen(InflFile, "r");
+          FILE *fInf = fopen(InflFile, "r");
           // assert(fInf != NULL);
           if (fInf == NULL) {
             neBEMMessage("Solve - InflFile in OptValidate.");
@@ -2755,12 +2679,11 @@ int Solve(void) {
               "...\n");
 
           char InflFile[256];
-          FILE *fInf;
           strcpy(InflFile, MeshOutDir);
           strcat(InflFile, "/RawInfl.out");
           printf("\nread from file %s\n", InflFile);
           fflush(stdout);
-          fInf = fopen(InflFile, "rb");
+          FILE *fInf = fopen(InflFile, "rb");
           // assert(fInf != NULL);
           if (fInf == NULL) {
             neBEMMessage("Solve - RawInflFile in OptValidate");
@@ -2788,10 +2711,9 @@ int Solve(void) {
     if (Inf || RawInf) {
       double XChk;
       char Chkfile[256];
-      FILE *fChk;
       strcpy(Chkfile, BCOutDir);
       strcat(Chkfile, "/XChk.out");
-      fChk = fopen(Chkfile, "w");  // assert(fChk != NULL);
+      FILE *fChk = fopen(Chkfile, "w");  // assert(fChk != NULL);
       if (fChk == NULL) {
         neBEMMessage("Solve - ChkFile");
         return -1;
@@ -3978,7 +3900,6 @@ Point3D ReflectOnMirror(char Axis, int elesrc, Point3D srcpt, Point3D fldpt,
       MirroredDC->YUnit.Y = (EleArr + elesrc - 1)->G.DC.YUnit.Y;
       MirroredDC->YUnit.Z = (EleArr + elesrc - 1)->G.DC.YUnit.Z;
       MirroredDC->ZUnit.X = -(EleArr + elesrc - 1)->G.DC.ZUnit.X;
-      MirroredDC->ZUnit.Y = (EleArr + elesrc - 1)->G.DC.ZUnit.Y;
       MirroredDC->ZUnit.Y = (EleArr + elesrc - 1)->G.DC.ZUnit.Y;
       MirroredDC->ZUnit.Z = (EleArr + elesrc - 1)->G.DC.ZUnit.Z;
       break;
