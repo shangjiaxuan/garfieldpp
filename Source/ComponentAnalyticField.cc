@@ -2587,6 +2587,7 @@ void ComponentAnalyticField::CellInit() {
 }
 
 bool ComponentAnalyticField::Prepare() {
+  std::lock_guard<std::mutex> guard(m_mutex);
   // Check that the cell makes sense.
   if (!CellCheck()) {
     std::cerr << m_className << "::Prepare:\n"
@@ -5877,6 +5878,8 @@ bool ComponentAnalyticField::PrepareSignals() {
     std::cerr << m_className << "::PrepareSignals: Cell not set up.\n";
     return false;
   }
+
+  std::lock_guard<std::mutex> guard(m_mutex);
 
   // If using natural periodicity, copy the cell type.
   // Otherwise, eliminate true periodicities.
