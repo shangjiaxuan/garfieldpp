@@ -1,6 +1,7 @@
 #ifndef G_COMPONENT_ANALYTIC_FIELD_H
 #define G_COMPONENT_ANALYTIC_FIELD_H
 
+#include <mutex>
 #include <cmath>
 #include <complex>
 
@@ -342,6 +343,8 @@ class ComponentAnalyticField : public Component {
   };
 
  private:
+  std::mutex m_mutex;
+
   Medium* m_medium = nullptr;
 
   bool m_chargeCheck = false;
