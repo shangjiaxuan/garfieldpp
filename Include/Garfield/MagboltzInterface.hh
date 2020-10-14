@@ -17,6 +17,7 @@ constexpr unsigned int nMaxInelasticTerms = 250;
 constexpr unsigned int nMaxAttachmentTerms = 8;
 constexpr unsigned int nMaxNullTerms = 10;
 constexpr unsigned int nMaxLevelsPerComponent = 300;
+constexpr unsigned int nCharName = 25;
 constexpr unsigned int nCharDescr = 50;
 constexpr unsigned int nMaxLevels = 960;
 constexpr unsigned int nMaxComponents = 6;
@@ -199,7 +200,8 @@ void gasmix_(std::int64_t* ngs, double* q, double* qin, std::int64_t* nin, doubl
              double* scln, std::int64_t* nc0, double* ec0, double* wk, double* efl,
              std::int64_t* ng1, double* eg1, std::int64_t* ng2, double* eg2,
              char scrpt[nMaxLevelsPerComponent][nCharDescr],
-             char scrptn[nMaxNullTerms][nCharDescr]);
+             char scrptn[nMaxNullTerms][nCharDescr],
+             short namelen, short scrpt_len, short scrptn_len);
 
 void colf_(double* freq, double* freel, double* freion, double* freatt, 
            double* frein, std::int64_t *ntotal);

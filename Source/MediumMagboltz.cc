@@ -1387,7 +1387,7 @@ bool MediumMagboltz::Mixer(const bool verbose) {
     Magboltz::inpt_.estep = m_eStep;
     Magboltz::mix2_.eg[iemax] = (iemax + 0.5) * m_eStep;
     Magboltz::mix2_.eroot[iemax] = sqrt((iemax + 0.5) * m_eStep);
-    char name[25];
+    char name[Magboltz::nCharName];
     // Number of inelastic cross-sections
     static std::int64_t nIn = 0;
     // Number of ionisation cross-sections
@@ -1426,7 +1426,8 @@ bool MediumMagboltz::Mixer(const bool verbose) {
         &ngs, q[0], qIn[0], &nIn, &e[0], eIn, name, &virial, eoby, pEqEl[0], 
         pEqIn[0], penFra[0], kEl, kIn, qIon[0], pEqIon[0], eIon, &nIon, 
         qAtt[0], &nAtt, qNull[0], &nNull, scln, nc0, ec0, wklm, efl,
-        ng1, eg1, ng2, eg2, scrpt, scrptn);
+        ng1, eg1, ng2, eg2, scrpt, scrptn,  
+        Magboltz::nCharName, Magboltz::nCharDescr, Magboltz::nCharDescr);
     if (m_debug || verbose) {
       const double m = (2. / e[1]) * ElectronMass / AtomicMassUnitElectronVolt;
       std::cout << "    " << name << "\n"
@@ -1635,7 +1636,8 @@ bool MediumMagboltz::Mixer(const bool verbose) {
           &ngs, q[0], qIn[0], &nIn, e, eIn, name, &virial, eoby, pEqEl[0], 
           pEqIn[0], penFra[0], kEl, kIn, qIon[0], pEqIon[0], eIon, &nIon, 
           qAtt[0], &nAtt, qNull[0], &nNull, scln, nc0, ec0, wklm, efl,
-          ng1, eg1, ng2, eg2, scrpt, scrptn);
+          ng1, eg1, ng2, eg2, scrpt, scrptn, 
+          Magboltz::nCharName, Magboltz::nCharDescr, Magboltz::nCharDescr);
       np = np0;
       if (m_useCsOutput) outfile << emax << "  " << q[iemax][1] << "  ";
       // Elastic scattering
@@ -3697,7 +3699,7 @@ void MediumMagboltz::GetExcitationIonisationLevels() {
     const double emax = 400.;
     Magboltz::inpt_.efinal = emax;
     Magboltz::inpt_.estep = emax / Magboltz::nEnergySteps;
-    char name[25];
+    char name[Magboltz::nCharName];
     // Number of inelastic, ionisation, attachment and null-collision levels.
     std::int64_t nIn = 0, nIon = 0, nAtt = 1, nNull = 0;
     // Virial coefficient (not used)
@@ -3735,7 +3737,8 @@ void MediumMagboltz::GetExcitationIonisationLevels() {
         &ng, q[0], qIn[0], &nIn, e, eIn, name, &virial, eoby, pEqEl[0], 
         pEqIn[0], penFra[0], kEl, kIn, qIon[0], pEqIon[0], eIon, &nIon, 
         qAtt[0], &nAtt, qNull[0], &nNull, scln, nc0, ec0, wklm, efl,
-        ng1, eg1, ng2, eg2, scrpt, scrptn);
+        ng1, eg1, ng2, eg2, scrpt, scrptn,
+        Magboltz::nCharName, Magboltz::nCharDescr, Magboltz::nCharDescr);
     const double r = 1. + 0.5 * e[1];
     // Ionisation cross section(s).
     for (int j = 0; j < nIon; ++j) {
