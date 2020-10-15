@@ -79,21 +79,21 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   unsigned int nMaterials;
   fmplist >> nMaterials;
   for (unsigned int i = 0; i < nMaterials; ++i) {
-    Material newMaterial;
-    newMaterial.driftmedium = true;
-    newMaterial.medium = nullptr;
-    newMaterial.ohm = -1;
-    fmplist >> newMaterial.eps;
-    m_materials.push_back(std::move(newMaterial));
+    Material material;
+    material.driftmedium = false;
+    material.medium = nullptr;
+    material.ohm = -1;
+    fmplist >> material.eps;
+    m_materials.push_back(std::move(material));
   }
-  {
+  if (m_materials.empty()) {
     // Add default material
-    Material newMaterial;
-    newMaterial.driftmedium = false;
-    newMaterial.medium = nullptr;
-    newMaterial.eps = newMaterial.ohm = -1;
-    m_materials.push_back(std::move(newMaterial));
-    nMaterials++;
+    Material material;
+    material.driftmedium = false;
+    material.medium = nullptr;
+    material.eps = material.ohm = -1;
+    m_materials.push_back(std::move(material));
+    nMaterials = 1;
   }
   std::map<int, int> domain2material;
   int d2msize;
@@ -104,6 +104,31 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     fmplist >> domain2material[domain];
   }
   fmplist.close();
+
+  // Find the lowest epsilon, check for eps = 0, set default drift media.
+  double epsmin = -1.;
+  unsigned int iepsmin = 0;
+  for (unsigned int i = 0; i < nMaterials; ++i) {
+    if (m_materials[i].eps < 0) continue;
+    if (m_materials[i].eps == 0) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Material " << i 
+                << " has been assigned a permittivity equal to zero in\n    "
+                << mplist << ".\n";
+      m_materials[i].eps = -1.;
+    } else if (epsmin < 0. || epsmin > m_materials[i].eps) {
+      epsmin = m_materials[i].eps;
+      iepsmin = i;
+    }
+  }
+
+  if (epsmin < 0.) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    No material with positive permittivity found \n"
+              << "    in material list " << mplist << ".\n";
+    return false;
+  }
+  m_materials[iepsmin].driftmedium = true;
 
   m_nodes.clear();
   std::ifstream fmesh;
@@ -201,7 +226,9 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     return false;
   }
 
-  const std::string hdr = "% x                       y                        z                        V (V)";
+  const std::string hdr1 = "% x                       y                        z                        V (V)";
+
+  const std::string hdr2 = "% x             y              z              V (V)";
   do {
     if (!std::getline(ffield, line)) {
       std::cerr << m_className << "::Initialise:\n"
@@ -209,7 +236,8 @@ bool ComponentComsol::Initialise(const std::string& mesh,
       ffield.close();
       return false;
     }
-  } while (line.find(hdr) == std::string::npos);
+  } while (line.find(hdr1) == std::string::npos && 
+           line.find(hdr2) == std::string::npos);
   std::istringstream sline(line);
   std::string token;
   sline >> token;  // %
