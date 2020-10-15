@@ -5,7 +5,7 @@
 #include <TCanvas.h>
 #include <TH1F.h>
 
-#include "Garfield/ComponentAnsys123.hh"
+#include "Garfield/ComponentComsol.hh"
 #include "Garfield/ViewField.hh"
 #include "Garfield/ViewFEMesh.hh"
 #include "Garfield/MediumMagboltz.hh"
@@ -21,8 +21,8 @@ int main(int argc, char * argv[]) {
   TApplication app("app", &argc, argv);
 
   // Load the field map.
-  ComponentAnsys123 fm;
-  fm.Initialise("ELIST.lis", "NLIST.lis", "MPLIST.lis", "PRNSOL.lis", "mm");
+  ComponentComsol fm;
+  fm.Initialise("mesh.mphtxt", "dielectrics.dat", "field.txt", "mm");
   fm.EnableMirrorPeriodicityX();
   fm.EnableMirrorPeriodicityY();
   fm.PrintRange();
@@ -65,7 +65,7 @@ int main(int argc, char * argv[]) {
     if (eps == 1.) fm.SetMedium(i, &gas);
   }
   fm.PrintMaterials();
-
+ 
   // Create the sensor.
   Sensor sensor;
   sensor.AddComponent(&fm);
@@ -124,9 +124,9 @@ int main(int argc, char * argv[]) {
       // x-z projection.
       meshView->SetPlane(0, -1, 0, 0, 0, 0);
       meshView->SetFillMesh(true);
-      meshView->SetColor(0, kGray);
-      // Set the color of the kapton.
-      meshView->SetColor(2, kYellow + 3);
+      // Set the color of the kapton and the metal.
+      meshView->SetColor(1, kYellow + 3);
+      meshView->SetColor(2, kGray);
       meshView->EnableAxes();
       meshView->SetViewDrift(&driftView);
       meshView->Plot();
@@ -140,5 +140,4 @@ int main(int argc, char * argv[]) {
   }
 
   app.Run(kTRUE);
-
 }

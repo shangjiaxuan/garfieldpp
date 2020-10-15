@@ -457,7 +457,7 @@ extracted from CST Studio. More details can be found at
 \subsection{COMSOL}
 
 The class \texttt{ComponentComsol} (contributed by E.~Bodnia) can be used for 
-importing field maps computed using COMSOL.
+importing field maps computed using COMSOL Multiphysics.
 The function to import a field map is 
 \begin{lstlisting}
 bool Initialise(std::string header = "mesh.mphtxt",
@@ -465,9 +465,35 @@ bool Initialise(std::string header = "mesh.mphtxt",
                 std::string field = "field.txt");
 \end{lstlisting}
 \begin{description}
-  \item[header] COMSOL Multiphysics text field (\texttt{.mphtxt}) containing the mesh data.
-  \item[field] exported field data. 
+  \item[header] COMSOL Multiphysics text file (\texttt{.mphtxt}) containing the mesh data,
+  \item[mplist] file containing the material properties, 
+  \item[field] file containing the exported field data. 
 \end{description}
+The materials file (second argument) is a simply ASCII file containing
+\begin{itemize}
+  \item
+  the number of materials in the field map, 
+  \item
+  the relative dielectric constants of each of the materials,
+  \item
+  the number of ``domains'',
+  \item
+  a list of domain numbers and indices of the corresponding materials.
+\end{itemize}
+The domain numbers can be found in the section 
+\texttt{\# Geometric entity indices} of the mesh data file 
+(\texttt{mesh.mphtxt}).
+For a field map with two materials, 
+one with a dielectric constant of $\varepsilon = 1$ (domain number 1) and 
+the other one with a dielectric constant of $\varepsilon = 4$ 
+(domain number 2), the file should look like the following.
+\begin{lstlisting}
+2
+1. 4. 
+2
+1 0
+2 1
+\end{lstlisting}
 
 \subsection{Regular grids}
 \begin{figure}
