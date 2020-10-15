@@ -13,16 +13,12 @@
 #include "Garfield/AvalancheMicroscopic.hh"
 #include "Garfield/AvalancheMC.hh"
 #include "Garfield/Random.hh"
-#include "Garfield/Plotting.hh"
 
 using namespace Garfield;
 
 int main(int argc, char * argv[]) {
 
   TApplication app("app", &argc, argv);
-  plottingEngine.SetDefaultStyle();
-
-  const bool debug = true;
 
   // Load the field map.
   ComponentAnsys123 fm;
@@ -90,9 +86,9 @@ int main(int argc, char * argv[]) {
     drift.EnablePlotting(&driftView);
   }
 
-  const int nEvents = 10;
-  for (int i = nEvents; i--;) { 
-    if (debug || i % 10 == 0) std::cout << i << "/" << nEvents << "\n";
+  constexpr unsigned int nEvents = 10;
+  for (unsigned int i = 0; i < nEvents; ++i) { 
+    std::cout << i << "/" << nEvents << "\n";
     // Randomize the initial position. 
     const double x0 = -0.5 * pitch + RndmUniform() * pitch;
     const double y0 = -0.5 * pitch + RndmUniform() * pitch;
@@ -102,13 +98,13 @@ int main(int argc, char * argv[]) {
     aval.AvalancheElectron(x0, y0, z0, t0, e0, 0., 0., 0.);
     int ne = 0, ni = 0;
     aval.GetAvalancheSize(ne, ni);
-    const int np = aval.GetNumberOfElectronEndpoints();
+    const unsigned int np = aval.GetNumberOfElectronEndpoints();
     double xe1, ye1, ze1, te1, e1;
     double xe2, ye2, ze2, te2, e2;
     double xi1, yi1, zi1, ti1;
     double xi2, yi2, zi2, ti2;
     int status;
-    for (int j = np; j--;) {
+    for (unsigned int j = 0; j < np; ++j) {
       aval.GetElectronEndpoint(j, xe1, ye1, ze1, te1, e1, 
                                   xe2, ye2, ze2, te2, e2, status);
       drift.DriftIon(xe1, ye1, ze1, te1);
