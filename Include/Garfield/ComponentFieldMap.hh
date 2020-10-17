@@ -246,9 +246,9 @@ class ComponentFieldMap : public Component {
                    double& t2, double& t3, double& t4, double jac[4][4],
                    double& det, const Element& element) const;
   /// Calculate local coordinates in linear tetrahedra.
-  int Coordinates12(const double x, const double y, const double z, double& t1,
-                    double& t2, double& t3, double& t4,
-                    const Element& element) const;
+  void Coordinates12(const double x, const double y, const double z, double& t1,
+                     double& t2, double& t3, double& t4,
+                     const Element& element) const;
   /// Calculate local coordinates for curved quadratic tetrahedra.
   int Coordinates13(const double x, const double y, const double z, double& t1,
                     double& t2, double& t3, double& t4, double jac[4][4],
