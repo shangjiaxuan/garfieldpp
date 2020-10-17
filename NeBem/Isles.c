@@ -712,7 +712,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
       else {
         tmp1 = gsl_complex_arctanh_real(R1 / (D11 * fabs(dzlo)));
         term1 = gsl_complex_mul_real(tmp1, (double)S1);
-        term2 = gsl_complex_mul_real(tmp1, (double)S1);
+        term2 = term1;
       }  // else fab I1 > MINDIST2
 
       if (fabs(I2) > MINDIST2) {
@@ -1828,10 +1828,7 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
   // Exact computations begin here, at last!
   // DTerm1 and DTerm2
   {
-    double DblTmp1, DblTmp2;
-
-    DTerm1 = 0.0;  // helps avoiding `may be used uninitialized' warning
-    DblTmp1 = (Hypot * D12 - E1) / (Hypot * D21 - E2);
+    double DblTmp1 = (Hypot * D12 - E1) / (Hypot * D21 - E2);
     if (DebugISLES) {
       printf("DblTmp1: %.16lg\n", DblTmp1);
       fflush(stdout);
@@ -1847,8 +1844,7 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
                             Flux));
     }
 
-    DTerm2 = 0.0;  // helps avoiding `may be used uninitialized' warning
-    DblTmp2 = (D11 - X) / (D21 - X + 1.0);
+    double DblTmp2 = (D11 - X) / (D21 - X + 1.0);
     if (DebugISLES) {
       printf("DblTmp2: %.16lg\n", DblTmp2);
       fflush(stdout);
@@ -2066,84 +2062,88 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
 
     GSL_SET_COMPLEX(&CmTmp1, R1, I1);
     CmTmp1 = gsl_complex_div_real(CmTmp1, D11 * fabs(Z));
-    if (fabs(CmTmp1.dat[0] < MINDIST2) &&
-        fabs(CmTmp1.dat[1] < MINDIST2)) {  // case tanh-1 (0)
+    if (fabs(CmTmp1.dat[0]) < MINDIST2 && fabs(CmTmp1.dat[1]) < MINDIST2) {
+      // case tanh-1 (0)
       CmTmp1.dat[0] = 0.0;
       CmTmp1.dat[1] = 0.0;
-    } else if (D11 * fabs(Z) < MINDIST2)  // case tanh-1 (inf)
-    {
+    } else if (D11 * fabs(Z) < MINDIST2) {
+      // case tanh-1 (inf)
       CmTmp1.dat[0] = 0.0;
       CmTmp1.dat[1] = -0.5 * ST_PI;
-    } else if (fabs(CmTmp1.dat[0] <= MINDIST2) &&
-               fabs((CmTmp1.dat[1] - 1.0) <= MINDIST2)) {  // case tanh-1 (i)
+    } else if (fabs(CmTmp1.dat[0]) <= MINDIST2 &&
+               fabs(CmTmp1.dat[1] - 1.0) <= MINDIST2) {
+      // case tanh-1 (i)
       CmTmp1.dat[0] = 0.0;
       CmTmp1.dat[1] = 0.25 * ST_PI;
-    } else if (fabs(CmTmp1.dat[1]) <
-               MINDIST2)  // if only imaginary part is zero
+    } else if (fabs(CmTmp1.dat[1]) < MINDIST2) {
+      // if only imaginary part is zero
       CmTmp1 = gsl_complex_arctanh_real(CmTmp1.dat[0]);
-    else
+    } else {
       CmTmp1 = gsl_complex_arctanh(CmTmp1);
-
+    }
     GSL_SET_COMPLEX(&CmTmp2, R1, -I1);
     CmTmp2 = gsl_complex_div_real(CmTmp2, (D11 * fabs(Z)));
-    if (fabs(CmTmp2.dat[0] < MINDIST2) &&
-        fabs(CmTmp2.dat[1] < MINDIST2)) {  // case tanh-1 (0)
+    if (fabs(CmTmp2.dat[0]) < MINDIST2 && fabs(CmTmp2.dat[1]) < MINDIST2) {
+      // case tanh-1 (0)
       CmTmp2.dat[0] = 0.0;
       CmTmp2.dat[1] = 0.0;
-    } else if (D11 * fabs(Z) < MINDIST2)  // case tanh-1 (inf)
-    {
+    } else if (D11 * fabs(Z) < MINDIST2) {
+      // case tanh-1 (inf)
       CmTmp2.dat[0] = 0.0;
       CmTmp2.dat[1] = -0.5 * ST_PI;
-    } else if (fabs(CmTmp2.dat[0] <= MINDIST2) &&
-               fabs((CmTmp2.dat[1] - 1.0) <= MINDIST2)) {  // case tanh-1 (i)
+    } else if (fabs(CmTmp2.dat[0]) <= MINDIST2 &&
+               fabs(CmTmp2.dat[1] - 1.0) <= MINDIST2) {
+      // case tanh-1 (i)
       CmTmp2.dat[0] = 0.0;
       CmTmp2.dat[1] = 0.25 * ST_PI;
-    } else if (fabs(CmTmp2.dat[1]) <
-               MINDIST2)  // if only imaginary part is zero
+    } else if (fabs(CmTmp2.dat[1]) < MINDIST2) {
+      // if only imaginary part is zero
       CmTmp2 = gsl_complex_arctanh_real(CmTmp2.dat[0]);
-    else
+    } else {
       CmTmp2 = gsl_complex_arctanh(CmTmp2);
-
+    }
     GSL_SET_COMPLEX(&CmTmp3, R1, I2);
     CmTmp3 = gsl_complex_div_real(CmTmp3, (D21 * fabs(Z)));
-    if (fabs(CmTmp3.dat[0] < MINDIST2) &&
-        fabs(CmTmp3.dat[1] < MINDIST2)) {  // case tanh-1 (0)
+    if (fabs(CmTmp3.dat[0]) < MINDIST2 && fabs(CmTmp3.dat[1]) < MINDIST2) {
+      // case tanh-1 (0)
       CmTmp3.dat[0] = 0.0;
       CmTmp3.dat[1] = 0.0;
-    } else if (D21 * fabs(Z) < MINDIST2)  // case tanh-1 (inf)
-    {
+    } else if (D21 * fabs(Z) < MINDIST2) { 
+      // case tanh-1 (inf)
       CmTmp3.dat[0] = 0.0;
       CmTmp3.dat[1] = -0.5 * ST_PI;
-    } else if (fabs(CmTmp3.dat[0] <= MINDIST2) &&
-               fabs((CmTmp3.dat[1] - 1.0) <= MINDIST2)) {  // case tanh-1 (i)
+    } else if (fabs(CmTmp3.dat[0]) <= MINDIST2 &&
+               fabs(CmTmp3.dat[1] - 1.0) <= MINDIST2) {  
+      // case tanh-1 (i)
       CmTmp3.dat[0] = 0.0;
       CmTmp3.dat[1] = 0.25 * ST_PI;
-    } else if (fabs(CmTmp3.dat[1]) <
-               MINDIST2)  // if only imaginary part is zero
+    } else if (fabs(CmTmp3.dat[1]) < MINDIST2) {
+      // if only imaginary part is zero
       CmTmp3 = gsl_complex_arctanh_real(CmTmp3.dat[0]);
-    else
+    } else {
       CmTmp3 = gsl_complex_arctanh(CmTmp3);
-
+    }
     GSL_SET_COMPLEX(&CmTmp4, R1, -I2);
     CmTmp4 = gsl_complex_div_real(CmTmp4, (D21 * fabs(Z)));
-    if (fabs(CmTmp4.dat[0] < MINDIST2) &&
-        fabs(CmTmp4.dat[1] < MINDIST2)) {  // case tanh-1 (0)
+    if (fabs(CmTmp4.dat[0]) < MINDIST2 && fabs(CmTmp4.dat[1]) < MINDIST2) {
+      // case tanh-1 (0)
       CmTmp4.dat[0] = 0.0;
       CmTmp4.dat[1] = 0.0;
-    } else if (D21 * fabs(Z) < MINDIST2)  // case tanh-1 (inf)
-    {
+    } else if (D21 * fabs(Z) < MINDIST2) {
+      // case tanh-1 (inf)
       CmTmp4.dat[0] = 0.0;
       CmTmp4.dat[1] = -0.5 * ST_PI;
-    } else if (fabs(CmTmp4.dat[0] <= MINDIST2) &&
-               fabs((CmTmp4.dat[1] - 1.0) <= MINDIST2)) {  // case tanh-1 (i)
+    } else if (fabs(CmTmp4.dat[0]) <= MINDIST2 &&
+               fabs(CmTmp4.dat[1] - 1.0) <= MINDIST2) {
+      // case tanh-1 (i)
       CmTmp4.dat[0] = 0.0;
       CmTmp4.dat[1] = 0.25 * ST_PI;
-    } else if (fabs(CmTmp4.dat[1]) <
-               MINDIST2)  // if only imaginary part is zero
+    } else if (fabs(CmTmp4.dat[1]) < MINDIST2) {
+      // if only imaginary part is zero
       CmTmp4 = gsl_complex_arctanh_real(CmTmp4.dat[0]);
-    else
+    } else {
       CmTmp4 = gsl_complex_arctanh(CmTmp4);
-
+    }
     gsl_complex TmpTanhTerm1;
     TmpTanhTerm1 = gsl_complex_add(CmTmp1, CmTmp2);
     TmpTanhTerm1 = gsl_complex_sub(TmpTanhTerm1, CmTmp3);
@@ -2245,7 +2245,7 @@ if (((X >= 0.0) && (X <= 1.0)))  // Possibility of point within element bounds
       Fy += 1.0 * ST_PI;
     else if (Y < 0.0)
       Fy -= 1.0 * ST_PI;
-  } else if ((!ConstAdd) && (Z <= 0.0) && (Z >= -Zhyp))  // within -ve element
+  } else if ((Z <= 0.0) && (Z >= -Zhyp))  // within -ve element
   {
     ConstAdd = 2;
     Pot += 1.0 * modY * ST_PI;
@@ -2255,7 +2255,7 @@ if (((X >= 0.0) && (X <= 1.0)))  // Possibility of point within element bounds
       Fy -= 1.0 * ST_PI;
     else if (Y < 0.0)
       Fy += 1.0 * ST_PI;
-  } else if ((!ConstAdd) && ((Z > Zhyp) && (Z <= zMax)))  // within +rect bounds
+  } else if (((Z > Zhyp) && (Z <= zMax)))  // within +rect bounds
   {  // merge with +ve shadow?
     ConstAdd = 3;
     Pot -= 1.0 * modY * ST_PI;
@@ -2265,7 +2265,7 @@ if (((X >= 0.0) && (X <= 1.0)))  // Possibility of point within element bounds
       Fy += 1.0 * ST_PI;
     else if (Y < 0.0)
       Fy -= 1.0 * ST_PI;
-  } else if ((!ConstAdd) && (Z < -Zhyp) && (Z >= -zMax))  // within -rect bounds
+  } else if ((Z < -Zhyp) && (Z >= -zMax))  // within -rect bounds
   {  // merge with -ve shadow?
     ConstAdd = 4;
     Pot += 1.0 * modY * ST_PI;
@@ -2275,7 +2275,7 @@ if (((X >= 0.0) && (X <= 1.0)))  // Possibility of point within element bounds
       Fy -= 1.0 * ST_PI;
     else if (Y < 0.0)
       Fy += 1.0 * ST_PI;
-  } else if ((!ConstAdd) && (Z > zMax))  // +ve shadow of the triangle - WHY?
+  } else if (Z > zMax)  // +ve shadow of the triangle - WHY?
   {
     ConstAdd = 5;
     Pot -= 1.0 * modY * ST_PI;
@@ -2285,7 +2285,7 @@ if (((X >= 0.0) && (X <= 1.0)))  // Possibility of point within element bounds
       Fy += 1.0 * ST_PI;
     else if (Y < 0.0)
       Fy -= 1.0 * ST_PI;
-  } else if ((!ConstAdd) && (Z < -zMax))  // -ve shadow of the triangle - WHY?
+  } else if (Z < -zMax)  // -ve shadow of the triangle - WHY?
   {
     ConstAdd = 6;
     Pot += 1.0 * modY * ST_PI;

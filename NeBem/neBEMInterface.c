@@ -169,7 +169,7 @@ int neBEMInitialize(void) {
     // first since that will decide whether there is a map and its version.
     fscanf(mapInpFile, "OptMap: %d\n", &OptMap);
     fscanf(mapInpFile, "OptStaggerMap: %d\n", &OptStaggerMap);
-    fscanf(mapInpFile, "MapVersion: %s\n", MapVersion);
+    fscanf(mapInpFile, "MapVersion: %9s\n", MapVersion);
     fscanf(mapInpFile, "Xmin: %le\n", &Map.Xmin);
     fscanf(mapInpFile, "Xmax: %le\n", &Map.Xmax);
     fscanf(mapInpFile, "Ymin: %le\n", &Map.Ymin);
@@ -331,7 +331,7 @@ int neBEMInitialize(void) {
       fscanf(fastWtFldInpFile, "LZ: %le\n", &WtFldBlkLZ[block]);
       fscanf(fastWtFldInpFile, "CornerZ: %le\n", &WtFldBlkCrnrZ[block]);
     }  // inputs for blocks
-    fscanf(fastInpFile, "NbOfOmitVols: %d\n", &WtFldFastVol.NbOmitVols);
+    fscanf(fastWtFldInpFile, "NbOfOmitVols: %d\n", &WtFldFastVol.NbOmitVols);
     if (WtFldFastVol.NbOmitVols) {
       WtFldOmitVolLX = dvector(1, WtFldFastVol.NbOmitVols);
       WtFldOmitVolLY = dvector(1, WtFldFastVol.NbOmitVols);
@@ -444,77 +444,73 @@ int neBEMReadGeometry(void) {
   // necessary if the elements are created immediately after a primitive is read
   // in.
   // MaxNbVertices = 4; // value specified through SetDefaults or init files
-  if (neBEMState == 2) {
-    // neBEM has been initialized, NbPrimitives set
-    PrimType = ivector(1, NbPrimitives);
-    NbVertices = ivector(1, NbPrimitives);
-    OrgnlToEffPrim = imatrix(1, NbPrimitives, 0, 2);  // 0 init, 1 intrfc, 2 rmv
-    XVertex = dmatrix(1, NbPrimitives, 0, MaxNbVertices - 1);
-    YVertex = dmatrix(1, NbPrimitives, 0, MaxNbVertices - 1);
-    ZVertex = dmatrix(1, NbPrimitives, 0, MaxNbVertices - 1);
-    XNorm = dvector(1, NbPrimitives);
-    YNorm = dvector(1, NbPrimitives);
-    ZNorm = dvector(1, NbPrimitives);
-    PrimLX = dvector(1, NbPrimitives);
-    PrimLZ = dvector(1, NbPrimitives);
-    Radius = dvector(1, NbPrimitives);  // can lead to a little memory misuse
-    PrimOriginX = dvector(1, NbPrimitives);
-    PrimOriginY = dvector(1, NbPrimitives);
-    PrimOriginZ = dvector(1, NbPrimitives);
-    PrimDC = (DirnCosn3D *)malloc(NbPrimitives * sizeof(DirnCosn3D));
-    VolRef1 = ivector(1, NbPrimitives);
-    VolRef2 = ivector(1, NbPrimitives);
-    NbSurfSegX = ivector(1, NbPrimitives);
-    NbSurfSegZ = ivector(1, NbPrimitives);
-    NbWireSeg = ivector(1, NbPrimitives);  // little memory misuse
-    InterfaceType = ivector(1, NbPrimitives);
-    Epsilon1 = dvector(1, NbPrimitives);
-    Epsilon2 = dvector(1, NbPrimitives);
-    Lambda = dvector(1, NbPrimitives);
-    ApplPot = dvector(1, NbPrimitives);
-    ApplCh = dvector(1, NbPrimitives);
-    PeriodicTypeX = ivector(1, NbPrimitives);
-    PeriodicTypeY = ivector(1, NbPrimitives);
-    PeriodicTypeZ = ivector(1, NbPrimitives);
-    PeriodicInX = ivector(1, NbPrimitives);
-    PeriodicInY = ivector(1, NbPrimitives);
-    PeriodicInZ = ivector(1, NbPrimitives);
-    XPeriod = dvector(1, NbPrimitives);
-    YPeriod = dvector(1, NbPrimitives);
-    ZPeriod = dvector(1, NbPrimitives);
-    MirrorTypeX = ivector(1, NbPrimitives);
-    MirrorTypeY = ivector(1, NbPrimitives);
-    MirrorTypeZ = ivector(1, NbPrimitives);
-    MirrorDistXFromOrigin = dvector(1, NbPrimitives);
-    MirrorDistYFromOrigin = dvector(1, NbPrimitives);
-    MirrorDistZFromOrigin = dvector(1, NbPrimitives);
-    BndPlaneInXMin = ivector(1, NbPrimitives);
-    BndPlaneInXMax = ivector(1, NbPrimitives);
-    BndPlaneInYMin = ivector(1, NbPrimitives);
-    BndPlaneInYMax = ivector(1, NbPrimitives);
-    BndPlaneInZMin = ivector(1, NbPrimitives);
-    BndPlaneInZMax = ivector(1, NbPrimitives);
-    XBndPlaneInXMin = dvector(1, NbPrimitives);
-    XBndPlaneInXMax = dvector(1, NbPrimitives);
-    YBndPlaneInYMin = dvector(1, NbPrimitives);
-    YBndPlaneInYMax = dvector(1, NbPrimitives);
-    ZBndPlaneInZMin = dvector(1, NbPrimitives);
-    ZBndPlaneInZMax = dvector(1, NbPrimitives);
-    VBndPlaneInXMin = dvector(1, NbPrimitives);
-    VBndPlaneInXMax = dvector(1, NbPrimitives);
-    VBndPlaneInYMin = dvector(1, NbPrimitives);
-    VBndPlaneInYMax = dvector(1, NbPrimitives);
-    VBndPlaneInZMin = dvector(1, NbPrimitives);
-    VBndPlaneInZMax = dvector(1, NbPrimitives);
-    NbElmntsOnPrim = ivector(1, NbPrimitives);
-    ElementBgn = ivector(1, NbPrimitives);
-    ElementEnd = ivector(1, NbPrimitives);
-    AvChDen = dvector(1, NbPrimitives);
-    AvAsgndChDen = dvector(1, NbPrimitives);
-  } else {
-    printf("can allocate memory only after knowing NbPrimitives ...\n");
-    return -1;
-  }
+
+  // neBEM has been initialized, NbPrimitives set
+  PrimType = ivector(1, NbPrimitives);
+  NbVertices = ivector(1, NbPrimitives);
+  OrgnlToEffPrim = imatrix(1, NbPrimitives, 0, 2);  // 0 init, 1 intrfc, 2 rmv
+  XVertex = dmatrix(1, NbPrimitives, 0, MaxNbVertices - 1);
+  YVertex = dmatrix(1, NbPrimitives, 0, MaxNbVertices - 1);
+  ZVertex = dmatrix(1, NbPrimitives, 0, MaxNbVertices - 1);
+  XNorm = dvector(1, NbPrimitives);
+  YNorm = dvector(1, NbPrimitives);
+  ZNorm = dvector(1, NbPrimitives);
+  PrimLX = dvector(1, NbPrimitives);
+  PrimLZ = dvector(1, NbPrimitives);
+  Radius = dvector(1, NbPrimitives);  // can lead to a little memory misuse
+  PrimOriginX = dvector(1, NbPrimitives);
+  PrimOriginY = dvector(1, NbPrimitives);
+  PrimOriginZ = dvector(1, NbPrimitives);
+  PrimDC = (DirnCosn3D *)malloc(NbPrimitives * sizeof(DirnCosn3D));
+  VolRef1 = ivector(1, NbPrimitives);
+  VolRef2 = ivector(1, NbPrimitives);
+  NbSurfSegX = ivector(1, NbPrimitives);
+  NbSurfSegZ = ivector(1, NbPrimitives);
+  NbWireSeg = ivector(1, NbPrimitives);  // little memory misuse
+  InterfaceType = ivector(1, NbPrimitives);
+  Epsilon1 = dvector(1, NbPrimitives);
+  Epsilon2 = dvector(1, NbPrimitives);
+  Lambda = dvector(1, NbPrimitives);
+  ApplPot = dvector(1, NbPrimitives);
+  ApplCh = dvector(1, NbPrimitives);
+  PeriodicTypeX = ivector(1, NbPrimitives);
+  PeriodicTypeY = ivector(1, NbPrimitives);
+  PeriodicTypeZ = ivector(1, NbPrimitives);
+  PeriodicInX = ivector(1, NbPrimitives);
+  PeriodicInY = ivector(1, NbPrimitives);
+  PeriodicInZ = ivector(1, NbPrimitives);
+  XPeriod = dvector(1, NbPrimitives);
+  YPeriod = dvector(1, NbPrimitives);
+  ZPeriod = dvector(1, NbPrimitives);
+  MirrorTypeX = ivector(1, NbPrimitives);
+  MirrorTypeY = ivector(1, NbPrimitives);
+  MirrorTypeZ = ivector(1, NbPrimitives);
+  MirrorDistXFromOrigin = dvector(1, NbPrimitives);
+  MirrorDistYFromOrigin = dvector(1, NbPrimitives);
+  MirrorDistZFromOrigin = dvector(1, NbPrimitives);
+  BndPlaneInXMin = ivector(1, NbPrimitives);
+  BndPlaneInXMax = ivector(1, NbPrimitives);
+  BndPlaneInYMin = ivector(1, NbPrimitives);
+  BndPlaneInYMax = ivector(1, NbPrimitives);
+  BndPlaneInZMin = ivector(1, NbPrimitives);
+  BndPlaneInZMax = ivector(1, NbPrimitives);
+  XBndPlaneInXMin = dvector(1, NbPrimitives);
+  XBndPlaneInXMax = dvector(1, NbPrimitives);
+  YBndPlaneInYMin = dvector(1, NbPrimitives);
+  YBndPlaneInYMax = dvector(1, NbPrimitives);
+  ZBndPlaneInZMin = dvector(1, NbPrimitives);
+  ZBndPlaneInZMax = dvector(1, NbPrimitives);
+  VBndPlaneInXMin = dvector(1, NbPrimitives);
+  VBndPlaneInXMax = dvector(1, NbPrimitives);
+  VBndPlaneInYMin = dvector(1, NbPrimitives);
+  VBndPlaneInYMax = dvector(1, NbPrimitives);
+  VBndPlaneInZMin = dvector(1, NbPrimitives);
+  VBndPlaneInZMax = dvector(1, NbPrimitives);
+  NbElmntsOnPrim = ivector(1, NbPrimitives);
+  ElementBgn = ivector(1, NbPrimitives);
+  ElementEnd = ivector(1, NbPrimitives);
+  AvChDen = dvector(1, NbPrimitives);
+  AvAsgndChDen = dvector(1, NbPrimitives);
 
   // Loop over the primitives - major loop
   int nvertex, volref1, volref2, volmax = 0;
@@ -738,7 +734,7 @@ int neBEMReadGeometry(void) {
           ApplCh[prim] = charge2;
         } else if (boundarytype2 == 3) {
           // dielectric-conductor
-          InterfaceType[prim] = 3;      // conductor at floating potential
+          InterfaceType[prim] = 3;  // conductor at floating potential
         } else if (boundarytype2 == 4) {
           // dielectric-dielectric
           if (fabs(epsilon1 - epsilon2) < 1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
@@ -760,7 +756,7 @@ int neBEMReadGeometry(void) {
           if (fabs(epsilon1 - epsilon2)  // identical dielectrica
               < 1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
             printf(
-                "neBEMReadGeometry: between identical dielectrica; skipd.\n");
+                "neBEMReadGeometry: between identical dielectrica; skipped.\n");
             printf("Primitive skipped: #%d\n", prim);
             InterfaceType[prim] = 0;
           } else {
@@ -1597,23 +1593,20 @@ int neBEMReadGeometry(void) {
                 // only check that and remove the primitive if the distace along
                 // that axis match. Possible pitfall => the primitives may be
                 // coplanar but non-overlapping!
-                if (fabs(fabs(XNorm[prim]) - 1.0) <=
-                    1.0e-12)  // primitive || to YZ
-                {
+                if (fabs(fabs(XNorm[prim]) - 1.0) <= 1.0e-12) {
+                  // primitive || to YZ
                   if (fabs(XVertex[prim][0] - rmXVert[rmprim]) <= MINDIST) {
                     remove[prim] = 1;
                   }
                 }
-                if (fabs(fabs(YNorm[prim]) - 1.0) <=
-                    1.0e-12)  // primitive || to XZ
-                {
+                if (fabs(fabs(YNorm[prim]) - 1.0) <= 1.0e-12) {
+                  // primitive || to XZ
                   if (fabs(YVertex[prim][0] - rmYVert[rmprim]) <= MINDIST) {
                     remove[prim] = 1;
                   }
                 }
-                if (fabs(fabs(ZNorm[prim]) - 1.0) <=
-                    1.0e-12)  // primitive || to XY
-                {
+                if (fabs(fabs(ZNorm[prim]) - 1.0) <= 1.0e-12) {
+                  // primitive || to XY
                   if (fabs(ZVertex[prim][0] - rmZVert[rmprim]) <= MINDIST) {
                     remove[prim] = 1;
                   }
@@ -1679,8 +1672,8 @@ int neBEMReadGeometry(void) {
                 YVertex[effprim][vert] = YVertex[prim][vert];
                 ZVertex[effprim][vert] = ZVertex[prim][vert];
               }
-              if (PrimType[effprim] == 2)  // wire
-              {
+              if (PrimType[effprim] == 2) {
+                // wire
                 XNorm[effprim] = 0.0;  // modulus not 1 - an absurd trio!
                 YNorm[effprim] = 0.0;
                 ZNorm[effprim] = 0.0;
@@ -1737,7 +1730,7 @@ int neBEMReadGeometry(void) {
             }  // else remove == 0
           }    // loop over primitives to remove the primitives tagged to be
                // removed
-          if (fprrm) fclose(fprrm);
+          fclose(fprrm);
 
           NbPrimitives -= NbRemoved;
           printf(
@@ -1796,8 +1789,7 @@ int neBEMReadGeometry(void) {
     strcat(NativePrimFile, strPrimNb);
     strcat(NativePrimFile, ".inp");
 
-    FILE *fNativePrim;
-    fNativePrim = fopen(NativePrimFile, "w");
+    FILE *fNativePrim = fopen(NativePrimFile, "w");
 
     fprintf(fNativePrim, "#Number of vertices:\n");
     fprintf(fNativePrim, "%d\n", NbVertices[prim]);
@@ -1851,8 +1843,7 @@ int neBEMReadGeometry(void) {
     strcat(NativeVolFile, strVolNb);
     strcat(NativeVolFile, ".inp");
 
-    FILE *fNativeVol;
-    fNativeVol = fopen(NativeVolFile, "w");
+    FILE *fNativeVol = fopen(NativeVolFile, "w");
 
     fprintf(fNativeVol, "#Shape of the volume:\n");
     fprintf(fNativeVol, "%d\n", shape);
@@ -1877,8 +1868,7 @@ int neBEMReadGeometry(void) {
     strcpy(NativeMapFile, NativePrimDir);
     strcat(NativeMapFile, "/MapFile.inp");
 
-    FILE *fNativeMap;
-    fNativeMap = fopen(NativeMapFile, "w");
+    FILE *fNativeMap = fopen(NativeMapFile, "w");
 
     fprintf(fNativeMap, "#Number of maps\n");
     fprintf(fNativeMap, "%d\n", 0);
@@ -2309,13 +2299,13 @@ int neBEMKnownCharges(void) {
         double KnChFactor;
 
         fscanf(KnChInpFile, "NbPointsKnCh: %d\n", &NbPointsKnCh);
-        fscanf(KnChInpFile, "PointKnChFile: %s\n", PointKnChFile);
+        fscanf(KnChInpFile, "PointKnChFile: %255s\n", PointKnChFile);
         fscanf(KnChInpFile, "NbLinesKnCh: %d\n", &NbLinesKnCh);
-        fscanf(KnChInpFile, "LineKnChFile: %s\n", LineKnChFile);
+        fscanf(KnChInpFile, "LineKnChFile: %255s\n", LineKnChFile);
         fscanf(KnChInpFile, "NbAreasKnCh: %d\n", &NbAreasKnCh);
-        fscanf(KnChInpFile, "AreaKnChFile: %s\n", AreaKnChFile);
+        fscanf(KnChInpFile, "AreaKnChFile: %255s\n", AreaKnChFile);
         fscanf(KnChInpFile, "NbVolumesKnCh: %d\n", &NbVolumesKnCh);
-        fscanf(KnChInpFile, "VolumeKnChFile: %s\n", VolumeKnChFile);
+        fscanf(KnChInpFile, "VolumeKnChFile: %255s\n", VolumeKnChFile);
         fscanf(KnChInpFile, "KnChFactor: %lg\n", &KnChFactor);
         if (1) {
           printf("NbPointsKnCh: %d\n", NbPointsKnCh);
@@ -2341,10 +2331,13 @@ int neBEMKnownCharges(void) {
 
           PointKnChArr =
               (PointKnCh *)malloc((NbPointsKnCh + 1) * sizeof(PointKnCh));
-
-          for (int point = 0; point <= NbPointsKnCh;
-               ++point) {  // CHECK!!! ele limits start from 0, but all else
-                           // from 1 to ...
+          if (PointKnChArr == NULL) {
+            neBEMMessage("Memory allocation failed ... returning\n");
+            fclose(fptrPointKnChFile);
+            return -10;
+          }
+          for (int point = 0; point <= NbPointsKnCh; ++point) {
+            // CHECK!!! ele limits start from 0, but all else from 1 to ...
             PointKnChArr[point].Nb = 0;
             PointKnChArr[point].P.X = 0.0;
             PointKnChArr[point].P.Y = 0.0;
@@ -2380,10 +2373,13 @@ int neBEMKnownCharges(void) {
 
           LineKnChArr =
               (LineKnCh *)malloc((NbLinesKnCh + 1) * sizeof(LineKnCh));
-
-          for (int line = 0; line <= NbLinesKnCh;
-               ++line) {  // CHECK!!! ele limits start from 0, but all else from
-                          // 1 to ...
+          if (LineKnChArr == NULL) {
+            neBEMMessage("Memory allocation failed ... returning\n");
+            fclose(fptrLineKnChFile);
+            return -10;
+          }
+          for (int line = 0; line <= NbLinesKnCh; ++line) {  
+            // CHECK!!! ele limits start from 0, but all else from 1 to ...
             LineKnChArr[line].Nb = 0;
             LineKnChArr[line].Start.X = 0.0;
             LineKnChArr[line].Start.Y = 0.0;
@@ -2424,10 +2420,13 @@ int neBEMKnownCharges(void) {
 
           AreaKnChArr =
               (AreaKnCh *)malloc((NbAreasKnCh + 1) * sizeof(AreaKnCh));
-
-          for (int area = 0; area <= NbAreasKnCh;
-               ++area) {  // CHECK!!! ele limits start from 0, but all else from
-                          // 1 to ...
+          if (AreaKnChArr == NULL) {
+            neBEMMessage("Memory allocation failed ... returning\n");
+            fclose(fptrAreaKnChFile);
+            return -10;
+          }
+          for (int area = 0; area <= NbAreasKnCh; ++area) {  
+            // CHECK!!! ele limits start from 0, but all else from 1 to ...
             AreaKnChArr[area].Nb = 0;
             AreaKnChArr[area].NbVertices = 0;
             for (int vert = 1; vert <= (AreaKnChArr + area - 1)->NbVertices;
@@ -2473,10 +2472,13 @@ int neBEMKnownCharges(void) {
 
           VolumeKnChArr =
               (VolumeKnCh *)malloc((NbVolumesKnCh + 1) * sizeof(VolumeKnCh));
-
-          for (int volume = 0; volume <= NbVolumesKnCh;
-               ++volume) {  // CHECK!!! ele limits start from 0, but all else
-                            // from 1 to ...
+          if (VolumeKnChArr == NULL) {
+            neBEMMessage("Memory allocation failed ... returning\n");
+            fclose(fptrVolumeKnChFile);
+            return -10;
+          }
+          for (int volume = 0; volume <= NbVolumesKnCh; ++volume) { 
+            // CHECK!!! ele limits start from 0, but all else from 1 to ...
             VolumeKnChArr[volume].Nb = 0;
             VolumeKnChArr[volume].NbVertices = 0;
             for (int vert = 1; vert <= (VolumeKnChArr + volume - 1)->NbVertices;
@@ -2560,8 +2562,8 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
         double ChUpFactor;
         int *NbChUpEonEle, *NbChUpIonEle;
 
-        fscanf(ChargingUpInpFile, "ChargingUpEFile: %s\n", ChargingUpEFile);
-        fscanf(ChargingUpInpFile, "ChargingUpIFile: %s\n", ChargingUpIFile);
+        fscanf(ChargingUpInpFile, "ChargingUpEFile: %255s\n", ChargingUpEFile);
+        fscanf(ChargingUpInpFile, "ChargingUpIFile: %255s\n", ChargingUpIFile);
         fscanf(ChargingUpInpFile, "ChUpFactor: %lg\n", &ChUpFactor);
         if (1) {
           printf("ChargingUpEFile: %s\n", ChargingUpEFile);
@@ -2578,14 +2580,18 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
           int NbOfE = neBEMGetNbOfLines(ChargingUpEFile);
           if (NbOfE <= 1) {
             neBEMMessage("Too few lines in ChargingUpE ... returning\n");
+            fclose(fptrChargingUpEFile);
             return -11;
-          } else {  // initialize
-            NbChUpEonEle = (int *)malloc((NbElements + 1) * sizeof(int));
-            for (int ele = 0; ele <= NbElements;
-                 ++ele) {  // CHECK!!! ele limits start from 0, but all else
-                           // from 1 to ...
-              NbChUpEonEle[ele] = 0;
-            }
+          }
+          NbChUpEonEle = (int *)malloc((NbElements + 1) * sizeof(int));
+          if (NbChUpEonEle == NULL) {
+            neBEMMessage("Memory allocation failed ... returning\n");
+            fclose(fptrChargingUpEFile);
+            return -11;
+          }            
+          for (int ele = 0; ele <= NbElements; ++ele) {
+            // CHECK!!! ele limits start from 0, but all else from 1 to ...
+            NbChUpEonEle[ele] = 0;
           }
 
           // read the header line
@@ -2598,18 +2604,21 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
           FILE *ftmpEF = fopen(tmpEFile, "w");
           if (ftmpEF == NULL) {
             printf("cannot open temporary output file ... returning ...\n");
+            free(NbChUpEonEle);
             return -100;
           }
           FILE *fPtEChUpMap = fopen("PtEChUpMap.out", "w");
           if (fPtEChUpMap == NULL) {
             printf("cannot open PtEChUpMap.out file for writing ...\n");
+            free(NbChUpEonEle);
+            fclose(ftmpEF);
             return 110;
           }
 
           char label;
           int vol, enb;  // label, volume and electron number
-          double xlbend, ylbend, zlbend, xend, yend,
-              zend;  // lbend == Last But END
+          double xlbend, ylbend, zlbend; // lbend == Last But END
+          double xend, yend, zend;
           Point3D
               ptintsct;  // each electron likely to have an intersection point
           for (int electron = 1; electron <= NbOfE; ++electron) {
@@ -2675,9 +2684,8 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                 EleIntsctd = -1;   // intersected primitive & element
             int nearestprim = -1;  // absurd value
             double dist = 1.0e6, mindist = 1.0e6;  // absurdly high numbers
-            for (int prim = 1; prim <= NbPrimitives;
-                 ++prim)  // check all primitives
-            {
+            // check all primitives
+            for (int prim = 1; prim <= NbPrimitives; ++prim) {
               if (InterfaceType[prim] != 4)
                 continue;  // primitive not a dielectric
 
@@ -2770,9 +2778,8 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                   fflush(stdout);
                 }
 
-                if (fabs(denom) <
-                    tol * norm1 * norm2)  // line parallel to the plane
-                {
+                if (fabs(denom) < tol * norm1 * norm2) {
+                  // line parallel to the plane
                   if (fabs(a * xlbend + b * ylbend + c * zlbend + d) <=
                       1.0e-16) {  // CHECK: was == 0.0 in original code
                     intersect = 1;
@@ -2911,6 +2918,7 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                     if (!nvert) {
                       neBEMMessage(
                           "no vertex in element! ... neBEMKnownCharges ...\n");
+                      fclose(fPtEChUpMap);
                       return -20;
                     }
 
@@ -3040,8 +3048,8 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                   InEle = 0;
                   break;
                 }
-
-                for (int ele = ElementBgn[nearestprim];  // check all elements
+                // check all elements
+                for (int ele = ElementBgn[nearestprim];  
                      ele <= ElementEnd[nearestprim]; ++ele) {
                   nvert = 0;
                   if ((EleArr + ele - 1)->G.Type == 3) nvert = 3;
@@ -3335,14 +3343,19 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
           int NbOfI = neBEMGetNbOfLines(ChargingUpIFile);
           if (NbOfI <= 1) {
             neBEMMessage("Too few lines in ChargingUpI ... returning\n");
+            fclose(fptrChargingUpIFile);
             return -11;
-          } else {  // initialize
-            NbChUpIonEle = (int *)malloc((NbElements + 1) * sizeof(int));
-            for (int ele = 0; ele <= NbElements;
-                 ++ele) {  // CHECK!!! ele limit starts from 0 but all other
-                           // from 1 to ...
-              NbChUpIonEle[ele] = 0;
-            }
+          } 
+          // initialize
+          NbChUpIonEle = (int *)malloc((NbElements + 1) * sizeof(int));
+          if (NbChUpIonEle == NULL) {
+            neBEMMessage("Memory allocation failed ... returning\n");
+            fclose(fptrChargingUpIFile);
+            return -11;
+          }
+          for (int ele = 0; ele <= NbElements; ++ele) {  
+            // CHECK!!! ele limit starts from 0 but all other from 1 to ...
+            NbChUpIonEle[ele] = 0;
           }
 
           // read the header line
@@ -3355,18 +3368,21 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
           FILE *ftmpIF = fopen(tmpIFile, "w");
           if (ftmpIF == NULL) {
             printf("cannot open temporary ion output file ... returning ...\n");
+            free(NbChUpEonEle);
             return -100;
           }
           FILE *fPtIChUpMap = fopen("PtIChUpMap.out", "w");
           if (fPtIChUpMap == NULL) {
             printf("cannot open PtIChUpMap.out file for writing ...\n");
+            fclose(ftmpIF);
+            free(NbChUpEonEle);
             return 110;
           }
 
           char label;
           int inb, vol;  // label, volume and ion number
-          double xlbend, ylbend, zlbend, xend, yend,
-              zend;          // lbend == Last But END
+          double xlbend, ylbend, zlbend; // lbend == Last But END
+          double xend, yend, zend;
           Point3D ptintsct;  // each ion likely to have an intersection point
           for (int ion = 1; ion <= NbOfI; ++ion) {
             fscanf(fptrChargingUpIFile, "%c %d %d %lg %lg %lg %lg %lg %lg\n",
@@ -3430,9 +3446,8 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
             int nearestprim = -1;  // absurd value
             double dist = 1.0e6, mindist = 1.0e6;  // absurdly high numbers
             double SumOfAngles;
-            for (int prim = 1; prim <= NbPrimitives;
-                 ++prim)  // check all primitives
-            {
+            // check all primitives
+            for (int prim = 1; prim <= NbPrimitives; ++prim) {
               if (InterfaceType[prim] != 4)
                 continue;  // primitive not a dielectric
 
@@ -3531,9 +3546,8 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                   fflush(stdout);
                 }
 
-                if (fabs(denom) <
-                    tol * norm1 * norm2)  // line parallel to the plane
-                {
+                if (fabs(denom) < tol * norm1 * norm2) {
+                  // line parallel to the plane
                   if (a * xlbend + b * ylbend + c * zlbend + d ==
                       0.0)  // CHECK == for float
                   {
@@ -3663,6 +3677,7 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                   if (!nvert) {
                     neBEMMessage(
                         "no vertex in element! ... neBEMKnownCharges ...\n");
+                    if (fPtIChUpMap) fclose(fPtIChUpMap);
                     return -20;
                   }
 
@@ -3749,13 +3764,10 @@ int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
                   }         // if InEle
                 }           // for all elements on this primitive
 
-                if (InEle)
-                  break;
-                else {
-                  neBEMMessage(
-                      "Element cannot be identified ... neBEMKnownCharges\n");
-                  return -2;
-                }
+                if (InEle) break;
+                neBEMMessage(
+                    "Element cannot be identified ... neBEMKnownCharges\n");
+                return -2;
               }  // if proper intersection and no extrasection
 
               if ((InPrim) && (intersect) && (!extrasect) && (InEle)) {
@@ -4129,8 +4141,7 @@ int neBEMSolve(void) {
         neBEMMessage("neBEMSolve - NewModel");
         return -1;
       }
-    } else  // NewModel == 0
-    {
+    } else { // NewModel == 0
       if (NewMesh) {
         // effectively, NewBC = NewPP = 1;
         fstatus = ComputeSolution();
@@ -4138,24 +4149,21 @@ int neBEMSolve(void) {
           neBEMMessage("neBEMSolve - NewMesh");
           return -1;
         }
-      } else  // NewModel == NewMesh == 0
-      {
+      } else { // NewModel == NewMesh == 0
         if (NewBC) {  // effectively, NewPP = 1;
           fstatus = ComputeSolution();
           if (fstatus != 0) {
             neBEMMessage("neBEMSolve - Failure computing new solution");
             return -1;
           }
-        } else  // NewBC == 0
-        {
+        } else { // NewBC == 0
           if (NewPP) {
             fstatus = ReadSolution();
             if (fstatus != 0) {
               neBEMMessage("neBEMSolve - Failure reading solution");
               return (-1);
             }
-          } else  // NewPP == 0
-          {
+          } else { // NewPP == 0
             printf("neBEMSolve: Nothing to do ... returning ...\n");
             return (-1);
           }  // NewPP == 0
@@ -4315,10 +4323,9 @@ int neBEMSolve(void) {
       double xpt, ypt, zpt;
 
       char FastVolPFFile[256];
-      FILE *fFastVolPF;
       strcpy(FastVolPFFile, BCOutDir);
       strcat(FastVolPFFile, "/FastVolPF.out");
-      fFastVolPF = fopen(FastVolPFFile, "r");
+      FILE* fFastVolPF = fopen(FastVolPFFile, "r");
       if (fFastVolPF == NULL) {
         neBEMMessage("in neBEMSolve - FastVolPFFile");
         return -1;
@@ -4346,11 +4353,9 @@ int neBEMSolve(void) {
 
       if (OptStaggerFastVol) {
         char FastStgVolPFFile[256];
-        FILE *fFastStgVolPF;
         strcpy(FastStgVolPFFile, BCOutDir);
         strcat(FastStgVolPFFile, "/FastStgVolPF.out");
-        fFastStgVolPF = fopen(FastStgVolPFFile, "r");
-
+        FILE *fFastStgVolPF = fopen(FastStgVolPFFile, "r");
         if (fFastStgVolPF == NULL) {
           neBEMMessage("in neBEMSolve - FastStgVolPFFile");
           return -1;
@@ -4472,11 +4477,6 @@ int neBEMSolve(void) {
       neBEMMessage(
           "neBEMSolve - Failure computing WtFldFastVolPF: not implemented");
       return -1;
-      int fstatus = WtFldFastVolPF();
-      if (fstatus != 0) {
-        neBEMMessage("neBEMSolve - Failure computing WtFldFastVolPF");
-        return -1;
-      }
     }  // if OptWtFldCreateFastPF
 
     if (OptWtFldReadFastPF)  // reading option overrides creation
@@ -4486,10 +4486,9 @@ int neBEMSolve(void) {
       double xpt, ypt, zpt;
 
       char FastVolPFFile[256];
-      FILE *fFastVolPF;
       strcpy(FastVolPFFile, BCOutDir);
       strcat(FastVolPFFile, "/WtFldFastVolPF.out");
-      fFastVolPF = fopen(FastVolPFFile, "r");
+      FILE *fFastVolPF = fopen(FastVolPFFile, "r");
       if (fFastVolPF == NULL) {
         neBEMMessage("in neBEMSolve - WtFldFastVolPFFile");
         return -1;
@@ -4679,39 +4678,33 @@ void neBEMDeleteAllWeightingFields(void) {
 // returns DBL_MAX as the value of potential when something goes wrong.
 double neBEMWeightingField(Point3D *point, Vector3D *field, int IdWtField) {
   double potential;
-  int fstatus;
 
   if (neBEMState < 9) {
     printf("neBEMWeightingField cannot be called before reaching state 9.\n");
     return (-1);
   }
 
-  if (OptFixedWtField) { // minimum computation, too restricted!
+  if (OptFixedWtField) { 
+    // minimum computation, too restricted!
     potential = FixedWtPotential;
     field->X = FixedWtFieldX;
     field->Y = FixedWtFieldY;
     field->Z = FixedWtFieldZ;
-    fstatus = 0;
-    if (fstatus != 0) {
-      neBEMMessage("neBEMWeightingField - FixedWtFieldAtPoint");
-      return DBL_MAX; 
-    }
-  } else if (OptWtFldFastVol)  // bit more computation, lot more flexibility
-  {                            // Note: this is not the Creat or Read option
-    fstatus = WtFldFastPFAtPoint(point, &potential, field);
+  } else if (OptWtFldFastVol) {
+    // bit more computation, lot more flexibility
+    // Note: this is not the Creat or Read option
+    int fstatus = WtFldFastPFAtPoint(point, &potential, field);
     if (fstatus != 0) {
       neBEMMessage("neBEMWeightingField - WtFldFastPFAtPoint");
       return DBL_MAX;
     }
   } else {
-    fstatus = WtPFAtPoint(point, &potential, field, IdWtField);
+    int fstatus = WtPFAtPoint(point, &potential, field, IdWtField);
     if (fstatus != 0) {
       neBEMMessage("neBEMWeightingField - WtPFAtPoint");
       return DBL_MAX;
     }
   }
-
-  // printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
 
   return potential;
 }  // neBEMWeightingField ends
@@ -4809,8 +4802,8 @@ int CreateDirStr(void) {
     return -1;
   }
 
-  if (NewModel)  // create ModelOutDir
-  {
+  if (NewModel) {
+    // create ModelOutDir
     if (OptReuseDir) {
       fstatus = CreateOrUseDir(ModelOutDir);
       fstatus = CreateOrUseDir(NativeOutDir);
@@ -4826,8 +4819,8 @@ int CreateDirStr(void) {
     }
   }
 
-  if (NewMesh)  // create MeshOutDir
-  {
+  if (NewMesh) {
+    // create MeshOutDir
     if (OptReuseDir)
       fstatus = CreateOrUseDir(MeshOutDir);
     else
@@ -4838,8 +4831,8 @@ int CreateDirStr(void) {
     }
   }
 
-  if (NewBC)  // create BCOutDir
-  {
+  if (NewBC) {
+    // create BCOutDir
     if (OptReuseDir)
       fstatus = CreateOrUseDir(BCOutDir);
     else
@@ -4850,8 +4843,8 @@ int CreateDirStr(void) {
     }
   }
 
-  if (NewPP)  // create PPOutDir
-  {
+  if (NewPP) {
+    // create PPOutDir
     if (OptReuseDir)
       fstatus = CreateOrUseDir(PPOutDir);
     else
@@ -4944,8 +4937,7 @@ int WritePrimitives(void) {
   strcpy(PrimitiveFile, ModelOutDir);
   strcat(PrimitiveFile, "/Primitives/StorePrims.out");
 
-  FILE *fStrPrm;
-  fStrPrm = fopen(PrimitiveFile, "w");
+  FILE *fStrPrm = fopen(PrimitiveFile, "w");
   if (fStrPrm == NULL) {
     neBEMMessage("WritePrimitives - Could not create file to store primitives");
     return -1;
@@ -4994,8 +4986,7 @@ int WriteElements(void) {
   strcpy(ElementFile, MeshOutDir);
   strcat(ElementFile, "/Elements/StoreElems.out");
 
-  FILE *fStrEle;
-  fStrEle = fopen(ElementFile, "w");
+  FILE *fStrEle = fopen(ElementFile, "w");
   if (fStrEle == NULL) {
     neBEMMessage("WriteElements - Could not create file to store elements");
     return -1;
