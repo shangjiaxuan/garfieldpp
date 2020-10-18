@@ -499,39 +499,25 @@ void ComponentFieldMap::Jacobian3(const Element& element, const double u,
   const double fourv = 4 * v;
   const double fourw = 4 * w;
 
-  const double ax = -n1.x + fourv * n1.x + fouru * n3.x + fourw * n5.x;
-  const double ay = -n1.y + fourv * n1.y + fouru * n3.y + fourw * n5.y;
-  const double bx = -n2.x + fourw * n2.x + fouru * n4.x + fourv * n5.x;
-  const double by = -n2.y + fourw * n2.y + fouru * n4.y + fourv * n5.y;
-  const double cx = -n0.x + fouru * n0.x + fourv * n3.x + fourw * n4.x;
-  const double cy = -n0.y + fouru * n0.y + fourv * n3.y + fourw * n4.y;
+  const double ax = (-1 + fourv) * n1.x + fouru * n3.x + fourw * n5.x;
+  const double ay = (-1 + fourv) * n1.y + fouru * n3.y + fourw * n5.y;
+  const double bx = (-1 + fourw) * n2.x + fouru * n4.x + fourv * n5.x;
+  const double by = (-1 + fourw) * n2.y + fouru * n4.y + fourv * n5.y;
+  const double cx = (-1 + fouru) * n0.x + fourv * n3.x + fourw * n4.x;
+  const double cy = (-1 + fouru) * n0.y + fourv * n3.y + fourw * n4.y;
   // Determinant of the quadratic triangular Jacobian
-  det = -((-1 + fourv) * n1.x + n2.x - fourw * n2.x + fouru * n3.x -
-          fouru * n4.x - fourv * n5.x + fourw * n5.x) *
-            cy -
-        ((-1 + fouru) * n0.x + n1.x - fourv * n1.x - fouru * n3.x +
-         fourv * n3.x + fourw * n4.x - fourw * n5.x) *
-            by +
-        ((-1 + fouru) * n0.x + n2.x - fourw * n2.x + fourv * n3.x -
-         fouru * n4.x + fourw * n4.x - fourv * n5.x) *
-            ay;
+  det = -(ax - bx) * cy - (cx - ax) * by + (cx - bx) * ay;
 
   // Terms of the quadratic triangular Jacobian
   jac[0][0] = ax * by - bx * ay;
-  jac[0][1] = (-1 + fourv) * n1.y + n2.y - fourw * n2.y + fouru * n3.y -
-              fouru * n4.y - fourv * n5.y + fourw * n5.y;
-  jac[0][2] = n1.x - fourv * n1.x + (-1 + fourw) * n2.x - fouru * n3.x +
-              fouru * n4.x + fourv * n5.x - fourw * n5.x;
+  jac[0][1] = ay - by;
+  jac[0][2] = bx - ax;
   jac[1][0] = bx * cy - cx * by;
-  jac[1][1] = n0.y - fouru * n0.y - n2.y + fourw * n2.y - fourv * n3.y +
-              fouru * n4.y - fourw * n4.y + fourv * n5.y;
-  jac[1][2] = (-1 + fouru) * n0.x + n2.x - fourw * n2.x + fourv * n3.x -
-              fouru * n4.x + fourw * n4.x - fourv * n5.x;
+  jac[1][1] = by - cy;
+  jac[1][2] = cx - bx;
   jac[2][0] = -ax * cy + cx * ay;
-  jac[2][1] = (-1 + fouru) * n0.y + n1.y - fourv * n1.y - fouru * n3.y +
-              fourv * n3.y + fourw * n4.y - fourw * n5.y;
-  jac[2][2] = n0.x - fouru * n0.x - n1.x + fourv * n1.x + fouru * n3.x -
-              fourv * n3.x - fourw * n4.x + fourw * n5.x;
+  jac[2][1] = cy - ay;
+  jac[2][2] = ax - cx;
 }
 
 void ComponentFieldMap::Jacobian5(const Element& element, const double u,
@@ -701,10 +687,6 @@ void ComponentFieldMap::Jacobian13(const Element& element, const double t,
                                    const double u, const double v,
                                    const double w, double& det,
                                    double jac[4][4]) const {
-  // Initial values
-  for (int j = 0; j < 4; ++j) {
-    for (int k = 0; k < 4; ++k) jac[j][k] = 0;
-  }
 
   const Node& n0 = m_nodes[element.emap[0]];
   const Node& n1 = m_nodes[element.emap[1]];
@@ -723,121 +705,101 @@ void ComponentFieldMap::Jacobian13(const Element& element, const double t,
   const double fourv = 4 * v;
   const double fourw = 4 * w;
 
-  const double ttx = (-1 + fourt) * n0.x + 4 * (u * n4.x + v * n5.x + w * n6.x);
-  const double tty = (-1 + fourt) * n0.y + 4 * (u * n4.y + v * n5.y + w * n6.y);
-  const double ttz = (-1 + fourt) * n0.z + 4 * (u * n4.z + v * n5.z + w * n6.z);
+  const double x0 = (-1 + fourt) * n0.x;
+  const double y0 = (-1 + fourt) * n0.y;
+  const double z0 = (-1 + fourt) * n0.z;
+  const double xp = fouru * n4.x + fourv * n5.x + fourw * n6.x; 
+  const double yp = fouru * n4.y + fourv * n5.y + fourw * n6.y; 
+  const double zp = fouru * n4.z + fourv * n5.z + fourw * n6.z; 
 
-  const double uux = (-1 + fouru) * n1.x + 4 * (t * n4.x + v * n7.x + w * n8.x);
-  const double uuy = (-1 + fouru) * n1.y + 4 * (t * n4.y + v * n7.y + w * n8.y);
-  const double uuz = (-1 + fouru) * n1.z + 4 * (t * n4.z + v * n7.z + w * n8.z);
+  const double tx = x0 + xp;
+  const double ty = y0 + yp;
+  const double tz = z0 + zp;
 
-  const double vvx =
-      fourv * n9.x - n3.x + fourw * n3.x + fourt * n6.x + fouru * n8.x;
-  const double vvy =
-      fourv * n9.y - n3.y + fourw * n3.y + fourt * n6.y + fouru * n8.y;
-  const double vvz =
-      fourv * n9.z - n3.z + fourw * n3.z + fourt * n6.z + fouru * n8.z;
+  const double x1 = (-1 + fouru) * n1.x;
+  const double y1 = (-1 + fouru) * n1.y;
+  const double z1 = (-1 + fouru) * n1.z;
+  const double xq = fourt * n4.x + fourv * n7.x + fourw * n8.x;
+  const double yq = fourt * n4.y + fourv * n7.y + fourw * n8.y;
+  const double zq = fourt * n4.z + fourv * n7.z + fourw * n8.z;
 
-  const double wwx =
-      fourw * n9.x - n2.x + fourv * n2.x + fourt * n5.x + fouru * n7.x;
-  const double wwy =
-      fourw * n9.y - n2.y + fourv * n2.y + fourt * n5.y + fouru * n7.y;
-  const double wwz =
-      fourw * n9.z - n2.z + fourv * n2.z + fourt * n5.z + fouru * n7.z;
+  const double ux = x1 + xq;
+  const double uy = y1 + yq;
+  const double uz = z1 + zq;
 
-  const double aax = n1.x - fouru * n1.x - n3.x + fourw * n3.x - fourt * n4.x +
-                     fourt * n6.x + fourv * (n9.x - n7.x) + fouru * n8.x -
-                     fourw * n8.x;
-  const double anx = -fourv * n9.x - n1.x + fouru * n1.x + n3.x - fourw * n3.x +
-                     fourt * n4.x - fourt * n6.x + fourv * n7.x - fouru * n8.x +
-                     fourw * n8.x;
-  const double aay = n1.y - fouru * n1.y - n3.y + fourw * n3.y - fourt * n4.y +
-                     fourt * n6.y + fourv * (n9.y - n7.y) + fouru * n8.y -
-                     fourw * n8.y;
-  const double any = -fourv * n9.y - n1.y + fouru * n1.y + n3.y - fourw * n3.y +
-                     fourt * n4.y - fourt * n6.y + fourv * n7.y - fouru * n8.y +
-                     fourw * n8.y;
+  const double x2 = (-1 + fourv) * n2.x;
+  const double y2 = (-1 + fourv) * n2.y;
+  const double z2 = (-1 + fourv) * n2.z;
+  const double xr = fourt * n5.x + fouru * n7.x + fourw * n9.x;
+  const double yr = fourt * n5.y + fouru * n7.y + fourw * n9.y;
+  const double zr = fourt * n5.z + fouru * n7.z + fourw * n9.z;
 
-  const double bbx = -fourw * n9.x - n1.x + fouru * n1.x + n2.x - fourv * n2.x +
-                     fourt * n4.x - fourt * n5.x - fouru * n7.x + fourv * n7.x +
-                     fourw * n8.x;
-  const double bnx = n1.x - fouru * n1.x - n2.x + fourv * n2.x - fourt * n4.x +
-                     fourt * n5.x + fouru * n7.x - fourv * n7.x +
-                     fourw * (n9.x - n8.x);
-  const double bby = -fourw * n9.y - n1.y + fouru * n1.y + n2.y - fourv * n2.y +
-                     fourt * n4.y - fourt * n5.y - fouru * n7.y + fourv * n7.y +
-                     fourw * n8.y;
-  const double bny = n1.y - fouru * n1.y - n2.y + fourv * n2.y - fourt * n4.y +
-                     fourt * n5.y + fouru * n7.y - fourv * n7.y +
-                     fourw * (n9.y - n8.y);
+  const double vx = x2 + xr;
+  const double vy = y2 + yr;
+  const double vz = z2 + zr;
 
-  const double ccx = -fourv * n9.x + fourw * n9.x - n2.x + fourv * n2.x + n3.x -
-                     fourw * n3.x + fourt * n5.x - fourt * n6.x + fouru * n7.x -
-                     fouru * n8.x;
-  const double cnx = -fourw * n9.x + fourv * (n9.x - n2.x) + n2.x - n3.x +
-                     fourw * n3.x - fourt * n5.x + fourt * n6.x - fouru * n7.x +
-                     fouru * n8.x;
-  const double ccy = -fourv * n9.y + fourw * n9.y - n2.y + fourv * n2.y + n3.y -
-                     fourw * n3.y + fourt * n5.y - fourt * n6.y + fouru * n7.y -
-                     fouru * n8.y;
-  const double cny = -fourw * n9.y + fourv * (n9.y - n2.y) + n2.y - n3.y +
-                     fourw * n3.y - fourt * n5.y + fourt * n6.y - fouru * n7.y +
-                     fouru * n8.y;
+  const double x3 = (-1 + fourw) * n3.x;
+  const double y3 = (-1 + fourw) * n3.y;
+  const double z3 = (-1 + fourw) * n3.z;
+  const double xs = fourt * n6.x + fouru * n8.x + fourv * n9.x;
+  const double ys = fourt * n6.y + fouru * n8.y + fourv * n9.y;
+  const double zs = fourt * n6.z + fouru * n8.z + fourv * n9.z;
 
-  const double ddy = (-1 + fourt) * n0.y - fourv * n9.y + n3.y - fourw * n3.y +
-                     fouru * n4.y + fourv * n5.y - fourt * n6.y + fourw * n6.y -
-                     fouru * n8.y;
-  const double ddx = (-1 + fourt) * n0.x - fourv * n9.x + n3.x - fourw * n3.x +
-                     fouru * n4.x + fourv * n5.x - fourt * n6.x + fourw * n6.x -
-                     fouru * n8.x;
+  const double wx = x3 + xs;
+  const double wy = y3 + ys;
+  const double wz = z3 + zs;
+  
+  const double ax = x1 - x3 + xq - xs;
+  const double ay = y1 - y3 + yq - ys;
 
-  const double eex = (-1 + fourt) * n0.x - fourw * n9.x + n2.x - fourv * n2.x +
-                     fouru * n4.x - fourt * n5.x + fourv * n5.x + fourw * n6.x -
-                     fouru * n7.x;
-  const double eey = (-1 + fourt) * n0.y - fourw * n9.y + n2.y - fourv * n2.y +
-                     fouru * n4.y - fourt * n5.y + fourv * n5.y + fourw * n6.y -
-                     fouru * n7.y;
+  const double bx = x1 - x2 + xq - xr;
+  const double by = y1 - y2 + yq - yr;
 
-  const double ffx =
-      (-1 + fourt) * n0.x + n1.x - fouru * n1.x +
-      4 * (-(t * n4.x) + u * n4.x + v * n5.x + w * n6.x - v * n7.x - w * n8.x);
-  const double ffy =
-      (-1 + fourt) * n0.y + n1.y - fouru * n1.y +
-      4 * (-(t * n4.y) + u * n4.y + v * n5.y + w * n6.y - v * n7.y - w * n8.y);
+  const double cx = x2 - x3 + xr - xs;
+  const double cy = y2 - y3 + yr - ys;
+
+  const double dx = x0 - x3 + xp - xs;
+  const double dy = y0 - y3 + yp - ys;
+
+  const double ex = x0 - x2 + xp - xr;
+  const double ey = y0 - y2 + yp - yr;
+
+  const double fx = x0 - x1 + xp - xq;
+  const double fy = y0 - y1 + yp - yq;
 
   // Determinant of the quadrilateral serendipity Jacobian
-  det = -(anx * wwy + bnx * vvy + cnx * uuy) * ttz -
-        (aax * tty - ffx * vvy + ddx * uuy) * wwz +
-        (bnx * tty - ffx * wwy + eex * uuy) * vvz +
-        (cnx * tty + ddx * wwy - eex * vvy) * uuz;
+  det = (-ax * vy + bx * wy + cx * uy) * tz -
+        (-ax * ty - fx * wy + dx * uy) * vz +
+        (-bx * ty - fx * vy + ex * uy) * wz +
+        (-cx * ty + dx * vy - ex * wy) * uz;
 
-  jac[0][0] = -(uux * vvy - vvx * uuy) * wwz + (uux * wwy - wwx * uuy) * vvz +
-              (-vvx * wwy + wwx * vvy) * uuz;
+  const double tu = tx * uy - ux * ty;
+  const double tv = tx * vy - vx * ty;
+  const double tw = tx * wy - wx * ty;
+  const double uv = ux * vy - vx * uy;
+  const double uw = ux * wy - wx * uy;
+  const double vw = vx * wy - wx * vy;
 
-  jac[0][1] = aay * wwz + bby * vvz + ccy * uuz;
-  jac[0][2] = anx * wwz + bnx * vvz + cnx * uuz;
-  jac[0][3] = aax * wwy + bbx * vvy + ccx * uuy;
+  jac[0][0] = -uw * vz + uv * wz + vw * uz;
+  jac[1][0] = -vw * tz + tw * vz - tv * wz;
+  jac[2][0] =  uw * tz + tu * wz - tw * uz;
+  jac[3][0] = -uv * tz - tu * vz + tv * uz;
 
-  jac[1][0] = -(-vvx * wwy + wwx * vvy) * ttz + (-vvx * tty + ttx * vvy) * wwz -
-              (-wwx * tty + ttx * wwy) * vvz;
+  jac[0][1] = -ay * vz + by * wz + cy * uz;
+  jac[0][2] =  ax * vz - bx * wz - cx * uz;
+  jac[0][3] = -ax * vy + bx * wy + cx * uy;
 
-  jac[1][1] = cny * ttz + ddy * wwz - eey * vvz;
-  jac[1][2] = ccx * ttz - ddx * wwz + eex * vvz;
-  jac[1][3] = cnx * tty + ddx * wwy - eex * vvy;
+  jac[1][1] = -cy * tz + dy * vz - ey * wz;
+  jac[1][2] =  cx * tz - dx * vz + ex * wz;
+  jac[1][3] = -cx * ty + dx * vy - ex * wy;
 
-  jac[2][0] = (uux * vvy - vvx * uuy) * ttz + (-uux * tty + ttx * uuy) * vvz -
-              (-vvx * tty + ttx * vvy) * uuz;
+  jac[2][1] =  ay * tz + fy * wz - dy * uz;
+  jac[2][2] = -ax * tz - fx * wz + dx * uz;
+  jac[2][3] =  ax * ty + fx * wy - dx * uy;
 
-  jac[2][1] = any * ttz + ffy * vvz - ddy * uuz;
-  jac[2][2] = aax * ttz - ffx * vvz + ddx * uuz;
-  jac[2][3] = anx * tty + ffx * vvy - ddx * uuy;
-
-  jac[3][0] = -(uux * wwy - wwx * uuy) * ttz - (-uux * tty + ttx * uuy) * wwz +
-              (-wwx * tty + ttx * wwy) * uuz;
-
-  jac[3][1] = bny * ttz - ffy * wwz + eey * uuz;
-  jac[3][2] = bbx * ttz + ffx * wwz - eex * uuz;
-  jac[3][3] = bnx * tty - ffx * wwy + eex * uuy;
+  jac[3][1] = -by * tz - fy * vz + ey * uz;
+  jac[3][2] =  bx * tz + fx * vz - ex * uz;
+  jac[3][3] = -bx * ty - fx * vy + ex * uy;
 }
 
 void ComponentFieldMap::JacobianCube(const Element& element, const double t1,
@@ -934,9 +896,6 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
     std::cout << "   Point (" << x << ", " << y << ", " << z << ")\n";
   }
 
-  // Failure flag
-  int ifail = 1;
-
   // Provisional values
   t1 = t2 = t3 = t4 = 0;
 
@@ -944,24 +903,18 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
   const Node& n0 = m_nodes[element.emap[0]];
   const Node& n1 = m_nodes[element.emap[1]];
   const Node& n2 = m_nodes[element.emap[2]];
-  const double tt1 = (x - n1.x) * (n2.y - n1.y) - (y - n1.y) * (n2.x - n1.x);
-  const double tt2 = (x - n2.x) * (n0.y - n2.y) - (y - n2.y) * (n0.x - n2.x);
-  const double tt3 = (x - n0.x) * (n1.y - n0.y) - (y - n0.y) * (n1.x - n0.x);
-  const double f1 =
-      (n0.x - n1.x) * (n2.y - n1.y) - (n2.x - n1.x) * (n0.y - n1.y);
-  const double f2 =
-      (n1.x - n2.x) * (n0.y - n2.y) - (n0.x - n2.x) * (n1.y - n2.y);
-  const double f3 =
-      (n2.x - n0.x) * (n1.y - n0.y) - (n1.x - n0.x) * (n2.y - n0.y);
-  if (f1 == 0 || f2 == 0 || f3 == 0) {
+  const double d1 = (n0.x - n1.x) * (n2.y - n1.y) - (n2.x - n1.x) * (n0.y - n1.y);
+  const double d2 = (n1.x - n2.x) * (n0.y - n2.y) - (n0.x - n2.x) * (n1.y - n2.y);
+  const double d3 = (n2.x - n0.x) * (n1.y - n0.y) - (n1.x - n0.x) * (n2.y - n0.y);
+  if (d1 == 0 || d2 == 0 || d3 == 0) {
     std::cerr << m_className << "::Coordinates3:\n";
     std::cerr << "    Calculation of linear coordinates failed; abandoned.\n";
-    return ifail;
-  } else {
-    t1 = tt1 / f1;
-    t2 = tt2 / f2;
-    t3 = tt3 / f3;
+    return 1;
   }
+  t1 = ((x - n1.x) * (n2.y - n1.y) - (y - n1.y) * (n2.x - n1.x)) / d1;
+  t2 = ((x - n2.x) * (n0.y - n2.y) - (y - n2.y) * (n0.x - n2.x)) / d2;
+  t3 = ((x - n0.x) * (n1.y - n0.y) - (y - n0.y) * (n1.x - n0.x)) / d3;
+
   const Node& n3 = m_nodes[element.emap[3]];
   const Node& n4 = m_nodes[element.emap[4]];
   const Node& n5 = m_nodes[element.emap[5]];
@@ -976,13 +929,18 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
                 << ", " << td2 << ", " << td3 << "), sum = " << td1 + td2 + td3
                 << "\n";
     }
+    // Evaluate the shape functions.
+    const double f0 = td1 * (2 * td1 - 1);
+    const double f1 = td2 * (2 * td2 - 1);
+    const double f2 = td3 * (2 * td3 - 1);
+    const double f3 = 4 * td1 * td2; 
+    const double f4 = 4 * td1 * td3; 
+    const double f5 = 4 * td2 * td3; 
     // Re-compute the (x,y,z) position for this coordinate.
-    const double xr = n0.x * td1 * (2 * td1 - 1) + n1.x * td2 * (2 * td2 - 1) +
-                      n2.x * td3 * (2 * td3 - 1) + n3.x * 4 * td1 * td2 +
-                      n4.x * 4 * td1 * td3 + n5.x * 4 * td2 * td3;
-    const double yr = n0.y * td1 * (2 * td1 - 1) + n1.y * td2 * (2 * td2 - 1) +
-                      n2.y * td3 * (2 * td3 - 1) + n3.y * 4 * td1 * td2 +
-                      n4.y * 4 * td1 * td3 + n5.y * 4 * td2 * td3;
+    const double xr = n0.x * f0 + n1.x * f1 + n2.x * f2 + 
+                      n3.x * f3 + n4.x * f4 + n5.x * f5;
+    const double yr = n0.y * f0 + n1.y * f1 + n2.y * f2 + 
+                      n3.y * f3 + n4.y * f4 + n5.y * f5;
     const double sr = td1 + td2 + td3;
     // Compute the Jacobian.
     Jacobian3(element, td1, td2, td3, det, jac);
@@ -991,10 +949,11 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
     // Update the estimate.
     const double invdet = 1. / det;
     double corr[3] = {0., 0., 0.};
-    for (int l = 0; l < 3; l++) {
-      for (int k = 0; k < 3; k++) {
-        corr[l] += jac[l][k] * diff[k] * invdet;
+    for (size_t l = 0; l < 3; l++) {
+      for (size_t k = 0; k < 3; k++) {
+        corr[l] += jac[l][k] * diff[k];
       }
+      corr[l] *= invdet;
     }
     // Debugging
     if (m_debug) {
@@ -1009,8 +968,8 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
     td2 += corr[1];
     td3 += corr[2];
     // Check for convergence.
-    if (fabs(corr[0]) < 1.0e-5 && fabs(corr[1]) < 1.0e-5 &&
-        fabs(corr[2]) < 1.0e-5) {
+    constexpr double tol = 1.e-5;
+    if (fabs(corr[0]) < tol && fabs(corr[1]) < tol && fabs(corr[2]) < tol) {
       if (m_debug) {
         std::cout << m_className << "::Coordinates3: Convergence reached.";
       }
@@ -1032,7 +991,7 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
                   << "    at position (" << x << ", " << y << ").\n";
       }
       t1 = t2 = t3 = t4 = 0;
-      return ifail;
+      return 1;
     }
   }
 
@@ -1046,13 +1005,17 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
     std::cout << "    Convergence reached at (t1, t2, t3) = (" << t1 << ", "
               << t2 << ", " << t3 << ").\n";
     // For debugging purposes, show position
-    double xr = n0.x * td1 * (2 * td1 - 1) + n1.x * td2 * (2 * td2 - 1) +
-                n2.x * td3 * (2 * td3 - 1) + n3.x * 4 * td1 * td2 +
-                n4.x * 4 * td1 * td3 + n5.x * 4 * td2 * td3;
-    double yr = n0.y * td1 * (2 * td1 - 1) + n1.y * td2 * (2 * td2 - 1) +
-                n2.y * td3 * (2 * td3 - 1) + n3.y * 4 * td1 * td2 +
-                n4.y * 4 * td1 * td3 + n5.y * 4 * td2 * td3;
-    double sr = td1 + td2 + td3;
+    const double f0 = td1 * (2 * td1 - 1);
+    const double f1 = td2 * (2 * td2 - 1);
+    const double f2 = td3 * (2 * td3 - 1);
+    const double f3 = 4 * td1 * td2; 
+    const double f4 = 4 * td1 * td3; 
+    const double f5 = 4 * td2 * td3; 
+    const double xr = n0.x * f0 + n1.x * f1 + n2.x * f2 + 
+                      n3.x * f3 + n4.x * f4 + n5.x * f5;
+    const double yr = n0.y * f0 + n1.y * f1 + n2.y * f2 + 
+                      n3.y * f3 + n4.y * f4 + n5.y * f5;
+    const double sr = td1 + td2 + td3;
     std::cout << m_className << "::Coordinates3:\n";
     std::cout << "    Position requested:     (" << x << ", " << y << ")\n";
     std::cout << "    Reconstructed:          (" << xr << ", " << yr << ")\n";
@@ -1062,8 +1025,7 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
   }
 
   // Success
-  ifail = 0;
-  return ifail;
+  return 0;
 }
 
 int ComponentFieldMap::Coordinates4(const double x, const double y,
@@ -1196,12 +1158,12 @@ int ComponentFieldMap::Coordinates4(const double x, const double y,
     std::cout << m_className << "::Coordinates4:\n";
     std::cout << "    Isoparametric (u, v):   (" << t1 << ", " << t2 << ").\n";
     // Re-compute the (x,y,z) position for this coordinate.
-    double xr =
-        n0.x * (1 - t1) * (1 - t2) * 0.25 + n1.x * (1 + t1) * (1 - t2) * 0.25 +
-        n2.x * (1 + t1) * (1 + t2) * 0.25 + n3.x * (1 - t1) * (1 + t2) * 0.25;
-    double yr =
-        n0.y * (1 - t1) * (1 - t2) * 0.25 + n1.y * (1 + t1) * (1 - t2) * 0.25 +
-        n2.y * (1 + t1) * (1 + t2) * 0.25 + n3.y * (1 - t1) * (1 + t2) * 0.25;
+    const double f0 = (1 - t1) * (1 - t2) * 0.25;
+    const double f1 = (1 + t1) * (1 - t2) * 0.25;
+    const double f2 = (1 + t1) * (1 + t2) * 0.25;
+    const double f3 = (1 - t1) * (1 + t2) * 0.25;
+    const double xr = n0.x * f0 + n1.x * f1 + n2.x * f2 + n3.x * f3;
+    const double yr = n0.y * f0 + n1.y * f1 + n2.y * f2 + n3.y * f3;
     std::cout << m_className << "::Coordinates4: \n";
     std::cout << "    Position requested:     (" << x << ", " << y << ")\n";
     std::cout << "    Reconstructed:          (" << xr << ", " << yr << ")\n";
@@ -1232,8 +1194,7 @@ int ComponentFieldMap::Coordinates5(const double x, const double y,
 
   // Degenerate elements should have been treated as triangles.
   if (element.degenerate) {
-    std::cerr << m_className << "::Coordinates5:\n"
-              << "    Received degenerate element.\n";
+    std::cerr << m_className << "::Coordinates5: Degenerate element.\n";
     return ifail;
   }
 
@@ -1295,10 +1256,12 @@ int ComponentFieldMap::Coordinates5(const double x, const double y,
     double diff[2] = {x - xr, y - yr};
     // Update the estimate.
     double corr[2] = {0., 0.};
-    for (int l = 0; l < 2; ++l) {
-      for (int k = 0; k < 2; ++k) {
-        corr[l] += jac[l][k] * diff[k] / det;
+    const double invdet = 1. / det;
+    for (size_t l = 0; l < 2; ++l) {
+      for (size_t k = 0; k < 2; ++k) {
+        corr[l] += jac[l][k] * diff[k];
       }
+      corr[l] *= invdet;
     }
     // Debugging
     if (m_debug) {
@@ -1312,7 +1275,8 @@ int ComponentFieldMap::Coordinates5(const double x, const double y,
     td1 += corr[0];
     td2 += corr[1];
     // Check for convergence.
-    if (fabs(corr[0]) < 1.0e-5 && fabs(corr[1]) < 1.0e-5) {
+    constexpr double tol = 1.e-5;
+    if (fabs(corr[0]) < tol && fabs(corr[1]) < tol) {
       if (m_debug) {
         std::cout << m_className << "::Coordinates5: Convergence reached.\n";
       }
@@ -1371,17 +1335,15 @@ int ComponentFieldMap::Coordinates5(const double x, const double y,
   return ifail;
 }
 
-int ComponentFieldMap::Coordinates12(const double x, const double y,
-                                     const double z, double& t1, double& t2,
-                                     double& t3, double& t4,
-                                     const Element& element) const {
+void ComponentFieldMap::Coordinates12(const double x, const double y,
+                                      const double z, double& t1, double& t2,
+                                      double& t3, double& t4,
+                                      const Element& element) const {
   if (m_debug) {
     std::cout << m_className << "::Coordinates12:\n"
               << "   Point (" << x << ", " << y << ", " << z << ").\n";
   }
 
-  // Failure flag
-  int ifail = 1;
   const Node& n0 = m_nodes[element.emap[0]];
   const Node& n1 = m_nodes[element.emap[1]];
   const Node& n2 = m_nodes[element.emap[2]];
@@ -1440,9 +1402,6 @@ int ComponentFieldMap::Coordinates12(const double x, const double y,
     std::cout << "    Checksum - 1:           " << sr - 1 << "\n";
   }
 
-  // This should always work.
-  ifail = 0;
-  return ifail;
 }
 
 int ComponentFieldMap::Coordinates13(const double x, const double y,
@@ -1455,21 +1414,11 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
     std::cout << "   Point (" << x << ", " << y << ", " << z << ")\n";
   }
 
-  // Failure flag
-  int ifail = 1;
-
   // Provisional values
   t1 = t2 = t3 = t4 = 0.;
 
   // Make a first order approximation.
-  if (Coordinates12(x, y, z, t1, t2, t3, t4, element) > 0) {
-    if (m_debug) {
-      std::cout << m_className << "::Coordinates13:\n"
-                << "    Failure to obtain linear estimate of isoparametric "
-                   "coordinates\n";
-    }
-    return ifail;
-  }
+  Coordinates12(x, y, z, t1, t2, t3, t4, element);
 
   // Set tolerance parameter.
   constexpr double f = 0.5;
@@ -1480,17 +1429,11 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
       std::cout << "    Linear isoparametric coordinates more than\n";
       std::cout << "    f (" << f << ") out of range.\n";
     }
-    ifail = 0;
-    return ifail;
+    return 0;
   }
 
   // Start iteration.
   double td1 = t1, td2 = t2, td3 = t3, td4 = t4;
-  if (m_debug) {
-    std::cout << m_className << "::Coordinates13:\n";
-    std::cout << "    Iteration starts at (t1,t2,t3,t4) = (" << td1 << ", "
-              << td2 << ", " << td3 << ", " << td4 << ").\n";
-  }
   const Node& n0 = m_nodes[element.emap[0]];
   const Node& n1 = m_nodes[element.emap[1]];
   const Node& n2 = m_nodes[element.emap[2]];
@@ -1508,25 +1451,29 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
   for (int iter = 0; iter < 10; iter++) {
     if (m_debug) {
       std::cout << m_className << "::Coordinates13:\n";
-      std::cout << "    Iteration " << iter << ":      (t1,t2,t3,t4) = (" << td1
-                << ", " << td2 << ", " << td3 << ", " << td4 << ").\n";
+      std::printf("    Iteration %4u: t = (%15.8f, %15.8f %15.8f %15.8f)\n",
+                  iter, td1, td2, td3, td4);
     }
+    const double f0 = td1 * (2 * td1 - 1);
+    const double f1 = td2 * (2 * td2 - 1);
+    const double f2 = td3 * (2 * td3 - 1);
+    const double f3 = td4 * (2 * td4 - 1);
+    const double f4 = 4 * td1 * td2;
+    const double f5 = 4 * td1 * td3;
+    const double f6 = 4 * td1 * td4;
+    const double f7 = 4 * td2 * td3;
+    const double f8 = 4 * td2 * td4;
+    const double f9 = 4 * td3 * td4; 
     // Re-compute the (x,y,z) position for this coordinate.
-    const double xr = n0.x * td1 * (2 * td1 - 1) + n1.x * td2 * (2 * td2 - 1) +
-                      n2.x * td3 * (2 * td3 - 1) + n3.x * td4 * (2 * td4 - 1) +
-                      n4.x * 4 * td1 * td2 + n5.x * 4 * td1 * td3 +
-                      n6.x * 4 * td1 * td4 + n7.x * 4 * td2 * td3 +
-                      n8.x * 4 * td2 * td4 + n9.x * 4 * td3 * td4;
-    const double yr = n0.y * td1 * (2 * td1 - 1) + n1.y * td2 * (2 * td2 - 1) +
-                      n2.y * td3 * (2 * td3 - 1) + n3.y * td4 * (2 * td4 - 1) +
-                      n4.y * 4 * td1 * td2 + n5.y * 4 * td1 * td3 +
-                      n6.y * 4 * td1 * td4 + n7.y * 4 * td2 * td3 +
-                      n8.y * 4 * td2 * td4 + n9.y * 4 * td3 * td4;
-    const double zr = n0.z * td1 * (2 * td1 - 1) + n1.z * td2 * (2 * td2 - 1) +
-                      n2.z * td3 * (2 * td3 - 1) + n3.z * td4 * (2 * td4 - 1) +
-                      n4.z * 4 * td1 * td2 + n5.z * 4 * td1 * td3 +
-                      n6.z * 4 * td1 * td4 + n7.z * 4 * td2 * td3 +
-                      n8.z * 4 * td2 * td4 + n9.z * 4 * td3 * td4;
+    const double xr = n0.x * f0 + n1.x * f1 + n2.x * f2 + n3.x * f3 +
+                      n4.x * f4 + n5.x * f5 + n6.x * f6 + n7.x * f7 + 
+                      n8.x * f8 + n9.x * f9;
+    const double yr = n0.y * f0 + n1.y * f1 + n2.y * f2 + n3.y * f3 +
+                      n4.y * f4 + n5.y * f5 + n6.y * f6 + n7.y * f7 +
+                      n8.y * f8 + n9.y * f9;
+    const double zr = n0.z * f0 + n1.z * f1 + n2.z * f2 + n3.z * f3 +
+                      n4.z * f4 + n5.z * f5 + n6.z * f6 + n7.z * f7 +
+                      n8.z * f8 + n9.z * f9;
     const double sr = td1 + td2 + td3 + td4;
 
     // Compute the Jacobian.
@@ -1536,14 +1483,14 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
     diff[1] = x - xr;
     diff[2] = y - yr;
     diff[3] = z - zr;
-
     // Update the estimate.
     const double invdet = 1. / det;
     for (int l = 0; l < 4; ++l) {
       corr[l] = 0;
       for (int k = 0; k < 4; ++k) {
-        corr[l] += jac[l][k] * diff[k] * invdet;
+        corr[l] += jac[l][k] * diff[k];
       }
+      corr[l] *= invdet;
     }
 
     // Debugging
@@ -1564,8 +1511,9 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
     td4 += corr[3];
 
     // Check for convergence.
-    if (fabs(corr[0]) < 1.0e-5 && fabs(corr[1]) < 1.0e-5 &&
-        fabs(corr[2]) < 1.0e-5 && fabs(corr[3]) < 1.0e-5) {
+    constexpr double tol = 1.e-5;
+    if (fabs(corr[0]) < tol && fabs(corr[1]) < tol &&
+        fabs(corr[2]) < tol && fabs(corr[3]) < tol) {
       if (m_debug) {
         std::cout << m_className << "::Coordinates13: Convergence reached.\n";
       }
@@ -1592,7 +1540,7 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
                   << ").\n";
       }
       t1 = t2 = t3 = t4 = -1;
-      return ifail;
+      return 1;
     }
   }
 
@@ -1606,21 +1554,25 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
     std::cout << "    Convergence reached at (t1, t2, t3, t4) = (" << t1 << ", "
               << t2 << ", " << t3 << ", " << t4 << ").\n";
     // Re-compute the (x,y,z) position for this coordinate.
-    double xr = n0.x * td1 * (2 * td1 - 1) + n1.x * td2 * (2 * td2 - 1) +
-                n2.x * td3 * (2 * td3 - 1) + n3.x * td4 * (2 * td4 - 1) +
-                n4.x * 4 * td1 * td2 + n5.x * 4 * td1 * td3 +
-                n6.x * 4 * td1 * td4 + n7.x * 4 * td2 * td3 +
-                n8.x * 4 * td2 * td4 + n9.x * 4 * td3 * td4;
-    double yr = n0.y * td1 * (2 * td1 - 1) + n1.y * td2 * (2 * td2 - 1) +
-                n2.y * td3 * (2 * td3 - 1) + n3.y * td4 * (2 * td4 - 1) +
-                n4.y * 4 * td1 * td2 + n5.y * 4 * td1 * td3 +
-                n6.y * 4 * td1 * td4 + n7.y * 4 * td2 * td3 +
-                n8.y * 4 * td2 * td4 + n9.y * 4 * td3 * td4;
-    double zr = n0.z * td1 * (2 * td1 - 1) + n1.z * td2 * (2 * td2 - 1) +
-                n2.z * td3 * (2 * td3 - 1) + n3.z * td4 * (2 * td4 - 1) +
-                n4.z * 4 * td1 * td2 + n5.z * 4 * td1 * td3 +
-                n6.z * 4 * td1 * td4 + n7.z * 4 * td2 * td3 +
-                n8.z * 4 * td2 * td4 + n9.z * 4 * td3 * td4;
+    const double f0 = td1 * (2 * td1 - 1);
+    const double f1 = td2 * (2 * td2 - 1);
+    const double f2 = td3 * (2 * td3 - 1);
+    const double f3 = td4 * (2 * td4 - 1);
+    const double f4 = 4 * td1 * td2;
+    const double f5 = 4 * td1 * td3;
+    const double f6 = 4 * td1 * td4;
+    const double f7 = 4 * td2 * td3;
+    const double f8 = 4 * td2 * td4;
+    const double f9 = 4 * td3 * td4; 
+    double xr = n0.x * f0 + n1.x * f1 + n2.x * f2 + n3.x * f3 +
+                n4.x * f4 + n5.x * f5 + n6.x * f6 + n7.x * f7 +
+                n8.x * f8 + n9.x * f9;
+    double yr = n0.y * f0 + n1.y * f1 + n2.y * f2 + n3.y * f3 +
+                n4.y * f4 + n5.y * f5 + n6.y * f6 + n7.y * f7 +
+                n8.y * f8 + n9.y * f9;
+    double zr = n0.z * f0 + n1.z * f1 + n2.z * f2 + n3.z * f3 +
+                n4.z * f4 + n5.z * f5 + n6.z * f6 + n7.z * f7 +
+                n8.z * f8 + n9.z * f9;
     double sr = td1 + td2 + td3 + td4;
     std::cout << "    Position requested:     (" << x << ", " << y << ", " << z
               << ")\n";
@@ -1632,8 +1584,7 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
   }
 
   // Success
-  ifail = 0;
-  return ifail;
+  return 0;
 }
 
 int ComponentFieldMap::CoordinatesCube(const double x, const double y,
@@ -2035,7 +1986,6 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
 
   // If chamber is periodic, reduce to the cell volume.
   xmirrored = false;
-  double auxr, auxphi;
   if (m_periodic[0]) {
     xpos = m_mapmin[0] + fmod(xpos - m_mapmin[0], m_mapmax[0] - m_mapmin[0]);
     if (xpos < m_mapmin[0]) xpos += m_mapmax[0] - m_mapmin[0];
@@ -2051,16 +2001,15 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
     xpos = xnew;
   }
   if (m_axiallyPeriodic[0] && (zpos != 0 || ypos != 0)) {
-    auxr = sqrt(zpos * zpos + ypos * ypos);
-    auxphi = atan2(zpos, ypos);
-    rotation = (m_mapamax[0] - m_mapamin[0]) *
-               floor(0.5 +
-                     (auxphi - 0.5 * (m_mapamin[0] + m_mapamax[0])) /
-                         (m_mapamax[0] - m_mapamin[0]));
+    const double auxr = sqrt(zpos * zpos + ypos * ypos);
+    double auxphi = atan2(zpos, ypos);
+    const double phirange = (m_mapamax[0] - m_mapamin[0]);
+    const double phim = 0.5 * (m_mapamin[0] + m_mapamax[0]);
+    rotation = phirange * floor(0.5 + (auxphi - phim) / phirange);
     if (auxphi - rotation < m_mapamin[0])
-      rotation = rotation - (m_mapamax[0] - m_mapamin[0]);
+      rotation = rotation - phirange;
     if (auxphi - rotation > m_mapamax[0])
-      rotation = rotation + (m_mapamax[0] - m_mapamin[0]);
+      rotation = rotation + phirange;
     auxphi = auxphi - rotation;
     ypos = auxr * cos(auxphi);
     zpos = auxr * sin(auxphi);
@@ -2082,16 +2031,15 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
     ypos = ynew;
   }
   if (m_axiallyPeriodic[1] && (xpos != 0 || zpos != 0)) {
-    auxr = sqrt(xpos * xpos + zpos * zpos);
-    auxphi = atan2(xpos, zpos);
-    rotation = (m_mapamax[1] - m_mapamin[1]) *
-               floor(0.5 +
-                     (auxphi - 0.5 * (m_mapamin[1] + m_mapamax[1])) /
-                         (m_mapamax[1] - m_mapamin[1]));
+    const double auxr = sqrt(xpos * xpos + zpos * zpos);
+    double auxphi = atan2(xpos, zpos);
+    const double phirange = (m_mapamax[1] - m_mapamin[1]);
+    const double phim = 0.5 * (m_mapamin[1] + m_mapamax[1]);
+    rotation = phirange * floor(0.5 + (auxphi - phim) / phirange);
     if (auxphi - rotation < m_mapamin[1])
-      rotation = rotation - (m_mapamax[1] - m_mapamin[1]);
+      rotation = rotation - phirange;
     if (auxphi - rotation > m_mapamax[1])
-      rotation = rotation + (m_mapamax[1] - m_mapamin[1]);
+      rotation = rotation + phirange;
     auxphi = auxphi - rotation;
     zpos = auxr * cos(auxphi);
     xpos = auxr * sin(auxphi);
@@ -2113,16 +2061,15 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
     zpos = znew;
   }
   if (m_axiallyPeriodic[2] && (ypos != 0 || xpos != 0)) {
-    auxr = sqrt(ypos * ypos + xpos * xpos);
-    auxphi = atan2(ypos, xpos);
-    rotation = (m_mapamax[2] - m_mapamin[2]) *
-               floor(0.5 +
-                     (auxphi - 0.5 * (m_mapamin[2] + m_mapamax[2])) /
-                         (m_mapamax[2] - m_mapamin[2]));
+    const double auxr = sqrt(ypos * ypos + xpos * xpos);
+    double auxphi = atan2(ypos, xpos);
+    const double phirange = (m_mapamax[2] - m_mapamin[2]);
+    const double phim = 0.5 * (m_mapamin[2] + m_mapamax[2]);
+    rotation = phirange * floor(0.5 + (auxphi - phim) / phirange);
     if (auxphi - rotation < m_mapamin[2])
-      rotation = rotation - (m_mapamax[2] - m_mapamin[2]);
+      rotation = rotation - phirange;
     if (auxphi - rotation > m_mapamax[2])
-      rotation = rotation + (m_mapamax[2] - m_mapamin[2]);
+      rotation = rotation + phirange;
     auxphi = auxphi - rotation;
     xpos = auxr * cos(auxphi);
     ypos = auxr * sin(auxphi);
