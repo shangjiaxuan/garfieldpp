@@ -337,19 +337,10 @@ Point3D TranslatePoint3D(Point3D *A, Point3D *Origin, int Sense) {
 // which we know the direction cosines of the new coordinate system.
 // This option can be invoked by choosing 'local2global' defined in Vector.h
 Point3D RotatePoint3D(Point3D *A, DirnCosn3D *DC, int Sense) {
-  double InitialVector[4];
-  double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                       {0.0, 0.0, 0.0, 0.0},
-                                       {0.0, 0.0, 0.0, 0.0},
-                                       {0.0, 0.0, 0.0, 1.0}};
-  double FinalVector[4];
-  Point3D RotatedPt;
 
-  InitialVector[0] = A->X;
-  InitialVector[1] = A->Y;
-  InitialVector[2] = A->Z;
-  InitialVector[3] = 1.0;
-
+  double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                       {0.0, 0.0, 0.0},
+                                       {0.0, 0.0, 0.0}};
   switch (Sense) {
     case 1:
       TransformationMatrix[0][0] = DC->XUnit.X;
@@ -380,13 +371,14 @@ Point3D RotatePoint3D(Point3D *A, DirnCosn3D *DC, int Sense) {
       exit(-1);
   }
 
-  for (int i = 0; i < 4; ++i) {
-    FinalVector[i] = 0.0;
-    for (int j = 0; j < 4; ++j) {
+  double InitialVector[3] = {A->X, A->Y, A->Z};
+  double FinalVector[3] = {0., 0., 0.};
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
       FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
     }
   }
-
+  Point3D RotatedPt;
   RotatedPt.X = FinalVector[0];
   RotatedPt.Y = FinalVector[1];
   RotatedPt.Z = FinalVector[2];
@@ -403,19 +395,10 @@ Point3D RotatePoint3D(Point3D *A, DirnCosn3D *DC, int Sense) {
 // which we know the direction cosines of the new coordinate system.
 // This option can be invoked by choosing 'local2global' defined in Vector.h
 Vector3D RotateVector3D(Vector3D *A, DirnCosn3D *DC, int Sense) {
-  double InitialVector[4];
   double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
                                        {0.0, 0.0, 0.0, 0.0},
                                        {0.0, 0.0, 0.0, 0.0},
                                        {0.0, 0.0, 0.0, 1.0}};
-  double FinalVector[4];
-  Vector3D RotatedVector;
-
-  InitialVector[0] = A->X;
-  InitialVector[1] = A->Y;
-  InitialVector[2] = A->Z;
-  InitialVector[3] = 1.0;
-
   switch (Sense) {
     case 1:
       TransformationMatrix[0][0] = DC->XUnit.X;
@@ -446,13 +429,14 @@ Vector3D RotateVector3D(Vector3D *A, DirnCosn3D *DC, int Sense) {
       exit(-1);
   }
 
-  for (int i = 0; i < 4; ++i) {
-    FinalVector[i] = 0.0;
-    for (int j = 0; j < 4; ++j) {
+  double InitialVector[3] = {A->X, A->Y, A->Z};
+  double FinalVector[3] = {0., 0., 0.};
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
       FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
     }
   }
-
+  Vector3D RotatedVector;
   RotatedVector.X = FinalVector[0];
   RotatedVector.Y = FinalVector[1];
   RotatedVector.Z = FinalVector[2];

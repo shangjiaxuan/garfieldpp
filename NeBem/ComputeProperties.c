@@ -18,6 +18,10 @@
 #include "neBEM.h"
 
 #ifdef __cplusplus
+namespace {
+  static constexpr double InvFourPiEps0 = 1. / MyFACTOR;
+}
+
 namespace neBEM {
 #endif
 
@@ -86,7 +90,11 @@ double RecPot(int ele, Point3D *localP) {
     Pot *= a;  // rescale Potential - cannot be done outside because of the `if'
   }
 
+#ifdef __cplusplus
+  return Pot * InvFourPiEps0;
+#else
   return (Pot / MyFACTOR);
+#endif
 }  // end of RecPot
 
 // Potential due to unit charge density on a triangular element
@@ -104,20 +112,19 @@ double TriPot(int ele, Point3D *localP) {
   // distance of field point from element centroid
   double a = (EleArr + ele - 1)->G.LX;
   double b = (EleArr + ele - 1)->G.LZ;
-  double diag =
-      sqrt(a * a + b * b);  // largest side (hypoteneus) of the element
+  // largest side (hypotenuse) of the element
+  double diag = sqrt(a * a + b * b);  
+  
+  const double xm = xpt - a / 3.;
+  const double zm = zpt - b / 3.;
+  double dist = sqrt(xm * xm + ypt * ypt + zm * zm);
 
-  double dist = sqrt((xpt - (a / 3.0)) * (xpt - (a / 3.0)) + ypt * ypt +
-                     (zpt - (b / 3.0)) * (zpt - (b / 3.0)));
-
-  if (dist >= FarField * diag)  // all are distances and, hence, +ve
-  {
+  if (dist >= FarField * diag) {
     double dA = 0.5 * a * b;  // area of the triangular element
     Pot = dA / dist;
   } else {
     int fstatus = ExactTriSurf(b / a, xpt / a, ypt / a, zpt / a, &Pot, &Field);
-    if (fstatus)  // non-zero
-    {
+    if (fstatus) { // non-zero
       printf("problem in computing Potential of triangular element ... \n");
       printf("a: %lg, b: %lg, X: %lg, Y: %lg, Z: %lg\n", a, b, xpt, ypt, zpt);
       // printf("returning ...\n");
@@ -126,7 +133,11 @@ double TriPot(int ele, Point3D *localP) {
     Pot *= a;  // rescale Potential
   }
 
+#ifdef __cplusplus
+  return Pot * InvFourPiEps0;
+#else
   return (Pot / MyFACTOR);
+#endif
 }  // end of TriPot
 
 // Potential due to unit charge density on this element
@@ -161,7 +172,11 @@ double WirePot(int ele, Point3D *localP) {
     Pot = ExactThinP_W(rW, lW, xpt, ypt, zpt);
   }
 
+#ifdef __cplusplus
+  return Pot * InvFourPiEps0;
+#else
   return (Pot / MyFACTOR);
+#endif
 }  // end of WirePot
 
 // Flux per unit charge density on an element returned as globalF
@@ -213,8 +228,7 @@ void RecFlux(int ele, Point3D *localP, Vector3D *localF) {
   if (DebugLevel == 301) {
     printf("In RecFlux ...\n");
   }
-
-  double Pot;
+  
   double xpt = localP->X;
   double ypt = localP->Y;
   double zpt = localP->Z;
@@ -227,28 +241,32 @@ void RecFlux(int ele, Point3D *localP, Vector3D *localF) {
   double dist = sqrt(xpt * xpt + ypt * ypt + zpt * zpt);
 
   // no re-scaling necessary for `E'
-  if (dist >= FarField * diag)  // all are distances and, hence, +ve
-  {
-    double dA = a * b;  // area of the rectangular element
-    double dist3 = dist * dist * dist;
-    localF->X = xpt * dA / dist3;
-    localF->Y = ypt * dA / dist3;
-    localF->Z = zpt * dA / dist3;
+  if (dist >= FarField * diag) {
+    const double f = a * b / (dist * dist * dist);
+    localF->X = xpt * f;
+    localF->Y = ypt * f;
+    localF->Z = zpt * f;
   } else {
+    double Pot;
     int fstatus =
         ExactRecSurf(xpt / a, ypt / a, zpt / a, -1.0 / 2.0, -(b / a) / 2.0,
                      1.0 / 2.0, (b / a) / 2.0, &Pot, localF);
-    if (fstatus)  // non-zero
-    {
+    if (fstatus) { // non-zero
       printf("problem in computing flux of rectangular element ... \n");
       // printf("returning ...\n");
       // return -1; void function at present
     }
   }
 
+#ifdef __cplusplus
+  localF->X *= InvFourPiEps0;
+  localF->Y *= InvFourPiEps0;
+  localF->Z *= InvFourPiEps0;
+#else
   localF->X /= MyFACTOR;
   localF->Y /= MyFACTOR;
   localF->Z /= MyFACTOR;
+#endif
 }  // end of RecFlux
 
 // local coord flux per unit charge density on a triangluar element
@@ -257,7 +275,6 @@ void TriFlux(int ele, Point3D *localP, Vector3D *localF) {
     printf("In TriFlux ...\n");
   }
 
-  double Pot;
   double xpt = localP->X;
   double ypt = localP->Y;
   double zpt = localP->Z;
@@ -270,30 +287,35 @@ void TriFlux(int ele, Point3D *localP, Vector3D *localF) {
   // printf("a: %lg, b: %lg, X: %lg, Y: %lg, Z: %lg\n", a, b, X, Y, Z);
 
   // distance of field point from element centroid
-  double dist = sqrt((xpt - (a / 3.0)) * (xpt - (a / 3.0)) + ypt * ypt +
-                     (zpt - (b / 3.0)) * (zpt - (b / 3.0)));
+  const double xm = xpt - a / 3.;
+  const double zm = zpt - b / 3.;
+  double dist = sqrt(xm * xm + ypt * ypt + zm * zm);
 
-  if (dist >= FarField * diag)  // all are distances and, hence, +ve
-  {
-    double dA = 0.5 * a * b;  // area of the triangular element
-    double dist3 = dist * dist * dist;
-    localF->X = xpt * dA / dist3;
-    localF->Y = ypt * dA / dist3;
-    localF->Z = zpt * dA / dist3;
+  if (dist >= FarField * diag) {
+    const double f = 0.5 * a * b / (dist * dist * dist);
+    localF->X = xpt * f;
+    localF->Y = ypt * f;
+    localF->Z = zpt * f;
   } else {
+    double Pot;
     int fstatus = ExactTriSurf(b / a, xpt / a, ypt / a, zpt / a, &Pot, localF);
     // fstatus = ApproxTriSurf(b/a, X/a, Y/a, Z/a, 5000, 5000, &Pot, &Flux);
-    if (fstatus)  // non-zero
-    {
+    if (fstatus) { // non-zero
       printf("problem in computing flux of triangular element ... \n");
       // printf("returning ...\n");
       // return -1; void function at present
     }
   }
 
+#ifdef __cplusplus
+  localF->X *= InvFourPiEps0;
+  localF->Y *= InvFourPiEps0;
+  localF->Z *= InvFourPiEps0;
+#else
   localF->X /= MyFACTOR;
   localF->Y /= MyFACTOR;
   localF->Z /= MyFACTOR;
+#endif
   // printf("Pot: %lg, Ex: %lg, Ey: %lg, Ez: %lg\n",
   // Pot, localF.X, localF.Y, localF.Z);
   // printf("Out of TriFlux\n");
@@ -314,13 +336,11 @@ void WireFlux(int ele, Point3D *localP, Vector3D *localF) {
   // field point from element centroid
   double dist = sqrt(xpt * xpt + ypt * ypt + zpt * zpt);
 
-  if (dist >= FarField * lW)  // all are distances and, hence, +ve
-  {
-    double dA = 2.0 * ST_PI * rW * lW;
-    double dist3 = dist * dist * dist;
-    localF->X = dA * xpt / dist3;
-    localF->Y = dA * ypt / dist3;
-    localF->Z = dA * zpt / dist3;
+  if (dist >= FarField * lW) {
+    const double f = 2.0 * ST_PI * rW * lW / (dist * dist * dist);
+    localF->X = xpt * f;
+    localF->Y = ypt * f;
+    localF->Z = zpt * f;
   } else {
     if ((fabs(xpt) < MINDIST) && (fabs(ypt) < MINDIST)) {
       localF->X = localF->Y = 0.0;
@@ -334,9 +354,15 @@ void WireFlux(int ele, Point3D *localP, Vector3D *localF) {
     localF->Z = ExactThinFZ_W(rW, lW, xpt, ypt, zpt);
   }
 
+#ifdef __cplusplus
+  localF->X *= InvFourPiEps0;
+  localF->Y *= InvFourPiEps0;
+  localF->Z *= InvFourPiEps0;
+#else
   localF->X /= MyFACTOR;
   localF->Y /= MyFACTOR;
   localF->Z /= MyFACTOR;
+#endif
 }  // end of WireFlux
 
 /* PFAtPoint without multi-threading (borrowed from 1.8.15)
@@ -344,1004 +370,288 @@ void WireFlux(int ele, Point3D *localP, Vector3D *localF) {
 // complex and this may work as a fall-back option.
 // Gives three components of the total Potential and flux in the global
 // coordinate system due to all the elements
-int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF)
-{
-double xfld = globalP->X;
-double yfld = globalP->Y;
-double zfld = globalP->Z;
-Point3D fldpt;
-fldpt.X = xfld; fldpt.Y = yfld; fldpt.Z = zfld;
-double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                    {0.0, 0.0, 0.0, 0.0},
-                                    {0.0, 0.0, 0.0, 0.0},
-                                    {0.0, 0.0, 0.0, 1.0}};
+int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
+  double xfld = globalP->X;
+  double yfld = globalP->Y;
+  double zfld = globalP->Z;
+  Point3D fldpt;
+  fldpt.X = xfld; fldpt.Y = yfld; fldpt.Z = zfld;
+  double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                       {0.0, 0.0, 0.0},
+                                       {0.0, 0.0, 0.0},
+                                       {0.0, 0.0, 0.0}};
 
-// Compute Potential and field at different locations
-*Potential = globalF->X = globalF->Y = globalF->Z = 0.0;
+  // Compute Potential and field at different locations
+  *Potential = globalF->X = globalF->Y = globalF->Z = 0.0;
 
-// Effects due to base primitives and their repetitions are considered in the
-// local coordinate system of the primitive (or element), while effects due to
-// mirror elements and their repetitions are considered in the global
-// coordinate system (GCS). This works because the direction cosines of a
-// primitive (and its elements) and those of its repetitions are the same.
-// As a result, we can do just one transformation from local to global at the
-// end of calculations related to a primitive. This can save substantial
-// computation if a discretized version of the primitive is being used since
-// we avoid one unnecessary transformation for each element that comprises a
-// primitive.
-// Begin with primitive description of the device
-double xpsrc, ypsrc, zpsrc; // source point as a primitive
-double tmpPot;
-Vector3D localF, tmpF;
+  // Effects due to base primitives and their repetitions are considered in the
+  // local coordinate system of the primitive (or element), while effects due to
+  // mirror elements and their repetitions are considered in the global
+  // coordinate system (GCS). This works because the direction cosines of a
+  // primitive (and its elements) and those of its repetitions are the same.
+  // As a result, we can do just one transformation from local to global at the
+  // end of calculations related to a primitive. This can save substantial
+  // computation if a discretized version of the primitive is being used since
+  // we avoid one unnecessary transformation for each element that comprises a
+  // primitive.
+  // Begin with primitive description of the device
+  double tmpPot;
+  Vector3D tmpF;
 
-for(unsigned int primsrc = 1; primsrc <= NbPrimitives; ++primsrc)
-        {
-  xpsrc = PrimOriginX[primsrc]; // helps faster execution - not for primitives?
-  ypsrc = PrimOriginY[primsrc];
-  zpsrc = PrimOriginZ[primsrc];
+  for(unsigned int primsrc = 1; primsrc <= NbPrimitives; ++primsrc) {
+    double xpsrc = PrimOriginX[primsrc];
+    double ypsrc = PrimOriginY[primsrc];
+    double zpsrc = PrimOriginZ[primsrc];
 
-        localF.X = localF.Y = localF.Z = 0.0;
+    Vector3D localF;
+    localF.X = localF.Y = localF.Z = 0.0;
 
-        // set up transform matrix for this primitive, which is also the same
-for
-        // for all the elements belonging to this primitive
-  TransformationMatrix[0][0] = PrimDC[primsrc].XUnit.X;
-  TransformationMatrix[0][1] = PrimDC[primsrc].XUnit.Y;
-  TransformationMatrix[0][2] = PrimDC[primsrc].XUnit.Z;
-  TransformationMatrix[1][0] = PrimDC[primsrc].YUnit.X;
-  TransformationMatrix[1][1] = PrimDC[primsrc].YUnit.Y;
-  TransformationMatrix[1][2] = PrimDC[primsrc].YUnit.Z;
-  TransformationMatrix[2][0] = PrimDC[primsrc].ZUnit.X;
-  TransformationMatrix[2][1] = PrimDC[primsrc].ZUnit.Y;
-  TransformationMatrix[2][2] = PrimDC[primsrc].ZUnit.Z;
+    // Set up transform matrix for this primitive, which is also the same for
+    // all the elements belonging to this primitive
+    TransformationMatrix[0][0] = PrimDC[primsrc].XUnit.X;
+    TransformationMatrix[0][1] = PrimDC[primsrc].XUnit.Y;
+    TransformationMatrix[0][2] = PrimDC[primsrc].XUnit.Z;
+    TransformationMatrix[1][0] = PrimDC[primsrc].YUnit.X;
+    TransformationMatrix[1][1] = PrimDC[primsrc].YUnit.Y;
+    TransformationMatrix[1][2] = PrimDC[primsrc].YUnit.Z;
+    TransformationMatrix[2][0] = PrimDC[primsrc].ZUnit.X;
+    TransformationMatrix[2][1] = PrimDC[primsrc].ZUnit.Y;
+    TransformationMatrix[2][2] = PrimDC[primsrc].ZUnit.Z;
 
-  // The total influence is due to primitives on the basic device and due to
-  // virtual primitives arising out of repetition, reflection etc and not
-  // residing on the basic device
+    // The total influence is due to primitives on the basic device and due to
+    // virtual primitives arising out of repetition, reflection etc and not
+    // residing on the basic device
 
-        { // basic device
-        Point3D localPP; // point primitive
-  // point translated to the ECS origin, but axes direction global
-  { // Rotate point3D from global to local system
-  double InitialVector[4];
-  double FinalVector[4];
+    { // basic device
+      Point3D localPP; // point primitive
+      // point translated to the ECS origin, but axes direction global
+      { // Rotate point3D from global to local system
+        double InitialVector[3] = {xfld - xpsrc, yfld - ypsrc, zfld - zpsrc};
+        double FinalVector[3] = {0., 0., 0.};
+        for (int i = 0; i < 3; ++i) {
+          for (int j = 0 ; j < 4; ++j) {
+            FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
+          }
+        }
+        localPP.X = FinalVector[0];
+        localPP.Y = FinalVector[1];
+        localPP.Z = FinalVector[2];
+      } // Point3D rotated
 
-  InitialVector[0] = xfld - xpsrc; InitialVector[1] = yfld - ypsrc;
-  InitialVector[2] = zfld - zpsrc; InitialVector[3] = 1.0;
+      // evaluate possibility whether primitive influence is accurate enough
+      // This could be based on localPP and the subtended solid angle
+      int PrimOK = 0;
 
-  for(int i = 0; i < 4; ++i)
-    {
-    FinalVector[i] = 0.0;
-    for(int j = 0 ; j < 4; ++j)
-      {
-      FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
-      }
-    }
-
-  localPP.X = FinalVector[0];
-  localPP.Y = FinalVector[1];
-  localPP.Z = FinalVector[2];
-  } // Point3D rotated
-
-  // evaluate possibility whether primitive influence is accurate enough
-        // This could be based on localPP and the subtended solid angle
-        int PrimOK = 0;
-
-  if(PrimOK) // if 1, then only primitive influence will be considered
-    {
+      if (PrimOK) { // if 1, then only primitive influence will be considered
         // Potential and flux (local system) due to base primitive
         GetPrimPF(primsrc, &localPP, &tmpPot, &tmpF);
         (*Potential) += (AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpPot;
         localF.X += (AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpF.X;
         localF.Y += (AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpF.Y;
         localF.Z += (AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpF.Z;
-        if(DebugLevel == 301)
-        {
-        printf("PFAtPoint base primitive =>\n");
-        printf("primsrc: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n",
-                primsrc, localPP.X, localPP.Y, localPP.Z);
-        printf("primsrc: %d, Pot: %lg, Fx: %lg, Fx: %lg, Fz: %lg\n",
-                primsrc, tmpPot, tmpF.X, tmpF.Y, tmpF.Z);
-        printf("primsrc: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n",
-                primsrc, *Potential, localF.X, localF.Y, localF.Z);
+        if (DebugLevel == 301) {
+          printf("PFAtPoint base primitive =>\n");
+          printf("primsrc: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n",
+                  primsrc, localPP.X, localPP.Y, localPP.Z);
+          printf("primsrc: %d, Pot: %lg, Fx: %lg, Fx: %lg, Fz: %lg\n",
+                  primsrc, tmpPot, tmpF.X, tmpF.Y, tmpF.Z);
+          printf("primsrc: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n",
+                  primsrc, *Potential, localF.X, localF.Y, localF.Z);
         }
-    } // if considering primtive influence is OK
-  else
-    { // element influence
-                Point3D localPE; // point element
-                double xsrc, ysrc, zsrc;
+      } else {
+        // element influence
 
-                for(unsigned int ele = ElementBgn[primsrc];
-                                                                                                                        ele <= ElementEnd[primsrc];
-                                                                                                                        ++ele)
-                        {
-                xsrc = (EleArr+ele-1)->G.Origin.X;	// helps faster
-execution ysrc = (EleArr+ele-1)->G.Origin.Y; zsrc = (EleArr+ele-1)->G.Origin.Z;
+        for (unsigned int ele = ElementBgn[primsrc]; ele <= ElementEnd[primsrc]; ++ele) {
+          double xsrc = (EleArr+ele-1)->G.Origin.X;
+          double ysrc = (EleArr+ele-1)->G.Origin.Y; 
+          double zsrc = (EleArr+ele-1)->G.Origin.Z;
+          // Rotate point3D from global to local system; 
+          // matrix as for primitive 
+          double InitialVector[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
+          double FinalVector[3] = {0., 0., 0.};
+          for (int i = 0; i < 3; ++i) {
+            for (int j = 0 ; j < 3; ++j) {
+              FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
+            }
+          }
+          Point3D localPE; // point element
+          localPE.X = FinalVector[0];
+          localPE.Y = FinalVector[1];
+          localPE.Z = FinalVector[2];
+          // Potential and flux (local system)
+          GetPF(ele, &localPE, &tmpPot, &tmpF);
+          (*Potential) += ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned) * tmpPot;
+          localF.X += ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned) * tmpF.X;
+          localF.Y += ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned) * tmpF.Y;
+          localF.Z += ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned) * tmpF.Z;
+          if (DebugLevel == 301) {
+            printf("PFAtPoint base primitive =>\n");
+            printf("ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n", 
+                   ele, localPE.X, localPE.Y, localPE.Z); 
+            printf("ele: %d, Pot: %lg, Fx: %lg, Fx: %lg, Fz: %lg\n", 
+                   ele, tmpPot, tmpF.X, tmpF.Y, tmpF.Z); 
+            printf("ele: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n", 
+                   ele, *Potential, localF.X, localF.Y, localF.Z);
+          }
+        } // for all the elements on this primsrc primitive 
+      } // else elements influence 
+    } // basic device ends
 
-                        { // Rotate point3D from global to local system;
-matrix as for primitive double InitialVector[4]; double FinalVector[4];
+    if (MirrorTypeX[primsrc] || MirrorTypeY[primsrc] || MirrorTypeZ[primsrc]) {
+      // Mirror effect of base primitives
+      printf("Mirror may not be correctly implemented ...\n");
+      exit(0);
+    } // Mirror effect ends
 
-                        InitialVector[0] = xfld - xsrc; InitialVector[1] = yfld
-- ysrc; InitialVector[2] = zfld - zsrc; InitialVector[3] = 1.0;
-
-                        for(int i = 0; i < 4; ++i)
-                                {
-                                FinalVector[i] = 0.0;
-                                for(int j = 0 ; j < 4; ++j)
-                                {
-                                FinalVector[i] += TransformationMatrix[i][j] *
-InitialVector[j];
-                                }
-                                }
-
-                        localPE.X = FinalVector[0];
-                        localPE.Y = FinalVector[1];
-                        localPE.Z = FinalVector[2];
-                        } // Point3D rotated
-
-                        // Potential and flux (local system) due to base
-primitive GetPF(ele, &localPE, &tmpPot, &tmpF);
-                        (*Potential) +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                        * tmpPot;
-                        localF.X +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned) * tmpF.X; localF.Y +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned) * tmpF.Y; localF.Z +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned) * tmpF.Z; if(DebugLevel ==
-301)
-                                {
-                                printf("PFAtPoint base primitive =>\n");
-                                printf("ele: %d, xlocal: %lg, ylocal: %lg,
-zlocal %lg\n", ele, localPE.X, localPE.Y, localPE.Z); printf("ele: %d, Pot: %lg,
-Fx: %lg, Fx: %lg, Fz: %lg\n", ele, tmpPot, tmpF.X, tmpF.Y, tmpF.Z); printf("ele:
-%d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n", ele, *Potential,
-localF.X, localF.Y, localF.Z);
-                                }
-                        } // for all the elements on this primsrc
-primitive } // else elements influence } // basic device ends
-
-        if(MirrorTypeX[primsrc] || MirrorTypeY[primsrc] || MirrorTypeZ[primsrc])
-                { // Mirror effect of base primitives
-                printf("Mirror may not be correctly implemented ...\n");
-                exit(0);
-
-                Point3D localPPM; // point primitive mirrored
-                Point3D srcptp;
-                DirnCosn3D DirCos;
-
-        srcptp.X = xpsrc; srcptp.Y = ypsrc; srcptp.Z = zpsrc;
-
-        if(MirrorTypeX[primsrc])
-        { MirrorTypeY[primsrc] = 0; MirrorTypeZ[primsrc] = 0; }
-        if(MirrorTypeY[primsrc]) MirrorTypeZ [primsrc]= 0;
-
-                if(MirrorTypeX[primsrc])
-                        {
-                        localPPM = ReflectPrimitiveOnMirror('X', primsrc,
-srcptp, fldpt, MirrorDistXFromOrigin[primsrc], &DirCos);
-
-                        // check whether primitive description is good enough
-                        int PrimOK = 0;
-
-                        if(PrimOK)
-                                {
-                                GetPrimPFGCS(primsrc, &localPPM, &tmpPot, &tmpF,
-&DirCos); // cannot work for force
-
-                        if(MirrorTypeX[primsrc] == 1) // opposite charge density
-                                        {
-                                        (*Potential) -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpPot;
-                                        globalF->X -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.X;
-                                        globalF->Y -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                * tmpF.Y;
-                                        globalF->Z -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                * tmpF.Z;
-                                        }
-                        if(MirrorTypeX[primsrc] == 2) // same charge density
-                                        {
-                                        (*Potential) +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpPot;
-                                        globalF->X +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.X;
-                                        globalF->Y +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.Y;
-                                        globalF->Z +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.Z;
-                                        }
-                        }
-                        else
-                                {	// consider element representation
-                                Point3D localPEM;	// point element
-mirrored double xsrc, ysrc, zsrc; Point3D srcpte;
-
-                                for(unsigned int ele =
-ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
-                                                                                                                                        ++ele)
-                                        {
-                                xsrc = (EleArr+ele-1)->G.Origin.X;	// helps
-faster execution ysrc = (EleArr+ele-1)->G.Origin.Y; zsrc =
-(EleArr+ele-1)->G.Origin.Z;
-
-                                srcpte.X = xsrc; srcpte.Y = ysrc; srcpte.Z =
-zsrc;
-
-                                        localPEM = ReflectOnMirror('X', ele,
-srcpte, fldpt, MirrorDistXFromOrigin[primsrc], &DirCos); GetPFGCS(ele,
-&localPEM, &tmpPot, &tmpF, &DirCos);
-
-                                        if(MirrorTypeX[primsrc] == 1) //
-opposite charge density
-                                                {
-                                                (*Potential) -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpPot;
-                                                globalF->X -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.X;
-                                                globalF->Y -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                        * tmpF.Y;
-                                                globalF->Z -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                        * tmpF.Z;
-                                                }
-                                        if(MirrorTypeX[primsrc] == 2) // same
-charge density
-                                                {
-                                                (*Potential) +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpPot;
-                                                globalF->X +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.X;
-                                                globalF->Y +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.Y;
-                                                globalF->Z +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.Z;
-                                                }
-                                        }	// loop for all elements on the
-primsrc primitive }	// else element representation }	// MirrorTypeX
-
-        if(MirrorTypeY[primsrc])
-                {
-                localPPM = ReflectOnMirror('Y', primsrc, srcptp, fldpt,
-                                                MirrorDistYFromOrigin[primsrc],
-&DirCos);
-
-                        // check whether primitive description is good enough
-                        int PrimOK = 0;
-
-                        if(PrimOK)
-                                {
-                                GetPrimPFGCS(primsrc, &localPPM, &tmpPot, &tmpF,
-&DirCos);
-
-                        if(MirrorTypeY[primsrc] == 1) // opposite charge density
-                                        {
-                                        (*Potential) -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpPot;
-                                        globalF->X -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.X;
-                                        globalF->Y -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.Y;
-                                        globalF->Z -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.Z;
-                                        }
-                        if(MirrorTypeY[primsrc] == 2) // same charge density
-                                        {
-                                        (*Potential) +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpPot;
-                                        globalF->X +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.X;
-                                        globalF->Y +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.Y;
-                                        globalF->Z +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.Z;
-                                        }
-                        }
-                        else
-                                {	// consider element representation
-                                Point3D localPEM;
-                                double xsrc, ysrc, zsrc;
-                                Point3D srcpte;
-
-                                for(unsigned int ele =
-ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
-                                                                                                                                        ++ele)
-                                        {
-                                xsrc = (EleArr+ele-1)->G.Origin.X;	// helps
-faster execution ysrc = (EleArr+ele-1)->G.Origin.Y; zsrc =
-(EleArr+ele-1)->G.Origin.Z;
-
-                                srcpte.X = xsrc; srcpte.Y = ysrc; srcpte.Z =
-zsrc;
-
-                        localPEM = ReflectOnMirror('Y', ele, srcpte, fldpt,
-                                                MirrorDistYFromOrigin[primsrc],
-&DirCos); GetPFGCS(ele, &localPEM, &tmpPot, &tmpF, &DirCos);
-
-                        if(MirrorTypeY[primsrc] == 1) // opposite charge density
-                                                {
-                                                (*Potential) -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpPot;
-                                                globalF->X -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.X;
-                                                globalF->Y -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.Y;
-                                                globalF->Z -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.Z;
-                                                }
-                        if(MirrorTypeY[primsrc] == 2) // same charge density
-                                                {
-                                                (*Potential) +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpPot;
-                                                globalF->X +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.X;
-                                                globalF->Y +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.Y;
-                                                globalF->Z +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.Z;
-                                                }
-                                        }	// loop for all elements on the
-primsrc primitive }	// else element representations }	// MirrorTypeY
-
-        if(MirrorTypeZ[primsrc])
-                {
-                localPPM = ReflectOnMirror('Z', primsrc, srcptp, fldpt,
-                                                MirrorDistZFromOrigin[primsrc],
-&DirCos);
-
-                        // check whether primitive description is good enough
-                        int PrimOK = 0;
-
-                        if(PrimOK)
-                                {
-                                GetPrimPFGCS(primsrc, &localPPM, &tmpPot, &tmpF,
-&DirCos);
-
-                        if(MirrorTypeZ[primsrc] == 1) // opposite charge density
-                                        {
-                                        (*Potential) -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpPot;
-                                        globalF->X -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.X;
-                                        globalF->Y -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.Y;
-                                        globalF->Z -=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.Z;
-                                        }
-                        if(MirrorTypeZ[primsrc] == 2) // same charge density
-                                        {
-                                        (*Potential) +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpPot;
-                                        globalF->X +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.X;
-                                        globalF->Y +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.Y;
-                                        globalF->Z +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                        * tmpF.Z;
-                                        }
-                                }	// if primitive representation
-                        else
-                                {	// elements to be considered
-                                Point3D localPEM;
-                                double xsrc, ysrc, zsrc;
-                                Point3D srcpte;
-
-                                for(unsigned int ele =
-ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
-                                                                                                                                        ++ele)
-                                        {
-                                xsrc = (EleArr+ele-1)->G.Origin.X;
-                                ysrc = (EleArr+ele-1)->G.Origin.Y;
-                                zsrc = (EleArr+ele-1)->G.Origin.Z;
-
-                                srcpte.X = xsrc; srcpte.Y = ysrc; srcpte.Z =
-zsrc;
-
-                        localPEM = ReflectOnMirror('Z', ele, srcpte, fldpt,
-                                                MirrorDistZFromOrigin[primsrc],
-&DirCos); GetPFGCS(ele, &localPEM, &tmpPot, &tmpF, &DirCos);
-
-                        if(MirrorTypeZ[primsrc] == 1) // opposite charge density
-                                                {
-                                                (*Potential) -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpPot;
-                                                globalF->X -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.X;
-                                                globalF->Y -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.Y;
-                                                globalF->Z -=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.Z;
-                                                }
-                        if(MirrorTypeZ[primsrc] == 2) // same charge density
-                                                {
-                                                (*Potential) +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpPot;
-                                                globalF->X +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.X;
-                                                globalF->Y +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.Y;
-                                                globalF->Z +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                * tmpF.Z;
-                                                }
-                                        }	// loop for all elements on the
-primsrc primitive }	// else consider element representation }	//
-MirrorTypeZ }	// Mirror effect ends
-
-        // Flux due to repeated primitives
-  if((PeriodicTypeX[primsrc] == 1) || (PeriodicTypeY[primsrc] == 1)
-      || (PeriodicTypeZ[primsrc] == 1))
-    {
-    if(PeriodicInX[primsrc] || PeriodicInY[primsrc] || PeriodicInZ[primsrc])
-      {
-      double XPOfRpt, YPOfRpt, ZPOfRpt;
-
-      for(int xrpt = -PeriodicInX[primsrc];
-            xrpt <= PeriodicInX[primsrc]; ++xrpt)
-        {
-        XPOfRpt = xpsrc + XPeriod[primsrc] * (double)xrpt;
-
-        for(int yrpt = -PeriodicInY[primsrc];
-              yrpt <= PeriodicInY[primsrc]; ++yrpt)
-          {
-          YPOfRpt = ypsrc + YPeriod[primsrc] * (double)yrpt;
-
-          for(int zrpt = -PeriodicInZ[primsrc];
-                zrpt <= PeriodicInZ[primsrc]; ++zrpt)
-            {
-            ZPOfRpt = zpsrc + ZPeriod[primsrc] * (double)zrpt;
-
-            if( (xrpt == 0) && (yrpt == 0) && (zrpt == 0) )
+    // Flux due to repeated primitives
+    if ((PeriodicTypeX[primsrc] == 1) || (PeriodicTypeY[primsrc] == 1) || 
+        (PeriodicTypeZ[primsrc] == 1)) {
+      if (PeriodicInX[primsrc] || PeriodicInY[primsrc] || PeriodicInZ[primsrc]) {
+        for (int xrpt = -PeriodicInX[primsrc]; xrpt <= PeriodicInX[primsrc]; ++xrpt) {
+          double XPOfRpt = xpsrc + XPeriod[primsrc] * (double)xrpt;
+          for (int yrpt = -PeriodicInY[primsrc]; yrpt <= PeriodicInY[primsrc]; ++yrpt) {
+            double YPOfRpt = ypsrc + YPeriod[primsrc] * (double)yrpt;
+            for (int zrpt = -PeriodicInZ[primsrc]; zrpt <= PeriodicInZ[primsrc]; ++zrpt) {
+              double ZPOfRpt = zpsrc + ZPeriod[primsrc] * (double)zrpt;
+              if ((xrpt == 0) && (yrpt == 0) && (zrpt == 0)) {
                 continue; // this is the base device
+              }
+              { // basic primitive repeated 
+                Point3D localPPR;
+                {
+                  double InitialVector[3] = {xfld - XPOfRpt, yfld - YPOfRpt, zfld - ZPOfRpt};
+                  double FinalVector[3] = {0., 0., 0.};
+                  for (int i = 0; i < 3; ++i) {
+                    for (int j = 0; j < 3; ++j) {
+                      FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
+                    }
+                  }
+                  localPPR.X = FinalVector[0];
+                  localPPR.Y = FinalVector[1];
+                  localPPR.Z = FinalVector[2];
+                } // Point3D rotated
+                int PrimOK = 0;
+                // consider primitive representation accurate enough if it is
+                // repeated and beyond PrimAfter repetitions. 
+                if (PrimAfter == 0) {
+                  // If PrimAfter is zero, PrimOK is always zero
+                  PrimOK = 0;
+                  // and the following is not evaluated at all.
+                } else if (abs(xrpt) > PrimAfter && abs(yrpt) > PrimAfter) {
+                  PrimOK = 1;
+                }
+                if (PrimOK) {
+                  // use primitive representation
+                  // Potential and flux (local system) due to repeated primitive 
+                  GetPrimPF(primsrc, &localPPR, &tmpPot, &tmpF);
+                  (*Potential) += (AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpPot;
+                  localF.X += (AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpF.X; 
+                  localF.Y += (AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpF.Y; 
+                  localF.Z += (AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpF.Z; 
+                  if (DebugLevel == 301) {
+                    printf("primsrc: %d, xlocal: %lg, ylocal: %lg, zlocal: %lg\n", 
+                           primsrc, localPPR.X, localPPR.Y, localPPR.Z);
+                    printf("primsrc: %d, Pot: %lg, Fx: %lg, Fy: %lg, Fz: %lg\n", 
+                           primsrc,
+                           tmpPot * (AvChDen[primsrc]+AvAsgndChDen[primsrc]),
+                           tmpF.X * (AvChDen[primsrc]+AvAsgndChDen[primsrc]),
+                           tmpF.Y * (AvChDen[primsrc]+AvAsgndChDen[primsrc]),
+                           tmpF.Z * (AvChDen[primsrc]+AvAsgndChDen[primsrc]));
+                    printf("primsrc: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n", 
+                           primsrc, *Potential, localF.X, localF.Y, localF.Z);
+                  }
+                } else {
+                  // use discretized representation of a repeated primitive
+                  Point3D localPER; // point element repeated
+                  for (unsigned int ele = ElementBgn[primsrc]; ele <= ElementEnd[primsrc]; ++ele) {
+                    double xsrc = (EleArr+ele-1)->G.Origin.X;
+                    double ysrc = (EleArr+ele-1)->G.Origin.Y; 
+                    double zsrc = (EleArr+ele-1)->G.Origin.Z;
+                                                                
+                    double XOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt; 
+                    double YOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
+                    double ZOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
+                                                                
+                    Rotate from global to local system  
+                    double InitialVector[3] = {xfld - XOfRpt, yfld - YOfRpt, zfld - ZOfRpt}; 
+                    double FinalVector[3] = {0., 0., 0.};
+                    for (int i = 0; i < 3; ++i) {
+                      for (int j = 0; j < 3; ++j) {
+                        FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
+                      }
+                    }
+                    localPER.X = FinalVector[0]; 
+                    localPER.Y = FinalVector[1]; 
+                    localPER.Z = FinalVector[2];
 
-                                                {	// basic primitive
-repeated Point3D localPPR;	// point primitive repeated
-
-                                                {	// Rotate point3D from
-global to local system double InitialVector[4]; double FinalVector[4];
-
-                                                InitialVector[0] = xfld -
-XPOfRpt; InitialVector[1] = yfld - YPOfRpt; InitialVector[2] = zfld - ZPOfRpt;
-InitialVector[3] = 1.0;
-
-                                                for(int i = 0; i < 4;
-++i)
-                                                        {
-                                                        FinalVector[i] = 0.0;
-                                                        for(int j = 0 ;
-j < 4; ++j)
-                                                        {
-                                                        FinalVector[i] +=
-TransformationMatrix[i][j] * InitialVector[j];
-                                                        }
-                                                        }
-
-                                                localPPR.X = FinalVector[0];
-                                                localPPR.Y = FinalVector[1];
-                                                localPPR.Z = FinalVector[2];
-                                                }	// Point3D rotated
-
-                                                int PrimOK = 0;
-
-                                                // consider primitive
-representation accurate enough if it is
-                                                // repeated and beyond PrimAfter
-repetitions. if(PrimAfter == 0)	// If PrimAfter is zero, PrimOK is always zero
-                                                        PrimOK = 0;
-// and the following is not evaluated at all.
-                                                else 	if(abs(xrpt) > PrimAfter
-&& abs(yrpt) > PrimAfter) PrimOK = 1;
-
-                                                if(PrimOK)
-                                                        {	// use primitive
-representation
-                                                // Potential and flux (local
-system) due to repeated primitive GetPrimPF(primsrc, &localPPR, &tmpPot, &tmpF);
-                                                (*Potential) +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                        * tmpPot;
-                                                localF.X +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpF.X; localF.Y +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpF.Y; localF.Z +=
-(AvChDen[primsrc]+AvAsgndChDen[primsrc]) * tmpF.Z; if(DebugLevel == 301)
-                                                {
-                                                printf("primsrc: %d, xlocal:
-%lg, ylocal: %lg, zlocal: %lg\n", primsrc, localPPR.X, localPPR.Y, localPPR.Z);
-                                                        printf("primsrc: %d,
-Pot: %lg, Fx: %lg, Fy: %lg, Fz: %lg\n", primsrc,
-                                                                                                tmpPot*(AvChDen[primsrc]+AvAsgndChDen[primsrc]),
-                                                                                                tmpF.X*(AvChDen[primsrc]+AvAsgndChDen[primsrc]),
-                                                                                                tmpF.Y*(AvChDen[primsrc]+AvAsgndChDen[primsrc]),
-                                                                                                tmpF.Z*(AvChDen[primsrc]+AvAsgndChDen[primsrc]));
-                                                printf("primsrc: %d, SumPot:
-%lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n", primsrc, *Potential, localF.X,
-localF.Y, localF.Z);
-                                                }
-                                                        }	// if primitive
-representation else {	// use discretized representation of a repeated
-primitive double xsrc, ysrc, zsrc; double XOfRpt, YOfRpt, ZOfRpt; Point3D
-localPER;	// point element repeated
-
-                                                        for(register unsigned
-int ele = ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
-                                                                                                                                                                ++ele)
-                                                                {
-                                                        xsrc =
-(EleArr+ele-1)->G.Origin.X;	// helps faster execution ysrc =
-(EleArr+ele-1)->G.Origin.Y; zsrc = (EleArr+ele-1)->G.Origin.Z;
-
-                                                                XOfRpt = xsrc +
-XPeriod[primsrc] * (double)xrpt; YOfRpt = ysrc + YPeriod[primsrc] *
-(double)yrpt; ZOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
-
-                                                                {	//
-Rotate point3D from global to local system double InitialVector[4]; double
-FinalVector[4];
-
-                                                                InitialVector[0]
-= xfld - XOfRpt; InitialVector[1] = yfld - YOfRpt; InitialVector[2] = zfld -
-ZOfRpt; InitialVector[3] = 1.0;
-
-                                                                for(int
-i = 0; i < 4; ++i)
-                                                                        {
-                                                                        FinalVector[i]
-= 0.0; for(int j = 0 ; j < 4; ++j)
-                                                                        {
-                                                                        FinalVector[i]
-+= TransformationMatrix[i][j]
-                                                                                                                                                        * InitialVector[j];
-                                                                        }
-                                                                        }
-
-                                                                localPER.X =
-FinalVector[0]; localPER.Y = FinalVector[1]; localPER.Z = FinalVector[2];
-                                                                }
-
-                                                                // Allowed,
-because all the local coordinates have the same
-                                                                // orientations.
-Only the origins are mutually displaced along
-                                                                // a line.
-                                GetPF(ele, &localPER, &tmpPot, &tmpF);
-                                (*Potential) += ((EleArr+ele-1)->Solution
-                                                                                                                                +(EleArr+ele-1)->Assigned)
-                                                                                                                                * tmpPot;
-                                localF.X +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                                * tmpF.X;
-                                localF.Y +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                                * tmpF.Y;
-                                localF.Z +=
-((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned)
-                                                                                                                                * tmpF.Z;
-                                                        if(DebugLevel == 301)
-                                                        {
-                                                        printf("primsrc: %d,
-ele: %d, xlocal: %lg, ylocal: %lg, zlocal: %lg\n", primsrc, ele, localPER.X,
-localPER.Y, localPER.Z); printf("primsrc: %d, Pot: %lg, Fx: %lg, Fy: %lg, Fz:
-%lg\n", primsrc, tmpPot*((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned),
-                                                                                                        tmpF.X*((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned),
-                                                                                                        tmpF.Y*((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned),
-                                                                                                        tmpF.Z*((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned));
-                                                        printf("primsrc: %d,
-SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n", primsrc, *Potential,
-localF.X, localF.Y, localF.Z);
-                                                        }
-                                                                }	// for
-all elements on this primitive
-                                                        }	// else
-discretized representation of this primitive }	// repitition of basic primitive
-
-                                                if(MirrorTypeX[primsrc] ||
-MirrorTypeY[primsrc]
-                                                                ||
-MirrorTypeZ[primsrc]) {	// Mirror effect of repeated primitives printf("Mirror
-not correctly implemented in this version of neBEM ...\n"); exit(0);
-
-                                                        Point3D srcptp;
-                                                        Point3D localPPRM;
-// point primitive repeated mirrored DirnCosn3D DirCos;
-
-                                                srcptp.X = XPOfRpt; srcptp.Y =
-YPOfRpt; srcptp.Z = ZPOfRpt;
-
-                                                if(MirrorTypeX[primsrc])
-                                                { MirrorTypeY[primsrc] = 0;
-MirrorTypeZ[primsrc] = 0; } if(MirrorTypeY[primsrc]) MirrorTypeZ [primsrc]= 0;
-
-                                                        if(MirrorTypeX[primsrc])
-                                                                {
-                                                                localPPRM =
-ReflectPrimitiveOnMirror('X', primsrc, srcptp, fldpt,
-                                                MirrorDistXFromOrigin[primsrc],
-&DirCos);
-
-                                                                // check whether
-primitive description is good enough int PrimOK = 0;
-
-                                                                if(PrimOK)
-                                                                        {
-                                                                        GetPrimPFGCS(primsrc,
-&localPPRM, &tmpPot, &tmpF, &DirCos);
-
-                                                                if(MirrorTypeX[primsrc]
-== 1) // opposite charge density
-                                                                                {
-                                                                                (*Potential) -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpPot;
-                                                                                globalF->X -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.X;
-                                                                                globalF->Y -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                        * tmpF.Y;
-                                                                                globalF->Z -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                        * tmpF.Z;
-                                                                                }
-                                                                if(MirrorTypeX[primsrc]
-== 2) // same charge density
-                                                                                {
-                                                                                (*Potential) += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpPot;
-                                                                                globalF->X += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.X;
-                                                                                globalF->Y += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.Y;
-                                                                                globalF->Z += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.Z;
-                                                                                }
-                                                                }
-                                                                else
-                                                                        {
-// consider element representation Point3D localPERM;	// point element
-repeated mirrored Point3D srcpte; double XOfRpt, YOfRpt, ZOfRpt; double xsrc,
-ysrc, zsrc;
-
-                                                                        for(register
-unsigned int ele = ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
-                                                                                                                                                                                ++ele)
-                                                                                {
-                                                                        xsrc =
-(EleArr+ele-1)->G.Origin.X; ysrc = (EleArr+ele-1)->G.Origin.Y; zsrc =
-(EleArr+ele-1)->G.Origin.Z;
-
-                                                                                XOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt;
-                                                                                YOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
-                                                                                ZOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
-
-                                                                        srcpte.X
-= XOfRpt; srcpte.Y = YOfRpt; srcpte.Z = ZOfRpt;
-
-                                                                                localPERM = ReflectOnMirror('X', ele, srcpte, fldpt,
-                                                                MirrorDistXFromOrigin[primsrc],
-&DirCos); GetPFGCS(ele, &localPERM, &tmpPot, &tmpF, &DirCos);// force?
-
-                                                                                if(MirrorTypeX[primsrc] == 1) // opposite charge density
-                                                                                        {
-                                                                                        (*Potential) -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpPot;
-                                                                                        globalF->X -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.X;
-                                                                                        globalF->Y -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                * tmpF.Y;
-                                                                                        globalF->Z -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                * tmpF.Z;
-                                                                                        }
-                                                                                if(MirrorTypeX[primsrc] == 2) // same charge density
-                                                                                        {
-                                                                                        (*Potential) += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpPot;
-                                                                                        globalF->X += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.X;
-                                                                                        globalF->Y += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.Y;
-                                                                                        globalF->Z += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.Z;
-                                                                                        }
-                                                                                }	// loop for all elements on the primsrc primitive
-                                                                        }
-// else element representation }	// MirrorTypeX
-
-                                                if(MirrorTypeY[primsrc])
-                                                        {
-                                                        localPPRM =
-ReflectOnMirror('Y', primsrc, srcptp, fldpt, MirrorDistYFromOrigin[primsrc],
-&DirCos);
-
-                                                                // check whether
-primitive description is good enough int PrimOK = 0;
-
-                                                                if(PrimOK)
-                                                                        {
-                                                                        GetPrimPFGCS(primsrc,
-&localPPRM, &tmpPot, &tmpF, &DirCos);
-
-                                                                if(MirrorTypeY[primsrc]
-== 1) // opposite charge density
-                                                                                {
-                                                                                (*Potential) -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpPot;
-                                                                                globalF->X -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.X;
-                                                                                globalF->Y -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.Y;
-                                                                                globalF->Z -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.Z;
-                                                                                }
-                                                                if(MirrorTypeY[primsrc]
-== 2) // same charge density
-                                                                                {
-                                                                                (*Potential) += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpPot;
-                                                                                globalF->X += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.X;
-                                                                                globalF->Y += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.Y;
-                                                                                globalF->Z += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.Z;
-                                                                                }
-                                                                }
-                                                                else
-                                                                        {
-// consider element representation Point3D localPERM; double xsrc, ysrc, zsrc;
-                                                                        Point3D
-srcpte;
-
-                                                                        for(register
-unsigned int ele = ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
-                                                                                                                                                                                ++ele)
-                                                                                {
-                                                                        xsrc =
-(EleArr+ele-1)->G.Origin.X; ysrc = (EleArr+ele-1)->G.Origin.Y; zsrc =
-(EleArr+ele-1)->G.Origin.Z;
-
-                                                                        srcpte.X
-= xsrc; srcpte.Y = ysrc; srcpte.Z = zsrc;
-
-                                                                localPERM =
-ReflectOnMirror('Y', ele, srcpte, fldpt, MirrorDistYFromOrigin[primsrc],
-&DirCos); GetPFGCS(ele, &localPERM, &tmpPot, &tmpF, &DirCos);
-
-                                                                if(MirrorTypeY[primsrc]
-== 1) // opposite charge density
-                                                                                        {
-                                                                                        (*Potential) -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpPot;
-                                                                                        globalF->X -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.X;
-                                                                                        globalF->Y -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.Y;
-                                                                                        globalF->Z -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.Z;
-                                                                                        }
-                                                                if(MirrorTypeY[primsrc]
-== 2) // same charge density
-                                                                                        {
-                                                                                        (*Potential) += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpPot;
-                                                                                        globalF->X += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.X;
-                                                                                        globalF->Y += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.Y;
-                                                                                        globalF->Z += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.Z;
-                                                                                        }
-                                                                                }	// loop for all elements on the primsrc primitive
-                                                                        }
-// else element representations }	// MirrorTypeY
-
-                                                if(MirrorTypeZ[primsrc])
-                                                        {
-                                                        localPPRM =
-ReflectOnMirror('Z', primsrc, srcptp, fldpt, MirrorDistZFromOrigin[primsrc],
-&DirCos);
-
-                                                                // check whether
-primitive description is good enough int PrimOK = 0;
-
-                                                                if(PrimOK)
-                                                                        {
-                                                                        GetPrimPFGCS(primsrc,
-&localPPRM, &tmpPot, &tmpF, &DirCos);
-
-                                                                if(MirrorTypeZ[primsrc]
-== 1) // opposite charge density
-                                                                                {
-                                                                                (*Potential) -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpPot;
-                                                                                globalF->X -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.X;
-                                                                                globalF->Y -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.Y;
-                                                                                globalF->Z -= (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.Z;
-                                                                                }
-                                                                if(MirrorTypeZ[primsrc]
-== 2) // same charge density
-                                                                                {
-                                                                                (*Potential) += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpPot;
-                                                                                globalF->X += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.X;
-                                                                                globalF->Y += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.Y;
-                                                                                globalF->Z += (AvChDen[primsrc]+AvAsgndChDen[primsrc])
-                                                                                                                                                * tmpF.Z;
-                                                                                }
-                                                                        }
-// if primitive representation else {	// elements to be considered Point3D
-localPERM; double xsrc, ysrc, zsrc; Point3D srcpte;
-
-                                                                        for(register
-unsigned int ele = ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
-                                                                                                                                                                                ++ele)
-                                                                                {
-                                                                        xsrc =
-(EleArr+ele-1)->G.Origin.X; ysrc = (EleArr+ele-1)->G.Origin.Y; zsrc =
-(EleArr+ele-1)->G.Origin.Z;
-
-                                                                        srcpte.X
-= xsrc; srcpte.Y = ysrc; srcpte.Z = zsrc;
-
-                                                                localPERM =
-ReflectOnMirror('Z', ele, srcpte, fldpt, MirrorDistZFromOrigin[primsrc],
-&DirCos); GetPFGCS(ele, &localPERM, &tmpPot, &tmpF, &DirCos);
-
-                                                                if(MirrorTypeZ[primsrc]
-== 1) // opposite charge density
-                                                                                        {
-                                                                                        (*Potential) -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpPot;
-                                                                                        globalF->X -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.X;
-                                                                                        globalF->Y -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.Y;
-                                                                                        globalF->Z -= ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.Z;
-                                                                                        }
-                                                                if(MirrorTypeZ[primsrc]
-== 2) // same charge density
-                                                                                        {
-                                                                                        (*Potential) += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpPot;
-                                                                                        globalF->X += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.X;
-                                                                                        globalF->Y += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.Y;
-                                                                                        globalF->Z += ((EleArr+ele-1)->Solution
-                                                                                                                                                        +(EleArr+ele-1)->Assigned)
-                                                                                                                                                        * tmpF.Z;
-                                                                                        }
-                                                                                }	// loop for all elements on the primsrc primitive
-                                                                        }
-// else consider element representation }	// MirrorTypeZ
-                                                        }	// Mirror effect
-for repeated primitives ends
-
+                    GetPF(ele, &localPER, &tmpPot, &tmpF);
+                    *Potential) += ((EleArr+ele-1)->Solution + (EleArr+ele-1)->Assigned) * tmpPot;
+                    localF.X += ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned) * tmpF.X;
+                    localF.Y += ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned) * tmpF.Y;
+                    localF.Z += ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned) * tmpF.Z;
+                    if (DebugLevel == 301) {
+                      printf("primsrc: %d, ele: %d, xlocal: %lg, ylocal: %lg, zlocal: %lg\n", 
+                             primsrc, ele, localPER.X, localPER.Y, localPER.Z); 
+                      printf("primsrc: %d, Pot: %lg, Fx: %lg, Fy: %lg, Fz: %lg\n", primsrc 
+                             tmpPot * ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned),
+                             tmpF.X * ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned),
+                             tmpF.Y * ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned),
+                             tmpF.Z * ((EleArr+ele-1)->Solution+(EleArr+ele-1)->Assigned));
+                      printf("primsrc: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n", 
+                             primsrc, *Potential, localF.X, localF.Y, localF.Z);
+                    }
+                  } // for all elements on this primitive
+                }
+              } // repetition of basic primitive
             } // for zrpt
           } // for yrpt
         } // for xrpt
       } // PeriodicInX || PeriodicInY || PeriodicInZ
     } // PeriodicType == 1
 
-        tmpF = RotateVector3D(&localF, &PrimDC[primsrc], local2global);
-        globalF->X += tmpF.X;
-        globalF->Y += tmpF.Y;
-        globalF->Z += tmpF.Z;
-        }	// for all primitives: basic device, mirror reflections and
-repetitions
+    tmpF = RotateVector3D(&localF, &PrimDC[primsrc], local2global);
+    globalF->X += tmpF.X;
+    globalF->Y += tmpF.Y;
+    globalF->Z += tmpF.Z;
+  } // for all primitives: basic device, mirror reflections and repetitions
 
-// ExactPointP and ExactPointF should also have an ExactPointPF
-// Similarly for area and volume element related functions
-// since there is no intermediate function that interfaces ExactPointP etc
-// division by MyFACTOR is necessary
-for(unsigned int point = 1; point <= NbPtsKnCh; ++point)
-        {
-        tmpPot = ExactPointP(&(PtKnChArr+point-1)->P, globalP);
-        (*Potential) += (PtKnChArr+point-1)->Assigned * tmpPot / MyFACTOR;
-        ExactPointF(&(PtKnChArr+point-1)->P, globalP, &tmpF);
-        globalF->X += (PtKnChArr+point-1)->Assigned * tmpF.X / MyFACTOR;
-        globalF->Y += (PtKnChArr+point-1)->Assigned * tmpF.Y / MyFACTOR;
-        globalF->Z += (PtKnChArr+point-1)->Assigned * tmpF.Z / MyFACTOR;
-        }
+  // ExactPointP and ExactPointF should also have an ExactPointPF
+  // Similarly for area and volume element related functions
+  // since there is no intermediate function that interfaces ExactPointP etc
+  // division by MyFACTOR is necessary
+  for (unsigned int point = 1; point <= NbPtsKnCh; ++point) {
+    tmpPot = ExactPointP(&(PtKnChArr+point-1)->P, globalP);
+    (*Potential) += (PtKnChArr+point-1)->Assigned * tmpPot / MyFACTOR;
+    ExactPointF(&(PtKnChArr+point-1)->P, globalP, &tmpF);
+    globalF->X += (PtKnChArr+point-1)->Assigned * tmpF.X / MyFACTOR;
+    globalF->Y += (PtKnChArr+point-1)->Assigned * tmpF.Y / MyFACTOR;
+    globalF->Z += (PtKnChArr+point-1)->Assigned * tmpF.Z / MyFACTOR;
+  }
 
-for(unsigned int line = 1; line <= NbLinesKnCh; ++line)
-        {
-        (*Potential) += 0.0;
-        globalF->X += 0.0;
-        globalF->Y += 0.0;
-        globalF->Z += 0.0;
-        }
+  for (unsigned int line = 1; line <= NbLinesKnCh; ++line) {
+    (*Potential) += 0.0;
+    globalF->X += 0.0;
+    globalF->Y += 0.0;
+    globalF->Z += 0.0;
+  }
 
-for(unsigned int area = 1; area <= NbAreasKnCh; ++area)
-        {
-        (*Potential) += 0.0;
-        globalF->X += 0.0;
-        globalF->Y += 0.0;
-        globalF->Z += 0.0;
-        }
+  for (unsigned int area = 1; area <= NbAreasKnCh; ++area) {
+    (*Potential) += 0.0;
+    globalF->X += 0.0;
+    globalF->Y += 0.0;
+    globalF->Z += 0.0;
+  }
 
-for(unsigned int vol = 1; vol <= NbVolsKnCh; ++vol)
-        {
-        (*Potential) += 0.0;
-        globalF->X += 0.0;
-        globalF->Y += 0.0;
-        globalF->Z += 0.0;
-        }
+  for (unsigned int vol = 1; vol <= NbVolsKnCh; ++vol) {
+    (*Potential) += 0.0;
+    globalF->X += 0.0;
+    globalF->Y += 0.0;
+    globalF->Z += 0.0;
+  }
 
-(*Potential) += VSystemChargeZero;	// respect total system charge
-constraint
-
-return(0);
-}	// end of PFAtPoint
+  (*Potential) += VSystemChargeZero; // respect total system charge constraint
+  return(0);
+} // end of PFAtPoint
 // do not erase this redundant function.
 PFAtPoint borrowed from V1.8.15 ends here */
 
@@ -1349,9 +659,8 @@ PFAtPoint borrowed from V1.8.15 ends here */
 // coordinate system due to all the interface elements and all known charges.
 // It may be interesting to inspect the relative influence of these two factors.
 int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
-  double ElePot, KnChPot;
-  Vector3D EleglobalF, KnChglobalF;
-
+  double ElePot;
+  Vector3D EleglobalF;
   int fstatus = ElePFAtPoint(globalP, &ElePot, &EleglobalF);
   if (fstatus) {
     printf(
@@ -1364,6 +673,8 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   globalF->Z = EleglobalF.Z;
 
   if (OptKnCh) {
+    double KnChPot;
+    Vector3D KnChglobalF;
     fstatus = KnChPFAtPoint(globalP, &KnChPot, &KnChglobalF);
     if (fstatus) {
       printf(
@@ -1386,13 +697,9 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
 int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   int dbgFn = 0;
 
-  double xfld = globalP->X;
-  double yfld = globalP->Y;
-  double zfld = globalP->Z;
-  Point3D fldpt;
-  fldpt.X = xfld;
-  fldpt.Y = yfld;
-  fldpt.Z = zfld;
+  const double xfld = globalP->X;
+  const double yfld = globalP->Y;
+  const double zfld = globalP->Z;
 
   // Compute Potential and field at different locations
   *Potential = globalF->X = globalF->Y = globalF->Z = 0.0;
@@ -1417,67 +724,21 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   // TransformationMatrix changes - kept within private (Note: matrices with
   // fixed dimensions can be maintained, but those with dynamic allocation
   // can not).
-  double *lFx, *lFy, *lFz, *gFx, *gFy, *gFz, *pPot, *plFx, *plFy, *plFz, *pgFx,
-      *pgFy, *pgFz;
-  pPot = dvector(1, NbPrimitives);
-  lFx = dvector(1, NbPrimitives);   // field components in LCS
-  lFy = dvector(1, NbPrimitives);   // summed over all the incarnations
-  lFz = dvector(1, NbPrimitives);   // of a given primitive
-  gFx = dvector(1, NbPrimitives);   // field components in GCS
-  gFy = dvector(1, NbPrimitives);   // summed over all the incarnations
-  gFz = dvector(1, NbPrimitives);   // of a given primitive
-  plFx = dvector(1, NbPrimitives);  // field components in LCS
-  plFy =
-      dvector(1, NbPrimitives);  // for a primitive and its other incarnations
-  plFz = dvector(1, NbPrimitives);
-  pgFx = dvector(1, NbPrimitives);  // field components in GCS
-  pgFy = dvector(1, NbPrimitives);  // for a primitive being summed
-  pgFz = dvector(1, NbPrimitives);
+  double *pPot = dvector(1, NbPrimitives);
+  // Field components in LCS for a primitive and its other incarnations.
+  double *plFx = dvector(1, NbPrimitives);  
+  double *plFy = dvector(1, NbPrimitives);
+  double *plFz = dvector(1, NbPrimitives);
 
   for (int prim = 1; prim <= NbPrimitives; ++prim) {
-    lFx[prim] = lFy[prim] = lFz[prim] = 0.0;
-    gFx[prim] = gFy[prim] = gFz[prim] = 0.0;
     pPot[prim] = plFx[prim] = plFy[prim] = plFz[prim] = 0.0;
-    pgFx[prim] = pgFy[prim] = pgFz[prim] = 0.0;
   }
-
-  double SumePot;
-  Vector3D SumeF;
-  double SumerPot;
-  Vector3D SumerF;
-  SumePot = SumerPot = 0.0;
-  SumeF.X = SumeF.Y = SumeF.Z = SumerF.X = SumerF.Y = SumerF.Z = 0.0;
 
 #ifdef _OPENMP
   int tid = 0, nthreads = 1;
   #pragma omp parallel private(tid, nthreads)
 #endif
   {
-    int primsrc;
-    double TransformationMatrix[4][4];
-    double xpsrc, ypsrc, zpsrc;
-    Point3D localPP;
-    double primPot;
-    Vector3D primF, localF;  // flux due to this primitive
-    int PrimOK;
-
-    // element representation of basic primitive
-    double xsrc, ysrc, zsrc;  // these variables are not necessary
-    Point3D localPE;
-    double ePot;
-    Vector3D eF;
-
-    // repeated primitive
-    int xrpt, yrpt, zrpt;
-    double XPOfRpt, YPOfRpt, ZPOfRpt;
-    Point3D localPPR;  // point primitive repeated
-
-    // element representation of repeated primitive
-    double xrsrc, yrsrc, zrsrc;  // these variables are not necessary
-    double XEOfRpt, YEOfRpt, ZEOfRpt;
-    Point3D localPER;  // point primitive repeated
-    double erPot;
-    Vector3D erF;
 
 #ifdef _OPENMP
     if (dbgFn) {
@@ -1490,402 +751,306 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
 #endif
 // by default, nested parallelization is off in C
 #ifdef _OPENMP
-#pragma omp for private(primsrc, TransformationMatrix, PrimOK, xpsrc, ypsrc, \
-                        zpsrc, localPP, primPot, primF, localF, xsrc, ysrc,  \
-                        zsrc, localPE, ePot, eF, SumePot, SumeF, xrpt, yrpt, \
-                        zrpt, XPOfRpt, YPOfRpt, ZPOfRpt, localPPR, xrsrc,    \
-                        yrsrc, zrsrc, XEOfRpt, YEOfRpt, ZEOfRpt, localPER,   \
-                        erPot, erF, SumerPot, SumerF)
+#pragma omp for 
 #endif
-    for (primsrc = 1; primsrc <= NbPrimitives; ++primsrc) {
+    for (int primsrc = 1; primsrc <= NbPrimitives; ++primsrc) {
       if (dbgFn) {
         printf("Evaluating effect of primsrc %d using on %lg, %lg, %lg\n",
                primsrc, xfld, yfld, zfld);
         fflush(stdout);
       }
 
-      xpsrc = PrimOriginX[primsrc];
-      ypsrc = PrimOriginY[primsrc];
-      zpsrc = PrimOriginZ[primsrc];
+      const double xpsrc = PrimOriginX[primsrc];
+      const double ypsrc = PrimOriginY[primsrc];
+      const double zpsrc = PrimOriginZ[primsrc];
 
-      primPot = 0.0;
-      primF.X = primF.Y = primF.Z = 0.0;
-      localF.X = localF.Y = localF.Z = 0.0;
+      // Field in the local frame.
+      double lFx = 0.;
+      double lFy = 0.;
+      double lFz = 0.;
 
-      double tmpPot;
-      Vector3D tmpF;
-
-      // set up transform matrix for this primitive, which is also the same for
-      // for all the elements belonging to this primitive
+      // Set up transform matrix for this primitive, which is also the same 
+      // for all the elements belonging to this primitive.
+      double TransformationMatrix[3][3];
       TransformationMatrix[0][0] = PrimDC[primsrc].XUnit.X;
       TransformationMatrix[0][1] = PrimDC[primsrc].XUnit.Y;
       TransformationMatrix[0][2] = PrimDC[primsrc].XUnit.Z;
-      TransformationMatrix[0][3] = 0.0;
       TransformationMatrix[1][0] = PrimDC[primsrc].YUnit.X;
       TransformationMatrix[1][1] = PrimDC[primsrc].YUnit.Y;
       TransformationMatrix[1][2] = PrimDC[primsrc].YUnit.Z;
-      TransformationMatrix[1][3] = 0.0;
       TransformationMatrix[2][0] = PrimDC[primsrc].ZUnit.X;
       TransformationMatrix[2][1] = PrimDC[primsrc].ZUnit.Y;
       TransformationMatrix[2][2] = PrimDC[primsrc].ZUnit.Z;
-      TransformationMatrix[2][3] = 0.0;
-      TransformationMatrix[3][0] = 0.0;
-      TransformationMatrix[3][1] = 0.0;
-      TransformationMatrix[3][2] = 0.0;
-      TransformationMatrix[3][3] = 1.0;
 
       // The total influence is due to primitives on the basic device and due to
       // virtual primitives arising out of repetition, reflection etc and not
       // residing on the basic device
 
-      {  // basic primitive
-        // point translated to the ECS origin, but axes direction global
-        {  // Rotate point3D from global to local system
-          double InitialVector[4];
-          double FinalVector[4];
+      // basic primitive
 
-          InitialVector[0] = xfld - xpsrc;
-          InitialVector[1] = yfld - ypsrc;
-          InitialVector[2] = zfld - zpsrc;
-          InitialVector[3] = 1.0;
+      // Evaluate possibility whether primitive influence is accurate enough.
+      // This could be based on localPP and the subtended solid angle.
+      // If 1, then only primitive influence will be considered.
+      int PrimOK = 0;
 
-          for (int i = 0; i < 4; ++i) {
-            FinalVector[i] = 0.0;
-            for (int j = 0; j < 4; ++j) {
+      if (PrimOK) {
+        // Only primitive influence will be considered
+        // Potential and flux (local system) due to base primitive
+        double tmpPot;
+        Vector3D tmpF;
+        // Rotate point from global to local system
+        double InitialVector[3] = {xfld - xpsrc, yfld - ypsrc, zfld - zpsrc};
+        double FinalVector[3] = {0., 0., 0.};
+        for (int i = 0; i < 3; ++i) {
+          for (int j = 0; j < 3; ++j) {
+            FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
+          }
+        }
+        Point3D localPP;
+        localPP.X = FinalVector[0];
+        localPP.Y = FinalVector[1];
+        localPP.Z = FinalVector[2];
+        GetPrimPF(primsrc, &localPP, &tmpPot, &tmpF);
+        const double qpr = AvChDen[primsrc] + AvAsgndChDen[primsrc];
+        pPot[primsrc] += qpr * tmpPot;
+        lFx += qpr * tmpF.X;
+        lFy += qpr * tmpF.Y;
+        lFz += qpr * tmpF.Z;
+        // if(DebugLevel == 301)
+        if (dbgFn) {
+          printf("PFAtPoint base primitive =>\n");
+          printf("primsrc: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n",
+                 primsrc, localPP.X, localPP.Y, localPP.Z);
+          printf("primsrc: %d, Pot: %lg, Fx: %lg, Fx: %lg, Fz: %lg\n",
+                 primsrc, tmpPot, tmpF.X, tmpF.Y, tmpF.Z);
+          printf("primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg\n",
+                 primsrc, pPot[primsrc], lFx, lFy, lFz);
+          fflush(stdout);
+          // exit(-1);
+        }
+      } else {
+        // Need to consider element influence.
+        double tPot;
+        Vector3D tF;
+        double ePot = 0.;
+        Vector3D eF;
+        eF.X = 0.0;
+        eF.Y = 0.0;
+        eF.Z = 0.0;
+        const int eleMin = ElementBgn[primsrc];
+        const int eleMax = ElementEnd[primsrc];
+        for (int ele = eleMin; ele <= eleMax; ++ele) {
+          const double xsrc = (EleArr + ele - 1)->G.Origin.X;
+          const double ysrc = (EleArr + ele - 1)->G.Origin.Y;
+          const double zsrc = (EleArr + ele - 1)->G.Origin.Z;
+          // Rotate from global to local system; matrix as for primitive
+          double InitialVector[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
+          double FinalVector[3] = {0., 0., 0.};
+          for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
               FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
             }
           }
+          Point3D localPE;
+          localPE.X = FinalVector[0];
+          localPE.Y = FinalVector[1];
+          localPE.Z = FinalVector[2];
 
-          localPP.X = FinalVector[0];
-          localPP.Y = FinalVector[1];
-          localPP.Z = FinalVector[2];
-        }  // Point3D rotated
-
-        // evaluate possibility whether primitive influence is accurate enough
-        // This could be based on localPP and the subtended solid angle
-        PrimOK = 0;
-
-        if (PrimOK)  // if 1, then only primitive influence will be considered
-        {
           // Potential and flux (local system) due to base primitive
-          GetPrimPF(primsrc, &localPP, &tmpPot, &tmpF);
-          pPot[primsrc] += (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpPot;
-          lFx[primsrc] += (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.X;
-          lFy[primsrc] += (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Y;
-          lFz[primsrc] += (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Z;
+          GetPF(ele, &localPE, &tPot, &tF);
+          const double qel = (EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned;
+          ePot += qel * tPot;
+          eF.X += qel * tF.X;
+          eF.Y += qel * tF.Y;
+          eF.Z += qel * tF.Z;
           // if(DebugLevel == 301)
           if (dbgFn) {
-            printf("PFAtPoint base primitive =>\n");
-            printf("primsrc: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n",
-                   primsrc, localPP.X, localPP.Y, localPP.Z);
-            printf("primsrc: %d, Pot: %lg, Fx: %lg, Fx: %lg, Fz: %lg\n",
-                   primsrc, tmpPot, tmpF.X, tmpF.Y, tmpF.Z);
-            printf("primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg\n",
-                   primsrc, pPot[primsrc], lFx[primsrc], lFy[primsrc],
-                   lFz[primsrc]);
-            fflush(stdout);
-            // exit(-1);
-          }
-        }       // if considering primtive influence is OK
-        else {  // element influence
-          xsrc = 0.0, ysrc = 0.0, zsrc = 0.0;
-          double tPot;
-          Vector3D tF;
-          ePot = 0.0;
-          eF.X = 0.0;
-          eF.Y = 0.0;
-          eF.Z = 0.0;
-
-          for (int ele = ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
-               ++ele) {
-            xsrc = (EleArr + ele - 1)->G.Origin.X;  // helps faster execution
-            ysrc = (EleArr + ele - 1)->G.Origin.Y;
-            zsrc = (EleArr + ele - 1)->G.Origin.Z;
-
-            {  // Rotate point3D from global to local system; matrix as for
-               // primitive
-              double InitialVector[4];
-              double FinalVector[4];
-
-              InitialVector[0] = xfld - xsrc;
-              InitialVector[1] = yfld - ysrc;
-              InitialVector[2] = zfld - zsrc;
-              InitialVector[3] = 1.0;
-
-              for (int i = 0; i < 4; ++i) {
-                FinalVector[i] = 0.0;
-                for (int j = 0; j < 4; ++j) {
-                  FinalVector[i] +=
-                      TransformationMatrix[i][j] * InitialVector[j];
-                }
-              }
-
-              localPE.X = FinalVector[0];
-              localPE.Y = FinalVector[1];
-              localPE.Z = FinalVector[2];
-            }  // Point3D rotated
-
-            // Potential and flux (local system) due to base primitive
-            GetPF(ele, &localPE, &tPot, &tF);
-            ePot +=
-                ((EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned) *
-                tPot;
-            eF.X +=
-                ((EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned) *
-                tF.X;
-            eF.Y +=
-                ((EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned) *
-                tF.Y;
-            eF.Z +=
-                ((EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned) *
-                tF.Z;
-            // if(DebugLevel == 301)
-            if (dbgFn) {
-              printf("PFAtPoint base primitive:%d\n", primsrc);
-              printf("ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n", ele,
-                     localPE.X, localPE.Y, localPE.Z);
-              printf(
-                  "ele: %d, tPot: %lg, tFx: %lg, tFy: %lg, tFz: %lg, Solution: "
-                  "%g\n",
-                  ele, tPot, tF.X, tF.Y, tF.Z,
-                  (EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned);
-              printf("ele: %d, ePot: %lg, eFx: %lg, eFy: %lg, eFz: %lg\n", ele,
-                     ePot, eF.X, eF.Y, eF.Z);
-              fflush(stdout);
-            }
-          }  // for all the elements on this primsrc primitive
-
-          SumePot = ePot;
-          SumeF.X = eF.X;
-          SumeF.Y = eF.Y;
-          SumeF.Z = eF.Z;
-          if (dbgFn) {
-            printf("SumePot: %lg, SumeFx: %lg, SumeFy: %lg, SumeFz: %lg\n",
-                   SumePot, SumeF.X, SumeF.Y, SumeF.Z);
-            fflush(stdout);
-            // exit(-1);
-          }
-
-          pPot[primsrc] += SumePot;
-          lFx[primsrc] += SumeF.X;
-          lFy[primsrc] += SumeF.Y;
-          lFz[primsrc] += SumeF.Z;
-          if (dbgFn) {
+            printf("PFAtPoint base primitive:%d\n", primsrc);
+            printf("ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n", ele,
+                   localPE.X, localPE.Y, localPE.Z);
             printf(
-                "prim%d, SumePot: %lg, SumeFx: %lg, SumeFy: %lg, SumeFz: %lg\n",
-                primsrc, SumePot, SumeF.X, SumeF.Y, SumeF.Z);
-            printf("prim%d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg\n", primsrc,
-                   pPot[primsrc], lFx[primsrc], lFy[primsrc], lFz[primsrc]);
+                "ele: %d, tPot: %lg, tFx: %lg, tFy: %lg, tFz: %lg, Solution: "
+                "%g\n",
+                ele, tPot, tF.X, tF.Y, tF.Z, qel);
+            printf("ele: %d, ePot: %lg, eFx: %lg, eFy: %lg, eFz: %lg\n", ele,
+                   ePot, eF.X, eF.Y, eF.Z);
             fflush(stdout);
           }
-        }  // else elements influence
+        }  // for all the elements on this primsrc primitive
 
-        // if(DebugLevel == 301)
+        pPot[primsrc] += ePot;
+        lFx += eF.X;
+        lFy += eF.Y;
+        lFz += eF.Z;
         if (dbgFn) {
-          printf("basic primtive\n");
-          printf("primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg\n",
-                 primsrc, pPot[primsrc], lFx[primsrc], lFy[primsrc],
-                 lFz[primsrc]);
+          printf(
+              "prim%d, ePot: %lg, eFx: %lg, eFy: %lg, eFz: %lg\n",
+              primsrc, ePot, eF.X, eF.Y, eF.Z);
+          printf("prim%d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg\n", primsrc,
+                 pPot[primsrc], lFx, lFy, lFz);
           fflush(stdout);
         }
-      }  // basic primitive ends
+      }  // else elements influence
+
+      // if(DebugLevel == 301)
+      if (dbgFn) {
+        printf("basic primitive\n");
+        printf("primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg\n",
+               primsrc, pPot[primsrc], lFx, lFy, lFz);
+        fflush(stdout);
+      }
 
       if (MirrorTypeX[primsrc] || MirrorTypeY[primsrc] ||
           MirrorTypeZ[primsrc]) {  // Mirror effect of base primitives
         printf("Mirror may not be correctly implemented ...\n");
         exit(0);
-      }        // Mirror effect ends
+      } // Mirror effect ends
 
       // Flux due to repeated primitives
       if ((PeriodicTypeX[primsrc] == 1) || (PeriodicTypeY[primsrc] == 1) ||
           (PeriodicTypeZ[primsrc] == 1)) {
-        if (PeriodicInX[primsrc] || PeriodicInY[primsrc] ||
-            PeriodicInZ[primsrc]) {
-          for (xrpt = -PeriodicInX[primsrc]; xrpt <= PeriodicInX[primsrc];
-               ++xrpt) {
-            XPOfRpt = xpsrc + XPeriod[primsrc] * (double)xrpt;
+        const int perx = PeriodicInX[primsrc];
+        const int pery = PeriodicInY[primsrc];
+        const int perz = PeriodicInZ[primsrc];
+        if (perx || pery || perz) {
+          for (int xrpt = -perx; xrpt <= perx; ++xrpt) {
+            const double xShift = XPeriod[primsrc] * (double)xrpt;
+            const double XPOfRpt = xpsrc + xShift;
+            for (int yrpt = -pery; yrpt <= pery; ++yrpt) {
+              const double yShift = YPeriod[primsrc] * (double)yrpt;
+              const double YPOfRpt = ypsrc + yShift;
+              for (int zrpt = -perz; zrpt <= perz; ++zrpt) {
+                const double zShift = ZPeriod[primsrc] * (double)zrpt;
+                const double ZPOfRpt = zpsrc + zShift;
+                // Skip the basic primitive.
+                if ((xrpt == 0) && (yrpt == 0) && (zrpt == 0)) continue;
 
-            for (yrpt = -PeriodicInY[primsrc]; yrpt <= PeriodicInY[primsrc];
-                 ++yrpt) {
-              YPOfRpt = ypsrc + YPeriod[primsrc] * (double)yrpt;
+                // Basic primitive repeated
+                int PrimOK = 0;
 
-              for (zrpt = -PeriodicInZ[primsrc]; zrpt <= PeriodicInZ[primsrc];
-                   ++zrpt) {
-                ZPOfRpt = zpsrc + ZPeriod[primsrc] * (double)zrpt;
+                // consider primitive representation accurate enough if it is
+                // repeated and beyond PrimAfter repetitions.
+                if (PrimAfter == 0) {
+                  // If PrimAfter is zero, PrimOK is always zero
+                  PrimOK = 0;
+                } else if ((abs(xrpt) > PrimAfter) && (abs(yrpt) > PrimAfter)) {
+                  PrimOK = 1;
+                }
+                if (PrimOK) {
+                  // Use primitive representation
+                  // Rotate point from global to local system
+                  double InitialVector[3] = {xfld - XPOfRpt, yfld - YPOfRpt, zfld - ZPOfRpt};
+                  double FinalVector[3] = {0., 0., 0.};
+                  for (int i = 0; i < 3; ++i) {
+                    for (int j = 0; j < 3; ++j) {
+                      FinalVector[i] +=
+                          TransformationMatrix[i][j] * InitialVector[j];
+                    }
+                  }
+                  Point3D localPPR;
+                  localPPR.X = FinalVector[0];
+                  localPPR.Y = FinalVector[1];
+                  localPPR.Z = FinalVector[2];
+                  // Potential and flux (local system) due to repeated
+                  // primitive
+                  double tmpPot;
+                  Vector3D tmpF;
+                  GetPrimPF(primsrc, &localPPR, &tmpPot, &tmpF);
+                  const double qpr = AvChDen[primsrc] + AvAsgndChDen[primsrc];
+                  pPot[primsrc] += qpr * tmpPot;
+                  lFx += qpr * tmpF.X;
+                  lFy += qpr * tmpF.Y;
+                  lFz += qpr * tmpF.Z;
+                  // if(DebugLevel == 301)
+                  if (dbgFn) {
+                    printf(
+                        "primsrc: %d, xlocal: %lg, ylocal: %lg, zlocal: "
+                        "%lg\n",
+                        primsrc, localPPR.X, localPPR.Y, localPPR.Z);
+                    printf(
+                        "primsrc: %d, Pot: %lg, Fx: %lg, Fy: %lg, Fz: %lg\n",
+                        primsrc, tmpPot * qpr, tmpF.X * qpr, tmpF.Y * qpr,
+                        tmpF.Z * qpr);
+                    printf(
+                        "primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: "
+                        "%lg\n",
+                        primsrc, pPot[primsrc], lFx, lFy, lFz);
+                    fflush(stdout);
+                  }
+                } else {
+                  // Use discretized representation of a repeated primitive
+                  double tPot;
+                  Vector3D tF;
+                  double erPot = 0.0;
+                  Vector3D erF;
+                  erF.X = 0.0;
+                  erF.Y = 0.0;
+                  erF.Z = 0.0;
+                  const int eleMin = ElementBgn[primsrc];
+                  const int eleMax = ElementEnd[primsrc];
+                  for (int ele = eleMin; ele <= eleMax; ++ele) {
+                    const double xrsrc = (EleArr + ele - 1)->G.Origin.X;
+                    const double yrsrc = (EleArr + ele - 1)->G.Origin.Y;
+                    const double zrsrc = (EleArr + ele - 1)->G.Origin.Z;
 
-                if ((xrpt == 0) && (yrpt == 0) && (zrpt == 0))
-                  continue;  // this is the base device
-
-                {  // basic primitive repeated
-
-                  {  // Rotate point3D from global to local system
-                    double InitialVector[4];
-                    double FinalVector[4];
-
-                    InitialVector[0] = xfld - XPOfRpt;
-                    InitialVector[1] = yfld - YPOfRpt;
-                    InitialVector[2] = zfld - ZPOfRpt;
-                    InitialVector[3] = 1.0;
-
-                    for (int i = 0; i < 4; ++i) {
-                      FinalVector[i] = 0.0;
-                      for (int j = 0; j < 4; ++j) {
+                    const double XEOfRpt = xrsrc + xShift;
+                    const double YEOfRpt = yrsrc + yShift;
+                    const double ZEOfRpt = zrsrc + zShift;
+                    // Rotate from global to local system
+                    double InitialVector[3] = {xfld - XEOfRpt, yfld - YEOfRpt, zfld - ZEOfRpt};
+                    double FinalVector[3] = {0., 0., 0.};
+                    for (int i = 0; i < 3; ++i) {
+                      for (int j = 0; j < 3; ++j) {
                         FinalVector[i] +=
                             TransformationMatrix[i][j] * InitialVector[j];
                       }
                     }
+                    Point3D localPER;
+                    localPER.X = FinalVector[0];
+                    localPER.Y = FinalVector[1];
+                    localPER.Z = FinalVector[2];
 
-                    localPPR.X = FinalVector[0];
-                    localPPR.Y = FinalVector[1];
-                    localPPR.Z = FinalVector[2];
-                  }  // Point3D rotated
-
-                  PrimOK = 0;
-
-                  // consider primitive representation accurate enough if it is
-                  // repeated and beyond PrimAfter repetitions.
-                  if (PrimAfter ==
-                      0)         // If PrimAfter is zero, PrimOK is always zero
-                    PrimOK = 0;  // and the following is not evaluated at all.
-                  else if ((abs(xrpt) > PrimAfter) && (abs(yrpt) > PrimAfter))
-                    PrimOK = 1;
-
-                  if (PrimOK) {  // use primitive representation
-                    // Potential and flux (local system) due to repeated
-                    // primitive
-                    GetPrimPF(primsrc, &localPPR, &tmpPot, &tmpF);
-                    pPot[primsrc] +=
-                        (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpPot;
-                    lFx[primsrc] +=
-                        (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.X;
-                    lFy[primsrc] +=
-                        (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Y;
-                    lFz[primsrc] +=
-                        (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Z;
+                    // Allowed, because all the local coordinates have the
+                    // same orientations. Only the origins are mutually
+                    // displaced along a line.
+                    GetPF(ele, &localPER, &tPot, &tF);
+                    const double qel = (EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned;
+                    erPot += qel * tPot;
+                    erF.X += qel * tF.X;
+                    erF.Y += qel * tF.Y;
+                    erF.Z += qel * tF.Z;
                     // if(DebugLevel == 301)
                     if (dbgFn) {
+                      printf("PFAtPoint base primitive:%d\n", primsrc);
+                      printf("ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n",
+                             ele, localPER.X, localPER.Y, localPER.Z);
                       printf(
-                          "primsrc: %d, xlocal: %lg, ylocal: %lg, zlocal: "
-                          "%lg\n",
-                          primsrc, localPPR.X, localPPR.Y, localPPR.Z);
+                          "ele: %d, tPot: %lg, tFx: %lg, tFy: %lg, tFz: %lg, "
+                          "Solution: %g\n",
+                          ele, tPot, tF.X, tF.Y, tF.Z, qel);
                       printf(
-                          "primsrc: %d, Pot: %lg, Fx: %lg, Fy: %lg, Fz: %lg\n",
-                          primsrc,
-                          tmpPot * (AvChDen[primsrc] + AvAsgndChDen[primsrc]),
-                          tmpF.X * (AvChDen[primsrc] + AvAsgndChDen[primsrc]),
-                          tmpF.Y * (AvChDen[primsrc] + AvAsgndChDen[primsrc]),
-                          tmpF.Z * (AvChDen[primsrc] + AvAsgndChDen[primsrc]));
-                      printf(
-                          "primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: "
-                          "%lg\n",
-                          primsrc, pPot[primsrc], lFx[primsrc], lFy[primsrc],
-                          lFz[primsrc]);
+                          "ele: %d, ePot: %lg, eFx: %lg, eFy: %lg, eFz: %lg\n",
+                          ele, erPot, erF.X, erF.Y, erF.Z);
                       fflush(stdout);
                     }
-                  }       // if primitive representation
-                  else {  // use discretized representation of a repeated
-                          // primitive
-                    xrsrc = 0.0, yrsrc = 0.0, zrsrc = 0.0;
-                    double tPot;
-                    Vector3D tF;
-                    erPot = 0.0;
-                    erF.X = 0.0;
-                    erF.Y = 0.0;
-                    erF.Z = 0.0;
+                  }  // for all the elements on this primsrc repeated
+                     // primitive
 
-                    for (int ele = ElementBgn[primsrc];
-                         ele <= ElementEnd[primsrc]; ++ele) {
-                      xrsrc = (EleArr + ele - 1)
-                                  ->G.Origin.X;  // helps faster execution
-                      yrsrc = (EleArr + ele - 1)->G.Origin.Y;
-                      zrsrc = (EleArr + ele - 1)->G.Origin.Z;
+                  pPot[primsrc] += erPot;
+                  lFx += erF.X;
+                  lFy += erF.Y;
+                  lFz += erF.Z;
+                }  // else discretized representation of this primitive
 
-                      XEOfRpt = xrsrc + XPeriod[primsrc] * (double)xrpt;
-                      YEOfRpt = yrsrc + YPeriod[primsrc] * (double)yrpt;
-                      ZEOfRpt = zrsrc + ZPeriod[primsrc] * (double)zrpt;
-
-                      {  // Rotate point3D from global to local system
-                        double InitialVector[4];
-                        double FinalVector[4];
-
-                        InitialVector[0] = xfld - XEOfRpt;
-                        InitialVector[1] = yfld - YEOfRpt;
-                        InitialVector[2] = zfld - ZEOfRpt;
-                        InitialVector[3] = 1.0;
-
-                        for (int i = 0; i < 4; ++i) {
-                          FinalVector[i] = 0.0;
-                          for (int j = 0; j < 4; ++j) {
-                            FinalVector[i] +=
-                                TransformationMatrix[i][j] * InitialVector[j];
-                          }
-                        }
-
-                        localPER.X = FinalVector[0];
-                        localPER.Y = FinalVector[1];
-                        localPER.Z = FinalVector[2];
-                      }
-
-                      // Allowed, because all the local coordinates have the
-                      // same orientations. Only the origins are mutually
-                      // displaced along a line.
-                      GetPF(ele, &localPER, &tPot, &tF);
-                      erPot += ((EleArr + ele - 1)->Solution +
-                                (EleArr + ele - 1)->Assigned) *
-                               tPot;
-                      erF.X += ((EleArr + ele - 1)->Solution +
-                                (EleArr + ele - 1)->Assigned) *
-                               tF.X;
-                      erF.Y += ((EleArr + ele - 1)->Solution +
-                                (EleArr + ele - 1)->Assigned) *
-                               tF.Y;
-                      erF.Z += ((EleArr + ele - 1)->Solution +
-                                (EleArr + ele - 1)->Assigned) *
-                               tF.Z;
-                      // if(DebugLevel == 301)
-                      if (dbgFn) {
-                        printf("PFAtPoint base primitive:%d\n", primsrc);
-                        printf(
-                            "ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n",
-                            ele, localPER.X, localPER.Y, localPER.Z);
-                        printf(
-                            "ele: %d, tPot: %lg, tFx: %lg, tFy: %lg, tFz: %lg, "
-                            "Solution: %g\n",
-                            ele, tPot, tF.X, tF.Y, tF.Z,
-                            (EleArr + ele - 1)->Solution +
-                                (EleArr + ele - 1)->Assigned);
-                        printf(
-                            "ele: %d, ePot: %lg, eFx: %lg, eFy: %lg, eFz: "
-                            "%lg\n",
-                            ele, erPot, erF.X, erF.Y, erF.Z);
-                        fflush(stdout);
-                      }
-                    }  // for all the elements on this primsrc repeated
-                       // primitive
-
-                    SumerPot = erPot;
-                    SumerF.X = erF.X;
-                    SumerF.Y = erF.Y;
-                    SumerF.Z = erF.Z;
-
-                    pPot[primsrc] += SumerPot;
-                    lFx[primsrc] += SumerF.X;
-                    lFy[primsrc] += SumerF.Y;
-                    lFz[primsrc] += SumerF.Z;
-                  }  // else discretized representation of this primitive
-
-                  // if(DebugLevel == 301)
-                  if (dbgFn) {
-                    printf("basic repeated xrpt: %d. yrpt: %d, zrpt: %d\n",
-                           xrpt, yrpt, zrpt);
-                    printf(
-                        "primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: "
-                        "%lg\n",
-                        primsrc, pPot[primsrc], lFx[primsrc], lFx[primsrc],
-                        lFx[primsrc]);
-                    fflush(stdout);
-                  }
-                }  // repitition of basic primitive
+                // if(DebugLevel == 301)
+                if (dbgFn) {
+                  printf("basic repeated xrpt: %d. yrpt: %d, zrpt: %d\n",
+                         xrpt, yrpt, zrpt);
+                  printf(
+                      "primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg\n",
+                      primsrc, pPot[primsrc], lFx, lFy, lFz);
+                  fflush(stdout);
+                }
 
                 if (MirrorTypeX[primsrc] || MirrorTypeY[primsrc] ||
                     MirrorTypeZ[primsrc]) {  // Mirror effect of repeated
@@ -1895,11 +1060,8 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                       "neBEM ...\n");
                   exit(0);
 
-                  // All these need to outside omp; additional variables such
-                  // pPot, pgFx, pgFy, pgFz need to be used (summed and
-                  // subtracted) to estimate effects. Only after these
-                  // operations are over, we can assign values to pPot[primsrc]
-                  // (not primPot), gFx[primsrc], gFy[primsrc], gFz[primsrc]
+                  double tmpPot;
+                  Vector3D tmpF;
                   Point3D srcptp;
                   Point3D localPPRM;  // point primitive repeated mirrored
                   DirnCosn3D DirCos;
@@ -1908,6 +1070,10 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                   srcptp.Y = YPOfRpt;
                   srcptp.Z = ZPOfRpt;
 
+                  Point3D fldpt;
+                  fldpt.X = xfld;
+                  fldpt.Y = yfld;
+                  fldpt.Z = zfld;
                   if (MirrorTypeX[primsrc]) {
                     MirrorTypeY[primsrc] = 0;
                     MirrorTypeZ[primsrc] = 0;
@@ -1920,49 +1086,38 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                         MirrorDistXFromOrigin[primsrc], &DirCos);
 
                     // check whether primitive description is good enough
-                    PrimOK = 0;
-
+                    int PrimOK = 0;
                     if (PrimOK) {
                       GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
                                    &DirCos);
-
-                      if (MirrorTypeX[primsrc] == 1)  // opposite charge density
-                      {
-                        primPot -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpPot;
-                        primF.X -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.X;
-                        primF.Y -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Y;
-                        primF.Z -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Z;
-                      }
-                      if (MirrorTypeX[primsrc] == 2)  // same charge density
-                      {
-                        primPot +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpPot;
-                        primF.X +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.X;
-                        primF.Y +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Y;
-                        primF.Z +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Z;
+                      const double qpr = AvChDen[primsrc] + AvAsgndChDen[primsrc];
+                      if (MirrorTypeX[primsrc] == 1) {
+                        // opposite charge density
+                        pPot[primsrc] -= qpr * tmpPot;
+                        lFx -= qpr * tmpF.X;
+                        lFy -= qpr * tmpF.Y;
+                        lFz -= qpr * tmpF.Z;
+                      } else if (MirrorTypeX[primsrc] == 2) {
+                        // same charge density
+                        pPot[primsrc] += qpr * tmpPot;
+                        lFx += qpr * tmpF.X;
+                        lFy += qpr * tmpF.Y;
+                        lFz += qpr * tmpF.Z;
                       }
                     } else {              // consider element representation
                       Point3D localPERM;  // point element repeated mirrored
                       Point3D srcpte;
-                      double XEOfRpt, YEOfRpt, ZEOfRpt;
-                      double xsrc, ysrc, zsrc;
 
-                      for (int ele = ElementBgn[primsrc];
-                           ele <= ElementEnd[primsrc]; ++ele) {
-                        xsrc = (EleArr + ele - 1)->G.Origin.X;
-                        ysrc = (EleArr + ele - 1)->G.Origin.Y;
-                        zsrc = (EleArr + ele - 1)->G.Origin.Z;
+                      const int eleMin = ElementBgn[primsrc];
+                      const int eleMax = ElementEnd[primsrc];
+                      for (int ele = eleMin; ele <= eleMax; ++ele) {
+                        const double xsrc = (EleArr + ele - 1)->G.Origin.X;
+                        const double ysrc = (EleArr + ele - 1)->G.Origin.Y;
+                        const double zsrc = (EleArr + ele - 1)->G.Origin.Z;
 
-                        XEOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt;
-                        YEOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
-                        ZEOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
+                        const double XEOfRpt = xsrc + xShift;
+                        const double YEOfRpt = ysrc + yShift;
+                        const double ZEOfRpt = zsrc + zShift;
 
                         srcpte.X = XEOfRpt;
                         srcpte.Y = YEOfRpt;
@@ -1971,39 +1126,20 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                         localPERM = ReflectOnMirror(
                             'X', ele, srcpte, fldpt,
                             MirrorDistXFromOrigin[primsrc], &DirCos);
-                        GetPFGCS(ele, &localPERM, &tmpPot, &tmpF,
-                                 &DirCos);  // force?
-
-                        if (MirrorTypeX[primsrc] ==
-                            1)  // opposite charge density
-                        {
-                          primPot -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpPot;
-                          primF.X -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.X;
-                          primF.Y -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Y;
-                          primF.Z -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Z;
-                        }
-                        if (MirrorTypeX[primsrc] == 2)  // same charge density
-                        {
-                          primPot += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpPot;
-                          primF.X += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.X;
-                          primF.Y += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Y;
-                          primF.Z += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Z;
+                        GetPFGCS(ele, &localPERM, &tmpPot, &tmpF, &DirCos);  // force?
+                        const double qel = (EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned;
+                        if (MirrorTypeX[primsrc] == 1) {
+                          // opposite charge density
+                          pPot[primsrc] -= qel * tmpPot;
+                          lFx -= qel * tmpF.X;
+                          lFy -= qel * tmpF.Y;
+                          lFz -= qel * tmpF.Z;
+                        } else if (MirrorTypeX[primsrc] == 2) {
+                          // same charge density
+                          pPot[primsrc] += qel * tmpPot;
+                          lFx += qel * tmpF.X;
+                          lFy += qel * tmpF.Y;
+                          lFz += qel * tmpF.Z;
                         }
                       }  // loop for all elements on the primsrc primitive
                     }    // else element representation
@@ -2015,49 +1151,38 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                                                 &DirCos);
 
                     // check whether primitive description is good enough
-                    PrimOK = 0;
-
+                    int PrimOK = 0;
                     if (PrimOK) {
                       GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
                                    &DirCos);
-
-                      if (MirrorTypeY[primsrc] == 1)  // opposite charge density
-                      {
-                        primPot -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpPot;
-                        primF.X -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.X;
-                        primF.Y -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Y;
-                        primF.Z -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Z;
-                      }
-                      if (MirrorTypeY[primsrc] == 2)  // same charge density
-                      {
-                        primPot +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpPot;
-                        primF.X +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.X;
-                        primF.Y +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Y;
-                        primF.Z +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Z;
+                      const double qpr = AvChDen[primsrc] + AvAsgndChDen[primsrc];
+                      if (MirrorTypeY[primsrc] == 1) {
+                        // opposite charge density
+                        pPot[primsrc] -= qpr * tmpPot;
+                        lFx -= qpr * tmpF.X;
+                        lFy -= qpr * tmpF.Y;
+                        lFz -= qpr * tmpF.Z;
+                      } else if (MirrorTypeY[primsrc] == 2) {
+                        // same charge density
+                        pPot[primsrc] += qpr * tmpPot;
+                        lFx += qpr * tmpF.X;
+                        lFy += qpr * tmpF.Y;
+                        lFz += qpr * tmpF.Z;
                       }
                     } else {  // consider element representation
                       Point3D localPERM;
-                      double xsrc, ysrc, zsrc;
                       Point3D srcpte;
-                      double XEOfRpt, YEOfRpt, ZEOfRpt;
 
-                      for (int ele = ElementBgn[primsrc];
-                           ele <= ElementEnd[primsrc]; ++ele) {
-                        xsrc = (EleArr + ele - 1)->G.Origin.X;
-                        ysrc = (EleArr + ele - 1)->G.Origin.Y;
-                        zsrc = (EleArr + ele - 1)->G.Origin.Z;
+                      const int eleMin = ElementBgn[primsrc];
+                      const int eleMax = ElementEnd[primsrc];
+                      for (int ele = eleMin; ele <= eleMax; ++ele) {
+                        const double xsrc = (EleArr + ele - 1)->G.Origin.X;
+                        const double ysrc = (EleArr + ele - 1)->G.Origin.Y;
+                        const double zsrc = (EleArr + ele - 1)->G.Origin.Z;
 
-                        XEOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt;
-                        YEOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
-                        ZEOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
+                        const double XEOfRpt = xsrc + xShift;
+                        const double YEOfRpt = ysrc + yShift;
+                        const double ZEOfRpt = zsrc + zShift;
 
                         srcpte.X = XEOfRpt;
                         srcpte.Y = YEOfRpt;
@@ -2067,37 +1192,19 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                             'Y', ele, srcpte, fldpt,
                             MirrorDistYFromOrigin[primsrc], &DirCos);
                         GetPFGCS(ele, &localPERM, &tmpPot, &tmpF, &DirCos);
-
-                        if (MirrorTypeY[primsrc] ==
-                            1)  // opposite charge density
-                        {
-                          primPot -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpPot;
-                          primF.X -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.X;
-                          primF.Y -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Y;
-                          primF.Z -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Z;
-                        }
-                        if (MirrorTypeY[primsrc] == 2)  // same charge density
-                        {
-                          primPot += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpPot;
-                          primF.X += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.X;
-                          primF.Y += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Y;
-                          primF.Z += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Z;
+                        const double qel = (EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned;
+                        if (MirrorTypeY[primsrc] == 1) {
+                          // opposite charge density
+                          pPot[primsrc] -= qel * tmpPot;
+                          lFx -= qel * tmpF.X;
+                          lFy -= qel * tmpF.Y;
+                          lFz -= qel * tmpF.Z;
+                        } else if (MirrorTypeY[primsrc] == 2) {
+                          // same charge density
+                          pPot[primsrc] += qel * tmpPot;
+                          lFx += qel * tmpF.X;
+                          lFy += qel * tmpF.Y;
+                          lFz += qel * tmpF.Z;
                         }
                       }  // loop for all elements on the primsrc primitive
                     }    // else element representations
@@ -2109,50 +1216,39 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                                                 &DirCos);
 
                     // check whether primitive description is good enough
-                    PrimOK = 0;
-
+                    int PrimOK = 0;
                     if (PrimOK) {
                       GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
                                    &DirCos);
-
-                      if (MirrorTypeZ[primsrc] == 1)  // opposite charge density
-                      {
-                        primPot -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpPot;
-                        primF.X -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.X;
-                        primF.Y -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Y;
-                        primF.Z -=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Z;
+                      const double qpr = AvChDen[primsrc] + AvAsgndChDen[primsrc];
+                      if (MirrorTypeZ[primsrc] == 1) {
+                        // opposite charge density
+                        pPot[primsrc] -= qpr * tmpPot;
+                        lFx -= qpr * tmpF.X;
+                        lFy -= qpr * tmpF.Y;
+                        lFz -= qpr * tmpF.Z;
+                      } else if (MirrorTypeZ[primsrc] == 2) {
+                        // same charge density
+                        pPot[primsrc] += qpr * tmpPot;
+                        lFx += qpr * tmpF.X;
+                        lFy += qpr * tmpF.Y;
+                        lFz += qpr * tmpF.Z;
                       }
-                      if (MirrorTypeZ[primsrc] == 2)  // same charge density
-                      {
-                        primPot +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpPot;
-                        primF.X +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.X;
-                        primF.Y +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Y;
-                        primF.Z +=
-                            (AvChDen[primsrc] + AvAsgndChDen[primsrc]) * tmpF.Z;
-                      }
-                    }       // if primitive representation
-                    else {  // elements to be considered
+                    } else {
+                      // elements to be considered
                       Point3D localPERM;
-                      double xsrc, ysrc, zsrc;
                       Point3D srcpte;
-                      double XEOfRpt, YEOfRpt, ZEOfRpt;
 
-                      for (int ele = ElementBgn[primsrc];
-                           ele <= ElementEnd[primsrc]; ++ele) {
-                        xsrc = (EleArr + ele - 1)->G.Origin.X;
-                        ysrc = (EleArr + ele - 1)->G.Origin.Y;
-                        zsrc = (EleArr + ele - 1)->G.Origin.Z;
+                      const int eleMin = ElementBgn[primsrc];
+                      const int eleMax = ElementEnd[primsrc];
+                      for (int ele = eleMin; ele <= eleMax; ++ele) {
+                        const double xsrc = (EleArr + ele - 1)->G.Origin.X;
+                        const double ysrc = (EleArr + ele - 1)->G.Origin.Y;
+                        const double zsrc = (EleArr + ele - 1)->G.Origin.Z;
 
-                        XEOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt;
-                        YEOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
-                        ZEOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
+                        const double XEOfRpt = xsrc + xShift;
+                        const double YEOfRpt = ysrc + yShift;
+                        const double ZEOfRpt = zsrc + zShift;
 
                         srcpte.X = XEOfRpt;
                         srcpte.Y = YEOfRpt;
@@ -2162,37 +1258,19 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                             'Z', ele, srcpte, fldpt,
                             MirrorDistZFromOrigin[primsrc], &DirCos);
                         GetPFGCS(ele, &localPERM, &tmpPot, &tmpF, &DirCos);
-
-                        if (MirrorTypeZ[primsrc] ==
-                            1)  // opposite charge density
-                        {
-                          primPot -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpPot;
-                          primF.X -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.X;
-                          primF.Y -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Y;
-                          primF.Z -= ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Z;
-                        }
-                        if (MirrorTypeZ[primsrc] == 2)  // same charge density
-                        {
-                          primPot += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpPot;
-                          primF.X += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.X;
-                          primF.Y += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Y;
-                          primF.Z += ((EleArr + ele - 1)->Solution +
-                                      (EleArr + ele - 1)->Assigned) *
-                                     tmpF.Z;
+                        const double qel = (EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned;
+                        if (MirrorTypeZ[primsrc] == 1) {
+                          // opposite charge density
+                          pPot[primsrc] -= qel * tmpPot;
+                          lFx -= qel * tmpF.X;
+                          lFy -= qel * tmpF.Y;
+                          lFz -= qel * tmpF.Z;
+                        } else if (MirrorTypeZ[primsrc] == 2) {
+                          // same charge density
+                          pPot[primsrc] += qel * tmpPot;
+                          lFx += qel * tmpF.X;
+                          lFy += qel * tmpF.Y;
+                          lFz += qel * tmpF.Z;
                         }
                       }  // loop for all elements on the primsrc primitive
                     }    // else consider element representation
@@ -2204,12 +1282,12 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
           }      // for xrpt
         }        // PeriodicInX || PeriodicInY || PeriodicInZ
       }          // PeriodicType == 1
-
-      localF.X = lFx[primsrc];
-      localF.Y = lFy[primsrc];
-      localF.Z = lFz[primsrc];
-      tmpF = RotateVector3D(&localF, &PrimDC[primsrc], local2global);
-      plFx[primsrc] = tmpF.X;  // local fluxes lFx, lFy, lFz in GCS
+      Vector3D localF;
+      localF.X = lFx;
+      localF.Y = lFy;
+      localF.Z = lFz;
+      Vector3D tmpF = RotateVector3D(&localF, &PrimDC[primsrc], local2global);
+      plFx[primsrc] = tmpF.X;
       plFy[primsrc] = tmpF.Y;
       plFz[primsrc] = tmpF.Z;
     }  // for all primitives: basic device, mirror reflections and repetitions
@@ -2223,22 +1301,6 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
     totF.X += plFx[prim];
     totF.Y += plFy[prim];
     totF.Z += plFz[prim];
-    totF.X += pgFx[prim];
-    totF.Y += pgFy[prim];
-    totF.Z += pgFz[prim];
-    if (DebugLevel == 1001) {
-      if (fabs(SumePot) < 1.0e-12) {
-        printf("xfld: %lg, yfld: %lg, zfld: %lg\n", xfld, yfld, zfld);
-        printf("prim%d, SumePot: %lg, SumeFx: %lg, SumeFy: %lg, SumeFz: %lg\n",
-               prim, SumePot, SumeF.X, SumeF.Y, SumeF.Z);
-        printf(
-            "prim%d, SumerPot: %lg, SumerFx: %lg, SumerFy: %lg, SumerFz: %lg\n",
-            prim, SumerPot, SumerF.X, SumerF.Y, SumerF.Z);
-        printf("prim%d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg, totPot: %lg\n",
-               prim, pPot[prim], lFx[prim], lFy[prim], lFz[prim], totPot);
-        fflush(stdout);
-      }
-    }
   }
 
   // This is done at the end of the function - before freeing memory
@@ -2258,19 +1320,10 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
     fflush(stdout);
   }
 
-  free_dvector(lFx, 1, NbPrimitives);
-  free_dvector(lFy, 1, NbPrimitives);
-  free_dvector(lFz, 1, NbPrimitives);
-  free_dvector(gFx, 1, NbPrimitives);
-  free_dvector(gFy, 1, NbPrimitives);
-  free_dvector(gFz, 1, NbPrimitives);
   free_dvector(pPot, 1, NbPrimitives);
   free_dvector(plFx, 1, NbPrimitives);
   free_dvector(plFy, 1, NbPrimitives);
   free_dvector(plFz, 1, NbPrimitives);
-  free_dvector(pgFx, 1, NbPrimitives);
-  free_dvector(pgFy, 1, NbPrimitives);
-  free_dvector(pgFz, 1, NbPrimitives);
 
   return (0);
 }  // end of ElePFAtPoint
@@ -5344,20 +4397,18 @@ void RecPF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
 
   double dist = sqrt(xpt * xpt + ypt * ypt + zpt * zpt);
 
-  if (dist >= FarField * diag)  // all are distances and, hence, +ve
-  {
+  if (dist >= FarField * diag) {
     double dA = a * b;  // area of the rectangular element
-    double dist3 = dist * dist * dist;
     (*Potential) = dA / dist;
-    localF->X = xpt * dA / dist3;
-    localF->Y = ypt * dA / dist3;
-    localF->Z = zpt * dA / dist3;
+    double f = dA / (dist * dist * dist);
+    localF->X = xpt * f;
+    localF->Y = ypt * f;
+    localF->Z = zpt * f;
   } else {
     int fstatus =
         ExactRecSurf(xpt / a, ypt / a, zpt / a, -1.0 / 2.0, -(b / a) / 2.0,
                      1.0 / 2.0, (b / a) / 2.0, Potential, localF);
-    if (fstatus)  // non-zero
-    {
+    if (fstatus) { // non-zero
       printf("problem in RecPF ... \n");
       // printf("returning ...\n");
       // return -1; void function at present
@@ -5366,10 +4417,17 @@ void RecPF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
   }
 
   // Potential, Ex, Ey, Ez
+#ifdef __cplusplus
+  (*Potential) *= InvFourPiEps0;
+  localF->X *= InvFourPiEps0;
+  localF->Y *= InvFourPiEps0;
+  localF->Z *= InvFourPiEps0;
+#else
   (*Potential) /= MyFACTOR;
   localF->X /= MyFACTOR;
   localF->Y /= MyFACTOR;
   localF->Z /= MyFACTOR;
+#endif
 }  // end of RecPF
 
 // Flux per unit charge density on a triangluar element
@@ -5381,25 +4439,25 @@ void TriPF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
 
   double a = (EleArr + ele - 1)->G.LX;
   double b = (EleArr + ele - 1)->G.LZ;
-  double diag =
-      sqrt(a * a + b * b);  // longest side (hypoteneus) of the element
-  double dist = sqrt((xpt - (a / 3.0)) * (xpt - (a / 3.0)) + ypt * ypt +
-                     (zpt - (b / 3.0)) * (zpt - (b / 3.0)));
+  // longest side (hypotenuse) of the element
+  double diag = sqrt(a * a + b * b);  
 
-  if (dist >= FarField * diag)  // all are distances and, hence, +ve
-  {
+  const double xm = xpt - a / 3.;
+  const double zm = zpt - b / 3.;
+  double dist = sqrt(xm * xm + ypt * ypt + zm * zm);
+
+  if (dist >= FarField * diag) {
     double dA = 0.5 * a * b;  // area of the triangular element
-    double dist3 = dist * dist * dist;
     (*Potential) = dA / dist;
-    localF->X = xpt * dA / dist3;
-    localF->Y = ypt * dA / dist3;
-    localF->Z = zpt * dA / dist3;
+    double f = dA / (dist * dist * dist);
+    localF->X = xpt * f;
+    localF->Y = ypt * f;
+    localF->Z = zpt * f;
   } else {
     int fstatus =
         ExactTriSurf(b / a, xpt / a, ypt / a, zpt / a, Potential, localF);
     // fstatus = ApproxTriSurf(b/a, X/a, Y/a, Z/a, 5000, 5000, &Pot, &Flux);
-    if (fstatus)  // non-zero
-    {
+    if (fstatus) { // non-zero
       printf("problem in TriPF ... \n");
       // printf("returning ...\n");
       // return -1; void function at present
@@ -5407,10 +4465,17 @@ void TriPF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
     (*Potential) *= a;  // rescale - cannot be done outside because of the `if'
   }
 
+#ifdef __cplusplus
+  (*Potential) *= InvFourPiEps0;
+  localF->X *= InvFourPiEps0;
+  localF->Y *= InvFourPiEps0;
+  localF->Z *= InvFourPiEps0;
+#else
   (*Potential) /= MyFACTOR;
   localF->X /= MyFACTOR;
   localF->Y /= MyFACTOR;
   localF->Z /= MyFACTOR;
+#endif
   // printf("Out of TriPF\n");
 }  // end of TriPF
 
@@ -5424,14 +4489,13 @@ void WirePF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
   double dist =
       sqrt(xpt * xpt + ypt * ypt + zpt * zpt);  // fld pt from ele cntrd
 
-  if (dist >= FarField * lW)  // all are distances and, hence, +ve
-  {
+  if (dist >= FarField * lW) { // all are distances and, hence, +ve
     double dA = 2.0 * ST_PI * rW * lW;
-    double dist3 = dist * dist * dist;
     (*Potential) = dA / dist;
-    localF->X = dA * xpt / dist3;
-    localF->Y = dA * ypt / dist3;
-    localF->Z = dA * zpt / dist3;
+    double f = dA / (dist * dist * dist);
+    localF->X = xpt * f;
+    localF->Y = ypt * f;
+    localF->Z = zpt * f;
   } else {
     if ((fabs(xpt) < MINDIST) && (fabs(ypt) < MINDIST)) {
       if (fabs(zpt) < MINDIST)
@@ -5446,10 +4510,17 @@ void WirePF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
     }
   }
 
+#ifdef __cplusplus
+  (*Potential) *= InvFourPiEps0;
+  localF->X *= InvFourPiEps0;
+  localF->Y *= InvFourPiEps0;
+  localF->Z *= InvFourPiEps0;
+#else
   (*Potential) /= MyFACTOR;
   localF->X /= MyFACTOR;
   localF->Y /= MyFACTOR;
   localF->Z /= MyFACTOR;
+#endif
 }  // end of WirePF
 
 // Potential and flux per unit charge density on an element returned as
@@ -5532,10 +4603,17 @@ void RecPrimPF(int prim, Point3D *localP, double *Potential, Vector3D *localF) {
   }
 
   // Potential, Ex, Ey, Ez
+#ifdef __cplusplus
+  (*Potential) *= InvFourPiEps0;
+  localF->X *= InvFourPiEps0;
+  localF->Y *= InvFourPiEps0;
+  localF->Z *= InvFourPiEps0;
+#else
   (*Potential) /= MyFACTOR;
   localF->X /= MyFACTOR;
   localF->Y /= MyFACTOR;
   localF->Z /= MyFACTOR;
+#endif
 }  // end of RecPrimPF
 
 // Flux per unit charge density on a triangluar primitive
@@ -5546,13 +4624,13 @@ void TriPrimPF(int prim, Point3D *localP, double *Potential, Vector3D *localF) {
   double zpt = localP->Z;
   double a = PrimLX[prim];
   double b = PrimLZ[prim];
+  // longest side (hypotenuse)
+  double diag = sqrt(a * a + b * b);  
+  const double xm = xpt - a / 3.;
+  const double zm = zpt - b / 3.;
+  double dist = sqrt(xm * xm + ypt * ypt + zm * zm);
 
-  double diag = sqrt(a * a + b * b);  // longest side (hypoteneus)
-  double dist = sqrt((xpt - (a / 3.0)) * (xpt - (a / 3.0)) + ypt * ypt +
-                     (zpt - (b / 3.0)) * (zpt - (b / 3.0)));
-
-  if (dist >= FarField * diag)  // all are distances and, hence, +ve
-  {
+  if (dist >= FarField * diag) {
     double dA = 0.5 * a * b;  // area
     double dist3 = dist * dist * dist;
     (*Potential) = dA / dist;
@@ -5569,10 +4647,17 @@ void TriPrimPF(int prim, Point3D *localP, double *Potential, Vector3D *localF) {
     (*Potential) *= a;  // rescale - cannot be done outside because of the `if'
   }
 
+#ifdef __cplusplus
+  (*Potential) *= InvFourPiEps0;
+  localF->X *= InvFourPiEps0;
+  localF->Y *= InvFourPiEps0;
+  localF->Z *= InvFourPiEps0;
+#else
   (*Potential) /= MyFACTOR;
   localF->X /= MyFACTOR;
   localF->Y /= MyFACTOR;
   localF->Z /= MyFACTOR;
+#endif
   // printf("Out of TriPrimPF\n");
 }  // end of TriPrimPF
 
@@ -5609,10 +4694,17 @@ void WirePrimPF(int prim, Point3D *localP, double *Potential,
     }
   }
 
+#ifdef __cplusplus
+  (*Potential) *= InvFourPiEps0;
+  localF->X *= InvFourPiEps0;
+  localF->Y *= InvFourPiEps0;
+  localF->Z *= InvFourPiEps0;
+#else
   (*Potential) /= MyFACTOR;
   localF->X /= MyFACTOR;
   localF->Y /= MyFACTOR;
   localF->Z /= MyFACTOR;
+#endif
 }  // end of WirePrimPF
 
 /*
@@ -5968,13 +5060,9 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                 int IdWtField) {
   int dbgFn = 0;
 
-  double xfld = globalP->X;
-  double yfld = globalP->Y;
-  double zfld = globalP->Z;
-  Point3D fldpt;
-  fldpt.X = xfld;
-  fldpt.Y = yfld;
-  fldpt.Z = zfld;
+  const double xfld = globalP->X;
+  const double yfld = globalP->Y;
+  const double zfld = globalP->Z;
 
   // Compute Potential and field at different locations
   *Potential = globalF->X = globalF->Y = globalF->Z = 0.0;
@@ -5999,67 +5087,20 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
   // TransformationMatrix changes - kept within private (Note: matrices with
   // fixed dimensions can be maintained, but those with dynamic allocation
   // can not).
-  double *lFx, *lFy, *lFz, *gFx, *gFy, *gFz, *pPot, *plFx, *plFy, *plFz, *pgFx,
-      *pgFy, *pgFz;
-  pPot = dvector(1, NbPrimitives);
-  lFx = dvector(1, NbPrimitives);   // field components in LCS
-  lFy = dvector(1, NbPrimitives);   // summed over all the incarnations
-  lFz = dvector(1, NbPrimitives);   // of a given primitive
-  gFx = dvector(1, NbPrimitives);   // field components in GCS
-  gFy = dvector(1, NbPrimitives);   // summed over all the incarnations
-  gFz = dvector(1, NbPrimitives);   // of a given primitive
-  plFx = dvector(1, NbPrimitives);  // field components in LCS
-  plFy =
-      dvector(1, NbPrimitives);  // for a primitive and its other incarnations
-  plFz = dvector(1, NbPrimitives);
-  pgFx = dvector(1, NbPrimitives);  // field components in GCS
-  pgFy = dvector(1, NbPrimitives);  // for a primitive being summed
-  pgFz = dvector(1, NbPrimitives);
+  double *pPot = dvector(1, NbPrimitives);
+  double *plFx = dvector(1, NbPrimitives);  // field components in LCS
+  double *plFy = dvector(1, NbPrimitives);  // for a primitive
+  double *plFz = dvector(1, NbPrimitives);  // and its other incarnations
 
   for (int prim = 1; prim <= NbPrimitives; ++prim) {
-    lFx[prim] = lFy[prim] = lFz[prim] = 0.0;
-    gFx[prim] = gFy[prim] = gFz[prim] = 0.0;
     pPot[prim] = plFx[prim] = plFy[prim] = plFz[prim] = 0.0;
-    pgFx[prim] = pgFy[prim] = pgFz[prim] = 0.0;
   }
-
-  double SumePot;
-  Vector3D SumeF;
-  double SumerPot;
-  Vector3D SumerF;
-  SumePot = SumerPot = 0.0;
-  SumeF.X = SumeF.Y = SumeF.Z = SumerF.X = SumerF.Y = SumerF.Z = 0.0;
 
 #ifdef _OPENMP
   int tid = 0, nthreads = 1;
   #pragma omp parallel private(tid, nthreads)
 #endif
   {
-    int primsrc;
-    double TransformationMatrix[4][4];
-    double xpsrc, ypsrc, zpsrc;
-    Point3D localPP;
-    double primPot;
-    Vector3D primF, localF;  // flux due to this primitive
-    int PrimOK;
-
-    // element representation of basic primitive
-    double xsrc, ysrc, zsrc;  // these variables are not necessary
-    Point3D localPE;
-    double ePot;
-    Vector3D eF;
-
-    // repeated primitive
-    int xrpt, yrpt, zrpt;
-    double XPOfRpt, YPOfRpt, ZPOfRpt;
-    Point3D localPPR;  // point primitive repeated
-
-    // element representation of repeated primitive
-    double xrsrc, yrsrc, zrsrc;  // these variables are not necessary
-    double XEOfRpt, YEOfRpt, ZEOfRpt;
-    Point3D localPER;  // point primitive repeated
-    double erPot;
-    Vector3D erF;
 
 #ifdef _OPENMP
     if (dbgFn) {
@@ -6072,49 +5113,36 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
 #endif
 // by default, nested parallelization is off in C
 #ifdef _OPENMP
-#pragma omp for private(primsrc, TransformationMatrix, PrimOK, xpsrc, ypsrc, \
-                        zpsrc, localPP, primPot, primF, localF, xsrc, ysrc,  \
-                        zsrc, localPE, ePot, eF, SumePot, SumeF, xrpt, yrpt, \
-                        zrpt, XPOfRpt, YPOfRpt, ZPOfRpt, localPPR, xrsrc,    \
-                        yrsrc, zrsrc, XEOfRpt, YEOfRpt, ZEOfRpt, localPER,   \
-                        erPot, erF, SumerPot, SumerF)
+#pragma omp for
 #endif
-    for (primsrc = 1; primsrc <= NbPrimitives; ++primsrc) {
+    for (int primsrc = 1; primsrc <= NbPrimitives; ++primsrc) {
       if (dbgFn) {
         printf("Evaluating effect of primsrc %d using on %lg, %lg, %lg\n",
                primsrc, xfld, yfld, zfld);
         fflush(stdout);
       }
 
-      xpsrc = PrimOriginX[primsrc];
-      ypsrc = PrimOriginY[primsrc];
-      zpsrc = PrimOriginZ[primsrc];
+      const double xpsrc = PrimOriginX[primsrc];
+      const double ypsrc = PrimOriginY[primsrc];
+      const double zpsrc = PrimOriginZ[primsrc];
 
-      primPot = 0.0;
-      primF.X = primF.Y = primF.Z = 0.0;
-      localF.X = localF.Y = localF.Z = 0.0;
+      // Field in the local frame.
+      double lFx = 0.;
+      double lFy = 0.;
+      double lFz = 0.;
 
-      double tmpPot;
-      Vector3D tmpF;
-
-      // set up transform matrix for this primitive, which is also the same for
-      // for all the elements belonging to this primitive
+      // Set up transform matrix for this primitive, which is also the same
+      // for all the elements belonging to this primitive.
+      double TransformationMatrix[3][3];
       TransformationMatrix[0][0] = PrimDC[primsrc].XUnit.X;
       TransformationMatrix[0][1] = PrimDC[primsrc].XUnit.Y;
       TransformationMatrix[0][2] = PrimDC[primsrc].XUnit.Z;
-      TransformationMatrix[0][3] = 0.0;
       TransformationMatrix[1][0] = PrimDC[primsrc].YUnit.X;
       TransformationMatrix[1][1] = PrimDC[primsrc].YUnit.Y;
       TransformationMatrix[1][2] = PrimDC[primsrc].YUnit.Z;
-      TransformationMatrix[1][3] = 0.0;
       TransformationMatrix[2][0] = PrimDC[primsrc].ZUnit.X;
       TransformationMatrix[2][1] = PrimDC[primsrc].ZUnit.Y;
       TransformationMatrix[2][2] = PrimDC[primsrc].ZUnit.Z;
-      TransformationMatrix[2][3] = 0.0;
-      TransformationMatrix[3][0] = 0.0;
-      TransformationMatrix[3][1] = 0.0;
-      TransformationMatrix[3][2] = 0.0;
-      TransformationMatrix[3][3] = 1.0;
 
       // The total influence is due to primitives on the basic device and due to
       // virtual primitives arising out of repetition, reflection etc and not
@@ -6122,22 +5150,15 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
 
       {  // basic primitive
         // point translated to the ECS origin, but axes direction global
+        Point3D localPP;
         {  // Rotate point3D from global to local system
-          double InitialVector[4];
-          double FinalVector[4];
-
-          InitialVector[0] = xfld - xpsrc;
-          InitialVector[1] = yfld - ypsrc;
-          InitialVector[2] = zfld - zpsrc;
-          InitialVector[3] = 1.0;
-
-          for (int i = 0; i < 4; ++i) {
-            FinalVector[i] = 0.0;
-            for (int j = 0; j < 4; ++j) {
+          double InitialVector[3] = {xfld - xpsrc, yfld - ypsrc, zfld - zpsrc};
+          double FinalVector[3] = {0., 0., 0.};
+          for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
               FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
             }
           }
-
           localPP.X = FinalVector[0];
           localPP.Y = FinalVector[1];
           localPP.Z = FinalVector[2];
@@ -6145,16 +5166,18 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
 
         // evaluate possibility whether primitive influence is accurate enough
         // This could be based on localPP and the subtended solid angle
-        PrimOK = 0;
-
-        if (PrimOK)  // if 1, then only primitive influence will be considered
-        {
+        // If 1, then only primitive influence will be considered
+        int PrimOK = 0;
+        if (PrimOK) {
           // Potential and flux (local system) due to base primitive
+          double tmpPot;
+          Vector3D tmpF;
           GetPrimPF(primsrc, &localPP, &tmpPot, &tmpF);
-          pPot[primsrc] += AvWtChDen[IdWtField][primsrc] * tmpPot;
-          lFx[primsrc] += AvWtChDen[IdWtField][primsrc] * tmpF.X;
-          lFy[primsrc] += AvWtChDen[IdWtField][primsrc] * tmpF.Y;
-          lFz[primsrc] += AvWtChDen[IdWtField][primsrc] * tmpF.Z;
+          const double qpr = AvWtChDen[IdWtField][primsrc];
+          pPot[primsrc] += qpr * tmpPot;
+          lFx += qpr * tmpF.X;
+          lFy += qpr * tmpF.Y;
+          lFz += qpr * tmpF.Z;
           // if(DebugLevel == 301)
           if (dbgFn) {
             printf("PFAtPoint base primitive =>\n");
@@ -6163,56 +5186,48 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
             printf("primsrc: %d, Pot: %lg, Fx: %lg, Fx: %lg, Fz: %lg\n",
                    primsrc, tmpPot, tmpF.X, tmpF.Y, tmpF.Z);
             printf("primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg\n",
-                   primsrc, pPot[primsrc], lFx[primsrc], lFy[primsrc],
-                   lFz[primsrc]);
+                   primsrc, pPot[primsrc], lFx, lFy, lFz);
             fflush(stdout);
             // exit(-1);
           }
-        }       // if considering primtive influence is OK
-        else {  // element influence
-          xsrc = 0.0, ysrc = 0.0, zsrc = 0.0;
+        } else {
+          // element influence
           double tPot;
           Vector3D tF;
-          ePot = 0.0;
+          double ePot = 0.;
+          Vector3D eF;
           eF.X = 0.0;
           eF.Y = 0.0;
           eF.Z = 0.0;
 
-          for (int ele = ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
-               ++ele) {
-            xsrc = (EleArr + ele - 1)->G.Origin.X;  // helps faster execution
-            ysrc = (EleArr + ele - 1)->G.Origin.Y;
-            zsrc = (EleArr + ele - 1)->G.Origin.Z;
-
-            {  // Rotate point3D from global to local system; matrix as for
-               // primitive
-              double InitialVector[4];
-              double FinalVector[4];
-
-              InitialVector[0] = xfld - xsrc;
-              InitialVector[1] = yfld - ysrc;
-              InitialVector[2] = zfld - zsrc;
-              InitialVector[3] = 1.0;
-
-              for (int i = 0; i < 4; ++i) {
-                FinalVector[i] = 0.0;
-                for (int j = 0; j < 4; ++j) {
-                  FinalVector[i] +=
-                      TransformationMatrix[i][j] * InitialVector[j];
-                }
+          const int eleMin = ElementBgn[primsrc];
+          const int eleMax = ElementEnd[primsrc];
+          for (int ele = eleMin; ele <= eleMax; ++ele) {
+            const double xsrc = (EleArr + ele - 1)->G.Origin.X;
+            const double ysrc = (EleArr + ele - 1)->G.Origin.Y;
+            const double zsrc = (EleArr + ele - 1)->G.Origin.Z;
+            // Rotate point3D from global to local system; matrix as for
+            // primitive
+            double InitialVector[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
+            double FinalVector[3] = {0., 0., 0.};
+            for (int i = 0; i < 3; ++i) {
+              for (int j = 0; j < 3; ++j) {
+                FinalVector[i] +=
+                    TransformationMatrix[i][j] * InitialVector[j];
               }
-
-              localPE.X = FinalVector[0];
-              localPE.Y = FinalVector[1];
-              localPE.Z = FinalVector[2];
-            }  // Point3D rotated
+            }
+            Point3D localPE;
+            localPE.X = FinalVector[0];
+            localPE.Y = FinalVector[1];
+            localPE.Z = FinalVector[2];
 
             // Potential and flux (local system) due to base primitive
             GetPF(ele, &localPE, &tPot, &tF);
-            ePot += WtFieldChDen[IdWtField][ele] * tPot;
-            eF.X += WtFieldChDen[IdWtField][ele] * tF.X;
-            eF.Y += WtFieldChDen[IdWtField][ele] * tF.Y;
-            eF.Z += WtFieldChDen[IdWtField][ele] * tF.Z;
+            const double qel = WtFieldChDen[IdWtField][ele];
+            ePot += qel * tPot;
+            eF.X += qel * tF.X;
+            eF.Y += qel * tF.Y;
+            eF.Z += qel * tF.Z;
             // if(DebugLevel == 301)
             if (dbgFn) {
               printf("PFAtPoint base primitive:%d\n", primsrc);
@@ -6221,35 +5236,23 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
               printf(
                   "ele: %d, tPot: %lg, tFx: %lg, tFy: %lg, tFz: %lg, Solution: "
                   "%g\n",
-                  ele, tPot, tF.X, tF.Y, tF.Z,
-                  (EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned);
+                  ele, tPot, tF.X, tF.Y, tF.Z, qel);
               printf("ele: %d, ePot: %lg, eFx: %lg, eFy: %lg, eFz: %lg\n", ele,
                      ePot, eF.X, eF.Y, eF.Z);
               fflush(stdout);
             }
           }  // for all the elements on this primsrc primitive
 
-          SumePot = ePot;
-          SumeF.X = eF.X;
-          SumeF.Y = eF.Y;
-          SumeF.Z = eF.Z;
-          if (dbgFn) {
-            printf("SumePot: %lg, SumeFx: %lg, SumeFy: %lg, SumeFz: %lg\n",
-                   SumePot, SumeF.X, SumeF.Y, SumeF.Z);
-            fflush(stdout);
-            // exit(-1);
-          }
-
-          pPot[primsrc] += SumePot;
-          lFx[primsrc] += SumeF.X;
-          lFy[primsrc] += SumeF.Y;
-          lFz[primsrc] += SumeF.Z;
+          pPot[primsrc] += ePot;
+          lFx += eF.X;
+          lFy += eF.Y;
+          lFz += eF.Z;
           if (dbgFn) {
             printf(
-                "prim%d, SumePot: %lg, SumeFx: %lg, SumeFy: %lg, SumeFz: %lg\n",
-                primsrc, SumePot, SumeF.X, SumeF.Y, SumeF.Z);
+                "prim%d, ePot: %lg, eFx: %lg, eFy: %lg, eFz: %lg\n",
+                primsrc, ePot, eF.X, eF.Y, eF.Z);
             printf("prim%d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg\n", primsrc,
-                   pPot[primsrc], lFx[primsrc], lFy[primsrc], lFz[primsrc]);
+                   pPot[primsrc], lFx, lFy, lFz);
             fflush(stdout);
           }
         }  // else elements influence
@@ -6258,8 +5261,7 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
         if (dbgFn) {
           printf("basic primtive\n");
           printf("primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg\n",
-                 primsrc, pPot[primsrc], lFx[primsrc], lFy[primsrc],
-                 lFz[primsrc]);
+                 primsrc, pPot[primsrc], lFx, lFy, lFz);
           fflush(stdout);
         }
       }  // basic primitive ends
@@ -6273,65 +5275,58 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
       // Flux due to repeated primitives
       if ((PeriodicTypeX[primsrc] == 1) || (PeriodicTypeY[primsrc] == 1) ||
           (PeriodicTypeZ[primsrc] == 1)) {
-        if (PeriodicInX[primsrc] || PeriodicInY[primsrc] ||
-            PeriodicInZ[primsrc]) {
-          for (xrpt = -PeriodicInX[primsrc]; xrpt <= PeriodicInX[primsrc];
-               ++xrpt) {
-            XPOfRpt = xpsrc + XPeriod[primsrc] * (double)xrpt;
-
-            for (yrpt = -PeriodicInY[primsrc]; yrpt <= PeriodicInY[primsrc];
-                 ++yrpt) {
-              YPOfRpt = ypsrc + YPeriod[primsrc] * (double)yrpt;
-
-              for (zrpt = -PeriodicInZ[primsrc]; zrpt <= PeriodicInZ[primsrc];
-                   ++zrpt) {
-                ZPOfRpt = zpsrc + ZPeriod[primsrc] * (double)zrpt;
-
-                if ((xrpt == 0) && (yrpt == 0) && (zrpt == 0))
-                  continue;  // this is the base device
-
+        const int perx = PeriodicInX[primsrc];
+        const int pery = PeriodicInY[primsrc];
+        const int perz = PeriodicInZ[primsrc];
+        if (perx || pery || perz) {
+          for (int xrpt = -perx; xrpt <= perx; ++xrpt) {
+            const double xShift = XPeriod[primsrc] * (double)xrpt;
+            double XPOfRpt = xpsrc + xShift;
+            for (int yrpt = -pery; yrpt <= pery; ++yrpt) {
+              const double yShift = YPeriod[primsrc] * (double)yrpt;
+              double YPOfRpt = ypsrc + yShift;
+              for (int zrpt = -perz; zrpt <= perz; ++zrpt) {
+                const double zShift = ZPeriod[primsrc] * (double)zrpt;
+                double ZPOfRpt = zpsrc + zShift;
+                // Skip the base device.
+                if ((xrpt == 0) && (yrpt == 0) && (zrpt == 0)) continue;
                 {  // basic primitive repeated
-
+                  Point3D localPPR;
                   {  // Rotate point3D from global to local system
-                    double InitialVector[4];
-                    double FinalVector[4];
-
-                    InitialVector[0] = xfld - XPOfRpt;
-                    InitialVector[1] = yfld - YPOfRpt;
-                    InitialVector[2] = zfld - ZPOfRpt;
-                    InitialVector[3] = 1.0;
-
-                    for (int i = 0; i < 4; ++i) {
-                      FinalVector[i] = 0.0;
-                      for (int j = 0; j < 4; ++j) {
+                    double InitialVector[3] = {xfld - XPOfRpt, yfld - YPOfRpt, zfld - ZPOfRpt};
+                    double FinalVector[3] = {0., 0., 0.};
+                    for (int i = 0; i < 3; ++i) {
+                      for (int j = 0; j < 3; ++j) {
                         FinalVector[i] +=
                             TransformationMatrix[i][j] * InitialVector[j];
                       }
                     }
-
                     localPPR.X = FinalVector[0];
                     localPPR.Y = FinalVector[1];
                     localPPR.Z = FinalVector[2];
                   }  // Point3D rotated
 
-                  PrimOK = 0;
+                  int PrimOK = 0;
 
                   // consider primitive representation accurate enough if it is
                   // repeated and beyond PrimAfter repetitions.
-                  if (PrimAfter ==
-                      0)         // If PrimAfter is zero, PrimOK is always zero
-                    PrimOK = 0;  // and the following is not evaluated at all.
-                  else if ((abs(xrpt) > PrimAfter) && (abs(yrpt) > PrimAfter))
+                  if (PrimAfter == 0) {
+                    // If PrimAfter is zero, PrimOK is always zero
+                    PrimOK = 0;
+                  } else if ((abs(xrpt) > PrimAfter) && (abs(yrpt) > PrimAfter)) {
                     PrimOK = 1;
-
+                  }
                   if (PrimOK) {  // use primitive representation
                     // Potential and flux (local system) due to repeated
                     // primitive
+                    double tmpPot;
+                    Vector3D tmpF;
                     GetPrimPF(primsrc, &localPPR, &tmpPot, &tmpF);
-                    pPot[primsrc] += AvWtChDen[IdWtField][primsrc] * tmpPot;
-                    lFx[primsrc] += AvWtChDen[IdWtField][primsrc] * tmpF.X;
-                    lFy[primsrc] += AvWtChDen[IdWtField][primsrc] * tmpF.Y;
-                    lFz[primsrc] += AvWtChDen[IdWtField][primsrc] * tmpF.Z;
+                    const double qpr = AvWtChDen[IdWtField][primsrc];
+                    pPot[primsrc] += qpr * tmpPot;
+                    lFx += qpr * tmpF.X;
+                    lFy += qpr * tmpF.Y;
+                    lFz += qpr * tmpF.Z;
                     // if(DebugLevel == 301)
                     if (dbgFn) {
                       printf(
@@ -6340,69 +5335,58 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                           primsrc, localPPR.X, localPPR.Y, localPPR.Z);
                       printf(
                           "primsrc: %d, Pot: %lg, Fx: %lg, Fy: %lg, Fz: %lg\n",
-                          primsrc, tmpPot * AvWtChDen[IdWtField][primsrc],
-                          tmpF.X * AvWtChDen[IdWtField][primsrc],
-                          tmpF.Y * AvWtChDen[IdWtField][primsrc],
-                          tmpF.Z * AvWtChDen[IdWtField][primsrc]);
+                          primsrc, tmpPot * qpr, tmpF.X * qpr, tmpF.Y * qpr,
+                          tmpF.Z * qpr);
                       printf(
                           "primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: "
                           "%lg\n",
-                          primsrc, pPot[primsrc], lFx[primsrc], lFy[primsrc],
-                          lFz[primsrc]);
+                          primsrc, pPot[primsrc], lFx, lFy, lFz);
                       fflush(stdout);
                     }
-                  }       // if primitive representation
-                  else {  // use discretized representation of a repeated
-                          // primitive
-                    xrsrc = 0.0, yrsrc = 0.0, zrsrc = 0.0;
+                  } else {
+                    // use discretized representation of a repeated primitive
                     double tPot;
                     Vector3D tF;
-                    erPot = 0.0;
+                    double erPot = 0.;
+                    Vector3D erF;
                     erF.X = 0.0;
                     erF.Y = 0.0;
                     erF.Z = 0.0;
 
-                    for (int ele = ElementBgn[primsrc];
-                         ele <= ElementEnd[primsrc]; ++ele) {
-                      xrsrc = (EleArr + ele - 1)
-                                  ->G.Origin.X;  // helps faster execution
-                      yrsrc = (EleArr + ele - 1)->G.Origin.Y;
-                      zrsrc = (EleArr + ele - 1)->G.Origin.Z;
+                    const int eleMin = ElementBgn[primsrc];
+                    const int eleMax = ElementEnd[primsrc];
+                    for (int ele = eleMin; ele <= eleMax; ++ele) {
+                      const double xrsrc = (EleArr + ele - 1)->G.Origin.X;
+                      const double yrsrc = (EleArr + ele - 1)->G.Origin.Y;
+                      const double zrsrc = (EleArr + ele - 1)->G.Origin.Z;
 
-                      XEOfRpt = xrsrc + XPeriod[primsrc] * (double)xrpt;
-                      YEOfRpt = yrsrc + YPeriod[primsrc] * (double)yrpt;
-                      ZEOfRpt = zrsrc + ZPeriod[primsrc] * (double)zrpt;
+                      const double XEOfRpt = xrsrc + xShift;
+                      const double YEOfRpt = yrsrc + yShift;
+                      const double ZEOfRpt = zrsrc + zShift;
 
-                      {  // Rotate point3D from global to local system
-                        double InitialVector[4];
-                        double FinalVector[4];
-
-                        InitialVector[0] = xfld - XEOfRpt;
-                        InitialVector[1] = yfld - YEOfRpt;
-                        InitialVector[2] = zfld - ZEOfRpt;
-                        InitialVector[3] = 1.0;
-
-                        for (int i = 0; i < 4; ++i) {
-                          FinalVector[i] = 0.0;
-                          for (int j = 0; j < 4; ++j) {
-                            FinalVector[i] +=
-                                TransformationMatrix[i][j] * InitialVector[j];
-                          }
+                      // Rotate point from global to local system.
+                      double InitialVector[3] = {xfld - XEOfRpt, yfld - YEOfRpt, zfld - ZEOfRpt};
+                      double FinalVector[3] = {0., 0., 0.};
+                      for (int i = 0; i < 3; ++i) {
+                        for (int j = 0; j < 3; ++j) {
+                          FinalVector[i] +=
+                              TransformationMatrix[i][j] * InitialVector[j];
                         }
-
-                        localPER.X = FinalVector[0];
-                        localPER.Y = FinalVector[1];
-                        localPER.Z = FinalVector[2];
                       }
+                      Point3D localPER;
+                      localPER.X = FinalVector[0];
+                      localPER.Y = FinalVector[1];
+                      localPER.Z = FinalVector[2];
 
                       // Allowed, because all the local coordinates have the
                       // same orientations. Only the origins are mutually
                       // displaced along a line.
                       GetPF(ele, &localPER, &tPot, &tF);
-                      erPot += WtFieldChDen[IdWtField][ele] * tPot;
-                      erF.X += WtFieldChDen[IdWtField][ele] * tF.X;
-                      erF.Y += WtFieldChDen[IdWtField][ele] * tF.Y;
-                      erF.Z += WtFieldChDen[IdWtField][ele] * tF.Z;
+                      const double qel = WtFieldChDen[IdWtField][ele];
+                      erPot += qel * tPot;
+                      erF.X += qel * tF.X;
+                      erF.Y += qel * tF.Y;
+                      erF.Z += qel * tF.Z;
                       // if(DebugLevel == 301)
                       if (dbgFn) {
                         printf("PFAtPoint base primitive:%d\n", primsrc);
@@ -6412,9 +5396,7 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                         printf(
                             "ele: %d, tPot: %lg, tFx: %lg, tFy: %lg, tFz: %lg, "
                             "Solution: %g\n",
-                            ele, tPot, tF.X, tF.Y, tF.Z,
-                            (EleArr + ele - 1)->Solution +
-                                (EleArr + ele - 1)->Assigned);
+                            ele, tPot, tF.X, tF.Y, tF.Z, qel);
                         printf(
                             "ele: %d, ePot: %lg, eFx: %lg, eFy: %lg, eFz: "
                             "%lg\n",
@@ -6424,15 +5406,10 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                     }  // for all the elements on this primsrc repeated
                        // primitive
 
-                    SumerPot = erPot;
-                    SumerF.X = erF.X;
-                    SumerF.Y = erF.Y;
-                    SumerF.Z = erF.Z;
-
-                    pPot[primsrc] += SumerPot;
-                    lFx[primsrc] += SumerF.X;
-                    lFy[primsrc] += SumerF.Y;
-                    lFz[primsrc] += SumerF.Z;
+                    pPot[primsrc] += erPot;
+                    lFx += erF.X;
+                    lFy += erF.Y;
+                    lFz += erF.Z;
                   }  // else discretized representation of this primitive
 
                   // if(DebugLevel == 301)
@@ -6442,8 +5419,7 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                     printf(
                         "primsrc: %d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: "
                         "%lg\n",
-                        primsrc, pPot[primsrc], lFx[primsrc], lFx[primsrc],
-                        lFx[primsrc]);
+                        primsrc, pPot[primsrc], lFx, lFy, lFz);
                     fflush(stdout);
                   }
                 }  // repitition of basic primitive
@@ -6455,234 +5431,6 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                       "Mirror not correctly implemented in this version of "
                       "neBEM ...\n");
                   exit(0);
-
-                  // All these need to outside omp; additional variables such
-                  // pPot, pgFx, pgFy, pgFz need to be used (summed and
-                  // subtracted) to estimate effects. Only after these
-                  // operations are over, we can assign values to pPot[primsrc]
-                  // (not primPot), gFx[primsrc], gFy[primsrc], gFz[primsrc]
-                  Point3D srcptp;
-                  Point3D localPPRM;  // point primitive repeated mirrored
-                  DirnCosn3D DirCos;
-
-                  srcptp.X = XPOfRpt;
-                  srcptp.Y = YPOfRpt;
-                  srcptp.Z = ZPOfRpt;
-
-                  if (MirrorTypeX[primsrc]) {
-                    MirrorTypeY[primsrc] = 0;
-                    MirrorTypeZ[primsrc] = 0;
-                  }
-                  if (MirrorTypeY[primsrc]) MirrorTypeZ[primsrc] = 0;
-
-                  if (MirrorTypeX[primsrc]) {
-                    localPPRM = ReflectPrimitiveOnMirror(
-                        'X', primsrc, srcptp, fldpt,
-                        MirrorDistXFromOrigin[primsrc], &DirCos);
-
-                    // check whether primitive description is good enough
-                    PrimOK = 0;
-
-                    if (PrimOK) {
-                      GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
-                                   &DirCos);
-
-                      if (MirrorTypeX[primsrc] == 1) {
-                        // opposite charge density
-                        primPot -= AvWtChDen[IdWtField][primsrc] * tmpPot;
-                        primF.X -= AvWtChDen[IdWtField][primsrc] * tmpF.X;
-                        primF.Y -= AvWtChDen[IdWtField][primsrc] * tmpF.Y;
-                        primF.Z -= AvWtChDen[IdWtField][primsrc] * tmpF.Z;
-                      }
-                      if (MirrorTypeX[primsrc] == 2) {
-                        // same charge density
-                        primPot += AvWtChDen[IdWtField][primsrc] * tmpPot;
-                        primF.X += AvWtChDen[IdWtField][primsrc] * tmpF.X;
-                        primF.Y += AvWtChDen[IdWtField][primsrc] * tmpF.Y;
-                        primF.Z += AvWtChDen[IdWtField][primsrc] * tmpF.Z;
-                      }
-                    } else {              // consider element representation
-                      Point3D localPERM;  // point element repeated mirrored
-                      Point3D srcpte;
-                      double XEOfRpt, YEOfRpt, ZEOfRpt;
-                      double xsrc, ysrc, zsrc;
-
-                      for (int ele = ElementBgn[primsrc];
-                           ele <= ElementEnd[primsrc]; ++ele) {
-                        xsrc = (EleArr + ele - 1)->G.Origin.X;
-                        ysrc = (EleArr + ele - 1)->G.Origin.Y;
-                        zsrc = (EleArr + ele - 1)->G.Origin.Z;
-
-                        XEOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt;
-                        YEOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
-                        ZEOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
-
-                        srcpte.X = XEOfRpt;
-                        srcpte.Y = YEOfRpt;
-                        srcpte.Z = ZEOfRpt;
-
-                        localPERM = ReflectOnMirror(
-                            'X', ele, srcpte, fldpt,
-                            MirrorDistXFromOrigin[primsrc], &DirCos);
-                        GetPFGCS(ele, &localPERM, &tmpPot, &tmpF,
-                                 &DirCos);  // force?
-
-                        if (MirrorTypeX[primsrc] == 1) {
-                          // opposite charge density
-                          primPot -= WtFieldChDen[IdWtField][ele] * tmpPot;
-                          primF.X -= WtFieldChDen[IdWtField][ele] * tmpF.X;
-                          primF.Y -= WtFieldChDen[IdWtField][ele] * tmpF.Y;
-                          primF.Z -= WtFieldChDen[IdWtField][ele] * tmpF.Z;
-                        }
-                        if (MirrorTypeX[primsrc] == 2) {
-                          // same charge density
-                          primPot += WtFieldChDen[IdWtField][ele] * tmpPot;
-                          primF.X += WtFieldChDen[IdWtField][ele] * tmpF.X;
-                          primF.Y += WtFieldChDen[IdWtField][ele] * tmpF.Y;
-                          primF.Z += WtFieldChDen[IdWtField][ele] * tmpF.Z;
-                        }
-                      }  // loop for all elements on the primsrc primitive
-                    }    // else element representation
-                  }      // MirrorTypeX
-
-                  if (MirrorTypeY[primsrc]) {
-                    localPPRM = ReflectOnMirror('Y', primsrc, srcptp, fldpt,
-                                                MirrorDistYFromOrigin[primsrc],
-                                                &DirCos);
-
-                    // check whether primitive description is good enough
-                    PrimOK = 0;
-
-                    if (PrimOK) {
-                      GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
-                                   &DirCos);
-
-                      if (MirrorTypeY[primsrc] == 1) {
-                        // opposite charge density
-                        primPot -= AvWtChDen[IdWtField][primsrc] * tmpPot;
-                        primF.X -= AvWtChDen[IdWtField][primsrc] * tmpF.X;
-                        primF.Y -= AvWtChDen[IdWtField][primsrc] * tmpF.Y;
-                        primF.Z -= AvWtChDen[IdWtField][primsrc] * tmpF.Z;
-                      }
-                      if (MirrorTypeY[primsrc] == 2) {
-                        // same charge density
-                        primPot += AvWtChDen[IdWtField][primsrc] * tmpPot;
-                        primF.X += AvWtChDen[IdWtField][primsrc] * tmpF.X;
-                        primF.Y += AvWtChDen[IdWtField][primsrc] * tmpF.Y;
-                        primF.Z += AvWtChDen[IdWtField][primsrc] * tmpF.Z;
-                      }
-                    } else {  // consider element representation
-                      Point3D localPERM;
-                      double xsrc, ysrc, zsrc;
-                      Point3D srcpte;
-                      double XEOfRpt, YEOfRpt, ZEOfRpt;
-
-                      for (int ele = ElementBgn[primsrc];
-                           ele <= ElementEnd[primsrc]; ++ele) {
-                        xsrc = (EleArr + ele - 1)->G.Origin.X;
-                        ysrc = (EleArr + ele - 1)->G.Origin.Y;
-                        zsrc = (EleArr + ele - 1)->G.Origin.Z;
-
-                        XEOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt;
-                        YEOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
-                        ZEOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
-
-                        srcpte.X = XEOfRpt;
-                        srcpte.Y = YEOfRpt;
-                        srcpte.Z = ZEOfRpt;
-
-                        localPERM = ReflectOnMirror(
-                            'Y', ele, srcpte, fldpt,
-                            MirrorDistYFromOrigin[primsrc], &DirCos);
-                        GetPFGCS(ele, &localPERM, &tmpPot, &tmpF, &DirCos);
-
-                        if (MirrorTypeY[primsrc] == 1) {
-                          // opposite charge density
-                          primPot -= WtFieldChDen[IdWtField][ele] * tmpPot;
-                          primF.X -= WtFieldChDen[IdWtField][ele] * tmpF.X;
-                          primF.Y -= WtFieldChDen[IdWtField][ele] * tmpF.Y;
-                          primF.Z -= WtFieldChDen[IdWtField][ele] * tmpF.Z;
-                        }
-                        if (MirrorTypeY[primsrc] == 2) {
-                          // same charge density
-                          primPot += WtFieldChDen[IdWtField][ele] * tmpPot;
-                          primF.X += WtFieldChDen[IdWtField][ele] * tmpF.X;
-                          primF.Y += WtFieldChDen[IdWtField][ele] * tmpF.Y;
-                          primF.Z += WtFieldChDen[IdWtField][ele] * tmpF.Z;
-                        }
-                      }  // loop for all elements on the primsrc primitive
-                    }    // else element representations
-                  }      // MirrorTypeY
-
-                  if (MirrorTypeZ[primsrc]) {
-                    localPPRM = ReflectOnMirror('Z', primsrc, srcptp, fldpt,
-                                                MirrorDistZFromOrigin[primsrc],
-                                                &DirCos);
-
-                    // check whether primitive description is good enough
-                    PrimOK = 0;
-
-                    if (PrimOK) {
-                      GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
-                                   &DirCos);
-
-                      if (MirrorTypeZ[primsrc] == 1) {
-                        // opposite charge density
-                        primPot -= AvWtChDen[IdWtField][primsrc] * tmpPot;
-                        primF.X -= AvWtChDen[IdWtField][primsrc] * tmpF.X;
-                        primF.Y -= AvWtChDen[IdWtField][primsrc] * tmpF.Y;
-                        primF.Z -= AvWtChDen[IdWtField][primsrc] * tmpF.Z;
-                      }
-                      if (MirrorTypeZ[primsrc] == 2) {
-                        // same charge density
-                        primPot += AvWtChDen[IdWtField][primsrc] * tmpPot;
-                        primF.X += AvWtChDen[IdWtField][primsrc] * tmpF.X;
-                        primF.Y += AvWtChDen[IdWtField][primsrc] * tmpF.Y;
-                        primF.Z += AvWtChDen[IdWtField][primsrc] * tmpF.Z;
-                      }
-                    }       // if primitive representation
-                    else {  // elements to be considered
-                      Point3D localPERM;
-                      double xsrc, ysrc, zsrc;
-                      Point3D srcpte;
-                      double XEOfRpt, YEOfRpt, ZEOfRpt;
-
-                      for (int ele = ElementBgn[primsrc];
-                           ele <= ElementEnd[primsrc]; ++ele) {
-                        xsrc = (EleArr + ele - 1)->G.Origin.X;
-                        ysrc = (EleArr + ele - 1)->G.Origin.Y;
-                        zsrc = (EleArr + ele - 1)->G.Origin.Z;
-
-                        XEOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt;
-                        YEOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
-                        ZEOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
-
-                        srcpte.X = XEOfRpt;
-                        srcpte.Y = YEOfRpt;
-                        srcpte.Z = ZEOfRpt;
-
-                        localPERM = ReflectOnMirror(
-                            'Z', ele, srcpte, fldpt,
-                            MirrorDistZFromOrigin[primsrc], &DirCos);
-                        GetPFGCS(ele, &localPERM, &tmpPot, &tmpF, &DirCos);
-
-                        if (MirrorTypeZ[primsrc] == 1) {
-                          // opposite charge density
-                          primPot -= WtFieldChDen[IdWtField][ele] * tmpPot;
-                          primF.X -= WtFieldChDen[IdWtField][ele] * tmpF.X;
-                          primF.Y -= WtFieldChDen[IdWtField][ele] * tmpF.Y;
-                          primF.Z -= WtFieldChDen[IdWtField][ele] * tmpF.Z;
-                        }
-                        if (MirrorTypeZ[primsrc] == 2) {
-                          // same charge density
-                          primPot += WtFieldChDen[IdWtField][ele] * tmpPot;
-                          primF.X += WtFieldChDen[IdWtField][ele] * tmpF.X;
-                          primF.Y += WtFieldChDen[IdWtField][ele] * tmpF.Y;
-                          primF.Z += WtFieldChDen[IdWtField][ele] * tmpF.Z;
-                        }
-                      }  // loop for all elements on the primsrc primitive
-                    }    // else consider element representation
-                  }      // MirrorTypeZ
                 }        // Mirror effect for repeated primitives ends
 
               }  // for zrpt
@@ -6690,11 +5438,11 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
           }      // for xrpt
         }        // PeriodicInX || PeriodicInY || PeriodicInZ
       }          // PeriodicType == 1
-
-      localF.X = lFx[primsrc];
-      localF.Y = lFy[primsrc];
-      localF.Z = lFz[primsrc];
-      tmpF = RotateVector3D(&localF, &PrimDC[primsrc], local2global);
+      Vector3D localF;
+      localF.X = lFx;
+      localF.Y = lFy;
+      localF.Z = lFz;
+      Vector3D tmpF = RotateVector3D(&localF, &PrimDC[primsrc], local2global);
       plFx[primsrc] = tmpF.X;  // local fluxes lFx, lFy, lFz in GCS
       plFy[primsrc] = tmpF.Y;
       plFz[primsrc] = tmpF.Z;
@@ -6709,23 +5457,6 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
     totF.X += plFx[prim];
     totF.Y += plFy[prim];
     totF.Z += plFz[prim];
-    totF.X += pgFx[prim];
-    totF.Y += pgFy[prim];
-    totF.Z += pgFz[prim];
-    if (dbgFn) {
-      if (fabs(SumePot) < 1.0e-12) {
-        printf("xfld: %lg, yfld: %lg, zfld: %lg\n", xfld, yfld, zfld);
-        printf("prim%d, SumePot: %lg, SumeFx: %lg, SumeFy: %lg, SumeFz: %lg\n",
-               prim, SumePot, SumeF.X, SumeF.Y, SumeF.Z);
-        printf(
-            "prim%d, SumerPot: %lg, SumerFx: %lg, SumerFy: %lg, SumerFz: %lg\n",
-            prim, SumerPot, SumerF.X, SumerF.Y, SumerF.Z);
-        printf("prim%d, pPot: %lg, lFx: %lg, lFy: %lg, lFz: %lg, totPot: %lg\n",
-               prim, pPot[prim], lFx[prim], lFy[prim], lFz[prim], totPot);
-        fflush(stdout);
-        exit(0);
-      }
-    }
   }
 
   // This should be done at the end of the function - before freeing memory
@@ -6790,19 +5521,10 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
     fflush(stdout);
   }
 
-  free_dvector(lFx, 1, NbPrimitives);
-  free_dvector(lFy, 1, NbPrimitives);
-  free_dvector(lFz, 1, NbPrimitives);
-  free_dvector(gFx, 1, NbPrimitives);
-  free_dvector(gFy, 1, NbPrimitives);
-  free_dvector(gFz, 1, NbPrimitives);
   free_dvector(pPot, 1, NbPrimitives);
   free_dvector(plFx, 1, NbPrimitives);
   free_dvector(plFy, 1, NbPrimitives);
   free_dvector(plFz, 1, NbPrimitives);
-  free_dvector(pgFx, 1, NbPrimitives);
-  free_dvector(pgFy, 1, NbPrimitives);
-  free_dvector(pgFz, 1, NbPrimitives);
 
   return (0);
 }  // end of WtPFAtPoint
