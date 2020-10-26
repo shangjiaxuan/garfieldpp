@@ -40,7 +40,7 @@ void Component::WeightingField(const double /*x*/, const double /*y*/,
   wx = wy = wz = 0.;
 }
 
-void Component::DelayedWeightingField(const double /*x*/, 
+void Component::DelayedWeightingField(const double /*x*/,
                                           const double /*y*/,
                                           const double /*z*/, 
                                           const double /*t*/,
@@ -51,6 +51,14 @@ void Component::DelayedWeightingField(const double /*x*/,
               << "Function not implemented.\n";
   }
   wx = wy = wz = 0.;
+}
+
+double Component::DelayedWeightingPotential(const double /*x*/,
+                                  const double /*y*/,
+                                  const double /*z*/,
+                                  const double /*t*/,
+                                  const std::string& /*label*/){
+    return 0.;
 }
 
 double Component::WeightingPotential(const double /*x*/, const double /*y*/,

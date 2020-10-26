@@ -643,7 +643,6 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
             
             const double pw0 = electrode.comp->WeightingPotential(x0, y0, z0, lbl);
             const double pw1 = electrode.comp->WeightingPotential(x1, y1, z1, lbl);
-            current = q * (pw1 - pw0) / dt;
             FillBinComponentsCharge(electrode, bin, q * (pw1 - pw0));
             
             double dw0 = 0.;
@@ -655,15 +654,15 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
             for (unsigned int i = 0; i < m_nTimeBins-bin; ++i) {
                 
                 delayedtime = m_tStep*(bin+i+0.5)-t0;
-                electrode.comp->DelayedWeightingField(x0, y0, z0, delayedtime, dw0, wdp1, wdp12 ,lbl);
-                electrode.comp->DelayedWeightingField(x1, y1, z1, delayedtime, dw1, wdp1, wdp12, lbl);
-                double current2 = q * (dw1 - dw0);
-                if (isnan(current2)){
-                    LOG(current2<<", "<<dw1<<", "<<dw0<<", "<<delayedtime);
-                    current2=0.;
+                double dp0 = electrode.comp->DelayedWeightingPotential(x0, y0, z0, delayedtime,lbl);
+                double dp1 = electrode.comp->DelayedWeightingPotential(x1, y1, z1, delayedtime, lbl);
+                double charge = q * (dp1 - dp0);
+                if (isnan(charge)){
+                    LOG(charge<<", "<<dp0<<", "<<dp1<<", "<<delayedtime);
+                    charge=0.;
                 }
-                electrode.inducedCharge[bin+i] += current2;
-                electrode.delayeInduceddCharge[bin+i] += current2;
+                electrode.inducedCharge[bin+i] += charge;
+                electrode.delayeInduceddCharge[bin+i] += charge;
             }
         }
     }
