@@ -885,7 +885,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           Terminate(x, y, z, t, x1, y1, z1, t1);
           if (m_doSignal) {
             const int q = hole ? 1 : -1;
-            m_sensor->AddSignal(q, t, t1, x, y, z, x1, y1, z1, 
+            m_sensor->AddSignal(q, t, t1, x, y, z, x1, y1, z1,
                                 m_integrateWeightingField,
                                 m_useWeightingPotential);
           }

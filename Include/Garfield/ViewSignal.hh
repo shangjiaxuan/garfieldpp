@@ -10,6 +10,7 @@
 
 #include "ViewBase.hh"
 
+
 namespace Garfield {
 
 class Sensor;
@@ -42,6 +43,15 @@ class ViewSignal : public ViewBase {
     * \param h histogram to be returned
                ('t': total, 'e': electron-induced, 'i': ion/hole-induced).
     **/
+    
+    void Plot(const std::string& label, const bool total = true,
+                    const bool delayed = true, const bool same = false);
+
+    /** Retrieve the histogram for the induced charge or induced signal.
+      * \param h histogram to be returned
+                 ('t': total, 'e': electron-induced, 'i': ion/hole-induced).
+      **/
+    
   TH1D* GetHistogram(const char h = 't') {
     return h == 'e' ? m_hSignalElectrons.get()
                : h == 'i' ? m_hSignalIons.get() : m_hSignal.get();
@@ -50,6 +60,10 @@ class ViewSignal : public ViewBase {
   /// Set the x-axis limits explicitly.
   void SetRangeX(const double xmin, const double xmax);
   /// Remove the user-defined x-axis limits.
+    void EnableSignalPlot(){
+        m_getsignal =true;
+    };
+    /// Remove the user-defined x-axis limits.
   void UnsetRangeX() { m_userRangeX = false; }
 
   /// Set the y-axis limits explicitly.
@@ -87,12 +101,19 @@ class ViewSignal : public ViewBase {
   double m_ymin = 0.;
   double m_ymax = 0.;
   bool m_userRangeY = false;
+    bool m_getsignal = false;
 
   // Axis label.
   std::string m_labelY = "";
 
   // Histograms.
   std::unique_ptr<TH1D> m_hSignal;
+    std::unique_ptr<TH1D> m_hPromptSignal;
+    
+    std::unique_ptr<TH1D> m_hCharge;
+    std::unique_ptr<TH1D> m_hPromptCharge;
+    std::unique_ptr<TH1D> m_hDelayedCharge;
+    
   std::unique_ptr<TH1D> m_hSignalElectrons;
   std::unique_ptr<TH1D> m_hSignalIons;
   std::unique_ptr<TH1D> m_hDelayedSignal;
