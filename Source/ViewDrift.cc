@@ -1,5 +1,7 @@
 #include <iostream>
 #include <cmath>
+#include <algorithm>
+#include <iterator>
 #include <limits>
 
 #include <TGraph.h>
@@ -46,6 +48,20 @@ void ViewDrift::SetCollisionMarkerSize(const double size) {
     m_markerSizeCollision = size;
   } else {
     std::cerr << m_className << "::SetCollisionMarkerSize: Size must be > 0.\n";
+  }
+}
+
+void ViewDrift::GetDriftLine(const size_t i, 
+                             std::vector<std::array<float, 3> >& driftLine,
+                             bool& electron) const {
+  driftLine.clear();
+  if (i >= m_driftLines.size()) return;
+  std::copy(m_driftLines[i].first.begin(), m_driftLines[i].first.end(),
+            std::back_inserter(driftLine));
+  if (m_driftLines[i].second == Particle::Electron) {
+    electron = true;
+  } else {
+    electron = false;
   }
 }
 
