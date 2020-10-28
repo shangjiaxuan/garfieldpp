@@ -56,6 +56,13 @@ class ViewDrift : public ViewBase {
   /// Set the colour with which to draw attachment markers.
   void SetColourAttachments(const short col) { m_colIonisation = col; } 
 
+  /// Get the number of drift lines stored. 
+  size_t GetNumberOfDriftLines() const { return m_driftLines.size(); }
+  /// Retrieve the coordinates of a given drift line.
+  void GetDriftLine(const size_t i, 
+                    std::vector<std::array<float, 3> >& driftLine, 
+                    bool& electron) const;
+
   // Functions used by the transport classes.
   void NewElectronDriftLine(const unsigned int np, int& id, const float x0,
                             const float y0, const float z0);
