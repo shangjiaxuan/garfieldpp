@@ -78,8 +78,8 @@ double RecPot(int ele, Point3D *localP) {
   } else {
     // normalize distances by `a' while sending - likely to improve accuracy
     int fstatus =
-        ExactRecSurf(xpt / a, ypt / a, zpt / a, -1.0 / 2.0, -(b / a) / 2.0,
-                     1.0 / 2.0, (b / a) / 2.0, &Pot, &Field);
+        ExactRecSurf(xpt / a, ypt / a, zpt / a, -0.5, -(b / a) / 2.0,
+                     0.5, (b / a) / 2.0, &Pot, &Field);
     if (fstatus)  // non-zero
     {
       printf("problem in computing Potential of rectangular element ... \n");
@@ -249,8 +249,8 @@ void RecFlux(int ele, Point3D *localP, Vector3D *localF) {
   } else {
     double Pot;
     int fstatus =
-        ExactRecSurf(xpt / a, ypt / a, zpt / a, -1.0 / 2.0, -(b / a) / 2.0,
-                     1.0 / 2.0, (b / a) / 2.0, &Pot, localF);
+        ExactRecSurf(xpt / a, ypt / a, zpt / a, -0.5, -(b / a) / 2.0,
+                     0.5, (b / a) / 2.0, &Pot, localF);
     if (fstatus) { // non-zero
       printf("problem in computing flux of rectangular element ... \n");
       // printf("returning ...\n");
@@ -4391,11 +4391,11 @@ void RecPF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
   double xpt = localP->X;
   double ypt = localP->Y;
   double zpt = localP->Z;
+  double dist = sqrt(xpt * xpt + ypt * ypt + zpt * zpt);
+
   double a = (EleArr + ele - 1)->G.LX;
   double b = (EleArr + ele - 1)->G.LZ;
   double diag = sqrt(a * a + b * b);  // diagonal of the element
-
-  double dist = sqrt(xpt * xpt + ypt * ypt + zpt * zpt);
 
   if (dist >= FarField * diag) {
     double dA = a * b;  // area of the rectangular element
@@ -4406,8 +4406,8 @@ void RecPF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
     localF->Z = zpt * f;
   } else {
     int fstatus =
-        ExactRecSurf(xpt / a, ypt / a, zpt / a, -1.0 / 2.0, -(b / a) / 2.0,
-                     1.0 / 2.0, (b / a) / 2.0, Potential, localF);
+        ExactRecSurf(xpt / a, ypt / a, zpt / a, -0.5, -(b / a) / 2.0,
+                     0.5, (b / a) / 2.0, Potential, localF);
     if (fstatus) { // non-zero
       printf("problem in RecPF ... \n");
       // printf("returning ...\n");
@@ -4575,26 +4575,25 @@ void RecPrimPF(int prim, Point3D *localP, double *Potential, Vector3D *localF) {
   double xpt = localP->X;
   double ypt = localP->Y;
   double zpt = localP->Z;
+  double dist = sqrt(xpt * xpt + ypt * ypt + zpt * zpt);
+
   double a = PrimLX[prim];
   double b = PrimLZ[prim];
   double diag = sqrt(a * a + b * b);  // diagonal
 
-  double dist = sqrt(xpt * xpt + ypt * ypt + zpt * zpt);
-
   if (dist >= FarField * diag)  // all are distances and, hence, +ve
   {
     double dA = a * b;  // area
-    double dist3 = dist * dist * dist;
     (*Potential) = dA / dist;
-    localF->X = xpt * dA / dist3;
-    localF->Y = ypt * dA / dist3;
-    localF->Z = zpt * dA / dist3;
+    const double f = dA / (dist * dist * dist);
+    localF->X = xpt * f;
+    localF->Y = ypt * f;
+    localF->Z = zpt * f;
   } else {
     int fstatus =
-        ExactRecSurf(xpt / a, ypt / a, zpt / a, -1.0 / 2.0, -(b / a) / 2.0,
-                     1.0 / 2.0, (b / a) / 2.0, Potential, localF);
-    if (fstatus)  // non-zero
-    {
+        ExactRecSurf(xpt / a, ypt / a, zpt / a, -0.5, -(b / a) / 2.0,
+                     0.5, (b / a) / 2.0, Potential, localF);
+    if (fstatus) { // non-zero
       printf("problem in RecPrimPF ... \n");
       // printf("returning ...\n");
       // return -1; void function at present
@@ -4632,11 +4631,11 @@ void TriPrimPF(int prim, Point3D *localP, double *Potential, Vector3D *localF) {
 
   if (dist >= FarField * diag) {
     double dA = 0.5 * a * b;  // area
-    double dist3 = dist * dist * dist;
     (*Potential) = dA / dist;
-    localF->X = xpt * dA / dist3;
-    localF->Y = ypt * dA / dist3;
-    localF->Z = zpt * dA / dist3;
+    double f = dA / (dist * dist * dist);
+    localF->X = xpt * f;
+    localF->Y = ypt * f;
+    localF->Z = zpt * f;
   } else {
     int fstatus =
         ExactTriSurf(b / a, xpt / a, ypt / a, zpt / a, Potential, localF);
@@ -4675,11 +4674,11 @@ void WirePrimPF(int prim, Point3D *localP, double *Potential,
   if (dist >= FarField * lW)  // all are distances and, hence, +ve
   {
     double dA = 2.0 * ST_PI * rW * lW;
-    double dist3 = dist * dist * dist;
     (*Potential) = dA / dist;
-    localF->X = dA * xpt / dist3;
-    localF->Y = dA * ypt / dist3;
-    localF->Z = dA * zpt / dist3;
+    double f = dA / (dist * dist * dist);
+    localF->X = xpt * f;
+    localF->Y = ypt * f;
+    localF->Z = zpt * f;
   } else {
     if ((fabs(xpt) < MINDIST) && (fabs(ypt) < MINDIST)) {
       if (fabs(zpt) < MINDIST)

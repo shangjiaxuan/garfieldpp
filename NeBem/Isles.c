@@ -14,6 +14,7 @@
 #define SHIFT 2.0
 
 #ifdef __cplusplus
+#include <fstream>
 namespace neBEM {
 #endif
 
@@ -25,12 +26,6 @@ namespace neBEM {
 // Expressions from:
 int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
                  double xhi, double zhi, double *Potential, Vector3D *Flux) {
-  double dxlo, dxhi, dzlo, dzhi;
-  double D11, D21, D12, D22;
-  int S1, S2, SY;
-  double modY;
-  double I1, I2, R1, R2;
-  double DZTerm1, DZTerm2, DXTerm1, DXTerm2;
   gsl_complex TanhTerm1, TanhTerm2;
   double Pot = 0.0;
   double Fx = 0.0, Fy = 0.0, Fz = 0.0;
@@ -59,49 +54,41 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
   if (fabs(Y) < MINDIST) Y = 0.0;
   if (fabs(Z) < MINDIST) Z = 0.0;
 
-  dxlo = X - xlo;  // zero at the X=xlo edge
+  double dxlo = X - xlo;  // zero at the X=xlo edge
   if (fabs(dxlo) < MINDIST) dxlo = 0.0;
-  dxhi = X - xhi;  // zero at the X=xhi edge
+  double dxhi = X - xhi;  // zero at the X=xhi edge
   if (fabs(dxhi) < MINDIST) dxhi = 0.0;
-  dzlo = Z - zlo;  // zero at the Z=zlo edge
+  double dzlo = Z - zlo;  // zero at the Z=zlo edge
   if (fabs(dzlo) < MINDIST) dzlo = 0.0;
-  dzhi = Z - zhi;  // zero at the Z=zhi edge
+  double dzhi = Z - zhi;  // zero at the Z=zhi edge
   if (fabs(dzhi) < MINDIST) dzhi = 0.0;
 
   // These four parameters can never be zero except at the four corners where
   // one of them can become zero. For example, at X=xlo, Y=0, Z=zlo, D11
   // is zero but the others are nonzero.
-  D11 = sqrt(dxlo * dxlo + Y * Y + dzlo * dzlo);
+  double D11 = sqrt(dxlo * dxlo + Y * Y + dzlo * dzlo);
   if (fabs(D11) < MINDIST) D11 = 0.0;
-  D21 = sqrt(dxhi * dxhi + Y * Y + dzlo * dzlo);
+  double D21 = sqrt(dxhi * dxhi + Y * Y + dzlo * dzlo);
   if (fabs(D21) < MINDIST) D21 = 0.0;
-  D12 = sqrt(dxlo * dxlo + Y * Y + dzhi * dzhi);
+  double D12 = sqrt(dxlo * dxlo + Y * Y + dzhi * dzhi);
   if (fabs(D12) < MINDIST) D12 = 0.0;
-  D22 = sqrt(dxhi * dxhi + Y * Y + dzhi * dzhi);
+  double D22 = sqrt(dxhi * dxhi + Y * Y + dzhi * dzhi);
   if (fabs(D22) < MINDIST) D22 = 0.0;
 
   // Parameters related to the Y terms
-  S1 = Sign(dzlo);
-  S2 = Sign(dzhi);
-  modY = fabs(Y);
-  SY = Sign(Y);
-  I1 = dxlo * modY;
-  I2 = dxhi * modY;
-  R1 = Y * Y + dzlo * dzlo;
-  R2 = Y * Y + dzhi * dzhi;
+  int S1 = Sign(dzlo);
+  int S2 = Sign(dzhi);
+  double modY = fabs(Y);
+  int SY = Sign(Y);
+  double I1 = dxlo * modY;
+  double I2 = dxhi * modY;
+  double R1 = Y * Y + dzlo * dzlo;
+  double R2 = Y * Y + dzhi * dzhi;
   if (fabs(I1) < MINDIST2) I1 = 0.0;
   if (fabs(I2) < MINDIST2) I2 = 0.0;
   if (fabs(R1) < MINDIST2) R1 = 0.0;
   if (fabs(R2) < MINDIST2) R2 = 0.0;
 
-  // Logarithmic weak singularities are possible.
-  // Checks to be perfomed for 0 or -ve denominators and also
-  // 0 and +ve numerators.
-  // Interestingly, 0/0 does not cause a problem.
-  DZTerm1 = log((D11 - dzlo) / (D12 - dzhi));
-  DZTerm2 = log((D21 - dzlo) / (D22 - dzhi));
-  DXTerm1 = log((D11 - dxlo) / (D21 - dxhi));
-  DXTerm2 = log((D12 - dxlo) / (D22 - dxhi));
 
   if (DebugISLES) {
     fprintf(stdout, "X: %.16lg, Y: %.16lg, Z: %.16lg\n", X, Y, Z);
@@ -114,10 +101,6 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     fprintf(stdout, "S1: %d, S2: %d, modY: %.16lg\n", S1, S2, modY);
     fprintf(stdout, "I1: %.16lg, I2: %.16lg, R1: %.16lg, R2: %.16lg\n", I1, I2,
             R1, R2);
-    fprintf(
-        stdout,
-        "DZTerm1: %.16lg, DZTerm2: %.16lg, DXTerm1: %.16lg, DXTerm2: %.16lg\n",
-        DZTerm1, DZTerm2, DXTerm1, DXTerm2);
     fprintf(stdout, "MINDIST: %.16lg, MINDIST2: %.16lg, SHIFT: %.16lg\n",
             MINDIST, MINDIST2, SHIFT);
     fflush(stdout);
@@ -145,68 +128,64 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
   // same, or another difficult-to-evaluate situation. One of the ways to ensure
   // this is to make SHIFT large enough, but that is unreasnoable and will
   // introduce large amount of error.
-  if ((fabs(D11) <= MINDIST))  // close to xlo, 0, zlo
-  {
+  if ((fabs(D11) <= MINDIST)) {
+    // close to xlo, 0, zlo
     if (DebugISLES) printf("fabs(D11) <= MINDIST ... ");
 
-    if ((X >= xlo) && (Z >= zlo))  // point on the element
-    {
+    if ((X >= xlo) && (Z >= zlo)) {
+      // point on the element
       if (DebugISLES) printf("Case 1\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X + SHIFT * MINDIST;
-      Z1 = Z + SHIFT * MINDIST;
+      double X1 = X + SHIFT * MINDIST;
+      double Z1 = Z + SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X <= xlo) && (Z >= zlo))  // field point outside the element
-    {
+    } else if ((X <= xlo) && (Z >= zlo)) {
+      // field point outside the element
       if (DebugISLES) printf("Case 2 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X - SHIFT * MINDIST;
-      Z1 = Z + SHIFT * MINDIST;
+      double X1 = X - SHIFT * MINDIST;
+      double Z1 = Z + SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X >= xlo) && (Z <= zlo))  // field point outside the element
-    {
+    } else if ((X >= xlo) && (Z <= zlo)) {
+      // field point outside the element
       if (DebugISLES) printf("Case 3 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X + SHIFT * MINDIST;
-      Z1 = Z - SHIFT * MINDIST;
+      double X1 = X + SHIFT * MINDIST;
+      double Z1 = Z - SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X <= xlo) && (Z <= zlo))  // field point outside the element
-    {
+    } else if ((X <= xlo) && (Z <= zlo)) {
+      // field point outside the element
       if (DebugISLES) printf("Case 4 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X - SHIFT * MINDIST;
-      Z1 = Z - SHIFT * MINDIST;
+      double X1 = X - SHIFT * MINDIST;
+      double Z1 = Z - SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
@@ -215,68 +194,64 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
       return 0;
     }
   }
-  if ((fabs(D21) <= MINDIST))  // close to xhi, 0, zlo
-  {
+  if ((fabs(D21) <= MINDIST)) {
+    // close to xhi, 0, zlo
     if (DebugISLES) printf("fabs(D21) <= MINDIST ... ");
 
-    if ((X >= xhi) && (Z >= zlo))  // point outside the element
-    {
+    if ((X >= xhi) && (Z >= zlo)) {
+      // point outside the element
       if (DebugISLES) printf("Case 1 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X + SHIFT * MINDIST;
-      Z1 = Z + SHIFT * MINDIST;
+      double X1 = X + SHIFT * MINDIST;
+      double Z1 = Z + SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X <= xhi) && (Z >= zlo))  // point on the element
-    {
+    } else if ((X <= xhi) && (Z >= zlo)) {
+      // point on the element
       if (DebugISLES) printf("Case 2 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X - SHIFT * MINDIST;
-      Z1 = Z + SHIFT * MINDIST;
+      double X1 = X - SHIFT * MINDIST;
+      double Z1 = Z + SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X >= xhi) && (Z <= zlo))  // field point outside the element
-    {
+    } else if ((X >= xhi) && (Z <= zlo)) {
+      // field point outside the element
       if (DebugISLES) printf("Case 3 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X + SHIFT * MINDIST;
-      Z1 = Z - SHIFT * MINDIST;
+      double X1 = X + SHIFT * MINDIST;
+      double Z1 = Z - SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X <= xhi) && (Z <= zlo))  // field point outside the element
-    {
+    } else if ((X <= xhi) && (Z <= zlo)) {
+      // field point outside the element
       if (DebugISLES) printf("Case 4 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X - SHIFT * MINDIST;
-      Z1 = Z - SHIFT * MINDIST;
+      double X1 = X - SHIFT * MINDIST;
+      double Z1 = Z - SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
@@ -285,68 +260,64 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
       return 0;
     }
   }
-  if ((fabs(D12) <= MINDIST))  // close to xlo, 0, zhi
-  {
+  if ((fabs(D12) <= MINDIST)) {
+     // close to xlo, 0, zhi
     if (DebugISLES) printf("fabs(D12) <= MINDIST ... ");
 
-    if ((X >= xlo) && (Z >= zhi))  // point outside the element
-    {
+    if ((X >= xlo) && (Z >= zhi)) {
+      // point outside the element
       if (DebugISLES) printf("Case 1 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X + SHIFT * MINDIST;
-      Z1 = Z + SHIFT * MINDIST;
+      double X1 = X + SHIFT * MINDIST;
+      double Z1 = Z + SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X <= xlo) && (Z >= zhi))  // field point outside the element
-    {
+    } else if ((X <= xlo) && (Z >= zhi)) {
+      // field point outside the element
       if (DebugISLES) printf("Case 2 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X - SHIFT * MINDIST;
-      Z1 = Z + SHIFT * MINDIST;
+      double X1 = X - SHIFT * MINDIST;
+      double Z1 = Z + SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X >= xlo) && (Z <= zhi))  // field point on the element
-    {
+    } else if ((X >= xlo) && (Z <= zhi)) {
+      // field point on the element
       if (DebugISLES) printf("Case 3 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X + SHIFT * MINDIST;
-      Z1 = Z - SHIFT * MINDIST;
+      double X1 = X + SHIFT * MINDIST;
+      double Z1 = Z - SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X <= xlo) && (Z <= zhi))  // field point outside the element
-    {
+    } else if ((X <= xlo) && (Z <= zhi)) {
+      // field point outside the element
       if (DebugISLES) printf("Case 4 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X - SHIFT * MINDIST;
-      Z1 = Z - SHIFT * MINDIST;
+      double X1 = X - SHIFT * MINDIST;
+      double Z1 = Z - SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
@@ -355,68 +326,64 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
       return 0;
     }
   }
-  if ((fabs(D22) <= MINDIST))  // close to xhi, 0, zhi
-  {
+  if ((fabs(D22) <= MINDIST)) {
+    // close to xhi, 0, zhi
     if (DebugISLES) printf("fabs(D22) <= MINDIST ... ");
 
-    if ((X >= xhi) && (Z >= zhi))  // point outside the element
-    {
+    if ((X >= xhi) && (Z >= zhi)) {
+      // point outside the element
       if (DebugISLES) printf("Case 1 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X + SHIFT * MINDIST;
-      Z1 = Z + SHIFT * MINDIST;
+      double X1 = X + SHIFT * MINDIST;
+      double Z1 = Z + SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X <= xhi) && (Z >= zhi))  // field point outside the element
-    {
+    } else if ((X <= xhi) && (Z >= zhi)) {
+      // field point outside the element
       if (DebugISLES) printf("Case 2 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X - SHIFT * MINDIST;
-      Z1 = Z + SHIFT * MINDIST;
+      double X1 = X - SHIFT * MINDIST;
+      double Z1 = Z + SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X >= xhi) && (Z <= zhi))  // field point outside the element
-    {
+    } else if ((X >= xhi) && (Z <= zhi)) {
+      // field point outside the element
       if (DebugISLES) printf("Case 3 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X + SHIFT * MINDIST;
-      Z1 = Z - SHIFT * MINDIST;
+      double X1 = X + SHIFT * MINDIST;
+      double Z1 = Z - SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
       Flux->Y = Flux1.Y;
       Flux->Z = Flux1.Z;
       return 0;
-    } else if ((X <= xhi) && (Z <= zhi))  // field point on the element
-    {
+    } else if ((X <= xhi) && (Z <= zhi)) {
+      // field point on the element
       if (DebugISLES) printf("Case 4 ...\n");
 
-      double X1 = X, Z1 = Z;
       double Pot1;
       Vector3D Flux1;
 
-      X1 = X - SHIFT * MINDIST;
-      Z1 = Z - SHIFT * MINDIST;
+      double X1 = X - SHIFT * MINDIST;
+      double Z1 = Z - SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       *Potential = Pot1;
       Flux->X = Flux1.X;
@@ -439,12 +406,11 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     {
       if (DebugISLES) printf("Case 1 ...\n");
 
-      double X1 = X, X2 = X;
       double Pot1, Pot2;
       Vector3D Flux1, Flux2;
 
-      X1 = X + SHIFT * MINDIST;
-      X2 = X - SHIFT * MINDIST;
+      double X1 = X + SHIFT * MINDIST;
+      double X2 = X - SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       ExactRecSurf(X2, Y, Z, xlo, zlo, xhi, zhi, &Pot2, &Flux2);
       *Potential = 0.5 * (Pot1 + Pot2);
@@ -456,12 +422,11 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     {
       if (DebugISLES) printf("Case 2 ...\n");
 
-      double X1 = X, X2 = X;
       double Pot1, Pot2;
       Vector3D Flux1, Flux2;
 
-      X1 = X - SHIFT * MINDIST;
-      X2 = X + SHIFT * MINDIST;
+      double X1 = X - SHIFT * MINDIST;
+      double X2 = X + SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       ExactRecSurf(X2, Y, Z, xlo, zlo, xhi, zhi, &Pot2, &Flux2);
       *Potential = 0.5 * (Pot1 + Pot2);
@@ -479,12 +444,11 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     {
       if (DebugISLES) printf("Case 1 ...\n");
 
-      double Z1 = Z, Z2 = Z;
       double Pot1, Pot2;
       Vector3D Flux1, Flux2;
 
-      Z1 = Z + SHIFT * MINDIST;
-      Z2 = Z - SHIFT * MINDIST;
+      double Z1 = Z + SHIFT * MINDIST;
+      double Z2 = Z - SHIFT * MINDIST;
       ExactRecSurf(X, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       ExactRecSurf(X, Y, Z2, xlo, zlo, xhi, zhi, &Pot2, &Flux2);
       *Potential = 0.5 * (Pot1 + Pot2);
@@ -496,12 +460,11 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     {
       if (DebugISLES) printf("Case 2 ...\n");
 
-      double Z1 = Z, Z2 = Z;
       double Pot1, Pot2;
       Vector3D Flux1, Flux2;
 
-      Z1 = Z - SHIFT * MINDIST;
-      Z2 = Z + SHIFT * MINDIST;
+      double Z1 = Z - SHIFT * MINDIST;
+      double Z2 = Z + SHIFT * MINDIST;
       ExactRecSurf(X, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       ExactRecSurf(X, Y, Z2, xlo, zlo, xhi, zhi, &Pot2, &Flux2);
       *Potential = 0.5 * (Pot1 + Pot2);
@@ -519,12 +482,11 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     {
       if (DebugISLES) printf("Case 1 ...\n");
 
-      double X1 = X, X2 = X;
       double Pot1, Pot2;
       Vector3D Flux1, Flux2;
 
-      X1 = X + SHIFT * MINDIST;
-      X2 = X - SHIFT * MINDIST;
+      double X1 = X + SHIFT * MINDIST;
+      double X2 = X - SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       ExactRecSurf(X2, Y, Z, xlo, zlo, xhi, zhi, &Pot2, &Flux2);
       *Potential = 0.5 * (Pot1 + Pot2);
@@ -536,12 +498,11 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     {
       if (DebugISLES) printf("Case 2 ...\n");
 
-      double X1 = X, X2 = X;
       double Pot1, Pot2;
       Vector3D Flux1, Flux2;
 
-      X1 = X - SHIFT * MINDIST;
-      X2 = X + SHIFT * MINDIST;
+      double X1 = X - SHIFT * MINDIST;
+      double X2 = X + SHIFT * MINDIST;
       ExactRecSurf(X1, Y, Z, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       ExactRecSurf(X2, Y, Z, xlo, zlo, xhi, zhi, &Pot2, &Flux2);
       *Potential = 0.5 * (Pot1 + Pot2);
@@ -559,12 +520,11 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     {
       if (DebugISLES) printf("Case 1 ...\n");
 
-      double Z1 = Z, Z2 = Z;
       double Pot1, Pot2;
       Vector3D Flux1, Flux2;
 
-      Z1 = Z + SHIFT * MINDIST;
-      Z2 = Z - SHIFT * MINDIST;
+      double Z1 = Z + SHIFT * MINDIST;
+      double Z2 = Z - SHIFT * MINDIST;
       ExactRecSurf(X, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       ExactRecSurf(X, Y, Z2, xlo, zlo, xhi, zhi, &Pot2, &Flux2);
       *Potential = 0.5 * (Pot1 + Pot2);
@@ -576,12 +536,11 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     {
       if (DebugISLES) printf("Case 2 ...\n");
 
-      double Z1 = Z, Z2 = Z;
       double Pot1, Pot2;
       Vector3D Flux1, Flux2;
 
-      Z1 = Z - SHIFT * MINDIST;
-      Z2 = Z + SHIFT * MINDIST;
+      double Z1 = Z - SHIFT * MINDIST;
+      double Z2 = Z + SHIFT * MINDIST;
       ExactRecSurf(X, Y, Z1, xlo, zlo, xhi, zhi, &Pot1, &Flux1);
       ExactRecSurf(X, Y, Z2, xlo, zlo, xhi, zhi, &Pot2, &Flux2);
       *Potential = 0.5 * (Pot1 + Pot2);
@@ -590,6 +549,22 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
       Flux->Z = 0.5 * (Flux1.Z + Flux2.Z);
       return 0;
     }
+  }
+
+  // Logarithmic weak singularities are possible.
+  // Checks to be perfomed for 0 or -ve denominators and also
+  // 0 and +ve numerators.
+  // Interestingly, 0/0 does not cause a problem.
+  double DZTerm1 = log((D11 - dzlo) / (D12 - dzhi));
+  double DZTerm2 = log((D21 - dzlo) / (D22 - dzhi));
+  double DXTerm1 = log((D11 - dxlo) / (D21 - dxhi));
+  double DXTerm2 = log((D12 - dxlo) / (D22 - dxhi));
+
+  if (DebugISLES) {
+    fprintf(
+        stdout,
+        "DZTerm1: %.16lg, DZTerm2: %.16lg, DXTerm1: %.16lg, DXTerm2: %.16lg\n",
+        DZTerm1, DZTerm2, DXTerm1, DXTerm2);
   }
   // Four conditions based on the logarithmic terms
   if (isnan(DZTerm1) || isinf(DZTerm1)) {
@@ -690,16 +665,16 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     }
   }
 
+  double sumTanTerms = 0.;
   // tanhyperbolic terms - this is the part that deals with complex numbers.
   // The possibility of singularities for dzhi or dzlo is zero (division by
   // zero) is overridden by the fact that S1 or S2 becomes zero in such cases
   // and the singularity is avoided.
   {  // TanhTerm1 and TanhTerm2
-    gsl_complex term1, term2, term3, term4, term5, term6, term7, term8;
-
+    gsl_complex term1, term2, term3, term4;
+    gsl_complex term5, term6, term7, term8;
     if (S1 != 0) {
       gsl_complex tmp1;
-
       if (fabs(I1) > MINDIST2) {
         GSL_SET_COMPLEX(&tmp1, R1, -I1);
         tmp1 = gsl_complex_div_real(tmp1, D11 * fabs(dzlo));
@@ -708,6 +683,16 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
         GSL_SET_COMPLEX(&tmp1, R1, I1);
         tmp1 = gsl_complex_div_real(tmp1, D11 * fabs(dzlo));
         term2 = gsl_complex_mul_real(gsl_complex_arctanh(tmp1), (double)S1);
+
+        double tmp = -S1 * atan(2 * I1 * D11 * fabs(dzlo) / (D11 * D11 * dzlo * dzlo - I1 * I1 - R1 * R1));
+        if (R1 * R1 + I1 * I1 > D11 * D11 * dzlo * dzlo) {
+          if ((X > xlo && Z > zlo) || (X < xlo && Z < zlo)) {
+            tmp -= ST_PI;
+          } else if ((X < xlo && Z > zlo) || (X > xlo && Z < zlo)) {
+            tmp += ST_PI;
+          }
+        }
+        sumTanTerms += tmp;
       }  // fabs I1 > MINDIST2
       else {
         tmp1 = gsl_complex_arctanh_real(R1 / (D11 * fabs(dzlo)));
@@ -723,16 +708,53 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
         GSL_SET_COMPLEX(&tmp1, R1, I2);
         tmp1 = gsl_complex_div_real(tmp1, D21 * fabs(dzlo));
         term4 = gsl_complex_mul_real(gsl_complex_arctanh(tmp1), (double)S1);
+
+        double tmp = -S1 * atan(2 * I2 * D21 * fabs(dzlo) / (D21 * D21 * dzlo * dzlo - I2 * I2 - R1 * R1));
+        if (R1 * R1 + I2 * I2 > D21 * D21 * dzlo * dzlo) {
+          if ((X > xhi && Z > zlo) || (X < xhi && Z < zlo)) {
+            tmp -= ST_PI;
+          } else if ((X < xhi && Z > zlo) || (X > xhi && Z < zlo)) {
+            tmp += ST_PI;
+          }
+        }
+        sumTanTerms -= tmp;
       }  // fabs I2 > MINDIST2
       else {
         tmp1 = gsl_complex_arctanh_real(R1 / (D21 * fabs(dzlo)));
         term3 = gsl_complex_mul_real(tmp1, (double)S1);
-        term4 = gsl_complex_mul_real(tmp1, (double)S1);
+        term4 = term3;
       }  // else fab I2 > MINDIST2
 
       TanhTerm1 = gsl_complex_sub(term1, term2);
       TanhTerm1 = gsl_complex_sub(TanhTerm1, term3);
       TanhTerm1 = gsl_complex_add(TanhTerm1, term4);
+      /*
+      double tanTerm12 = -S1 * atan(2 * I1 * D11 * fabs(dzlo) / (D11 * D11 * dzlo * dzlo - I1 * I1 - R1 * R1));
+      if (R1 * R1 + I1 * I1 > D11 * D11 * dzlo * dzlo) {
+        if ((X > xlo && Z > zlo) || (X < xlo && Z < zlo)) {
+          tanTerm12 -= ST_PI;
+        } else if ((X < xlo && Z > zlo) || (X > xlo && Z < zlo)) {
+          tanTerm12 += ST_PI;
+        }
+      }
+      gsl_complex TanhTerm12 = gsl_complex_sub(term1, term2);
+      const double diff12 = TanhTerm12.dat[1] - tanTerm12;
+      if (fabs(diff12) > 1.e-8) {
+        std::printf("(1-2) TANH: %20.15f, TAN: %20.15f, DIFF: %20.15f\n", TanhTerm12.dat[1], tanTerm12, diff12);
+      double tanTerm34 = -S1 * atan(2 * I2 * D21 * fabs(dzlo) / (D21 * D21 * dzlo * dzlo - I2 * I2 - R1 * R1));
+      if (R1 * R1 + I2 * I2 > D21 * D21 * dzlo * dzlo) {
+        if ((X > xhi && Z > zlo) || (X < xhi && Z < zlo)) {
+          tanTerm34 -= ST_PI;
+        } else if ((X < xhi && Z > zlo) || (X > xhi && Z < zlo)) {
+          tanTerm34 += ST_PI;
+        }
+      }
+      gsl_complex TanhTerm34 = gsl_complex_sub(term3, term4);
+      const double diff34 = TanhTerm34.dat[1] - tanTerm34;
+      if (fabs(diff34) > 1.e-8) {
+        std::printf("(3-4) TANH: %20.15f, TAN: %20.15f, DIFF: %20.15f\n", TanhTerm34.dat[1], tanTerm34, diff34);
+      }
+      */
     }  // if S1 != 0
     else {
       GSL_SET_COMPLEX(&TanhTerm1, 0.0, 0.0);
@@ -749,6 +771,16 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
         GSL_SET_COMPLEX(&tmp1, R2, I1);
         tmp1 = gsl_complex_div_real(tmp1, D12 * fabs(dzhi));
         term6 = gsl_complex_mul_real(gsl_complex_arctanh(tmp1), (double)S2);
+
+        double tmp = -S2 * atan(2 * I1 * D12 * fabs(dzhi) / (D12 * D12 * dzhi * dzhi - I1 * I1 - R2 * R2));
+        if (R2 * R2 + I1 * I1 > D12 * D12 * dzhi * dzhi) {
+          if ((X > xlo && Z > zhi) || (X < xlo && Z < zhi)) {
+            tmp -= ST_PI;
+          } else if ((X < xlo && Z > zhi) || (X > xlo && Z < zhi)) {
+            tmp += ST_PI;
+          } 
+        }
+        sumTanTerms -= tmp;
       }  // if fabs(I1) > MINDIST2
       else {
         tmp1 = gsl_complex_arctanh_real(R2 / (D12 * fabs(dzhi)));
@@ -764,6 +796,16 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
         GSL_SET_COMPLEX(&tmp1, R2, I2);
         tmp1 = gsl_complex_div_real(tmp1, D22 * fabs(dzhi));
         term8 = gsl_complex_mul_real(gsl_complex_arctanh(tmp1), (double)S2);
+
+        double tmp = -S2 * atan(2 * I2 * D22 * fabs(dzhi) / (D22 * D22 * dzhi * dzhi - I2 * I2 - R2 * R2));
+        if (R2 * R2 + I2 * I2 > D22 * D22 * dzhi * dzhi) {
+          if ((X > xhi && Z > zhi) || (X < xhi && Z < zhi)) {
+            tmp -= ST_PI;
+          } else if ((X < xhi && Z > zhi) || (X > xhi && Z < zhi)) {
+            tmp += ST_PI;
+          }
+        }
+        sumTanTerms += tmp;
       }  // if fabs(I2) > MINDIST2
       else {
         tmp1 = gsl_complex_arctanh_real(R2 / (D22 * fabs(dzhi)));
@@ -774,6 +816,38 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
       TanhTerm2 = gsl_complex_sub(term6, term5);
       TanhTerm2 = gsl_complex_add(TanhTerm2, term7);
       TanhTerm2 = gsl_complex_sub(TanhTerm2, term8);
+
+      /*
+      double tanTerm56 = -S2 * atan(2 * I1 * D12 * fabs(dzhi) / (D12 * D12 * dzhi * dzhi - I1 * I1 - R2 * R2));
+      if (R2 * R2 + I1 * I1 > D12 * D12 * dzhi * dzhi) {
+        if ((X > xlo && Z > zhi) || (X < xlo && Z < zhi)) {
+          tanTerm56 -= ST_PI;
+        } else if ((X < xlo && Z > zhi) || (X > xlo && Z < zhi)) {
+          tanTerm56 += ST_PI;
+        }
+      }
+      gsl_complex TanhTerm56 = gsl_complex_sub(term5, term6);
+      const double diff56 = TanhTerm56.dat[1] - tanTerm56;
+      if (fabs(diff56) > 1.e-8) {
+        std::printf("(5-6) TANH: %20.15f, TAN: %20.15f, DIFF: %20.15f\n", TanhTerm56.dat[1], tanTerm56, diff56);
+      }
+      double tanTerm78 = 0.;
+      if (fabs(I2) > MINDIST) { 
+        tanTerm78 = -S2 * atan(2 * I2 * D22 * fabs(dzhi) / (D22 * D22 * dzhi * dzhi - I2 * I2 - R2 * R2));
+        if (R2 * R2 + I2 * I2 > D22 * D22 * dzhi * dzhi) {
+          if ((X > xhi && Z > zhi) || (X < xhi && Z < zhi)) {
+            tanTerm78 -= ST_PI;
+          } else if ((X < xhi && Z > zhi) || (X > xhi && Z < zhi)) {
+            tanTerm78 += ST_PI;
+          }
+        }
+      }
+      gsl_complex TanhTerm78 = gsl_complex_sub(term7, term8);
+      const double diff78 = TanhTerm78.dat[1] - tanTerm78;
+      if (fabs(diff78) > 1.e-8) {
+        std::printf("(7-8) TANH: %20.15f, TAN: %20.15f, I2: %20.15f, DIFF: %20.15f\n", TanhTerm78.dat[1], tanTerm78, I2, diff78);
+      }
+      */
     }  // if S2 != 0
     else {
       GSL_SET_COMPLEX(&TanhTerm2, 0.0, 0.0);
@@ -828,7 +902,11 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
       return (ApproxRecSurf(X, Y, Z, xlo, zlo, xhi, zhi, XNSegApprox,
                             ZNSegApprox, Potential, Flux));
     }
-
+ 
+    sumTanTerms *= -0.5;
+    if (fabs(sumTanhTerms.dat[0] -  sumTanTerms) > 1.e-8) {
+      std::printf("TANH: %20.15f, TAN: %20.15f, DIFF: %20.15f\n", sumTanhTerms.dat[0], sumTanTerms, sumTanhTerms.dat[0] -  sumTanTerms);
+    }
     Pot = -dxlo * DZTerm1 + dxhi * DZTerm2 + modY * sumTanhTerms.dat[0] -
           dzlo * DXTerm1 + dzhi * DXTerm2;
     Fx = DZTerm1 - DZTerm2;
