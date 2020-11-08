@@ -867,6 +867,11 @@ bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
   // Stop if we are outside a valid drift medium.
   status = GetField(x, ex, ey, ez, bx, by, bz, medium);
   if (status != 0) return true;
+  // Also stop if we are outside the drift area.
+  if (!m_sensor->IsInArea(x[0], x[1], x[2])) {
+    status = StatusLeftDriftArea;
+    return true;
+  } 
   if (particle == Particle::Electron) {
     return medium->ElectronVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } else if (particle == Particle::Ion) {
@@ -1014,6 +1019,7 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
     double ex = 0., ey = 0., ez = 0.;
     Medium* medium = nullptr;
     m_sensor->ElectricField(xm[0], xm[1], xm[2], ex, ey, ez, medium, status);
+    if (!m_sensor->IsInArea(xm[0], xm[1], xm[2])) status = -1;
     if (status == 0) {
       x0 = xm;
     } else {
