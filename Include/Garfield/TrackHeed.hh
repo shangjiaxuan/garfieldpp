@@ -71,6 +71,9 @@ class TrackHeed : public Track {
   /// Return the Fano factor of the medium (of the last simulated track).
   double GetFanoFactor() const;
 
+  /// Compute the differential cross-section for a given medium.
+  bool Initialise(Medium* medium);
+
   /** Simulate a delta electron.
     * \param x0,y0,z0 initial position of the delta electron
     * \param t0 initial time
@@ -234,11 +237,9 @@ class TrackHeed : public Track {
   /// Angular step for curved lines.
   double m_stepAngleCurved = 0.2;
 
-#ifndef __CINT__
   std::vector<Heed::gparticle*> m_particleBank;
   std::vector<Heed::gparticle*>::iterator m_bankIterator;
-#endif /* __CINT __ */
-  bool Setup(Medium* medium);
+
   bool SetupGas(Medium* medium);
   bool SetupMaterial(Medium* medium);
   bool SetupDelta(const std::string& databasePath);
