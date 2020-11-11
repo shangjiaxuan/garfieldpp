@@ -92,7 +92,7 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
   // If medium, particle or bounding box have changed,
   // update the cross-sections.
   if (m_isChanged) {
-    if (!Setup(medium)) return false;
+    if (!Initialise(medium)) return false;
     m_isChanged = false;
     m_mediumName = medium->GetName();
     m_mediumDensity = medium->GetMassDensity();
@@ -193,11 +193,6 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
 }
 
 double TrackHeed::GetClusterDensity() {
-  if (!m_ready) {
-    std::cerr << m_className << "::GetClusterDensity:\n"
-              << "    Track has not been initialized.\n";
-    return 0.;
-  }
 
   if (!m_transferCs) {
     std::cerr << m_className << "::GetClusterDensity:\n"
@@ -209,11 +204,6 @@ double TrackHeed::GetClusterDensity() {
 }
 
 double TrackHeed::GetStoppingPower() {
-  if (!m_ready) {
-    std::cerr << m_className << "::GetStoppingPower:\n"
-              << "    Track has not been initialized.\n";
-    return 0.;
-  }
 
   if (!m_transferCs) {
     std::cerr << m_className << "::GetStoppingPower:\n"
@@ -474,7 +464,7 @@ void TrackHeed::TransportDeltaElectron(const double x0, const double y0,
 
   // If medium or bounding box have changed, update the "chamber".
   if (update) {
-    if (!Setup(medium)) return;
+    if (!Initialise(medium)) return;
     m_ready = true;
     m_mediumName = medium->GetName();
     m_mediumDensity = medium->GetMassDensity();
@@ -585,7 +575,7 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
 
   // If medium or bounding box have changed, update the "chamber".
   if (update) {
-    if (!Setup(medium)) return;
+    if (!Initialise(medium)) return;
     m_ready = true;
     m_mediumName = medium->GetName();
     m_mediumDensity = medium->GetMassDensity();
@@ -722,7 +712,7 @@ void TrackHeed::SetParticleUser(const double m, const double z) {
   m_particleName = "exotic";
 }
 
-bool TrackHeed::Setup(Medium* medium) {
+bool TrackHeed::Initialise(Medium* medium) {
   // Make sure the path to the Heed database is known.
   std::string databasePath;
   char* dbPath = std::getenv("HEED_DATABASE");
@@ -730,7 +720,8 @@ bool TrackHeed::Setup(Medium* medium) {
     // Try GARFIELD_HOME.
     dbPath = std::getenv("GARFIELD_HOME");
     if (dbPath == NULL) {
-      std::cerr << m_className << "::Setup:\n    Cannot retrieve database path "
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Cannot retrieve database path "
                 << "(environment variables HEED_DATABASE and GARFIELD_HOME "
                 << "are not defined).\n    Cannot proceed.\n";
       return false;
@@ -745,7 +736,7 @@ bool TrackHeed::Setup(Medium* medium) {
 
   // Check once more that the medium exists.
   if (!medium) {
-    std::cerr << m_className << "::Setup: Null pointer.\n";
+    std::cerr << m_className << "::Initialise: Null pointer.\n";
     return false;
   }
 
@@ -773,7 +764,7 @@ bool TrackHeed::Setup(Medium* medium) {
     const double w = m_matter->W * 1.e6;
     const double f = m_matter->F;
     const double minI = m_matter->min_ioniz_pot * 1.e6;
-    std::cout << m_className << "::Setup:\n";
+    std::cout << m_className << "::Initialise:\n";
     std::cout << "    Cluster density:             " << nc << " cm-1\n";
     std::cout << "    Stopping power (restricted): " << dedx << " keV/cm\n";
     std::cout << "    Stopping power (incl. tail): " << dedx1 << " keV/cm\n";

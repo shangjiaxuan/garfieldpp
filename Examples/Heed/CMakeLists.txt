@@ -17,3 +17,6 @@ target_link_libraries(rangeSi Garfield)
 
 add_executable(fe55 fe55.C)
 target_link_libraries(fe55 Garfield)
+
+add_executable(plotdedx plotdedx.C)
+target_link_libraries(plotdedx Garfield)
