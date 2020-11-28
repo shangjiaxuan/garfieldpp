@@ -62,8 +62,8 @@ bool MediumGaAs::ElectronVelocity(const double ex, const double ey,
   constexpr double r4 = r * r * r * r;
   const double er4 = e2 * e2 * r4;
   const double mu = -(m_eMobility + er4 * m_eSatVel / sqrt(e2)) / (1. + er4);
-  const double bmag = sqrt(bx * bx + by * by + bz * bz);
-  if (bmag < Small) {
+  const double b2 = bx * bx + by * by + bz * bz;
+  if (b2 < Small) {
     vx = mu * ex;
     vy = mu * ey;
     vz = mu * ez;
@@ -71,8 +71,8 @@ bool MediumGaAs::ElectronVelocity(const double ex, const double ey,
     // Hall mobility
     const double muH = m_eHallFactor * mu;
     const double mu2 = muH * muH;
+    const double f = muH / (1. + mu2 * b2);
     const double eb = bx * ex + by * ey + bz * ez;
-    const double f = muH / (1. + mu2 * bmag * bmag);
     // Compute the drift velocity using the Langevin equation.
     vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
     vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
@@ -132,8 +132,8 @@ bool MediumGaAs::HoleVelocity(const double ex, const double ey, const double ez,
   // Inverse of the critical field.
   constexpr double r = 1. / 4000.;
   const double mu = (m_hMobility + m_hSatVel * r) / (1. + emag * r);
-  const double bmag = sqrt(bx * bx + by * by + bz * bz);
-  if (bmag < Small) {
+  const double b2 = bx * bx + by * by + bz * bz;
+  if (b2 < Small) {
     vx = mu * ex;
     vy = mu * ey;
     vz = mu * ez;
@@ -141,8 +141,8 @@ bool MediumGaAs::HoleVelocity(const double ex, const double ey, const double ez,
     // Hall mobility
     const double muH = m_hHallFactor * mu;
     const double mu2 = muH * muH;
+    const double f = mu / (1. + mu2 * b2);
     const double eb = bx * ex + by * ey + bz * ez;
-    const double f = mu / (1. + mu2 * bmag * bmag);
     // Compute the drift velocity using the Langevin equation.
     vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
     vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
