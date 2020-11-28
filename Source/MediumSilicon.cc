@@ -151,19 +151,19 @@ bool MediumSilicon::ElectronVelocity(const double ex, const double ey,
     return Medium::ElectronVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
   }
 
-  const double e = sqrt(ex * ex + ey * ey + ez * ez);
+  const double emag = sqrt(ex * ex + ey * ey + ez * ez);
 
   // Calculate the mobility
   double mu;
   switch (m_highFieldMobilityModel) {
     case HighFieldMobility::Minimos:
-      ElectronMobilityMinimos(e, mu);
+      ElectronMobilityMinimos(emag, mu);
       break;
     case HighFieldMobility::Canali:
-      ElectronMobilityCanali(e, mu);
+      ElectronMobilityCanali(emag, mu);
       break;
     case HighFieldMobility::Reggiani:
-      ElectronMobilityReggiani(e, mu);
+      ElectronMobilityReggiani(emag, mu);
       break;
     default:
       mu = m_eMobility;
@@ -171,22 +171,21 @@ bool MediumSilicon::ElectronVelocity(const double ex, const double ey,
   }
   mu = -mu;
 
-  const double b = sqrt(bx * bx + by * by + bz * bz);
-  if (b < Small) {
+  const double b2 = bx * bx + by * by + bz * bz;
+  if (b2 < Small) {
     vx = mu * ex;
     vy = mu * ey;
     vz = mu * ez;
   } else {
     // Hall mobility
     const double muH = m_eHallFactor * mu;
+    const double mu2 = muH * muH;
+    const double f = mu / (1. + mu2 * b2);
     const double eb = bx * ex + by * ey + bz * ez;
-    const double mub = muH * b;
-    const double f = mu / (1. + mub * mub);
-    const double muH2 = muH * muH;
     // Compute the drift velocity using the Langevin equation.
-    vx = f * (ex + muH * (ey * bz - ez * by) + muH2 * bx * eb);
-    vy = f * (ey + muH * (ez * bx - ex * bz) + muH2 * by * eb);
-    vz = f * (ez + muH * (ex * by - ey * bx) + muH2 * bz * eb);
+    vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
+    vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
+    vz = f * (ez + muH * (ex * by - ey * bx) + mu2 * bz * eb);
   }
   return true;
 }
@@ -210,15 +209,15 @@ bool MediumSilicon::ElectronTownsend(const double ex, const double ey,
     return Medium::ElectronTownsend(ex, ey, ez, bx, by, bz, alpha);
   }
 
-  const double e = sqrt(ex * ex + ey * ey + ez * ez);
+  const double emag = sqrt(ex * ex + ey * ey + ez * ez);
 
   switch (m_impactIonisationModel) {
     case ImpactIonisation::VanOverstraeten:
-      return ElectronImpactIonisationVanOverstraetenDeMan(e, alpha);
+      return ElectronImpactIonisationVanOverstraetenDeMan(emag, alpha);
     case ImpactIonisation::Grant:
-      return ElectronImpactIonisationGrant(e, alpha);
+      return ElectronImpactIonisationGrant(emag, alpha);
     case ImpactIonisation::Massey:
-      return ElectronImpactIonisationMassey(e, alpha);
+      return ElectronImpactIonisationMassey(emag, alpha);
     default:
       std::cerr << m_className << "::ElectronTownsend: Unknown model. Bug!\n";
       break;
@@ -282,40 +281,39 @@ bool MediumSilicon::HoleVelocity(const double ex, const double ey,
     return Medium::HoleVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
   }
 
-  const double e = sqrt(ex * ex + ey * ey + ez * ez);
+  const double emag = sqrt(ex * ex + ey * ey + ez * ez);
 
   // Calculate the mobility
   double mu;
   switch (m_highFieldMobilityModel) {
     case HighFieldMobility::Minimos:
-      HoleMobilityMinimos(e, mu);
+      HoleMobilityMinimos(emag, mu);
       break;
     case HighFieldMobility::Canali:
-      HoleMobilityCanali(e, mu);
+      HoleMobilityCanali(emag, mu);
       break;
     case HighFieldMobility::Reggiani:
-      HoleMobilityReggiani(e, mu);
+      HoleMobilityReggiani(emag, mu);
       break;
     default:
       mu = m_hMobility;
   }
 
-  const double b = sqrt(bx * bx + by * by + bz * bz);
-  if (b < Small) {
+  const double b2 = bx * bx + by * by + bz * bz;
+  if (b2 < Small) {
     vx = mu * ex;
     vy = mu * ey;
     vz = mu * ez;
   } else {
     // Hall mobility
     const double muH = m_hHallFactor * mu;
+    const double mu2 = muH * muH;
+    const double f = mu / (1. + mu2 * b2);
     const double eb = bx * ex + by * ey + bz * ez;
-    const double mub = muH * b;
-    const double f = mu / (1. + mub * mub);
-    const double muH2 = muH * muH;
     // Compute the drift velocity using the Langevin equation.
-    vx = f * (ex + muH * (ey * bz - ez * by) + muH2 * bx * eb);
-    vy = f * (ey + muH * (ez * bx - ex * bz) + muH2 * by * eb);
-    vz = f * (ez + muH * (ex * by - ey * bx) + muH2 * bz * eb);
+    vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
+    vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
+    vz = f * (ez + muH * (ex * by - ey * bx) + mu2 * bz * eb);
   }
   return true;
 }
@@ -339,15 +337,15 @@ bool MediumSilicon::HoleTownsend(const double ex, const double ey,
     return Medium::HoleTownsend(ex, ey, ez, bx, by, bz, alpha);
   }
 
-  const double e = sqrt(ex * ex + ey * ey + ez * ez);
+  const double emag = sqrt(ex * ex + ey * ey + ez * ez);
 
   switch (m_impactIonisationModel) {
     case ImpactIonisation::VanOverstraeten:
-      return HoleImpactIonisationVanOverstraetenDeMan(e, alpha);
+      return HoleImpactIonisationVanOverstraetenDeMan(emag, alpha);
     case ImpactIonisation::Grant:
-      return HoleImpactIonisationGrant(e, alpha);
+      return HoleImpactIonisationGrant(emag, alpha);
     case ImpactIonisation::Massey:
-      return HoleImpactIonisationMassey(e, alpha);
+      return HoleImpactIonisationMassey(emag, alpha);
     default:
       std::cerr << m_className << "::HoleTownsend: Unknown model. Bug!\n";
       break;
