@@ -129,7 +129,7 @@ int main(int argc, char * argv[]){
   }
   
   // Calculate the accumulated charge on each strip.
-  sensor.IntegrateSignal();
+  sensor.IntegrateSignals();
   const double q1 = sensor.GetSignal("strip1", nTimeBins - 1); 
   const double q2 = sensor.GetSignal("strip2", nTimeBins - 1); 
   const double q3 = sensor.GetSignal("strip3", nTimeBins - 1); 
