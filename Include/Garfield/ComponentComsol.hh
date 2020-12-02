@@ -47,7 +47,7 @@ public:
     /// Import the time-independent weighting field maps.
     bool SetWeightingField(const std::string& file, const std::string& label);
     /// Import the time-dependent weighting field maps.
-    bool SetDelayedWeightingField(const std::string& file, const std::string& label);
+    bool SetDelayedWeightingPotential(const std::string& file, const std::string& label);
     /// Set the time interval of the time-dependent weighting field.
     void SetTimeInterval(const double mint,const double maxt, const double stept);
     
@@ -62,6 +62,8 @@ private:
     bool m_timeset =false;
     
     bool IsComment(const std::string& line);
+    
+    bool GetTimeInterval(const std::string& file);
     
 };
 }

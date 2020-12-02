@@ -4,6 +4,7 @@
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <stdlib.h>
 
 #include "Garfield/ComponentComsol.hh"
 #include "Garfield/KDTree.hh"
@@ -728,7 +729,7 @@ void ComponentComsol::GetAspectRatio(const unsigned int i, double& dmin,
     }
 }
 
-bool ComponentComsol::SetDelayedWeightingField(const std::string& field, const std::string& label){
+bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field, const std::string& label){
     
     if (!m_ready) {
         
@@ -738,6 +739,8 @@ bool ComponentComsol::SetDelayedWeightingField(const std::string& field, const s
         return false;
         
     }
+    
+    if(!GetTimeInterval(field)) return false;
     
     if (!m_timeset){
         
@@ -757,13 +760,6 @@ bool ComponentComsol::SetDelayedWeightingField(const std::string& field, const s
     std::ifstream ffield;
     ffield.open(field.c_str(), std::ios::in);
     
-    if (ffield.fail()) {
-        
-        std::cerr << m_className << "::SetDelayedWeightingField:\n"
-        << "    Could not open potentials file " << field << ".\n";
-        return false;
-        
-    }
     // Check if a weighting field with the same label already exists.
     const size_t iw = GetOrCreateWeightingFieldIndex(label);
     
@@ -927,6 +923,9 @@ bool  ComponentComsol::IsComment(const std::string& line) {
 }
 
 void ComponentComsol::SetTimeInterval(const double mint,const double maxt, const double stept){
+    
+    std::cout << std::endl << m_className << "::SetTimeInterval:Overwriting time interval of weighting potential.\n";
+    
     if(m_wdtimes.empty()){
         double t=mint;
         while(t<=maxt){
@@ -936,8 +935,81 @@ void ComponentComsol::SetTimeInterval(const double mint,const double maxt, const
     }
     m_timeset = true;
     
-    std::cout << std::endl << m_className << "::SetTimeInterval: Time set for t in ["<< mint<<","<<maxt<<"].\n";
+    std::cout << std::endl << m_className << "::SetTimeInterval: Time of weighting potential set for t in ["<< mint<<","<<maxt<<"].\n";
     
+}
+
+bool ComponentComsol::GetTimeInterval(const std::string& field){
+    
+    if(!m_wdtimes.empty()) return false;
+    
+    std::ifstream ffield;
+    ffield.open(field.c_str(), std::ios::in);
+    
+    if (ffield.fail()) {
+        
+        std::cerr << m_className << "::SetDelayedWeightingField:\n"
+        << "    Could not open potentials file " << field << ".\n";
+        return false;
+        
+    }
+    
+    std::string strtime = "t=";
+    std::string holder;
+    std::string hoder2;
+    
+    double time=-1.;
+    
+    std::string line;
+    // Find first occurrence of "geeks"
+    size_t found =0;
+    
+    bool searching =true;
+    while (std::getline(ffield, line)) {
+        // Skip empty lines.
+        if (line.empty()) continue;
+        // Skip lines that are not comments.
+        if (line[0] == '%' && line[2] != 'x') continue;
+        
+        while(searching){
+            found = line.find(strtime, found+1);
+            
+            searching = false;
+            
+            if (found != std::string::npos){
+                
+                searching = true;
+                
+                int i =2;
+                
+                holder ="";
+                
+                while(true){
+                    
+                    holder+=line[found+i];
+                    i++;
+                    
+                    if(found+i==line.size()) break;
+                    
+                    hoder2= line[found+i];
+                    
+                    if( hoder2.compare(" ")==0) break;
+                }
+                
+                time = stod(holder);
+                m_wdtimes.push_back (time);
+            }
+        }
+        break;
+    }
+    
+    m_timeset = true;
+    
+    std::cout << std::endl << m_className << "::GetTimeInterval: Time of weighting potential set for t in ["<< m_wdtimes[0]<<","<<m_wdtimes[m_wdtimes.size()-1]<<"].\n";
+    
+    ffield.close();
+    
+    return true;
 }
 
 }
