@@ -14,13 +14,11 @@
 
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/Random.hh"
-#include "Garfield/ViewField.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/MediumMagboltz.hh"
 #include "Garfield/Sensor.hh"
 #include "Garfield/AvalancheMicroscopic.hh"
-#include "Garfield/AvalancheMC.hh"
-#include "Garfield/ViewDrift.hh"
+#include "Garfield/AvalancheGrid.hh"
 #include "Garfield/ViewSignal.hh"
 #include "Garfield/SolidBox.hh"
 #include "Garfield/GeometrySimple.hh"
@@ -36,22 +34,21 @@ int main(int argc, char * argv[]) {
     
     const bool debug = true;
     
-    double gap= 0.5; double thickness = 4; double eps = 8.; double voltage = -10000.; double sigma = 0.01;
+    // The geometry of the RPC.
+    double gap= 0.2; double thickness = 0.8; double eps = 5.; double voltage = -10000; double sigma =0.5;
     
     ComponentParallelPlate* RPC = new ComponentParallelPlate();
     RPC->Setup(gap,thickness,eps,voltage,sigma);
     
+    // Adding a readout structure.
     const std::string label ="NaN";
     RPC->AddPlane(label);
-    //RPC->AddStrip(16, 4,label);
-    //RPC->AddPixel(30.,0.,10.,10.,label);
     
-    
-    // Setup the gas.
+    // Setup the gas, but one can also use a gasfile.
     MediumMagboltz gas;
     gas.SetComposition("ar", 80., "co2", 20.);
     gas.SetTemperature(293.15);
-    gas.SetPressure(200.);
+    gas.SetPressure(760.);
     gas.Initialise(true);
     
     // Set the Penning transfer efficiency.
@@ -62,56 +59,58 @@ int main(int argc, char * argv[]) {
     const std::string path = getenv("GARFIELD_HOME");
     gas.LoadIonMobility(path + "/Data/IonMobility_Ar+_Ar.txt");
     
+    // Setting the drift medium.
     SolidBox box(0., 0., 0., 100., 100., gap);
     GeometrySimple geo;
     geo.AddSolid(&box, &gas);
     RPC->SetGeometry(&geo);
-    
-    
     RPC->SetMedium(&gas);
     
     // Create the sensor.
     Sensor sensor;
     sensor.AddComponent(RPC);
     sensor.AddElectrode(RPC, label);
-    sensor.EnableInducedCharge();
-  //  sensor.EnableDelayedSignal();
     
-    constexpr bool plotField = true;
-    if (plotField) {
-        ViewField* fieldView = new ViewField();
-        fieldView->SetSensor(&sensor);
-        fieldView->SetPlane(0, -1, 0, 0, 0, 0);
-        fieldView->SetArea(-10, 0, 10, gap);
-        fieldView->PlotContour("v");
-    }
-    // Plot the weighting potential if requested.
-    constexpr bool plotWeightingField = false;
-    if (plotWeightingField) {
-        ViewField* wfieldView = new ViewField();
-        wfieldView->SetComponent(RPC);
-        wfieldView->SetPlane(0, -1, 0, 0, 0, 0);
-        wfieldView->SetArea(-10, 0, 10, gap);
-        wfieldView->PlotContourWeightingField(label, "v");
-    }
+    // Enable the calculation of the total induced charge on the electrode, as a function of time.
+    sensor.EnableInducedCharge();
+    // The resistive layer will make the weighting potential time-dependent.
+    sensor.EnableDelayedSignal();
     
     // Set the time bins.
     const unsigned int nTimeBins = 100;
     const double tmin =  0.;
-    const double tmax = 100.;
+    const double tmax = 40;
     const double tstep = (tmax - tmin) / nTimeBins;
     sensor.SetTimeWindow(tmin, tstep, nTimeBins);
     
+    // Set the times the delayed signals will be calculated.
+    std::vector<double> times;
+    
+    for(int i=0;i<nTimeBins;i++){
+        times.push_back(tmin+tstep/2+i*tstep);
+    }
+    sensor.SetDelayedSignalTimes(times);
+    
+    // Create the AvalancheMicroscopic.
     AvalancheMicroscopic aval;
     aval.SetSensor(&sensor);
     aval.UseWeightingPotential();
     aval.EnableSignalCalculation();
-
     
-    AvalancheMC drift;
-    drift.SetSensor(&sensor);
-    drift.SetDistanceSteps(2.e-4);
+    // Set time window where the calculations will be done microscopically.
+    const double tMaxWindow =2.;
+    aval.SetTimeWindow(0.,tMaxWindow);
     
+    // Create the AvalancheGrid for grid-based avalanche calculations that are suited for constant drift fields. This class will take over the calculations of the microscopic class after the set time-window.
+    AvalancheGrid avalgrid;
+    avalgrid.SetSensor(&sensor);
+    avalgrid.SetAvalancheMicroscopic(&aval);
+    
+    // Setting relevant paramiters of the gas. These can be obtained from the Medium class when using a gas file.
+    avalgrid.SetElectronTownsend(1.3);
+    avalgrid.SetElectronAttachment(.35);
+    
+    // Preparing the plotting of the induced charge and signal of the electrode readout.
     constexpr bool plotSignal = true;
     ViewSignal* signalView = nullptr;
     TCanvas* cSignal = nullptr;
@@ -132,54 +131,46 @@ int main(int argc, char * argv[]) {
         chargeView->SetSensor(&sensor);
     }
     
-    constexpr bool plotDrift = false;
-    ViewDrift* driftView = nullptr;
-    TCanvas* cDrift = nullptr;
-    aval.EnablePlotting(driftView);
-    drift.EnablePlotting(driftView);
-    if (plotDrift) {
-        cDrift = new TCanvas("cDrift", "", 600, 600);
-        driftView = new ViewDrift();
-        driftView->SetArea(-5, -5, 0,5, 5, gap);
-        driftView->SetPlane(0, -1, 0, 0, 0, 0);
-        driftView->SetCanvas(cDrift);
-    }
-    
+    // Initial position of an electron in the drift gap,
     const double x0 = 0.;
     const double y0 = 0.;
-    const double z0 = gap*0.99;
+    const double z0 = gap*0.999; // Starting at the top of the drift gap.
     const double t0 = 0.;
-    const double e0 = 0.1;
-    const double dx = 0.;const double dy = 0.;const double dz = 0.;
+    const double e0 = 1;
+    const double dx = 0.;const double dy = 0.;const double dz = 0;
     
+    // Setting the timer for the running time of the algorithm.
     std::clock_t start;
        double duration;
     
     start = std::clock();
-    aval.DriftElectron(x0, y0, z0, t0,e0,dx,dy,dz);
     
+    // Start avalanche.
+    aval.AvalancheElectron(x0, y0, z0, t0,e0,dx,dy,dz);
+    // Stops calculation after tMaxWindow ns.
+    
+    // Start grid based avalanche calculations starting from where the microsocpic calculations stoped,
+    avalgrid.StartGridAvalanche(0,gap,1000,-0.05,0.05,500);
+    
+    // Stop timer.
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
     
-    LOG("Script: "<<"Electrons have drifted. It has taken "<<duration<<"s to run.");
+    LOG("Script: "<<"Electrons have drifted. It took "<<duration<<"s to run.");
     
+    // Plot Signals
     if (plotSignal) {
-        signalView->Plot(label);
+        signalView->Plot(label,true);
         cSignal->Update();
         gSystem->ProcessEvents();
         
-        chargeView->EnableSignalPlot();
-        chargeView->Plot(label);
+        chargeView->Plot(label,false);
         cCharge->Update();
         gSystem->ProcessEvents();
     }
     
-    
-    if (plotDrift) {
-        constexpr bool twod = true;
-        driftView->Plot(twod);
-        cDrift->Update();
-        gSystem->ProcessEvents();
-    };
+    // Export induced current and charge data as an csv file.
+    sensor.ExportCharge(label);
+    sensor.ExportSignal(label);
     
     app.Run(kTRUE);
 }

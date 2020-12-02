@@ -10,7 +10,7 @@ add_executable(Weight Weight.C)
 target_link_libraries(Weight Garfield)
 
 #---Copy all files locally to the build directory-------------------------------
-#foreach(_file ELIST.lis MPLIST.lis NLIST.lis PRNSOL.lis)
-#  configure_file(${_file} ${_file} COPYONLY)
-# endforeach()
+foreach(_file ar_93_co2_7_3bar.gas)
+  configure_file(${_file} ${_file} COPYONLY)
+endforeach()
 
