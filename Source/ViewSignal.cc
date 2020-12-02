@@ -189,7 +189,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
   }
 }
 
-void ViewSignal::Plot(const std::string& label, const bool total,
+void ViewSignal::Plot(const std::string& label, const bool getsignal, const bool total,
                             const bool delayed, const bool same) {
     if (!(m_sensor->GetEnableInducedCharge())){
         PlotSignal(label);
@@ -203,11 +203,6 @@ void ViewSignal::Plot(const std::string& label, const bool total,
   canvas->cd();
   canvas->SetTitle("Signal");
     
-    if(m_getsignal) {
-        LOG("Differentiating induced charge");
-        m_sensor->DiffCharge(label);
-    }
-    
   unsigned int nBins = 100;
   double t0 = 0., dt = 1.;
   m_sensor->GetTimeWindow(t0, dt, nBins);
@@ -217,7 +212,7 @@ void ViewSignal::Plot(const std::string& label, const bool total,
   std::string ylabel = m_labelY;
   if (ylabel.empty()) {
     //ylabel = m_sensor->IsIntegrated(label) ? "signal [fC]" : "signal [fC / ns]";
-      ylabel =m_getsignal ? "signal [fC / ns]" : "charge [fC]";
+      ylabel =getsignal ? "signal [fC / ns]" : "charge [fC]";
   }
   unsigned int nPlots = same ? 1 : 0;
   if (total) {
@@ -229,7 +224,7 @@ void ViewSignal::Plot(const std::string& label, const bool total,
     m_hSignal->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {
       //const double sig = m_sensor->GetSignal(label, i);
-      const double sig = m_getsignal ? m_sensor->GetSignal(label, i,0): m_sensor->GetCharge(label, i,0);
+      const double sig = getsignal ? m_sensor->GetSignal(label, i,0): m_sensor->GetCharge(label, i,0);
       m_hSignal->SetBinContent(i + 1, sig);
     }
       m_hSignal->SetLineWidth(6);
@@ -268,7 +263,7 @@ void ViewSignal::Plot(const std::string& label, const bool total,
       m_hDelayedSignal->SetLineStyle(2);
       m_hDelayedSignal->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
-          const double sig = m_getsignal ? m_sensor->GetSignal(label, i,2):m_sensor->GetCharge(label, i,2);
+          const double sig = getsignal ? m_sensor->GetSignal(label, i,2):m_sensor->GetCharge(label, i,2);
         m_hDelayedSignal->SetBinContent(i + 1, sig);
       }
       m_hDelayedSignal->SetFillStyle( 3001);
@@ -280,7 +275,7 @@ void ViewSignal::Plot(const std::string& label, const bool total,
       m_hPromptSignal->SetLineStyle(2);
       m_hPromptSignal->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
-          const double sig = m_getsignal ? m_sensor->GetSignal(label, i,1):m_sensor->GetCharge(label, i,1);
+          const double sig = getsignal ? m_sensor->GetSignal(label, i,1):m_sensor->GetCharge(label, i,1);
           m_hPromptSignal->SetBinContent(i + 1, sig);
       }
       m_hPromptSignal->SetFillStyle( 3001);
@@ -303,7 +298,7 @@ void ViewSignal::Plot(const std::string& label, const bool total,
       
       TLegend *leg = new TLegend(0.7,0.7,0.9,0.9);
       
-      if (!m_getsignal){
+      if (!getsignal){
           leg->SetHeader("Induced charge as a function of time");
      leg->AddEntry(g0,"Total induced charge","f");
        leg->AddEntry(g2,"Prompt induced charge","f");

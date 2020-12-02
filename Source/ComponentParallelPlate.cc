@@ -204,7 +204,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el, con
 double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el, const double X, const double Y, const double Z, const double t){
     switch(el.ind) {
         case structureelectrode::Plane: {
-            double tau = (1+m_b/m_g)*(1/m_sigma); // Note to self: You dropt the eps) here for convenience.
+            double tau = (m_eps+m_b/m_g)/(m_sigma); // Note to self: You dropt the eps) here for convenience.
             return m_Vw *(1-exp(-t/tau))*(m_b*(m_g -Z))/(m_g*(m_b+m_eps*m_g)); // Note to self: Check epsr depencences.
             break;}
         case structureelectrode::Pixel:{
@@ -417,8 +417,6 @@ void ComponentParallelPlate::DelayedWeightingField(const double x, const double 
         if (m_sigma==0) {
             LOG("No conductivity set!");
         }
-        
-        wx= IntegrateDelayedPotential(element,x, y, z,t);
     }
 }
 

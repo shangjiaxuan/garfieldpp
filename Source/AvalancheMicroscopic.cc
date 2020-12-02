@@ -3,6 +3,7 @@
 #include <functional>
 #include <iostream>
 #include <string>
+#include <random>
 
 #include "Garfield/AvalancheMicroscopic.hh"
 #include "Garfield/FundamentalConstants.hh"
@@ -811,6 +812,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         }
         if (!ok) break;
 
+          if (m_testsignal) {dt =m_testt; en=0.;}
+          
         // Increase the collision counter.
         ++nCollTemp;
 
@@ -861,16 +864,24 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           ky1 = ky * b1 + ey * b2;
           kz1 = kz * b1 + ez * b2;
 
+            
           // Calculate the step in coordinate space.
           const double b3 = dt * dt * c2;
           dx = vx * dt + ex * b3;
           dy = vy * dt + ey * b3;
           dz = vz * dt + ez * b3;
+            
+            if (m_testsignal){
+            dx = 0.;
+            dy = 0.;
+            dz = m_testv* dt;
+            }
         }
         double x1 = x + dx;
         double y1 = y + dy;
         double z1 = z + dz;
         double t1 = t + dt;
+    
         // Get the electric field and medium at the proposed new position.
         m_sensor->ElectricField(x1, y1, z1, ex, ey, ez, medium, status);
         if (!hole) {
@@ -1499,4 +1510,5 @@ void AvalancheMicroscopic::Terminate(double x0, double y0, double z0, double t0,
     }
   }
 }
+
 }

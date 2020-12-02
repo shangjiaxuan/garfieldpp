@@ -237,6 +237,8 @@ public:
     /// Deactivate the user handle called at every ionisation.
     void UnsetUserHandleIonisation() { m_userHandleIonisation = nullptr; }
     
+    void EnableTestSignal(const double v, const double dt=5e-04) { m_testv = v; m_testt=dt ;m_testsignal = true; }
+    
     /// Switch on debugging messages.
     void EnableDebugging() { m_debug = true; }
     void DisableDebugging() { m_debug = false; }
@@ -315,6 +317,10 @@ private:
     bool m_hasTimeWindow = false;
     double m_tMin = 0.;
     double m_tMax = 0.;
+    
+    bool m_testsignal =false;
+    double m_testv = 0.;
+    double m_testt = 0.;
     
     // User procedures
     void (*m_userHandleStep)(double x, double y, double z, double t, double e,

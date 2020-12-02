@@ -39,15 +39,20 @@ class ViewSignal : public ViewBase {
                   const bool electron = false, const bool ion = false, 
                   const bool delayed = false, const bool same = false);
 
-  /** Retrieve the histogram for the induced signal.
-    * \param h histogram to be returned
-               ('t': total, 'e': electron-induced, 'i': ion/hole-induced).
-    **/
+    /** Retrieve the histogram for the total, prompt and delayed induced charge or signal..
+      * \param label Identifier (weighting field) of the signal to be plotted.
+      *  \param h histogram to be returned
+      * \param electron Flag whether to plot the electron-induced signal.
+      * \param ion Flag whether to plot the ion/hole-induced signal.
+      * \param delayed Flag whether to plot the delayed signal component.
+      * \param same Flag to keep existing plots on the canvas or not.
+      * \param getsignal is true for plotting the signal and false for plotting the charge.
+      */
     
-    void Plot(const std::string& label, const bool total = true,
+    void Plot(const std::string& label, const bool getsignal, const bool total = true,
                     const bool delayed = true, const bool same = false);
 
-    /** Retrieve the histogram for the induced charge or induced signal.
+    /** Retrieve the histogram for the total, prompt and delayed induced charge or signal.
       * \param h histogram to be returned
                  ('t': total, 'e': electron-induced, 'i': ion/hole-induced).
       **/
@@ -59,10 +64,6 @@ class ViewSignal : public ViewBase {
 
   /// Set the x-axis limits explicitly.
   void SetRangeX(const double xmin, const double xmax);
-  /// Remove the user-defined x-axis limits.
-    void EnableSignalPlot(){
-        m_getsignal =true;
-    };
     /// Remove the user-defined x-axis limits.
   void UnsetRangeX() { m_userRangeX = false; }
 
@@ -101,7 +102,6 @@ class ViewSignal : public ViewBase {
   double m_ymin = 0.;
   double m_ymax = 0.;
   bool m_userRangeY = false;
-    bool m_getsignal = false;
 
   // Axis label.
   std::string m_labelY = "";

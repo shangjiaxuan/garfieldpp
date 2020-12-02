@@ -4,6 +4,7 @@
 #include <vector>
 #include <utility>
 #include <tuple>
+#include <fstream>
 
 #include "Component.hh"
 #include "Shaper.hh"
@@ -123,13 +124,13 @@ public:
     double GetCharge(const std::string& label, const unsigned int bin,const int comp=0);
     /// Retrieve the induced charge for a given electrode and time bin. comp=0: total induced charge, comp=1: prompt induced charge, comp=2: delayed induced charge.
     double GetSignal(const std::string& label, const unsigned int bin,const int comp);
-    /// Retrieve the components of signal for a given electrode and time bin. comp=0: total signal, comp=1: prompt signal, comp=2: delayed signal.
+    /// Overwrite the indused current by taking the time derivative of the induced charge.
     void DiffCharge(const std::string& label);
-    /// Given the induced charge as a function of time, calculate the signal by taking the derivative.
+    /// Retrieve the prompt signal for a given electrode and time bin.
     double GetPromptSignal(const std::string& label, const unsigned int bin);
-    /// Retrieve the electron prompt signal for a given electrode and time bin.
+    /// Retrieve the delayed signal for a given electrode and time bin.
     double GetDelayedSignal(const std::string& label, const unsigned int bin);
-    /// Retrieve the electron delayed signal for a given electrode and time bin.
+    /// Retrieve the electron  signal for a given electrode and time bin.
     double GetElectronSignal(const std::string& label, const unsigned int bin);
     /// Retrieve the ion or hole signal for a given electrode and time bin.
     double GetIonSignal(const std::string& label, const unsigned int bin);
@@ -137,8 +138,7 @@ public:
     double GetDelayedElectronSignal(const std::string& label, const unsigned int bin);
     /// Retrieve the delayed ion/hole signal for a given electrode and time bin.
     double GetDelayedIonSignal(const std::string& label, const unsigned int bin);
-    /// Retrieve the total induced charge for a given electrode,
-    /// calculated using the weighting potentials at the start and end points.
+    /// Calculated using the weighting potentials at the start and end points.
     double GetInducedCharge(const std::string& label);
     /// Set the function to be used for evaluating the transfer function.
     void SetTransferFunction(double (*f)(double t));
@@ -226,6 +226,49 @@ public:
                    const std::vector<std::array<double, 3> >& vs,
                    const std::vector<double>& ns, const int navg);
     /// Add the induced charge from a charge carrier drift between two points.
+    
+    void ExportCharge(const std::string& label){
+        
+        for (const auto& electrode : m_electrodes) {
+            if (electrode.label == label) {
+                
+                std::ofstream myfile;
+                std::string filename = "Charge"+label+".csv";
+                myfile.open (filename);
+                myfile << "The cumulative induced charge.\n";
+                myfile << "Time [ns],Prompt [fC],Delayed [fC],Total [fC],\n";
+                const int N = (int) m_nTimeBins;
+                for (int i = 0; i < N; i++){
+                    myfile<<  std::to_string(m_tStart+i*m_tStep)<<"," <<  std::to_string(ElementaryCharge *electrode.promptInducedCharge[i])<<","<<std::to_string(ElementaryCharge *electrode.delayeInduceddCharge[i])<<","<<std::to_string(ElementaryCharge *electrode.inducedCharge[i])<<","<<"\n";
+                }
+                myfile.close();
+            }
+        }
+          return;
+    }
+    /// Exporting cumulative induced charge to a csv file.
+    
+    void ExportSignal(const std::string& label){
+        
+        for (const auto& electrode : m_electrodes) {
+            if (electrode.label == label) {
+                
+                std::ofstream myfile;
+                std::string filename = "Signal"+label+".csv";
+                myfile.open (filename);
+                myfile << "The induced signal.\n";
+                myfile << "Time [ns],Prompt [zC/ns],Delayed [zC/ns],Total [zC/ns];\n";
+                double scale =1e6;
+                const int N = (int) m_nTimeBins;
+                for (int i = 0; i < N; i++){
+                    myfile<<  std::to_string(m_tStart+i*m_tStep)<<"," <<  std::to_string(scale*ElementaryCharge *electrode.promptSignal[i])<<","<<std::to_string(scale*ElementaryCharge *electrode.delayedSignal[i])<<","<<std::to_string(scale*ElementaryCharge *electrode.signal[i])<<","<<"\n";
+                }
+                myfile.close();
+            }
+        }
+          return;
+    }
+    /// Exporting induced signal to a csv file.
     
     void AddInducedCharge(const double q, const double x0, const double y0,
                           const double z0, const double x1, const double y1,
@@ -321,7 +364,16 @@ private:
                     const bool delayed = false);
     void FillBin(Electrode& electrode, const unsigned int bin,
                  const double signal, const bool electron, const bool delayed) {
+        
+        if(delayed){
+            electrode.delayedSignal[bin] += signal;
+            
+        } else{
+            electrode.promptSignal[bin] += signal;
+        }
+        
         electrode.signal[bin] += signal;
+        
         if (electron) {
             electrode.electronsignal[bin] += signal;
             if (delayed) electrode.delayedElectronSignal[bin] += signal;

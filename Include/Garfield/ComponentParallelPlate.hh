@@ -49,7 +49,7 @@ public:
     
     /// Calculeting delayed weigthing electric potential at position \f$x, y, z.
     double DelayedWeightingPotential(const double x, const double y,
-                                      const double z, const double t, const std::string& label);
+                                      const double z, const double t, const std::string& label) override;
     
     /// Calculeting delayed weigthing electric fields at position \f$x, y, z.
     virtual void DelayedWeightingField(const double x, const double y,
