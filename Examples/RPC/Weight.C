@@ -71,15 +71,13 @@ int main(int argc, char * argv[]) {
     sensor.AddComponent(RPC);
     sensor.AddElectrode(RPC, label);
     
-    // Enable the calculation of the total induced charge on the electrode, as a function of time.
-    sensor.EnableInducedCharge();
     // The resistive layer will make the weighting potential time-dependent.
     sensor.EnableDelayedSignal();
     
     // Set the time bins.
-    const unsigned int nTimeBins = 100;
+    const unsigned int nTimeBins = 200;
     const double tmin =  0.;
-    const double tmax = 40;
+    const double tmax = 50;
     const double tstep = (tmax - tmin) / nTimeBins;
     sensor.SetTimeWindow(tmin, tstep, nTimeBins);
     
@@ -150,19 +148,19 @@ int main(int argc, char * argv[]) {
     // Stops calculation after tMaxWindow ns.
     
     // Start grid based avalanche calculations starting from where the microsocpic calculations stoped,
-    avalgrid.StartGridAvalanche(0,gap,1000,-0.05,0.05,500);
+    avalgrid.StartGridAvalanche(0,gap,2000,-0.05,0.05,500);
     
     // Stop timer.
     duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
     
     LOG("Script: "<<"Electrons have drifted. It took "<<duration<<"s to run.");
     
-    // Plot Signals
     if (plotSignal) {
+        // Plot signals
         signalView->Plot(label,true);
         cSignal->Update();
         gSystem->ProcessEvents();
-        
+        // Plot induced charge
         chargeView->Plot(label,false);
         cCharge->Update();
         gSystem->ProcessEvents();

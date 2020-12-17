@@ -40,7 +40,7 @@ public:
     void SetElectronAttachment(const double att){m_Attachment=10*att;};
     /// Set the maximum avalanche size (1e7 by default).
     void SetMaxAvalancheSize(const double size){m_MaxSize=size;};
-    /// Enable transverse diffusion of electrons.
+    /// Enable transverse diffusion of electrons with transverse diffusion coefficients (in √cm).
     void EnableDiffusion(const double diffSigma){m_diffusion=true;m_DiffSigma = diffSigma;}
     
 private:
@@ -49,17 +49,17 @@ private:
     
     double m_Attachment = 3.5; // [1/mm];
     
-    double m_Velocity=0.;
+    double m_Velocity=0.; // [cm/ns]
     
-    double m_MaxSize = 1e7;
+    double m_MaxSize = 1e7; // Saturations size
     
-    bool m_Saturated = false;
+    bool m_Saturated = false; // Check if avalanche has reached maximum size
     
-    double m_SaturationTime = -1.;
+    double m_SaturationTime = -1.; // Time when the avalanche has reached maximum size
     
-    bool m_diffusion = false;
+    bool m_diffusion = false; // Check if transverse diffusion is enabled.
     
-    double m_DiffSigma =1.;
+    double m_DiffSigma =0.; // Transverse diffusion coefficients (in √cm).
     
     std::string m_className = "AvalancheGrid";
     

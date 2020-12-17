@@ -113,6 +113,8 @@ class ComponentFieldMap : public Component {
     double v;
     // Weighting potentials
     std::vector<double> w;
+      // Delayed weighting potentials
+      std::vector<std::vector<double>> dw;
   };
   std::vector<Node> m_nodes;
 
@@ -130,6 +132,9 @@ class ComponentFieldMap : public Component {
 
   std::vector<std::string> m_wfields;
   std::vector<bool> m_wfieldsOk;
+    std::vector<bool> m_dwfieldsOk;
+    
+    std::vector<double> m_wdtimes;
 
   // Bounding box
   bool m_hasBoundingBox = false;

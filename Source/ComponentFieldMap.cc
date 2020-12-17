@@ -2320,7 +2320,6 @@ size_t ComponentFieldMap::GetWeightingFieldIndex(const std::string& label) const
 
 size_t ComponentFieldMap::GetOrCreateWeightingFieldIndex(
     const std::string& label) {
-
   // Check if a weighting field with the same label already exists.
   size_t nWeightingFields = m_wfields.size();
   for (size_t i = 0; i < nWeightingFields; ++i) {
@@ -2331,6 +2330,7 @@ size_t ComponentFieldMap::GetOrCreateWeightingFieldIndex(
   m_wfieldsOk.resize(nWeightingFields);
   for (auto& node : m_nodes) {
     node.w.resize(nWeightingFields);
+    node.dw.resize(nWeightingFields);
   }
   m_wfields.back() = label;
   return nWeightingFields - 1;

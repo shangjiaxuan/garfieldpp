@@ -182,15 +182,6 @@ bool Sensor::GetMedium(const double x, const double y, const double z,
     return false;
 }
 
-void Sensor::FillBinComponentsCharge(Electrode& electrode, const unsigned int bin,
-                                     const double charge) {
-    
-    for(unsigned int i = 0; i < m_nTimeBins-bin; ++i){
-        electrode.inducedCharge[bin+i] += charge;
-        electrode.promptInducedCharge[bin+i] +=charge;
-    }
-}
-
 bool Sensor::SetArea() {
     if (!GetBoundingBox(m_xMinUser, m_yMinUser, m_zMinUser, m_xMaxUser,
                         m_yMaxUser, m_zMaxUser)) {
@@ -515,8 +506,6 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
             const double w1 = electrode.comp->WeightingPotential(x1, y1, z1, lbl);
             charge= q * (w1 - w0);
             current = 2*charge / dt;
-            
-            if(m_useinducedcharge) FillBinComponentsCharge(electrode, bin, charge);
         } else {
             double wx = 0., wy = 0., wz = 0.;
             // Calculate the weighting field for this electrode.
@@ -580,48 +569,41 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
     for (auto& electrode : m_electrodes) {
         const std::string lbl = electrode.label;
         std::vector<double> id(nd, 0.);
-        if (useWeightingPotential) {
+        if (useWeightingPotential) { // When using the weighting potential
             double chargeHolder = 0.;
             double currentHolder =0.;
             int binHolder =0;
             
-            for (unsigned int i = 0; i <nd; ++i) {
+            for (unsigned int i = 0; i <nd; ++i) { // For each time in the given vector of delayed times.
                 
-                double delayedtime = m_delayedSignalTimes[i]-t0;
+                double delayedtime = m_delayedSignalTimes[i]-t0; // t - t0
                 
-                if (delayedtime<0) continue;
-                
+                if (delayedtime<0) continue; // Heaviside-functie
+                // Find bin that needs to be filled.
                 int bin2 = int((m_delayedSignalTimes[i] - m_tStart) / m_tStep);
-                
+                // Compute induced charge
                 double dp0 = electrode.comp->DelayedWeightingPotential(x0, y0, z0, delayedtime,lbl);
                 double dp1 = electrode.comp->DelayedWeightingPotential(x1, y1, z1, delayedtime,lbl);
                 
                 double charge = q * (dp1 - dp0);
-                
+                // In very rare cases the result is infinity. We do not let this contribute.
                 if (isnan(charge)){
                     charge=0.;
                 }
-                
-                if(m_useinducedcharge){
-                    electrode.inducedCharge[bin2] += charge;
-                    electrode.delayeInduceddCharge[bin2] += charge;
-                }
-                
+                // Calculate induced current based on the induced charge.
                 if(i>0){
+                    // Time difference between previous entry.
                     double dtt = m_delayedSignalTimes[i]-m_delayedSignalTimes[i-1];
-                    
+                    // Induced current
                     double current2=(charge-chargeHolder)/dtt;
-                    
+                    // Fill bins
                     electrode.delayedSignal[bin2] += current2;
                     electrode.signal[bin2] += current2;
-                    
+                    // Linear interpolation if the current is calculated from the induced charge of two non-subsequent bins.
                     if (binHolder>0 && binHolder+1<bin2){
                         const int diffBin =bin2-binHolder;
                         for(int j=binHolder+1;j<bin2;j++){
-                            if(m_useinducedcharge){
-                            electrode.inducedCharge[j] += (j - binHolder)*(charge-chargeHolder)/diffBin+chargeHolder;
-                            electrode.delayeInduceddCharge[j] += (j - binHolder)*(charge-chargeHolder)/diffBin+chargeHolder;
-                            }
+                
                             electrode.delayedSignal[j] += (j - binHolder)*(current2-currentHolder)/diffBin+currentHolder;
                             electrode.signal[j] += (j - binHolder)*(current2-currentHolder)/diffBin+currentHolder;
                         }
@@ -629,10 +611,13 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
                     
                     currentHolder = current2;
                 }
+                // Hold information for next current calculation and interpolation.
                 binHolder = bin2;
                 chargeHolder = charge;
             }
-        }else{
+            
+        }else{ // When using the weighting field
+            
             for (unsigned int i = 0; i < nd; ++i) {
                 // Integrate over the drift line segment.
                 const double step = std::min(m_delayedSignalTimes[i], dt);
@@ -655,30 +640,6 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
                 id[i] = -q * 0.5 * sum * step;
             }
             FillSignal(electrode, q, td, id, m_nAvgDelayedSignal, true);
-        }
-    }
-}
-
-void Sensor::DiffCharge(const std::string& label){
-    if(!m_useinducedcharge) return;
-    std::cout << ":DiffCharge:Overwriting induced charge.\n";
-    
-    double pcurrent=0.;
-    double dcurrent=0.;
-    
-    for (auto& electrode : m_electrodes) {
-        if (electrode.label == label){
-            for (unsigned int i = 0; i < m_nTimeBins-1; ++i) {
-                dcurrent=(electrode.delayeInduceddCharge[i]-electrode.delayeInduceddCharge[i+1])/m_tStep;
-                pcurrent=(electrode.promptInducedCharge[i]-electrode.promptInducedCharge[i+1])/m_tStep;
-                
-                electrode.promptSignal[i]=-pcurrent;
-                electrode.delayedSignal[i]=-dcurrent;
-                electrode.signal[i]=-(pcurrent+dcurrent);
-                
-                pcurrent=0.;
-                dcurrent=0.;
-            }
         }
     }
 }
@@ -949,7 +910,6 @@ double Sensor::GetCharge(const std::string& label, const unsigned int bin,const 
             }
         }
     }
-    // return ElementaryCharge * sig;
     return ElementaryCharge*sig;
 }
 
@@ -971,7 +931,6 @@ double Sensor::GetSignal(const std::string& label, const unsigned int bin,const 
             }
         }
     }
-    // return ElementaryCharge * sig;
     return ElementaryCharge*sig;
 }
 
@@ -1259,10 +1218,21 @@ void Sensor::IntegrateSignal(Electrode& electrode) {
         electrode.signal[j] *= m_tStep;
         electrode.electronsignal[j] *= m_tStep;
         electrode.ionsignal[j] *= m_tStep;
+        
+        electrode.promptSignal[j] *= m_tStep;
+        electrode.delayedSignal[j] *= m_tStep;
         if (j > 0) {
             electrode.signal[j] += electrode.signal[j - 1];
             electrode.electronsignal[j] += electrode.electronsignal[j - 1];
             electrode.ionsignal[j] += electrode.ionsignal[j - 1];
+            
+            electrode.promptSignal[j] += electrode.promptSignal[j-1];
+            electrode.delayedSignal[j] += electrode.delayedSignal[j-1];
+            
+            electrode.inducedCharge[j] =electrode.signal[j];
+            electrode.promptInducedCharge[j] =electrode.promptSignal[j];
+            electrode.delayeInduceddCharge[j] =electrode.delayedSignal[j];
+            
         }
     }
     electrode.integrated = true;

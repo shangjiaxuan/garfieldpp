@@ -46,7 +46,7 @@ class ViewSignal : public ViewBase {
       * \param ion Flag whether to plot the ion/hole-induced signal.
       * \param delayed Flag whether to plot the delayed signal component.
       * \param same Flag to keep existing plots on the canvas or not.
-      * \param getsignal is true for plotting the signal and false for plotting the charge.
+      * \param getsignal is true for plotting the induced signal and false for plotting the induced charge.
       */
     
     void Plot(const std::string& label, const bool getsignal, const bool total = true,

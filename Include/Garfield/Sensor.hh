@@ -30,10 +30,6 @@ public:
     void EnableComponent(const unsigned int i, const bool on);
     /// Activate/deactivate use of the magnetic field of a given component.
     void EnableMagneticField(const unsigned int i, const bool on);
-    /// Enable calculation of the induced charge as a function of time.  (default: off).
-    void EnableInducedCharge() { m_useinducedcharge = true; }
-    /// Retreive if you are using induced charge methode for calculating the signal.
-    bool GetEnableInducedCharge() { return m_useinducedcharge; }
     
     /// Add an electrode.
     void AddElectrode(Component* comp, const std::string& label);
@@ -124,8 +120,6 @@ public:
     double GetCharge(const std::string& label, const unsigned int bin,const int comp=0);
     /// Retrieve the induced charge for a given electrode and time bin. comp=0: total induced charge, comp=1: prompt induced charge, comp=2: delayed induced charge.
     double GetSignal(const std::string& label, const unsigned int bin,const int comp);
-    /// Overwrite the indused current by taking the time derivative of the induced charge.
-    void DiffCharge(const std::string& label);
     /// Retrieve the prompt signal for a given electrode and time bin.
     double GetPromptSignal(const std::string& label, const unsigned int bin);
     /// Retrieve the delayed signal for a given electrode and time bin.
@@ -382,10 +376,6 @@ private:
             if (delayed) electrode.delayedIonSignal[bin] += signal;
         }
     }
-    
-    
-    void FillBinComponentsCharge(Electrode& electrode, const unsigned int bin,
-                                 const double charge);
     
     void FillSignalComponents(Electrode& electrode, const double q,
                               const std::vector<double>& ts,const std::vector<double>& is);
