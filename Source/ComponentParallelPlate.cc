@@ -17,9 +17,9 @@ Component("ParallelPlate") {
 void ComponentParallelPlate::Setup(double g,double b,double eps,double V){
     
     m_g=g;m_b=b;m_eps=eps;m_V=V;
-    
-    m_ezg = - m_eps * m_V /(m_b+m_eps * m_g);
-    m_ezb = - m_V /(m_b+m_eps * m_g);
+    // For large times the resistive layer will act as a perfect conductor.
+    m_ezg = - m_V /m_g;
+    m_ezb = 0.;
     
     LOG("Geometry set.");
 }

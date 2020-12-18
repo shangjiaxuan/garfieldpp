@@ -131,6 +131,7 @@ void AvalancheGrid::SnapToGrid(Grid& av, const double x, const double z, const d
     // When snapping the electron to the grid the distance traveled can yield additional electrons or attachment.
     const double nholder =GetAvalancheSize(z-av.zgrid[index],1,13,3.5);
     av.N += nholder;
+    //std::cerr << m_className << "::SnapToGrid::size after snap "<<nholder<<", for z = "<<z<<", and z[i] = "<<av.zgrid[index]<<".\n";
     // We need to do the same for the x position if diffusion is on. The convention is the following: av.n[<index of z position>][<index of x position>].
     if(!m_diffusion){
 
@@ -246,50 +247,18 @@ void  AvalancheGrid::NextAvalancheGridPoint(Grid& av){
         }
         pos-=1; // Update position index.
     }
-    av.time +=abs(av.zStepSize/av.velocity); // After all active grid points have propagated, update the time.
-    std::cerr << m_className << "::NextAvalancheGridPoint::Number of electrons = "<<av.N<<", at time = "<<av.time<<".\n";
-    
+    // After all active grid points have propagated, update the time.
+    av.time +=abs(av.zStepSize/av.velocity);
 }
 
-void  AvalancheGrid::StartGridAvalanche(const double zmin,const double zmax, const int zsteps,const double xmin,const double xmax, const int xsteps) {
+void  AvalancheGrid::StartGridAvalanche() {
     // Start the AvalancheGrid algorithm.
-    if(!m_avmc || !m_sensor) return;
+    if((!m_avmc && !m_driftAvalanche) || !m_sensor) return;
     
-    if(zmin>=zmax||zsteps<=0) return;
-    // Get the information of the electrons from the AvalancheMicroscopic class.
-    int np = m_avmc->GetNumberOfElectronEndpoints();
+    if(!m_importAvalanche && m_avmc) ImportElectronData();
     
-    std::cerr << m_className << "::StartGridAvalanche::Number of initial electrons = "<<np<<".\n";
+    std::cerr << m_className << "::StartGridAvalanche::Starting grid based simulation with "<<m_avgrid.N<<" initial electrons.\n";
     
-    if (np==0) return;
-    // Set grid
-    if (!m_diffusion){
-        
-        SetZGrid(m_avgrid,zmax,zmin,zsteps);
-        
-    }else{
-        
-        SetZGrid(m_avgrid,zmax,zmin,zsteps);
-        SetXGrid(m_avgrid,xmax,xmin,xsteps);
-        
-    }
-    // Get initial positions of electrons
-    double x1, y1, z1, t1;
-    double x2, y2, z2, t2;
-    double e1, e2;
-    int status;
-    
-    double vel =0.;
-    for (int i = 0; i < np; ++i) {
-        
-        m_avmc->GetElectronEndpoint(i, x1, y1, z1, t1, e1,x2, y2, z2, t2, e2, status);
-        
-        vel = (z2-z1)/(t2-t1);
-        
-        m_avgrid.time = t2;
-        SnapToGrid(m_avgrid,x2,z2,vel); // Snap electrons to grid
-        
-    }
     // The vector containing the indexes of the z-coordinate grid points of the initial electrons needs to be ordered from small to large values. All duplicate values need to be removed.
     sort( m_avgrid.gridPosition.begin(), m_avgrid.gridPosition.end() );
     m_avgrid.gridPosition.erase( unique( m_avgrid.gridPosition.begin(), m_avgrid.gridPosition.end() ), m_avgrid.gridPosition.end() );
@@ -307,6 +276,22 @@ void  AvalancheGrid::StartGridAvalanche(const double zmin,const double zmax, con
     std::cerr << m_className << "::StartGridAvalanche::Final avalanche size = "<<m_avgrid.N<<" at t = "<<m_avgrid.time<<" ns.\n";
     
     return;
+}
+
+void AvalancheGrid::SetGrid(const double zmin,const double zmax, const int zsteps,const double xmin,const double xmax, const int xsteps){
+    
+    if(zmin>=zmax||zsteps<=0) return;
+    // Set grid
+    if (!m_diffusion){
+        
+        SetZGrid(m_avgrid,zmax,zmin,zsteps);
+        
+    }else{
+        
+        SetZGrid(m_avgrid,zmax,zmin,zsteps);
+        SetXGrid(m_avgrid,xmax,xmin,xsteps);
+        
+    }
 }
 
 void AvalancheGrid::DiffusionFactors(Grid& av){
@@ -332,6 +317,48 @@ void AvalancheGrid::DiffusionFactors(Grid& av){
     std::cerr << m_className << "::DiffusionFactors::Transvers diffusion spreads to "<<av.transverseDiffusion.size()<<" points.\n";
     
     return;
+}
+
+void AvalancheGrid::DriftAvalanche(const double x, const double z, const double vz, const double t){
+    
+    std::cerr << m_className << "::DriftElectron::Start avalanche at (t,x,z) =  ("<<t<<","<<x<<","<< z <<"), and speed v = "<<vz<<".\n";
+    
+    m_driftAvalanche = true;
+    
+    if(m_avgrid.time==0) std::cerr << m_className << "::DriftElectron::Overzriting start time of avalanche for t = 0 to "<<t<<".\n";
+    m_avgrid.time = t;
+    
+    SnapToGrid(m_avgrid,x,z,vz);
+}
+void AvalancheGrid::ImportElectronData(){
+    // Get the information of the electrons from the AvalancheMicroscopic class.
+    if (!m_avmc) return;
+    
+    m_importAvalanche = true;
+    
+    int np = m_avmc->GetNumberOfElectronEndpoints();
+    
+    std::cerr << m_className << "::ImportElectronData::Number of initial electrons = "<<np<<".\n";
+    
+    if (np==0) return;
+    
+    // Get initial positions of electrons
+    double x1, y1, z1, t1;
+    double x2, y2, z2, t2;
+    double e1, e2;
+    int status;
+    
+    double vel =0.;
+    for (int i = 0; i < np; ++i) {
+        
+        m_avmc->GetElectronEndpoint(i, x1, y1, z1, t1, e1,x2, y2, z2, t2, e2, status);
+        
+        vel = (z2-z1)/(t2-t1);
+        
+        m_avgrid.time = t2;
+        SnapToGrid(m_avgrid,x2,z2,vel); // Snap electrons to grid
+        
+    }
 }
 
 }
