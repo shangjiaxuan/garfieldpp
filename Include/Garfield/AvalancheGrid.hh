@@ -26,14 +26,14 @@ public:
     
     /** Start grid based avalanche simulation.
       *
-      * \param zmin,zmax z coordinate range of grid [cm].
+      * \param zmin,zmax z-coordinate range of grid [cm].
       * \param zsteps amount of z-coordinate points in grid.
-      * \param xmin,xmax x coordinate range of grid [cm].
+      * \param xmin,xmax x-coordinate range of grid [cm].
       * \param xsteps amount of x-coordinate points in grid.
       */
-    void StartGridAvalanche(const double zmin,const double zmax, const int zsteps,const double xmin=0.,const double xmax=0., const int xsteps=0);
+    void StartGridAvalanche();
     /// Set the electron drift velocity (in cm / ns).
-    void SetElectronVelocity(const double vel){m_Velocity=vel;};
+    void SetElectronVelocity(const double vel){if (vel>=0) return;m_Velocity=vel;};
     /// Set the electron Townsend coefficient (in 1 / cm).
     void SetElectronTownsend(const double town){m_Townsend=10*town;};
     /// Set the electron attachment coefficient (in 1 / cm).
@@ -42,6 +42,19 @@ public:
     void SetMaxAvalancheSize(const double size){m_MaxSize=size;};
     /// Enable transverse diffusion of electrons with transverse diffusion coefficients (in √cm).
     void EnableDiffusion(const double diffSigma){m_diffusion=true;m_DiffSigma = diffSigma;}
+    /** Starting point of avalanche.
+      *
+      * \param z z-coordinate of initial electron.
+      * \param x x-coordinate of initial electron.
+      * \param vz speed of initial electron in z-direction.
+      * \param t starting time of avalanche.
+      */
+    void DriftAvalanche(const double x, const double z, const double vz, const double t=0);
+    /// Import electron data from AvalancheMicroscopic class
+    void ImportElectronData();
+    
+    /// Import electron data from AvalancheMicroscopic class
+    void SetGrid(const double zmin,const double zmax, const int zsteps,const double xmin=0.,const double xmax=0., const int xsteps=0);
     
 private:
     
@@ -60,6 +73,9 @@ private:
     bool m_diffusion = false; // Check if transverse diffusion is enabled.
     
     double m_DiffSigma =0.; // Transverse diffusion coefficients (in √cm).
+    
+    bool m_driftAvalanche = false;
+    bool m_importAvalanche = false;
     
     std::string m_className = "AvalancheGrid";
     
@@ -87,7 +103,7 @@ private:
         std::vector<double> transverseDiffusion; ///< Factors of the charge that go to horizontally neighboring grid points.
         
         double velocity = 0; ///<Velocity of electrons.
-        double time; ///<Clock.
+        double time=0; ///<Clock.
 
         bool run = true; ///<Tracking if the charges are still in the drift gap.
         
