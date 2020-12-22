@@ -5,7 +5,8 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
-#include <random>
+
+#include "Garfield/Random.hh"
 
 namespace Garfield {
 void AvalancheGrid::SetZGrid(Grid& av, const double ztop, const double zbottom,
@@ -64,36 +65,23 @@ int AvalancheGrid::GetAvalancheSize(double dx, const int nsize,
   if (nsize < 1e3) {
     // Running over all electrons in the avalanche.
     for (int i = 0; i < nsize; i++) {
-      // Draw a random number form the uniform distribution (0,1).
-      std::random_device rd;
-      std::mt19937 gen(rd());
-      std::uniform_real_distribution<> dis(0., 1.);
-      double s = dis(gen);
+      // Draw a random number from the uniform distribution (0,1).
+      double s = RndmUniformPos();
       // Condition to which the random number will be compared. If the number is
       // smaller than the condition, nothing happens. Otherwise, the single
       // electron will be attached or retrieve additional electrons from the
       // gas.
       double condition = k * (ndx - 1) / (ndx - k);
-
-      int Nholder;
-
-      if (s < condition) {
-        Nholder = 0;
-      } else {
-        Nholder = (int)(1 + log((ndx - k) * (1 - s) / (ndx * (1 - k))) /
+      if (s >= condition) {
+        newnsize += (int)(1 + log((ndx - k) * (1 - s) / (ndx * (1 - k))) /
                                 log(1 - (1 - k) / (ndx - k)));
       }
-      newnsize += Nholder;
     }
 
   } else {
     // Central limit theorem.
     const double sigma = sqrt((1 + k) * ndx * (ndx - 1) / (1 - k));
-
-    std::default_random_engine generator;
-    std::normal_distribution<double> normalDistr(nsize * ndx,
-                                                 sqrt(nsize) * sigma);
-    newnsize = normalDistr(generator);
+    newnsize = RndmGaussian(nsize * ndx, sqrt(nsize) * sigma);
   }
 
   return newnsize;
