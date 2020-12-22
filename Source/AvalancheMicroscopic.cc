@@ -2,7 +2,6 @@
 #include <cmath>
 #include <functional>
 #include <iostream>
-#include <random>
 #include <string>
 
 #include "Garfield/AvalancheMicroscopic.hh"
