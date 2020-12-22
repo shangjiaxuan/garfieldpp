@@ -22,49 +22,43 @@ class ComponentParallelPlate : public Component {
 
   /** Set the parallel-plate geometries with resistive elements.
    * \param g size of the gap along positive \f$z\f$.
-   * \param b tyhickness of the resistive layer along negative \f$z\f$.
-   * \param eps relative permitivity of the resistive layer\f$.
-   * \param sigma conductivity of the resitive layer (must be larger then zero,
-   * otherwise do not pass it in the function)\f$. \param V applied potential
-   * difference between the paraleel plates\f$.
+   * \param b thickness of the resistive layer along negative \f$z\f$.
+   * \param eps relative permittivity of the resistive layer.
+   * \param sigma conductivity of the resistive layer (must be larger then zero,
+   * otherwise do not pass it in the function). 
+   * \param V applied potential difference between the parallel plates.
    */
   void Setup(double g, double b, double eps, double V, double sigma);
 
-  /// Calculeting electric fields and potentials at position \f$x, y, z.
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
-  /// Calculeting electric potential at position \f$x, y, z.
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, double& v, Medium*& m,
                      int& status) override;
 
-  /// Calculeting prompt weigthing electric fields at position \f$x, y, z.
   void WeightingField(const double x, const double y, const double z,
                       double& wx, double& wy, double& wz,
                       const std::string& label) override;
 
-  /// Calculeting prompt weigthing electric potentia at position \f$x, y, z.
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
 
-  /// Calculeting delayed weigthing electric potential at position \f$x, y, z.
   double DelayedWeightingPotential(const double x, const double y,
                                    const double z, const double t,
                                    const std::string& label) override;
 
-  /// Calculeting delayed weigthing electric fields at position \f$x, y, z.
-  virtual void DelayedWeightingField(const double x, const double y,
-                                     const double z, const double t, double& wx,
-                                     double& wy, double& wz,
-                                     const std::string& label) override;
+  void DelayedWeightingField(const double x, const double y,
+                             const double z, const double t, double& wx,
+                             double& wy, double& wz,
+                             const std::string& label) override;
 
   bool GetVoltageRange(double& vmin, double& vmax) override;
 
   /** Set the parallel-plate geometries with resistive elements.
-   * \param x,y position of the center of the electrode in the xyPlane\f$.
+   * \param x,y position of the center of the electrode in the xy-plane.
    * \param lx_input width in the along \f$x\f$.
    * \param ly_inputwidth in the along \f$y\f$.
-   * \param label give name using a string\f$.
+   * \param label give name using a string.
    */
   void AddPixel(double x, double y, double lx_input, double ly_input,
                 const std::string& label);
@@ -75,22 +69,25 @@ class ComponentParallelPlate : public Component {
   void AddPlane(const std::string& label);
 
   // Setting the medium
-
   void SetMedium(Medium* medium) { m_medium = medium; }
 
   Medium* GetMedium(const double x, const double y, const double z) override;
 
  private:
-  /// Member variables
+  // Size of the gap.
   double m_g = 0.;
-  double m_b = 0.;  // Here g is the size of the gap and b is the thickness of
-                    // the resistive element.
-  static constexpr double m_Vw = 1.;  // Applied voltage on the electrode to
-                                      // calculate the weighting potential.
+  // Thickness of the resistive element.
+  double m_b = 0.;
+  // Applied voltage on the electrode to
+  // calculate the weighting potential.
+  static constexpr double m_Vw = 1.;  
   double m_eps = 1.;
-  double m_V = 0.;     // Voltage acrose the RPC
+  // Voltage across the RPC
+  double m_V = 0.;     
+  // Electric field in the gap.
   double m_ezg = 0;
-  double m_ezb = 0;  // Electric field in the gap and resistive layer.
+  // Electric field in the resistive layer.
+  double m_ezb = 0;  
   double m_sigma = 0;
 
   std::string m_className = "ComponentParallelPlate";
@@ -102,7 +99,7 @@ class ComponentParallelPlate : public Component {
     std::string type;                      ///< Label.
     int ind = structureelectrode::NotSet;  ///< Readout group.
     double xpos, ypos;                     ///< Coordinates in x/y.
-    double lx, ly;                         ///< Dimensionas in the x-y plane.
+    double lx, ly;                         ///< Dimensions in the x-y plane.
   };
 
   enum fieldcomponent { xcomp = 0, ycomp, zcomp };
@@ -124,7 +121,6 @@ class ComponentParallelPlate : public Component {
                                    const double Y, const double Z,
                                    const double t);
 
-  /// Overrided member functions
   void UpdatePeriodicity() override;
   void Reset() override;
 };
