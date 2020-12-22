@@ -1219,9 +1219,10 @@ double Divdif(const std::vector<double>& f, const std::vector<double>& a,
   }
 
   // Deal with the case that X is located at first or last point.
-  const double tol = 1.e-6 * (fabs(a[0]) + fabs(a[nn - 1]));
-  if (fabs(x - a[0]) < tol) return f[0];
-  if (fabs(x - a[nn - 1]) < tol) return f[nn - 1];
+  const double tol1 = 1.e-6 * fabs(fabs(a[1]) - fabs(a[0]));
+  const double tol2 = 1.e-6 * fabs(fabs(a[nn-1]) - fabs(a[nn-2]));
+  if (fabs(x - a[0]) < tol1) return f[0];
+  if (fabs(x - a[nn - 1]) < tol2) return f[nn - 1];
 
   // Find subscript IX of X in array A.
   constexpr int mmax = 10;

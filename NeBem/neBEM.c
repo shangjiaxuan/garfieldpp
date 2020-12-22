@@ -305,11 +305,6 @@ int LHMatrix(void) {
 #ifdef _OPENMP
   int dbgFn = 0;
 #endif
-  double xfld, yfld, zfld;
-  int primsrc;
-  double xsrc, ysrc, zsrc;
-  Point3D localP;
-
   printf(
       "\nLHMatrix: The size of the Influence coefficient matrix is %d X %d\n",
       NbEqns, NbUnknowns);
@@ -356,12 +351,12 @@ int LHMatrix(void) {
 
       // Retrieve element properties at the field point
       // boundary condn applied at collocation point
-      xfld = (EleArr + elefld - 1)->BC.CollPt.X;
-      yfld = (EleArr + elefld - 1)->BC.CollPt.Y;
-      zfld = (EleArr + elefld - 1)->BC.CollPt.Z;
+      const double xfld = (EleArr + elefld - 1)->BC.CollPt.X;
+      const double yfld = (EleArr + elefld - 1)->BC.CollPt.Y;
+      const double zfld = (EleArr + elefld - 1)->BC.CollPt.Z;
 
 #ifdef _OPENMP
-      #pragma omp for private(primsrc, xsrc, ysrc, zsrc, localP)
+      #pragma omp for 
 #endif
       for (int elesrc = 1; elesrc <= NbElements; ++elesrc) {
         if (DebugLevel == 301) {
@@ -369,10 +364,10 @@ int LHMatrix(void) {
         }
 
         // Retrieve element properties at the field point
-        primsrc = (EleArr + elesrc - 1)->PrimitiveNb;  // not just convenience
-        xsrc = (EleArr + elesrc - 1)->G.Origin.X;      // helps faster execution
-        ysrc = (EleArr + elesrc - 1)->G.Origin.Y;
-        zsrc = (EleArr + elesrc - 1)->G.Origin.Z;
+        const int primsrc = (EleArr + elesrc - 1)->PrimitiveNb;
+        const double xsrc = (EleArr + elesrc - 1)->G.Origin.X;
+        const double ysrc = (EleArr + elesrc - 1)->G.Origin.Y;
+        const double zsrc = (EleArr + elesrc - 1)->G.Origin.Z;
 
         if ((EleArr + elesrc - 1)->E.Type == 0) {
           printf(
@@ -388,22 +383,15 @@ int LHMatrix(void) {
 
         // Influence due to elements belonging to the basic device
         {
+          Point3D localP;
           // Through InitialVector[], field point gets translated to ECS origin
           // Axes direction are, however, still global which when rotated to ECS
           // system, yields FinalVector[].
           {  // Rotate point3D from global to local system
-            double InitialVector[4];
-            double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                                 {0.0, 0.0, 0.0, 0.0},
-                                                 {0.0, 0.0, 0.0, 0.0},
-                                                 {0.0, 0.0, 0.0, 1.0}};
+            double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                                 {0.0, 0.0, 0.0},
+                                                 {0.0, 0.0, 0.0}};
             DirnCosn3D *DirCos = &(EleArr + elesrc - 1)->G.DC;
-            double FinalVector[4];
-
-            InitialVector[0] = xfld - xsrc;
-            InitialVector[1] = yfld - ysrc;
-            InitialVector[2] = zfld - zsrc;
-            InitialVector[3] = 1.0;
 
             TransformationMatrix[0][0] = DirCos->XUnit.X;
             TransformationMatrix[0][1] = DirCos->XUnit.Y;
@@ -415,9 +403,10 @@ int LHMatrix(void) {
             TransformationMatrix[2][1] = DirCos->ZUnit.Y;
             TransformationMatrix[2][2] = DirCos->ZUnit.Z;
 
-            for (int i = 0; i < 4; ++i) {
-              FinalVector[i] = 0.0;
-              for (int j = 0; j < 4; ++j) {
+            double InitialVector[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
+            double FinalVector[3] = {0., 0., 0.};
+            for (int i = 0; i < 3; ++i) {
+              for (int j = 0; j < 3; ++j) {
                 FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
               }
             }
@@ -425,7 +414,7 @@ int LHMatrix(void) {
             localP.X = FinalVector[0];
             localP.Y = FinalVector[1];
             localP.Z = FinalVector[2];
-          }  // Point3D rotated
+          }
 
           // Initiate debugging, if necessary
           if ((elefld == 0) && (elesrc == 0))
@@ -476,38 +465,29 @@ int LHMatrix(void) {
               (PeriodicTypeZ[primsrc] == 1)) {
             if (PeriodicInX[primsrc] || PeriodicInY[primsrc] ||
                 PeriodicInZ[primsrc]) {
-              double AddnalInfl = 0.0, XOfRpt, YOfRpt, ZOfRpt;
-
               for (int xrpt = -PeriodicInX[primsrc];
                    xrpt <= PeriodicInX[primsrc]; ++xrpt) {
-                XOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt;
+                double XOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt;
 
                 for (int yrpt = -PeriodicInY[primsrc];
                      yrpt <= PeriodicInY[primsrc]; ++yrpt) {
-                  YOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
+                  double YOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
 
                   for (int zrpt = -PeriodicInZ[primsrc];
                        zrpt <= PeriodicInZ[primsrc]; ++zrpt) {
-                    ZOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
+                    double ZOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
 
                     if ((xrpt == 0) && (yrpt == 0) && (zrpt == 0))
                       continue;  // this is the base device
 
+                    Point3D localP;
                     // axis direction in the global system
                     {  // Rotate point3D from global to local system
-                      double InitialVector[4];
-                      double TransformationMatrix[4][4] = {
-                          {0.0, 0.0, 0.0, 0.0},
-                          {0.0, 0.0, 0.0, 0.0},
-                          {0.0, 0.0, 0.0, 0.0},
-                          {0.0, 0.0, 0.0, 1.0}};
+                      double TransformationMatrix[3][3] = {
+                          {0.0, 0.0, 0.0},
+                          {0.0, 0.0, 0.0},
+                          {0.0, 0.0, 0.0}};
                       DirnCosn3D *DirCos = &(EleArr + elesrc - 1)->G.DC;
-                      double FinalVector[4];
-
-                      InitialVector[0] = xfld - XOfRpt;  // Vector in the GCS
-                      InitialVector[1] = yfld - YOfRpt;
-                      InitialVector[2] = zfld - ZOfRpt;
-                      InitialVector[3] = 1.0;
 
                       TransformationMatrix[0][0] = DirCos->XUnit.X;
                       TransformationMatrix[0][1] = DirCos->XUnit.Y;
@@ -519,9 +499,11 @@ int LHMatrix(void) {
                       TransformationMatrix[2][1] = DirCos->ZUnit.Y;
                       TransformationMatrix[2][2] = DirCos->ZUnit.Z;
 
-                      for (int i = 0; i < 4; ++i) {
-                        FinalVector[i] = 0.0;
-                        for (int j = 0; j < 4; ++j) {
+                      // Vector in the GCS
+                      double InitialVector[3] = {xfld - XOfRpt, yfld - YOfRpt, zfld - ZOfRpt};
+                      double FinalVector[3] = {0., 0., 0.};
+                      for (int i = 0; i < 3; ++i) {
+                        for (int j = 0; j < 3; ++j) {
                           FinalVector[i] +=
                               TransformationMatrix[i][j] * InitialVector[j];
                         }
@@ -534,7 +516,7 @@ int LHMatrix(void) {
 
                     // Direction cosines remain unchanged for a regular
                     // repetition
-                    AddnalInfl = ComputeInfluence(elefld, elesrc, &localP,
+                    double AddnalInfl = ComputeInfluence(elefld, elesrc, &localP,
                                                   &(EleArr + elesrc - 1)->G.DC);
                     Inf[elefld][elesrc] += AddnalInfl;
 
@@ -789,54 +771,48 @@ to all the elements at a given field point
 // total potential, or field (normal component for a given coordinate system) at
 that point
 // If no specific direction is provided, the GCS is used as default
-Vector1D* InflVec(Point3D fldpt, DirnCosn3D *fldDC, int Pot0Cont1)
-{
-int dbgFn = 0;
-double xfld, yfld, zfld;
-int primsrc;
-double xsrc, ysrc, zsrc;
-Point3D localP;
+Vector1D* InflVec(Point3D fldpt, DirnCosn3D *fldDC, int Pot0Cont1) {
+  int dbgFn = 0;
+  int primsrc;
+  double xsrc, ysrc, zsrc;
+  Point3D localP;
 
-printf("\nLHMatrix: The size of the Influence coefficient vector is %d\n",
-NbUnknowns); fflush(stdout);
+  printf("\nLHMatrix: The size of the Influence coefficient vector is %d\n",
+         NbUnknowns); fflush(stdout);
 
-// Influence coefficient vector
-// For each field point influences from all the source elements need to be
-summed up.
-// The source elements are followed using elesrc (source counter)
-printf("Computing influence coefficient vector ... will take some time ...\n");
+  // Influence coefficient vector
+  // For each field point influences from all the source elements 
+  // need to be summed up.
+  // The source elements are followed using elesrc (source counter)
+  printf("Computing influence coefficient vector ... will take some time ...\n");
 
-int nthreads = 1, tid = 0;
+  int nthreads = 1, tid = 0;
 #pragma omp parallel private(nthreads, tid)
-{
-if(dbgFn)
-        {
-        tid = omp_get_thread_num();
-        if (tid == 0)
-        {
+  {
+    if(dbgFn) {
+      tid = omp_get_thread_num();
+      if (tid == 0) {
         nthreads = omp_get_num_threads();
-        printf("Starting influence matrix computation with %d
-threads\n",nthreads);
-        }
-        }
+        printf("Starting influence matrix computation with %d threads\n",
+               nthreads);
+      }
+    }
 
-        xfld = fldpt.X;
-        yfld = fldpt.Y;
-        zfld = fldpt.Z;
+    double xfld = fldpt.X;
+    double yfld = fldpt.Y;
+    double zfld = fldpt.Z;
 
-        #pragma omp for private(primsrc, xsrc, ysrc, zsrc, localP)
-        for(int elesrc = 1; elesrc <= NbElements; ++elesrc)
-                {
-    if(DebugLevel == 301)
-                        {
-                        printf("\n\nelesrc: %d\n", elesrc);
-                        }
+#pragma omp for private(primsrc, xsrc, ysrc, zsrc, localP)
+    for (int elesrc = 1; elesrc <= NbElements; ++elesrc) {
+      if (DebugLevel == 301) {
+        printf("\n\nelesrc: %d\n", elesrc);
+      }
 
-                // Retrieve element properties at the field point
-                primsrc = (EleArr+elesrc-1)->PrimitiveNb;	// not just
-convenience xsrc = (EleArr+elesrc-1)->G.Origin.X;	// helps faster
-execution ysrc = (EleArr+elesrc-1)->G.Origin.Y; zsrc =
-(EleArr+elesrc-1)->G.Origin.Z;
+    // Retrieve element properties at the field point
+    int primsrc = (EleArr+elesrc-1)->PrimitiveNb;
+    double xsrc = (EleArr+elesrc-1)->G.Origin.X;
+    double ysrc = (EleArr+elesrc-1)->G.Origin.Y; 
+    double zsrc = (EleArr+elesrc-1)->G.Origin.Z;
 
                 // The total influence is due to elements on the basic device
 and due to
@@ -2066,7 +2042,6 @@ double ValueKnCh(int elefld) {
   int dbgFn = 0;
 
   double value = 0.0;
-  double assigned = 0.0;
   double xfld = (EleArr + elefld - 1)->BC.CollPt.X;
   double yfld = (EleArr + elefld - 1)->BC.CollPt.Y;
   double zfld = (EleArr + elefld - 1)->BC.CollPt.Z;
@@ -2079,7 +2054,7 @@ double ValueKnCh(int elefld) {
 
   // Effect of known charges on the interface elements
   for (int elesrc = 1; elesrc <= NbElements; ++elesrc) {
-    assigned = (EleArr + elesrc - 1)->Assigned;
+    double assigned = (EleArr + elesrc - 1)->Assigned;
     if (fabs(assigned) <= 1.0e-16) continue;
 
     // Retrieve element properties from the structure
@@ -2098,18 +2073,10 @@ double ValueKnCh(int elefld) {
     globalP.Z = zfld - pOrigin->Z;
 
     {  // Rotate point3D from global to local system
-      double InitialVector[4];
-      double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 1.0}};
+      double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0}};
       DirnCosn3D *DirCos = &(EleArr + elesrc - 1)->G.DC;
-      double FinalVector[4];
-
-      InitialVector[0] = xfld - pOrigin->X;
-      InitialVector[1] = yfld - pOrigin->Y;
-      InitialVector[2] = zfld - pOrigin->Z;
-      InitialVector[3] = 1.0;
 
       TransformationMatrix[0][0] = DirCos->XUnit.X;
       TransformationMatrix[0][1] = DirCos->XUnit.Y;
@@ -2121,8 +2088,9 @@ double ValueKnCh(int elefld) {
       TransformationMatrix[2][1] = DirCos->ZUnit.Y;
       TransformationMatrix[2][2] = DirCos->ZUnit.Z;
 
+      double InitialVector[3] = {xfld - pOrigin->X, yfld - pOrigin->Y, zfld - pOrigin->Z};
+      double FinalVector[3] = {0., 0., 0.};  
       for (int i = 0; i < 4; ++i) {
-        FinalVector[i] = 0.0;
         for (int j = 0; j < 4; ++j) {
           FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
         }
@@ -2221,7 +2189,6 @@ double ContinuityKnCh(int elefld) {
   int dbgFn = 0;
 
   double value = 0.0;
-  double assigned = 0.0;
   double xfld = (EleArr + elefld - 1)->BC.CollPt.X;
   double yfld = (EleArr + elefld - 1)->BC.CollPt.Y;
   double zfld = (EleArr + elefld - 1)->BC.CollPt.Z;
@@ -2233,7 +2200,7 @@ double ContinuityKnCh(int elefld) {
 
   // Effect of known charges on interface elements
   for (int elesrc = 1; elesrc <= NbElements; ++elesrc) {
-    assigned = (EleArr + elesrc - 1)->Assigned;
+    double assigned = (EleArr + elesrc - 1)->Assigned;
     if (fabs(assigned) <= 1.0e-16) continue;
 
     Point3D *pOrigin = &(EleArr + elesrc - 1)->G.Origin;
@@ -2252,18 +2219,10 @@ double ContinuityKnCh(int elefld) {
     // globalP.Z = zfld - pOrigin->Z;
 
     {  // Rotate point3D from global to local system
-      double InitialVector[4];
-      double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 1.0}};
+      double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0}};
       DirnCosn3D *DirCos = &(EleArr + elesrc - 1)->G.DC;
-      double FinalVector[4];
-
-      InitialVector[0] = xfld - pOrigin->X;
-      InitialVector[1] = yfld - pOrigin->Y;
-      InitialVector[2] = zfld - pOrigin->Z;
-      InitialVector[3] = 1.0;
 
       TransformationMatrix[0][0] = DirCos->XUnit.X;
       TransformationMatrix[0][1] = DirCos->XUnit.Y;
@@ -2275,9 +2234,10 @@ double ContinuityKnCh(int elefld) {
       TransformationMatrix[2][1] = DirCos->ZUnit.Y;
       TransformationMatrix[2][2] = DirCos->ZUnit.Z;
 
-      for (int i = 0; i < 4; ++i) {
-        FinalVector[i] = 0.0;
-        for (int j = 0; j < 4; ++j) {
+      double InitialVector[3] = {xfld - pOrigin->X, yfld - pOrigin->Y, zfld - pOrigin->Z};
+      double FinalVector[3] = {0., 0., 0.};
+      for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
           FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
         }
       }

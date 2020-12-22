@@ -692,11 +692,9 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
   }
   // Check the initial energy (in MeV).
   const double ekin0 = 1.e-6 * GetKineticEnergy();
-  if (ekin0 < 1.e-14 * m_mion || ekin0 < 1.e-3 * m_work) {
-    if (m_debug) {
-      std::cout << hdr << "Initial kinetic energy E = " << ekin0
-                << " MeV such that beta2 = 0 or E << W; particle stopped.\n";
-    }
+  if (ekin0 < 1.e-14 * m_mion || ekin0 < 1.e-6 * m_work) {
+    std::cerr << hdr << "Initial kinetic energy E = " << ekin0
+              << " MeV such that beta2 = 0 or E << W; particle stopped.\n";
     return true;
   }
 

@@ -21,3 +21,6 @@ target_link_libraries(parallelPlates Garfield)
 add_executable(crossingWires crossingWires.C)
 target_link_libraries(crossingWires Garfield)
 
+add_executable(parallelPlatesWeightingField parallelPlatesWeightingField.C)
+target_link_libraries(parallelPlatesWeightingField Garfield)
+
