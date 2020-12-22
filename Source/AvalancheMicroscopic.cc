@@ -810,11 +810,6 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         }
         if (!ok) break;
 
-        if (m_testsignal) {
-          dt = m_testt;
-          en = 0.;
-        }
-
         // Increase the collision counter.
         ++nCollTemp;
 
