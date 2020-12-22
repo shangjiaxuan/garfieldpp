@@ -2,6 +2,7 @@
 #define G_SENSOR_H
 
 #include <fstream>
+#include <mutex>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -307,6 +308,8 @@ class Sensor {
 
  private:
   std::string m_className = "Sensor";
+  /// Mutex.
+  std::mutex m_mutex;
 
   /// Components
   std::vector<std::tuple<Component*, bool, bool> > m_components;
@@ -377,6 +380,7 @@ class Sensor {
                   const int navg, const bool delayed = false);
   void FillBin(Electrode& electrode, const unsigned int bin,
                const double signal, const bool electron, const bool delayed) {
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (delayed) {
       electrode.delayedSignal[bin] += signal;
 

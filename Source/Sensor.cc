@@ -1,5 +1,3 @@
-#include "Garfield/Sensor.hh"
-
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -9,6 +7,7 @@
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Numerics.hh"
 #include "Garfield/Random.hh"
+#include "Garfield/Sensor.hh"
 
 namespace {
 
@@ -565,17 +564,15 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
   for (auto& electrode : m_electrodes) {
     const std::string lbl = electrode.label;
     std::vector<double> id(nd, 0.);
-    if (useWeightingPotential) {  // When using the weighting potential
+    if (useWeightingPotential) {  
+      // Using the weighting potential.
       double chargeHolder = 0.;
       double currentHolder = 0.;
       int binHolder = 0;
-
-      for (unsigned int i = 0; i < nd;
-           ++i) {  // For each time in the given vector of delayed times.
-
+      // Loop over each time in the given vector of delayed times.
+      for (unsigned int i = 0; i < nd; ++i) {  
         double delayedtime = m_delayedSignalTimes[i] - t0;  // t - t0
-
-        if (delayedtime < 0) continue;  // Heaviside-functie
+        if (delayedtime < 0) continue;
         // Find bin that needs to be filled.
         int bin2 = int((m_delayedSignalTimes[i] - m_tStart) / m_tStep);
         // Compute induced charge
@@ -620,8 +617,8 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
         chargeHolder = charge;
       }
 
-    } else {  // When using the weighting field
-
+    } else {  
+      // Using the weighting field.
       for (unsigned int i = 0; i < nd; ++i) {
         // Integrate over the drift line segment.
         const double step = std::min(m_delayedSignalTimes[i], dt);
