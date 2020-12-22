@@ -393,7 +393,6 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
   if (z > 0) {
     status = 0;
   } else {
-    LOG("Stopt drifting. (C2) ");
     status = -5;
   }
 }
@@ -427,12 +426,10 @@ double ComponentParallelPlate::WeightingPotential(const double x,
   if (it == m_readout.end()) {
     LOG("Label not found, please try again. (P)");
     return 0.;
-  } else {
-    const auto index = it - m_readout.begin();
-
-    auto element = m_readout_p[index];
-    return IntegratePromptPotential(element, x, y, z);
   }
+  const auto index = it - m_readout.begin();
+  auto element = m_readout_p[index];
+  return IntegratePromptPotential(element, x, y, z);
 }
 
 double ComponentParallelPlate::DelayedWeightingPotential(
@@ -446,18 +443,10 @@ double ComponentParallelPlate::DelayedWeightingPotential(
   if (it == m_readout.end()) {
     LOG("Label not found, please try again. (P)");
     return 0.;
-  } else {
-    const auto index = it - m_readout.begin();
-
-    auto element = m_readout_p[index];
-
-    if (m_sigma == 0) {
-      LOG("No conductivity set!");
-      return 0.;
-    }
-
-    return IntegrateDelayedPotential(element, x, y, z, t);
   }
+  const auto index = it - m_readout.begin();
+  auto element = m_readout_p[index];
+  return IntegrateDelayedPotential(element, x, y, z, t);
 }
 
 void ComponentParallelPlate::DelayedWeightingField(
@@ -506,59 +495,56 @@ void ComponentParallelPlate::AddPixel(double x, double y, double lx_input,
                                       const std::string& label) {
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
   if (it == m_readout.end() && m_readout.size() > 0) {
-    LOG("Label " << label << " already excists, please use an other lable.");
-  } else {
-    Electrode* pixel = new Electrode();
-
-    pixel->type = label;
-    pixel->ind = structureelectrode::Pixel;
-    pixel->xpos = x;
-    pixel->ypos = y;
-    pixel->lx = lx_input;
-    pixel->ly = ly_input;
-
-    m_readout.push_back(label);
-    m_readout_p.push_back(*pixel);
-
-    LOG("The pixel electrode structure has been added.");
+    LOG("Label " << label << " already exists, please use another label.");
+    return;
   }
+  Electrode pixel;
+  pixel.type = label;
+  pixel.ind = structureelectrode::Pixel;
+  pixel.xpos = x;
+  pixel.ypos = y;
+  pixel.lx = lx_input;
+  pixel.ly = ly_input;
+
+  m_readout.push_back(label);
+  m_readout_p.push_back(std::move(pixel));
+
+  LOG("The pixel electrode structure has been added.");
 }
 
 void ComponentParallelPlate::AddStrip(double x, double lx_input,
                                       const std::string& label) {
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
   if (it == m_readout.end() && m_readout.size() > 0) {
-    LOG("Label " << label << " already excists, please use an other lable.");
-  } else {
-    Electrode* strip = new Electrode();
-
-    strip->type = label;
-    strip->ind = structureelectrode::Strip;
-    strip->xpos = x;
-    strip->lx = lx_input;
-
-    m_readout.push_back(label);
-    m_readout_p.push_back(*strip);
-
-    LOG("The strip electrode structure has been added.");
+    LOG("Label " << label << " already exists, please use another label.");
+    return;
   }
+  Electrode strip;
+  strip.type = label;
+  strip.ind = structureelectrode::Strip;
+  strip.xpos = x;
+  strip.lx = lx_input;
+
+  m_readout.push_back(label);
+  m_readout_p.push_back(std::move(strip));
+
+  LOG("The strip electrode structure has been added.");
 }
 
 void ComponentParallelPlate::AddPlane(const std::string& label) {
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
   if (it == m_readout.end() && m_readout.size() > 0) {
-    LOG("Label " << label << " already excists, please use an other lable.");
-  } else {
-    Electrode* plate = new Electrode();
-
-    plate->type = label;
-    plate->ind = structureelectrode::Plane;
-
-    m_readout.push_back(label);
-    m_readout_p.push_back(*plate);
-
-    LOG("The plane electrode structure has been added.");
+    LOG("Label " << label << " already exists, please use another label.");
+    return;
   }
+  Electrode plate;
+  plate.type = label;
+  plate.ind = structureelectrode::Plane;
+
+  m_readout.push_back(label);
+  m_readout_p.push_back(std::move(plate));
+
+  LOG("The plane electrode structure has been added.");
 }
 
 Medium* ComponentParallelPlate::GetMedium(const double x, const double y,
