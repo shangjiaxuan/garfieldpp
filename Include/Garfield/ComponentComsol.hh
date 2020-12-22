@@ -64,8 +64,6 @@ class ComponentComsol : public ComponentFieldMap {
   double m_unit = 100.;
   bool m_timeset = false;
 
-  bool IsComment(const std::string& line);
-
   bool GetTimeInterval(const std::string& file);
 };
 }  // namespace Garfield

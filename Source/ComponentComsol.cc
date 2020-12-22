@@ -16,6 +16,12 @@ bool ends_with(std::string s, std::string t) {
   return s.size() >= t.size() && s.substr(s.size() - t.size(), t.size()) == t;
 }
 
+bool isComment(const std::string& line) {
+  if (line.empty()) return false;
+  if (line[0] == '%') return true;
+  return false;
+}
+
 int readInt(std::string s) {
   std::istringstream iss(s);
   int ret;
@@ -795,7 +801,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
     // Skip empty lines.
     if (line.empty()) continue;
     // Skip lines that are not comments.
-    if (IsComment(line)) continue;
+    if (isComment(line)) continue;
 
     std::istringstream data;
     data.str(line);
@@ -912,12 +918,6 @@ double ComponentComsol::DelayedWeightingPotential(const double xin,
   const double f0 = 1. - f1;
 
   return f0 * dp0 + f1 * dp1;
-}
-
-bool ComponentComsol::IsComment(const std::string& line) {
-  if (line.empty()) return false;
-  if (line[0] == '%') return true;
-  return false;
 }
 
 void ComponentComsol::SetTimeInterval(const double mint, const double maxt,
