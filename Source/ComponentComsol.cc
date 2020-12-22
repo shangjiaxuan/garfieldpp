@@ -1,5 +1,3 @@
-#include "Garfield/ComponentComsol.hh"
-
 #include <math.h>
 #include <stdlib.h>
 
@@ -8,6 +6,7 @@
 #include <map>
 #include <sstream>
 
+#include "Garfield/ComponentComsol.hh"
 #include "Garfield/KDTree.hh"
 
 namespace {
@@ -40,7 +39,7 @@ void PrintProgress(const double f) {
   std::cout << bar << "\r" << std::flush;
 }
 
-}  // namespace
+}
 
 namespace Garfield {
 
@@ -748,8 +747,8 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
 
   if (!m_timeset) {
     std::cerr << m_className << "::SetDelayedWeightingField:\n"
-              << "    No valid times slices of potenital set.\n"
-              << "    Please add time the time slices.\n";
+              << "    No valid times slices of potential set.\n"
+              << "    Please add the time slices.\n";
     return false;
   }
 
@@ -788,7 +787,8 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
   const unsigned int nPrint =
       std::pow(10, static_cast<unsigned int>(
                        std::max(std::floor(std::log10(nNodes)) - 1, 1.)));
-  std::cout << m_className << "::Initialise: Reading weighting potentials.\n";
+  std::cout << m_className << "::SetDelayedWeightingField:\n"
+            << "    Reading weighting potentials.\n";
   PrintProgress(0.);
 
   while (std::getline(ffield, line)) {
@@ -808,7 +808,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
     kdtree.n_nearest(pt, 1, res);
 
     if (res.empty()) {
-      std::cerr << m_className << "::SetWeightingField:\n"
+      std::cerr << m_className << "::SetDelayedWeightingField:\n"
                 << "    Could not find a matching mesh node for point (" << x
                 << ", " << y << ", " << z << ")\n.";
       ffield.close();
@@ -833,7 +833,8 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
   }
 
   PrintProgress(1.);
-  std::cout << std::endl << m_className << "::Initialise: Done.\n";
+  std::cout << std::endl << m_className 
+            << "::SetDelayedWeightingField: Done.\n";
   ffield.close();
   return true;
 }

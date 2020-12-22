@@ -1,23 +1,20 @@
-#include "Garfield/ViewSignal.hh"
-
 #include <TAxis.h>
 #include <TGraph.h>
 
 #include <iostream>
 
+#include "Garfield/ViewSignal.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/Sensor.hh"
 #include "TLegend.h"
 #include "TPaveLabel.h"
 
-#define LOG(x) std::cout << m_className << ": " << x << "\n" << std::endl
-
 namespace Garfield {
 
 ViewSignal::ViewSignal() : ViewBase("ViewSignal") {}
 
-void ViewSignal::SetSensor(Sensor *s) {
+void ViewSignal::SetSensor(Sensor* s) {
   if (!s) {
     std::cerr << m_className << "::SetSensor: Null pointer.\n";
     return;
@@ -45,7 +42,7 @@ void ViewSignal::SetRangeY(const double ymin, const double ymax) {
   m_userRangeY = true;
 }
 
-void ViewSignal::PlotSignal(const std::string &label, const bool total,
+void ViewSignal::PlotSignal(const std::string& label, const bool total,
                             const bool electron, const bool ion,
                             const bool delayed, const bool same) {
   if (!m_sensor) {
@@ -141,8 +138,7 @@ void ViewSignal::PlotSignal(const std::string &label, const bool total,
     }
     if (delayed) {
       const auto hnamed = FindUnusedHistogramName("hDelayedSignalElectrons_");
-      m_hDelayedSignalElectrons.reset(
-          new TH1D(hnamed.c_str(), "", nBins, t0, t1));
+      m_hDelayedSignalElectrons.reset(new TH1D(hnamed.c_str(), "", nBins, t0, t1));
       m_hDelayedSignalElectrons->SetLineColor(m_colDelayed[1]);
       m_hDelayedSignalElectrons->SetLineStyle(2);
       m_hDelayedSignalElectrons->SetStats(0);

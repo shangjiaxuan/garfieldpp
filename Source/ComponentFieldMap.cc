@@ -786,23 +786,23 @@ void ComponentFieldMap::Jacobian13(const Element& element, const double t,
 
   jac[0][0] = -uw * vz + uv * wz + vw * uz;
   jac[1][0] = -vw * tz + tw * vz - tv * wz;
-  jac[2][0] = uw * tz + tu * wz - tw * uz;
+  jac[2][0] =  uw * tz + tu * wz - tw * uz;
   jac[3][0] = -uv * tz - tu * vz + tv * uz;
 
   jac[0][1] = -ay * vz + by * wz + cy * uz;
-  jac[0][2] = ax * vz - bx * wz - cx * uz;
+  jac[0][2] =  ax * vz - bx * wz - cx * uz;
   jac[0][3] = -ax * vy + bx * wy + cx * uy;
 
   jac[1][1] = -cy * tz + dy * vz - ey * wz;
-  jac[1][2] = cx * tz - dx * vz + ex * wz;
+  jac[1][2] =  cx * tz - dx * vz + ex * wz;
   jac[1][3] = -cx * ty + dx * vy - ex * wy;
 
-  jac[2][1] = ay * tz + fy * wz - dy * uz;
+  jac[2][1] =  ay * tz + fy * wz - dy * uz;
   jac[2][2] = -ax * tz - fx * wz + dx * uz;
-  jac[2][3] = ax * ty + fx * wy - dx * uy;
+  jac[2][3] =  ax * ty + fx * wy - dx * uy;
 
   jac[3][1] = -by * tz - fy * vz + ey * uz;
-  jac[3][2] = bx * tz + fx * vz - ex * uz;
+  jac[3][2] =  bx * tz + fx * vz - ex * uz;
   jac[3][3] = -bx * ty - fx * vy + ex * uy;
 }
 

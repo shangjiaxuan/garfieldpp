@@ -1,8 +1,7 @@
-#include "Garfield/Component.hh"
-
 #include <cmath>
 #include <iostream>
 
+#include "Garfield/Component.hh"
 #include "Garfield/FundamentalConstants.hh"
 
 namespace Garfield {
