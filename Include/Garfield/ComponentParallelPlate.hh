@@ -88,8 +88,6 @@ class ComponentParallelPlate : public Component {
   static constexpr double m_Vw = 1.;  // Applied voltage on the electrode to
                                       // calculate the weighting potential.
   double m_eps = 1.;
-  double m_eps0 =
-      8.85418782e-12;  // Relative permittivity of the resistive layer.
   double m_V = 0.;     // Voltage acrose the RPC
   double m_ezg = 0;
   double m_ezb = 0;  // Electric field in the gap and resistive layer.
