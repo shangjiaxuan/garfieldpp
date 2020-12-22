@@ -1,5 +1,3 @@
-#include "Garfield/AvalancheMicroscopic.hh"
-
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -7,6 +5,7 @@
 #include <random>
 #include <string>
 
+#include "Garfield/AvalancheMicroscopic.hh"
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/Random.hh"
 
@@ -870,18 +869,11 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           dx = vx * dt + ex * b3;
           dy = vy * dt + ey * b3;
           dz = vz * dt + ez * b3;
-
-          if (m_testsignal) {
-            dx = 0.;
-            dy = 0.;
-            dz = m_testv * dt;
-          }
         }
         double x1 = x + dx;
         double y1 = y + dy;
         double z1 = z + dz;
         double t1 = t + dt;
-
         // Get the electric field and medium at the proposed new position.
         m_sensor->ElectricField(x1, y1, z1, ex, ey, ez, medium, status);
         if (!hole) {
