@@ -14,6 +14,9 @@
 #define SHIFT 2.0
 
 #ifdef __cplusplus
+#include <cmath>
+using std::isnan;
+using std::isinf;
 namespace neBEM {
 #endif
 
