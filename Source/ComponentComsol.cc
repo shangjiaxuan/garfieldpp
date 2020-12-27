@@ -924,7 +924,7 @@ void ComponentComsol::SetTimeInterval(const double mint, const double maxt,
                                       const double stept) {
   std::cout << std::endl
             << m_className
-            << "::SetTimeInterval:Overwriting time interval of weighting "
+            << "::SetTimeInterval: Overwriting time interval of weighting "
                "potential.\n";
 
   if (m_wdtimes.empty()) {
@@ -955,10 +955,6 @@ bool ComponentComsol::GetTimeInterval(const std::string& field) {
   }
 
   std::string strtime = "t=";
-  std::string holder;
-  std::string hoder2;
-
-  double time = -1.;
 
   std::string line;
   // Find first occurrence of "geeks"
@@ -981,21 +977,16 @@ bool ComponentComsol::GetTimeInterval(const std::string& field) {
 
         int i = 2;
 
-        holder = "";
+        std::string holder = "";
 
         while (true) {
           holder += line[found + i];
           i++;
 
           if (found + i == line.size()) break;
-
-          hoder2 = line[found + i];
-
-          if (hoder2.compare(" ") == 0) break;
+          if (line[found + i] == ' ') break;
         }
-
-        time = stod(holder);
-        m_wdtimes.push_back(time);
+        m_wdtimes.push_back(stod(holder));
       }
     }
     break;
@@ -1006,7 +997,7 @@ bool ComponentComsol::GetTimeInterval(const std::string& field) {
   std::cout << std::endl
             << m_className
             << "::GetTimeInterval: Time of weighting potential set for t in ["
-            << m_wdtimes[0] << "," << m_wdtimes[m_wdtimes.size() - 1] << "].\n";
+            << m_wdtimes.front() << "," << m_wdtimes.back() << "].\n";
 
   ffield.close();
 
