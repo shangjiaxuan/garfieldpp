@@ -1990,13 +1990,13 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
   // If chamber is periodic, reduce to the cell volume.
   xmirrored = false;
   if (m_periodic[0]) {
-    xpos = m_mapmin[0] + fmod(xpos - m_mapmin[0], m_mapmax[0] - m_mapmin[0]);
-    if (xpos < m_mapmin[0]) xpos += m_mapmax[0] - m_mapmin[0];
+    const double xrange = m_mapmax[0] - m_mapmin[0];
+    xpos = m_mapmin[0] + fmod(xpos - m_mapmin[0], xrange);
+    if (xpos < m_mapmin[0]) xpos += xrange;
   } else if (m_mirrorPeriodic[0]) {
-    double xnew =
-        m_mapmin[0] + fmod(xpos - m_mapmin[0], m_mapmax[0] - m_mapmin[0]);
-    if (xnew < m_mapmin[0]) xnew += m_mapmax[0] - m_mapmin[0];
-    int nx = int(floor(0.5 + (xnew - xpos) / (m_mapmax[0] - m_mapmin[0])));
+    double xnew = m_mapmin[0] + fmod(xpos - m_mapmin[0], xrange);
+    if (xnew < m_mapmin[0]) xnew += xrange;
+    int nx = int(floor(0.5 + (xnew - xpos) / xrange));
     if (nx != 2 * (nx / 2)) {
       xnew = m_mapmin[0] + m_mapmax[0] - xnew;
       xmirrored = true;
@@ -2006,11 +2006,11 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
   if (m_axiallyPeriodic[0] && (zpos != 0 || ypos != 0)) {
     const double auxr = sqrt(zpos * zpos + ypos * ypos);
     double auxphi = atan2(zpos, ypos);
-    const double phirange = (m_mapamax[0] - m_mapamin[0]);
+    const double phirange = m_mapamax[0] - m_mapamin[0];
     const double phim = 0.5 * (m_mapamin[0] + m_mapamax[0]);
     rotation = phirange * floor(0.5 + (auxphi - phim) / phirange);
-    if (auxphi - rotation < m_mapamin[0]) rotation = rotation - phirange;
-    if (auxphi - rotation > m_mapamax[0]) rotation = rotation + phirange;
+    if (auxphi - rotation < m_mapamin[0]) rotation -= phirange;
+    if (auxphi - rotation > m_mapamax[0]) rotation += phirange;
     auxphi = auxphi - rotation;
     ypos = auxr * cos(auxphi);
     zpos = auxr * sin(auxphi);
@@ -2018,13 +2018,13 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
 
   ymirrored = false;
   if (m_periodic[1]) {
-    ypos = m_mapmin[1] + fmod(ypos - m_mapmin[1], m_mapmax[1] - m_mapmin[1]);
-    if (ypos < m_mapmin[1]) ypos += m_mapmax[1] - m_mapmin[1];
+    const double yrange = m_mapmax[1] - m_mapmin[1];
+    ypos = m_mapmin[1] + fmod(ypos - m_mapmin[1], yrange);
+    if (ypos < m_mapmin[1]) ypos += yrange;
   } else if (m_mirrorPeriodic[1]) {
-    double ynew =
-        m_mapmin[1] + fmod(ypos - m_mapmin[1], m_mapmax[1] - m_mapmin[1]);
-    if (ynew < m_mapmin[1]) ynew += m_mapmax[1] - m_mapmin[1];
-    int ny = int(floor(0.5 + (ynew - ypos) / (m_mapmax[1] - m_mapmin[1])));
+    double ynew = m_mapmin[1] + fmod(ypos - m_mapmin[1], yrange);
+    if (ynew < m_mapmin[1]) ynew += yrange;
+    int ny = int(floor(0.5 + (ynew - ypos) / yrange));
     if (ny != 2 * (ny / 2)) {
       ynew = m_mapmin[1] + m_mapmax[1] - ynew;
       ymirrored = true;
@@ -2037,8 +2037,8 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
     const double phirange = (m_mapamax[1] - m_mapamin[1]);
     const double phim = 0.5 * (m_mapamin[1] + m_mapamax[1]);
     rotation = phirange * floor(0.5 + (auxphi - phim) / phirange);
-    if (auxphi - rotation < m_mapamin[1]) rotation = rotation - phirange;
-    if (auxphi - rotation > m_mapamax[1]) rotation = rotation + phirange;
+    if (auxphi - rotation < m_mapamin[1]) rotation -= phirange;
+    if (auxphi - rotation > m_mapamax[1]) rotation += phirange;
     auxphi = auxphi - rotation;
     zpos = auxr * cos(auxphi);
     xpos = auxr * sin(auxphi);
@@ -2046,13 +2046,13 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
 
   zmirrored = false;
   if (m_periodic[2]) {
-    zpos = m_mapmin[2] + fmod(zpos - m_mapmin[2], m_mapmax[2] - m_mapmin[2]);
-    if (zpos < m_mapmin[2]) zpos += m_mapmax[2] - m_mapmin[2];
+    const double zrange = m_mapmax[2] - m_mapmin[2];
+    zpos = m_mapmin[2] + fmod(zpos - m_mapmin[2], zrange);
+    if (zpos < m_mapmin[2]) zpos += zrange;
   } else if (m_mirrorPeriodic[2]) {
-    double znew =
-        m_mapmin[2] + fmod(zpos - m_mapmin[2], m_mapmax[2] - m_mapmin[2]);
-    if (znew < m_mapmin[2]) znew += m_mapmax[2] - m_mapmin[2];
-    int nz = int(floor(0.5 + (znew - zpos) / (m_mapmax[2] - m_mapmin[2])));
+    double znew = m_mapmin[2] + fmod(zpos - m_mapmin[2], zrange);
+    if (znew < m_mapmin[2]) znew += zrange;
+    int nz = int(floor(0.5 + (znew - zpos) / zrange));
     if (nz != 2 * (nz / 2)) {
       znew = m_mapmin[2] + m_mapmax[2] - znew;
       zmirrored = true;
@@ -2062,11 +2062,11 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
   if (m_axiallyPeriodic[2] && (ypos != 0 || xpos != 0)) {
     const double auxr = sqrt(ypos * ypos + xpos * xpos);
     double auxphi = atan2(ypos, xpos);
-    const double phirange = (m_mapamax[2] - m_mapamin[2]);
+    const double phirange = m_mapamax[2] - m_mapamin[2];
     const double phim = 0.5 * (m_mapamin[2] + m_mapamax[2]);
     rotation = phirange * floor(0.5 + (auxphi - phim) / phirange);
-    if (auxphi - rotation < m_mapamin[2]) rotation = rotation - phirange;
-    if (auxphi - rotation > m_mapamax[2]) rotation = rotation + phirange;
+    if (auxphi - rotation < m_mapamin[2]) rotation -= phirange;
+    if (auxphi - rotation > m_mapamax[2]) rotation += phirange;
     auxphi = auxphi - rotation;
     xpos = auxr * cos(auxphi);
     ypos = auxr * sin(auxphi);
