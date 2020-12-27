@@ -1994,6 +1994,7 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
     xpos = m_mapmin[0] + fmod(xpos - m_mapmin[0], xrange);
     if (xpos < m_mapmin[0]) xpos += xrange;
   } else if (m_mirrorPeriodic[0]) {
+    const double xrange = m_mapmax[0] - m_mapmin[0];
     double xnew = m_mapmin[0] + fmod(xpos - m_mapmin[0], xrange);
     if (xnew < m_mapmin[0]) xnew += xrange;
     int nx = int(floor(0.5 + (xnew - xpos) / xrange));
@@ -2022,6 +2023,7 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
     ypos = m_mapmin[1] + fmod(ypos - m_mapmin[1], yrange);
     if (ypos < m_mapmin[1]) ypos += yrange;
   } else if (m_mirrorPeriodic[1]) {
+    const double yrange = m_mapmax[1] - m_mapmin[1];
     double ynew = m_mapmin[1] + fmod(ypos - m_mapmin[1], yrange);
     if (ynew < m_mapmin[1]) ynew += yrange;
     int ny = int(floor(0.5 + (ynew - ypos) / yrange));
@@ -2050,6 +2052,7 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
     zpos = m_mapmin[2] + fmod(zpos - m_mapmin[2], zrange);
     if (zpos < m_mapmin[2]) zpos += zrange;
   } else if (m_mirrorPeriodic[2]) {
+    const double zrange = m_mapmax[2] - m_mapmin[2];
     double znew = m_mapmin[2] + fmod(zpos - m_mapmin[2], zrange);
     if (znew < m_mapmin[2]) znew += zrange;
     int nz = int(floor(0.5 + (znew - zpos) / zrange));
