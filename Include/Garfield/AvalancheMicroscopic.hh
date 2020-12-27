@@ -1,10 +1,10 @@
 #ifndef G_AVALANCHE_MICROSCOPIC_H
 #define G_AVALANCHE_MICROSCOPIC_H
 
-#include <TH1.h>
-
 #include <string>
 #include <vector>
+
+#include <TH1.h>
 
 #include "GarfieldConstants.hh"
 #include "Sensor.hh"
@@ -365,6 +365,6 @@ class AvalancheMicroscopic {
   void Terminate(double x0, double y0, double z0, double t0, double& x1,
                  double& y1, double& z1, double& t1);
 };
-}  // namespace Garfield
+}
 
 #endif

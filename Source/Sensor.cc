@@ -631,7 +631,6 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
           const double x = x0 + s * dx;
           const double y = y0 + s * dy;
           const double z = z0 + s * dz;
-
           // Calculate the delayed weighting field.
           double wx = 0., wy = 0., wz = 0.;
           electrode.comp->DelayedWeightingField(x, y, z, t, wx, wy, wz, lbl);
@@ -1217,14 +1216,12 @@ void Sensor::IntegrateSignal(Electrode& electrode) {
     electrode.signal[j] *= m_tStep;
     electrode.electronsignal[j] *= m_tStep;
     electrode.ionsignal[j] *= m_tStep;
-
     electrode.promptSignal[j] *= m_tStep;
     electrode.delayedSignal[j] *= m_tStep;
     if (j > 0) {
       electrode.signal[j] += electrode.signal[j - 1];
       electrode.electronsignal[j] += electrode.electronsignal[j - 1];
       electrode.ionsignal[j] += electrode.ionsignal[j - 1];
-
       electrode.promptSignal[j] += electrode.promptSignal[j - 1];
       electrode.delayedSignal[j] += electrode.delayedSignal[j - 1];
 

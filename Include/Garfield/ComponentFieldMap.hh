@@ -284,6 +284,6 @@ class ComponentFieldMap : public Component {
   /// Initialize the tetrahedral tree.
   bool InitializeTetrahedralTree();
 };
-}  // namespace Garfield
+}
 
 #endif

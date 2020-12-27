@@ -11,7 +11,7 @@
 
 namespace Garfield {
 
-/// Calculate avalanches in an uniform electric field using avalanche
+/// Calculate avalanches in a uniform electric field using avalanche
 /// statistics.
 
 class AvalancheGrid {
@@ -95,14 +95,14 @@ class AvalancheGrid {
   AvalancheMicroscopic* m_avmc = nullptr;
 
   struct Grid {
-    std::vector<double> zgrid;  ///< Grind points of z-coordinate.
-    int zsteps = 0.;            ///< Amount of grid points.
+    std::vector<double> zgrid;  ///< Grid points of z-coordinate.
+    int zsteps = 0;             ///< Amount of grid points.
     double zStepSize =
-        0.;  ///< Distance between the grind points of z-coordinate.
+        0.;  ///< Distance between the grid points of z-coordinate.
 
-    std::vector<double> xgrid;  ///< Grind points of x-coordinate.
+    std::vector<double> xgrid;  ///< Grid points of x-coordinate.
     double xStepSize = 0.;      ///< Amount of grid points.
-    int xsteps = 0.;  ///< Distance between the grind points of x-coordinate.
+    int xsteps = 0.;  ///< Distance between the grid points of x-coordinate.
 
     std::vector<int>
         gridPosition;  ///< Tracking of active z-coordinate grid points.
