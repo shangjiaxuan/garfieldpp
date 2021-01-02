@@ -767,23 +767,19 @@ void Medium::SetFieldGrid(double emin, double emax, const size_t ne, bool logE,
   const double astep = na > 1 ? (amax - amin) / (na - 1.) : 0;
 
   // Setup the field grids.
-  std::vector<double> eFieldsNew(ne);
-  std::vector<double> bFieldsNew(nb);
-  std::vector<double> bAnglesNew(na);
+  std::vector<double> eFields(ne);
+  std::vector<double> bFields(nb);
+  std::vector<double> bAngles(na);
   for (size_t i = 0; i < ne; ++i) {
-    eFieldsNew[i] = logE ? emin * pow(estep, i) : emin + i * estep;
+    eFields[i] = logE ? emin * pow(estep, i) : emin + i * estep;
   }
   for (size_t i = 0; i < nb; ++i) {
-    bFieldsNew[i] = bmin + i * bstep;
+    bFields[i] = bmin + i * bstep;
   }
-  if (na == 1 && nb == 1 && fabs(bmin) < 1.e-4) {
-    bAnglesNew[0] = HalfPi;
-  } else {
-    for (size_t i = 0; i < na; ++i) {
-      bAnglesNew[i] = amin + i * astep;
-    }
+  for (size_t i = 0; i < na; ++i) {
+    bAngles[i] = amin + i * astep;
   }
-  SetFieldGrid(eFieldsNew, bFieldsNew, bAnglesNew);
+  SetFieldGrid(eFields, bFields, bAngles);
 }
 
 void Medium::SetFieldGrid(const std::vector<double>& efields,
