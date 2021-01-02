@@ -57,12 +57,18 @@ int main() {
     
     // Histograms
     TH1::StatOverflows(true);
-    TH1F hElectrons("hElectrons", "Avalanche Size", 200, 0,2000);
+    TH1F hElectrons("hElectrons", "Avalanche Size", 200, 0, 2000);
     TH1F hIons("hIons", "Avalanche Size", 200, 0, 2000);
-
+    TH1F hEnergy("hEnergy", "Energy Distribution", 500, 0., 50.);
+    // Request the electron energy histogram to be filled.
+    aval.EnableElectronEnergyHistogramming(&hEnergy);
     std::cout << field << " kV/cm\n";
+    // Count the ionisations and excitations in the avalanche.
+    unsigned int nIon = 0;
+    unsigned int nExc = 0;
     constexpr unsigned int nEvents = 100;
     for (unsigned int j = 0; j < nEvents; ++j) {
+      gas.ResetCollisionCounters();
       aval.AvalancheElectron(0, 0, gap, 0, e0, 0, 0, 0);
       int ne = 0, ni = 0;
       aval.GetAvalancheSize(ne, ni);
@@ -72,18 +78,25 @@ int main() {
       }
       hElectrons.Fill(ne);
       hIons.Fill(ni);
+      // Retrieve the number of collisions of each type.
+      unsigned int nColl[6] = {0};
+      unsigned int nTotal = gas.GetNumberOfElectronCollisions(
+        nColl[0], nColl[1], nColl[2], nColl[3], nColl[4], nColl[5]);
+      nIon += nColl[1];
+      nExc += nColl[4];
     }
-
     outfile.cd();
     std::string dir = std::to_string(int(field));
     outfile.mkdir(dir.c_str());
     outfile.cd(dir.c_str());
     hElectrons.Write();
     hIons.Write();
+    hEnergy.Write();
 
     const double mean = hElectrons.GetMean();
     const double rms = hElectrons.GetRMS();
     std::cout << " f = " << rms * rms / (mean * mean) << "\n";
+    std::printf("    %20u ionisations, %20u excitations\n", nIon, nExc);
     field += 5.;
   }
   outfile.Close();
