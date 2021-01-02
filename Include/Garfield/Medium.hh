@@ -496,6 +496,8 @@ class Medium {
 
   // Id number
   int m_id;
+  // Number of components
+  unsigned int m_nComponents = 1;
   // Name
   std::string m_name = "";
   // Temperature [K]
@@ -504,8 +506,6 @@ class Medium {
   double m_pressure = 760.;
   // Static dielectric constant
   double m_epsilon = 1.;
-  // Number of components
-  unsigned int m_nComponents = 1;
   // (Effective) atomic number Z
   double m_z = 1.;
   // Atomic weight A
@@ -513,15 +513,15 @@ class Medium {
   // Number density [cm-3]
   double m_density = 0.;
 
-  // Transport flags
-  bool m_driftable = false;
-  bool m_microscopic = false;
-  bool m_ionisable = false;
-
   // W value
   double m_w = 0.;
   // Fano factor
   double m_fano = 0.;
+
+  // Transport flags
+  bool m_driftable = false;
+  bool m_microscopic = false;
+  bool m_ionisable = false;
 
   // Update flag
   bool m_isChanged = true;
@@ -529,13 +529,14 @@ class Medium {
   // Switch on/off debugging messages
   bool m_debug = false;
 
+  // Tables of transport parameters
+  bool m_tab2d = false;
+
   // Field grids
   std::vector<double> m_eFields;
   std::vector<double> m_bFields;
   std::vector<double> m_bAngles;
 
-  // Tables of transport parameters
-  bool m_tab2d = false;
   // Electrons
   std::vector<std::vector<std::vector<double> > > m_eVelE;
   std::vector<std::vector<std::vector<double> > > m_eVelX;
