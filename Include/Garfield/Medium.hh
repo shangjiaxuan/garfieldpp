@@ -200,170 +200,157 @@ class Medium {
                     std::vector<double>& angles);
 
   /// Set an entry in the table of drift speeds along E.
-  bool SetElectronVelocityE(const unsigned int ie, const unsigned int ib,
-                            const unsigned int ia, const double v) {
-    return SetEntry(ie, ib, ia, "SetElectronVelocityE", m_eVelE, v);
+  bool SetElectronVelocityE(const size_t ie, const size_t ib,
+                            const size_t ia, const double v) {
+    return SetEntry(ie, ib, ia, "ElectronVelocityE", m_eVelE, v);
   }
   /// Get an entry in the table of drift speeds along E.
-  bool GetElectronVelocityE(const unsigned int ie, const unsigned int ib,
-                            const unsigned int ia, double& v) {
-    return GetEntry(ie, ib, ia, "GetElectronVelocityE", m_eVelE, v);
+  bool GetElectronVelocityE(const size_t ie, const size_t ib,
+                            const size_t ia, double& v) {
+    return GetEntry(ie, ib, ia, "ElectronVelocityE", m_eVelE, v);
   }
   /// Set an entry in the table of drift speeds along ExB.
-  bool SetElectronVelocityExB(const unsigned int ie, const unsigned int ib,
-                              const unsigned int ia, const double v) {
-    return SetEntry(ie, ib, ia, "SetElectronVelocityExB", m_eVelX, v);
+  bool SetElectronVelocityExB(const size_t ie, const size_t ib,
+                              const size_t ia, const double v) {
+    return SetEntry(ie, ib, ia, "ElectronVelocityExB", m_eVelX, v);
   }
   /// Get an entry in the table of drift speeds along ExB.
-  bool GetElectronVelocityExB(const unsigned int ie, const unsigned int ib,
-                              const unsigned int ia, double& v) {
-    return GetEntry(ie, ib, ia, "GetElectronVelocityExB", m_eVelX, v);
+  bool GetElectronVelocityExB(const size_t ie, const size_t ib,
+                              const size_t ia, double& v) {
+    return GetEntry(ie, ib, ia, "ElectronVelocityExB", m_eVelX, v);
   }
   /// Set an entry in the table of drift speeds along Btrans.
-  bool SetElectronVelocityB(const unsigned int ie, const unsigned int ib,
-                            const unsigned int ia, const double v) {
-    return SetEntry(ie, ib, ia, "SetElectronVelocityB", m_eVelB, v);
+  bool SetElectronVelocityB(const size_t ie, const size_t ib,
+                            const size_t ia, const double v) {
+    return SetEntry(ie, ib, ia, "ElectronVelocityB", m_eVelB, v);
   }
   /// Get an entry in the table of drift speeds along Btrans.
-  bool GetElectronVelocityB(const unsigned int ie, const unsigned int ib,
-                            const unsigned int ia, double& v) {
-    return GetEntry(ie, ib, ia, "GetElectronVelocityB", m_eVelB, v);
+  bool GetElectronVelocityB(const size_t ie, const size_t ib,
+                            const size_t ia, double& v) {
+    return GetEntry(ie, ib, ia, "ElectronVelocityB", m_eVelB, v);
   }
   /// Set an entry in the table of longitudinal diffusion coefficients.
-  bool SetElectronLongitudinalDiffusion(const unsigned int ie, 
-                                        const unsigned int ib,
-                                        const unsigned int ia, 
-                                        const double dl) {
-    return SetEntry(ie, ib, ia, "SetElectronLongitudinalDiffusion", 
-                    m_eDifL, dl);
+  bool SetElectronLongitudinalDiffusion(const size_t ie, const size_t ib,
+                                        const size_t ia, const double dl) {
+    return SetEntry(ie, ib, ia, "ElectronLongitudinalDiffusion", m_eDifL, dl);
   }
   /// Get an entry in the table of longitudinal diffusion coefficients.
-  bool GetElectronLongitudinalDiffusion(const unsigned int ie,
-                                        const unsigned int ib,
-                                        const unsigned int ia, double& dl) {
-    return GetEntry(ie, ib, ia, "GetElectronLongitudinalDiffusion", 
-                    m_eDifL, dl);
+  bool GetElectronLongitudinalDiffusion(const size_t ie, const size_t ib,
+                                        const size_t ia, double& dl) {
+    return GetEntry(ie, ib, ia, "ElectronLongitudinalDiffusion", m_eDifL, dl);
   }
   /// Set an entry in the table of transverse diffusion coefficients.
-  bool SetElectronTransverseDiffusion(const unsigned int ie, 
-                                      const unsigned int ib,
-                                      const unsigned int ia, 
-                                      const double dt) {
-    return SetEntry(ie, ib, ia, "SetElectronTransverseDiffusion", 
-                    m_eDifT, dt);
+  bool SetElectronTransverseDiffusion(const size_t ie, const size_t ib,
+                                      const size_t ia, const double dt) {
+    return SetEntry(ie, ib, ia, "ElectronTransverseDiffusion", m_eDifT, dt);
   }
   /// Get an entry in the table of transverse diffusion coefficients.
-  bool GetElectronTransverseDiffusion(const unsigned int ie,
-                                      const unsigned int ib,
-                                      const unsigned int ia, double& dt) {
-    return GetEntry(ie, ib, ia, "GetElectronTransverseDiffusion", 
-                    m_eDifT, dt);
+  bool GetElectronTransverseDiffusion(const size_t ie, const size_t ib,
+                                      const size_t ia, double& dt) {
+    return GetEntry(ie, ib, ia, "ElectronTransverseDiffusion", m_eDifT, dt);
   }
   /// Set an entry in the table of Townsend coefficients.
-  bool SetElectronTownsend(const unsigned int ie, const unsigned int ib,
-                           const unsigned int ia, const double alpha) {
-    return SetEntry(ie, ib, ia, "SetElectronTownsend", m_eAlp, alpha);
+  bool SetElectronTownsend(const size_t ie, const size_t ib,
+                           const size_t ia, const double alpha) {
+    return SetEntry(ie, ib, ia, "ElectronTownsend", m_eAlp, alpha);
   }
   /// Get an entry in the table of Townsend coefficients.
-  bool GetElectronTownsend(const unsigned int ie, const unsigned int ib,
-                           const unsigned int ia, double& alpha) {
-    return GetEntry(ie, ib, ia, "GetElectronTownsend", m_eAlp, alpha);
+  bool GetElectronTownsend(const size_t ie, const size_t ib,
+                           const size_t ia, double& alpha) {
+    return GetEntry(ie, ib, ia, "ElectronTownsend", m_eAlp, alpha);
   }
   /// Set an entry in the table of attachment coefficients.
-  bool SetElectronAttachment(const unsigned int ie, const unsigned int ib,
-                             const unsigned int ia, const double eta) {
-    return SetEntry(ie, ib, ia, "SetElectronAttachment", m_eAtt, eta);
+  bool SetElectronAttachment(const size_t ie, const size_t ib,
+                             const size_t ia, const double eta) {
+    return SetEntry(ie, ib, ia, "ElectronAttachment", m_eAtt, eta);
   }
   /// Get an entry in the table of attachment coefficients.
-  bool GetElectronAttachment(const unsigned int ie, const unsigned int ib,
-                             const unsigned int ia, double& eta) {
-    return GetEntry(ie, ib, ia, "GetElectronAttachment", m_eAtt, eta);
+  bool GetElectronAttachment(const size_t ie, const size_t ib,
+                             const size_t ia, double& eta) {
+    return GetEntry(ie, ib, ia, "ElectronAttachment", m_eAtt, eta);
   }
  
   /// Set an entry in the table of Lorentz angles.
-  bool SetElectronLorentzAngle(const unsigned int ie, const unsigned int ib,
-                               const unsigned int ia, const double lor) {
-    return SetEntry(ie, ib, ia, "SetElectronLorentzAngle", m_eLor, lor);
+  bool SetElectronLorentzAngle(const size_t ie, const size_t ib,
+                               const size_t ia, const double lor) {
+    return SetEntry(ie, ib, ia, "ElectronLorentzAngle", m_eLor, lor);
   }
   /// Get an entry in the table of Lorentz angles.
-  bool GetElectronLorentzAngle(const unsigned int ie, const unsigned int ib,
-                               const unsigned int ia, double& lor) {
-    return GetEntry(ie, ib, ia, "GetElectronLorentzAngle", m_eLor, lor);
+  bool GetElectronLorentzAngle(const size_t ie, const size_t ib,
+                               const size_t ia, double& lor) {
+    return GetEntry(ie, ib, ia, "ElectronLorentzAngle", m_eLor, lor);
   }
 
   /// Set an entry in the table of drift speeds along E.
-  bool SetHoleVelocityE(const unsigned int ie, const unsigned int ib,
-                        const unsigned int ia, const double v) {
-    return SetEntry(ie, ib, ia, "SetHoleVelocityE", m_hVelE, v);
+  bool SetHoleVelocityE(const size_t ie, const size_t ib,
+                        const size_t ia, const double v) {
+    return SetEntry(ie, ib, ia, "HoleVelocityE", m_hVelE, v);
   }
   /// Get an entry in the table of drift speeds along E.
-  bool GetHoleVelocityE(const unsigned int ie, const unsigned int ib,
-                        const unsigned int ia, double& v) {
-    return GetEntry(ie, ib, ia, "GetHoleVelocityE", m_hVelE, v);
+  bool GetHoleVelocityE(const size_t ie, const size_t ib,
+                        const size_t ia, double& v) {
+    return GetEntry(ie, ib, ia, "HoleVelocityE", m_hVelE, v);
   }
   /// Set an entry in the table of drift speeds along ExB.
-  bool SetHoleVelocityExB(const unsigned int ie, const unsigned int ib,
-                          const unsigned int ia, const double v) {
-    return SetEntry(ie, ib, ia, "SetHoleVelocityExB", m_hVelX, v);
+  bool SetHoleVelocityExB(const size_t ie, const size_t ib,
+                          const size_t ia, const double v) {
+    return SetEntry(ie, ib, ia, "HoleVelocityExB", m_hVelX, v);
   }
   /// Get an entry in the table of drift speeds along ExB.
-  bool GetHoleVelocityExB(const unsigned int ie, const unsigned int ib,
-                          const unsigned int ia, double& v) {
-    return GetEntry(ie, ib, ia, "GetHoleVelocityExB", m_hVelX, v);
+  bool GetHoleVelocityExB(const size_t ie, const size_t ib,
+                          const size_t ia, double& v) {
+    return GetEntry(ie, ib, ia, "HoleVelocityExB", m_hVelX, v);
   }
   /// Set an entry in the table of drift speeds along Btrans.
-  bool SetHoleVelocityB(const unsigned int ie, const unsigned int ib,
-                        const unsigned int ia, const double v) {
-    return SetEntry(ie, ib, ia, "SetHoleVelocityB", m_hVelB, v);
+  bool SetHoleVelocityB(const size_t ie, const size_t ib,
+                        const size_t ia, const double v) {
+    return SetEntry(ie, ib, ia, "HoleVelocityB", m_hVelB, v);
   }
   /// Get an entry in the table of drift speeds along Btrans.
-  bool GetHoleVelocityB(const unsigned int ie, const unsigned int ib,
-                        const unsigned int ia, double& v) {
-    return GetEntry(ie, ib, ia, "GetHoleVelocityB", m_hVelB, v);
+  bool GetHoleVelocityB(const size_t ie, const size_t ib,
+                        const size_t ia, double& v) {
+    return GetEntry(ie, ib, ia, "HoleVelocityB", m_hVelB, v);
   }
 
   /// Set an entry in the table of longitudinal diffusion coefficients.
-  bool SetHoleLongitudinalDiffusion(const unsigned int ie,
-                                    const unsigned int ib,
-                                    const unsigned int ia, const double dl) {
-    return SetEntry(ie, ib, ia, "SetHoleLongitudinalDiffusion", m_hDifL, dl);
+  bool SetHoleLongitudinalDiffusion(const size_t ie, const size_t ib,
+                                    const size_t ia, const double dl) {
+    return SetEntry(ie, ib, ia, "HoleLongitudinalDiffusion", m_hDifL, dl);
   }
   /// Get an entry in the table of longitudinal diffusion coefficients.
-  bool GetHoleLongitudinalDiffusion(const unsigned int ie,
-                                    const unsigned int ib,
-                                    const unsigned int ia, double& dl) {
-    return GetEntry(ie, ib, ia, "GetHoleLongitudinalDiffusion", m_hDifL, dl);
+  bool GetHoleLongitudinalDiffusion(const size_t ie, const size_t ib,
+                                    const size_t ia, double& dl) {
+    return GetEntry(ie, ib, ia, "HoleLongitudinalDiffusion", m_hDifL, dl);
   }
   /// Set an entry in the table of transverse diffusion coefficients.
-  bool SetHoleTransverseDiffusion(const unsigned int ie,
-                                  const unsigned int ib,
-                                  const unsigned int ia, const double dt) {
-    return SetEntry(ie, ib, ia, "SetHoleTransverseDiffusion", m_hDifT, dt);
+  bool SetHoleTransverseDiffusion(const size_t ie, const size_t ib,
+                                  const size_t ia, const double dt) {
+    return SetEntry(ie, ib, ia, "HoleTransverseDiffusion", m_hDifT, dt);
   }
   /// Get an entry in the table of transverse diffusion coefficients.
-  bool GetHoleTransverseDiffusion(const unsigned int ie, const unsigned int ib,
-                                  const unsigned int ia, double& dt) {
-    return GetEntry(ie, ib, ia, "GetHoleTransverseDiffusion", m_hDifT, dt);
+  bool GetHoleTransverseDiffusion(const size_t ie, const size_t ib,
+                                  const size_t ia, double& dt) {
+    return GetEntry(ie, ib, ia, "HoleTransverseDiffusion", m_hDifT, dt);
   }
   /// Set an entry in the table of Townsend coefficients.
-  bool SetHoleTownsend(const unsigned int ie, const unsigned int ib,
-                       const unsigned int ia, const double alpha) {
-    return SetEntry(ie, ib, ia, "SetHoleTownsend", m_hAlp, alpha);
+  bool SetHoleTownsend(const size_t ie, const size_t ib,
+                       const size_t ia, const double alpha) {
+    return SetEntry(ie, ib, ia, "HoleTownsend", m_hAlp, alpha);
   }
   /// Get an entry in the table of Townsend coefficients.
-  bool GetHoleTownsend(const unsigned int ie, const unsigned int ib,
-                       const unsigned int ia, double& alpha) {
-    return GetEntry(ie, ib, ia, "GetHoleTownsend", m_hAlp, alpha);
+  bool GetHoleTownsend(const size_t ie, const size_t ib,
+                       const size_t ia, double& alpha) {
+    return GetEntry(ie, ib, ia, "HoleTownsend", m_hAlp, alpha);
   }
   /// Set an entry in the table of attachment coefficients.
-  bool SetHoleAttachment(const unsigned int ie, const unsigned int ib,
-                         const unsigned int ia, const double eta) {
-    return SetEntry(ie, ib, ia, "SetHoleAttachment", m_hAtt, eta);
+  bool SetHoleAttachment(const size_t ie, const size_t ib,
+                         const size_t ia, const double eta) {
+    return SetEntry(ie, ib, ia, "HoleAttachment", m_hAtt, eta);
   }
   /// Get an entry in the table of attachment coefficients.
-  bool GetHoleAttachment(const unsigned int ie, const unsigned int ib,
-                         const unsigned int ia, double& eta) {
-    return GetEntry(ie, ib, ia, "GetHoleAttachment", m_hAtt, eta);
+  bool GetHoleAttachment(const size_t ie, const size_t ib,
+                         const size_t ia, double& eta) {
+    return GetEntry(ie, ib, ia, "HoleAttachment", m_hAtt, eta);
   }
 
   /// Initialise the table of ion mobilities from a list of 
@@ -373,43 +360,43 @@ class Medium {
   bool SetIonMobility(const std::vector<double>& fields,
                       const std::vector<double>& mobilities);
   /// Set an entry in the table of ion mobilities.
-  bool SetIonMobility(const unsigned int ie, const unsigned int ib,
-                      const unsigned int ia, const double mu);
+  bool SetIonMobility(const size_t ie, const size_t ib, 
+                      const size_t ia, const double mu);
   /// Get an entry in the table of ion mobilities.
-  bool GetIonMobility(const unsigned int ie, const unsigned int ib,
-                      const unsigned int ia, double& mu) {
-    return GetEntry(ie, ib, ia, "GetIonMobility", m_iMob, mu);
+  bool GetIonMobility(const size_t ie, const size_t ib, 
+                      const size_t ia, double& mu) {
+    return GetEntry(ie, ib, ia, "IonMobility", m_iMob, mu);
   }
 
   /// Set an entry in the table of longitudinal diffusion coefficients.
-  bool SetIonLongitudinalDiffusion(const unsigned int ie, const unsigned int ib,
-                                   const unsigned int ia, const double dl) {
-    return SetEntry(ie, ib, ia, "SetIonLongitudinalDiffusion", m_iDifL, dl);
+  bool SetIonLongitudinalDiffusion(const size_t ie, const size_t ib,
+                                   const size_t ia, const double dl) {
+    return SetEntry(ie, ib, ia, "IonLongitudinalDiffusion", m_iDifL, dl);
   } 
   /// Get an entry in the table of longitudinal diffusion coefficients.
-  bool GetIonLongitudinalDiffusion(const unsigned int ie, const unsigned int ib,
-                                   const unsigned int ia, double& dl) {
-    return GetEntry(ie, ib, ia, "GetIonLongitudinalDiffusion", m_iDifL, dl);
+  bool GetIonLongitudinalDiffusion(const size_t ie, const size_t ib,
+                                   const size_t ia, double& dl) {
+    return GetEntry(ie, ib, ia, "IonLongitudinalDiffusion", m_iDifL, dl);
   } 
   /// Set an entry in the table of transverse diffusion coefficients.
-  bool SetIonTransverseDiffusion(const unsigned int ie, const unsigned int ib,
-                                 const unsigned int ia, const double dt) {
-    return SetEntry(ie, ib, ia, "SetIonTransverseDiffusion", m_iDifT, dt);
+  bool SetIonTransverseDiffusion(const size_t ie, const size_t ib,
+                                 const size_t ia, const double dt) {
+    return SetEntry(ie, ib, ia, "IonTransverseDiffusion", m_iDifT, dt);
   } 
   /// Get an entry in the table of transverse diffusion coefficients.
-  bool GetIonTransverseDiffusion(const unsigned int ie, const unsigned int ib,
-                                 const unsigned int ia, double& dt) {
-    return GetEntry(ie, ib, ia, "GetIonTransverseDiffusion", m_iDifT, dt);
+  bool GetIonTransverseDiffusion(const size_t ie, const size_t ib,
+                                 const size_t ia, double& dt) {
+    return GetEntry(ie, ib, ia, "IonTransverseDiffusion", m_iDifT, dt);
   }
   /// Set an entry in the table of dissociation coefficients.
-  bool SetIonDissociation(const unsigned int ie, const unsigned int ib,
-                          const unsigned int ia, const double diss) {
-    return SetEntry(ie, ib, ia, "SetIonDissociation", m_iDis, diss);
+  bool SetIonDissociation(const size_t ie, const size_t ib,
+                          const size_t ia, const double diss) {
+    return SetEntry(ie, ib, ia, "IonDissociation", m_iDis, diss);
   }
   /// Get an entry in the table of dissociation coefficients.
-  bool GetIonDissociation(const unsigned int ie, const unsigned int ib,
-                          const unsigned int ia, double& diss) {
-    return GetEntry(ie, ib, ia, "GetIonDissociation", m_iDis, diss);
+  bool GetIonDissociation(const size_t ie, const size_t ib,
+                          const size_t ia, double& diss) {
+    return GetEntry(ie, ib, ia, "IonDissociation", m_iDis, diss);
   }
 
   /// Reset all tables of transport parameters.
@@ -509,6 +496,8 @@ class Medium {
 
   // Id number
   int m_id;
+  // Number of components
+  unsigned int m_nComponents = 1;
   // Name
   std::string m_name = "";
   // Temperature [K]
@@ -517,8 +506,6 @@ class Medium {
   double m_pressure = 760.;
   // Static dielectric constant
   double m_epsilon = 1.;
-  // Number of components
-  unsigned int m_nComponents = 1;
   // (Effective) atomic number Z
   double m_z = 1.;
   // Atomic weight A
@@ -526,15 +513,15 @@ class Medium {
   // Number density [cm-3]
   double m_density = 0.;
 
-  // Transport flags
-  bool m_driftable = false;
-  bool m_microscopic = false;
-  bool m_ionisable = false;
-
   // W value
   double m_w = 0.;
   // Fano factor
   double m_fano = 0.;
+
+  // Transport flags
+  bool m_driftable = false;
+  bool m_microscopic = false;
+  bool m_ionisable = false;
 
   // Update flag
   bool m_isChanged = true;
@@ -542,13 +529,14 @@ class Medium {
   // Switch on/off debugging messages
   bool m_debug = false;
 
+  // Tables of transport parameters
+  bool m_tab2d = false;
+
   // Field grids
   std::vector<double> m_eFields;
   std::vector<double> m_bFields;
   std::vector<double> m_bAngles;
 
-  // Tables of transport parameters
-  bool m_tab2d = false;
   // Electrons
   std::vector<std::vector<std::vector<double> > > m_eVelE;
   std::vector<std::vector<std::vector<double> > > m_eVelX;
@@ -637,12 +625,12 @@ class Medium {
                        const unsigned int intpMeth,
                        const std::pair<unsigned int, unsigned int>& extr) const;
 
-  bool SetEntry(const unsigned int i, const unsigned int j, 
-                const unsigned int k, const std::string& fcn, 
+  bool SetEntry(const size_t i, const size_t j, const size_t k, 
+                const std::string& fcn, 
                 std::vector<std::vector<std::vector<double> > >& tab,
                 const double val);
-  bool GetEntry(const unsigned int i, const unsigned int j, 
-                const unsigned int k, const std::string& fcn, 
+  bool GetEntry(const size_t i, const size_t j, const size_t k, 
+                const std::string& fcn, 
                 const std::vector<std::vector<std::vector<double> > >& tab,
                 double& val) const;
 
@@ -650,7 +638,7 @@ class Medium {
                               std::pair<unsigned int, unsigned int>& extr,
                               const std::string& fcn);
   bool GetExtrapolationIndex(std::string str, unsigned int& nb) const;
-  unsigned int SetThreshold(
+  size_t SetThreshold(
       const std::vector<std::vector<std::vector<double> > >& tab) const;
 
   void Clone(std::vector<std::vector<std::vector<double> > >& tab,
@@ -661,7 +649,7 @@ class Medium {
              const double init, const std::string& label);
   void Clone(
       std::vector<std::vector<std::vector<std::vector<double> > > >& tab,
-      const unsigned int n, const std::vector<double>& efields,
+      const size_t n, const std::vector<double>& efields,
       const std::vector<double>& bfields, const std::vector<double>& angles,
       const unsigned int intp,
       const std::pair<unsigned int, unsigned int>& extr, const double init,

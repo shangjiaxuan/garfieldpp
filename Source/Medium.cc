@@ -17,8 +17,7 @@ void PrintNotImplemented(const std::string& cls, const std::string& fcn) {
 }
 
 void PrintOutOfRange(const std::string& cls, const std::string& fcn,
-                     const unsigned int i, const unsigned int j,
-                     const unsigned int k) {
+                     const size_t i, const size_t j, const size_t k) {
   std::cerr << cls << "::" << fcn << ": Index (" << i << ", " << j << ", " << k
             << ") out of range.\n";
 }
@@ -767,23 +766,19 @@ void Medium::SetFieldGrid(double emin, double emax, const size_t ne, bool logE,
   const double astep = na > 1 ? (amax - amin) / (na - 1.) : 0;
 
   // Setup the field grids.
-  std::vector<double> eFieldsNew(ne);
-  std::vector<double> bFieldsNew(nb);
-  std::vector<double> bAnglesNew(na);
+  std::vector<double> eFields(ne);
+  std::vector<double> bFields(nb);
+  std::vector<double> bAngles(na);
   for (size_t i = 0; i < ne; ++i) {
-    eFieldsNew[i] = logE ? emin * pow(estep, i) : emin + i * estep;
+    eFields[i] = logE ? emin * pow(estep, i) : emin + i * estep;
   }
   for (size_t i = 0; i < nb; ++i) {
-    bFieldsNew[i] = bmin + i * bstep;
+    bFields[i] = bmin + i * bstep;
   }
-  if (na == 1 && nb == 1 && fabs(bmin) < 1.e-4) {
-    bAnglesNew[0] = HalfPi;
-  } else {
-    for (size_t i = 0; i < na; ++i) {
-      bAnglesNew[i] = amin + i * astep;
-    }
+  for (size_t i = 0; i < na; ++i) {
+    bAngles[i] = amin + i * astep;
   }
-  SetFieldGrid(eFieldsNew, bFieldsNew, bAnglesNew);
+  SetFieldGrid(eFields, bFields, bAngles);
 }
 
 void Medium::SetFieldGrid(const std::vector<double>& efields,
@@ -870,13 +865,13 @@ void Medium::GetFieldGrid(std::vector<double>& efields,
   angles = m_bAngles;
 }
 
-bool Medium::SetEntry(const unsigned int i, const unsigned int j,
-                      const unsigned int k, const std::string& fcn,
+bool Medium::SetEntry(const size_t i, const size_t j, const size_t k,
+                      const std::string& fcn,
                       std::vector<std::vector<std::vector<double> > >& tab,
                       const double val) {
 
   if (i >= m_eFields.size() || j >= m_bFields.size() || k >= m_bAngles.size()) {
-    PrintOutOfRange(m_className, fcn, i, j, k);
+    PrintOutOfRange(m_className, "Set" + fcn, i, j, k);
     return false;
   }
   if (tab.empty()) {
@@ -886,17 +881,17 @@ bool Medium::SetEntry(const unsigned int i, const unsigned int j,
   return true;
 }
 
-bool Medium::GetEntry(const unsigned int i, const unsigned int j, 
-                      const unsigned int k, const std::string& fcn, 
+bool Medium::GetEntry(const size_t i, const size_t j, const size_t k, 
+                      const std::string& fcn, 
                       const std::vector<std::vector<std::vector<double> > >& tab,
                       double& val) const {
   val = 0.;
   if (i >= m_eFields.size() || j >= m_bFields.size() || k >= m_bAngles.size()) {
-    PrintOutOfRange(m_className, fcn, i, j, k);
+    PrintOutOfRange(m_className, "Get" + fcn, i, j, k);
     return false;
   }
   if (tab.empty()) {
-    if (m_debug) PrintDataNotAvailable(m_className, fcn);
+    if (m_debug) PrintDataNotAvailable(m_className, "Get" + fcn);
     return false;
   }
   val = tab[k][j][i];
@@ -965,12 +960,11 @@ void Medium::Clone(std::vector<std::vector<std::vector<double> > >& tab,
   }
   // Copy the values to the original table.
   tab.swap(tabClone);
-  tabClone.clear();
 }
 
 void Medium::Clone(
     std::vector<std::vector<std::vector<std::vector<double> > > >& tab,
-    const unsigned int n, const std::vector<double>& efields,
+    const size_t n, const std::vector<double>& efields,
     const std::vector<double>& bfields, const std::vector<double>& angles,
     const unsigned int intp, const std::pair<unsigned int, unsigned int>& extr,
     const double init, const std::string& lbl) {
@@ -978,21 +972,21 @@ void Medium::Clone(
   if (tab.empty()) return;
 
   // Get the dimensions of the new grid.
-  const unsigned int nE = efields.size();
-  const unsigned int nB = bfields.size();
-  const unsigned int nA = angles.size();
+  const auto nE = efields.size();
+  const auto nB = bfields.size();
+  const auto nA = angles.size();
 
   // Create a temporary table to store the values at the new grid points.
   std::vector<std::vector<std::vector<std::vector<double> > > > tabClone;
   Init(nE, nB, nA, n, tabClone, init);
 
   // Fill the temporary table.
-  for (unsigned int l = 0; l < n; ++l) {
-    for (unsigned int i = 0; i < nE; ++i) {
+  for (size_t l = 0; l < n; ++l) {
+    for (size_t i = 0; i < nE; ++i) {
       const double e = efields[i];
-      for (unsigned int j = 0; j < nB; ++j) {
+      for (size_t j = 0; j < nB; ++j) {
         const double b = bfields[j];
-        for (unsigned int k = 0; k < nA; ++k) {
+        for (size_t k = 0; k < nA; ++k) {
           const double a = angles[k];
           double val = 0.;
           if (!Interpolate(e, b, a, tab[l], val, intp, extr)) {
@@ -1012,8 +1006,8 @@ void Medium::Clone(
   tab.swap(tabClone);
 }
 
-bool Medium::SetIonMobility(const unsigned int ie, const unsigned int ib,
-                            const unsigned int ia, const double mu) {
+bool Medium::SetIonMobility(const size_t ie, const size_t ib,
+                            const size_t ia, const double mu) {
   // Check the index.
   if (ie >= m_eFields.size() || ib >= m_bFields.size() ||
       ia >= m_bAngles.size()) {
@@ -1044,29 +1038,27 @@ bool Medium::SetIonMobility(const unsigned int ie, const unsigned int ib,
 
 bool Medium::SetIonMobility(const std::vector<double>& efields,
                             const std::vector<double>& mobs) {
-  const int ne = efields.size();
-  const int nm = mobs.size();
-  if (ne != nm) {
+  if (efields.size() != mobs.size()) {
     std::cerr << m_className << "::SetIonMobility:\n"
               << "    E-field and mobility arrays have different sizes.\n";
     return false;
   }
 
   ResetIonMobility();
-  const unsigned int nEfields = m_eFields.size();
-  const unsigned int nBfields = m_bFields.size();
-  const unsigned int nAngles = m_bAngles.size();
-  Init(nEfields, nBfields, nAngles, m_iMob, 0.);
-  for (unsigned int i = 0; i < nEfields; ++i) {
+  const auto nE = m_eFields.size();
+  const auto nB = m_bFields.size();
+  const auto nA = m_bAngles.size();
+  Init(nE, nB, nA, m_iMob, 0.);
+  for (size_t i = 0; i < nE; ++i) {
     const double e = m_eFields[i];
     const double mu = Interpolate1D(e, mobs, efields, m_intpMob, m_extrMob);
     m_iMob[0][0][i] = mu;
   }
 
   if (m_tab2d) {
-    for (unsigned int i = 0; i < nAngles; ++i) {
-      for (unsigned int j = 0; j < nBfields; ++j) {
-        for (unsigned int k = 0; k < nEfields; ++k) {
+    for (size_t i = 0; i < nA; ++i) {
+      for (size_t j = 0; j < nB; ++j) {
+        for (size_t k = 0; k < nE; ++k) {
           m_iMob[i][j][k] = m_iMob[0][0][k];
         }
       }
@@ -1142,17 +1134,17 @@ bool Medium::GetExtrapolationIndex(std::string str, unsigned int& nb) const {
   return true;
 }
 
-unsigned int Medium::SetThreshold(
+size_t Medium::SetThreshold(
     const std::vector<std::vector<std::vector<double> > >& tab) const {
 
   if (tab.empty()) return 0;
-  const unsigned int nE = m_eFields.size();
-  const unsigned int nB = m_bFields.size();
-  const unsigned int nA = m_bAngles.size();
-  for (unsigned int i = 0; i < nE; ++i) {
+  const auto nE = m_eFields.size();
+  const auto nB = m_bFields.size();
+  const auto nA = m_bAngles.size();
+  for (size_t i = 0; i < nE; ++i) {
     bool below = false;
-    for (unsigned int k = 0; k < nA; ++k) {
-      for (unsigned int j = 0; j < nB; ++j) {
+    for (size_t k = 0; k < nA; ++k) {
+      for (size_t j = 0; j < nB; ++j) {
         if (tab[k][j][i] < -20.) {
           below = true;
           break;
@@ -1234,7 +1226,7 @@ double Medium::Interpolate1D(
   // GASVEL, GASVT1, GASVT2, GASLOR, GASMOB, GASDFT, and GASDFL
   // for the case of a 1D table. All variables are generic.
 
-  const int nSizeTable = fields.size();
+  const auto nSizeTable = fields.size();
 
   if (e < 0. || nSizeTable < 1) return 0.;
 
