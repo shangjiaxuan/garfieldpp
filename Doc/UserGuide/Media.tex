@@ -118,9 +118,9 @@ By default, the field and angular ranges are
 
 For specifying the field grid, two functions are available:
 \begin{lstlisting}
-void SetFieldGrid(double emin, double emax, int ne, bool logE,
-                  double bmin, double bmax, int nb,
-                  double amin, double amax, int na);
+void SetFieldGrid(double emin, double emax, const size_t ne, bool logE,
+                  double bmin, double bmax, const size_t nb,
+                  double amin, double amax, const size_t na);
 void SetFieldGrid(const std::vector<double>& efields,
                   const std::vector<double>& bfields,
                   const std::vector<double>& angles);
@@ -136,23 +136,23 @@ evenly spaced (\texttt{false}), or logarithmically spaced (\texttt{true})
 \(\theta\) (in ascending order)
 \end{description}
 Electric fields have to be supplied in V\,/\,cm, magnetic fields in Tesla, 
-and angles in rad.
+and angles in radian.
 
 The electron drift velocity components at a specific point in the table 
 can be set and retrieved using
 \begin{lstlisting}
-bool SetElectronVelocityE(const unsigned int ie, const unsigned int ib,
-                          const unsigned int ia, const double v);
-bool SetElectronVelocityB(const unsigned int ie, const unsigned int ib,
-                          const unsigned int ia, const double v);
-bool SetElectronVelocityExB(const unsigned int ie, const unsigned int ib,
-                            const unsigned int ia, const double v);
-bool GetElectronVelocityE(const unsigned int ie, const unsigned int ib,
-                          const unsigned int ia, double& v);
-bool GetElectronVelocityB(const unsigned int ie, const unsigned int ib,
-                          const unsigned int ia, double& v);
-bool GetElectronVelocityExB(const unsigned int ie, const unsigned int ib,
-                            const unsigned int ia, double& v);
+bool SetElectronVelocityE(const size_t ie, const size_t ib,
+                          const size_t ia, const double v);
+bool SetElectronVelocityB(const size_t ie, const size_t ib,
+                          const size_t ia, const double v);
+bool SetElectronVelocityExB(const size_t ie, const size_t ib,
+                            const size_t ia, const double v);
+bool GetElectronVelocityE(const size_t ie, const size_t ib,
+                          const size_t ia, double& v);
+bool GetElectronVelocityB(const size_t ie, const size_t ib,
+                          const size_t ia, double& v);
+bool GetElectronVelocityExB(const size_t ie, const size_t ib,
+                            const size_t ia, double& v);
 \end{lstlisting}
 \begin{description}
   \item[ie] index in the list of electric fields,
@@ -474,7 +474,7 @@ This feature can be enabled or disabled using
 void EnableThermalMotion(const bool on);
 \end{lstlisting} 
 By default the option is switched off, \texttt{i. e.} the gas 
-is assumed to be 0\,K. 
+is assumed to be at 0\,K. 
 
 In order to calculate the electron transport parameters 
 for all values of \(\mathbf{E}\), \(\mathbf{B}\), 
