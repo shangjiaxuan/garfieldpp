@@ -391,7 +391,11 @@ void ComponentNeBem3d::ElectricField(const double x, const double y,
   status = 0;
   // Check if the requested point is inside a medium
   m = GetMedium(x, y, z);
-  if (!m) status = -6;
+  if (!m) {
+    status = -6;
+  } else if (!m->IsDriftable()) {
+    status = -5;
+  }
 
   if (!m_ready) {
     if (!Initialise()) {
