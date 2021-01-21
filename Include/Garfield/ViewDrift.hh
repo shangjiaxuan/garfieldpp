@@ -54,7 +54,7 @@ class ViewDrift : public ViewBase {
   /// Set the colour with which to draw ionisation markers.
   void SetColourIonisations(const short col) { m_colIonisation = col; } 
   /// Set the colour with which to draw attachment markers.
-  void SetColourAttachments(const short col) { m_colIonisation = col; } 
+  void SetColourAttachments(const short col) { m_colAttachment = col; } 
 
   /// Get the number of drift lines stored. 
   size_t GetNumberOfDriftLines() const { return m_driftLines.size(); }
