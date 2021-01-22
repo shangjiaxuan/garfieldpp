@@ -1,8 +1,9 @@
 ###############################################################################
 # build Garfield++ library and examples
 # depend on: ROOT
-# @author Klaus Zenker, Pere Mato
-cmake_minimum_required(VERSION 3.3)
+# @author Klaus Zenker, Pere Mato, Stefano Caiazza
+# Version 3.9 is required by the ROOT Use file
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 ################################################################################
 
 # Setting a default build type to be release with debug information.
@@ -23,7 +24,6 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif()
 #---- Use GNU-style hierarchy for installing build products
 include(GNUInstallDirs)
-set(CMAKE_INSTALL_LIBDIR lib)  # overwrite this one
 
 #--- Dependencies---------------------------------------------------------------
 if(DEFINED ENV{ROOTSYS})
@@ -38,8 +38,12 @@ else()
 endif(DEFINED ENV{ROOTSYS})
 
 find_package(ROOT 6.0 REQUIRED COMPONENTS Geom Gdml)
-#--- Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
-include(${ROOT_USE_FILE})
+if(${ROOT_VERSION} VERSION_LESS "6.20.0")
+  #--- Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
+  # it only makes sense for ROOT < 6.20. Afterwards it is loaded automatically by the find_package
+  get_filename_component(Root_Use_File_Dir ${ROOT_USE_FILE} DIRECTORY)
+  include("${Root_Use_File_Dir}/modules/RootNewMacros.cmake")
+endif()
 
 find_package(GSL REQUIRED)
 include_directories(${GSL_INCLUDE_DIR})
