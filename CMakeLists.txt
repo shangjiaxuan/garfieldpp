@@ -19,9 +19,16 @@ endif()
 
 project(Garfield LANGUAGES CXX Fortran VERSION 0.3.0)
 
+#--- Set default installation prefix
+# TODO Possibly change the default install prefix simply to GARFIELD_HOME
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  if(DEFINED ENV{GARFIELD_HOME})
+    set(CMAKE_INSTALL_PREFIX $ENV{GARFIELD_HOME}/install CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
+  endif()
+else()
   message(STATUS "The installation folder is set to its default value ${CMAKE_INSTALL_PREFIX}")
 endif()
+
 #---- Use GNU-style hierarchy for installing build products
 include(GNUInstallDirs)
 
@@ -105,12 +112,6 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-#--- Set default installation prefix
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  if(DEFINED ENV{GARFIELD_HOME})
-    set(CMAKE_INSTALL_PREFIX $ENV{GARFIELD_HOME}/install CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
-  endif()
-endif()
 
 #--- Add switches used in HEED--------------------------------------------------
 # -DNOT_INCLUDE_GASLIB_IN_PACSLIB is used in Heed/heed++/code/PhotoAbsCS.c
@@ -163,7 +164,7 @@ endif()
 #--- target for Doxygen documentation ------------------------------------------
 option(WITH_DOC "Whether or not to create doxygen doc target." OFF)
 if(WITH_DOC)
-  include(cmake/GarfieldDoxygen.cmake)
+  add_subdirectory(Doc)
 endif()
 
 #--- add CMake infrastructure --------------------------------------------------
