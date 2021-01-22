@@ -37,6 +37,12 @@ include(GNUInstallDirs)
 include(BuildUtils)
 force_color_output()
 
+#--- Add neBEM------------------------------------------------------------------
+add_subdirectory(NeBem)
+
+#--- Add Magboltz
+add_subdirectory(Magboltz)
+
 #--- Dependencies---------------------------------------------------------------
 if(DEFINED ENV{ROOTSYS})
     list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
@@ -77,9 +83,6 @@ mark_as_advanced(BUILD_WITH_VERSION_NUMBER)
 #--- Add Garfield---------------------------------------------------------------
 aux_source_directory(Source garfield_sources)
 
-#--- Add Magboltz
-set(magboltz_sources Source/magboltz-11.9.f )
-set_source_files_properties(${magboltz_sources} PROPERTIES LANGUAGE Fortran)
 
 #--- Add Heed-------------------------------------------------------------------
 set( heed_dirs 
@@ -101,8 +104,6 @@ foreach(heed_dir ${heed_dirs})
 endforeach()
 set_source_files_properties(${heed_sources} PROPERTIES LANGUAGE CXX)
 
-#--- Add neBEM------------------------------------------------------------------
-add_subdirectory(NeBem)
 
 #--- Flags to pass to the compiler----------------------------------------------
 if(APPLE)
@@ -154,8 +155,8 @@ message(STATUS "-----------------------------------------------------------" )
 message(STATUS "Directory used to find ROOT dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
 message(STATUS "-----------------------------------------------------------" )
 
-target_sources( Garfield PRIVATE ${garfield_sources} ${magboltz_sources} ${heed_sources})
-target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES} NeBem)
+target_sources( Garfield PRIVATE ${garfield_sources} ${heed_sources})
+target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES} NeBem magboltz)
 if(OpenMP_CXX_FOUND)
   target_link_libraries(Garfield PRIVATE OpenMP::OpenMP_CXX)
 endif()
