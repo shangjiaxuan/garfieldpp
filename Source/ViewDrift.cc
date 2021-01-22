@@ -176,7 +176,7 @@ void ViewDrift::AddIonisation(const float x, const float y, const float z) {
 void ViewDrift::AddAttachment(const float x, const float y, const float z) {
   std::lock_guard<std::mutex> guard(m_mutex);
   std::array<float, 3> p = {x, y, z};
-  m_ion.push_back(std::move(p));
+  m_att.push_back(std::move(p));
 }
 
 void ViewDrift::Plot(const bool twod, const bool axis) {
