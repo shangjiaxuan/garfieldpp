@@ -102,8 +102,7 @@ endforeach()
 set_source_files_properties(${heed_sources} PROPERTIES LANGUAGE CXX)
 
 #--- Add neBEM------------------------------------------------------------------
-aux_source_directory(NeBem nebem_sources)
-set_source_files_properties(${nebem_sources} PROPERTIES LANGUAGE CXX)
+add_subdirectory(NeBem)
 
 #--- Flags to pass to the compiler----------------------------------------------
 if(APPLE)
@@ -155,8 +154,8 @@ message(STATUS "-----------------------------------------------------------" )
 message(STATUS "Directory used to find ROOT dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
 message(STATUS "-----------------------------------------------------------" )
 
-target_sources( Garfield PRIVATE ${garfield_sources} ${magboltz_sources} ${heed_sources} ${nebem_sources})
-target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES})
+target_sources( Garfield PRIVATE ${garfield_sources} ${magboltz_sources} ${heed_sources})
+target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES} NeBem)
 if(OpenMP_CXX_FOUND)
   target_link_libraries(Garfield PRIVATE OpenMP::OpenMP_CXX)
 endif()
@@ -165,9 +164,6 @@ target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/NeBem>)
-if(BUILD_WITH_VERSION_NUMBER)
-
-endif()
 
 #--- target for Doxygen documentation ------------------------------------------
 option(WITH_DOC "Whether or not to create doxygen doc target." OFF)
