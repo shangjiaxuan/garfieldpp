@@ -4,8 +4,23 @@
 # @author Klaus Zenker, Pere Mato
 cmake_minimum_required(VERSION 3.3)
 ################################################################################
+
+# Setting a default build type to be release with debug information.
+# Otherwise the default mode is debug.
+set(default_build_type "Release" )
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  	set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE
+      	STRING "Choose the type of build.")
+  	# Set the possible values of build type for cmake-gui
+  	set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+		"Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
 project(Garfield LANGUAGES CXX Fortran VERSION 0.3.0)
 
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  message(STATUS "The installation folder is set to its default value ${CMAKE_INSTALL_PREFIX}")
+endif()
 #---- Use GNU-style hierarchy for installing build products
 include(GNUInstallDirs)
 set(CMAKE_INSTALL_LIBDIR lib)  # overwrite this one
