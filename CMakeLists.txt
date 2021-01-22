@@ -62,11 +62,17 @@ include_directories(${GSL_INCLUDE_DIR})
 
 find_package(OpenMP)
 
+# Creating the main Garfield library
+add_library(Garfield SHARED "")
+
 #--- If you cannot create symbolic links turn FALSE the library version
-set(BUILD_WITH_VERSION_NUMBER TRUE)
+option(BUILD_WITH_VERSION_NUMBER "If you cannot create symbolic links turn FALSE the library version" TRUE)
 if(BUILD_WITH_VERSION_NUMBER)
-    set( Garfield_SOVERSION ${Garfield_VERSION} )
+  set_target_properties(Garfield PROPERTIES
+                                 VERSION ${Garfield_VERSION}
+                                 SOVERSION ${Garfield_VERSION} )
 endif()
+mark_as_advanced(BUILD_WITH_VERSION_NUMBER)
 
 #--- Add Garfield---------------------------------------------------------------
 aux_source_directory(Source garfield_sources)
@@ -149,8 +155,7 @@ message(STATUS "-----------------------------------------------------------" )
 message(STATUS "Directory used to find ROOT dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
 message(STATUS "-----------------------------------------------------------" )
 
-#--- build the Garfield library
-add_library(Garfield SHARED ${garfield_sources} ${magboltz_sources} ${heed_sources} ${nebem_sources})
+target_sources( Garfield PRIVATE ${garfield_sources} ${magboltz_sources} ${heed_sources} ${nebem_sources})
 target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES})
 if(OpenMP_CXX_FOUND)
   target_link_libraries(Garfield PRIVATE OpenMP::OpenMP_CXX)
@@ -161,9 +166,7 @@ target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/NeBem>)
 if(BUILD_WITH_VERSION_NUMBER)
-  set_target_properties(Garfield PROPERTIES
-                        VERSION ${Garfield_VERSION}
-                        SOVERSION ${Garfield_SOVERSION} )
+
 endif()
 
 #--- target for Doxygen documentation ------------------------------------------
