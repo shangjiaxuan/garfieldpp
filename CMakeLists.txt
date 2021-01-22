@@ -29,8 +29,13 @@ else()
   message(STATUS "The installation folder is set to its default value ${CMAKE_INSTALL_PREFIX}")
 endif()
 
+#Adding the CMake folder to the search path for modules
+list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake)
+
 #---- Use GNU-style hierarchy for installing build products
 include(GNUInstallDirs)
+include(BuildUtils)
+force_color_output()
 
 #--- Dependencies---------------------------------------------------------------
 if(DEFINED ENV{ROOTSYS})
