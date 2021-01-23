@@ -63,36 +63,6 @@ if(${ROOT_VERSION} VERSION_LESS "6.20.0")
   include("${Root_Use_File_Dir}/modules/RootNewMacros.cmake")
 endif()
 
-find_package(GSL REQUIRED)
-include_directories(${GSL_INCLUDE_DIR})
-
-find_package(OpenMP)
-
-# Creating the main Garfield library
-add_library(Garfield SHARED "")
-
-#--- Add Heed-------------------------------------------------------------------
-add_subdirectory(Heed)
-
-#--- If you cannot create symbolic links turn FALSE the library version
-option(BUILD_WITH_VERSION_NUMBER "If you cannot create symbolic links turn FALSE the library version" TRUE)
-if(BUILD_WITH_VERSION_NUMBER)
-  set_target_properties(Garfield PROPERTIES
-                                 VERSION ${Garfield_VERSION}
-                                 SOVERSION ${Garfield_VERSION} )
-endif()
-mark_as_advanced(BUILD_WITH_VERSION_NUMBER)
-
-#--- Add Garfield---------------------------------------------------------------
-aux_source_directory(Source garfield_sources)
-
-#--- Flags to pass to the compiler----------------------------------------------
-if(APPLE)
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -Wno-long-long -Woverloaded-virtual -fno-common" )
-else()
-  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wno-long-long -Woverloaded-virtual -fno-common" )
-endif()
-
 #--- Set the C++ standard (depending on the ROOT version)-----------------------
 if(NOT DEFINED CMAKE_CXX_STANDARD)
   if(${ROOT_CXX_FLAGS} MATCHES ".*-std=c\\+\\+([0-9][0-9])")
@@ -103,6 +73,80 @@ if(NOT DEFINED CMAKE_CXX_STANDARD)
 endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+find_package(GSL REQUIRED)
+include_directories(${GSL_INCLUDE_DIR})
+
+find_package(OpenMP)
+
+# Creating the main Garfield library
+add_library(Garfield SHARED "")
+target_sources(Garfield PRIVATE Source/AvalancheMC.cc
+                                Source/AvalancheMicroscopic.cc
+                                Source/Component.cc
+                                Source/ComponentAnalyticField.cc
+                                Source/ComponentAnsys121.cc
+                                Source/ComponentAnsys123.cc
+                                Source/ComponentCST.cc
+                                Source/ComponentComsol.cc
+                                Source/ComponentConstant.cc
+                                Source/ComponentElmer.cc
+                                Source/ComponentElmer2D.cc
+                                Source/ComponentFieldMap.cc
+                                Source/ComponentGrid.cc
+                                Source/ComponentNeBem2d.cc
+                                Source/ComponentNeBem3d.cc
+                                Source/ComponentNeBem3dMap.cc
+                                Source/ComponentTcad2d.cc
+                                Source/ComponentTcad3d.cc
+                                Source/ComponentUser.cc
+                                Source/ComponentVoxel.cc
+                                Source/DriftLineRKF.cc
+                                Source/GeometryRoot.cc
+                                Source/GeometrySimple.cc
+                                Source/KDTree.cc
+                                Source/Medium.cc
+                                Source/MediumCdTe.cc
+                                Source/MediumGaAs.cc
+                                Source/MediumGaN.cc
+                                Source/MediumGas.cc
+                                Source/MediumMagboltz.cc
+                                Source/MediumSilicon.cc
+                                Source/NeBemInterface.cpp
+                                Source/Numerics.cc
+                                Source/OpticalData.cc
+                                Source/PlottingEngineRoot.cc
+                                Source/Polygon.cc
+                                Source/Random.cc
+                                Source/RandomEngineRoot.cc
+                                Source/Sensor.cc
+                                Source/Shaper.cc
+                                Source/Solid.cc
+                                Source/SolidBox.cc
+                                Source/SolidExtrusion.cc
+                                Source/SolidHole.cc
+                                Source/SolidRidge.cc
+                                Source/SolidSphere.cc
+                                Source/SolidTube.cc
+                                Source/SolidWire.cc
+                                Source/TetrahedralTree.cc
+                                Source/Track.cc
+                                Source/TrackBichsel.cc
+                                Source/TrackElectron.cc
+                                Source/TrackHeed.cc
+                                Source/TrackPAI.cc
+                                Source/TrackSimple.cc
+                                Source/TrackSrim.cc
+                                Source/ViewBase.cc
+                                Source/ViewCell.cc
+                                Source/ViewDrift.cc
+                                Source/ViewFEMesh.cc
+                                Source/ViewField.cc
+                                Source/ViewGeometry.cc
+                                Source/ViewIsochrons.cc
+                                Source/ViewMedium.cc
+                                Source/ViewSignal.cc
+)
 
 #--- create ROOT dictionary-----------------------------------------------------
 if(ROOT_VERSION VERSION_LESS 6.17)
@@ -116,7 +160,25 @@ else()
   ROOT_GENERATE_DICTIONARY(GarfieldDict ${garfield_header}
                            LINKDEF Include/Garfield/LinkDef.h)
 endif()
-list(APPEND garfield_sources GarfieldDict.cxx)
+target_sources(Garfield PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/GarfieldDict.cxx)
+
+#--- If you cannot create symbolic links turn FALSE the library version
+option(BUILD_WITH_VERSION_NUMBER "If you cannot create symbolic links turn FALSE the library version" TRUE)
+if(BUILD_WITH_VERSION_NUMBER)
+  set_target_properties(Garfield PROPERTIES SOVERSION ${Garfield_VERSION} )
+endif()
+mark_as_advanced(BUILD_WITH_VERSION_NUMBER)
+
+#--- Add Heed sources-------------------------------------------------------------------
+add_subdirectory(Heed)
+
+#--- Flags to pass to the compiler----------------------------------------------
+if(APPLE)
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -Wno-long-long -Woverloaded-virtual -fno-common" )
+else()
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -ansi -Wno-long-long -Woverloaded-virtual -fno-common" )
+endif()
+
 
 #--- Print information on considered files and the root dictionary include directories
 message(STATUS "-----------------------------------------------------------" )
@@ -133,8 +195,7 @@ endif()
 target_compile_features(Garfield INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
-                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>
-                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/NeBem>)
+                                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>)
 
 #--- target for Doxygen documentation ------------------------------------------
 option(WITH_DOC "Whether or not to create doxygen doc target." OFF)
