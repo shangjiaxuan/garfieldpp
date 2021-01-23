@@ -222,8 +222,7 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
     m_hSignal->SetStats(0);
     // Fill histogram with total signal
     for (unsigned int i = 0; i < nBins; ++i) {
-      const double sig = getsignal ? m_sensor->GetSignal(label, i, 0)
-                                   : m_sensor->GetCharge(label, i, 0);
+        const double sig = m_sensor->GetSignal(label, i, 0);
       m_hSignal->SetBinContent(i + 1, sig);
     }
 
@@ -261,8 +260,7 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
       m_hDelayedSignal->SetLineStyle(2);
       m_hDelayedSignal->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
-        const double sig = getsignal ? m_sensor->GetSignal(label, i, 2)
-                                     : m_sensor->GetCharge(label, i, 2);
+          const double sig = m_sensor->GetSignal(label, i, 2);
         m_hDelayedSignal->SetBinContent(i + 1, sig);
       }
       m_hDelayedSignal->SetFillStyle(3001);
@@ -275,8 +273,7 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
     m_hPromptSignal->SetLineStyle(2);
     m_hPromptSignal->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {
-      const double sig = getsignal ? m_sensor->GetSignal(label, i, 1)
-                                   : m_sensor->GetCharge(label, i, 1);
+        const double sig = m_sensor->GetSignal(label, i, 1);
       m_hPromptSignal->SetBinContent(i + 1, sig);
     }
     m_hPromptSignal->SetFillStyle(3001);
