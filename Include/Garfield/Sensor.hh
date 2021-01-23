@@ -118,11 +118,6 @@ class Sensor {
   /// Retrieve the total signal for a given electrode and time bin.
   double GetSignal(const std::string& label, const unsigned int bin);
   /// Retrieve the electron signal for a given electrode and time bin.
-  double GetCharge(const std::string& label, const unsigned int bin,
-                   const int comp = 0);
-  /// Retrieve the induced charge for a given electrode and time bin. comp=0:
-  /// total induced charge, comp=1: prompt induced charge, comp=2: delayed
-  /// induced charge.
   double GetSignal(const std::string& label, const unsigned int bin,
                    const int comp);
   /// Retrieve the prompt signal for a given electrode and time bin.
@@ -227,63 +222,10 @@ class Sensor {
                  const std::vector<double>& ns, const int navg);
   /// Add the induced charge from a charge carrier drift between two points.
 
-  void ExportCharge(const std::string& label) {
-    for (const auto& electrode : m_electrodes) {
-      if (electrode.label == label) {
-        std::ofstream myfile;
-        std::string filename = "Charge" + label + ".csv";
-        myfile.open(filename);
-        myfile << "The cumulative induced charge.\n";
-        myfile << "Time [ns],Prompt [fC],Delayed [fC],Total [fC],\n";
-        const int N = (int)m_nTimeBins;
-        for (int i = 0; i < N; i++) {
-          myfile << std::to_string(m_tStart + i * m_tStep) << ","
-                 << std::to_string(ElementaryCharge *
-                                   electrode.promptInducedCharge[i])
-                 << ","
-                 << std::to_string(ElementaryCharge *
-                                   electrode.delayeInduceddCharge[i])
-                 << ","
-                 << std::to_string(ElementaryCharge *
-                                   electrode.inducedCharge[i])
-                 << ","
-                 << "\n";
-        }
-        myfile.close();
-      }
-    }
-    return;
-  }
-  /// Exporting cumulative induced charge to a csv file.
+    void ExportCharge(const std::string& label,const std::string& filename);
+    /// Exporting cumulative induced charge to a csv file.
 
-  void ExportSignal(const std::string& label) {
-    for (const auto& electrode : m_electrodes) {
-      if (electrode.label == label) {
-        std::ofstream myfile;
-        std::string filename = "Signal" + label + ".csv";
-        myfile.open(filename);
-        myfile << "The induced signal.\n";
-        myfile << "Time [ns],Prompt [zC/ns],Delayed [zC/ns],Total [zC/ns];\n";
-        double scale = 1e6;
-        const int N = (int)m_nTimeBins;
-        for (int i = 0; i < N; i++) {
-          myfile << std::to_string(m_tStart + i * m_tStep) << ","
-                 << std::to_string(scale * ElementaryCharge *
-                                   electrode.promptSignal[i])
-                 << ","
-                 << std::to_string(scale * ElementaryCharge *
-                                   electrode.delayedSignal[i])
-                 << ","
-                 << std::to_string(scale * ElementaryCharge *
-                                   electrode.signal[i])
-                 << ","
-                 << "\n";
-        }
-        myfile.close();
-      }
-    }
-    return;
-  }
+    void ExportSignal(const std::string& label,const std::string& filename);
   /// Exporting induced signal to a csv file.
 
   void AddInducedCharge(const double q, const double x0, const double y0,
@@ -319,12 +261,7 @@ class Sensor {
     Component* comp;
     std::string label;
     std::vector<double> signal;
-    std::vector<double> promptSignal;
     std::vector<double> delayedSignal;
-
-    std::vector<double> inducedCharge;
-    std::vector<double> promptInducedCharge;
-    std::vector<double> delayeInduceddCharge;
 
     std::vector<double> electronsignal;
     std::vector<double> ionsignal;
@@ -366,8 +303,6 @@ class Sensor {
   double m_xMinUser = 0., m_yMinUser = 0., m_zMinUser = 0.;
   double m_xMaxUser = 0., m_yMaxUser = 0., m_zMaxUser = 0.;
 
-  bool m_useinducedcharge = false;
-
   // Switch on/off debugging messages
   bool m_debug = false;
 
@@ -381,12 +316,7 @@ class Sensor {
   void FillBin(Electrode& electrode, const unsigned int bin,
                const double signal, const bool electron, const bool delayed) {
     std::lock_guard<std::mutex> guard(m_mutex);
-    if (delayed) {
-      electrode.delayedSignal[bin] += signal;
-
-    } else {
-      electrode.promptSignal[bin] += signal;
-    }
+    if (delayed) electrode.delayedSignal[bin] += signal;
 
     electrode.signal[bin] += signal;
 

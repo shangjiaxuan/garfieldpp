@@ -364,11 +364,7 @@ void Sensor::AddElectrode(Component* cmp, const std::string& label) {
   electrode.electronsignal.assign(m_nTimeBins, 0.);
   electrode.ionsignal.assign(m_nTimeBins, 0.);
   electrode.delayedElectronSignal.assign(m_nTimeBins, 0.);
-  electrode.inducedCharge.assign(m_nTimeBins, 0.);
-  electrode.promptInducedCharge.assign(m_nTimeBins, 0.);
-  electrode.delayeInduceddCharge.assign(m_nTimeBins, 0.);
   electrode.delayedSignal.assign(m_nTimeBins, 0.);
-  electrode.promptSignal.assign(m_nTimeBins, 0.);
   electrode.delayedIonSignal.assign(m_nTimeBins, 0.);
   m_electrodes.push_back(std::move(electrode));
   std::cout << m_className << "::AddElectrode:\n"
@@ -501,7 +497,7 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
       const double w0 = electrode.comp->WeightingPotential(x0, y0, z0, lbl);
       const double w1 = electrode.comp->WeightingPotential(x1, y1, z1, lbl);
       charge = q * (w1 - w0);
-      current = 2 * charge / dt;
+      current = charge / dt;
     } else {
       double wx = 0., wy = 0., wz = 0.;
       // Calculate the weighting field for this electrode.
@@ -887,30 +883,6 @@ double Sensor::GetSignal(const std::string& label, const unsigned int bin) {
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
-double Sensor::GetCharge(const std::string& label, const unsigned int bin,
-                         const int comp) {
-  if (m_nEvents == 0) return 0.;
-  if (bin >= m_nTimeBins) return 0.;
-  double sig = 0.;
-  for (const auto& electrode : m_electrodes) {
-    if (electrode.label == label) {
-      switch (comp) {
-        case 1: {
-          sig += electrode.promptInducedCharge[bin];
-          break;
-        }
-        case 2: {
-          sig += electrode.delayeInduceddCharge[bin];
-          break;
-        }
-        default:
-          sig += electrode.inducedCharge[bin];
-      }
-    }
-  }
-  return ElementaryCharge * sig;
-}
-
 double Sensor::GetSignal(const std::string& label, const unsigned int bin,
                          const int comp) {
   if (m_nEvents == 0) return 0.;
@@ -920,7 +892,7 @@ double Sensor::GetSignal(const std::string& label, const unsigned int bin,
     if (electrode.label == label) {
       switch (comp) {
         case 1: {
-          sig += electrode.promptSignal[bin];
+            sig += electrode.signal[bin]-electrode.delayedSignal[bin];
           break;
         }
         case 2: {
@@ -941,7 +913,7 @@ double Sensor::GetPromptSignal(const std::string& label,
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
   for (const auto& electrode : m_electrodes) {
-    if (electrode.label == label) sig += electrode.promptSignal[bin];
+      if (electrode.label == label) sig += electrode.signal[bin]-electrode.delayedSignal[bin];
   }
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
@@ -1110,14 +1082,17 @@ void Sensor::ConvoluteSignal(Electrode& electrode,
                              const std::vector<double>& tab) {
   // Do the convolution.
   std::vector<double> tmpSignal(m_nTimeBins, 0.);
+    std::vector<double> tmpSignalDelayed(m_nTimeBins, 0.);
   const unsigned int offset = m_nTimeBins - 1;
   for (unsigned int j = 0; j < m_nTimeBins; ++j) {
-    tmpSignal[j] = 0.;
+    tmpSignal[j] = tmpSignalDelayed[j]= 0.;
     for (unsigned int k = 0; k < m_nTimeBins; ++k) {
       tmpSignal[j] += m_tStep * tab[offset + j - k] * electrode.signal[k];
+      tmpSignalDelayed[j]+= m_tStep * tab[offset + j - k] * electrode.delayedSignal[k];
     }
   }
   electrode.signal.swap(tmpSignal);
+    electrode.delayedSignal.swap(tmpSignalDelayed);
   electrode.integrated = true;
 }
 
@@ -1216,18 +1191,12 @@ void Sensor::IntegrateSignal(Electrode& electrode) {
     electrode.signal[j] *= m_tStep;
     electrode.electronsignal[j] *= m_tStep;
     electrode.ionsignal[j] *= m_tStep;
-    electrode.promptSignal[j] *= m_tStep;
     electrode.delayedSignal[j] *= m_tStep;
     if (j > 0) {
       electrode.signal[j] += electrode.signal[j - 1];
       electrode.electronsignal[j] += electrode.electronsignal[j - 1];
       electrode.ionsignal[j] += electrode.ionsignal[j - 1];
-      electrode.promptSignal[j] += electrode.promptSignal[j - 1];
       electrode.delayedSignal[j] += electrode.delayedSignal[j - 1];
-
-      electrode.inducedCharge[j] = electrode.signal[j];
-      electrode.promptInducedCharge[j] = electrode.promptSignal[j];
-      electrode.delayeInduceddCharge[j] = electrode.delayedSignal[j];
     }
   }
   electrode.integrated = true;
@@ -1619,5 +1588,73 @@ void Sensor::FFT(std::vector<double>& data, const bool inverse, const int nn) {
     mmax = step;
   }
 }
+
+void Sensor::ExportCharge(const std::string& label,const std::string& name) {
+    for (const auto& electrode : m_electrodes) {
+      if (electrode.label == label) {
+          
+          if(!electrode.integrated){
+              std::cerr << m_className << "::ExportCharge: Signal is not integrated. Could not export data.\n";
+              return;
+          };
+        std::ofstream myfile;
+        std::string filename = name + ".csv";
+        myfile.open(filename);
+        myfile << "The cumulative induced charge.\n";
+        myfile << "Time [ns],Prompt [fC],Delayed [fC],Total [fC],\n";
+        const int N = (int)m_nTimeBins;
+        for (int i = 0; i < N; i++) {
+            myfile << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                   << m_tStart + i * m_tStep
+                   << ","
+                   << ElementaryCharge *(
+                                     electrode.signal[i]-electrode.delayedSignal[i])
+                   << ","
+                   << ElementaryCharge *
+                                     electrode.delayedSignal[i]
+                   << ","
+                   << ElementaryCharge *
+                                     electrode.signal[i]
+                   << ","
+                   << "\n";
+        }
+        myfile.close();
+      }
+    }
+    std::cerr << m_className << "::ExportCharge: File '"<<name<<".csv' exported. \n";
+    return;
+  }
+  /// Exporting cumulative induced charge to a csv file.
+
+  void Sensor::ExportSignal(const std::string& label,const std::string& name) {
+    for (const auto& electrode : m_electrodes) {
+      if (electrode.label == label) {
+        std::ofstream myfile;
+        std::string filename = name + ".csv";
+        myfile.open(filename);
+        myfile << "The induced signal.\n";
+        myfile << "Time [ns],Prompt [fC/ns],Delayed [fC/ns],Total [fC/ns];\n";
+        const int N = (int)m_nTimeBins;
+        for (int i = 0; i < N; i++) {
+          myfile << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
+                 << m_tStart + i * m_tStep
+                 << ","
+                 << ElementaryCharge *(
+                                   electrode.signal[i]-electrode.delayedSignal[i])
+                 << ","
+                 << ElementaryCharge *
+                                   electrode.delayedSignal[i]
+                 << ","
+                 << ElementaryCharge *
+                                   electrode.signal[i]
+                 << ","
+                 << "\n";
+        }
+        myfile.close();
+          std::cerr << m_className << "::ExportSignal: File '"<<name<<".csv' exported.\n";
+      }
+    }
+    return;
+  }
 
 }  // namespace Garfield
