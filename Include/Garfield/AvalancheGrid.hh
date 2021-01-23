@@ -21,7 +21,7 @@ class AvalancheGrid {
   /// Destructor
   ~AvalancheGrid() {}
   /// Set the sensor.
-  void SetSensor(Sensor* sensor) { m_sensor = sensor; };
+    void SetSensor(Sensor* sensor) { m_sensor = sensor;};
   /// Set the AvalancheMicroscopic.
   void SetAvalancheMicroscopic(AvalancheMicroscopic* avmc) { m_avmc = avmc; };
 
@@ -34,14 +34,17 @@ class AvalancheGrid {
    */
   void StartGridAvalanche();
   /// Set the electron drift velocity (in cm / ns).
-  void SetElectronVelocity(const double vel) {
-    if (vel >= 0) return;
-    m_Velocity = vel;
+  void SetElectronVelocity(const double vx, const double vy, const double vz) {
+      double vel = sqrt(vx*vx+vy*vy+vz*vz);
+      if (vel!=abs(vx) && vel!=abs(vy) && vel!=abs(vz)) return;
+      int nx = (int) vx/vel;int ny = (int) vy/vel;int nz = (int) vz/vel;
+      m_velNormal = {nx,ny,nz};
+      m_Velocity = -abs(vel);
   };
   /// Set the electron Townsend coefficient (in 1 / cm).
-  void SetElectronTownsend(const double town) { m_Townsend = 10 * town; };
+  void SetElectronTownsend(const double town) { m_Townsend = town; };
   /// Set the electron attachment coefficient (in 1 / cm).
-  void SetElectronAttachment(const double att) { m_Attachment = 10 * att; };
+  void SetElectronAttachment(const double att) { m_Attachment = att; };
   /// Set the maximum avalanche size (1e7 by default).
   void SetMaxAvalancheSize(const double size) { m_MaxSize = size; };
   /// Enable transverse diffusion of electrons with transverse diffusion
@@ -50,29 +53,37 @@ class AvalancheGrid {
     m_diffusion = true;
     m_DiffSigma = diffSigma;
   }
-  /** Starting point of avalanche.
+  /** Setting the starting point of an electron that .
    *
    * \param z z-coordinate of initial electron.
    * \param x x-coordinate of initial electron.
    * \param vz speed of initial electron in z-direction.
    * \param t starting time of avalanche.
    */
-  void DriftAvalanche(const double x, const double z, const double vz,
+  void CreateAvalanche(const double x, const double y, const double z, const double vz,
                       const double t = 0);
   /// Import electron data from AvalancheMicroscopic class
-  void ImportElectronData();
+  void GetElectronsFromAvalancheMicroscopic();
 
   /// Import electron data from AvalancheMicroscopic class
-  void SetGrid(const double zmin, const double zmax, const int zsteps,
-               const double xmin = 0., const double xmax = 0.,
-               const int xsteps = 0);
+  void SetGrid(const double xmin, const double xmax,const int xsteps,
+               const double ymin, const double ymax,const int ysteps,
+               const double zmin, const double zmax, const int zsteps);
+    
+    void EnableDebugging(){m_debug =true;};
+    
+    void Reset();
 
  private:
-  double m_Townsend = 13.;  // [1/mm];
+    bool m_debug=false;
+    
+  double m_Townsend = -1;  // [1/cm];
 
-  double m_Attachment = 3.5;  // [1/mm];
+  double m_Attachment = -1;  // [1/cm];
 
   double m_Velocity = 0.;  // [cm/ns]
+    
+    std::vector<int> m_velNormal = {0,0,-1};
 
   double m_MaxSize = 1e7;  // Saturations size
 
@@ -87,6 +98,7 @@ class AvalancheGrid {
 
   bool m_driftAvalanche = false;
   bool m_importAvalanche = false;
+    bool m_SensorParameters = false;
 
   std::string m_className = "AvalancheGrid";
 
@@ -99,18 +111,21 @@ class AvalancheGrid {
     int zsteps = 0;             ///< Amount of grid points.
     double zStepSize =
         0.;  ///< Distance between the grid points of z-coordinate.
+      
+      std::vector<double> ygrid;  ///< Grid points of y-coordinate.
+      double yStepSize = 0.;      ///< Amount of grid points.
+      int ysteps = 0.;  ///< Distance between the grid points of y-coordinate.
 
     std::vector<double> xgrid;  ///< Grid points of x-coordinate.
     double xStepSize = 0.;      ///< Amount of grid points.
     int xsteps = 0.;  ///< Distance between the grid points of x-coordinate.
 
-    std::vector<int>
-        gridPosition;  ///< Tracking of active z-coordinate grid points.
+      std::vector<std::vector<int>> gridPosition = {{},{},{}};  ///< Tracking of active z-coordinate grid points.
 
     bool gridset = false;  ///< Keeps track if the grid has been defined.
 
-    std::vector<std::vector<int>>
-        n;      ///< Grid based representation of space-charge.
+      std::vector<std::vector<std::vector<int>>>
+        n;      ///< Grid based representation of space-charge. [z,y,x];
     int N = 0;  ///< Total amount of charge.
 
     std::vector<double>
@@ -127,6 +142,9 @@ class AvalancheGrid {
   // Setting z-coordinate grid.
   void SetZGrid(Grid& av, const double top, const double bottom,
                 const int steps);
+    // Setting y-coordinate grid.
+    void SetYGrid(Grid& av, const double top, const double bottom,
+                  const int steps);
   // Setting x-coordinate grid.
   void SetXGrid(Grid& av, const double top, const double bottom,
                 const int steps);
@@ -134,12 +152,16 @@ class AvalancheGrid {
   int GetAvalancheSize(double dz, const int nsize, const double alpha,
                        const double eta);
   // Assign electron to the closest grid point.
-  void SnapToGrid(Grid& av, const double x, const double z, const double v);
+  bool SnapToGrid(Grid& av, const double x, const double y, const double z, const double v);
   // Go to next time step.
   void NextAvalancheGridPoint(Grid& av);
   // Compute the factor of the charge that go to neighboring points through
   // transverse diffusion.
   void DiffusionFactors(Grid& av);
+    // Obtain the Townsend coef., Attachment coef. and veleocity vector from sensor class.
+  void GetParametersFromSensor();
+    
+    void SortPositionVector();
 };
 }  // namespace Garfield
 
