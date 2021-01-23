@@ -761,7 +761,6 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
   const int T = m_wdtimes.size();
 
   double x, y, z;
-  std::vector<double> pvect;
 
   // Open the voltage list.
   std::ifstream ffield;
@@ -802,6 +801,8 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
     if (line.empty()) continue;
     // Skip lines that are not comments.
     if (isComment(line)) continue;
+    
+      std::vector<double> pvect;
 
     std::istringstream data;
     data.str(line);
@@ -826,8 +827,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
     for (int i = 0; i < T; i++) {
       data >> pholder;
       if (i == 0) pholder0 = pholder;
-      pvect.push_back(0.);
-      pvect[i] = pholder - pholder0;
+      pvect.push_back(pholder - pholder0);
     }
     const size_t k = res[0].idx;
     m_nodes[k].dw[iw] = pvect;
