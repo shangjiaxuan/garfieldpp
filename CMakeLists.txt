@@ -71,6 +71,9 @@ find_package(OpenMP)
 # Creating the main Garfield library
 add_library(Garfield SHARED "")
 
+#--- Add Heed-------------------------------------------------------------------
+add_subdirectory(Heed)
+
 #--- If you cannot create symbolic links turn FALSE the library version
 option(BUILD_WITH_VERSION_NUMBER "If you cannot create symbolic links turn FALSE the library version" TRUE)
 if(BUILD_WITH_VERSION_NUMBER)
@@ -82,28 +85,6 @@ mark_as_advanced(BUILD_WITH_VERSION_NUMBER)
 
 #--- Add Garfield---------------------------------------------------------------
 aux_source_directory(Source garfield_sources)
-
-
-#--- Add Heed-------------------------------------------------------------------
-set( heed_dirs 
-    Heed
-    Heed/heed++/code 
-    Heed/wcpplib/clhep_units 
-    Heed/wcpplib/geometry 
-    Heed/wcpplib/ioniz 
-    Heed/wcpplib/math 
-    Heed/wcpplib/matrix 
-    Heed/wcpplib/matter 
-    Heed/wcpplib/particle 
-    Heed/wcpplib/random 
-    Heed/wcpplib/safetl 
-    Heed/wcpplib/stream 
-    Heed/wcpplib/util )
-foreach(heed_dir ${heed_dirs})
-  aux_source_directory(${heed_dir} heed_sources)
-endforeach()
-set_source_files_properties(${heed_sources} PROPERTIES LANGUAGE CXX)
-
 
 #--- Flags to pass to the compiler----------------------------------------------
 if(APPLE)
@@ -123,11 +104,6 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-
-#--- Add switches used in HEED--------------------------------------------------
-# -DNOT_INCLUDE_GASLIB_IN_PACSLIB is used in Heed/heed++/code/PhotoAbsCS.c
-set_source_files_properties(${heed_sources} PROPERTIES COMPILE_FLAGS "-DNOT_INCLUDE_GASLIB_IN_PACSLIB -DGARFIELD_HEED_INTERFACE -DFUNNAMESTACK")
-
 #--- create ROOT dictionary-----------------------------------------------------
 if(ROOT_VERSION VERSION_LESS 6.17)
   file (GLOB garfield_header RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}/Include Include/Garfield/*.hh)
@@ -146,16 +122,10 @@ list(APPEND garfield_sources GarfieldDict.cxx)
 message(STATUS "-----------------------------------------------------------" )
 message(STATUS "Garfield source files: ${garfield_sources}" )
 message(STATUS "-----------------------------------------------------------" )
-message(STATUS "Heed source files: ${heed_sources}" )
-message(STATUS "-----------------------------------------------------------" )
-message(STATUS "Magboltz source files: ${magboltz_sources}" )
-message(STATUS "-----------------------------------------------------------" )
-message(STATUS "neBEM source files: ${nebem_sources}" )
-message(STATUS "-----------------------------------------------------------" )
 message(STATUS "Directory used to find ROOT dict files: ${ROOT_DICT_INCLUDE_DIRS}" )
 message(STATUS "-----------------------------------------------------------" )
 
-target_sources( Garfield PRIVATE ${garfield_sources} ${heed_sources})
+target_sources( Garfield PRIVATE ${garfield_sources})
 target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES} NeBem magboltz)
 if(OpenMP_CXX_FOUND)
   target_link_libraries(Garfield PRIVATE OpenMP::OpenMP_CXX)
