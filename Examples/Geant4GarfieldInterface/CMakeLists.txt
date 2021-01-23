@@ -1,10 +1,3 @@
-#---Setup the example project---------------------------------------------------
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
-project(Geant4GarfieldInterface)
-
-#---Find Garfield using cmake---------------------------------------------------
-find_package(Garfield REQUIRED)
-
 #---Find Geant4 package, activating all available UI and Vis drivers by default-
 #   You can set WITH_GEANT4_UIVIS to OFF via the command line or ccmake/cmake-gui
 #   to build a batch mode only executable
@@ -25,14 +18,14 @@ endif()
 include(${Geant4_USE_FILE})
 
 #---Locate sources and headers for this project---------------------------------
-file(GLOB sources ${PROJECT_SOURCE_DIR}/src/*.cc)
-file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.hh)
-include_directories(${PROJECT_SOURCE_DIR}/include)
+file(GLOB sources ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc)
+file(GLOB headers ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hh)
 
 
 #---Add the executable, and link it to the Geant4 libraries---------------------
 add_executable(exampleGeant4Interface exampleGarfield.cc ${sources} ${headers})
 target_link_libraries(exampleGeant4Interface ${Geant4_LIBRARIES} Garfield)
+target_include_directories(exampleGeant4Interface PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
 #---Copy all scripts to the build directory-------------------------------------
 set(EXAMPLEGARFIELD_SCRIPTS
@@ -46,5 +39,5 @@ set(EXAMPLEGARFIELD_SCRIPTS
   )
 
 foreach(_script ${EXAMPLEGARFIELD_SCRIPTS})
-  configure_file(${PROJECT_SOURCE_DIR}/${_script} ${PROJECT_BINARY_DIR}/${_script} COPYONLY)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${_script} ${CMAKE_CURRENT_BINARY_DIR}/${_script} COPYONLY)
 endforeach()
