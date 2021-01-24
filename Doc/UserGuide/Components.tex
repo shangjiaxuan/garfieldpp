@@ -386,9 +386,9 @@ the regions of the device where charge transport is to be enabled
 need to be associated with \texttt{Medium} classes. 
 \begin{lstlisting}
 // Get the number of regions in the device
-unsigned int GetNumberOfRegions();
+size_t GetNumberOfRegions();
 // Associate a region with a Medium class
-void SetMedium(const unsigned int ireg, Medium* m);
+void SetMedium(const size_t ireg, Medium* m);
 \end{lstlisting}
 \begin{description}
   \item[ireg]
@@ -399,7 +399,7 @@ void SetMedium(const unsigned int ireg, Medium* m);
 
 The name of a region can be retrieved with
 \begin{lstlisting}
-void GetRegion(const unsigned int i, std::string& name, bool& active);
+void GetRegion(const size_t i, std::string& name, bool& active);
 \end{lstlisting}
 \begin{description}
   \item[name] 
