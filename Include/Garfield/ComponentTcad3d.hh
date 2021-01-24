@@ -2,8 +2,10 @@
 #define G_COMPONENT_TCAD_3D_H
 
 #include <array>
+#include <memory>
 
 #include "Component.hh"
+#include "TetrahedralTree.hh"
 
 namespace Garfield {
 
@@ -56,29 +58,28 @@ class ComponentTcad3d : public Component {
   /// List all currently defined regions.
   void PrintRegions();
   /// Get the number of regions in the device.
-  unsigned int GetNumberOfRegions() const { return m_regions.size(); }
-  void GetRegion(const unsigned int ireg, std::string& name,
+  size_t GetNumberOfRegions() const { return m_regions.size(); }
+  void GetRegion(const size_t ireg, std::string& name,
                  bool& active) const;
-  void SetDriftRegion(const unsigned int ireg);
-  void UnsetDriftRegion(const unsigned int ireg);
+  void SetDriftRegion(const size_t ireg);
+  void UnsetDriftRegion(const size_t ireg);
   /// Set the medium for a given region
-  void SetMedium(const unsigned int ireg, Medium* m);
+  void SetMedium(const size_t ireg, Medium* m);
   /// Get the medium for a given region
-  bool GetMedium(const unsigned int ireg, Medium*& m) const;
+  bool GetMedium(const size_t ireg, Medium*& m) const;
 
-  int GetNumberOfElements() const { return m_elements.size(); }
-  bool GetElement(const unsigned int i, double& vol, double& dmin, double& dmax,
+  size_t GetNumberOfElements() const { return m_elements.size(); }
+  bool GetElement(const size_t i, double& vol, double& dmin, double& dmax,
                   int& type) const;
-  bool GetElement(const unsigned int i, double& vol, double& dmin, double& dmax,
-                  int& type, int& node1, int& node2, int& node3, int& node4,
-                  int& node5, int& node6, int& node7, int& reg) const;
-  unsigned int GetNumberOfNodes() const { return m_vertices.size(); }
-  bool GetNode(const unsigned int i, double& x, double& y, double& z, double& v,
+  bool GetElement(const size_t i, double& vol, double& dmin, double& dmax,
+                  int& type, std::vector<size_t>& nodes, int& reg) const;
+  size_t GetNumberOfNodes() const { return m_vertices.size(); }
+  bool GetNode(const size_t i, double& x, double& y, double& z, double& v,
                double& ex, double& ey, double& ez) const;
 
  private:
   // Max. number of vertices per element
-  static constexpr int nMaxVertices = 7;
+  static constexpr size_t nMaxVertices = 7;
 
   // Regions
   struct Region {
@@ -106,7 +107,7 @@ class ComponentTcad3d : public Component {
   // Elements
   struct Element {
     // Indices of vertices
-    int vertex[nMaxVertices];
+    size_t vertex[nMaxVertices];
     // Type of element
     // 1: Segment (line)
     // 2: Triangle
@@ -122,7 +123,6 @@ class ComponentTcad3d : public Component {
     int type;
     // Associated region
     int region;
-    std::vector<int> neighbours;
     // Bounding box
     double xmin, xmax;
     double ymin, ymax;
@@ -145,14 +145,14 @@ class ComponentTcad3d : public Component {
   double m_xMinBB = 0., m_yMinBB = 0., m_zMinBB = 0.;
   double m_xMaxBB = 0., m_yMaxBB = 0., m_zMaxBB = 0.;
 
-  // Element from the previous call
-  int m_lastElement = 0;
+  // Tetrahedral tree.
+  std::unique_ptr<TetrahedralTree> m_tree;
 
   void Reset() override;
   void UpdatePeriodicity() override;
 
-  unsigned int FindElement(const double x, const double y, const double z,
-                           std::array<double, nMaxVertices>& w) const;
+  size_t FindElement(const double x, const double y, const double z,
+                     std::array<double, nMaxVertices>& w) const;
   bool CheckElement(const double x, const double y, const double z,
                     const Element& element, 
                     std::array<double, nMaxVertices>& w) const {
@@ -178,7 +178,6 @@ class ComponentTcad3d : public Component {
                      const Element& element, 
                      std::array<double, nMaxVertices>& w) const;
 
-  void FindNeighbours();
   bool LoadGrid(const std::string& gridfilename);
   bool LoadData(const std::string& datafilename);
   bool ReadDataset(std::ifstream& datafile, const std::string& dataset);
@@ -189,7 +188,7 @@ class ComponentTcad3d : public Component {
 
   void MapCoordinates(double& x, double& y, double& z, bool& xmirr, bool& ymirr,
                       bool& zmirr) const;
-  int FindRegion(const std::string& name) const;
+  size_t FindRegion(const std::string& name) const;
 };
 }
 #endif
