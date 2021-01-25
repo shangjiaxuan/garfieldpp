@@ -84,3 +84,6 @@ target_compile_definitions(Garfield PRIVATE NOT_INCLUDE_GASLIB_IN_PACSLIB
 # ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 # RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 # )
+
+#--- install the Heed database--------------------------------------------------
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/heed++/database DESTINATION Heed/heed++)

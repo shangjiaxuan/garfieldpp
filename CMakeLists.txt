@@ -28,6 +28,8 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 else()
   message(STATUS "The installation folder is set to its default value ${CMAKE_INSTALL_PREFIX}")
 endif()
+message(STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "If you want to change this path call cmake -DCMAKE_INSTALL_PREFIX=my_install_path ...")
 
 #Adding the CMake folder to the search path for modules
 list( APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake)
@@ -64,8 +66,6 @@ if(${ROOT_VERSION} VERSION_LESS "6.20.0")
 endif()
 
 find_package(GSL REQUIRED)
-include_directories(${GSL_INCLUDE_DIR})
-
 find_package(OpenMP)
 
 # Creating the main Garfield library
@@ -190,6 +190,15 @@ target_include_directories(Garfield PUBLIC $<INSTALL_INTERFACE:include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
                                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>)
 
+#Install the header files
+install( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} REGEX LinkDef EXCLUDE) 
+
+install( TARGETS Garfield EXPORT "${PROJECT_NAME}Targets"
+         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+		 )
+
 #--- target for Doxygen documentation ------------------------------------------
 option(WITH_DOC "Whether or not to create doxygen doc target." OFF)
 if(WITH_DOC)
@@ -205,27 +214,4 @@ else()
   message(STATUS "Building of examples is switched off.")
 endif()
 
-#--- add CMake infrastructure --------------------------------------------------
-export(PACKAGE Garfield)
-include(CMake/GarfieldCreateConfig.cmake)
-
-configure_file(${CMAKE_SOURCE_DIR}/CMake/setup.sh.in
-               ${CMAKE_BINARY_DIR}/setup.sh @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/CMake/GarfieldConfig.dummy.in
-               ${CMAKE_BINARY_DIR}/GarfieldConfig.cmake @ONLY)
-
-
-
-#--- Installation of all artifacts----------------------------------------------
-message(STATUS "Install path: ${CMAKE_INSTALL_PREFIX}")
-message(STATUS "If you want to change this path call cmake -DCMAKE_INSTALL_PREFIX=my_install_path ...")
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
-
-#--- Where the library will end up and to write info in GarfieldTargets.cmake--
-install(TARGETS Garfield DESTINATION ${CMAKE_INSTALL_LIBDIR} EXPORT GarfieldTargets)
-
-#--- install the Heed database--------------------------------------------------
-install(DIRECTORY Heed/heed++/database DESTINATION Heed/heed++)
-
-#--- install headers------------------------------------------------------------
-install(DIRECTORY Include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} REGEX LinkDef EXCLUDE)
+add_subdirectory(CMake)
