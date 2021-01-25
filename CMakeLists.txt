@@ -182,7 +182,7 @@ mark_as_advanced(BUILD_WITH_VERSION_NUMBER)
 #--- Add Heed sources-------------------------------------------------------------------
 add_subdirectory(Heed)
 
-target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d ${GSL_LIBRARIES} NeBem magboltz)
+target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d GSL::gsl NeBem magboltz)
 if(OpenMP_CXX_FOUND)
   target_link_libraries(Garfield PRIVATE OpenMP::OpenMP_CXX)
 endif()
