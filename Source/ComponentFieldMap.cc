@@ -144,7 +144,7 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
   if (m_useTetrahedralTree && m_octree) {
-    tetList = m_octree->GetTetListInBlock(Vec3(x, y, z));
+    tetList = m_octree->GetElementsInBlock(Vec3(x, y, z));
   }
   // Backup
   double jacbak[4][4], detbak = 1.;
@@ -304,7 +304,7 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
   if (m_useTetrahedralTree && m_octree) {
-    tetList = m_octree->GetTetListInBlock(Vec3(x, y, z));
+    tetList = m_octree->GetElementsInBlock(Vec3(x, y, z));
   }
   // Number of elements to scan.
   // With tetra tree disabled, all elements are scanned.
@@ -2302,7 +2302,7 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   for (unsigned int i = 0; i < m_elements.size(); i++) {
     const Element& e = m_elements[i];
     const double bb[6] = {e.xmin, e.ymin, e.zmin, e.xmax, e.ymax, e.zmax};
-    m_octree->InsertTetrahedron(bb, i);
+    m_octree->InsertMeshElement(bb, i);
   }
 
   std::cout << m_className << "::InitializeTetrahedralTree: Success.\n";
