@@ -14,9 +14,7 @@ namespace Garfield {
 ComponentFieldMap::ComponentFieldMap(const std::string& name) 
     : Component(name) {}
 
-ComponentFieldMap::~ComponentFieldMap() {
-  if (m_tetTree) delete m_tetTree;
-}
+ComponentFieldMap::~ComponentFieldMap() {}
 
 void ComponentFieldMap::PrintMaterials() {
   // Do not proceed if not properly initialised.
@@ -140,24 +138,13 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
                                     double& det) {
   // Check if bounding boxes of elements have been computed
   if (!m_cacheElemBoundingBoxes) {
-    std::cout << m_className << "::FindElement5:\n"
-              << "    Caching the bounding boxes of all elements...";
-    CalculateElementBoundingBoxes();
-    std::cout << " done.\n";
     m_cacheElemBoundingBoxes = true;
   }
 
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
-  if (m_useTetrahedralTree) {
-    if (!m_isTreeInitialized) {
-      if (!InitializeTetrahedralTree()) {
-        std::cerr << m_className << "::FindElement5:\n";
-        std::cerr << "    Tetrahedral tree initialization failed.\n";
-        return -1;
-      }
-    }
-    tetList = m_tetTree->GetTetListInBlock(Vec3(x, y, z));
+  if (m_useTetrahedralTree && m_octree) {
+    tetList = m_octree->GetElementsInBlock(Vec3(x, y, z));
   }
   // Backup
   double jacbak[4][4], detbak = 1.;
@@ -294,15 +281,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
                                      const double z, double& t1, double& t2,
                                      double& t3, double& t4, double jac[4][4],
                                      double& det) {
-  // Check if bounding boxes of elements have been computed
-  if (!m_cacheElemBoundingBoxes) {
-    std::cout << m_className << "::FindElement13:\n"
-              << "    Caching the bounding boxes of all elements...";
-    CalculateElementBoundingBoxes();
-    std::cout << " done.\n";
-    m_cacheElemBoundingBoxes = true;
-  }
-
   // Backup
   double jacbak[4][4];
   double detbak = 1.;
@@ -325,15 +303,8 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
 
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
-  if (m_useTetrahedralTree) {
-    if (!m_isTreeInitialized) {
-      if (!InitializeTetrahedralTree()) {
-        std::cerr << m_className << "::FindElement13:\n";
-        std::cerr << "    Tetrahedral tree initialization failed.\n";
-        return -1;
-      }
-    }
-    tetList = m_tetTree->GetTetListInBlock(Vec3(x, y, z));
+  if (m_useTetrahedralTree && m_octree) {
+    tetList = m_octree->GetElementsInBlock(Vec3(x, y, z));
   }
   // Number of elements to scan.
   // With tetra tree disabled, all elements are scanned.
@@ -1662,6 +1633,37 @@ int ComponentFieldMap::CoordinatesCube(const double x, const double y,
   return ifail;
 }
 
+void ComponentFieldMap::Reset() {
+
+  m_ready = false;
+
+  m_elements.clear();
+  m_nodes.clear();
+  m_materials.clear();
+  m_wfields.clear();
+  m_wfieldsOk.clear();
+  m_hasBoundingBox = false;
+  m_warning = false;
+  m_nWarnings = 0;
+
+  m_octree.reset(nullptr);
+  m_cacheElemBoundingBoxes = false;
+  m_lastElement = -1;
+}
+
+void ComponentFieldMap::Prepare() {
+
+  // Establish the ranges.
+  SetRange();
+  UpdatePeriodicity();
+  std::cout << m_className << "::Prepare:\n"
+            << "    Caching the bounding boxes of all elements...";
+  CalculateElementBoundingBoxes();
+  std::cout << " done.\n";
+  // Initialize the tetrahedral tree.
+  InitializeTetrahedralTree();
+}
+
 void ComponentFieldMap::UpdatePeriodicityCommon() {
   // Check the required data is available.
   if (!m_ready) {
@@ -2203,7 +2205,7 @@ double ComponentFieldMap::ReadDouble(char* token, double def, bool& error) {
   return atof(token);
 }
 
-void ComponentFieldMap::CalculateElementBoundingBoxes(void) {
+void ComponentFieldMap::CalculateElementBoundingBoxes() {
   // Do not proceed if not properly initialised.
   if (!m_ready) {
     PrintNotReady("CalculateElementBoundingBoxes");
@@ -2283,15 +2285,15 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   const double hx = 0.5 * (xmax - xmin);
   const double hy = 0.5 * (ymax - ymin);
   const double hz = 0.5 * (zmax - zmin);
-  m_tetTree = new TetrahedralTree(Vec3(xmin + hx, ymin + hy, zmin + hz),
-                                  Vec3(hx, hy, hz));
+  m_octree.reset(new TetrahedralTree(Vec3(xmin + hx, ymin + hy, zmin + hz),
+                                     Vec3(hx, hy, hz)));
 
   if (m_debug) std::cout << "    Tree instantiated.\n";
 
   // Insert all mesh nodes in the tree
   for (unsigned int i = 0; i < m_nodes.size(); i++) {
     const Node& n = m_nodes[i];
-    m_tetTree->InsertMeshNode(Vec3(n.x, n.y, n.z), i);
+    m_octree->InsertMeshNode(Vec3(n.x, n.y, n.z), i);
   }
 
   if (m_debug) std::cout << "    Tree nodes initialized successfully.\n"; 
@@ -2300,12 +2302,10 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   for (unsigned int i = 0; i < m_elements.size(); i++) {
     const Element& e = m_elements[i];
     const double bb[6] = {e.xmin, e.ymin, e.zmin, e.xmax, e.ymax, e.zmax};
-    m_tetTree->InsertTetrahedron(bb, i);
+    m_octree->InsertMeshElement(bb, i);
   }
 
   std::cout << m_className << "::InitializeTetrahedralTree: Success.\n";
-
-  m_isTreeInitialized = true;
   return true;
 }
 

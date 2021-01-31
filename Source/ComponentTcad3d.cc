@@ -370,7 +370,7 @@ bool ComponentTcad3d::Initialise(const std::string& gridfilename,
   for (size_t i = 0; i < nElements; ++i) {
     const Element& e = m_elements[i];
     const double bb[6] = {e.xmin, e.ymin, e.zmin, e.xmax, e.ymax, e.zmax};
-    m_tree->InsertTetrahedron(bb, i);
+    m_tree->InsertMeshElement(bb, i);
   }
 
   m_ready = true;
@@ -566,7 +566,7 @@ size_t ComponentTcad3d::FindElement(
   w.fill(0.);
 
   std::vector<int> elementsToSearch;
-  if (m_tree) elementsToSearch = m_tree->GetTetListInBlock(Vec3(x, y, z));
+  if (m_tree) elementsToSearch = m_tree->GetElementsInBlock(Vec3(x, y, z));
   const size_t nElementsToSearch = m_tree ? elementsToSearch.size() : m_elements.size(); 
   // Loop over the elements.
   for (size_t i = 0; i < nElementsToSearch; ++i) {

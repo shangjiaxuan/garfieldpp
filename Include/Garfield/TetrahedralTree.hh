@@ -3,8 +3,6 @@
 
 #include <vector>
 
-#define BLOCK_CAPACITY 10  // k_v
-
 namespace Garfield {
 
 // TODO: replace this class with ROOT's TVector3 class
@@ -55,74 +53,61 @@ Organization: Texas A&M University at Qatar
 
 */
 class TetrahedralTree {
- private:
-  // Physical position/size. This implicitly defines the bounding
-  // box of this node
-  Vec3 m_origin;         // The physical center of this node
-  Vec3 m_halfDimension;  // Half the width/height/depth of this node
+ public:
+  /// Constructor
+  TetrahedralTree(const Vec3& origin, const Vec3& halfDimension);
 
-  Vec3 min, max;  // storing min and max points for convenience
+  /// Destructor
+  ~TetrahedralTree();
+
+  /// Insert a mesh node (a vertex/point) to the tree.
+  void InsertMeshNode(Vec3 point, const int index);
+
+  /// Insert a mesh element with given bounding box and index to the tree.
+  void InsertMeshElement(const double bb[6], const int index);
+
+  /// Get all elements linked to a block corresponding to the given point.
+  std::vector<int> GetElementsInBlock(const Vec3& point) const;
+
+ private:
+  // Physical centre of this tree node.
+  Vec3 m_origin;
+  // Half the width/height/depth of this tree node. 
+  Vec3 m_halfDimension;
+  // Storing min and max points for convenience
+  Vec3 m_min, m_max;  
 
   // The tree has up to eight children and can additionally store
-  // a list of mesh nodes and mesh elements (Tetrahedron)
-  TetrahedralTree* children[8];  // Pointers to child octants
+  // a list of mesh nodes and mesh elements.
+  // Pointers to child octants.
+  TetrahedralTree* children[8];  
 
   // Children follow a predictable pattern to make accesses simple.
   // Here, - means less than 'origin' in that dimension, + means greater than.
   // child:	0 1 2 3 4 5 6 7
-  // x:      - - - - + + + +
-  // y:      - - + + - - + +
-  // z:      - + - + - + - +
+  // x:     - - - - + + + +
+  // y:     - - + + - - + +
+  // z:     - + - + - + - +
 
-  struct OctreeBlockElem {
-    Vec3 point;
-    int nodeIndex;
+  std::vector<std::pair<Vec3, int> > nodes;
+  std::vector<int> elements;
 
-    OctreeBlockElem(const Vec3& _point, const int _ni)
-        : point(_point), nodeIndex(_ni) {}
-  };
+  static const size_t BlockCapacity = 10;
 
-  std::vector<OctreeBlockElem> iBlockElems;
-  std::vector<int> tetList;
-
- public:
-  // Constructor
-  TetrahedralTree(const Vec3& origin, const Vec3& halfDimension);
-
-  // Destructor
-  ~TetrahedralTree();
-
-  // Insert a mesh node (a vertex/point) to the tree
-  void InsertMeshNode(Vec3 point, const int nodeIndex);
-
-  // Insert the mesh element (a tetrahedron) to the tree
-  void InsertTetrahedron(const double elemBoundingBox[6], const int elemIndex);
-
-  // Get all tetrahedra linked to a block corresponding to the given point
-  std::vector<int> GetTetListInBlock(const Vec3& point);
-
- private:
-  // Check if the given box overlaps with the box corresponding to this tree
-  // node
-  bool DoesBoxOverlap(const Vec3& b_min, const Vec3& b_max) const;
+  // Check if the given box overlaps with this tree node.
+  bool DoesBoxOverlap(const double bb[6]) const;
 
   int GetOctantContainingPoint(const Vec3& point) const;
 
-  // Check if the tree node is full
-  bool IsFull() const;
-
-  // Check if the tree node is empty
-  bool IsEmpty() const;
-
-  // Check if this tree node is a leaf or intermediate node
+  // Check if this tree node is a leaf or intermediate node.
   bool IsLeafNode() const;
 
   // Get a block containing the input point
-  const TetrahedralTree* GetBlockFromPoint(const Vec3& point);
+  const TetrahedralTree* GetBlockFromPoint(const Vec3& point) const;
 
   // A helper function used by the function above.
   // Called recursively on the child nodes.
-  const TetrahedralTree* GetBlockFromPointHelper(const Vec3& point);
+  const TetrahedralTree* GetBlockFromPointHelper(const Vec3& point) const;
 };
 }
 

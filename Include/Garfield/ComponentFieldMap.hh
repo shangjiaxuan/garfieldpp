@@ -2,6 +2,7 @@
 #define G_COMPONENT_FIELD_MAP_H
 
 #include <iostream>
+#include <memory>
 #include "Component.hh"
 #include "TMatrixD.h"
 #include "TetrahedralTree.hh"
@@ -163,8 +164,10 @@ class ComponentFieldMap : public Component {
   // Get the scaling factor for a given length unit.
   static double ScalingFactor(std::string unit);
  
-  // Reset the component
-  void Reset() override {}
+  // Reset the component.
+  void Reset() override;
+
+  void Prepare();
 
   // Periodicities
   void UpdatePeriodicity2d();
@@ -224,8 +227,7 @@ class ComponentFieldMap : public Component {
 
   // Tetrahedral tree
   bool m_useTetrahedralTree = true;
-  bool m_isTreeInitialized = false;
-  TetrahedralTree* m_tetTree = nullptr;
+  std::unique_ptr<TetrahedralTree> m_octree;
 
   /// Flag to check if bounding boxes of elements are cached
   bool m_cacheElemBoundingBoxes = false;

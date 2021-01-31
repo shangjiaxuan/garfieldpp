@@ -17,9 +17,7 @@ ComponentAnsys121::ComponentAnsys121() : ComponentFieldMap("Ansys121") {
 bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
                                    std::string mplist, std::string prnsol,
                                    std::string unit) {
-  m_ready = false;
-  m_warning = false;
-  m_nWarnings = 0;
+  Reset();
   // Keep track of the success.
   bool ok = true;
 
@@ -584,13 +582,7 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
     return false;
   }
 
-  // Remove weighting fields (if any).
-  m_wfields.clear();
-  m_wfieldsOk.clear();
-
-  // Establish the ranges
-  SetRange();
-  UpdatePeriodicity();
+  Prepare();
   return true;
 }
 
