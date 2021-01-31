@@ -14,9 +14,7 @@ namespace Garfield {
 ComponentFieldMap::ComponentFieldMap(const std::string& name) 
     : Component(name) {}
 
-ComponentFieldMap::~ComponentFieldMap() {
-  if (m_tetTree) delete m_tetTree;
-}
+ComponentFieldMap::~ComponentFieldMap() {}
 
 void ComponentFieldMap::PrintMaterials() {
   // Do not proceed if not properly initialised.
@@ -150,14 +148,14 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
   if (m_useTetrahedralTree) {
-    if (!m_isTreeInitialized) {
+    if (!m_octree) {
       if (!InitializeTetrahedralTree()) {
         std::cerr << m_className << "::FindElement5:\n";
         std::cerr << "    Tetrahedral tree initialization failed.\n";
         return -1;
       }
     }
-    tetList = m_tetTree->GetTetListInBlock(Vec3(x, y, z));
+    tetList = m_octree->GetTetListInBlock(Vec3(x, y, z));
   }
   // Backup
   double jacbak[4][4], detbak = 1.;
@@ -326,14 +324,14 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
   if (m_useTetrahedralTree) {
-    if (!m_isTreeInitialized) {
+    if (!m_octree) {
       if (!InitializeTetrahedralTree()) {
         std::cerr << m_className << "::FindElement13:\n";
         std::cerr << "    Tetrahedral tree initialization failed.\n";
         return -1;
       }
     }
-    tetList = m_tetTree->GetTetListInBlock(Vec3(x, y, z));
+    tetList = m_octree->GetTetListInBlock(Vec3(x, y, z));
   }
   // Number of elements to scan.
   // With tetra tree disabled, all elements are scanned.
@@ -2283,15 +2281,15 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   const double hx = 0.5 * (xmax - xmin);
   const double hy = 0.5 * (ymax - ymin);
   const double hz = 0.5 * (zmax - zmin);
-  m_tetTree = new TetrahedralTree(Vec3(xmin + hx, ymin + hy, zmin + hz),
-                                  Vec3(hx, hy, hz));
+  m_octree.reset(new TetrahedralTree(Vec3(xmin + hx, ymin + hy, zmin + hz),
+                                     Vec3(hx, hy, hz)));
 
   if (m_debug) std::cout << "    Tree instantiated.\n";
 
   // Insert all mesh nodes in the tree
   for (unsigned int i = 0; i < m_nodes.size(); i++) {
     const Node& n = m_nodes[i];
-    m_tetTree->InsertMeshNode(Vec3(n.x, n.y, n.z), i);
+    m_octree->InsertMeshNode(Vec3(n.x, n.y, n.z), i);
   }
 
   if (m_debug) std::cout << "    Tree nodes initialized successfully.\n"; 
@@ -2300,12 +2298,10 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   for (unsigned int i = 0; i < m_elements.size(); i++) {
     const Element& e = m_elements[i];
     const double bb[6] = {e.xmin, e.ymin, e.zmin, e.xmax, e.ymax, e.zmax};
-    m_tetTree->InsertTetrahedron(bb, i);
+    m_octree->InsertTetrahedron(bb, i);
   }
 
   std::cout << m_className << "::InitializeTetrahedralTree: Success.\n";
-
-  m_isTreeInitialized = true;
   return true;
 }
 

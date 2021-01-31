@@ -2,6 +2,7 @@
 #define G_COMPONENT_FIELD_MAP_H
 
 #include <iostream>
+#include <memory>
 #include "Component.hh"
 #include "TMatrixD.h"
 #include "TetrahedralTree.hh"
@@ -224,8 +225,7 @@ class ComponentFieldMap : public Component {
 
   // Tetrahedral tree
   bool m_useTetrahedralTree = true;
-  bool m_isTreeInitialized = false;
-  TetrahedralTree* m_tetTree = nullptr;
+  std::unique_ptr<TetrahedralTree> m_octree;
 
   /// Flag to check if bounding boxes of elements are cached
   bool m_cacheElemBoundingBoxes = false;
