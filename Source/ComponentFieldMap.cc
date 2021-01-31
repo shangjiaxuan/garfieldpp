@@ -138,10 +138,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
                                     double& det) {
   // Check if bounding boxes of elements have been computed
   if (!m_cacheElemBoundingBoxes) {
-    std::cout << m_className << "::FindElement5:\n"
-              << "    Caching the bounding boxes of all elements...";
-    CalculateElementBoundingBoxes();
-    std::cout << " done.\n";
     m_cacheElemBoundingBoxes = true;
   }
 
@@ -285,15 +281,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
                                      const double z, double& t1, double& t2,
                                      double& t3, double& t4, double jac[4][4],
                                      double& det) {
-  // Check if bounding boxes of elements have been computed
-  if (!m_cacheElemBoundingBoxes) {
-    std::cout << m_className << "::FindElement13:\n"
-              << "    Caching the bounding boxes of all elements...";
-    CalculateElementBoundingBoxes();
-    std::cout << " done.\n";
-    m_cacheElemBoundingBoxes = true;
-  }
-
   // Backup
   double jacbak[4][4];
   double detbak = 1.;
@@ -1669,6 +1656,10 @@ void ComponentFieldMap::Prepare() {
   // Establish the ranges.
   SetRange();
   UpdatePeriodicity();
+  std::cout << m_className << "::Prepare:\n"
+            << "    Caching the bounding boxes of all elements...";
+  CalculateElementBoundingBoxes();
+  std::cout << " done.\n";
   // Initialize the tetrahedral tree.
   InitializeTetrahedralTree();
 }
@@ -2214,7 +2205,7 @@ double ComponentFieldMap::ReadDouble(char* token, double def, bool& error) {
   return atof(token);
 }
 
-void ComponentFieldMap::CalculateElementBoundingBoxes(void) {
+void ComponentFieldMap::CalculateElementBoundingBoxes() {
   // Do not proceed if not properly initialised.
   if (!m_ready) {
     PrintNotReady("CalculateElementBoundingBoxes");
