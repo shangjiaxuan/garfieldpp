@@ -164,8 +164,10 @@ class ComponentFieldMap : public Component {
   // Get the scaling factor for a given length unit.
   static double ScalingFactor(std::string unit);
  
-  // Reset the component
-  void Reset() override {}
+  // Reset the component.
+  void Reset() override;
+
+  void Prepare();
 
   // Periodicities
   void UpdatePeriodicity2d();

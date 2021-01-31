@@ -56,9 +56,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
                                  const std::string& mplist,
                                  const std::string& field, 
                                  const std::string& unit) {
-  m_ready = false;
-  m_warning = false;
-  m_nWarnings = 0;
+  Reset();
 
   // Get the conversion factor to be applied to the coordinates.
   m_unit = ScalingFactor(unit);
@@ -306,12 +304,10 @@ bool ComponentComsol::Initialise(const std::string& mesh,
               << "    Missing potentials for " << nMissing << " nodes.\n";
     return false;
   }
-  std::cout << std::endl << m_className << "::Initialise: Done.\n";
 
   m_ready = true;
-  // Establish the ranges.
-  SetRange();
-  UpdatePeriodicity();
+  Prepare();
+  std::cout << std::endl << m_className << "::Initialise: Done.\n";
   return true;
 }
 

@@ -147,14 +147,7 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
 
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
-  if (m_useTetrahedralTree) {
-    if (!m_octree) {
-      if (!InitializeTetrahedralTree()) {
-        std::cerr << m_className << "::FindElement5:\n";
-        std::cerr << "    Tetrahedral tree initialization failed.\n";
-        return -1;
-      }
-    }
+  if (m_useTetrahedralTree && m_octree) {
     tetList = m_octree->GetTetListInBlock(Vec3(x, y, z));
   }
   // Backup
@@ -323,14 +316,7 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
 
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
-  if (m_useTetrahedralTree) {
-    if (!m_octree) {
-      if (!InitializeTetrahedralTree()) {
-        std::cerr << m_className << "::FindElement13:\n";
-        std::cerr << "    Tetrahedral tree initialization failed.\n";
-        return -1;
-      }
-    }
+  if (m_useTetrahedralTree && m_octree) {
     tetList = m_octree->GetTetListInBlock(Vec3(x, y, z));
   }
   // Number of elements to scan.
@@ -1658,6 +1644,33 @@ int ComponentFieldMap::CoordinatesCube(const double x, const double y,
   // This should always work.
   ifail = 0;
   return ifail;
+}
+
+void ComponentFieldMap::Reset() {
+
+  m_ready = false;
+
+  m_elements.clear();
+  m_nodes.clear();
+  m_materials.clear();
+  m_wfields.clear();
+  m_wfieldsOk.clear();
+  m_hasBoundingBox = false;
+  m_warning = false;
+  m_nWarnings = 0;
+
+  m_octree.reset(nullptr);
+  m_cacheElemBoundingBoxes = false;
+  m_lastElement = -1;
+}
+
+void ComponentFieldMap::Prepare() {
+
+  // Establish the ranges.
+  SetRange();
+  UpdatePeriodicity();
+  // Initialize the tetrahedral tree.
+  InitializeTetrahedralTree();
 }
 
 void ComponentFieldMap::UpdatePeriodicityCommon() {
