@@ -99,7 +99,7 @@ class TetrahedralTree {
   void InsertTetrahedron(const double elemBoundingBox[6], const int elemIndex);
 
   // Get all tetrahedra linked to a block corresponding to the given point
-  std::vector<int> GetTetListInBlock(const Vec3& point);
+  std::vector<int> GetTetListInBlock(const Vec3& point) const;
 
  private:
   // Check if the given box overlaps with the box corresponding to this tree
@@ -118,11 +118,11 @@ class TetrahedralTree {
   bool IsLeafNode() const;
 
   // Get a block containing the input point
-  const TetrahedralTree* GetBlockFromPoint(const Vec3& point);
+  const TetrahedralTree* GetBlockFromPoint(const Vec3& point) const;
 
   // A helper function used by the function above.
   // Called recursively on the child nodes.
-  const TetrahedralTree* GetBlockFromPointHelper(const Vec3& point);
+  const TetrahedralTree* GetBlockFromPointHelper(const Vec3& point) const;
 };
 }
 

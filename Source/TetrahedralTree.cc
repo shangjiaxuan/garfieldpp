@@ -124,7 +124,7 @@ void TetrahedralTree::InsertTetrahedron(const double elemBoundingBox[6],
 // It returns the list of tetrahedrons that intersects in a bounding box (Octree
 // block) that contains the
 // point passed as input.
-std::vector<int> TetrahedralTree::GetTetListInBlock(const Vec3& point) {
+std::vector<int> TetrahedralTree::GetTetListInBlock(const Vec3& point) const {
   const TetrahedralTree* octreeNode = GetBlockFromPoint(point);
 
   if (octreeNode) {
@@ -139,7 +139,8 @@ std::vector<int> TetrahedralTree::GetTetListInBlock(const Vec3& point) {
 // the mesh's bounding box
 // If we don't check this, the case when root is leaf node itself will return
 // wrong block
-const TetrahedralTree* TetrahedralTree::GetBlockFromPoint(const Vec3& point) {
+const TetrahedralTree* TetrahedralTree::GetBlockFromPoint(
+    const Vec3& point) const {
   if (!(m_origin.x - m_halfDimension.x <= point.x &&
         point.x <= m_origin.x + m_halfDimension.x &&
         m_origin.y - m_halfDimension.y <= point.y &&
@@ -152,7 +153,7 @@ const TetrahedralTree* TetrahedralTree::GetBlockFromPoint(const Vec3& point) {
 }
 
 const TetrahedralTree* TetrahedralTree::GetBlockFromPointHelper(
-    const Vec3& point) {
+    const Vec3& point) const {
   // If we're at a leaf node, it means, the point is inside this block
   if (IsLeafNode()) return this;
   // We are at the interior node, so check which child octant contains the
