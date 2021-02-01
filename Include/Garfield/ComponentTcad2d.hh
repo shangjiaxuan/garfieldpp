@@ -4,6 +4,7 @@
 #include <array>
 
 #include "Component.hh"
+#include "QuadTree.hh"
 
 namespace Garfield {
 
@@ -216,6 +217,9 @@ class ComponentTcad2d : public Component {
   bool m_hasRangeZ = false;
   double m_xMinBB = 0., m_yMinBB = 0., m_zMinBB = 0.;
   double m_xMaxBB = 0., m_yMaxBB = 0., m_zMaxBB = 0.;
+
+  // Tetrahedral tree.
+  std::unique_ptr<QuadTree> m_tree;
 
   // Element from the previous call
   int m_lastElement = 0;
