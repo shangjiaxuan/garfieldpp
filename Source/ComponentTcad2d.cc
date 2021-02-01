@@ -726,11 +726,29 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   std::cout << m_className << "::Initialise:\n"
             << "    Looking for neighbouring elements. Be patient...\n";
   FindNeighbours();
-
+ 
   if (!ok) {
     m_ready = false;
     Cleanup();
     return false;
+  }
+
+  // Set up the quad tree.
+  const double hx = 0.5 * (m_xMaxBB - m_xMinBB);
+  const double hy = 0.5 * (m_yMaxBB - m_yMinBB);
+  m_tree.reset(new QuadTree(m_xMinBB + hx, m_yMinBB + hy, hx, hy));
+  // Insert the mesh nodes in the tree.
+  const auto nVertices = m_vertices.size();
+  for (size_t i = 0; i < nVertices; ++i) {
+    const Vertex& vtx = m_vertices[i];
+    m_tree->InsertMeshNode(vtx.x, vtx.y, i);
+  }
+
+  // Insert the mesh elements in the tree.
+  for (size_t i = 0; i < nElements; ++i) {
+    const Element& e = m_elements[i];
+    const double bb[4] = {e.xmin, e.ymin, e.xmax, e.ymax};
+    m_tree->InsertMeshElement(bb, i);
   }
 
   m_ready = true;
@@ -1968,6 +1986,7 @@ unsigned int ComponentTcad2d::FindElement(
     std::array<double, nMaxVertices>& w) const {
 
   w.fill(0.);
+ 
   if (m_lastElement >= 0) {
     // Check if the point is still located in the previously found element.
     const Element& last = m_elements[m_lastElement];
@@ -1988,21 +2007,23 @@ unsigned int ComponentTcad2d::FindElement(
   }
 
   // The point is not in the previous element nor in the adjacent ones.
-  // We have to loop over all elements.
-  const unsigned int nElements = m_elements.size();
-  for (unsigned int i = 0; i < nElements; ++i) {
-    const Element& element = m_elements[i];
+  std::vector<int> elementsToSearch;
+  if (m_tree) elementsToSearch = m_tree->GetElementsInBlock(x, y);
+  const size_t nElementsToSearch = m_tree ? elementsToSearch.size() : m_elements.size(); 
+  for (size_t i = 0; i < nElementsToSearch; ++i) {
+    const size_t idx = m_tree ? elementsToSearch[i] : i;
+    const Element& element = m_elements[idx];
     if (x < element.xmin || x > element.xmax || y < element.ymin ||
         y > element.ymax)
       continue;
-    if (CheckElement(x, y, element, w)) return i;
+    if (CheckElement(x, y, element, w)) return idx;
   }
   // Point is outside the mesh.
   if (m_debug) {
     std::cerr << m_className << "::FindElement:\n"
               << "    Point (" << x << ", " << y << ") is outside the mesh.\n";
   }
-  return nElements;
+  return m_elements.size();
 }
 
 bool ComponentTcad2d::CheckElement(const double x, const double y,
