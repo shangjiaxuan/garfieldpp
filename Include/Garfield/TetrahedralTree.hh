@@ -1,6 +1,7 @@
 #ifndef TETRAHEDRAL_TREE_H
 #define TETRAHEDRAL_TREE_H
 
+#include <cstddef>
 #include <vector>
 
 namespace Garfield {
