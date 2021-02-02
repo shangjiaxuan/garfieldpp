@@ -2,6 +2,7 @@
 #define G_COMPONENT_TCAD_2D_H
 
 #include <array>
+#include <memory>
 
 #include "Component.hh"
 #include "QuadTree.hh"
