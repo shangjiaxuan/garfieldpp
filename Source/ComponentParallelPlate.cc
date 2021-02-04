@@ -240,7 +240,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
                                                         const double z) {
     switch (el.ind) {
         case structureelectrode::Plane: {
-            double sol = m_eps * m_Vw * (m_g - z) / (2*m_b + m_eps * m_g);
+            double sol = m_eps * m_Vw * (m_g - z) / (m_b + m_eps * m_g);
             return abs(sol)>m_presision ? sol : 0.;
             break;
         }
