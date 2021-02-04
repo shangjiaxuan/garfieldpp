@@ -70,6 +70,8 @@ class TrackHeed : public Track {
   double GetW() const;
   /// Return the Fano factor of the medium (of the last simulated track).
   double GetFanoFactor() const;
+  /// Return the photoabsorption cross-section at a given energy.
+  double GetPhotoAbsorptionCrossSection(const double e) const;
 
   /// Compute the differential cross-section for a given medium.
   bool Initialise(Medium* medium);
