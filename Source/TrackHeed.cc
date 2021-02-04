@@ -1038,6 +1038,21 @@ bool TrackHeed::SetupDelta(const std::string& databasePath) {
 double TrackHeed::GetW() const { return m_matter->W * 1.e6; }
 double TrackHeed::GetFanoFactor() const { return m_matter->F; }
 
+double TrackHeed::GetPhotoAbsorptionCrossSection(const double en) const {
+
+  if (!m_matter) return 0.;
+  // Convert eV to MeV.
+  const double e = 1.e-6 * en;
+  double cs = 0.;
+  const auto n = m_matter->apacs.size();
+  for (size_t i = 0; i < n; ++i) {
+    const double w = m_matter->matter->weight_quan(i);
+    cs += m_matter->apacs[i]->get_ACS(e) * w;
+  }
+  // Convert Mbarn to cm-2.
+  return cs * 1.e-18;
+}
+
 std::string TrackHeed::FindUnusedMaterialName(const std::string& namein) {
   std::string nameout = namein;
   unsigned int counter = 0;
