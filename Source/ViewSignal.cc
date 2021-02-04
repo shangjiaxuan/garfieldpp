@@ -193,6 +193,7 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
     std::cerr << m_className << "::PlotSignal: Sensor is not defined.\n";
     return;
   }
+    const double pres = 1e-50;
   // Create canvas
   auto canvas = GetCanvas();
   canvas->cd();
@@ -223,16 +224,18 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
     // Fill histogram with total signal
     for (unsigned int i = 0; i < nBins; ++i) {
         const double sig = m_sensor->GetSignal(label, i, 0);
-      m_hSignal->SetBinContent(i + 1, sig);
+        if(!isnan(sig) && abs(sig)<pres){
+          m_hSignal->SetBinContent(i + 1, 0.);
+        }else{
+            m_hSignal->SetBinContent(i + 1, sig);
+        }
     }
-
     m_hSignal->SetLineWidth(6);
     const std::string opt = nPlots > 0 ? "same" : "";
     m_hSignal->DrawCopy(opt.c_str());
     ++nPlots;
     if (m_userRangeX) m_hSignal->SetAxisRange(m_xmin, m_xmax, "X");
     if (m_userRangeY) m_hSignal->SetAxisRange(m_ymin, m_ymax, "Y");
-
     // Get and plot threshold crossings.
     const auto nCrossings = m_sensor->GetNumberOfThresholdCrossings();
     if (nCrossings > 0) {
@@ -251,7 +254,6 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
       }
       gCrossings.DrawGraph(xp.size(), xp.data(), yp.data(), "psame");
     }
-
     if (delayed) {
       // Makign the delayed component histogram.
       const auto hnamed = FindUnusedHistogramName("hDelayedCharge_");
@@ -261,7 +263,11 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
       m_hDelayedSignal->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
           const double sig = m_sensor->GetSignal(label, i, 2);
-        m_hDelayedSignal->SetBinContent(i + 1, sig);
+          if(!isnan(sig) && abs(sig)<pres){
+              m_hDelayedSignal->SetBinContent(i + 1, 0.);
+          }else{
+              m_hDelayedSignal->SetBinContent(i + 1, sig);
+          }
       }
       m_hDelayedSignal->SetFillStyle(3001);
       m_hDelayedSignal->SetFillColor(m_colDelayed[0]);
@@ -274,7 +280,11 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
     m_hPromptSignal->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {
         const double sig = m_sensor->GetSignal(label, i, 1);
-      m_hPromptSignal->SetBinContent(i + 1, sig);
+        if(!isnan(sig) && abs(sig)<pres){
+            m_hPromptSignal->SetBinContent(i + 1, 0.);
+        }else{
+            m_hPromptSignal->SetBinContent(i + 1, sig);
+        }
     }
     m_hPromptSignal->SetFillStyle(3001);
     m_hPromptSignal->SetFillColor(m_colDelayed[2]);
@@ -295,12 +305,12 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
     g2->SetFillColor(m_colDelayed[2]);
 
     TLegend *leg = new TLegend(0.7, 0.7, 0.9, 0.9);
-
     if (!getsignal) {
       leg->SetHeader("Induced charge as a function of time");
       leg->AddEntry(g0, "Total induced charge", "f");
       leg->AddEntry(g2, "Prompt induced charge", "f");
       if (delayed) leg->AddEntry(g1, "Delayed induced charge", "f");
+
     } else {
       leg->SetHeader("Induced current as a function of time");
       leg->AddEntry(g0, "Total induced current", "f");

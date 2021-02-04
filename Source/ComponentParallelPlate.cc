@@ -240,7 +240,8 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
                                                         const double z) {
     switch (el.ind) {
         case structureelectrode::Plane: {
-            return m_eps * m_Vw * (m_g - z) / (m_b + m_eps * m_g);
+            double sol = m_eps * m_Vw * (m_g - z) / (2*m_b + m_eps * m_g);
+            return abs(sol)>m_presision ? sol : 0.;
             break;
         }
         case structureelectrode::Pixel: {
@@ -310,9 +311,11 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
             double tau =
             m_eps0*(m_eps + m_b / m_g) /
             (m_sigma);  // Note to self: You dropt the eps) here for convenience.
-            return m_Vw * (1 - exp(-t / tau)) * (m_b * (m_g - z)) /
+            
+            double sol = m_Vw * (1 - exp(-t / tau)) * (m_b * (m_g - z)) /
             (m_g *
-             (m_b + m_eps * m_g));  // Note to self: Check epsr depencences.
+             (m_b + m_eps * m_g));
+            return abs(sol)>m_presision ? sol : 0.;
             break;
         }
         case structureelectrode::Pixel: {

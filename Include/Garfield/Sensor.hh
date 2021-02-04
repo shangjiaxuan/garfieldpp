@@ -219,7 +219,7 @@ class Sensor {
   void AddSignal(const double q, const std::vector<double>& ts,
                  const std::vector<std::array<double, 3> >& xs,
                  const std::vector<std::array<double, 3> >& vs,
-                 const std::vector<double>& ns, const int navg);
+                 const std::vector<double>& ns, const int navg, const bool useWeightingPotential = false);
   /// Add the induced charge from a charge carrier drift between two points.
 
     void ExportCharge(const std::string& label,const std::string& filename);
@@ -247,7 +247,7 @@ class Sensor {
                            const double x1, const double y1, const double z1,
                            const double xp, const double yp, const double zp,
                            const unsigned int nI, const int isign = 0);
-
+    double GetTotalInducedCharge(const std::string label);
  private:
   std::string m_className = "Sensor";
   /// Mutex.

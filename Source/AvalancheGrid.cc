@@ -80,12 +80,11 @@ int AvalancheGrid::GetAvalancheSize(double dx, const int nsize,
                                     const double alpha, const double eta) {
     // Algorithm to get the size of the avalanche after it has propagated over a
     // distance dx.
-    dx = 10 * dx;  // Scaling to get the dimensions right [mm].
     
     int newnsize = 0;  // Holder for final size.
     
     const double k = eta / alpha;
-    const double ndx = exp((alpha - eta) * dx/10); // Scaling Townsend and Attachment coef. to 1/mm.
+    const double ndx = exp((alpha - eta) * dx); // Scaling Townsend and Attachment coef. to 1/mm.
     // If the size is higher than 1e3 the central limit theorem will be used to
     // describe the growth of the Townsend avalanche.
     if (nsize < 1e3) {
@@ -98,10 +97,8 @@ int AvalancheGrid::GetAvalancheSize(double dx, const int nsize,
             // electron will be attached or retrieve additional electrons from the
             // gas.
             double condition = k * (ndx - 1) / (ndx - k);
-            if (s >= condition) {
-                newnsize += (int)(1 + log((ndx - k) * (1 - s) / (ndx * (1 - k))) /
-                                  log(1 - (1 - k) / (ndx - k)));
-            }
+            
+            if (s >= condition) newnsize += (int)(1 + log((ndx - k) * (1 - s) / (ndx * (1 - k))) / log(1 - (1 - k) / (ndx - k)));
         }
         
     } else {
@@ -113,7 +110,7 @@ int AvalancheGrid::GetAvalancheSize(double dx, const int nsize,
     return newnsize;
 }
 
-bool AvalancheGrid::SnapToGrid(Grid& av, const double x,const double y, const double z,const double v) {
+bool AvalancheGrid::SnapToGrid(Grid& av, const double x,const double y, const double z,const double v, const int n) {
     // Snap electron from AvalancheMicroscopic to the predefined grid.
     if (!av.gridset) {
         std::cerr << m_className << "::SnapToGrid:Error: grid is not defined.\n";
@@ -154,8 +151,10 @@ bool AvalancheGrid::SnapToGrid(Grid& av, const double x,const double y, const do
         step = y - av.ygrid[indexY];
     }
     
-    const double nholder = GetAvalancheSize(step, 1, m_Townsend, m_Attachment);
-    av.N += nholder;
+    const int nholder = GetAvalancheSize(step, n, m_Townsend, m_Attachment);
+    
+    //av.N += nholder;
+    av.N += n;
     
     av.n[indexZ][indexY][indexX] += nholder;
     if (m_debug) std::cerr << m_className << "::SnapToGrid: n from 1 to "
@@ -238,6 +237,9 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
                         
                         holdnsize = GetAvalancheSize(step, av.n[iz][iy][ix], m_Townsend,
                                                      m_Attachment);
+                        
+                        if(m_MaxSize - av.N < holdnsize - av.n[iz][iy][ix]) holdnsize = m_MaxSize- av.N + av.n[iz][iy][ix];
+                        
                     } else {
                         holdnsize = av.n[iz][iy][ix];
                         m_Saturated = true;
@@ -308,8 +310,14 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
                     // its propagation to the next z-coordinate grid point. Else, the size
                     // will be kept constant under the propagation.
                     if (av.N < m_MaxSize) {
-                        av.n[iz + m_velNormal[2]][iy + m_velNormal[1]][ix + m_velNormal[0]] = GetAvalancheSize(av.zStepSize, av.n[iz][iy][ix],
-                                                                m_Townsend, m_Attachment);
+                        
+                        int holdnsize = GetAvalancheSize(av.zStepSize, av.n[iz][iy][ix],
+                                                         m_Townsend, m_Attachment);
+                        
+                        if(m_MaxSize - av.N < holdnsize - av.n[iz][iy][ix]) holdnsize = m_MaxSize- av.N + av.n[iz][iy][ix];
+                        
+                        av.n[iz + m_velNormal[2]][iy + m_velNormal[1]][ix + m_velNormal[0]] = holdnsize;
+                        
                     } else {
 
                         av.n[iz + m_velNormal[2]][iy+ m_velNormal[1]][ix + m_velNormal[0]] = av.n[iz][iy][ix];
@@ -320,9 +328,9 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
                     }
                     // Produce induced signal on readout electrodes.
 
-                    m_sensor->AddSignal(-(av.n[iz][iy][ix] + Nholder) / 2, av.time,
+                    m_sensor->AddSignal(-(av.n[iz][iy][ix] + av.n[iz + m_velNormal[2]][iy + m_velNormal[1]][ix + m_velNormal[0]]) / 2, av.time,
                                         av.time + av.zStepSize / av.velocity, av.xgrid[ix],
-                                        av.ygrid[iy], av.zgrid[iz], av.xgrid[ix + m_velNormal[0]], av.ygrid[iy + m_velNormal[1]], av.zgrid[iz + m_velNormal[2]],
+                                        av.ygrid[iy], av.zgrid[iz], av.xgrid[ix + m_velNormal[0]], av.ygrid[iy + m_velNormal[1]], av.zgrid[iz  -1],
                                         false, true);
                     
                     av.N +=
@@ -360,6 +368,13 @@ void AvalancheGrid::StartGridAvalanche() {
     std::cerr << m_className
     << "::StartGridAvalanche::Starting grid based simulation with "
     << m_avgrid.N << " initial electrons.\n";
+    if(m_avgrid.N<=0){
+        std::cerr << m_className
+        << "::StartGridAvalanche::Cancelled.\n";
+        return;
+    }
+    
+    m_nestart = m_avgrid.N;
     
     // The vector containing the indexes of the z-coordinate grid points of the
     // initial electrons needs to be ordered from small to large values. All
@@ -443,20 +458,21 @@ void AvalancheGrid::DiffusionFactors(Grid& av) {
     return;
 }
 
-void AvalancheGrid::CreateAvalanche(const double x, const double y, const double z,
-                                    const double vz, const double t) {
+void AvalancheGrid::CreateAvalanche(const double x, const double y, const double z, const double t,const int n) {
     
     m_driftAvalanche = true;
     
-    if (m_avgrid.time == 0 && m_avgrid.time!=t)
+    if (m_avgrid.time == 0 && m_avgrid.time!=t && m_debug)
         std::cerr
         << m_className
-        << "::DriftElectron::Overwriting start time of avalanche for t = 0 to "
+        << "::CreateAvalanche::Overwriting start time of avalanche for t = 0 to "
         << t << ".\n";
     m_avgrid.time = t;
     
-    if(SnapToGrid(m_avgrid, x, y,z, vz)&& m_debug) std::cerr << m_className << "::CreateAvalanche::Electron added at (t,x,y,z) =  ("
+    if(SnapToGrid(m_avgrid, x, y,z, 0, n)&& m_debug) std::cerr << m_className << "::CreateAvalanche::Electron added at (t,x,y,z) =  ("
         << t << "," << x << "," << y << "," << z << ").\n";
+    
+   // std::cerr<< m_className<< "::CreateAvalanche::expected contribution is "<< exp((m_Townsend-m_Attachment)*z) << ".\n";
 }
 void AvalancheGrid::GetElectronsFromAvalancheMicroscopic() {
     // Get the information of the electrons from the AvalancheMicroscopic class.
@@ -475,6 +491,7 @@ void AvalancheGrid::GetElectronsFromAvalancheMicroscopic() {
     int status;
     
     double vel = 0.;
+    
     for (int i = 0; i < np; ++i) {
         m_avmc->GetElectronEndpoint(i, x1, y1, z1, t1, e1, x2, y2, z2, t2, e2,
                                     status);
@@ -482,6 +499,7 @@ void AvalancheGrid::GetElectronsFromAvalancheMicroscopic() {
         vel = (z2 - z1) / (t2 - t1);
         
         m_avgrid.time = t2;
+        
         if(SnapToGrid(m_avgrid, x2, y2, z2, vel)&& m_debug) std::cerr << m_className << "::GetElectronsFromAvalancheMicroscopic::Electron added at (x,y,z) =  ("
             << x2 << "," << y2 << "," << z2 << ").\n";
     }
@@ -511,12 +529,14 @@ void AvalancheGrid::GetParametersFromSensor() {
         int nx = (int) round(vx/vel);int ny = (int) round(vy/vel);int nz = (int) round(vz/vel);
         m_velNormal = {nx,ny,nz};
         m_Velocity = -abs(vel);
+        
     }
+    
     std::cerr << m_className
     << "::GetParametersFromSensor::Electric field = (" << e[0]/1000
     <<", "<< e[1]/1000
     <<", " << e[2]/1000
-    << ") [kV].\n";
+    << ") [kV/cm].\n";
     
     std::cerr << m_className
     << "::GetParametersFromSensor::Townsend = " << m_Townsend
@@ -544,11 +564,22 @@ void AvalancheGrid::Reset() {
     m_avgrid.n.clear();
     m_avgrid.transverseDiffusion.clear();
     m_avgrid.time = 0;
+    m_avgrid.N =0;
+    m_avgrid.run = true;
+    
+    m_Saturated = false;
+    m_SaturationTime = -1;
+    
+    m_driftAvalanche=false;
     
     std::vector<int> nhx(m_avgrid.xsteps, 0);
     std::vector<std::vector<int>> nhy(m_avgrid.ysteps, nhx);
     std::vector<std::vector<std::vector<int>>> nhz(m_avgrid.zsteps, nhy);
     m_avgrid.n = nhz;
+    
+    for(int i = 0; i<3;i++){
+        m_avgrid.gridPosition[i].clear();
+    }
 
     // Get the diffusion factors for neighboring points on the grid.
     DiffusionFactors(m_avgrid);

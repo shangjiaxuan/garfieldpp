@@ -86,6 +86,7 @@ class ComponentParallelPlate : public Component {
   Medium* GetMedium(const double x, const double y, const double z) override;
 
  private:
+    const double m_presision = 1e-30;
   // Size of the gap.
   double m_g = 0.;
   // Thickness of the resistive element.

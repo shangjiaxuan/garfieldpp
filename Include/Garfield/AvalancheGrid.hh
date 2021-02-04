@@ -57,11 +57,11 @@ class AvalancheGrid {
    *
    * \param z z-coordinate of initial electron.
    * \param x x-coordinate of initial electron.
-   * \param vz speed of initial electron in z-direction.
+   * \param v speed of initial electron.
    * \param t starting time of avalanche.
    */
-  void CreateAvalanche(const double x, const double y, const double z, const double vz,
-                      const double t = 0);
+  void CreateAvalanche(const double x, const double y, const double z,
+                       const double t = 0,const int n =1);
   /// Import electron data from AvalancheMicroscopic class
   void GetElectronsFromAvalancheMicroscopic();
 
@@ -69,6 +69,7 @@ class AvalancheGrid {
   void SetGrid(const double xmin, const double xmax,const int xsteps,
                const double ymin, const double ymax,const int ysteps,
                const double zmin, const double zmax, const int zsteps);
+    int GetAmountOfStartingElectrons(){return m_nestart;};
     
     void EnableDebugging(){m_debug =true;};
     
@@ -85,7 +86,7 @@ class AvalancheGrid {
     
     std::vector<int> m_velNormal = {0,0,-1};
 
-  double m_MaxSize = 1e7;  // Saturations size
+  double m_MaxSize = 1.6e7;  // Saturations size
 
   bool m_Saturated = false;  // Check if avalanche has reached maximum size
 
@@ -95,6 +96,8 @@ class AvalancheGrid {
   bool m_diffusion = false;  // Check if transverse diffusion is enabled.
 
   double m_DiffSigma = 0.;  // Transverse diffusion coefficients (in √cm).
+    
+    int m_nestart = 0.;
 
   bool m_driftAvalanche = false;
   bool m_importAvalanche = false;
@@ -152,7 +155,7 @@ class AvalancheGrid {
   int GetAvalancheSize(double dz, const int nsize, const double alpha,
                        const double eta);
   // Assign electron to the closest grid point.
-  bool SnapToGrid(Grid& av, const double x, const double y, const double z, const double v);
+  bool SnapToGrid(Grid& av, const double x, const double y, const double z, const double v,const int n =1);
   // Go to next time step.
   void NextAvalancheGridPoint(Grid& av);
   // Compute the factor of the charge that go to neighboring points through
