@@ -45,7 +45,7 @@ void PrintProgress(const double f) {
   std::cout << bar << "\r" << std::flush;
 }
 
-}
+}  // namespace
 
 namespace Garfield {
 
@@ -797,8 +797,8 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
     if (line.empty()) continue;
     // Skip lines that are not comments.
     if (isComment(line)) continue;
-    
-      std::vector<double> pvect;
+
+    std::vector<double> pvect;
 
     std::istringstream data;
     data.str(line);
@@ -835,8 +835,8 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
   }
 
   PrintProgress(1.);
-  std::cout << std::endl << m_className 
-            << "::SetDelayedWeightingField: Done.\n";
+  std::cout << std::endl
+            << m_className << "::SetDelayedWeightingField: Done.\n";
   ffield.close();
   return true;
 }

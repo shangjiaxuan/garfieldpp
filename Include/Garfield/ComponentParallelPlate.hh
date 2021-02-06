@@ -18,16 +18,16 @@ class ComponentParallelPlate : public Component {
   ~ComponentParallelPlate() {}
 
   /// Set the parallel-plate geometries without resistive elements.
-    
-    /** Set the parallel-plate geometries with resistive elements.
-     * \param g size of the gap along positive \f$z\f$.
-     * \param b thickness of the resistive layer along negative \f$z\f$.
-     * \param eps relative permittivity of the resistive layer.
-     * \param sigma conductivity of the resistive layer (must be larger then zero,
-     * otherwise do not pass it in the function).
-     * \param V applied potential difference between the parallel plates.
-     */
-  void Setup(double g, double b, double eps, double V,double sigma=0);
+
+  /** Set the parallel-plate geometries with resistive elements.
+   * \param g size of the gap along positive \f$z\f$.
+   * \param b thickness of the resistive layer along negative \f$z\f$.
+   * \param eps relative permittivity of the resistive layer.
+   * \param sigma conductivity of the resistive layer (must be larger then zero,
+   * otherwise do not pass it in the function).
+   * \param V applied potential difference between the parallel plates.
+   */
+  void Setup(double g, double b, double eps, double V, double sigma = 0);
 
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
@@ -46,9 +46,8 @@ class ComponentParallelPlate : public Component {
                                    const double z, const double t,
                                    const std::string& label) override;
 
-  void DelayedWeightingField(const double x, const double y,
-                             const double z, const double t, double& wx,
-                             double& wy, double& wz,
+  void DelayedWeightingField(const double x, const double y, const double z,
+                             const double t, double& wx, double& wy, double& wz,
                              const std::string& label) override;
 
   bool GetVoltageRange(double& vmin, double& vmax) override;
@@ -64,40 +63,47 @@ class ComponentParallelPlate : public Component {
   /// Add strip electrode.
   void AddStrip(double x, double lx, const std::string& label);
 
-  /// Add plane electrode, if you want to read the signal from the cathode set the second argument to false.
-  void AddPlane(const std::string& label, bool anode =true);
+  /// Add plane electrode, if you want to read the signal from the cathode set
+  /// the second argument to false.
+  void AddPlane(const std::string& label, bool anode = true);
 
   // Setting the medium
-  void SetMedium(Medium* medium) { m_medium = medium;}
-    
-    // This will calculate the electrode's time-dependent weighting potential on the specified grid.
-    void SetWeightingPotentialGrid(const std::string& label,
-                                   const double xmin, const double xmax, const double xsteps,
-                                   const double ymin, const double ymax, const double ysteps,
-                                   const double zmin, const double zmax, const double zsteps,
-                                   const double tmin, const double tmax, const double tsteps);
-    
-    // This will calculate all electrodes time-dependent weighting potential on the specified grid.
-    void SetWeightingPotentialGrids(const double xmin, const double xmax, const double xsteps,
-                                    const double ymin, const double ymax, const double ysteps,
-                                    const double zmin, const double zmax, const double zsteps,
-                                    const double tmin, const double tmax, const double tsteps);
+  void SetMedium(Medium* medium) { m_medium = medium; }
+
+  // This will calculate the electrode's time-dependent weighting potential on
+  // the specified grid.
+  void SetWeightingPotentialGrid(const std::string& label, const double xmin,
+                                 const double xmax, const double xsteps,
+                                 const double ymin, const double ymax,
+                                 const double ysteps, const double zmin,
+                                 const double zmax, const double zsteps,
+                                 const double tmin, const double tmax,
+                                 const double tsteps);
+
+  // This will calculate all electrodes time-dependent weighting potential on
+  // the specified grid.
+  void SetWeightingPotentialGrids(const double xmin, const double xmax,
+                                  const double xsteps, const double ymin,
+                                  const double ymax, const double ysteps,
+                                  const double zmin, const double zmax,
+                                  const double zsteps, const double tmin,
+                                  const double tmax, const double tsteps);
 
   Medium* GetMedium(const double x, const double y, const double z) override;
 
  private:
-    const double m_presision = 1e-30;
+  const double m_presision = 1e-30;
   // Size of the gap.
   double m_g = 0.;
   // Thickness of the resistive element.
   double m_b = 0.;
   // Applied voltage on the electrode to
   // calculate the weighting potential.
-  static constexpr double m_Vw = 1.;  
-  double m_eps =1;
-    double m_eps0 = 8.85418782e-3;
+  static constexpr double m_Vw = 1.;
+  double m_eps = 1;
+  double m_eps0 = 8.85418782e-3;
   // Voltage across the RPC
-  double m_V = 0.;     
+  double m_V = 0.;
   // Electric field in the gap.
   double m_ezg = 0;
   // Electric field in the resistive layer.
@@ -114,26 +120,26 @@ class ComponentParallelPlate : public Component {
     int ind = structureelectrode::NotSet;  ///< Readout group.
     double xpos, ypos;                     ///< Coordinates in x/y.
     double lx, ly;                         ///< Dimensions in the x-y plane.
-      double flip = 1;                     ///< Dimensions in the x-y plane.
-      
-      bool m_usegrid = false;
-      std::vector<std::vector<std::vector<double>>> gridPromptV;
-      std::vector<std::vector<std::vector<std::vector<double>>>> gridDelayedV;
-      
-      double gridXSteps = 0;
-      double gridYSteps = 0;
-      double gridZSteps = 0;
-      double gridTSteps = 0;
-      
-      double gridX0 = 0;
-      double gridY0 = 0;
-      double gridZ0 = 0;
-      double gridT0 = 0;
-      
-      double gridXStepSize = 0;
-      double gridYStepSize = 0;
-      double gridZStepSize = 0;
-      double gridTStepSize = 0;
+    double flip = 1;                       ///< Dimensions in the x-y plane.
+
+    bool m_usegrid = false;
+    std::vector<std::vector<std::vector<double>>> gridPromptV;
+    std::vector<std::vector<std::vector<std::vector<double>>>> gridDelayedV;
+
+    double gridXSteps = 0;
+    double gridYSteps = 0;
+    double gridZSteps = 0;
+    double gridTSteps = 0;
+
+    double gridX0 = 0;
+    double gridY0 = 0;
+    double gridZ0 = 0;
+    double gridT0 = 0;
+
+    double gridXStepSize = 0;
+    double gridYStepSize = 0;
+    double gridZStepSize = 0;
+    double gridTStepSize = 0;
   };
 
   enum fieldcomponent { xcomp = 0, ycomp, zcomp };
@@ -148,28 +154,30 @@ class ComponentParallelPlate : public Component {
   /// Functions that calculate the electric field and potential
   double IntegrateField(const Electrode& el, int comp, const double x,
                         const double y, const double z);
-    
-double IntegrateDelayedField(const Electrode& el, int comp,
-                                                  const double x, const double y,
-                             const double z, const double t);
+
+  double IntegrateDelayedField(const Electrode& el, int comp, const double x,
+                               const double y, const double z, const double t);
 
   double IntegratePromptPotential(const Electrode& el, const double x,
                                   const double y, const double z);
   double IntegrateDelayedPotential(const Electrode& el, const double x,
                                    const double y, const double z,
                                    const double t);
-    
-    void CalculateDynamicalWeightingPotential(const Electrode& el);
-    
-    double FindWeightingPotentialInGrid(const Electrode& el, const double x,
-                                const double y, const double z);
-    
-    double FindDelayedWeightingPotentialInGrid(const Electrode& el , const double x,
-                                const double y, const double z, const double t);
-    
-    double FindWeightFactor(const Electrode& el,const double dx, const double dy, const double dz);
-    
-    double FindWeightFactor(const Electrode& el,const double dx, const double dy, const double dz, const double dt);
+
+  void CalculateDynamicalWeightingPotential(const Electrode& el);
+
+  double FindWeightingPotentialInGrid(const Electrode& el, const double x,
+                                      const double y, const double z);
+
+  double FindDelayedWeightingPotentialInGrid(const Electrode& el,
+                                             const double x, const double y,
+                                             const double z, const double t);
+
+  double FindWeightFactor(const Electrode& el, const double dx, const double dy,
+                          const double dz);
+
+  double FindWeightFactor(const Electrode& el, const double dx, const double dy,
+                          const double dz, const double dt);
 
   void UpdatePeriodicity() override;
   void Reset() override;
