@@ -6,7 +6,6 @@
 #include <TSystem.h>
 
 #include <cmath>
-#include <cstdio>
 #include <ctime>
 #include <fstream>
 #include <iostream>
@@ -15,12 +14,9 @@
 #include "Garfield/AvalancheMicroscopic.hh"
 #include "Garfield/ComponentParallelPlate.hh"
 #include "Garfield/FundamentalConstants.hh"
-#include "Garfield/GeometrySimple.hh"
-#include "Garfield/Medium.hh"
 #include "Garfield/MediumMagboltz.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/Sensor.hh"
-#include "Garfield/SolidBox.hh"
 #include "Garfield/TrackHeed.hh"
 #include "Garfield/ViewSignal.hh"
 
@@ -33,10 +29,9 @@ int main(int argc, char* argv[]) {
   plottingEngine.SetDefaultStyle();
 
   const bool debug = true;
-    constexpr bool plotSignal = true;
-    constexpr bool plotDrift = true;
+  constexpr bool plotSignal = true;
+  constexpr bool plotDrift = true;
     
-
   // The geometry of the RPC.
   const double gap = 0.03;  // [cm]
   const double thickness = 0.2;  // [cm]
@@ -57,10 +52,6 @@ int main(int argc, char* argv[]) {
   gas.Initialise(true);
 
   // Setting the drift medium.
-  SolidBox box(0., 0., gap/2, 5., 5., gap/2);
-  GeometrySimple geo;
-  geo.AddSolid(&box, &gas);
-  RPC->SetGeometry(&geo);
   RPC->SetMedium(&gas);
 
   // Create the sensor.
@@ -80,7 +71,6 @@ int main(int argc, char* argv[]) {
 
   // Set the times the delayed signals will be calculated.
   std::vector<double> times;
-
   for (int i = 0; i < nTimeBins; i++) {
     times.push_back(tmin + tstep / 2 + i * tstep);
   }
@@ -105,7 +95,7 @@ int main(int argc, char* argv[]) {
     
     
   avalgrid.SetGrid(-0.05, 0.05, 5,-0.05, 0.05, 5,0, gap, 1000);
-//avalgrid.EnableDebugging();
+  //avalgrid.EnableDebugging();
 
   // Preparing the plotting of the induced charge and signal of the electrode
   // readout.
@@ -147,10 +137,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Setting the timer for the running time of the algorithm.
-  std::clock_t start;
-  double duration;
-
-  start = std::clock();
+  std::clock_t start = std::clock();
 
   // Simulate a charged-particle track.
   track.NewTrack(0, 0, gap, 0, 0, 0, -1);
@@ -159,16 +146,15 @@ int main(int argc, char* argv[]) {
   // Retrieve the clusters along the track.
   while (track.GetCluster(xc, yc, zc, tc, ne, ec, extra)) {
     // Loop over the electrons in the cluster.
-     for (int j = 0; j < ne; ++j) {
+    for (int j = 0; j < ne; ++j) {
       double xe = 0., ye = 0., ze = 0., te = 0., ee = 0.;
       double dxe = 0., dye = 0., dze = 0.;
       track.GetElectron(j, xe, ye, ze, te, ee, dxe, dye, dze);
       // Simulate the electron and hole drift lines.
-      if (plotDrift)aval.EnablePlotting(driftView);
-         
-        aval.AvalancheElectron(xe, ye, ze, te, ee, dxe, dye, dze);
-        // Stops calculation after tMaxWindow ns.
-         avalgrid.GetElectronsFromAvalancheMicroscopic();
+      if (plotDrift) aval.EnablePlotting(driftView);
+      aval.AvalancheElectron(xe, ye, ze, te, ee, dxe, dye, dze);
+      // Stops calculation after tMaxWindow ns.
+      avalgrid.GetElectronsFromAvalancheMicroscopic();
     }
   }
 
@@ -176,18 +162,17 @@ int main(int argc, char* argv[]) {
   // calculations stoped.
   avalgrid.StartGridAvalanche();
   // Stop timer.
-  duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+  double duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
 
   LOG("Script: "
       << "Electrons have drifted. It took " << duration << "s to run.");
     
-    if (plotDrift) {
-      constexpr bool twod = true;
-      driftView->Plot(twod);
-      cDrift->Update();
-      gSystem->ProcessEvents();
-    }
-    
+  if (plotDrift) {
+    constexpr bool twod = true;
+    driftView->Plot(twod);
+    cDrift->Update();
+    gSystem->ProcessEvents();
+  }
     
   if (plotSignal) {
     // Plot signals
@@ -200,9 +185,9 @@ int main(int argc, char* argv[]) {
     chargeView->Plot(label, false);
     cCharge->Update();
     gSystem->ProcessEvents();
-      // Export induced current data as an csv file.
-      sensor.ExportCharge(label,"ChargeNaN");
+    // Export induced current data as an csv file.
+    sensor.ExportCharge(label,"ChargeNaN");
   }
     
-    app.Run(kTRUE);
+  app.Run(kTRUE);
 }

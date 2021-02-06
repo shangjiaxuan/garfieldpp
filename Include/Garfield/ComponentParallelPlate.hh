@@ -89,6 +89,8 @@ class ComponentParallelPlate : public Component {
 
   Medium* GetMedium(const double x, const double y, const double z) override;
 
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
+                      double& xmax, double& ymax, double& zmax) override;
  private:
   static constexpr double m_precision = 1.e-30;
   // Size of the gap.
