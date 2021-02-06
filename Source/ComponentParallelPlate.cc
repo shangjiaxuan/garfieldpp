@@ -46,8 +46,6 @@ double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
         double kx = k[0];
         double ky = k[1];
 
-        delete p;
-
         double K = std::sqrt(kx * kx + ky * ky);
 
         double intsol = 1;
@@ -88,15 +86,13 @@ double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
 
       delete fw;
 
-      return (4 * m_eps * m_Vw / (Pi * Pi)) * sol;
+      return (4 * m_eps * m_Vw / Pi2) * sol;
 
       break;
     }
     case structureelectrode::Strip: {
       auto WFieldStrip = [=](double* k, double* p) {
         double kk = k[0];
-
-        delete p;
 
         double intsol = 1 / ((cosh(m_g * kk) * sinh(m_b * kk) +
                               m_eps * cosh(m_b * kk) * sinh(m_g * kk)));
@@ -118,15 +114,11 @@ double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
 
       if (comp == ycomp) {
         return 0.;
-      } else {
-        TF1* fw = new TF1("WFieldStrip", WFieldStrip, 0, 10 * m_g, 0);
-
-        double sol = fw->Integral(0, 10 * m_g);
-
-        delete fw;
-
-        return (2 * m_eps * m_Vw / (Pi)) * sol;
       }
+      TF1* fw = new TF1("WFieldStrip", WFieldStrip, 0, 10 * m_g, 0);
+      double sol = fw->Integral(0, 10 * m_g);
+      delete fw;
+      return (2 * m_eps * m_Vw / (Pi)) * sol;
       break;
     }
     default: {
@@ -158,8 +150,6 @@ double ComponentParallelPlate::IntegrateDelayedField(const Electrode& el,
       auto WFieldPixel = [=](double* k, double* p) {
         double kx = k[0];
         double ky = k[1];
-
-        delete p;
 
         double K = std::sqrt(kx * kx + ky * ky);
 
@@ -204,15 +194,13 @@ double ComponentParallelPlate::IntegrateDelayedField(const Electrode& el,
 
       delete fw;
 
-      return (4 * m_eps * m_Vw / (Pi * Pi)) * sol;
+      return (4 * m_eps * m_Vw / Pi2) * sol;
 
       break;
     }
     case structureelectrode::Strip: {
       auto WFieldStrip = [=](double* k, double* p) {
         double kk = k[0];
-        delete p;
-
         double tau = m_eps0 *
                      (m_eps + cosh(m_g * kk) * sinh(m_b * kk) /
                                   (cosh(m_b * kk) * sinh(m_g * kk))) *
@@ -240,15 +228,11 @@ double ComponentParallelPlate::IntegrateDelayedField(const Electrode& el,
 
       if (comp == ycomp) {
         return 0.;
-      } else {
-        TF1* fw = new TF1("WFieldStrip", WFieldStrip, 0, 10 * m_g, 0);
-
-        double sol = fw->Integral(0, 10 * m_g);
-
-        delete fw;
-
-        return (2 * m_eps * m_Vw / Pi) * sol;
-      }
+      } 
+      TF1* fw = new TF1("WFieldStrip", WFieldStrip, 0, 10 * m_g, 0);
+      double sol = fw->Integral(0, 10 * m_g);
+      delete fw;
+      return (2 * m_eps * m_Vw / Pi) * sol;
       break;
     }
     default: {
@@ -276,8 +260,6 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
       auto WPotentialPixel = [=](double* k, double* p) {
         double kx = k[0];
         double ky = k[1];
-
-        delete p;
 
         double K = std::sqrt(kx * kx + ky * ky);
 
@@ -307,8 +289,6 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
       auto WPotentialStrip = [=](double* k, double* p) {
         double kk = k[0];
 
-        delete p;
-
         double intsol = 1 / (kk * (cosh(m_g * kk) * sinh(m_b * kk) +
                                    m_eps * cosh(m_b * kk) * sinh(m_g * kk)));
         intsol *= (sin(kk * el.lx / 2) * cos(kk * (x - el.xpos)) *
@@ -321,7 +301,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
 
       double sol = pw->Integral(0, 10 * m_g);
       delete pw;
-      return (2 * m_eps * m_Vw / (Pi)) * sol;
+      return (2 * m_eps * m_Vw / Pi) * sol;
       break;
     }
     default: {
@@ -356,8 +336,6 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
         double kx = k[0];
         double ky = k[1];
 
-        delete p;
-
         double K = std::sqrt(kx * kx + ky * ky);
         double tau = m_eps0 *
                      (m_eps + cosh(m_g * K) * sinh(m_b * K) /
@@ -384,14 +362,12 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
 
       delete pw;
 
-      return (4 * m_Vw / (Pi * Pi)) * sol;
+      return (4 * m_Vw / Pi2) * sol;
       break;
     }
     case structureelectrode::Strip: {
       auto WPotentialStrip = [=](double* k, double* p) {
         double kk = k[0];
-
-        delete p;
 
         double tau = m_eps0 *
                      (m_eps + cosh(m_g * kk) * sinh(m_b * kk) /
@@ -411,7 +387,7 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
 
       double sol = pw->Integral(0, 8 * m_g);
       delete pw;
-      return (2 * m_Vw / (Pi)) * sol;
+      return (2 * m_Vw / Pi) * sol;
       break;
     }
     default: {
