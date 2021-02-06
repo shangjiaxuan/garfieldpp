@@ -31,9 +31,8 @@ class ComponentFieldMap : public Component {
            z >= m_minBoundingBox[2] && y <= m_maxBoundingBox[2];
   }
 
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
-                              double& xmax, double& ymax,
-                              double& zmax) override;
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
+                      double& ymax, double& zmax) override;
 
   bool GetVoltageRange(double& vmin, double& vmax) override {
     vmin = m_mapvmin;
@@ -73,8 +72,8 @@ class ComponentFieldMap : public Component {
     if (on) m_lastElement = -1;
   }
   /// Option to eliminate mesh elements in conductors (default: on).
-  void EnableDeleteBackgroundElements(const bool on = true) { 
-    m_deleteBackground = on; 
+  void EnableDeleteBackgroundElements(const bool on = true) {
+    m_deleteBackground = on;
   }
 
   /// Enable or disable the usage of the tetrahedral tree
@@ -84,7 +83,7 @@ class ComponentFieldMap : public Component {
   }
 
   /// Enable or disable warnings that the calculation of the local
-  /// coordinates did not achieve the requested precision. 
+  /// coordinates did not achieve the requested precision.
   void EnableConvergenceWarnings(const bool on = true) {
     m_printConvergenceWarnings = on;
   }
@@ -114,6 +113,8 @@ class ComponentFieldMap : public Component {
     double v;
     // Weighting potentials
     std::vector<double> w;
+    // Delayed weighting potentials
+    std::vector<std::vector<double>> dw;
   };
   std::vector<Node> m_nodes;
 
@@ -131,6 +132,9 @@ class ComponentFieldMap : public Component {
 
   std::vector<std::string> m_wfields;
   std::vector<bool> m_wfieldsOk;
+  std::vector<bool> m_dwfieldsOk;
+
+  std::vector<double> m_wdtimes;
 
   // Bounding box
   bool m_hasBoundingBox = false;
@@ -157,8 +161,8 @@ class ComponentFieldMap : public Component {
   bool m_warning = false;
   unsigned int m_nWarnings = 0;
 
-  // Print warnings about failed convergence when refining 
-  // isoparametric coordinates. 
+  // Print warnings about failed convergence when refining
+  // isoparametric coordinates.
   bool m_printConvergenceWarnings = true;
 
   // Get the scaling factor for a given length unit.
@@ -241,8 +245,8 @@ class ComponentFieldMap : public Component {
                    const Element& element) const;
   /// Calculate local coordinates for linear quadrilaterals.
   int Coordinates4(const double x, const double y, const double z, double& t1,
-                   double& t2, double& t3, double& t4, 
-                   double& det, const Element& element) const;
+                   double& t2, double& t3, double& t4, double& det,
+                   const Element& element) const;
   /// Calculate local coordinates for curved quadratic quadrilaterals.
   int Coordinates5(const double x, const double y, const double z, double& t1,
                    double& t2, double& t3, double& t4, double jac[4][4],
