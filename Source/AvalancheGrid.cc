@@ -116,7 +116,7 @@ int AvalancheGrid::GetAvalancheSize(double dx, const int nsize,
 }
 
 bool AvalancheGrid::SnapToGrid(Grid& av, const double x, const double y,
-                               const double z, const double v, const int n) {
+                               const double z, const double /*v*/, const int n) {
   // Snap electron from AvalancheMicroscopic to the predefined grid.
   if (!av.gridset) {
     std::cerr << m_className << "::SnapToGrid:Error: grid is not defined.\n";
@@ -405,7 +405,7 @@ void AvalancheGrid::StartGridAvalanche() {
   if (m_debug) {
     std::cerr << m_className
               << "::StartGridAvalanche::m_avgrid.gridPosition at iz = ";
-    for (int i = 0; i < m_avgrid.gridPosition[0].size(); i++) {
+    for (size_t i = 0; i < m_avgrid.gridPosition[0].size(); i++) {
       std::cerr << m_avgrid.gridPosition[0][i] << ",";
     }
     std::cerr << ".\n";
