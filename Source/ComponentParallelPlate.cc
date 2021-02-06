@@ -42,7 +42,7 @@ double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
       break;
     }
     case structureelectrode::Pixel: {
-      auto WFieldPixel = [=](double* k, double* p) {
+      auto WFieldPixel = [=](double* k, double* /*p*/) {
         double kx = k[0];
         double ky = k[1];
 
@@ -91,7 +91,7 @@ double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
       break;
     }
     case structureelectrode::Strip: {
-      auto WFieldStrip = [=](double* k, double* p) {
+      auto WFieldStrip = [=](double* k, double* /*p*/) {
         double kk = k[0];
 
         double intsol = 1 / ((cosh(m_g * kk) * sinh(m_b * kk) +
@@ -147,7 +147,7 @@ double ComponentParallelPlate::IntegrateDelayedField(const Electrode& el,
       break;
     }
     case structureelectrode::Pixel: {
-      auto WFieldPixel = [=](double* k, double* p) {
+      auto WFieldPixel = [=](double* k, double* /*p*/) {
         double kx = k[0];
         double ky = k[1];
 
@@ -199,7 +199,7 @@ double ComponentParallelPlate::IntegrateDelayedField(const Electrode& el,
       break;
     }
     case structureelectrode::Strip: {
-      auto WFieldStrip = [=](double* k, double* p) {
+      auto WFieldStrip = [=](double* k, double* /*p*/) {
         double kk = k[0];
         double tau = m_eps0 *
                      (m_eps + cosh(m_g * kk) * sinh(m_b * kk) /
@@ -257,7 +257,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
       break;
     }
     case structureelectrode::Pixel: {
-      auto WPotentialPixel = [=](double* k, double* p) {
+      auto WPotentialPixel = [=](double* k, double* /*p*/) {
         double kx = k[0];
         double ky = k[1];
 
@@ -286,7 +286,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
       break;
     }
     case structureelectrode::Strip: {
-      auto WPotentialStrip = [=](double* k, double* p) {
+      auto WPotentialStrip = [=](double* k, double* /*p*/) {
         double kk = k[0];
 
         double intsol = 1 / (kk * (cosh(m_g * kk) * sinh(m_b * kk) +
@@ -332,7 +332,7 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
       break;
     }
     case structureelectrode::Pixel: {
-      auto WPotentialPixel = [=](double* k, double* p) {
+      auto WPotentialPixel = [=](double* k, double* /*p*/) {
         double kx = k[0];
         double ky = k[1];
 
@@ -366,7 +366,7 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
       break;
     }
     case structureelectrode::Strip: {
-      auto WPotentialStrip = [=](double* k, double* p) {
+      auto WPotentialStrip = [=](double* k, double* /*p*/) {
         double kk = k[0];
 
         double tau = m_eps0 *
