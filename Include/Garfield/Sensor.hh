@@ -262,9 +262,8 @@ class Sensor {
     std::string label;
     std::vector<double> signal;
     std::vector<double> delayedSignal;
-
-    std::vector<double> electronsignal;
-    std::vector<double> ionsignal;
+    std::vector<double> electronSignal;
+    std::vector<double> ionSignal;
     std::vector<double> delayedElectronSignal;
     std::vector<double> delayedIonSignal;
     double charge;
@@ -316,15 +315,13 @@ class Sensor {
   void FillBin(Electrode& electrode, const unsigned int bin,
                const double signal, const bool electron, const bool delayed) {
     std::lock_guard<std::mutex> guard(m_mutex);
-    if (delayed) electrode.delayedSignal[bin] += signal;
-
     electrode.signal[bin] += signal;
-
+    if (delayed) electrode.delayedSignal[bin] += signal;
     if (electron) {
-      electrode.electronsignal[bin] += signal;
+      electrode.electronSignal[bin] += signal;
       if (delayed) electrode.delayedElectronSignal[bin] += signal;
     } else {
-      electrode.ionsignal[bin] += signal;
+      electrode.ionSignal[bin] += signal;
       if (delayed) electrode.delayedIonSignal[bin] += signal;
     }
   }

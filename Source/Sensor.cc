@@ -361,10 +361,10 @@ void Sensor::AddElectrode(Component* cmp, const std::string& label) {
   electrode.comp = cmp;
   electrode.label = label;
   electrode.signal.assign(m_nTimeBins, 0.);
-  electrode.electronsignal.assign(m_nTimeBins, 0.);
-  electrode.ionsignal.assign(m_nTimeBins, 0.);
-  electrode.delayedElectronSignal.assign(m_nTimeBins, 0.);
+  electrode.electronSignal.assign(m_nTimeBins, 0.);
+  electrode.ionSignal.assign(m_nTimeBins, 0.);
   electrode.delayedSignal.assign(m_nTimeBins, 0.);
+  electrode.delayedElectronSignal.assign(m_nTimeBins, 0.);
   electrode.delayedIonSignal.assign(m_nTimeBins, 0.);
   m_electrodes.push_back(std::move(electrode));
   std::cout << m_className << "::AddElectrode:\n"
@@ -427,8 +427,8 @@ void Sensor::ClearSignal() {
     electrode.charge = 0.;
     electrode.signal.assign(m_nTimeBins, 0.);
     electrode.delayedSignal.assign(m_nTimeBins, 0.);
-    electrode.electronsignal.assign(m_nTimeBins, 0.);
-    electrode.ionsignal.assign(m_nTimeBins, 0.);
+    electrode.electronSignal.assign(m_nTimeBins, 0.);
+    electrode.ionSignal.assign(m_nTimeBins, 0.);
     electrode.delayedElectronSignal.assign(m_nTimeBins, 0.);
     electrode.delayedIonSignal.assign(m_nTimeBins, 0.);
     electrode.integrated = false;
@@ -841,8 +841,12 @@ void Sensor::SetTimeWindow(const double tstart, const double tstep,
   std::cout << m_className << "::SetTimeWindow: Resetting all signals.\n";
   for (auto& electrode : m_electrodes) {
     electrode.signal.assign(m_nTimeBins, 0.);
-    electrode.electronsignal.assign(m_nTimeBins, 0.);
-    electrode.ionsignal.assign(m_nTimeBins, 0.);
+    electrode.electronSignal.assign(m_nTimeBins, 0.);
+    electrode.ionSignal.assign(m_nTimeBins, 0.);
+    electrode.delayedSignal.assign(m_nTimeBins, 0.);
+    electrode.delayedElectronSignal.assign(m_nTimeBins, 0.);
+    electrode.delayedIonSignal.assign(m_nTimeBins, 0.);
+    electrode.integrated = false;
   }
   m_nEvents = 0;
   // Reset the cached FFT of the transfer function
@@ -856,7 +860,7 @@ double Sensor::GetElectronSignal(const std::string& label,
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
   for (const auto& electrode : m_electrodes) {
-    if (electrode.label == label) sig += electrode.electronsignal[bin];
+    if (electrode.label == label) sig += electrode.electronSignal[bin];
   }
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
@@ -866,7 +870,7 @@ double Sensor::GetIonSignal(const std::string& label, const unsigned int bin) {
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
   for (const auto& electrode : m_electrodes) {
-    if (electrode.label == label) sig += electrode.ionsignal[bin];
+    if (electrode.label == label) sig += electrode.ionSignal[bin];
   }
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
@@ -1223,13 +1227,13 @@ bool Sensor::IntegrateSignal(const std::string& label) {
 void Sensor::IntegrateSignal(Electrode& electrode) {
   for (unsigned int j = 0; j < m_nTimeBins; ++j) {
     electrode.signal[j] *= m_tStep;
-    electrode.electronsignal[j] *= m_tStep;
-    electrode.ionsignal[j] *= m_tStep;
+    electrode.electronSignal[j] *= m_tStep;
+    electrode.ionSignal[j] *= m_tStep;
     electrode.delayedSignal[j] *= m_tStep;
     if (j > 0) {
       electrode.signal[j] += electrode.signal[j - 1];
-      electrode.electronsignal[j] += electrode.electronsignal[j - 1];
-      electrode.ionsignal[j] += electrode.ionsignal[j - 1];
+      electrode.electronSignal[j] += electrode.electronSignal[j - 1];
+      electrode.ionSignal[j] += electrode.ionSignal[j - 1];
       electrode.delayedSignal[j] += electrode.delayedSignal[j - 1];
     }
   }
@@ -1281,8 +1285,8 @@ void Sensor::AddNoise(const bool total, const bool electron, const bool ion) {
     for (unsigned int j = 0; j < m_nTimeBins; ++j) {
       const double noise = m_fNoise(t);
       if (total) electrode.signal[j] += noise;
-      if (electron) electrode.electronsignal[j] += noise;
-      if (ion) electrode.ionsignal[j] += noise;
+      if (electron) electrode.electronSignal[j] += noise;
+      if (ion) electrode.ionSignal[j] += noise;
       t += m_tStep;
     }
   }
