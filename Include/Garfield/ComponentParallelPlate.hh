@@ -90,7 +90,7 @@ class ComponentParallelPlate : public Component {
   Medium* GetMedium(const double x, const double y, const double z) override;
 
  private:
-  const double m_precision = 1.e-30;
+  static constexpr double m_precision = 1.e-30;
   // Size of the gap.
   double m_g = 0.;
   // Thickness of the resistive element.
@@ -98,16 +98,16 @@ class ComponentParallelPlate : public Component {
   // Applied voltage on the electrode to
   // calculate the weighting potential.
   static constexpr double m_Vw = 1.;
-  double m_eps = 1;
+  double m_eps = 1.;
   double m_eps0 = 8.85418782e-3;
   // Voltage difference between the parallel plates.
   double m_V = 0.;
   // Electric field in the gap.
-  double m_ezg = 0;
+  double m_ezg = 0.;
   // Electric field in the resistive layer.
-  double m_ezb = 0;
+  double m_ezb = 0.;
   // Conductivity of the resistive layer.
-  double m_sigma = 0;
+  double m_sigma = 0.;
 
   Medium* m_medium = nullptr;
 

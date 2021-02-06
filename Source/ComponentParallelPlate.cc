@@ -14,21 +14,26 @@ ComponentParallelPlate::ComponentParallelPlate() : Component("ParallelPlate") {}
 
 void ComponentParallelPlate::Setup(double g, double b, double eps, double V,
                                    double sigma) {
-  std::cout << m_className << "::Setup: Geometry set.\n";
+  // TODO: can g, b be negative?
   m_g = g;
   m_b = b;
+  if (eps < 1.) {
+    std::cerr << m_className << "::Setup: Epsilon must be >= 1.\n";
+    return;
+  }
   m_eps = eps;
   m_V = V;
+  // TODO: can sigma be negative?
   m_sigma = sigma;
-  // For large times the resistive layer will act as a perfect conductor.
   if (sigma == 0) {
     m_ezg = -m_eps * m_V / (m_b + m_eps * m_g);
     m_ezb = -m_V / (m_b + m_eps * m_g);
-    return;
+  } else {
+    // For large times the resistive layer will act as a perfect conductor.
+    m_ezg = -m_V / m_g;
+    m_ezb = 0.;
   }
-
-  m_ezg = -m_V / m_g;
-  m_ezb = 0.;
+  std::cout << m_className << "::Setup: Geometry set.\n";
 }
 
 double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
@@ -48,11 +53,11 @@ double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
 
         double K = std::sqrt(kx * kx + ky * ky);
 
-        double intsol = 1;
+        double intsol = 1.;
 
         switch (comp) {
           case fieldcomponent::xcomp: {
-            intsol *= 1 / (ky * cosh(m_g * K) * sinh(m_b * K) +
+            intsol *= 1. / (ky * cosh(m_g * K) * sinh(m_b * K) +
                            m_eps * ky * cosh(m_b * K) * sinh(m_g * K));
 
             intsol *= cos(ky * (y - el.ypos)) * sin((kx * el.lx) / 2) *
@@ -61,7 +66,7 @@ double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
             break;
           }
           case fieldcomponent::ycomp: {
-            intsol *= 1 / (kx * cosh(m_g * K) * sinh(m_b * K) +
+            intsol *= 1. / (kx * cosh(m_g * K) * sinh(m_b * K) +
                            m_eps * kx * cosh(m_b * K) * sinh(m_g * K));
             intsol *= sin(ky * (y - el.ypos)) * sin((kx * el.lx) / 2) *
                       sin((ky * el.ly) / 2) * cos(kx * (x - el.xpos)) *
@@ -69,7 +74,7 @@ double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
             break;
           }
           case fieldcomponent::zcomp: {
-            intsol *= 1 / (ky * kx * cosh(m_g * K) * sinh(m_b * K) +
+            intsol *= 1. / (ky * kx * cosh(m_g * K) * sinh(m_b * K) +
                            m_eps * ky * kx * cosh(m_b * K) * sinh(m_g * K));
             intsol *= K * cos(ky * (y - el.ypos)) * sin((kx * el.lx) / 2) *
                       sin((ky * el.ly) / 2) * cos(kx * (x - el.xpos)) *
@@ -118,15 +123,11 @@ double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
       TF1* fw = new TF1("WFieldStrip", WFieldStrip, 0, 10 * m_g, 0);
       double sol = fw->Integral(0, 10 * m_g);
       delete fw;
-      return (2 * m_eps * m_Vw / (Pi)) * sol;
+      return (2 * m_eps * m_Vw / Pi) * sol;
       break;
     }
     default: {
-      std::cout
-          << m_className
-          << ":: IntegrateField: The structure of the electrode is not set."
-          << "\n"
-          << std::endl;
+      std::cerr << m_className << "::IntegrateField: Unknown electrode type.\n";
       return 0.;
     }
   }
@@ -236,11 +237,8 @@ double ComponentParallelPlate::IntegrateDelayedField(const Electrode& el,
       break;
     }
     default: {
-      std::cout
-          << m_className
-          << ":: IntegrateField: The structure of the electrode is not set."
-          << "\n"
-          << std::endl;
+      std::cerr << m_className << "::IntegrateDelayedField:\n"
+                << "    Unknown electrode type.\n";
       return 0.;
     }
   }
@@ -282,14 +280,14 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
 
       delete pw;
 
-      return (4 * m_eps * m_Vw / (Pi * Pi)) * sol;
+      return (4 * m_eps * m_Vw / Pi2) * sol;
       break;
     }
     case structureelectrode::Strip: {
       auto WPotentialStrip = [=](double* k, double* /*p*/) {
         double kk = k[0];
 
-        double intsol = 1 / (kk * (cosh(m_g * kk) * sinh(m_b * kk) +
+        double intsol = 1. / (kk * (cosh(m_g * kk) * sinh(m_b * kk) +
                                    m_eps * cosh(m_b * kk) * sinh(m_g * kk)));
         intsol *= (sin(kk * el.lx / 2) * cos(kk * (x - el.xpos)) *
                    sinh(kk * (m_g - z)));
@@ -305,11 +303,8 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
       break;
     }
     default: {
-      std::cout << m_className
-                << ":: IntegratePromptPotential: The structure of the "
-                   "electrode is not set."
-                << "\n"
-                << std::endl;
+      std::cerr << m_className << "::IntegratePromptPotential:\n"
+                << "    Unknown electrode type.\n";
       return 0.;
     }
   }
@@ -343,7 +338,7 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
                      (1 / m_sigma);  // Note to self: You dropt the eps) here
                                      // for convenience.
 
-        double intsol = 1 / (kx * ky *
+        double intsol = 1. / (kx * ky *
                              (sinh(m_b * K) * cosh(m_g * K) +
                               m_eps * sinh(m_g * K) * cosh(m_b * K)));
 
@@ -374,7 +369,7 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
                                   (cosh(m_b * kk) * sinh(m_g * kk))) *
                      (1 / m_sigma);
 
-        double intsol = 1 / (kk * (cosh(m_g * kk) * sinh(m_b * kk) +
+        double intsol = 1. / (kk * (cosh(m_g * kk) * sinh(m_b * kk) +
                                    m_eps * cosh(m_b * kk) * sinh(m_g * kk)));
         intsol *= (sin(kk * el.lx / 2) * cos(kk * (x - el.xpos)) *
                    sinh(kk * (m_g - z)) * cosh(m_g * kk) * tanh(m_b * kk)) *
@@ -391,11 +386,8 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
       break;
     }
     default: {
-      std::cout << m_className
-                << ":: IntegrateDelayedPotential: The structure of the "
-                   "electrode is not set."
-                << "\n"
-                << std::endl;
+      std::cerr << m_className << "::IntegrateDelayedPotential:\n"
+                << "    Unknown electrode type.\n";
       return 0.;
     }
   }
@@ -521,10 +513,10 @@ double ComponentParallelPlate::DelayedWeightingPotential(
     const double x, const double y, const double z, const double t,
     const std::string& label) {
   if (m_sigma == 0) {
-    std::cout << m_className
-              << ":: DelayedWeightingPotential: No conductivity set."
-              << "\n"
-              << std::endl;
+    if (m_debug) {
+      std::cout << m_className << "::DelayedWeightingPotential:\n"
+                << "    Conductivity is set to zero.\n";
+    }
     return 0.;
   }
 
@@ -552,9 +544,11 @@ void ComponentParallelPlate::DelayedWeightingField(
   wz = 0.;
 
   if (m_sigma == 0) {
-    std::cout << m_className << ":: DelayedWeightingField: No conductivity set."
-              << "\n"
-              << std::endl;
+    if (m_debug) {
+      std::cout << m_className << "::DelayedWeightingField:\n"
+                << "    Conductivity is set to zero.\n";
+    }
+    return;
   }
 
   for (const auto& electrode : m_readout_p) {
@@ -604,8 +598,7 @@ void ComponentParallelPlate::AddPixel(double x, double y, double lx_input,
 
   m_readout.push_back(label);
   m_readout_p.push_back(std::move(pixel));
-  std::cerr << m_className << "::AddPixel:\n"
-            << "The pixel electrode structure has been added.\n";
+  std::cout << m_className << "::AddPixel: Added pixel electrode.\n";
 }
 
 void ComponentParallelPlate::AddStrip(double x, double lx_input,
@@ -624,8 +617,7 @@ void ComponentParallelPlate::AddStrip(double x, double lx_input,
   m_readout.push_back(label);
   m_readout_p.push_back(std::move(strip));
 
-  std::cerr << m_className << "::AddStrip:\n"
-            << "The strip electrode structure has been added.\n";
+  std::cout << m_className << "::AddStrip: Added strip electrode.\n";
 }
 
 void ComponentParallelPlate::AddPlane(const std::string& label, bool anode) {
@@ -643,8 +635,7 @@ void ComponentParallelPlate::AddPlane(const std::string& label, bool anode) {
   m_readout.push_back(label);
   m_readout_p.push_back(std::move(plate));
 
-  std::cerr << m_className << "::AddPlane:\n"
-            << "The plane electrode structure has been added.\n";
+  std::cout << m_className << "::AddPlane: Added plane electrode.\n";
 }
 
 Medium* ComponentParallelPlate::GetMedium(const double x, const double y,
