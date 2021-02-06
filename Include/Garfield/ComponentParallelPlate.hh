@@ -17,9 +17,7 @@ class ComponentParallelPlate : public Component {
   /// Destructor
   ~ComponentParallelPlate() {}
 
-  /// Set the parallel-plate geometries without resistive elements.
-
-  /** Set the parallel-plate geometries with resistive elements.
+  /** Define the geometry.
    * \param g size of the gap along positive \f$z\f$.
    * \param b thickness of the resistive layer along negative \f$z\f$.
    * \param eps relative permittivity of the resistive layer.
@@ -27,7 +25,7 @@ class ComponentParallelPlate : public Component {
    * otherwise do not pass it in the function).
    * \param V applied potential difference between the parallel plates.
    */
-  void Setup(double g, double b, double eps, double V, double sigma = 0);
+  void Setup(double g, double b, double eps, double v, double sigma = 0.);
 
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
@@ -52,7 +50,7 @@ class ComponentParallelPlate : public Component {
 
   bool GetVoltageRange(double& vmin, double& vmax) override;
 
-  /** Set the parallel-plate geometries with resistive elements.
+  /** Add a pixel electrode.
    * \param x,z position of the center of the electrode in the xy-plane.
    * \param lx width in the along \f$x\f$.
    * \param ly width in the along \f$y\f$.
@@ -92,7 +90,7 @@ class ComponentParallelPlate : public Component {
   Medium* GetMedium(const double x, const double y, const double z) override;
 
  private:
-  const double m_presision = 1e-30;
+  const double m_precision = 1.e-30;
   // Size of the gap.
   double m_g = 0.;
   // Thickness of the resistive element.
@@ -102,15 +100,14 @@ class ComponentParallelPlate : public Component {
   static constexpr double m_Vw = 1.;
   double m_eps = 1;
   double m_eps0 = 8.85418782e-3;
-  // Voltage across the RPC
+  // Voltage difference between the parallel plates.
   double m_V = 0.;
   // Electric field in the gap.
   double m_ezg = 0;
   // Electric field in the resistive layer.
   double m_ezb = 0;
+  // Conductivity of the resistive layer.
   double m_sigma = 0;
-
-  std::string m_className = "ComponentParallelPlate";
 
   Medium* m_medium = nullptr;
 
@@ -147,11 +144,11 @@ class ComponentParallelPlate : public Component {
   /// Possible readout groups
   enum structureelectrode { NotSet = -1, Plane, Strip, Pixel };
 
-  /// Vectors storing the readouts
+  // Vectors storing the readout electrodes.
   std::vector<std::string> m_readout;
   std::vector<Electrode> m_readout_p;
 
-  /// Functions that calculate the electric field and potential
+  // Functions that calculate the electric field and potential
   double IntegrateField(const Electrode& el, int comp, const double x,
                         const double y, const double z);
 

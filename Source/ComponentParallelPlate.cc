@@ -8,23 +8,19 @@
 
 #include "Garfield/GarfieldConstants.hh"
 
-#define LOG(x) std::cout << m_className << ":: " << x << "\n" << std::endl
-
 namespace Garfield {
 
 ComponentParallelPlate::ComponentParallelPlate() : Component("ParallelPlate") {}
+
 void ComponentParallelPlate::Setup(double g, double b, double eps, double V,
                                    double sigma) {
-  std::cout << m_className << ":: Setup: Geometry set."
-            << "\n"
-            << std::endl;
+  std::cout << m_className << "::Setup: Geometry set.\n";
   m_g = g;
   m_b = b;
   m_eps = eps;
   m_V = V;
   m_sigma = sigma;
   // For large times the resistive layer will act as a perfect conductor.
-
   if (sigma == 0) {
     m_ezg = -m_eps * m_V / (m_b + m_eps * m_g);
     m_ezb = -m_V / (m_b + m_eps * m_g);
@@ -174,7 +170,6 @@ double ComponentParallelPlate::IntegrateDelayedField(const Electrode& el,
 
         double intsol = 1 / (cosh(m_g * K) * sinh(m_b * K) +
                              m_eps * cosh(m_b * K) * sinh(m_g * K));
-        ;
 
         switch (comp) {
           case fieldcomponent::xcomp: {
@@ -274,7 +269,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
   switch (el.ind) {
     case structureelectrode::Plane: {
       double sol = m_eps * m_Vw * (m_g - z) / (m_b + m_eps * m_g);
-      return abs(sol) > m_presision ? sol : 0.;
+      return abs(sol) > m_precision ? sol : 0.;
       break;
     }
     case structureelectrode::Pixel: {
@@ -353,7 +348,7 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
 
       double sol = m_Vw * (1 - exp(-t / tau)) * (m_b * (m_g - z)) /
                    (m_g * (m_b + m_eps * m_g));
-      return abs(sol) > m_presision ? sol : 0.;
+      return abs(sol) > m_precision ? sol : 0.;
       break;
     }
     case structureelectrode::Pixel: {
