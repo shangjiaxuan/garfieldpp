@@ -248,7 +248,7 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
             m_Saturated = true;
 
             if (m_SaturationTime == -1)
-              m_SaturationTime = av.time + abs(av.zStepSize / av.velocity);
+              m_SaturationTime = av.time + std::abs(av.zStepSize / av.velocity);
           }
 
           int chargeRemaining =
@@ -333,7 +333,7 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
             m_Saturated = true;
 
             if (m_SaturationTime == -1)
-              m_SaturationTime = av.time + abs(av.zStepSize / av.velocity);
+              m_SaturationTime = av.time + std::abs(av.zStepSize / av.velocity);
           }
           // Produce induced signal on readout electrodes.
 
@@ -375,7 +375,7 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
   }
   // After all active grid points have propagated, update the time.
 
-  av.time += abs(av.zStepSize / av.velocity);
+  av.time += std::abs(av.zStepSize / av.velocity);
 }
 
 void AvalancheGrid::StartGridAvalanche() {
@@ -556,12 +556,12 @@ void AvalancheGrid::GetParametersFromSensor() {
     m->ElectronVelocity(e[0], e[1], e[2], 0., 0., 0., vx, vy, vz);
 
     double vel = sqrt(vx * vx + vy * vy + vz * vz);
-    if (vel != abs(vx) && vel != abs(vy) && vel != abs(vz)) return;
+    if (vel != std::abs(vx) && vel != std::abs(vy) && vel != std::abs(vz)) return;
     int nx = (int)round(vx / vel);
     int ny = (int)round(vy / vel);
     int nz = (int)round(vz / vel);
     m_velNormal = {nx, ny, nz};
-    m_Velocity = -abs(vel);
+    m_Velocity = -std::abs(vel);
   }
 
   std::cerr << m_className << "::GetParametersFromSensor::Electric field = ("

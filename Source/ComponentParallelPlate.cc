@@ -269,7 +269,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
   switch (el.ind) {
     case structureelectrode::Plane: {
       double sol = m_eps * m_Vw * (m_g - z) / (m_b + m_eps * m_g);
-      return abs(sol) > m_precision ? sol : 0.;
+      return std::abs(sol) > m_precision ? sol : 0.;
       break;
     }
     case structureelectrode::Pixel: {
@@ -348,7 +348,7 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
 
       double sol = m_Vw * (1 - exp(-t / tau)) * (m_b * (m_g - z)) /
                    (m_g * (m_b + m_eps * m_g));
-      return abs(sol) > m_precision ? sol : 0.;
+      return std::abs(sol) > m_precision ? sol : 0.;
       break;
     }
     case structureelectrode::Pixel: {
@@ -777,8 +777,8 @@ double ComponentParallelPlate::FindWeightingPotentialInGrid(const Electrode& el,
       for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 2; j++) {
           ret += FindWeightFactor(
-                     el, abs((ix + i) * el.gridXStepSize + el.gridX0 - x), 0,
-                     abs((iz + j) * el.gridZStepSize + el.gridZ0 - z)) *
+                     el, std::abs((ix + i) * el.gridXStepSize + el.gridX0 - x), 0,
+                     std::abs((iz + j) * el.gridZStepSize + el.gridZ0 - z)) *
                  el.gridPromptV[ix + i][0][iz + j];
         }
       }
@@ -801,9 +801,9 @@ double ComponentParallelPlate::FindWeightingPotentialInGrid(const Electrode& el,
         for (int j = 0; j < 2; j++) {
           for (int k = 0; k < 2; k++) {
             ret += FindWeightFactor(
-                       el, abs((ix + i) * el.gridXStepSize + el.gridX0 - x),
-                       abs((iy + k) * el.gridYStepSize + el.gridY0 - y),
-                       abs((iz + j) * el.gridZStepSize + el.gridZ0 - z)) *
+                       el, std::abs((ix + i) * el.gridXStepSize + el.gridX0 - x),
+                       std::abs((iy + k) * el.gridYStepSize + el.gridY0 - y),
+                       std::abs((iz + j) * el.gridZStepSize + el.gridZ0 - z)) *
                    el.gridPromptV[ix + i][iy + k][iz + j];
           }
         }
@@ -838,9 +838,9 @@ double ComponentParallelPlate::FindDelayedWeightingPotentialInGrid(
         for (int j = 0; j < 2; j++) {
           for (int l = 0; l < 2; l++) {
             ret += FindWeightFactor(
-                       el, abs((ix + i) * el.gridXStepSize + el.gridX0 - x), 0,
-                       abs((iz + j) * el.gridZStepSize + el.gridZ0 - z),
-                       abs((it + l) * el.gridTStepSize + el.gridT0 - t)) *
+                       el, std::abs((ix + i) * el.gridXStepSize + el.gridX0 - x), 0,
+                       std::abs((iz + j) * el.gridZStepSize + el.gridZ0 - z),
+                       std::abs((it + l) * el.gridTStepSize + el.gridT0 - t)) *
                    el.gridDelayedV[ix + i][0][iz + j][it + l];
           }
         }
@@ -866,10 +866,10 @@ double ComponentParallelPlate::FindDelayedWeightingPotentialInGrid(
           for (int k = 0; k < 2; k++) {
             for (int l = 0; l < 2; l++) {
               ret += FindWeightFactor(
-                         el, abs((ix + i) * el.gridXStepSize + el.gridX0 - x),
-                         abs((iy + k) * el.gridYStepSize + el.gridY0 - y),
-                         abs((iz + j) * el.gridZStepSize + el.gridZ0 - z),
-                         abs((it + l) * el.gridTStepSize + el.gridT0 - t)) *
+                         el, std::abs((ix + i) * el.gridXStepSize + el.gridX0 - x),
+                         std::abs((iy + k) * el.gridYStepSize + el.gridY0 - y),
+                         std::abs((iz + j) * el.gridZStepSize + el.gridZ0 - z),
+                         std::abs((it + l) * el.gridTStepSize + el.gridT0 - t)) *
                      el.gridDelayedV[ix + i][iy + k][iz + j][it + l];
             }
           }

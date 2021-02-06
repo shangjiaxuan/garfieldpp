@@ -27,7 +27,7 @@ double Interpolate(const std::vector<double>& y, const std::vector<double>& x,
 }
 
 double Trapezoid2(const std::vector<std::pair<double, double> >& f) {
-  const unsigned int n = f.size();
+  const size_t n = f.size();
   if (n < 2) return -1.;
   double sum = 0.;
   const double x0 = f[0].first;
@@ -48,7 +48,7 @@ double Trapezoid2(const std::vector<std::pair<double, double> >& f) {
     const double yn = f[n - 1].second;
     sum += (xn - f[n - 3].first) * ym * ym + (xn - xm) * yn * yn;
     if (n > 4) {
-      for (unsigned int k = 2; k < n - 2; ++k) {
+      for (size_t k = 2; k < n - 2; ++k) {
         const double y = f[k].second;
         sum += (f[k + 1].first - f[k - 1].first) * y * y;
       }
@@ -508,7 +508,7 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
       double wx = 0., wy = 0., wz = 0.;
       // Calculate the weighting field for this electrode.
       if (integrateWeightingField) {
-        for (unsigned int j = 0; j < 6; ++j) {
+        for (size_t j = 0; j < 6; ++j) {
           const double s = 0.5 * (1. + tg[j]);
           const double x = x0 + s * dx;
           const double y = y0 + s * dy;
@@ -556,10 +556,10 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
   }
   if (!m_delayedSignal) return;
   if (m_delayedSignalTimes.empty()) return;
-  const unsigned int nd = m_delayedSignalTimes.size();
+  const size_t nd = m_delayedSignalTimes.size();
   // Establish the points in time at which we evaluate the delayed signal.
   std::vector<double> td(nd);
-  for (unsigned int i = 0; i < nd; ++i) {
+  for (size_t i = 0; i < nd; ++i) {
     td[i] = t0 + m_delayedSignalTimes[i];
   }
   // Calculate the signals for each electrode.
@@ -572,7 +572,7 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
       double currentHolder = 0.;
       int binHolder = 0;
       // Loop over each time in the given vector of delayed times.
-      for (unsigned int i = 0; i < nd; ++i) {
+      for (size_t i = 0; i < nd; ++i) {
         double delayedtime = m_delayedSignalTimes[i] - t0;  // t - t0
         if (delayedtime < 0) continue;
         // Find bin that needs to be filled.
@@ -596,9 +596,7 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
           // Induced current
           double current2 = m_tStep * (charge - chargeHolder) / dtt;
           // Fill bins
-          if (!(abs(current2) > 1e-16)) {
-            current2 = 0.;
-          }
+          if (std::abs(current2) < 1e-16) current2 = 0.;
           electrode.delayedSignal[bin2] += current2;
           electrode.signal[bin2] += current2;
           // Linear interpolation if the current is calculated from the induced
@@ -606,7 +604,6 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
           if (binHolder > 0 && binHolder + 1 < bin2) {
             const int diffBin = bin2 - binHolder;
             for (int j = binHolder + 1; j < bin2; j++) {
-              std::cout << "Called!!\n";
               electrode.delayedSignal[j] +=
                   (j - binHolder) * (current2 - currentHolder) / diffBin +
                   currentHolder;
@@ -625,12 +622,12 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
 
     } else {
       // Using the weighting field.
-      for (unsigned int i = 0; i < nd; ++i) {
+      for (size_t i = 0; i < nd; ++i) {
         // Integrate over the drift line segment.
         const double step = std::min(m_delayedSignalTimes[i], dt);
         const double scale = step / dt;
         double sum = 0.;
-        for (unsigned int j = 0; j < 6; ++j) {
+        for (size_t j = 0; j < 6; ++j) {
           double s = 0.5 * (1. + tg[j]);
           const double t = m_delayedSignalTimes[i] - s * step;
           s *= scale;
@@ -661,7 +658,7 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
     return;
   }
   const bool aval = ns.size() == ts.size();
-  const unsigned int nPoints = ts.size();
+  const size_t nPoints = ts.size();
   if (m_debug) {
     std::cout << m_className << "::AddSignal: Adding a " << nPoints
               << "-vector (charge " << q << ").\n";
@@ -671,7 +668,7 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
   for (auto& electrode : m_electrodes) {
     const std::string label = electrode.label;
     std::vector<double> signal(nPoints, 0.);
-    for (unsigned int i = 0; i < nPoints; ++i) {
+    for (size_t i = 0; i < nPoints; ++i) {
       const auto& x = xs[i];
       const auto& v = vs[i];
       if (useWeightingPotential) {
@@ -717,8 +714,8 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
   constexpr double wg[6] = {0.171324492379170345, 0.360761573048138608,
                             0.467913934572691047, 0.467913934572691047,
                             0.360761573048138608, 0.171324492379170345};
-  const unsigned int nd = m_delayedSignalTimes.size();
-  for (unsigned int k = 0; k < nPoints - 1; ++k) {
+  const size_t nd = m_delayedSignalTimes.size();
+  for (size_t k = 0; k < nPoints - 1; ++k) {
     const double t0 = ts[k];
     const double t1 = ts[k + 1];
     const double dt = t1 - t0;
@@ -727,14 +724,14 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
     const auto& x1 = xs[k + 1];
     const auto& v = vs[k];
     std::vector<double> td(nd);
-    for (unsigned int i = 0; i < nd; ++i) {
+    for (size_t i = 0; i < nd; ++i) {
       td[i] = t0 + m_delayedSignalTimes[i];
     }
     // Calculate the signals for each electrode.
     for (auto& electrode : m_electrodes) {
       const std::string lbl = electrode.label;
       std::vector<double> id(nd, 0.);
-      for (unsigned int i = 0; i < nd; ++i) {
+      for (size_t i = 0; i < nd; ++i) {
         // Integrate over the drift line segment.
         const double step = std::min(m_delayedSignalTimes[i], dt);
         const double scale = step / dt;
@@ -742,7 +739,7 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
         const double dy = scale * (x1[1] - x0[1]);
         const double dz = scale * (x1[2] - x0[2]);
         double sum = 0.;
-        for (unsigned int j = 0; j < 6; ++j) {
+        for (size_t j = 0; j < 6; ++j) {
           const double f = 0.5 * (1. + tg[j]);
           const double t = m_delayedSignalTimes[i] - f * step;
           // Calculate the delayed weighting field.

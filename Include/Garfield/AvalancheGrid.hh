@@ -17,7 +17,7 @@ namespace Garfield {
 class AvalancheGrid {
  public:
   /// Constructor
-  AvalancheGrid(){};
+  AvalancheGrid() {};
   /// Destructor
   ~AvalancheGrid() {}
   /// Set the sensor.
@@ -36,7 +36,7 @@ class AvalancheGrid {
   /// Set the electron drift velocity (in cm / ns).
   void SetElectronVelocity(const double vx, const double vy, const double vz) {
     double vel = sqrt(vx * vx + vy * vy + vz * vz);
-    if (vel != abs(vx) && vel != abs(vy) && vel != abs(vz)) return;
+    if (vel != std::abs(vx) && vel != std::abs(vy) && vel != std::abs(vz)) return;
     int nx = (int)vx / vel;
     int ny = (int)vy / vel;
     int nz = (int)vz / vel;
