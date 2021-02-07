@@ -320,8 +320,14 @@ class Component {
   /// Pointer to the geometry.
   Geometry* m_geometry = nullptr;
 
+  /// Constant magnetic field.
+  std::array<double, 3> m_b0 = {{0., 0., 0.}};
+
   /// Ready for use?
   bool m_ready = false;
+
+  /// Switch on/off debugging messages
+  bool m_debug = false;
 
   /// Simple periodicity in x, y, z.
   std::array<bool, 3> m_periodic = {{false, false, false}};
@@ -331,12 +337,6 @@ class Component {
   std::array<bool, 3> m_axiallyPeriodic = {{false, false, false}};
   /// Rotation symmetry around x-axis, y-axis, z-axis.
   std::array<bool, 3> m_rotationSymmetric = {{false, false, false}};
-
-  /// Constant magnetic field.
-  std::array<double, 3> m_b0 = {{0., 0., 0.}};
-
-  /// Switch on/off debugging messages
-  bool m_debug = false;
 
   /// Reset the component.
   virtual void Reset() = 0;
