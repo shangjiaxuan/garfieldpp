@@ -66,9 +66,6 @@ class ComponentNeBem3d : public Component {
                   std::vector<double>& zv, int& interface, double& bc,
                   double& lambda) const;
 
-  void Reset() override;
-  void UpdatePeriodicity() override;
-
   /// Retrieve surface panels, remove contacts and cut polygons to rectangles
   /// and right-angle triangles.
   bool Initialise();
@@ -121,6 +118,10 @@ class ComponentNeBem3d : public Component {
   void SetNumberOfThreads(const unsigned int n) {
     m_nThreads = n > 0 ? n : 1;
   }
+
+ protected:
+  void Reset() override;
+  void UpdatePeriodicity() override;
 
  private:
   struct Primitive {
