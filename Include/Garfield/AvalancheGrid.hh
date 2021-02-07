@@ -42,7 +42,7 @@ class AvalancheGrid {
     int nz = (int)vz / vel;
     m_velNormal = {nx, ny, nz};
     m_Velocity = -abs(vel);
-  };
+  }
   /// Set the electron Townsend coefficient (in 1 / cm).
   void SetElectronTownsend(const double town) { m_Townsend = town; }
   /// Set the electron attachment coefficient (in 1 / cm).
