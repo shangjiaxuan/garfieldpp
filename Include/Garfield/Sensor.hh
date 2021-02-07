@@ -24,7 +24,7 @@ class Sensor {
   /// Add a component.
   void AddComponent(Component* comp);
   /// Get the number of components attached to the sensor.
-  unsigned int GetNumberOfComponents() const { return m_components.size(); }
+  size_t GetNumberOfComponents() const { return m_components.size(); }
   /// Retrieve the pointer to a given component.
   Component* GetComponent(const unsigned int i);
   /// Activate/deactivate a given component.
@@ -35,7 +35,7 @@ class Sensor {
   /// Add an electrode.
   void AddElectrode(Component* comp, const std::string& label);
   /// Get the number of electrodes attached to the sensor.
-  unsigned int GetNumberOfElectrodes() const { return m_electrodes.size(); }
+  size_t GetNumberOfElectrodes() const { return m_electrodes.size(); }
   /// Remove all components, electrodes and reset the sensor.
   void Clear();
 
@@ -124,7 +124,7 @@ class Sensor {
   double GetPromptSignal(const std::string& label, const unsigned int bin);
   /// Retrieve the delayed signal for a given electrode and time bin.
   double GetDelayedSignal(const std::string& label, const unsigned int bin);
-  /// Retrieve the electron  signal for a given electrode and time bin.
+  /// Retrieve the electron signal for a given electrode and time bin.
   double GetElectronSignal(const std::string& label, const unsigned int bin);
   /// Retrieve the ion or hole signal for a given electrode and time bin.
   double GetIonSignal(const std::string& label, const unsigned int bin);
@@ -135,6 +135,7 @@ class Sensor {
   double GetDelayedIonSignal(const std::string& label, const unsigned int bin);
   /// Calculated using the weighting potentials at the start and end points.
   double GetInducedCharge(const std::string& label);
+
   /// Set the function to be used for evaluating the transfer function.
   void SetTransferFunction(double (*f)(double t));
   /// Set the points to be used for interpolating the transfer function.
@@ -195,7 +196,7 @@ class Sensor {
                                  int& n);
   /// Get the number of threshold crossings
   /// (after having called ComputeThresholdCrossings).
-  unsigned int GetNumberOfThresholdCrossings() const {
+  size_t GetNumberOfThresholdCrossings() const {
     return m_thresholdCrossings.size();
   }
   /** Retrieve the time and type of a given threshold crossing (after having
@@ -214,20 +215,21 @@ class Sensor {
                  const double x1, const double y1, const double z1,
                  const bool integrateWeightingField,
                  const bool useWeightingPotential = false);
-  /// Add the signal from a drift line.
 
+  /// Add the signal from a drift line.
   void AddSignal(const double q, const std::vector<double>& ts,
                  const std::vector<std::array<double, 3> >& xs,
                  const std::vector<std::array<double, 3> >& vs,
-                 const std::vector<double>& ns, const int navg, const bool useWeightingPotential = false);
-  /// Add the induced charge from a charge carrier drift between two points.
+                 const std::vector<double>& ns, const int navg, 
+                 const bool useWeightingPotential = false);
 
-    void ExportCharge(const std::string& label,const std::string& filename);
-    /// Exporting cumulative induced charge to a csv file.
+  /// Exporting cumulative induced charge to a csv file.
+  void ExportCharge(const std::string& label,const std::string& filename);
 
-    void ExportSignal(const std::string& label,const std::string& filename);
   /// Exporting induced signal to a csv file.
+  void ExportSignal(const std::string& label,const std::string& filename);
 
+  /// Add the induced charge from a charge carrier drift between two points.
   void AddInducedCharge(const double q, const double x0, const double y0,
                         const double z0, const double x1, const double y1,
                         const double z1);
@@ -247,7 +249,8 @@ class Sensor {
                            const double x1, const double y1, const double z1,
                            const double xp, const double yp, const double zp,
                            const unsigned int nI, const int isign = 0);
-    double GetTotalInducedCharge(const std::string label);
+  // TODO!
+  double GetTotalInducedCharge(const std::string label);
  private:
   std::string m_className = "Sensor";
   /// Mutex.
@@ -273,9 +276,9 @@ class Sensor {
   std::vector<Electrode> m_electrodes;
 
   // Time window for signals
-  unsigned int m_nTimeBins = 200;
   double m_tStart = 0.;
   double m_tStep = 10.;
+  unsigned int m_nTimeBins = 200;
   unsigned int m_nEvents = 0;
   bool m_delayedSignal = false;
   std::vector<double> m_delayedSignalTimes;
@@ -298,9 +301,9 @@ class Sensor {
   double m_thresholdLevel = 0.;
 
   // User bounding box
-  bool m_hasUserArea = false;
   double m_xMinUser = 0., m_yMinUser = 0., m_zMinUser = 0.;
   double m_xMaxUser = 0., m_yMaxUser = 0., m_zMaxUser = 0.;
+  bool m_hasUserArea = false;
 
   // Switch on/off debugging messages
   bool m_debug = false;
