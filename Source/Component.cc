@@ -27,6 +27,14 @@ Medium* Component::GetMedium(const double x, const double y, const double z) {
 
 void Component::Clear() {
   m_geometry = nullptr;
+  m_ready = false;
+  // Reset periodicities.
+  m_periodic.fill(false);
+  m_mirrorPeriodic.fill(false);
+  m_axiallyPeriodic.fill(false);
+  m_rotationSymmetric.fill(false);
+  // Reset the magnetic field.
+  m_b0.fill(0.);
   Reset();
 }
 
@@ -44,10 +52,18 @@ void Component::DelayedWeightingField(const double /*x*/, const double /*y*/,
                                       double& wx, double& wy, double& wz,
                                       const std::string& /*label*/) {
   if (m_debug) {
-    std::cerr << m_className << "::DelayedWeightingField: "
-              << "Function not implemented.\n";
+    std::cerr << m_className << "::DelayedWeightingField: Not implemented.\n";
   }
   wx = wy = wz = 0.;
+}
+
+double Component::WeightingPotential(const double /*x*/, const double /*y*/,
+                                     const double /*z*/,
+                                     const std::string& /*label*/) {
+  if (m_debug) {
+    std::cerr << m_className << "::WeightingPotential: Not implemented.\n";
+  }
+  return 0.;
 }
 
 double Component::DelayedWeightingPotential(const double /*x*/,
@@ -55,18 +71,13 @@ double Component::DelayedWeightingPotential(const double /*x*/,
                                             const double /*z*/,
                                             const double /*t*/,
                                             const std::string& /*label*/) {
-  return 0.;
-}
-
-double Component::WeightingPotential(const double /*x*/, const double /*y*/,
-                                     const double /*z*/,
-                                     const std::string& /*label*/) {
   if (m_debug) {
-    std::cerr << m_className << "::WeightingPotential: "
-              << "Function not implemented.\n";
+    std::cerr << m_className 
+              << "::DelayedWeightingPotential: Not implemented.\n";
   }
   return 0.;
 }
+
 
 void Component::MagneticField(const double x, const double y, const double z,
                               double& bx, double& by, double& bz, int& status) {
@@ -118,7 +129,7 @@ double Component::IntegrateFluxCircle(const double xc, const double yc,
     return 0.;
   }
   // Number of Gaussian quadrature points per interval.
-  constexpr unsigned int nG = 6;
+  constexpr size_t nG = 6;
   constexpr std::array<double, nG> t = {
       -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
       0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
@@ -135,7 +146,7 @@ double Component::IntegrateFluxCircle(const double xc, const double yc,
   int status = 0;
   // Perform the integration.
   double s = 0.;
-  for (unsigned int i = 0; i < nG; ++i) {
+  for (size_t i = 0; i < nG; ++i) {
     const double phi0 = h * (1. + t[i]);
     for (unsigned int k = 0; k < nI; ++k) {
       const double phi = phi0 + k * d;
@@ -158,7 +169,7 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
     return 0.;
   }
   // Number of Gaussian quadrature points.
-  constexpr unsigned int nG = 6;
+  constexpr size_t nG = 6;
   constexpr std::array<double, nG> t = {
       -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
       0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
@@ -180,7 +191,7 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
   // Perform the integration.
   double s2 = 0.;
   // Loop over theta.
-  for (unsigned int i = 0; i < nG; ++i) {
+  for (size_t i = 0; i < nG; ++i) {
     const double theta0 = ht * (1. + t[i]) - HalfPi;
     for (unsigned int k = 0; k < nI; ++k) {
       const double theta = theta0 + k * dt;
@@ -189,7 +200,7 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
       const double z = zc + st * r;
       double s1 = 0.;
       // Loop over phi.
-      for (unsigned int ii = 0; ii < nG; ++ii) {
+      for (size_t ii = 0; ii < nG; ++ii) {
         const double phi0 = hp * (1. + t[ii]);
         for (unsigned int kk = 0; kk < nI; ++kk) {
           const double phi = phi0 + kk * dp;
@@ -218,7 +229,7 @@ double Component::IntegrateFluxParallelogram(
     return 0.;
   }
   // Number of Gaussian quadrature points.
-  constexpr unsigned int nG = 6;
+  constexpr size_t nG = 6;
   constexpr std::array<double, nG> t = {
       -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
       0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
@@ -231,15 +242,16 @@ double Component::IntegrateFluxParallelogram(
   const double yn = dz1 * dx2 - dx1 * dz2;
   const double zn = dx1 * dy2 - dy1 * dx2;
   if (m_debug) {
-    std::cout << m_className << "::IntegrateFlux: Normal vector = " << xn
-              << ", " << yn << ", " << zn << ".\n";
+    std::cout << m_className << "::IntegrateFluxParallelogram:\n"
+              << "    Normal vector = " << xn << ", " << yn << ", " << zn 
+              << ".\n";
   }
   // If this vector has zero norm, return 0 flux.
   const double d1 = dx1 * dx1 + dy1 * dy1 + dz1 * dz1;
   const double d2 = dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
   if (xn * xn + yn * yn + zn * zn < 1.e-10 * sqrt(d1 * d2) ||
       d1 < 1.e-10 * d2 || d2 < 1.e-10 * d1) {
-    std::cerr << m_className << "::IntegrateFlux:\n"
+    std::cerr << m_className << "::IntegrateFluxParallelogram:\n"
               << "    Parallelogram does not have non-zero area.\n";
     return 0.;
   }
@@ -255,12 +267,12 @@ double Component::IntegrateFluxParallelogram(
   int status = 0;
   // Perform the integration.
   double s2 = 0.;
-  for (unsigned int i = 0; i < nG; ++i) {
+  for (size_t i = 0; i < nG; ++i) {
     const double v0 = hv * (1. + t[i]);
     for (unsigned int k = 0; k < nV; ++k) {
       const double v = v0 + k * dv;
       double s1 = 0.;
-      for (unsigned int ii = 0; ii < nG; ++ii) {
+      for (size_t ii = 0; ii < nG; ++ii) {
         const double u0 = hu * (1. + t[ii]);
         for (unsigned int kk = 0; kk < nU; ++kk) {
           const double u = u0 + kk * du;
@@ -287,7 +299,8 @@ double Component::IntegrateFluxLine(const double x0, const double y0,
   // Normalise the norm vector.
   const double pmag2 = xp * xp + yp * yp + zp * zp;
   if (pmag2 <= 0.) {
-    std::cerr << " Normal vector has zero length; flux set to 0.\n";
+    std::cerr << m_className << "::IntegrateFluxLine:\n"
+              << "    Normal vector has zero length; flux set to 0.\n";
     return 0.;
   }
   const double pmag = sqrt(pmag2);
@@ -297,7 +310,8 @@ double Component::IntegrateFluxLine(const double x0, const double y0,
 
   // Check integration points.
   if (nI <= 1) {
-    std::cerr << " Number of points to integrate over must be > 1.\n";
+    std::cerr << m_className << "::IntegrateFluxLine:\n"
+              << "    Number of points to integrate over must be > 1.\n";
     return 0.;
   }
   // Ensure the segment has non-zero length.
@@ -306,18 +320,20 @@ double Component::IntegrateFluxLine(const double x0, const double y0,
   const double vz = z1 - z0;
   const double vmag2 = vx * vx + vy * vy + vz * vz;
   if (vmag2 <= 0.) {
-    std::cerr << " Segment has zero length; flux set to 0.\n";
+    std::cerr << m_className << "::IntegrateFluxLine:\n"
+              << "    Segment has zero length; flux set to 0.\n";
     return 0.;
   }
   const double vmag = sqrt(vmag2);
   // Segment should be perpendicular to the norm vector.
   if (fabs(vx * xn + vy * yn + vz * zn) > 1.e-4 * vmag) {
-    std::cerr << " Segment is not perpendicular to norm vector.\n";
+    std::cerr << m_className << "::IntegrateFluxLine:\n"
+              << "    Segment is not perpendicular to norm vector.\n";
     return 0.;
   }
 
   // Perform the integration.
-  constexpr unsigned int nG = 6;
+  constexpr size_t nG = 6;
   constexpr std::array<double, nG> t = {
       -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
       0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
@@ -332,7 +348,7 @@ double Component::IntegrateFluxLine(const double x0, const double y0,
   Medium* m = nullptr;
   int status = 0;
   double s = 0.;
-  for (unsigned int i = 0; i < nG; ++i) {
+  for (size_t i = 0; i < nG; ++i) {
     const double u0 = h * (1. + t[i]);
     for (unsigned int k = 0; k < nI; ++k) {
       const double u = u0 + k * d;
