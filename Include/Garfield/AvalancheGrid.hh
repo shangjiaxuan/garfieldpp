@@ -17,13 +17,13 @@ namespace Garfield {
 class AvalancheGrid {
  public:
   /// Constructor
-  AvalancheGrid() {};
+  AvalancheGrid() {}
   /// Destructor
   ~AvalancheGrid() {}
   /// Set the sensor.
-  void SetSensor(Sensor* sensor) { m_sensor = sensor; };
+  void SetSensor(Sensor* sensor) { m_sensor = sensor; }
   /// Set the AvalancheMicroscopic.
-  void SetAvalancheMicroscopic(AvalancheMicroscopic* avmc) { m_avmc = avmc; };
+  void SetAvalancheMicroscopic(AvalancheMicroscopic* avmc) { m_avmc = avmc; }
 
   /** Start grid based avalanche simulation.
    *
@@ -44,11 +44,11 @@ class AvalancheGrid {
     m_Velocity = -abs(vel);
   };
   /// Set the electron Townsend coefficient (in 1 / cm).
-  void SetElectronTownsend(const double town) { m_Townsend = town; };
+  void SetElectronTownsend(const double town) { m_Townsend = town; }
   /// Set the electron attachment coefficient (in 1 / cm).
-  void SetElectronAttachment(const double att) { m_Attachment = att; };
+  void SetElectronAttachment(const double att) { m_Attachment = att; }
   /// Set the maximum avalanche size (1e7 by default).
-  void SetMaxAvalancheSize(const double size) { m_MaxSize = size; };
+  void SetMaxAvalancheSize(const double size) { m_MaxSize = size; }
   /// Enable transverse diffusion of electrons with transverse diffusion
   /// coefficients (in √cm).
   void EnableDiffusion(const double diffSigma) {
@@ -71,18 +71,18 @@ class AvalancheGrid {
   void SetGrid(const double xmin, const double xmax, const int xsteps,
                const double ymin, const double ymax, const int ysteps,
                const double zmin, const double zmax, const int zsteps);
-  int GetAmountOfStartingElectrons() { return m_nestart; };
+  int GetAmountOfStartingElectrons() { return m_nestart; }
 
-  void EnableDebugging() { m_debug = true; };
+  void EnableDebugging() { m_debug = true; }
 
   void Reset();
 
  private:
   bool m_debug = false;
 
-  double m_Townsend = -1;  // [1/cm];
+  double m_Townsend = -1;  // [1/cm]
 
-  double m_Attachment = -1;  // [1/cm];
+  double m_Attachment = -1;  // [1/cm]
 
   double m_Velocity = 0.;  // [cm/ns]
 
@@ -165,7 +165,7 @@ class AvalancheGrid {
   // Compute the factor of the charge that go to neighboring points through
   // transverse diffusion.
   void DiffusionFactors(Grid& av);
-  // Obtain the Townsend coef., Attachment coef. and veleocity vector from
+  // Obtain the Townsend coef., Attachment coef. and velocity vector from
   // sensor class.
   void GetParametersFromSensor();
 
