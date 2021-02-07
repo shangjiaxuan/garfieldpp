@@ -660,12 +660,14 @@ void ViewMedium::Plot(const Axis xaxis, const Charge charge,
         if (!m_medium->ElectronTownsend(ex, 0, 0, bx, by, 0, y)) continue;
       } else {
         if (!m_medium->ElectronAttachment(ex, 0, 0, bx, by, 0, y)) continue;
+        y = std::abs(y);
       }
     } else {
       if (par == Parameter::Townsend) {
         if (!m_medium->HoleTownsend(ex, 0, 0, bx, by, 0, y)) continue;
       } else {
-        if (!m_medium->ElectronAttachment(ex, 0, 0, bx, by, 0, y)) continue;
+        if (!m_medium->HoleAttachment(ex, 0, 0, bx, by, 0, y)) continue;
+        y = std::abs(y);
       }
     }
     ypl[i] = y;
