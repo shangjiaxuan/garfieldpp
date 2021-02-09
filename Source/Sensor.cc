@@ -587,7 +587,7 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
         double charge = q * (dp1 - dp0);
         // In very rare cases the result is infinity. We do not let this
         // contribute.
-        if (isnan(charge)) {
+        if (std::isnan(charge)) {
           charge = 0.;
         }
         // Calculate induced current based on the induced charge.
