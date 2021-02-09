@@ -629,8 +629,8 @@ bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium,
   bool ok = false;
   if (m_useVelocityMap && particle != Particle::Ion) {
     // We assume there is only one component with a velocity map.
-    const unsigned int nComponents = m_sensor->GetNumberOfComponents();
-    for (unsigned int i = 0; i < nComponents; ++i) {
+    const auto nComponents = m_sensor->GetNumberOfComponents();
+    for (size_t i = 0; i < nComponents; ++i) {
       auto cmp = m_sensor->GetComponent(i);
       if (!cmp->HasVelocityMap()) continue;
       if (particle == Particle::Electron) {
@@ -691,8 +691,8 @@ double AvalancheMC::GetAttachment(const Particle particle, Medium* medium,
                                   const std::array<double, 3>& b) const {
   double eta = 0.;
   if (m_useAttachmentMap) {
-    const unsigned int nComponents = m_sensor->GetNumberOfComponents();
-    for (unsigned int i = 0; i < nComponents; ++i) {
+    const auto nComponents = m_sensor->GetNumberOfComponents();
+    for (size_t i = 0; i < nComponents; ++i) {
       auto cmp = m_sensor->GetComponent(i);
       if (!cmp->HasAttachmentMap()) continue;
       if (particle == Particle::Electron) {
@@ -942,25 +942,26 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
                             0.467913934572691047, 0.467913934572691047,
                             0.360761573048138608, 0.171324492379170345};
 
-  const unsigned int nPoints = driftLine.size();
+  const size_t nPoints = driftLine.size();
   alps.assign(nPoints, 0.);
   etas.assign(nPoints, 0.);
   if (nPoints < 2) return true;
   // Loop over the drift line.
-  for (unsigned int i = 0; i < nPoints - 1; ++i) {
+  for (size_t i = 0; i < nPoints - 1; ++i) {
     const auto& x0 = driftLine[i].x;
     const auto& x1 = driftLine[i + 1].x;
     // Compute the step length.
     const std::array<double, 3> del = {x1[0] - x0[0], x1[1] - x0[1],
                                        x1[2] - x0[2]};
-    const double delmag = Mag(del);
-    if (delmag < Small) continue;
+    const double dmag = Mag(del);
+    if (dmag < Small) continue;
+    const double veff = dmag / (driftLine[i + 1].t - driftLine[i].t);
     // Integrate drift velocity and Townsend and attachment coefficients.
     std::array<double, 3> vd = {0., 0., 0.};
-    for (unsigned int j = 0; j < 6; ++j) {
+    for (size_t j = 0; j < 6; ++j) {
       const double f = 0.5 * (1. + tg[j]);
       std::array<double, 3> x = x0;
-      for (unsigned int k = 0; k < 3; ++k) x[k] += f * del[k];
+      for (size_t k = 0; k < 3; ++k) x[k] += f * del[k];
       // Get the field.
       std::array<double, 3> e;
       std::array<double, 3> b;
@@ -985,13 +986,15 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
 
       if (particle == Particle::Electron) {
         medium->ElectronTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
-
       } else {
         medium->HoleTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
       }
 
-      const double eta = GetAttachment(particle, medium, x, e, b);
-      for (unsigned int k = 0; k < 3; ++k) vd[k] += wg[j] * v[k];
+      double eta = GetAttachment(particle, medium, x, e, b);
+      if (eta < 0.) {
+        eta = std::abs(eta) * Mag(v) / veff;
+      }
+      for (size_t k = 0; k < 3; ++k) vd[k] += wg[j] * v[k];
       alps[i] += wg[j] * alpha;
       etas[i] += wg[j] * eta;
     }
@@ -1000,15 +1003,15 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
     double scale = 1.;
     if (m_doEquilibration) {
       const double vdmag = Mag(vd);
-      if (vdmag * delmag <= 0.) {
+      if (vdmag * dmag <= 0.) {
         scale = 0.;
       } else {
         const double dinv = del[0] * vd[0] + del[1] * vd[1] + del[2] * vd[2];
-        scale = dinv < 0. ? 0. : dinv / (vdmag * delmag);
+        scale = dinv < 0. ? 0. : dinv / (vdmag * dmag);
       }
     }
-    alps[i] *= 0.5 * delmag * scale;
-    etas[i] *= 0.5 * delmag * scale;
+    alps[i] *= 0.5 * dmag * scale;
+    etas[i] *= 0.5 * dmag * scale;
   }
 
   // Skip equilibration if projection has not been requested.
@@ -1032,9 +1035,9 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
 }
 
 bool AvalancheMC::Equilibrate(std::vector<double>& alphas) const {
-  const unsigned int nPoints = alphas.size();
+  const size_t nPoints = alphas.size();
   // Try to alpha-equilibrate the returning parts.
-  for (unsigned int i = 0; i < nPoints - 1; ++i) {
+  for (size_t i = 0; i < nPoints - 1; ++i) {
     // Skip non-negative points.
     if (alphas[i] >= 0.) continue;
     // Targets for subtracting
@@ -1043,7 +1046,7 @@ bool AvalancheMC::Equilibrate(std::vector<double>& alphas) const {
     bool try1 = false;
     bool try2 = false;
     // Try to subtract half in earlier points.
-    for (unsigned int j = 0; j < i - 1; ++j) {
+    for (size_t j = 0; j < i - 1; ++j) {
       if (alphas[i - j] > sub1) {
         alphas[i - j] -= sub1;
         alphas[i] += sub1;
@@ -1057,7 +1060,7 @@ bool AvalancheMC::Equilibrate(std::vector<double>& alphas) const {
       }
     }
     // Try to subtract the other half in later points.
-    for (unsigned int j = 0; j < nPoints - i - 1; ++j) {
+    for (size_t j = 0; j < nPoints - i - 1; ++j) {
       if (alphas[i + j] > sub2) {
         alphas[i + j] -= sub2;
         alphas[i] += sub2;
@@ -1078,7 +1081,7 @@ bool AvalancheMC::Equilibrate(std::vector<double>& alphas) const {
     } else if (try1) {
       // Try earlier points again.
       sub1 = -alphas[i];
-      for (unsigned int j = 0; j < i - 1; ++j) {
+      for (size_t j = 0; j < i - 1; ++j) {
         if (alphas[i - j] > sub1) {
           alphas[i - j] -= sub1;
           alphas[i] += sub1;
@@ -1094,7 +1097,7 @@ bool AvalancheMC::Equilibrate(std::vector<double>& alphas) const {
     } else if (try2) {
       // Try later points again.
       sub2 = -alphas[i];
-      for (unsigned int j = 0; j < nPoints - i - 1; ++j) {
+      for (size_t j = 0; j < nPoints - i - 1; ++j) {
         if (alphas[i + j] > sub2) {
           alphas[i + j] -= sub2;
           alphas[i] += sub2;
@@ -1121,7 +1124,7 @@ void AvalancheMC::ComputeSignal(
   if (nPoints < 2) return;
 
   if (m_useWeightingPotential) {
-    for (unsigned int i = 0; i < nPoints - 1; ++i) {
+    for (size_t i = 0; i < nPoints - 1; ++i) {
       const auto& x0 = driftLine[i].x;
       const auto& x1 = driftLine[i + 1].x;
       const double t0 = driftLine[i].t;
