@@ -493,7 +493,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
 
   // Plot the drift line if requested.
   if (m_viewer && !m_drift.empty()) {
-    const unsigned int nPoints = m_drift.size();
+    const size_t nPoints = m_drift.size();
     // Register the new drift line and get its ID.
     int id;
     if (particle == Particle::Electron) {
@@ -504,7 +504,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
       m_viewer->NewIonDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
     }
     // Set the points along the trajectory.
-    for (unsigned int i = 0; i < nPoints; ++i) {
+    for (size_t i = 0; i < nPoints; ++i) {
       const auto& x = m_drift[i].x;
       m_viewer->SetDriftLinePoint(id, i, x[0], x[1], x[2]);
     }
@@ -604,7 +604,7 @@ int AvalancheMC::GetField(const std::array<double, 3>& x,
   // Get the magnetic field, if requested.
   if (m_useBfield) {
     m_sensor->MagneticField(x[0], x[1], x[2], b[0], b[1], b[2], status);
-    for (unsigned int k = 0; k < 3; ++k) b[k] *= Tesla2Internal;
+    for (size_t k = 0; k < 3; ++k) b[k] *= Tesla2Internal;
   }
   return 0;
 }
@@ -726,7 +726,7 @@ void AvalancheMC::StepRKF(const Particle particle,
 
   vf = v0;
   // First probe point.
-  for (unsigned int k = 0; k < 3; ++k) {
+  for (size_t k = 0; k < 3; ++k) {
     xf[k] = x0[k] + dt * beta10 * v0[k];
   }
   std::array<double, 3> e;
@@ -743,7 +743,7 @@ void AvalancheMC::StepRKF(const Particle particle,
   }
 
   // Second point.
-  for (unsigned int k = 0; k < 3; ++k) {
+  for (size_t k = 0; k < 3; ++k) {
     xf[k] = x0[k] + dt * (beta20 * v0[k] + beta21 * v1[k]);
   }
   status = GetField(xf, e, b, medium);
@@ -757,7 +757,7 @@ void AvalancheMC::StepRKF(const Particle particle,
   }
 
   // Compute the mean velocity and endpoint of the step.
-  for (unsigned int k = 0; k < 3; ++k) {
+  for (size_t k = 0; k < 3; ++k) {
     vf[k] = ci0 * v0[k] + ci1 * v1[k] + ci2 * v2[k];
     xf[k] = x0[k] + dt * vf[k];
   }
@@ -941,11 +941,12 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
   constexpr double wg[6] = {0.171324492379170345, 0.360761573048138608,
                             0.467913934572691047, 0.467913934572691047,
                             0.360761573048138608, 0.171324492379170345};
-
+ 
   const size_t nPoints = driftLine.size();
   alps.assign(nPoints, 0.);
   etas.assign(nPoints, 0.);
   if (nPoints < 2) return true;
+  bool equilibrate = m_doEquilibration;
   // Loop over the drift line.
   for (size_t i = 0; i < nPoints - 1; ++i) {
     const auto& x0 = driftLine[i].x;
@@ -993,6 +994,7 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
       double eta = GetAttachment(particle, medium, x, e, b);
       if (eta < 0.) {
         eta = std::abs(eta) * Mag(v) / veff;
+        equilibrate = false;
       }
       for (size_t k = 0; k < 3; ++k) vd[k] += wg[j] * v[k];
       alps[i] += wg[j] * alpha;
@@ -1001,7 +1003,7 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
 
     // Compute the scaling factor for the projected length.
     double scale = 1.;
-    if (m_doEquilibration) {
+    if (equilibrate) {
       const double vdmag = Mag(vd);
       if (vdmag * dmag <= 0.) {
         scale = 0.;
@@ -1015,7 +1017,7 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
   }
 
   // Skip equilibration if projection has not been requested.
-  if (!m_doEquilibration) return true;
+  if (!equilibrate) return true;
   if (!Equilibrate(alps)) {
     if (m_debug) {
       std::cerr << m_className << "::ComputeAlphaEta:\n    Unable to even out "
@@ -1036,7 +1038,7 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
 
 bool AvalancheMC::Equilibrate(std::vector<double>& alphas) const {
   const size_t nPoints = alphas.size();
-  // Try to alpha-equilibrate the returning parts.
+  // Try to equilibrate the returning parts.
   for (size_t i = 0; i < nPoints - 1; ++i) {
     // Skip non-negative points.
     if (alphas[i] >= 0.) continue;
@@ -1120,7 +1122,7 @@ bool AvalancheMC::Equilibrate(std::vector<double>& alphas) const {
 void AvalancheMC::ComputeSignal(
     const Particle particle, const double q,
     const std::vector<DriftPoint>& driftLine) const {
-  const unsigned int nPoints = driftLine.size();
+  const size_t nPoints = driftLine.size();
   if (nPoints < 2) return;
 
   if (m_useWeightingPotential) {
