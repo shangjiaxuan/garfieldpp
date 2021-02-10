@@ -1,4 +1,4 @@
-:warning To compile and link this program, a version of Geant4.10 has to be installed
+:warning: To compile and link this program, a version of Geant4.10 has to be installed
 
 To run the program in batch mode, please type 
 ```
