@@ -223,12 +223,12 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
     m_hSignal->SetStats(0);
     // Fill histogram with total signal
     for (unsigned int i = 0; i < nBins; ++i) {
-        const double sig = m_sensor->GetSignal(label, i, 0);
-        if(!std::isnan(sig) && abs(sig)<pres){
-          m_hSignal->SetBinContent(i + 1, 0.);
-        }else{
-            m_hSignal->SetBinContent(i + 1, sig);
-        }
+      const double sig = m_sensor->GetSignal(label, i, 0);
+      if(!std::isnan(sig) && std::abs(sig) < pres) {
+        m_hSignal->SetBinContent(i + 1, 0.);
+      } else {
+        m_hSignal->SetBinContent(i + 1, sig);
+      }
     }
     m_hSignal->SetLineWidth(6);
     const std::string opt = nPlots > 0 ? "same" : "";
@@ -255,36 +255,36 @@ void ViewSignal::Plot(const std::string &label, const bool getsignal,
       gCrossings.DrawGraph(xp.size(), xp.data(), yp.data(), "psame");
     }
     if (delayed) {
-      // Makign the delayed component histogram.
+      // Making the delayed component histogram.
       const auto hnamed = FindUnusedHistogramName("hDelayedCharge_");
       m_hDelayedSignal.reset(new TH1D(hnamed.c_str(), "", nBins, t0, t1));
       m_hDelayedSignal->SetLineColor(m_colDelayed[0]);
       m_hDelayedSignal->SetLineStyle(2);
       m_hDelayedSignal->SetStats(0);
       for (unsigned int i = 0; i < nBins; ++i) {
-          const double sig = m_sensor->GetSignal(label, i, 2);
-          if(!std::isnan(sig) && abs(sig)<pres){
-              m_hDelayedSignal->SetBinContent(i + 1, 0.);
-          }else{
-              m_hDelayedSignal->SetBinContent(i + 1, sig);
-          }
+        const double sig = m_sensor->GetSignal(label, i, 2);
+        if (!std::isnan(sig) && std::abs(sig) < pres) {
+          m_hDelayedSignal->SetBinContent(i + 1, 0.);
+        } else {
+          m_hDelayedSignal->SetBinContent(i + 1, sig);
+        }
       }
       m_hDelayedSignal->SetFillStyle(3001);
       m_hDelayedSignal->SetFillColor(m_colDelayed[0]);
     }
-    // Makign the prompt component histogram.
+    // Making the prompt component histogram.
     const auto dnamed = FindUnusedHistogramName("hPromptCharge_");
     m_hPromptSignal.reset(new TH1D(dnamed.c_str(), "", nBins, t0, t1));
     m_hPromptSignal->SetLineColor(m_colDelayed[2]);
     m_hPromptSignal->SetLineStyle(2);
     m_hPromptSignal->SetStats(0);
     for (unsigned int i = 0; i < nBins; ++i) {
-        const double sig = m_sensor->GetSignal(label, i, 1);
-        if(!std::isnan(sig) && abs(sig)<pres){
-            m_hPromptSignal->SetBinContent(i + 1, 0.);
-        }else{
-            m_hPromptSignal->SetBinContent(i + 1, sig);
-        }
+      const double sig = m_sensor->GetSignal(label, i, 1);
+      if (!std::isnan(sig) && std::abs(sig) < pres) {
+        m_hPromptSignal->SetBinContent(i + 1, 0.);
+      } else {
+        m_hPromptSignal->SetBinContent(i + 1, sig);
+      }
     }
     m_hPromptSignal->SetFillStyle(3001);
     m_hPromptSignal->SetFillColor(m_colDelayed[2]);
