@@ -9,6 +9,32 @@
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Utilities.hh"
 
+namespace {
+
+bool ExtractFromSquareBrackets(std::string& line) {
+
+  const auto bra = line.find('[');
+  const auto ket = line.find(']');
+  if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    return false;
+  }
+  line = line.substr(bra + 1, ket - bra - 1);
+  return true;
+}
+
+bool ExtractFromBrackets(std::string& line) {
+
+  const auto bra = line.find('(');
+  const auto ket = line.find(')');
+  if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    return false;
+  }
+  line = line.substr(bra + 1, ket - bra - 1);
+  return true;
+}
+
+}
+
 namespace Garfield {
 
 ComponentTcad2d::ComponentTcad2d() : Component("Tcad2d") {
@@ -1173,9 +1199,7 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
   std::getline(datafile, line);
   std::getline(datafile, line);
   // Get the region name (given in brackets).
-  std::string::size_type bra = line.find('[');
-  std::string::size_type ket = line.find(']');
-  if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+  if (!ExtractFromSquareBrackets(line)) {
     std::cerr << m_className << "::ReadDataset:\n"
               << "    Cannot extract region name.\n"
               << "    Line:\n    " << line << "\n";
@@ -1183,7 +1207,6 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
     Cleanup();
     return false;
   }
-  line = line.substr(bra + 1, ket - bra - 1);
   std::string name;
   std::istringstream data;
   data.str(line);
@@ -1200,9 +1223,7 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
   }
   // Get the number of values.
   std::getline(datafile, line);
-  bra = line.find('(');
-  ket = line.find(')');
-  if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+  if (!ExtractFromBrackets(line)) {
     std::cerr << m_className << "::ReadDataset:\n"
               << "    Cannot extract number of values to be read.\n"
               << "    Line:\n    " << line << "\n";
@@ -1210,7 +1231,6 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
     Cleanup();
     return false;
   }
-  line = line.substr(bra + 1, ket - bra - 1);
   int nValues;
   data.str(line);
   data >> nValues;
@@ -1352,16 +1372,13 @@ bool ComponentTcad2d::LoadWeightingField(const std::string& datafilename,
     std::getline(datafile, line);
     std::getline(datafile, line);
     // Get the region name (given in brackets).
-    auto bra = line.find('[');
-    auto ket = line.find(']');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    if (!ExtractFromSquareBrackets(line)) {
       std::cerr << m_className << "::LoadWeightingField:\n"
                 << "    Cannot extract region name.\n"
                 << "    Line:\n    " << line << "\n";
       ok = false;
       break;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::string name;
     data.str(line);
     data >> name;
@@ -1376,16 +1393,13 @@ bool ComponentTcad2d::LoadWeightingField(const std::string& datafilename,
     }
     // Get the number of values.
     std::getline(datafile, line);
-    bra = line.find('(');
-    ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadWeightingField:\n"
                 << "    Cannot extract number of values to be read.\n"
                 << "    Line:\n    " << line << "\n";
       ok = false;
       break;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     int nValues;
     data.str(line);
     data >> nValues;
@@ -1443,8 +1457,6 @@ bool ComponentTcad2d::LoadWeightingField(const std::string& datafilename,
   return true;
 }
 
-
-
 bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
   // Open the file containing the mesh description.
   std::ifstream gridfile;
@@ -1460,7 +1472,7 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
   // Count line numbers.
   unsigned int iLine = 0;
   // Get the number of regions.
-  unsigned int nRegions = 0;
+  size_t nRegions = 0;
   // Read the file line by line.
   std::string line;
   while (std::getline(gridfile, line)) {
@@ -1501,7 +1513,7 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     return false;
   }
   m_regions.resize(nRegions);
-  for (unsigned int j = 0; j < nRegions; ++j) {
+  for (size_t j = 0; j < nRegions; ++j) {
     m_regions[j].name = "";
     m_regions[j].drift = false;
     m_regions[j].medium = nullptr;
@@ -1519,20 +1531,16 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     // Find entry 'regions'.
     if (line.substr(0, 7) != "regions") continue;
     // Get region names (given in brackets).
-    const std::string::size_type bra = line.find('[');
-    const std::string::size_type ket = line.find(']');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets [].
+    if (!ExtractFromSquareBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read region names.\n";
       Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
-    for (unsigned int j = 0; j < nRegions; ++j) {
+    for (size_t j = 0; j < nRegions; ++j) {
       data >> m_regions[j].name;
       data.clear();
       // Assume by default that all regions are active.
@@ -1567,17 +1575,13 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     // Find section 'Vertices'.
     if (line.substr(0, 8) != "Vertices") continue;
     // Get number of vertices (given in brackets).
-    const std::string::size_type bra = line.find('(');
-    const std::string::size_type ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets [].
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of vertices.\n";
       Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
     data >> nVertices;
@@ -1619,17 +1623,13 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     // Find section 'Edges'.
     if (line.substr(0, 5) != "Edges") continue;
     // Get the number of edges (given in brackets).
-    const std::string::size_type bra = line.find('(');
-    const std::string::size_type ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets ()
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of edges.\n";
       Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
     data >> nEdges;
@@ -1679,31 +1679,27 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
   }
 
   // Get the elements.
-  unsigned int nElements = 0;
+  size_t nElements = 0;
   while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
     // Find section 'Elements'.
     if (line.substr(0, 8) != "Elements") continue;
     // Get number of elements (given in brackets).
-    const std::string::size_type bra = line.find('(');
-    const std::string::size_type ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets ().
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of elements.\n";
       Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
     data >> nElements;
     // Resize array of elements.
     m_elements.resize(nElements);
     // Get type and constituting edges of each element.
-    for (unsigned int j = 0; j < nElements; ++j) {
+    for (size_t j = 0; j < nElements; ++j) {
       for (int k = nMaxVertices; k--;) m_elements[j].vertex[k] = -1;
       ++iLine;
       int type;
@@ -1865,16 +1861,13 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     // Find section 'Region'.
     if (line.substr(0, 6) != "Region") continue;
     // Get region name (given in brackets).
-    std::string::size_type bra = line.find('(');
-    std::string::size_type ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read region name.\n";
       Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
     std::string name;
@@ -1890,19 +1883,15 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     }
     std::getline(gridfile, line);
     std::getline(gridfile, line);
-    bra = line.find('(');
-    ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets ().
-      std::cerr << m_className << "::LoadGrid:\n";
-      std::cerr << "    Error reading file " << gridfilename << ".\n";
+    if (!ExtractFromBrackets(line)) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Error reading file " << gridfilename << ".\n";
       std::cerr << "    Could not read number of elements in region " << name
                 << ".\n";
       Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     int nElementsRegion;
     int iElement;
     data.str(line);
