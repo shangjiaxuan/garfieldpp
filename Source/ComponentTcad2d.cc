@@ -17,7 +17,7 @@ ComponentTcad2d::ComponentTcad2d() : Component("Tcad2d") {
   m_elements.reserve(10000);
 }
 
-bool ComponentTcad2d::SetDonor(const unsigned int donorNumber,
+bool ComponentTcad2d::SetDonor(const size_t donorNumber,
                                const double eXsec, const double hXsec,
                                const double conc) {
   if (donorNumber >= m_donors.size()) {
@@ -32,7 +32,7 @@ bool ComponentTcad2d::SetDonor(const unsigned int donorNumber,
   return true;
 }
 
-bool ComponentTcad2d::SetAcceptor(const unsigned int acceptorNumber,
+bool ComponentTcad2d::SetAcceptor(const size_t acceptorNumber,
                                   const double eXsec, const double hXsec,
                                   const double conc) {
   if (acceptorNumber >= m_acceptors.size()) {
@@ -67,15 +67,15 @@ bool ComponentTcad2d::ElectronAttachment(const double x, const double y,
     return true;
   }
 
-  const unsigned int nAcceptors = m_acceptors.size();
-  for (unsigned int i = 0; i < nAcceptors; ++i) {
+  const size_t nAcceptors = m_acceptors.size();
+  for (size_t i = 0; i < nAcceptors; ++i) {
     const Defect& acceptor = m_acceptors[i];
     double f = 0.;
     GetAcceptorOccupation(x, y, z, i, f);
     eta += acceptor.conc * acceptor.xsece * (1. - f);
   }
-  const unsigned int nDonors = m_donors.size();
-  for (unsigned int i = 0; i < nDonors; ++i) {
+  const size_t nDonors = m_donors.size();
+  for (size_t i = 0; i < nDonors; ++i) {
     const Defect& donor = m_donors[i];
     double f = 0.;
     GetDonorOccupation(x, y, z, i, f);
@@ -100,15 +100,15 @@ bool ComponentTcad2d::HoleAttachment(const double x, const double y,
     return true;
   }
 
-  const unsigned int nAcceptors = m_acceptors.size();
-  for (unsigned int i = 0; i < nAcceptors; ++i) {
+  const size_t nAcceptors = m_acceptors.size();
+  for (size_t i = 0; i < nAcceptors; ++i) {
     const Defect& acceptor = m_acceptors[i];
     double f = 0.;
     GetAcceptorOccupation(x, y, z, i, f);
     eta += acceptor.conc * acceptor.xsech * f;
   }
-  const unsigned int nDonors = m_donors.size();
-  for (unsigned int i = 0; i < nDonors; ++i) {
+  const size_t nDonors = m_donors.size();
+  for (size_t i = 0; i < nDonors; ++i) {
     const Defect& donor = m_donors[i];
     double f = 0.;
     GetDonorOccupation(x, y, z, i, f);
@@ -433,7 +433,7 @@ bool ComponentTcad2d::GetMobility(const double xin, const double yin,
 
 bool ComponentTcad2d::GetDonorOccupation(const double xin, const double yin,
                                          const double zin,
-                                         const unsigned int donorNumber,
+                                         const size_t donorNumber,
                                          double& f) {
   f = 0.;
   if (donorNumber >= m_donors.size()) {
@@ -475,7 +475,7 @@ bool ComponentTcad2d::GetDonorOccupation(const double xin, const double yin,
 
 bool ComponentTcad2d::GetAcceptorOccupation(const double xin, const double yin,
                                             const double zin,
-                                            const unsigned int acceptorNumber,
+                                            const size_t acceptorNumber,
                                             double& f) {
   f = 0.;
   if (acceptorNumber >= m_acceptors.size()) {
@@ -893,7 +893,7 @@ void ComponentTcad2d::PrintRegions() const {
   }
 }
 
-void ComponentTcad2d::GetRegion(const unsigned int i, std::string& name,
+void ComponentTcad2d::GetRegion(const size_t i, std::string& name,
                                 bool& active) const {
   if (i >= m_regions.size()) {
     std::cerr << m_className << "::GetRegion: Index out of range.\n";
@@ -903,7 +903,7 @@ void ComponentTcad2d::GetRegion(const unsigned int i, std::string& name,
   active = m_regions[i].drift;
 }
 
-void ComponentTcad2d::SetDriftRegion(const unsigned int i) {
+void ComponentTcad2d::SetDriftRegion(const size_t i) {
   if (i >= m_regions.size()) {
     std::cerr << m_className << "::SetDriftRegion: Index out of range.\n";
     return;
@@ -911,7 +911,7 @@ void ComponentTcad2d::SetDriftRegion(const unsigned int i) {
   m_regions[i].drift = true;
 }
 
-void ComponentTcad2d::UnsetDriftRegion(const unsigned int i) {
+void ComponentTcad2d::UnsetDriftRegion(const size_t i) {
   if (i >= m_regions.size()) {
     std::cerr << m_className << "::UnsetDriftRegion: Index out of range.\n";
     return;
@@ -919,7 +919,7 @@ void ComponentTcad2d::UnsetDriftRegion(const unsigned int i) {
   m_regions[i].drift = false;
 }
 
-void ComponentTcad2d::SetMedium(const unsigned int i, Medium* medium) {
+void ComponentTcad2d::SetMedium(const size_t i, Medium* medium) {
   if (i >= m_regions.size()) {
     std::cerr << m_className << "::SetMedium: Index out of range.\n";
     return;
@@ -933,7 +933,7 @@ void ComponentTcad2d::SetMedium(const unsigned int i, Medium* medium) {
   m_regions[i].medium = medium;
 }
 
-Medium* ComponentTcad2d::GetMedium(const unsigned int i) const {
+Medium* ComponentTcad2d::GetMedium(const size_t i) const {
   if (i >= m_regions.size()) {
     std::cerr << m_className << "::GetMedium: Index out of range.\n";
     return nullptr;
@@ -942,7 +942,7 @@ Medium* ComponentTcad2d::GetMedium(const unsigned int i) const {
   return m_regions[i].medium;
 }
 
-bool ComponentTcad2d::GetElement(const unsigned int i, double& vol,
+bool ComponentTcad2d::GetElement(const size_t i, double& vol,
                                  double& dmin, double& dmax, int& type) const {
   if (i >= m_elements.size()) {
     std::cerr << m_className << "::GetElement: Index out of range.\n";
@@ -987,7 +987,7 @@ bool ComponentTcad2d::GetElement(const unsigned int i, double& vol,
   return true;
 }
 
-bool ComponentTcad2d::GetElement(const unsigned int i, double& vol,
+bool ComponentTcad2d::GetElement(const size_t i, double& vol,
                                  double& dmin, double& dmax, int& type,
                                  int& node1, int& node2, int& node3, int& node4,
                                  int& reg) const {
@@ -1001,7 +1001,7 @@ bool ComponentTcad2d::GetElement(const unsigned int i, double& vol,
   return true;
 }
 
-bool ComponentTcad2d::GetNode(const unsigned int i, double& x, double& y,
+bool ComponentTcad2d::GetNode(const size_t i, double& x, double& y,
                               double& v, double& ex, double& ey) const {
   if (i >= m_vertices.size()) {
     std::cerr << m_className << "::GetNode: Index out of range.\n";

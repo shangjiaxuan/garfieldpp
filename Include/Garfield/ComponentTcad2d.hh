@@ -63,24 +63,24 @@ class ComponentTcad2d : public Component {
   /// List all currently defined regions.
   void PrintRegions() const;
   /// Get the number of regions in the device.
-  unsigned int GetNumberOfRegions() const { return m_regions.size(); }
-  void GetRegion(const unsigned int i, std::string& name, bool& active) const;
-  void SetDriftRegion(const unsigned int ireg);
-  void UnsetDriftRegion(const unsigned int ireg);
+  size_t GetNumberOfRegions() const { return m_regions.size(); }
+  void GetRegion(const size_t i, std::string& name, bool& active) const;
+  void SetDriftRegion(const size_t ireg);
+  void UnsetDriftRegion(const size_t ireg);
   /// Set the medium for a given region.
-  void SetMedium(const unsigned int ireg, Medium* m);
+  void SetMedium(const size_t ireg, Medium* m);
   /// Get the medium for a given region.
-  Medium* GetMedium(const unsigned int ireg) const;
+  Medium* GetMedium(const size_t ireg) const;
 
   // Retrieve information about the mesh.
-  unsigned int GetNumberOfElements() const { return m_elements.size(); }
-  bool GetElement(const unsigned int i, double& vol, double& dmin, double& dmax,
+  size_t GetNumberOfElements() const { return m_elements.size(); }
+  bool GetElement(const size_t i, double& vol, double& dmin, double& dmax,
                   int& type) const;
-  bool GetElement(const unsigned int i, double& vol, double& dmin, double& dmax,
+  bool GetElement(const size_t i, double& vol, double& dmin, double& dmax,
                   int& type, int& node1, int& node2, int& node3, int& node4,
                   int& reg) const;
-  unsigned int GetNumberOfNodes() const { return m_vertices.size(); }
-  bool GetNode(const unsigned int i, double& x, double& y, double& v,
+  size_t GetNumberOfNodes() const { return m_vertices.size(); }
+  bool GetNode(const size_t i, double& x, double& y, double& v,
                double& ex, double& ey) const;
 
   // Mobilities
@@ -106,14 +106,14 @@ class ComponentTcad2d : public Component {
   int GetNumberOfAcceptors() { return m_acceptors.size(); }
 
   bool GetDonorOccupation(const double x, const double y, const double z,
-                          const unsigned int donorNumber,
+                          const size_t donorNumber,
                           double& occupationFraction);
   bool GetAcceptorOccupation(const double x, const double y, const double z,
-                             const unsigned int acceptorNumber,
+                             const size_t acceptorNumber,
                              double& occupationFraction);
-  bool SetDonor(const unsigned int donorNumber, const double eXsec,
+  bool SetDonor(const size_t donorNumber, const double eXsec,
                 const double hxSec, const double concentration);
-  bool SetAcceptor(const unsigned int acceptorNumber, const double eXsec,
+  bool SetAcceptor(const size_t acceptorNumber, const double eXsec,
                    const double hxSec, const double concentration);
 
   /// Switch use of the imported trapping map on/off.
