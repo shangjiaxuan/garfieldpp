@@ -552,7 +552,7 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
     double ymax = v0.y;
     m_pMin = std::min(m_pMin, v0.p);
     m_pMax = std::max(m_pMax, v0.p);
-    const unsigned int nVertices = element.type + 2;
+    const unsigned int nVertices = element.type + 1;
     for (unsigned int j = 0; j < nVertices; ++j) {
       const Vertex& v = m_vertices[element.vertex[j]];
       xmin = std::min(xmin, v.x);
