@@ -126,7 +126,7 @@ class ComponentTcad2d : public Component {
 
  private:
   // Max. number of vertices per element
-  static constexpr unsigned int nMaxVertices = 4;
+  static constexpr size_t nMaxVertices = 4;
 
   // Regions
   struct Region {
@@ -174,10 +174,10 @@ class ComponentTcad2d : public Component {
     // Types 1 - 3 are supported by this class.
     int type;
     // Associated region
-    int region;
+    unsigned int region;
     // Bounding box
-    double xmin, xmax;
-    double ymin, ymax;
+    float xmin, xmax;
+    float ymin, ymax;
   };
   std::vector<Element> m_elements;
 
@@ -226,8 +226,8 @@ class ComponentTcad2d : public Component {
 
   void Reset() override;
   void UpdatePeriodicity() override;
-  unsigned int FindElement(const double x, const double y,
-                           std::array<double, nMaxVertices>& w) const;
+  size_t FindElement(const double x, const double y,
+                     std::array<double, nMaxVertices>& w) const;
   // Check whether a point is inside a given element and calculate the
   // shape functions if it is.
   bool CheckElement(const double x, const double y, const Element& element,
@@ -247,10 +247,9 @@ class ComponentTcad2d : public Component {
   bool LoadWeightingField(const std::string& datafilename,
                           std::vector<std::array<double, 2> >& wf,
                           std::vector<double>& wp);
-  void FindNeighbours();
   void Cleanup();
 
-  int FindRegion(const std::string& name) const;
+  size_t FindRegion(const std::string& name) const;
 
   void MapCoordinates(double& x, double& y, bool& xmirr, bool& ymirr) const;
   bool InsideBoundingBox(const double x, const double y, 
