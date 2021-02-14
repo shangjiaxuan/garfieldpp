@@ -175,7 +175,6 @@ class ComponentTcad2d : public Component {
     int type;
     // Associated region
     int region;
-    std::vector<int> neighbours;
     // Bounding box
     double xmin, xmax;
     double ymin, ymax;

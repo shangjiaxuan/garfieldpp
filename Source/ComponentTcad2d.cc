@@ -721,12 +721,6 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   }
 
   std::cout << "    Number of vertices: " << m_vertices.size() << "\n";
-
-  // Find adjacent elements.
-  std::cout << m_className << "::Initialise:\n"
-            << "    Looking for neighbouring elements. Be patient...\n";
-  FindNeighbours();
- 
   if (!ok) {
     m_ready = false;
     Cleanup();
@@ -1711,7 +1705,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     // Get type and constituting edges of each element.
     for (unsigned int j = 0; j < nElements; ++j) {
       for (int k = nMaxVertices; k--;) m_elements[j].vertex[k] = -1;
-      m_elements[j].neighbours.clear();
       ++iLine;
       int type;
       gridfile >> type;
@@ -1932,43 +1925,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
   return true;
 }
 
-void ComponentTcad2d::FindNeighbours() {
-  const unsigned int nElements = m_elements.size();
-  std::vector<std::vector<bool> > adjacent(nElements,
-                                           std::vector<bool>(nElements, false));
-
-  constexpr double tol = 5.e-4;
-  for (unsigned int i = 0; i < nElements; ++i) {
-    const Element& ei = m_elements[i];
-    for (unsigned int j = 0; j < nElements; ++j) {
-      if (i == j || adjacent[i][j]) continue;
-      const Element& ej = m_elements[j];
-      if (ei.xmin > ej.xmax + tol || ei.xmax < ej.xmin - tol) continue;
-      if (ei.ymin > ej.ymax + tol || ei.ymax < ej.ymin - tol) continue;
-      for (unsigned int m = 0; m < nMaxVertices; ++m) {
-        if (ei.vertex[m] < 0) break;
-        for (unsigned int n = 0; n < nMaxVertices; ++n) {
-          if (ei.vertex[n] < 0) break;
-          if (ei.vertex[m] == ej.vertex[n]) {
-            adjacent[i][j] = adjacent[j][i] = true;
-            break;
-          }
-        }
-        if (adjacent[i][j]) break;
-      }
-    }
-  }
-
-  for (unsigned int i = 0; i < nElements; ++i) {
-    m_elements[i].neighbours.clear();
-    for (unsigned int j = 0; j < nElements; ++j) {
-      if (adjacent[i][j]) {
-        m_elements[i].neighbours.push_back(j);
-      }
-    }
-  }
-}
-
 void ComponentTcad2d::Cleanup() {
   // Vertices
   m_vertices.clear();
@@ -1992,17 +1948,6 @@ unsigned int ComponentTcad2d::FindElement(
     const Element& last = m_elements[m_lastElement];
     if (x >= last.xmin && x <= last.xmax && y >= last.ymin && y <= last.ymax) {
       if (CheckElement(x, y, last, w)) return m_lastElement;
-    }
-    // The point is not in the previous element.
-    // Check the adjacent elements.
-    const unsigned int nNeighbours = last.neighbours.size();
-    for (unsigned int i = 0; i < nNeighbours; ++i) {
-      const Element& element = m_elements[last.neighbours[i]];
-      if (x < element.xmin || x > element.xmax || y < element.ymin ||
-          y > element.ymax)
-        continue;
-      if (!CheckElement(x, y, element, w)) continue;
-      return last.neighbours[i];
     }
   }
 
