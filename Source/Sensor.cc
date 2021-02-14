@@ -458,10 +458,12 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
     return;
   }
   const double dt = t1 - t0;
-  if (dt < Small && !useWeightingPotential) {
+  if (dt < Small) {
     if (m_debug) std::cout << "Time step too small.\n";
     return;
   }
+  const double invdt = 1. / dt;
+
   const int bin = int((t0 - m_tStart) / m_tStep);
   // Check if the starting time is outside the range
   if (bin < 0 || bin >= (int)m_nTimeBins) {
@@ -473,9 +475,9 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
   const double dx = x1 - x0;
   const double dy = y1 - y0;
   const double dz = z1 - z0;
-  const double vx = dx / dt;
-  const double vy = dy / dt;
-  const double vz = dz / dt;
+  const double vx = dx * invdt;
+  const double vy = dy * invdt;
+  const double vz = dz * invdt;
   if (m_debug) {
     std::cout << "  Time: " << t0 << "\n"
               << "  Step: " << dt << "\n"
@@ -494,16 +496,12 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
     if (m_debug) std::cout << "  Electrode " << electrode.label << ":\n";
     // Induced current.
     double current = 0.;
-    double charge = 0.;
     if (useWeightingPotential) {
       const double w0 = electrode.comp->WeightingPotential(x0, y0, z0, lbl);
       const double w1 = electrode.comp->WeightingPotential(x1, y1, z1, lbl);
-      charge = q * (w1 - w0);
-      current = charge / dt;
+      current = q * (w1 - w0) * invdt;
       if (m_debug) {
-        std::cerr << m_className << "::Current = " << current
-                  << ", for w0 = " << w0 << ", w1 = " << w1
-                  << ", charge = " << charge << ".\n";
+        std::cout << "    Weighting potentials: " << w0 << ", " << w1 << "\n";
       }
     } else {
       double wx = 0., wy = 0., wz = 0.;
@@ -613,14 +611,12 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
                   currentHolder;
             }
           }
-
           currentHolder = current2;
         }
         // Hold information for next current calculation and interpolation.
         binHolder = bin2;
         chargeHolder = charge;
       }
-
     } else {
       // Using the weighting field.
       for (size_t i = 0; i < nd; ++i) {
