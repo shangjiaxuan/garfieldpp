@@ -15,6 +15,10 @@
 
 #ifdef __cplusplus
 #include <cmath>
+#ifdef _GLIBCXX_HAVE_OBSOLETE_ISINF_ISNAN
+using std::isnan;
+using std::isinf;
+#endif
 namespace neBEM {
 #endif
 
@@ -394,7 +398,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
         DZTerm1, DZTerm2, DXTerm1, DXTerm2);
   }
   // Four conditions based on the logarithmic terms
-  if (std::isnan(DZTerm1) || std::isinf(DZTerm1)) {
+  if (isnan(DZTerm1) || isinf(DZTerm1)) {
     ++FailureCntr;
     --ExactCntr;
     ApproxFlag = 1;
@@ -404,7 +408,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     return (ApproxRecSurf(X, Y, Z, xlo, zlo, xhi, zhi, XNSegApprox, ZNSegApprox,
                           Potential, Flux));
   }
-  if (std::isnan(DZTerm2) || std::isinf(DZTerm2)) {
+  if (isnan(DZTerm2) || isinf(DZTerm2)) {
     ++FailureCntr;
     --ExactCntr;
     ApproxFlag = 2;
@@ -414,7 +418,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     return (ApproxRecSurf(X, Y, Z, xlo, zlo, xhi, zhi, XNSegApprox, ZNSegApprox,
                           Potential, Flux));
   }
-  if (std::isnan(DXTerm1) || std::isinf(DXTerm1)) {
+  if (isnan(DXTerm1) || isinf(DXTerm1)) {
     ++FailureCntr;
     --ExactCntr;
     ApproxFlag = 3;
@@ -424,7 +428,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     return (ApproxRecSurf(X, Y, Z, xlo, zlo, xhi, zhi, XNSegApprox, ZNSegApprox,
                           Potential, Flux));
   }
-  if (std::isnan(DXTerm2) || std::isinf(DXTerm2)) {
+  if (isnan(DXTerm2) || isinf(DXTerm2)) {
     ++FailureCntr;
     --ExactCntr;
     ApproxFlag = 4;
@@ -580,7 +584,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
   }
 
   // Error situations handled before returning the values
-  if ((Pot < 0.0) || (std::isnan(Pot) || std::isinf(Pot))) {
+  if ((Pot < 0.0) || (isnan(Pot) || isinf(Pot))) {
     fprintf(fIsles, "\n--- Approximation in ExactRecSurf ---\n");
     fprintf(fIsles, "Negative, nan or inf potential ... approximating!\n");
     if (DebugISLES) {
@@ -606,7 +610,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     return (ApproxRecSurf(X, Y, Z, xlo, zlo, xhi, zhi, XNSegApprox, ZNSegApprox,
                           Potential, Flux));
   }
-  if (std::isnan(Fx) || std::isinf(Fx)) {
+  if (isnan(Fx) || isinf(Fx)) {
     fprintf(fIsles, "\n--- Approximation in ExactRecSurf ---\n");
     fprintf(fIsles, "Nan or inf Fx ... approximating!\n");
     if (DebugISLES) {
@@ -628,7 +632,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     return (ApproxRecSurf(X, Y, Z, xlo, zlo, xhi, zhi, XNSegApprox, ZNSegApprox,
                           Potential, Flux));
   }
-  if (std::isnan(Fy) || std::isinf(Fy)) {
+  if (isnan(Fy) || isinf(Fy)) {
     fprintf(fIsles, "\n--- Approximation in ExactRecSurf ---\n");
     fprintf(fIsles, "Nan or inf Fy ... approximating!\n");
     if (DebugISLES) {
@@ -653,7 +657,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     return (ApproxRecSurf(X, Y, Z, xlo, zlo, xhi, zhi, XNSegApprox, ZNSegApprox,
                           Potential, Flux));
   }
-  if (std::isnan(Fz) || std::isinf(Fz)) {
+  if (isnan(Fz) || isinf(Fz)) {
     fprintf(fIsles, "\n--- Approximation in ExactRecSurf ---\n");
     fprintf(fIsles, "Nan or inf Fz ... approximating!\n");
     if (DebugISLES) {
@@ -1545,7 +1549,7 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     }
     if (DblTmp1 < MINDIST2) DblTmp1 = MINDIST2;
     DTerm1 = log(DblTmp1);
-    if (std::isnan(DTerm1) || std::isinf(DTerm1)) {
+    if (isnan(DTerm1) || isinf(DTerm1)) {
       ApproxFlag = 18;
       ++FailureCntr;
       --ExactCntr;
@@ -1561,7 +1565,7 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     }
     if (DblTmp2 < MINDIST2) DblTmp2 = MINDIST2;
     DTerm2 = log(DblTmp2);
-    if (std::isnan(DTerm2) || std::isinf(DTerm2)) {
+    if (isnan(DTerm2) || isinf(DTerm2)) {
       ApproxFlag = 18;
       ++FailureCntr;
       --ExactCntr;
@@ -2056,7 +2060,7 @@ if (((X >= 0.0) && (X <= 1.0)))  // Possibility of point within element bounds
 }  // point within element bounds
 
 // Error situations handled before returning the potential value
-if ((Pot < 0) || std::isnan(Pot) || std::isinf(Pot)) {
+if ((Pot < 0) || isnan(Pot) || isinf(Pot)) {
   fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
   fprintf(fIsles, "Problem with potential ... approximating!\n");
   fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
@@ -2076,7 +2080,7 @@ if ((Pot < 0) || std::isnan(Pot) || std::isinf(Pot)) {
       ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
 }
 
-if (std::isnan(Fx) || std::isinf(Fx)) {
+if (isnan(Fx) || isinf(Fx)) {
   fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
   fprintf(fIsles, "Problem with Fx ... approximating!\n");
   fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
@@ -2096,7 +2100,7 @@ if (std::isnan(Fx) || std::isinf(Fx)) {
       ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
 }
 
-if (std::isnan(Fy) || std::isinf(Fy)) {
+if (isnan(Fy) || isinf(Fy)) {
   fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
   fprintf(fIsles, "Problem with Fy ... approximating!\n");
   fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
@@ -2116,7 +2120,7 @@ if (std::isnan(Fy) || std::isinf(Fy)) {
       ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
 }
 
-if (std::isnan(Fz) || std::isinf(Fz)) {
+if (isnan(Fz) || isinf(Fz)) {
   fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
   fprintf(fIsles, "Problem with Fz ... approximating!\n");
   fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
