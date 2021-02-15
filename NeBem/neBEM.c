@@ -2090,8 +2090,8 @@ double ValueKnCh(int elefld) {
 
       double InitialVector[3] = {xfld - pOrigin->X, yfld - pOrigin->Y, zfld - pOrigin->Z};
       double FinalVector[3] = {0., 0., 0.};  
-      for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
+      for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
           FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
         }
       }
