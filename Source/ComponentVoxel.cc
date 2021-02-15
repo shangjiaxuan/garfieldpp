@@ -279,10 +279,10 @@ bool ComponentVoxel::LoadWeightingField(const std::string& fname,
     m_wdtimes.push_back(t);
     m_wdfields.push_back(std::move(wfield));
   } else {
-    const auto it = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
-    const auto n = std::distance(m_wdtimes.cbegin(), it);
+    const auto it = std::upper_bound(m_wdtimes.begin(), m_wdtimes.end(), t);
+    const auto n = std::distance(m_wdtimes.begin(), it);
     m_wdtimes.insert(it, t); 
-    m_wdfields.insert(m_wdfields.cbegin() + n, std::move(wfield));
+    m_wdfields.insert(m_wdfields.begin() + n, std::move(wfield));
   }
   return true;
 }
