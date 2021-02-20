@@ -1221,31 +1221,31 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
   // Plot the drift paths and photon tracks.
   if (m_viewer) {
     // Electrons
-    const unsigned int nElectronEndpoints = m_endpointsElectrons.size();
-    for (unsigned int i = 0; i < nElectronEndpoints; ++i) {
-      const int np = GetNumberOfElectronDriftLinePoints(i);
-      int jL;
+    const size_t nElectronEndpoints = m_endpointsElectrons.size();
+    for (size_t i = 0; i < nElectronEndpoints; ++i) {
+      const size_t np = GetNumberOfElectronDriftLinePoints(i);
       if (np <= 0) continue;
+      size_t k;
       const Electron& p = m_endpointsElectrons[i];
-      m_viewer->NewElectronDriftLine(np, jL, p.x0, p.y0, p.z0);
-      for (int jP = np; jP--;) {
+      m_viewer->NewElectronDriftLine(np, k, p.x0, p.y0, p.z0);
+      for (size_t j = 0; j < np; ++j) {
         double x = 0., y = 0., z = 0., t = 0.;
-        GetElectronDriftLinePoint(x, y, z, t, jP, i);
-        m_viewer->SetDriftLinePoint(jL, jP, x, y, z);
+        GetElectronDriftLinePoint(x, y, z, t, j, i);
+        m_viewer->SetDriftLinePoint(k, j, x, y, z);
       }
     }
     // Holes
-    const unsigned int nHoleEndpoints = m_endpointsHoles.size();
-    for (unsigned int i = 0; i < nHoleEndpoints; ++i) {
-      const int np = GetNumberOfHoleDriftLinePoints(i);
-      int jL;
+    const size_t nHoleEndpoints = m_endpointsHoles.size();
+    for (size_t i = 0; i < nHoleEndpoints; ++i) {
+      const size_t np = GetNumberOfHoleDriftLinePoints(i);
       if (np <= 0) continue;
+      size_t k;
       const Electron& p = m_endpointsHoles[i];
-      m_viewer->NewHoleDriftLine(np, jL, p.x0, p.y0, p.z0);
-      for (int jP = np; jP--;) {
+      m_viewer->NewHoleDriftLine(np, k, p.x0, p.y0, p.z0);
+      for (size_t j = 0; j < np; ++j) {
         double x = 0., y = 0., z = 0., t = 0.;
-        GetHoleDriftLinePoint(x, y, z, t, jP, i);
-        m_viewer->SetDriftLinePoint(jL, jP, x, y, z);
+        GetHoleDriftLinePoint(x, y, z, t, j, i);
+        m_viewer->SetDriftLinePoint(k, j, x, y, z);
       }
     }
     // Photons

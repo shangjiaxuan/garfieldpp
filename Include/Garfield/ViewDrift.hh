@@ -64,22 +64,22 @@ class ViewDrift : public ViewBase {
                     bool& electron) const;
 
   // Functions used by the transport classes.
-  void NewElectronDriftLine(const unsigned int np, int& id, const float x0,
+  void NewElectronDriftLine(const size_t np, size_t& id, const float x0,
                             const float y0, const float z0);
-  void NewHoleDriftLine(const unsigned int np, int& id, const float x0,
+  void NewHoleDriftLine(const size_t np, size_t& id, const float x0,
                         const float y0, const float z0);
-  void NewIonDriftLine(const unsigned int np, int& id, const float x0,
+  void NewIonDriftLine(const size_t np, size_t& id, const float x0,
                        const float y0, const float z0);
-  void NewChargedParticleTrack(const unsigned int np, int& id, const float x0,
+  void NewChargedParticleTrack(const size_t np, size_t& id, const float x0,
                                const float y0, const float z0);
 
-  void SetDriftLinePoint(const unsigned int iL, const unsigned int iP,
+  void SetDriftLinePoint(const size_t iL, const size_t iP,
                          const float x, const float y, const float z);
-  void AddDriftLinePoint(const unsigned int iL, const float x, const float y,
+  void AddDriftLinePoint(const size_t iL, const float x, const float y,
                          const float z);
-  void SetTrackPoint(const unsigned int iL, const unsigned int iP,
+  void SetTrackPoint(const size_t iL, const size_t iP,
                      const float x, const float y, const float z);
-  void AddTrackPoint(const unsigned int iL, const float x, const float y,
+  void AddTrackPoint(const size_t iL, const float x, const float y,
                      const float z);
   void AddExcitation(const float x, const float y, const float z);
   void AddIonisation(const float x, const float y, const float z);

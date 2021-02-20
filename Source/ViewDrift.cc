@@ -65,34 +65,36 @@ void ViewDrift::GetDriftLine(const size_t i,
   }
 }
 
-void ViewDrift::NewElectronDriftLine(const unsigned int np, int& id,
+void ViewDrift::NewElectronDriftLine(const size_t np, size_t& id,
                                      const float x0, const float y0,
                                      const float z0) {
   std::lock_guard<std::mutex> guard(m_mutex);
   // Create a new electron drift line and add it to the list.
   std::array<float, 3> p = {x0, y0, z0};
-  std::vector<std::array<float, 3> > dl(std::max(1U, np), p);
+  constexpr size_t minSize = 1;
+  std::vector<std::array<float, 3> > dl(std::max(minSize, np), p);
   m_driftLines.push_back(std::make_pair(std::move(dl), Particle::Electron));
   // Return the index of this drift line.
   id = m_driftLines.size() - 1;
 }
 
-void ViewDrift::NewHoleDriftLine(const unsigned int np, int& id,
-                                 const float x0, const float y0,
-                                 const float z0) {
+void ViewDrift::NewHoleDriftLine(const size_t np, size_t& id, const float x0, 
+                                 const float y0, const float z0) {
   std::lock_guard<std::mutex> guard(m_mutex);
   std::array<float, 3> p = {x0, y0, z0};
-  std::vector<std::array<float, 3> > dl(std::max(1U, np), p);
+  constexpr size_t minSize = 1;
+  std::vector<std::array<float, 3> > dl(std::max(minSize, np), p);
   m_driftLines.push_back(std::make_pair(std::move(dl), Particle::Hole));
   // Return the index of this drift line.
   id = m_driftLines.size() - 1;
 }
 
-void ViewDrift::NewIonDriftLine(const unsigned int np, int& id, const float x0,
+void ViewDrift::NewIonDriftLine(const size_t np, size_t& id, const float x0,
                                 const float y0, const float z0) {
   std::lock_guard<std::mutex> guard(m_mutex);
   std::array<float, 3> p = {x0, y0, z0};
-  std::vector<std::array<float, 3> > dl(std::max(1U, np), p);
+  constexpr size_t minSize = 1;
+  std::vector<std::array<float, 3> > dl(std::max(minSize, np), p);
   m_driftLines.push_back(std::make_pair(std::move(dl), Particle::Ion));
   // Return the index of this drift line.
   id = m_driftLines.size() - 1;
@@ -106,19 +108,20 @@ void ViewDrift::AddPhoton(const float x0, const float y0, const float z0,
   m_photons.push_back({p0, p1});
 }
 
-void ViewDrift::NewChargedParticleTrack(const unsigned int np, int& id,
+void ViewDrift::NewChargedParticleTrack(const size_t np, size_t& id,
                                         const float x0, const float y0,
                                         const float z0) {
   std::lock_guard<std::mutex> guard(m_mutex);
   // Create a new track and add it to the list.
-  std::vector<std::array<float, 3> > track(std::max(1U, np));
+  constexpr size_t minSize = 1;
+  std::vector<std::array<float, 3> > track(std::max(minSize, np));
   track[0] = {x0, y0, z0};
   m_tracks.push_back(std::move(track));
   // Return the index of this track.
   id = m_tracks.size() - 1;
 }
 
-void ViewDrift::SetDriftLinePoint(const unsigned int iL, const unsigned int iP,
+void ViewDrift::SetDriftLinePoint(const size_t iL, const size_t iP,
                                   const float x, const float y,
                                   const float z) {
   std::lock_guard<std::mutex> guard(m_mutex);
@@ -129,7 +132,7 @@ void ViewDrift::SetDriftLinePoint(const unsigned int iL, const unsigned int iP,
   m_driftLines[iL].first[iP] = {x, y, z};
 }
 
-void ViewDrift::AddDriftLinePoint(const unsigned int iL, const float x,
+void ViewDrift::AddDriftLinePoint(const size_t iL, const float x,
                                   const float y, const float z) {
   std::lock_guard<std::mutex> guard(m_mutex);
   if (iL >= m_driftLines.size()) {
@@ -140,7 +143,7 @@ void ViewDrift::AddDriftLinePoint(const unsigned int iL, const float x,
   m_driftLines[iL].first.push_back(std::move(p));
 }
 
-void ViewDrift::SetTrackPoint(const unsigned int iL, const unsigned int iP,
+void ViewDrift::SetTrackPoint(const size_t iL, const size_t iP,
                               const float x, const float y, const float z) {
   std::lock_guard<std::mutex> guard(m_mutex);
   if (iL >= m_tracks.size() || iP >= m_tracks[iL].size()) {
@@ -150,7 +153,7 @@ void ViewDrift::SetTrackPoint(const unsigned int iL, const unsigned int iP,
   m_tracks[iL][iP] = {x, y, z};
 }
 
-void ViewDrift::AddTrackPoint(const unsigned int iL, const float x,
+void ViewDrift::AddTrackPoint(const size_t iL, const float x,
                               const float y, const float z) {
   std::lock_guard<std::mutex> guard(m_mutex);
   if (iL >= m_tracks.size()) {
@@ -326,7 +329,8 @@ void ViewDrift::Plot3d(const bool axis, const bool ogl) {
       points.push_back(p[1]);
       points.push_back(p[2]);
     }
-    TPolyLine3D pl;
+    const int nP = driftLine.first.size();
+    TPolyLine3D pl(nP, points.data());
     if (driftLine.second == Particle::Electron) {
       pl.SetLineColor(m_colElectron);
     } else if (driftLine.second == Particle::Hole) {
@@ -335,7 +339,6 @@ void ViewDrift::Plot3d(const bool axis, const bool ogl) {
       pl.SetLineColor(m_colIon);
     }
     pl.SetLineWidth(1);
-    const int nP = driftLine.first.size();
     pl.DrawPolyLine(nP, points.data(), "same");
   }
 
@@ -346,13 +349,13 @@ void ViewDrift::Plot3d(const bool axis, const bool ogl) {
       points.push_back(p[1]);
       points.push_back(p[2]);
     }
-    TPolyLine3D pl;
+    const int nP = track.size();
+    TPolyLine3D pl(nP, points.data());
     pl.SetLineColor(m_colTrack);
     pl.SetLineWidth(1);
-    const int nP = track.size();
     pl.DrawPolyLine(nP, points.data(), "same");
     if (!m_drawClusters) continue;
-    TPolyMarker3D pm;
+    TPolyMarker3D pm(nP, points.data());
     pm.SetMarkerColor(m_colTrack);
     pm.SetMarkerSize(m_markerSizeCluster);
     pm.DrawPolyMarker(nP, points.data(), 20, "same");
@@ -366,7 +369,7 @@ void ViewDrift::Plot3d(const bool axis, const bool ogl) {
       points.push_back(m_exc[i][1]);
       points.push_back(m_exc[i][2]);
     }
-    TPolyMarker3D pm;
+    TPolyMarker3D pm(nP, points.data());
     pm.SetMarkerColor(m_colExcitation);
     pm.SetMarkerSize(m_markerSizeCollision);
     pm.DrawPolyMarker(nP, points.data(), 20, "same");
@@ -380,7 +383,7 @@ void ViewDrift::Plot3d(const bool axis, const bool ogl) {
       points.push_back(m_ion[i][1]);
       points.push_back(m_ion[i][2]);
     }
-    TPolyMarker3D pm;
+    TPolyMarker3D pm(nP, points.data());
     pm.SetMarkerColor(m_colIonisation);
     pm.SetMarkerSize(m_markerSizeCollision);
     pm.DrawPolyMarker(nP, points.data(), 20, "same");
@@ -394,11 +397,12 @@ void ViewDrift::Plot3d(const bool axis, const bool ogl) {
       points.push_back(m_att[i][1]);
       points.push_back(m_att[i][2]);
     }
-    TPolyMarker3D pm;
+    TPolyMarker3D pm(nP, points.data());
     pm.SetMarkerColor(m_colAttachment);
     pm.SetMarkerSize(m_markerSizeCollision);
     pm.DrawPolyMarker(nP, points.data(), 20, "same");
-  }
+  } 
+  pad->Modified();
   pad->Update();
 
   if (axis) {
