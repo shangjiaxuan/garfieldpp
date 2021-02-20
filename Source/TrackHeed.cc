@@ -188,7 +188,7 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
   m_ready = true;
 
   // Plot the new track.
-  if (m_usePlotting) PlotNewTrack(x0, y0, z0);
+  if (m_viewer) PlotNewTrack(x0, y0, z0);
   return true;
 }
 
@@ -274,7 +274,7 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
   // Stop if we did not find a virtual photon.
   if (!virtualPhoton) return false;
   // Plot the cluster, if requested.
-  if (m_usePlotting) PlotCluster(xcls, ycls, zcls);
+  if (m_viewer) PlotCluster(xcls, ycls, zcls);
 
   std::vector<Heed::gparticle*> secondaries;
   // Transport the virtual photon.

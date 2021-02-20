@@ -113,12 +113,11 @@ class Track {
 
   bool m_isChanged = true;
 
-  bool m_usePlotting = false;
   ViewDrift* m_viewer = nullptr;
 
   bool m_debug = false;
 
-  int m_plotId = -1;
+  size_t m_plotId = 0;
   void PlotNewTrack(const double x0, const double y0, const double z0);
   void PlotCluster(const double x0, const double y0, const double z0);
 };

@@ -177,27 +177,19 @@ void Track::EnablePlotting(ViewDrift* view) {
     std::cerr << m_className << "::EnablePlotting: Null pointer.\n";
     return;
   }
-
   m_viewer = view;
-  m_usePlotting = true;
 }
 
 void Track::DisablePlotting() {
-  m_usePlotting = false;
   m_viewer = nullptr;
 }
 
 void Track::PlotNewTrack(const double x0, const double y0, const double z0) {
-  if (!m_usePlotting || !m_viewer) return;
-
+  if (!m_viewer) return;
   m_viewer->NewChargedParticleTrack(1, m_plotId, x0, y0, z0);
 }
 
 void Track::PlotCluster(const double x0, const double y0, const double z0) {
-  if (m_plotId < 0 || !m_usePlotting || !m_viewer) {
-    std::cerr << m_className << "::PlotCluster: No track set. Program bug!\n";
-    return;
-  }
-  m_viewer->AddTrackPoint(m_plotId, x0, y0, z0);
+  if (m_viewer) m_viewer->AddTrackPoint(m_plotId, x0, y0, z0);
 }
 }
