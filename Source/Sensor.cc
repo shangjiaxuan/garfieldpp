@@ -458,7 +458,7 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
     return;
   }
   const double dt = t1 - t0;
-  if (dt < Small) {
+  if (dt < Small && !useWeightingPotential) {
     if (m_debug) std::cout << "Time step too small.\n";
     return;
   }
