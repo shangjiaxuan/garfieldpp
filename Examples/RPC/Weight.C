@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 
   const bool debug = true;
   constexpr bool plotSignal = true;
-  constexpr bool plotDrift = true;
+  constexpr bool plotDrift = false;
     
   // The geometry of the RPC.
   const double gap = 0.03;  // [cm]
@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
   RPC->Setup(gap, thickness, eps, voltage, sigma);
 
   // Adding a readout structure.
-  const std::string label = "NaN";
+  const std::string label = "ReadoutPlane";
   RPC->AddPlane(label);
 
   // Setup the gas, but one can also use a gasfile.
@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
     cCharge->Update();
     gSystem->ProcessEvents();
     // Export induced current data as an csv file.
-    sensor.ExportCharge(label,"ChargeNaN");
+    sensor.ExportSignal(label,"ChargeNaN");
   }
     
   app.Run(kTRUE);
