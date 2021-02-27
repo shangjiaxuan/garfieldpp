@@ -43,7 +43,12 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
   m_etransf.clear();
   m_natom.clear();
   m_nshell.clear();
+  // Get the step.
   if (m_currpos.prange <= 0.0) return;
+  const double step = m_currpos.prange / cm;
+  const vec dir = unit_vec(m_currpos.pt - m_prevpos.pt);
+  const double range = (m_currpos.pt - m_prevpos.pt).length();
+  if (m_print_listing) Iprint3n(mcout, m_prevpos.pt, dir, range);
   // Get local volume.
   const absvol* av = m_currpos.tid.G_lavol();
   auto etcs = dynamic_cast<const EnTransfCS*>(av);
@@ -53,9 +58,14 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
   EnergyMesh* emesh = hmd->energy_mesh;
   const double* aetemp = emesh->get_ae();
   PointCoorMesh<double, const double*> pcm(emesh->get_q() + 1, &(aetemp));
+  basis tempbas(m_currpos.dir, "tempbas");
+  // Particle mass and energy.
+  const double mp = m_mass * c_squared;
+  const double ep = mp + m_curr_ekin;
+  // Electron mass.
+  const double mt = electron_def.mass * c_squared;
   const long qa = matter->qatom();
   if (m_print_listing) Iprintn(mcout, qa);
-  basis tempbas(m_currpos.dir, "tempbas");
   for (long na = 0; na < qa; ++na) {
     if (m_print_listing) Iprintn(mcout, na);
     const long qs = hmd->apacs[na]->get_qshell();
@@ -64,18 +74,14 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
       if (etcs->quan[na][ns] <= 0.0) continue;
       // Sample the number of collisions for this shell.
       int ierror = 0;
-      const long qt = pois(etcs->quan[na][ns] * m_currpos.prange / cm, ierror);
+      const long qt = pois(etcs->quan[na][ns] * step, ierror);
       check_econd11a(ierror, == 1,
                      " etcs->quan[na][ns]=" << etcs->quan[na][ns]
                                             << " currpos.prange/cm="
-                                            << m_currpos.prange / cm << '\n',
+                                            << step << '\n',
                      mcerr);
       if (m_print_listing) Iprintn(mcout, qt);
       if (qt <= 0) continue;
-      point curpt = m_prevpos.pt;
-      vec dir = unit_vec(m_currpos.pt - m_prevpos.pt);
-      const double range = (m_currpos.pt - m_prevpos.pt).length();
-      if (m_print_listing) Iprint3n(mcout, curpt, dir, range);
       for (long nt = 0; nt < qt; ++nt) {
         // Sample the energy transfer in this collision.
         const double rn = SRANLUX();
@@ -92,22 +98,15 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
         if (m_print_listing) Iprint2n(mcout, nt, et);
         // Sample the position of the collision.
         const double arange = SRANLUX() * range;
-        point pt = curpt + dir * arange;
-        point ptloc = pt;
-        m_prevpos.tid.up_absref(&ptloc);
+        point pt = m_prevpos.pt + dir * arange;
         if (m_loss_only) continue;
         if (m_print_listing) mcout << "generating new cluster\n";
         if (m_store_clusters) {
-          m_clusterBank.emplace_back(
-              HeedCluster(et, 0, pt, ptloc, m_prevpos.tid, na, ns));
+          m_clusterBank.emplace_back(HeedCluster(et, pt, na, ns));
         }
         // Generate a virtual photon.
-        const double Ep0 = m_mass * c_squared + m_curr_ekin;
-        const double Ep1 = Ep0 - m_etransf.back();
-        const double Mp = m_mass * c_squared;
-        const double Mt = electron_def.mass * c_squared;
         double theta_p, theta_t;
-        theta_two_part(Ep0, Ep1, Mp, Mt, theta_p, theta_t);
+        theta_two_part(ep, ep - et, mp, mt, theta_p, theta_t);
         vec vel;
         vel.random_conic_vec(fabs(theta_t));
         vel.down(&tempbas);  // direction is OK

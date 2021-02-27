@@ -128,12 +128,9 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
         // Sample the position of the collision.
         const double arange = SRANLUX() * range;
         point pt = curpt + dir * arange;
-        point ptloc = pt;
-        m_prevpos.tid.up_absref(&ptloc);
         if (m_loss_only) continue;
         if (m_print_listing) mcout << "generating new cluster\n";
-        m_clusterBank.push_back(
-            HeedCluster(et, 0, pt, ptloc, m_prevpos.tid, na, ns));
+        m_clusterBank.push_back(HeedCluster(et, pt, na, ns));
         // Generate a virtual photon.
         const double Ep0 = m_mass * c_squared + m_curr_ekin;
         const double Ep1 = Ep0 - m_etransf.back();
