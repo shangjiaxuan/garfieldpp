@@ -176,6 +176,8 @@ class gparticle {
   vfloat time() const { return m_currpos.time; }
   /// Get the current direction of the particle.
   const vec& direction() const { return m_currpos.dir; }
+  // Alive?
+  bool alive() const { return m_alive; }
 
   /// Print-out.
   virtual void print(std::ostream& file, int l) const;

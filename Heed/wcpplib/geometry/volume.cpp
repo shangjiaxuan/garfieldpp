@@ -1,3 +1,4 @@
+#include <cstddef>
 #include "wcpplib/geometry/volume.h"
 
 /*
@@ -80,10 +81,10 @@ std::vector<manip_absvol*> absvol::Gamanip_embed() const {
 int absvol::find_embed_vol(const point& fpt, const vec& dir,
                            manip_absvol_treeid* atid) const {
   if (check_point_inside(fpt, dir) == 0) return 0;
-  const unsigned int s = atid->eid.size();
+  const size_t s = atid->eid.size();
   std::vector<manip_absvol*> aman = Gamanip_embed();
-  const int qaman = aman.size();
-  for (int n = 0; n < qaman; ++n) {
+  const size_t qaman = aman.size();
+  for (size_t n = 0; n < qaman; ++n) {
     const int i = aman[n]->m_find_embed_vol(fpt, dir, atid);
     if (i == 1) {
       // TODO!
@@ -174,9 +175,8 @@ int manip_absvol::m_find_embed_vol(const point& fpt, const vec& fdir,
   vec dir = fdir;
   up_absref(&dir);
   // TODO!
-  atid->eid.resize(atid->eid.size() + 1);
-  atid->eid.back() = (manip_absvol*)this;
-  unsigned int s = atid->eid.size();
+  atid->eid.push_back((manip_absvol*)this);
+  const size_t s = atid->eid.size();
   int iret = avol->find_embed_vol(pt, dir, atid);
   if (iret == 0) {
     if (atid->eid.size() < s) {
@@ -185,13 +185,12 @@ int manip_absvol::m_find_embed_vol(const point& fpt, const vec& fdir,
     }
     atid->eid.pop_back();
     return 0;
-  } else {
-    if (atid->eid.size() < s) {
-      mcerr << "manip_absvol::m_find_embed_vol: should never happen\n";
-      exit(1);
-    }
-    return 1;
   }
+  if (atid->eid.size() < s) {
+    mcerr << "manip_absvol::m_find_embed_vol: should never happen\n";
+    exit(1);
+  }
+  return 1;
 }
 
 int manip_absvol::m_range(trajestep& fts, int s_ext, int& sb,

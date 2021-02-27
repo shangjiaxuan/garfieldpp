@@ -41,7 +41,6 @@ gparticle::gparticle(manip_absvol* primvol, const point& pt, const vec& vel,
                      vfloat ftime)
     : m_prevpos(),
       m_nextpos() {
-  // As far as I can now understand, primvol will be at m_origin.tid.eid[0]
   mfunname("gparticle::gparticle(...)");
   primvol->m_find_embed_vol(pt, vel, &m_origin.tid);
   m_origin.pt = pt;

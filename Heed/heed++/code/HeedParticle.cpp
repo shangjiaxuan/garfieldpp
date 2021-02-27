@@ -64,6 +64,8 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
   const double ep = mp + m_curr_ekin;
   // Electron mass.
   const double mt = electron_def.mass * c_squared;
+  // Particle velocity.
+  const double invSpeed = 1. / m_prevpos.speed;
   const long qa = matter->qatom();
   if (m_print_listing) Iprintn(mcout, qa);
   for (long na = 0; na < qa; ++na) {
@@ -111,10 +113,14 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
         vel.random_conic_vec(fabs(theta_t));
         vel.down(&tempbas);  // direction is OK
         vel *= c_light;
-        const double t = m_prevpos.time + arange / m_prevpos.speed;
+        const double t = m_prevpos.time + arange * invSpeed;
         if (m_print_listing) mcout << "generating new virtual photon\n";
         HeedPhoton* hp = new HeedPhoton(m_currpos.tid.eid[0], pt, vel, t,
                                         m_particle_number, et, m_fieldMap);
+        if (!hp->alive()) {
+          delete hp;
+          continue;
+        }
         hp->m_photon_absorbed = true;
         hp->m_delta_generated = false;
         hp->m_na_absorbing = na;
