@@ -234,10 +234,7 @@ void HeedDeltaElectron::physics_after_new_speed(
   if (m_print_listing) Iprintnf(mcout, m_q_low_path_length);
 #ifdef RANDOM_POIS
   if (m_q_low_path_length > 0.0) {
-    int ierror = 0;
-    long random_q_low_path_length = pois(m_q_low_path_length, ierror);
-    check_econd11a(ierror, == 1,
-                   " q_low_path_length=" << m_q_low_path_length << '\n', mcerr);
+    long random_q_low_path_length = pois(m_q_low_path_length);
     m_q_low_path_length = long(random_q_low_path_length);
     if (m_print_listing) {
       mcout << "After pois:\n";

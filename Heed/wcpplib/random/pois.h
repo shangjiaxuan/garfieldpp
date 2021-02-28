@@ -3,7 +3,7 @@
 
 namespace Heed {
 
-long pois(const double amu, int &ierror);
+long pois(const double amu);
 }
 
 #endif

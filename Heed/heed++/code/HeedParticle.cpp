@@ -67,13 +67,7 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
       if (m_print_listing) Iprintn(mcout, ns);
       if (etcs->quan[na][ns] <= 0.0) continue;
       // Sample the number of collisions for this shell.
-      int ierror = 0;
-      const long qt = pois(etcs->quan[na][ns] * step, ierror);
-      check_econd11a(ierror, == 1,
-                     " etcs->quan[na][ns]=" << etcs->quan[na][ns]
-                                            << " currpos.prange/cm="
-                                            << step << '\n',
-                     mcerr);
+      const long qt = pois(etcs->quan[na][ns] * step);
       if (m_print_listing) Iprintn(mcout, qt);
       if (qt <= 0) continue;
       for (long nt = 0; nt < qt; ++nt) {

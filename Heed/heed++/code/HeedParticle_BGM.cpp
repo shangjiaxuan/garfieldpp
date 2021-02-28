@@ -83,6 +83,8 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
     return;
   }
 
+  const double f2 = (bg - b1) * (y2 - y1);
+  const double f1 = 1. - f2;
   const long qa = matter->qatom();
   if (m_print_listing) Iprintn(mcout, qa);
   basis tempbas(m_currpos.dir, "tempbas");
@@ -93,14 +95,9 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
       if (m_print_listing) Iprintn(mcout, ns);
       const double y1 = etcs->etcs_bgm[n1].quan[na][ns];
       const double y2 = etcs->etcs_bgm[n2].quan[na][ns];
-      const double mean_pois = y1 + (bg - b1) * (y2 - y1) / (b2 - b1);
+      const double mean_pois = f1 * y1 + f2 * y2;
       if (mean_pois <= 0.) continue;
-      int ierror;
-      long qt = pois(mean_pois * step, ierror);
-      check_econd11a(ierror, == 1, " mean_pois=" << mean_pois
-                                                 << " currpos.prange/cm="
-                                                 << step << '\n',
-                     mcerr);
+      const long qt = pois(mean_pois * step);
       if (m_print_listing) Iprintn(mcout, qt);
       if (qt <= 0) continue;
       for (long nt = 0; nt < qt; nt++) {
@@ -112,7 +109,7 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
         const double r2 = t_hisran_step_ar<
             double, std::vector<double>, PointCoorMesh<double, const double*> >(
             pcm_e, etcs->etcs_bgm[n2].fadda[na][ns], rn);
-        const double r = r1 + (bg - b1) * (r2 - r1) / (b2 - b1);
+        const double r = f1 * r1 + f2 * r2;
         if (m_print_listing) {
           Iprintn(mcout, rn);
           Iprint3n(mcout, r1, r2, r);
