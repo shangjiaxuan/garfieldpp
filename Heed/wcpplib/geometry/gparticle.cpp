@@ -139,7 +139,7 @@ stvpoint gparticle::calc_step_to_bord() {
   // Here the range is calculated:
   int sb;
   manip_absvol* faeid = nullptr;
-  m_currpos.tid.G_lavol()->range(ts, 1, sb, faeid);
+  m_currpos.volume()->range(ts, 1, sb, faeid);
   // 1 means inside the volume and makes
   // the program checking embraced volumes
   if (ts.s_prec == 0) {
@@ -174,7 +174,7 @@ stvpoint gparticle::switch_new_vol() {
       // Remains in the same old volume, may be numerical error
       // Will probably repeat attempt to switch at the same steps until ok.
       s_e = 0;
-      double curprec = nextp.tid.G_lavol()->prec;
+      double curprec = nextp.volume()->prec;
       if (m_currpos.prange <= curprec) {
         // very bad case, to repeat the trial.
         vec additional_dist = nextp.dir * curprec;

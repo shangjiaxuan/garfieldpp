@@ -45,7 +45,7 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
   const double range = (m_currpos.pt - m_prevpos.pt).length();
   if (m_print_listing) Iprint3n(mcout, m_prevpos.pt, dir, range);
   // Get local volume.
-  const absvol* av = m_currpos.tid.G_lavol();
+  const absvol* av = m_currpos.volume();
   auto etcs = dynamic_cast<const EnTransfCS_BGM*>(av);
   if (!etcs) return;
   HeedMatterDef* hmd = etcs->hmd;
@@ -83,11 +83,14 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
     return;
   }
 
-  const double f2 = (bg - b1) * (y2 - y1);
+  const double f2 = (bg - b1) * (b2 - b1);
   const double f1 = 1. - f2;
   const long qa = matter->qatom();
   if (m_print_listing) Iprintn(mcout, qa);
   basis tempbas(m_currpos.dir, "tempbas");
+  // Shorthand.
+  const auto sampleTransfer = t_hisran_step_ar<double, std::vector<double>,
+                                               PointCoorMesh<double, const double*> >;
   for (long na = 0; na < qa; ++na) {
     if (m_print_listing) Iprintn(mcout, na);
     long qs = hmd->apacs[na]->get_qshell();
@@ -102,13 +105,9 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
       if (qt <= 0) continue;
       for (long nt = 0; nt < qt; nt++) {
         // Sample the energy transfer in this collision.
-        double rn = SRANLUX();
-        const double r1 = t_hisran_step_ar<
-            double, std::vector<double>, PointCoorMesh<double, const double*> >(
-            pcm_e, etcs->etcs_bgm[n1].fadda[na][ns], rn);
-        const double r2 = t_hisran_step_ar<
-            double, std::vector<double>, PointCoorMesh<double, const double*> >(
-            pcm_e, etcs->etcs_bgm[n2].fadda[na][ns], rn);
+        const double rn = SRANLUX();
+        const double r1 = sampleTransfer(pcm_e, etcs->etcs_bgm[n1].fadda[na][ns], rn);
+        const double r2 = sampleTransfer(pcm_e, etcs->etcs_bgm[n2].fadda[na][ns], rn);
         const double r = f1 * r1 + f2 * r2;
         if (m_print_listing) {
           Iprintn(mcout, rn);

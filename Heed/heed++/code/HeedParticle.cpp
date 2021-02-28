@@ -42,7 +42,7 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
   const double range = (m_currpos.pt - m_prevpos.pt).length();
   if (m_print_listing) Iprint3n(mcout, m_prevpos.pt, dir, range);
   // Get local volume.
-  const absvol* av = m_currpos.tid.G_lavol();
+  const absvol* av = m_currpos.volume();
   auto etcs = dynamic_cast<const EnTransfCS*>(av);
   if (!etcs) return;
   HeedMatterDef* hmd = etcs->hmd;
@@ -58,6 +58,9 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
   const double mt = electron_def.mass * c_squared;
   // Particle velocity.
   const double invSpeed = 1. / m_prevpos.speed;
+  // Shorthand.
+  const auto sampleTransfer = t_hisran_step_ar<double, std::vector<double>,
+                                               PointCoorMesh<double, const double*> >;
   const long qa = matter->qatom();
   if (m_print_listing) Iprintn(mcout, qa);
   for (long na = 0; na < qa; ++na) {
@@ -72,12 +75,7 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
       if (qt <= 0) continue;
       for (long nt = 0; nt < qt; ++nt) {
         // Sample the energy transfer in this collision.
-        const double rn = SRANLUX();
-        if (m_print_listing) Iprint3n(mcout, rn, etcs, etcs->fadda[na][ns][1]);
-        const double r = t_hisran_step_ar<
-            double, std::vector<double>, PointCoorMesh<double, const double*> >(
-            pcm, etcs->fadda[na][ns], rn);
-
+        const double r = sampleTransfer(pcm, etcs->fadda[na][ns], SRANLUX());
         // Convert to internal units.
         const double et = r * MeV;
         m_edep += et;

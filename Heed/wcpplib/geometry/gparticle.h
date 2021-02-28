@@ -134,6 +134,7 @@ class stvpoint {
   /// Copy constructor.
   stvpoint(const stvpoint& fp) = default;
   void print(std::ostream& file, int l) const;
+  absvol* volume() { return tid.G_lavol(); }
 };
 
 /// "Geometric particle" (particle that does not interact with materials).
@@ -196,7 +197,7 @@ class gparticle {
   virtual void step(std::vector<gparticle*>& secondaries);
 
   /// Move from one volume to another.
-  virtual void change_vol() { m_currpos.tid.G_lavol()->income(this); }
+  virtual void change_vol() { m_currpos.volume()->income(this); }
 
   /** Set curvature. Can also change the direction at the current position.
     * \param curved 
