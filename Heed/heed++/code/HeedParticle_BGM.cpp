@@ -33,7 +33,6 @@ HeedParticle_BGM::HeedParticle_BGM(manip_absvol* primvol, const point& pt,
   m_etransf.reserve(100);
   m_natom.reserve(100);
   m_nshell.reserve(100);
-  m_clusterBank.reserve(100);
 }
 
 void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
@@ -45,19 +44,30 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
   m_etransf.clear();
   m_natom.clear();
   m_nshell.clear();
+  // Get the step.
   if (m_currpos.prange <= 0.0) return;
-  // Get least address of volume
+  const double step = m_currpos.prange / cm;
+  const vec dir = unit_vec(m_currpos.pt - m_prevpos.pt);
+  // This approximation ignores curvature
+  const double range = (m_currpos.pt - m_prevpos.pt).length();
+  if (m_print_listing) Iprint3n(mcout, m_prevpos.pt, dir, range);
+  // Get local volume.
   const absvol* av = m_currpos.tid.G_lavol();
-  const EnTransfCS_BGM* etcs = dynamic_cast<const EnTransfCS_BGM*>(av);
-  // Check if dynamic cast was successful.
+  auto etcs = dynamic_cast<const EnTransfCS_BGM*>(av);
   if (!etcs) return;
   HeedMatterDef* hmd = etcs->hmd;
   MatterDef* matter = hmd->matter;
   EnergyMesh* emesh = hmd->energy_mesh;
   const double* aetemp = hmd->energy_mesh->get_ae();
   PointCoorMesh<double, const double*> pcm_e(emesh->get_q() + 1, &(aetemp));
-
+  // Particle mass, energy and momentum.
+  const double mp = m_mass * c_squared;
+  const double ep = mp + m_curr_ekin;
   const double bg = sqrt(m_curr_gamma_1 * (m_curr_gamma_1 + 2.0));
+  // Electron mass.
+  const double mt = electron_def.mass * c_squared;
+  // Particle velocity.
+  const double invSpeed = 1. / m_prevpos.speed;
   PointCoorMesh<double, std::vector<double> > pcm(etcs->mesh->q,
                                                   &(etcs->mesh->x));
   long n1, n2;
@@ -93,18 +103,13 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
       const double mean_pois = y1 + (bg - b1) * (y2 - y1) / (b2 - b1);
       if (mean_pois <= 0.) continue;
       int ierror;
-      long qt = pois(mean_pois * m_currpos.prange / cm, ierror);
+      long qt = pois(mean_pois * step, ierror);
       check_econd11a(ierror, == 1, " mean_pois=" << mean_pois
                                                  << " currpos.prange/cm="
-                                                 << m_currpos.prange / cm << '\n',
+                                                 << step << '\n',
                      mcerr);
       if (m_print_listing) Iprintn(mcout, qt);
       if (qt <= 0) continue;
-      point curpt = m_prevpos.pt;
-      vec dir = unit_vec(m_currpos.pt - m_prevpos.pt);
-      // This approximation ignores curvature
-      const double range = (m_currpos.pt - m_prevpos.pt).length();
-      if (m_print_listing) Iprint3n(mcout, curpt, dir, range);
       for (long nt = 0; nt < qt; nt++) {
         // Sample the energy transfer in this collision.
         double rn = SRANLUX();
@@ -127,25 +132,25 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
         if (m_print_listing) Iprint2n(mcout, nt, et);
         // Sample the position of the collision.
         const double arange = SRANLUX() * range;
-        point pt = curpt + dir * arange;
+        point pt = m_prevpos.pt + dir * arange;
         if (m_loss_only) continue;
         if (m_print_listing) mcout << "generating new cluster\n";
         m_clusterBank.push_back(HeedCluster(et, pt, na, ns));
         // Generate a virtual photon.
-        const double Ep0 = m_mass * c_squared + m_curr_ekin;
-        const double Ep1 = Ep0 - m_etransf.back();
-        const double Mp = m_mass * c_squared;
-        const double Mt = electron_def.mass * c_squared;
         double theta_p, theta_t;
-        theta_two_part(Ep0, Ep1, Mp, Mt, theta_p, theta_t);
+        theta_two_part(ep, ep - et, mp, mt, theta_p, theta_t);
         vec vel;
         vel.random_conic_vec(fabs(theta_t));
         vel.down(&tempbas);  // direction is OK
         vel *= c_light;
+        const double t = m_prevpos.time + arange * invSpeed;
         if (m_print_listing) mcout << "generating new virtual photon\n";
-        HeedPhoton* hp =
-            new HeedPhoton(m_currpos.tid.eid[0], pt, vel, m_currpos.time,
-                           m_particle_number, et, m_fieldMap);
+        HeedPhoton* hp = new HeedPhoton(m_currpos.tid.eid[0], pt, vel, t,
+                                        m_particle_number, et, m_fieldMap);
+        if (!hp->alive()) {
+          delete hp;
+          continue;
+        }
         hp->m_photon_absorbed = true;
         hp->m_delta_generated = false;
         hp->m_na_absorbing = na;
