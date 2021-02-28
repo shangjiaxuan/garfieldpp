@@ -1,5 +1,6 @@
 #include <array>
 #include "wcpplib/geometry/box.h"
+
 /*
 Copyright (c) 2000 Igor B. Smirnov
 
@@ -107,7 +108,7 @@ void box::init_planes() {
 }
 
 int box::check_point_inside(const point& fpt, const vec& dir) const {
-  mfunname("virtual int check_point_inside(const point& fpt, const vec& dir)");
+  mfunname("int check_point_inside(const point& fpt, const vec& dir)");
 #ifdef TRACE_find_embed_vol
   mcout << "box::check_point_inside: \n";
   print(mcout, 1);
@@ -119,109 +120,64 @@ int box::check_point_inside(const point& fpt, const vec& dir) const {
       return 1;
     }
     return 0;
-  } else {
-    if (fabs(fpt.v.x) <= m_dxh - prec && fabs(fpt.v.y) <= m_dyh - prec &&
-        fabs(fpt.v.z) <= m_dzh - prec) {
+  }
+  if (fabs(fpt.v.x) <= m_dxh - prec && fabs(fpt.v.y) <= m_dyh - prec &&
+      fabs(fpt.v.z) <= m_dzh - prec) {
 #ifdef TRACE_find_embed_vol
-      mcout << "cond 1, returning 1\n";
-#endif
-      return 1;
-    }
-    if (fabs(fpt.v.x) > m_dxh + prec || fabs(fpt.v.y) > m_dyh + prec ||
-        fabs(fpt.v.z) > m_dzh + prec) {
-#ifdef TRACE_find_embed_vol
-      if (fabs(fpt.v.x) > m_dxh + prec) mcout << "cond 2.1 satisfied\n";
-      if (fabs(fpt.v.y) > m_dyh + prec) mcout << "cond 2.2 satisfied\n";
-      if (fabs(fpt.v.z) > m_dzh + prec) mcout << "cond 2.3 satisfied\n";
-      mcout << "cond 2, returning 0\n";
-#endif
-      return 0;
-    }
-// What remains is point belonging to border
-#ifdef IMPROVED_BOUNDARY
-    // Below we detect cases when particle is exiting, leaving the
-    // case when it is entering
-    if (fabs(fpt.v.x) > m_dxh - prec) {
-      if (dir.x == 0.0) return 0;
-      if ((fpt.v.x > 0 && dir.x > 0) || (fpt.v.x < 0 && dir.x < 0)) {
-#ifdef TRACE_find_embed_vol
-        mcout << "cond 3, returning 0\n";
-#endif
-        return 0;
-      }
-    }
-    if (fabs(fpt.v.y) > m_dyh - prec) {
-      if (dir.y == 0.0) return 0;
-      if ((fpt.v.y > 0 && dir.y > 0) || (fpt.v.y < 0 && dir.y < 0)) {
-#ifdef TRACE_find_embed_vol
-        mcout << "cond 4, returning 0\n";
-#endif
-        return 0;
-      }
-    }
-    if (fabs(fpt.v.z) > m_dzh - prec) {
-      if (dir.z == 0.0) return 0;
-      if ((fpt.v.z > 0 && dir.z > 0) || (fpt.v.z < 0 && dir.z < 0)) {
-#ifdef TRACE_find_embed_vol
-        mcout << "cond 5, returning 0\n";
-#endif
-        return 0;
-      }
-    }
-#ifdef TRACE_find_embed_vol
-    mcout << "finish, returning 1\n";
+    mcout << "cond 1, returning 1\n";
 #endif
     return 1;
-
-#else
-    // for IMPROVED_BOUNDARY
-    // In the old version, which is below,
-    // if the track is parallel to a boundary, it was interpreted as
-    // signature of being inside volume.
-    // The general principal, saying that
-    // if particle is located at the boundary and headed
-    // outside the volume,
-    // it is considered in the volume to which it is headed,
-    // cannot help to choose between two versions.
-    // Of course, the box is convex and the particle flying along the border
-    // enters the external space sooner or later and it can be regarded as
-    // already outside. But the same can be said about the particle,
-    // which is completely indise the volume.
-    // So this principle does not work here.
-    // The other principle should be applied.
-    // If we allow the absolutely thing volumes (control surfaces)
-    // we should use the algorithm, which, in particular stops the particle
-    // crossing exactly the corner of volume without entering its inside.
-    // But this does not allow to choose. So now the old (this) variant
-    // is used, untill other arguments appear.
-
-    if (fabs(fpt.v.x) > m_dxh - prec &&
-        ((fpt.v.x > 0 && dir.x > 0) || (fpt.v.x < 0 && dir.x < 0))) {
+  }
+  if (fabs(fpt.v.x) > m_dxh + prec || fabs(fpt.v.y) > m_dyh + prec ||
+      fabs(fpt.v.z) > m_dzh + prec) {
+#ifdef TRACE_find_embed_vol
+    if (fabs(fpt.v.x) > m_dxh + prec) mcout << "cond 2.1 satisfied\n";
+    if (fabs(fpt.v.y) > m_dyh + prec) mcout << "cond 2.2 satisfied\n";
+    if (fabs(fpt.v.z) > m_dzh + prec) mcout << "cond 2.3 satisfied\n";
+    mcout << "cond 2, returning 0\n";
+#endif
+    return 0;
+  }
+  // What remains is point belonging to border.
+  // Below we detect cases when particle is exiting, leaving the
+  // case when it is entering
+  if (fabs(fpt.v.x) > m_dxh - prec) {
+#ifdef IMPROVED_BOUNDARY
+    if (dir.x == 0.0) return 0;
+#endif
+    if ((fpt.v.x > 0 && dir.x > 0) || (fpt.v.x < 0 && dir.x < 0)) {
 #ifdef TRACE_find_embed_vol
       mcout << "cond 3, returning 0\n";
 #endif
-      return 0;  // exiting
+      return 0;
     }
-    if (fabs(fpt.v.y) > m_dyh - prec &&
-        ((fpt.v.y > 0 && dir.y > 0) || (fpt.v.y < 0 && dir.y < 0))) {
+  }
+  if (fabs(fpt.v.y) > m_dyh - prec) {
+#ifdef IMPROVED_BOUNDARY
+    if (dir.y == 0.0) return 0;
+#endif
+    if ((fpt.v.y > 0 && dir.y > 0) || (fpt.v.y < 0 && dir.y < 0)) {
 #ifdef TRACE_find_embed_vol
       mcout << "cond 4, returning 0\n";
 #endif
       return 0;
     }
-    if (fabs(fpt.v.z) > m_dzh - prec &&
-        ((fpt.v.z > 0 && dir.z > 0) || (fpt.v.z < 0 && dir.z < 0))) {
+  }
+  if (fabs(fpt.v.z) > m_dzh - prec) {
+#ifdef IMPROVED_BOUNDARY
+    if (dir.z == 0.0) return 0;
+#endif
+    if ((fpt.v.z > 0 && dir.z > 0) || (fpt.v.z < 0 && dir.z < 0)) {
 #ifdef TRACE_find_embed_vol
       mcout << "cond 5, returning 0\n";
 #endif
       return 0;
     }
-#ifdef TRACE_find_embed_vol
-    mcout << "finish, returning 1\n";
-#endif
-    return 1;
-#endif
   }
+#ifdef TRACE_find_embed_vol
+  mcout << "finish, returning 1\n";
+#endif
+  return 1;
 }
 
 void box::print(std::ostream& file, int l) const {
