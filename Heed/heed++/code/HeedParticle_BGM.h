@@ -36,12 +36,11 @@ class HeedParticle_BGM : public eparticle {
 
  private:
   bool m_print_listing = false;
+  bool m_loss_only = false;
+
   long m_particle_number = 0;
 
-  bool m_loss_only = false;
-  std::vector<double> m_etransf;
-  std::vector<long> m_natom;
-  std::vector<long> m_nshell;
+  double m_edep = 0.;
 
   std::vector<HeedCluster> m_clusterBank;
 };

@@ -27,13 +27,8 @@ HeedParticle_BGM::HeedParticle_BGM(manip_absvol* primvol, const point& pt,
                                    const bool fprint_listing)
     : eparticle(primvol, pt, vel, ftime, fpardef, fieldmap),
       m_print_listing(fprint_listing),
-      m_particle_number(last_particle_number++),
-      m_loss_only(floss_only) {
-  mfunname("HeedParticle_BGM::HeedParticle_BGM(...)");
-  m_etransf.reserve(100);
-  m_natom.reserve(100);
-  m_nshell.reserve(100);
-}
+      m_loss_only(floss_only),
+      m_particle_number(last_particle_number++) {}
 
 void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
   mfunname("void HeedParticle_BGM::physics()");
@@ -41,9 +36,7 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
     mcout << "HeedParticle_BGM::physics is started\n";
     Iprintn(mcout, m_currpos.prange);
   }
-  m_etransf.clear();
-  m_natom.clear();
-  m_nshell.clear();
+  m_edep = 0.;
   // Get the step.
   if (m_currpos.prange <= 0.0) return;
   const double step = m_currpos.prange / cm;
@@ -126,9 +119,7 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
         }
         // Convert to internal units.
         const double et = r * MeV;
-        m_etransf.push_back(et);
-        m_natom.push_back(na);
-        m_nshell.push_back(ns);
+        m_edep += et;
         if (m_print_listing) Iprint2n(mcout, nt, et);
         // Sample the position of the collision.
         const double arange = SRANLUX() * range;
@@ -160,8 +151,7 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
     }
   }
   if (m_print_listing) {
-    const double sum = std::accumulate(m_etransf.begin(), m_etransf.end(), 0.);
-    Iprint2n(mcout, m_etransf.size(), sum);
+    Iprintn(mcout, m_edep);
     mcout << "Exiting HeedParticle_BGM::physics\n";
   }
 }
@@ -174,17 +164,6 @@ void HeedParticle_BGM::print(std::ostream& file, int l) const {
   file << std::endl;
   if (l == 1) return;
   mparticle::print(file, l - 1);
-  const double sum = std::accumulate(m_etransf.begin(), m_etransf.end(), 0.);
-  Iprintn(mcout, sum);
-  Iprintn(mcout, m_etransf.size());
-  if (l >= 5) {
-    Ifile << "   nt  natom nshell etransf\n";
-    const long qt = m_etransf.size();
-    for (long nt = 0; nt < qt; nt++) {
-      Ifile << std::setw(3) << nt << ' ' << std::setw(3) << m_natom[nt] << ' '
-            << std::setw(3) << m_nshell[nt] << ' ' 
-            << std::setw(12) << m_etransf[nt] << '\n';
-    }
-  }
+  Iprintn(mcout, m_edep);
 }
 }
