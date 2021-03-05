@@ -84,8 +84,10 @@ class ComponentTcad2d : public Component {
                double& ex, double& ey) const;
 
   // Mobilities
-  bool GetMobility(const double x, const double y, const double z, double& emob,
-                   double& hmob);
+  bool GetElectronMobility(const double x, const double y, const double z, 
+                           double& mob);
+  bool GetHoleMobility(const double x, const double y, const double z, 
+                       double& mob);
 
   /// Switch use of the imported velocity map on/off.
   void EnableVelocityMap(const bool on) { m_useVelocityMap = on; }
@@ -138,28 +140,28 @@ class ComponentTcad2d : public Component {
   };
   std::vector<Region> m_regions;
 
-  // Vertices
-  struct Vertex {
-    // Coordinates [cm]
-    double x, y;
-    // Potential [V] and electric field [V / cm]
-    double p, ex, ey;
-    // Mobilities [cm2 / (V ns)]
-    double emob, hmob;
-    // Velocities [cm/ns]
-    double eVx, eVy;
-    double hVx, hVy;
-    // Lifetimes [1/ns]
-    double eTau, hTau;
-    // Trap occupations [dimensionless]
-    std::vector<float> donorOcc;
-    std::vector<float> acceptorOcc;
-  };
-  std::vector<Vertex> m_vertices;
+  // Vertex coordinates [cm].
+  std::vector<std::array<double, 2> > m_vertices;
 
+  // Potential [V] at each vertex.
+  std::vector<double> m_potential;
+  // Electric field [V / cm].
+  std::vector<std::array<double, 2> > m_efield;
   // Weighting field and potential at each vertex.
   std::vector<std::array<double, 2> > m_wf;
   std::vector<double> m_wp;
+  // Velocities [cm / ns]
+  std::vector<std::array<double, 2> > m_eVelocity; 
+  std::vector<std::array<double, 2> > m_hVelocity;
+  // Mobilities [cm2 / (V ns)]
+  std::vector<double> m_eMobility;
+  std::vector<double> m_hMobility; 
+  // Trap occupations [dimensionless]
+  std::vector<std::vector<float> > m_donorOcc;
+  std::vector<std::vector<float> > m_acceptorOcc;
+  // Lifetimes [1/ns]
+  std::vector<double> m_eLifetime;
+  std::vector<double> m_hLifetime;
 
   // Elements
   struct Element {
@@ -192,16 +194,6 @@ class ComponentTcad2d : public Component {
   std::vector<Defect> m_donors;
   std::vector<Defect> m_acceptors;
 
-  // Available data.
-  bool m_hasPotential = false;
-  bool m_hasField = false;
-  bool m_hasElectronMobility = false;
-  bool m_hasHoleMobility = false;
-  bool m_hasElectronVelocity = false;
-  bool m_hasHoleVelocity = false;
-  bool m_hasElectronLifetime = false;
-  bool m_hasHoleLifetime = false;
-
   // Use velocity and trapping maps or not.
   bool m_useVelocityMap = false;
   bool m_useAttachmentMap = false;
@@ -215,8 +207,8 @@ class ComponentTcad2d : public Component {
 
   // Bounding box
   bool m_hasRangeZ = false;
-  double m_xMinBB = 0., m_yMinBB = 0., m_zMinBB = 0.;
-  double m_xMaxBB = 0., m_yMaxBB = 0., m_zMaxBB = 0.;
+  std::array<double, 3> m_bbMin = {{0., 0., 0.}};
+  std::array<double, 3> m_bbMax = {{0., 0., 0.}};
 
   // Tetrahedral tree.
   std::unique_ptr<QuadTree> m_tree;
@@ -230,16 +222,22 @@ class ComponentTcad2d : public Component {
                      std::array<double, nMaxVertices>& w) const;
   // Check whether a point is inside a given element and calculate the
   // shape functions if it is.
-  bool CheckElement(const double x, const double y, const Element& element,
-                    std::array<double, nMaxVertices>& w) const;
-  bool CheckRectangle(const double x, const double y, const Element& element,
-                      std::array<double, nMaxVertices>& w) const;
-  bool CheckTriangle(const double x, const double y, const Element& element,
-                     std::array<double, nMaxVertices>& w) const;
-  bool CheckLine(const double x, const double y, const Element& element,
+  bool InElement(const double x, const double y, const Element& element,
                  std::array<double, nMaxVertices>& w) const;
-  bool CheckPoint(const double x, const double y, const Element& element,
+  bool InRectangle(const double x, const double y, const Element& element,
+                   std::array<double, nMaxVertices>& w) const;
+  bool InTriangle(const double x, const double y, const Element& element,
                   std::array<double, nMaxVertices>& w) const;
+  bool OnLine(const double x, const double y, const Element& element,
+              std::array<double, nMaxVertices>& w) const;
+  bool AtPoint(const double x, const double y, const Element& element,
+               std::array<double, nMaxVertices>& w) const;
+
+  bool Interpolate(const double x, const double y, const double z,
+                   const std::vector<double>& field, double& f);
+  bool Interpolate(const double x, const double y, const double z,
+                   const std::vector<std::array<double, 2> >& field, 
+                   double& fx, double& fy);
 
   bool LoadGrid(const std::string& gridfilename);
   bool LoadData(const std::string& datafilename);
@@ -255,8 +253,8 @@ class ComponentTcad2d : public Component {
   bool InsideBoundingBox(const double x, const double y, 
                          const double z) const {
     bool inside = true;
-    if (x < m_xMinBB || x > m_xMaxBB || y < m_yMinBB || y > m_yMaxBB ||
-        (m_hasRangeZ && (z < m_zMinBB || z > m_zMaxBB))) {
+    if (x < m_bbMin[0] || x > m_bbMax[0] || y < m_bbMin[1] || y > m_bbMax[1] ||
+        (m_hasRangeZ && (z < m_bbMin[2] || z > m_bbMax[2]))) {
       inside = false;
     }
     return inside;

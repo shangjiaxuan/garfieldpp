@@ -143,61 +143,27 @@ bool ComponentTcad2d::HoleAttachment(const double x, const double y,
   return true;
 }
 
-void ComponentTcad2d::WeightingField(const double xin, const double yin,
-                                     const double zin, double& wx, double& wy,
+void ComponentTcad2d::WeightingField(const double x, const double y,
+                                     const double z, double& wx, double& wy,
                                      double& wz, const std::string& /*label*/) {
   wx = wy = wz = 0.;
   if (m_wf.empty()) {
     std::cerr << m_className << "::WeightingField: Not available.\n";
     return;
   }
-  // In case of periodicity, reduce to the cell volume.
-  double x = xin, y = yin, z = zin;
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
-  // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y, z)) return;
-
-  std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
-  if (i >= m_elements.size()) return;
-
-  const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
-  for (size_t j = 0; j < nVertices; ++j) {
-    const auto& f = m_wf[element.vertex[j]];
-    wx += w[j] * f[0];
-    wy += w[j] * f[1];
-  }
-  if (xmirr) wx = -wx;
-  if (ymirr) wy = -wy;
+  Interpolate(x, y, z, m_wf, wx, wy);
 }
 
-double ComponentTcad2d::WeightingPotential(const double xin, const double yin,
-                                           const double zin, 
+double ComponentTcad2d::WeightingPotential(const double x, const double y,
+                                           const double z, 
                                            const std::string& /*label*/) {
 
   if (m_wp.empty()) {
     std::cerr << m_className << "::WeightingPotential: Not available.\n";
     return 0.;
   }
-  // In case of periodicity, reduce to the cell volume.
-  double x = xin, y = yin, z = zin;
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
-  // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y, z)) return 0.;
-
-  std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
-  if (i >= m_elements.size()) return 0.;
-
   double v = 0.;
-  const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
-  for (size_t j = 0; j < nVertices; ++j) {
-    v += w[j] * m_wp[element.vertex[j]];
-  }
+  Interpolate(x, y, z, m_wp, v);
   return v;
 }
 
@@ -240,10 +206,10 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
   const Element& element = m_elements[i];
   const size_t nVertices = element.type + 1;
   for (size_t j = 0; j < nVertices; ++j) {
-    const Vertex& vj = m_vertices[element.vertex[j]];
-    ex += w[j] * vj.ex;
-    ey += w[j] * vj.ey;
-    p += w[j] * vj.p;
+    const auto index = element.vertex[j];
+    ex += w[j] * m_efield[index][0];
+    ey += w[j] * m_efield[index][1];
+    p += w[j] * m_potential[index];
   }
   if (xmirr) ex = -ex;
   if (ymirr) ey = -ey;
@@ -252,19 +218,13 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
   m_lastElement = i;
 }
 
-bool ComponentTcad2d::ElectronVelocity(const double xin, const double yin,
-                                       const double zin, double& vx, double& vy,
-                                       double& vz) {
-  // Initialise.
-  vx = vy = vz = 0.;
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    std::cerr << m_className << "::ElectronVelocity:\n"
-              << "    Field map is not available for interpolation.\n";
-    return false;
-  }
+bool ComponentTcad2d::Interpolate(const double xin, const double yin,
+    const double z,
+    const std::vector<std::array<double, 2> >& field,
+    double& fx, double& fy) {
 
-  double x = xin, y = yin, z = zin;
+  if (field.empty()) return false;
+  double x = xin, y = yin;
   // In case of periodicity, reduce to the cell volume.
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
@@ -278,18 +238,57 @@ bool ComponentTcad2d::ElectronVelocity(const double xin, const double yin,
   const Element& element = m_elements[i];
   const size_t nVertices = element.type + 1;
   for (size_t j = 0; j < nVertices; ++j) {
-    const Vertex& vj = m_vertices[element.vertex[j]];
-    vx += w[j] * vj.eVx;
-    vy += w[j] * vj.eVy;
+    fx += w[j] * field[element.vertex[j]][0];
+    fy += w[j] * field[element.vertex[j]][1];
   }
-  if (xmirr) vx = -vx;
-  if (ymirr) vy = -vy;
+  if (xmirr) fx = -fx;
+  if (ymirr) fy = -fy;
   m_lastElement = i;
   return true;
 }
 
-bool ComponentTcad2d::HoleVelocity(const double xin, const double yin,
-                                   const double zin, double& vx, double& vy,
+bool ComponentTcad2d::Interpolate(const double xin, const double yin,
+    const double z,
+    const std::vector<double>& field, double& f) {
+
+  if (field.empty()) return false;
+  double x = xin, y = yin;
+  // In case of periodicity, reduce to the cell volume.
+  bool xmirr = false, ymirr = false;
+  MapCoordinates(x, y, xmirr, ymirr);
+  if (!InsideBoundingBox(x, y, z)) return false;
+
+  std::array<double, nMaxVertices> w;
+  const auto i = FindElement(x, y, w);
+  // Stop if the point is outside the mesh.
+  if (i >= m_elements.size()) return false;
+
+  const Element& element = m_elements[i];
+  const size_t nVertices = element.type + 1;
+  for (size_t j = 0; j < nVertices; ++j) {
+    f += w[j] * field[element.vertex[j]];
+  }
+  m_lastElement = i;
+  return true;
+}
+
+bool ComponentTcad2d::ElectronVelocity(const double x, const double y,
+                                       const double z, double& vx, double& vy,
+                                       double& vz) {
+  // Initialise.
+  vx = vy = vz = 0.;
+  // Make sure the field map has been loaded.
+  if (!m_ready) {
+    std::cerr << m_className << "::ElectronVelocity:\n"
+              << "    Field map is not available for interpolation.\n";
+    return false;
+  }
+
+  return Interpolate(x, y, z, m_eVelocity, vx, vy);
+}
+
+bool ComponentTcad2d::HoleVelocity(const double x, const double y,
+                                   const double z, double& vx, double& vy,
                                    double& vz) {
   // Initialise.
   vx = vy = vz = 0.;
@@ -301,28 +300,7 @@ bool ComponentTcad2d::HoleVelocity(const double xin, const double yin,
     return false;
   }
 
-  double x = xin, y = yin, z = zin;
-  // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
-  if (!InsideBoundingBox(x, y, z)) return false;
-
-  std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
-  // Stop if the point is outside the mesh.
-  if (i >= m_elements.size()) return false;
-
-  const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
-  for (size_t j = 0; j < nVertices; ++j) {
-    const Vertex& vj = m_vertices[element.vertex[j]];
-    vx += w[j] * vj.hVx;
-    vy += w[j] * vj.hVy;
-  }
-  if (xmirr) vx = -vx;
-  if (ymirr) vy = -vy;
-  m_lastElement = i;
-  return true;
+  return Interpolate(x, y, z, m_hVelocity, vx, vy);
 }
 
 Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
@@ -353,8 +331,8 @@ Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
   return m_regions[element.region].medium;
 }
 
-bool ComponentTcad2d::GetElectronLifetime(const double xin, const double yin,
-                                          const double zin, double& tau) {
+bool ComponentTcad2d::GetElectronLifetime(const double x, const double y,
+                                          const double z, double& tau) {
   tau = 0.;
   // Make sure the field map has been loaded.
   if (!m_ready) {
@@ -363,31 +341,10 @@ bool ComponentTcad2d::GetElectronLifetime(const double xin, const double yin,
     return false;
   }
 
-  double x = xin, y = yin, z = zin;
-  // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
-  // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y, z)) return false;
-
-  std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
-  if (i >= m_elements.size()) {
-    // Point is outside the mesh.
-    return false;
-  }
-
-  const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
-  for (size_t j = 0; j < nVertices; ++j) {
-    const Vertex& vj = m_vertices[element.vertex[j]];
-    tau += w[j] * vj.eTau;
-  }
-  m_lastElement = i;
-  return true;
+  return Interpolate(x, y, z, m_eLifetime, tau);
 }
-bool ComponentTcad2d::GetHoleLifetime(const double xin, const double yin,
-                                      const double zin, double& tau) {
+bool ComponentTcad2d::GetHoleLifetime(const double x, const double y,
+                                      const double z, double& tau) {
   tau = 0.;
   // Make sure the field map has been loaded.
   if (!m_ready) {
@@ -396,65 +353,31 @@ bool ComponentTcad2d::GetHoleLifetime(const double xin, const double yin,
     return false;
   }
 
-  double x = xin, y = yin, z = zin;
-  // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
-  // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y, z)) return false;
-
-  std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
-  if (i >= m_elements.size()) {
-    // Point is outside the mesh.
-    return false;
-  }
-
-  const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
-  for (size_t j = 0; j < nVertices; ++j) {
-    const Vertex& vj = m_vertices[element.vertex[j]];
-    tau += w[j] * vj.hTau;
-  }
-  m_lastElement = i;
-  return true;
+  return Interpolate(x, y, z, m_hLifetime, tau);
 }
 
-bool ComponentTcad2d::GetMobility(const double xin, const double yin,
-                                  const double zin, double& emob,
-                                  double& hmob) {
-  emob = hmob = 0.;
-
+bool ComponentTcad2d::GetElectronMobility(const double x, const double y,
+                                          const double z, double& mob) {
+  mob = 0.;
   // Make sure the field map has been loaded.
   if (!m_ready) {
-    std::cerr << m_className << "::GetMobility:\n"
+    std::cerr << m_className << "::ElectronMobility:\n"
               << "    Field map is not available for interpolation.\n";
     return false;
   }
+  return Interpolate(x, y, z, m_eMobility, mob);
+}
 
-  double x = xin, y = yin, z = zin;
-  // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
-  // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y, z)) return false;
-
-  std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
-  if (i >= m_elements.size()) {
-    // Point is outside the mesh.
+bool ComponentTcad2d::GetHoleMobility(const double x, const double y,
+                                      const double z, double& mob) {
+  mob = 0.;
+  // Make sure the field map has been loaded.
+  if (!m_ready) {
+    std::cerr << m_className << "::HoleMobility:\n"
+              << "    Field map is not available for interpolation.\n";
     return false;
   }
-
-  const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
-  for (size_t j = 0; j < nVertices; ++j) {
-    const Vertex& vj = m_vertices[element.vertex[j]];
-    emob += w[j] * vj.emob;
-    hmob += w[j] * vj.hmob;
-  }
-  m_lastElement = i;
-  return true;
+  return Interpolate(x, y, z, m_hMobility, mob);
 }
 
 bool ComponentTcad2d::GetDonorOccupation(const double xin, const double yin,
@@ -492,8 +415,7 @@ bool ComponentTcad2d::GetDonorOccupation(const double xin, const double yin,
   const Element& element = m_elements[i];
   const size_t nVertices = element.type + 1;
   for (size_t j = 0; j < nVertices; ++j) {
-    const Vertex& vj = m_vertices[element.vertex[j]];
-    f += w[j] * vj.donorOcc[donorNumber];
+    f += w[j] * m_donorOcc[element.vertex[j]][donorNumber];
   }
   m_lastElement = i;
   return true;
@@ -534,8 +456,7 @@ bool ComponentTcad2d::GetAcceptorOccupation(const double xin, const double yin,
   const Element& element = m_elements[i];
   const size_t nVertices = element.type + 1;
   for (size_t j = 0; j < nVertices; ++j) {
-    const Vertex& vj = m_vertices[element.vertex[j]];
-    f += w[j] * vj.acceptorOcc[acceptorNumber];
+    f += w[j] * m_acceptorOcc[element.vertex[j]][acceptorNumber];
   }
   m_lastElement = i;
   return true;
@@ -544,9 +465,7 @@ bool ComponentTcad2d::GetAcceptorOccupation(const double xin, const double yin,
 bool ComponentTcad2d::Initialise(const std::string& gridfilename,
                                  const std::string& datafilename) {
   m_ready = false;
-
-  m_hasPotential = m_hasField = false;
-  m_hasElectronMobility = m_hasHoleMobility = false;
+  Cleanup();
   m_validTraps = false;
   m_donors.clear();
   m_acceptors.clear();
@@ -567,62 +486,58 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   }
 
   // Find min./max. coordinates and potentials.
-  m_xMaxBB = m_xMinBB = m_vertices[m_elements[0].vertex[0]].x;
-  m_yMaxBB = m_yMinBB = m_vertices[m_elements[0].vertex[0]].y;
-  m_pMax = m_pMin = m_vertices[m_elements[0].vertex[0]].p;
+  m_bbMax[0] = m_bbMin[0] = m_vertices[m_elements[0].vertex[0]][0];
+  m_bbMax[1] = m_bbMin[1] = m_vertices[m_elements[0].vertex[0]][1];
   for (auto& element : m_elements) {
-    const Vertex& v0 = m_vertices[element.vertex[0]];
-    double xmin = v0.x;
-    double xmax = v0.x;
-    double ymin = v0.y;
-    double ymax = v0.y;
-    m_pMin = std::min(m_pMin, v0.p);
-    m_pMax = std::max(m_pMax, v0.p);
+    const auto& v0 = m_vertices[element.vertex[0]];
+    double xmin = v0[0];
+    double xmax = v0[0];
+    double ymin = v0[1];
+    double ymax = v0[1];
     const size_t nVertices = element.type + 1;
     for (size_t j = 0; j < nVertices; ++j) {
-      const Vertex& v = m_vertices[element.vertex[j]];
-      xmin = std::min(xmin, v.x);
-      xmax = std::max(xmax, v.x);
-      ymin = std::min(ymin, v.y);
-      ymax = std::max(ymax, v.y);
-      m_pMin = std::min(m_pMin, v.p);
-      m_pMax = std::max(m_pMax, v.p);
+      const auto& v = m_vertices[element.vertex[j]];
+      xmin = std::min(xmin, v[0]);
+      xmax = std::max(xmax, v[0]);
+      ymin = std::min(ymin, v[1]);
+      ymax = std::max(ymax, v[1]);
     }
     constexpr double tol = 1.e-6;
     element.xmin = xmin - tol;
     element.xmax = xmax + tol;
     element.ymin = ymin - tol;
     element.ymax = ymax + tol;
-    m_xMinBB = std::min(m_xMinBB, xmin);
-    m_xMaxBB = std::max(m_xMaxBB, xmax);
-    m_yMinBB = std::min(m_yMinBB, ymin);
-    m_yMaxBB = std::max(m_yMaxBB, ymax);
+    m_bbMin[0] = std::min(m_bbMin[0], xmin);
+    m_bbMax[0] = std::max(m_bbMax[0], xmax);
+    m_bbMin[1] = std::min(m_bbMin[1], ymin);
+    m_bbMax[1] = std::max(m_bbMax[1], ymax);
   }
-
+  m_pMin = *std::min_element(m_potential.begin(), m_potential.end());
+  m_pMax = *std::max_element(m_potential.begin(), m_potential.end());
   std::cout << m_className << "::Initialise:\n"
             << "    Available data:\n";
-  if (m_hasPotential) {
+  if (!m_potential.empty()) {
     std::cout << "      Electrostatic potential\n";
   }
-  if (m_hasField) {
+  if (!m_efield.empty()) {
     std::cout << "      Electric field\n";
   }
-  if (m_hasElectronMobility) {
+  if (!m_eMobility.empty()) {
     std::cout << "      Electron mobility\n";
   }
-  if (m_hasHoleMobility) {
+  if (!m_hMobility.empty()) {
     std::cout << "      Hole mobility\n";
   }
-  if (m_hasElectronVelocity) {
+  if (!m_eVelocity.empty()) {
     std::cout << "      Electron velocity\n";
   }
-  if (m_hasHoleVelocity) {
+  if (!m_hVelocity.empty()) {
     std::cout << "      Hole velocity\n";
   }
-  if (m_hasElectronLifetime) {
+  if (!m_eLifetime.empty()) {
     std::cout << "      Electron lifetimes\n";
   }
-  if (m_hasHoleLifetime) {
+  if (!m_hLifetime.empty()) {
     std::cout << "      Hole lifetimes\n";
   }
   if (!m_donors.empty()) {
@@ -632,8 +547,8 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
     std::cout << "      " << m_acceptors.size() << " acceptor-type traps\n";
   }
   std::cout << "    Bounding box:\n"
-            << "      " << m_xMinBB << " < x [cm] < " << m_xMaxBB << "\n"
-            << "      " << m_yMinBB << " < y [cm] < " << m_yMaxBB << "\n"
+            << "      " << m_bbMin[0] << " < x [cm] < " << m_bbMax[0] << "\n"
+            << "      " << m_bbMin[1] << " < y [cm] < " << m_bbMax[1] << "\n"
             << "    Voltage range:\n"
             << "      " << m_pMin << " < V < " << m_pMax << "\n";
 
@@ -754,14 +669,13 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   }
 
   // Set up the quad tree.
-  const double hx = 0.5 * (m_xMaxBB - m_xMinBB);
-  const double hy = 0.5 * (m_yMaxBB - m_yMinBB);
-  m_tree.reset(new QuadTree(m_xMinBB + hx, m_yMinBB + hy, hx, hy));
+  const double hx = 0.5 * (m_bbMax[0] - m_bbMin[0]);
+  const double hy = 0.5 * (m_bbMax[1] - m_bbMin[1]);
+  m_tree.reset(new QuadTree(m_bbMin[0] + hx, m_bbMin[1] + hy, hx, hy));
   // Insert the mesh nodes in the tree.
   const auto nVertices = m_vertices.size();
   for (size_t i = 0; i < nVertices; ++i) {
-    const Vertex& vtx = m_vertices[i];
-    m_tree->InsertMeshNode(vtx.x, vtx.y, i);
+    m_tree->InsertMeshNode(m_vertices[i][0], m_vertices[i][1], i);
   }
 
   // Insert the mesh elements in the tree.
@@ -850,21 +764,21 @@ bool ComponentTcad2d::GetBoundingBox(double& xmin, double& ymin, double& zmin,
     xmin = -INFINITY;
     xmax = +INFINITY;
   } else {
-    xmin = m_xMinBB;
-    xmax = m_xMaxBB;
+    xmin = m_bbMin[0];
+    xmax = m_bbMax[0];
   }
 
   if (m_periodic[1] || m_mirrorPeriodic[1]) {
     ymin = -INFINITY;
     ymax = +INFINITY;
   } else {
-    ymin = m_yMinBB;
-    ymax = m_yMaxBB;
+    ymin = m_bbMin[1];
+    ymax = m_bbMax[1];
   }
 
   if (m_hasRangeZ) {
-    zmin = m_zMinBB;
-    zmax = m_zMaxBB;
+    zmin = m_bbMin[2];
+    zmax = m_bbMax[2];
   }
   return true;
 }
@@ -874,8 +788,8 @@ void ComponentTcad2d::SetRangeZ(const double zmin, const double zmax) {
     std::cerr << m_className << "::SetRangeZ: Zero range is not permitted.\n";
     return;
   }
-  m_zMinBB = std::min(zmin, zmax);
-  m_zMaxBB = std::max(zmin, zmax);
+  m_bbMin[2] = std::min(zmin, zmax);
+  m_bbMax[2] = std::max(zmin, zmax);
   m_hasRangeZ = true;
 }
 
@@ -979,29 +893,27 @@ bool ComponentTcad2d::GetElement(const size_t i, double& vol,
   if (element.type == 0) {
     dmin = dmax = vol = 0;
   } else if (element.type == 1) {
-    const Vertex& v0 = m_vertices[element.vertex[0]];
-    const Vertex& v1 = m_vertices[element.vertex[1]];
-    const double dx = v1.x - v0.x;
-    const double dy = v1.y - v0.y;
-    const double d = sqrt(dx * dx + dy * dy);
+    const auto& v0 = m_vertices[element.vertex[0]];
+    const auto& v1 = m_vertices[element.vertex[1]];
+    const double d = std::hypot(v1[0] - v0[0], v1[1] - v0[1]);
     dmin = dmax = vol = d;
   } else if (m_elements[i].type == 2) {
-    const Vertex& v0 = m_vertices[element.vertex[0]];
-    const Vertex& v1 = m_vertices[element.vertex[1]];
-    const Vertex& v2 = m_vertices[element.vertex[2]];
+    const auto& v0 = m_vertices[element.vertex[0]];
+    const auto& v1 = m_vertices[element.vertex[1]];
+    const auto& v2 = m_vertices[element.vertex[2]];
     vol = 0.5 *
-          fabs((v2.x - v0.x) * (v1.y - v0.y) - (v2.y - v0.y) * (v1.x - v0.x));
-    const double a = sqrt(pow(v1.x - v0.x, 2) + pow(v1.y - v0.y, 2));
-    const double b = sqrt(pow(v2.x - v0.x, 2) + pow(v2.y - v0.y, 2));
-    const double c = sqrt(pow(v1.x - v2.x, 2) + pow(v1.y - v2.y, 2));
-    dmin = std::min(std::min(a, b), c);
-    dmax = std::max(std::max(a, b), c);
+          fabs((v2[0] - v0[0]) * (v1[1] - v0[1]) - (v2[1] - v0[1]) * (v1[0] - v0[0]));
+    const double a = std::hypot(v1[0] - v0[0], v1[1] - v0[1]);
+    const double b = std::hypot(v2[0] - v0[0], v2[1] - v0[1]);
+    const double c = std::hypot(v1[0] - v2[0], v1[1] - v2[1]);
+    dmin = std::min({a, b, c});
+    dmax = std::max({a, b, c});
   } else if (m_elements[i].type == 3) {
-    const Vertex& v0 = m_vertices[element.vertex[0]];
-    const Vertex& v1 = m_vertices[element.vertex[1]];
-    const Vertex& v3 = m_vertices[element.vertex[3]];
-    const double a = sqrt(pow(v1.x - v0.x, 2) + pow(v1.y - v0.y, 2));
-    const double b = sqrt(pow(v3.x - v0.x, 2) + pow(v3.y - v0.y, 2));
+    const auto& v0 = m_vertices[element.vertex[0]];
+    const auto& v1 = m_vertices[element.vertex[1]];
+    const auto& v3 = m_vertices[element.vertex[3]];
+    const double a = std::hypot(v1[0] - v0[0], v1[1] - v0[1]);
+    const double b = std::hypot(v3[0] - v0[0], v3[1] - v0[1]);
     vol = a * b;
     dmin = std::min(a, b);
     dmax = sqrt(a * a + b * b);
@@ -1034,11 +946,13 @@ bool ComponentTcad2d::GetNode(const size_t i, double& x, double& y,
     return false;
   }
 
-  x = m_vertices[i].x;
-  y = m_vertices[i].y;
-  v = m_vertices[i].p;
-  ex = m_vertices[i].ex;
-  ey = m_vertices[i].ey;
+  x = m_vertices[i][0];
+  y = m_vertices[i][1];
+  if (!m_potential.empty()) v = m_potential[i];
+  if (!m_efield.empty()) {
+    ex = m_efield[i][0];
+    ey = m_efield[i][1];
+  }
   return true;
 }
 
@@ -1053,15 +967,14 @@ bool ComponentTcad2d::LoadData(const std::string& datafilename) {
 
   const unsigned int nVertices = m_vertices.size();
   std::vector<unsigned int> fillCount(nVertices, 0);
-  for (unsigned int i = 0; i < nVertices; ++i) {
-    m_vertices[i].p = 0.;
-    m_vertices[i].ex = 0.;
-    m_vertices[i].ey = 0.;
-    m_vertices[i].emob = 0.;
-    m_vertices[i].hmob = 0.;
-    m_vertices[i].donorOcc.clear();
-    m_vertices[i].acceptorOcc.clear();
-  }
+
+
+
+  m_hVelocity.assign(nVertices, {0., 0.});
+  m_eMobility.assign(nVertices, 0.);
+  m_hMobility.assign(nVertices, 0.);
+  m_donorOcc.clear();
+  m_acceptorOcc.clear();
   m_donors.clear();
   m_acceptors.clear();
 
@@ -1089,29 +1002,53 @@ bool ComponentTcad2d::LoadData(const std::string& datafilename) {
     data.str(line);
     data >> dataset;
     if (dataset == "ElectrostaticPotential") {
-      if (!ReadDataset(datafile, dataset)) return false;
-      m_hasPotential = true;
+      m_potential.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_potential.clear();
+        return false;
+      }
     } else if (dataset == "ElectricField") {
-      if (!ReadDataset(datafile, dataset)) return false;
-      m_hasField = true;
+      m_efield.assign(nVertices, {0., 0.});
+      if (!ReadDataset(datafile, dataset)) {
+        m_efield.clear();
+        return false;
+      }
     } else if (dataset == "eDriftVelocity") {
-      if (!ReadDataset(datafile, dataset)) return false;
-      m_hasElectronVelocity = true;
+      m_eVelocity.assign(nVertices, {0., 0.});
+      if (!ReadDataset(datafile, dataset)) {
+        m_eVelocity.clear();
+        return false;
+      }
     } else if (dataset == "hDriftVelocity") {
-      if (!ReadDataset(datafile, dataset)) return false;
-      m_hasHoleVelocity = true;
+      m_hVelocity.assign(nVertices, {0., 0.});
+      if (!ReadDataset(datafile, dataset)) {
+        m_hVelocity.clear();
+        return false;
+      }
     } else if (dataset == "eMobility") {
-      if (!ReadDataset(datafile, dataset)) return false;
-      m_hasElectronMobility = true;
+      m_eMobility.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_eMobility.clear();
+        return false;
+      }
     } else if (dataset == "hMobility") {
-      if (!ReadDataset(datafile, dataset)) return false;
-      m_hasHoleMobility = true;
+      m_hMobility.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_hMobility.clear();
+        return false;
+      }
     } else if (dataset == "eLifetime") {
-      if (!ReadDataset(datafile, dataset)) return false;
-      m_hasElectronLifetime = true;
+      m_eLifetime.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_eLifetime.clear();
+        return false;
+      }
     } else if (dataset == "hLifetime") {
-      if (!ReadDataset(datafile, dataset)) return false;
-      m_hasHoleLifetime = true;
+      m_hLifetime.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_hLifetime.clear();
+        return false;
+      }
     } else if (dataset.substr(0, 14) == "TrapOccupation" &&
                dataset.substr(17, 2) == "Do") {
       if (!ReadDataset(datafile, dataset)) return false;
@@ -1273,43 +1210,43 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
     }
     switch (ds) {
       case ElectrostaticPotential:
-        m_vertices[ivertex].p = val1;
+        m_potential[ivertex] = val1;
         break;
       case EField:
-        m_vertices[ivertex].ex = val1;
-        m_vertices[ivertex].ey = val2;
+        m_efield[ivertex][0] = val1;
+        m_efield[ivertex][1] = val2;
         break;
       case eDriftVelocity:
         // Scale from cm/s to cm/ns.
-        m_vertices[ivertex].eVx = val1 * 1.e-9;
-        m_vertices[ivertex].eVy = val2 * 1.e-9;
+        m_eVelocity[ivertex][0] = val1 * 1.e-9;
+        m_eVelocity[ivertex][1] = val2 * 1.e-9;
         break;
       case hDriftVelocity:
         // Scale from cm/s to cm/ns.
-        m_vertices[ivertex].hVx = val1 * 1.e-9;
-        m_vertices[ivertex].hVy = val2 * 1.e-9;
+        m_hVelocity[ivertex][0] = val1 * 1.e-9;
+        m_hVelocity[ivertex][1] = val2 * 1.e-9;
         break;
       case eMobility:
         // Convert from cm2 / (V s) to cm2 / (V ns).
-        m_vertices[ivertex].emob = val1 * 1.e-9;
+        m_eMobility[ivertex] = val1 * 1.e-9;
         break;
       case hMobility:
         // Convert from cm2 / (V s) to cm2 / (V ns).
-        m_vertices[ivertex].hmob = val1 * 1.e-9;
+        m_hMobility[ivertex] = val1 * 1.e-9;
         break;
       case eLifetime:
         // Convert from s to ns.
-        m_vertices[ivertex].eTau = val1 * 1.e9;
+        m_eLifetime[ivertex] = val1 * 1.e9;
         break;
       case hLifetime:
         // Convert from s to ns.
-        m_vertices[ivertex].hTau = val1 * 1.e9;
+        m_hLifetime[ivertex] = val1 * 1.e9;
         break;
       case DonorTrapOccupation:
-        m_vertices[ivertex].donorOcc.push_back(val1);
+        m_donorOcc[ivertex].push_back(val1);
         break;
       case AcceptorTrapOccupation:
-        m_vertices[ivertex].acceptorOcc.push_back(val1);
+        m_acceptorOcc[ivertex].push_back(val1);
         break;
       default:
         std::cerr << m_className << "::ReadDataset:\n"
@@ -1588,10 +1525,10 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     m_vertices.resize(nVertices);
     // Get the coordinates of this vertex.
     for (unsigned int j = 0; j < nVertices; ++j) {
-      gridfile >> m_vertices[j].x >> m_vertices[j].y;
+      gridfile >> m_vertices[j][0] >> m_vertices[j][1];
       // Change units from micron to cm.
-      m_vertices[j].x *= 1.e-4;
-      m_vertices[j].y *= 1.e-4;
+      m_vertices[j][0] *= 1.e-4;
+      m_vertices[j][1] *= 1.e-4;
       ++iLine;
     }
     break;
@@ -1767,10 +1704,10 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
             m_elements[j].vertex[2] = edgeP2[p1];
           }
           // Rearrange vertices such that point 0 is on the left.
-          while (m_vertices[m_elements[j].vertex[0]].x >
-                 m_vertices[m_elements[j].vertex[1]].x ||
-                 m_vertices[m_elements[j].vertex[0]].x >
-                 m_vertices[m_elements[j].vertex[2]].x) {
+          while (m_vertices[m_elements[j].vertex[0]][0] >
+                 m_vertices[m_elements[j].vertex[1]][0] ||
+                 m_vertices[m_elements[j].vertex[0]][0] >
+                 m_vertices[m_elements[j].vertex[2]][0]) {
             const int tmp = m_elements[j].vertex[0];
             m_elements[j].vertex[0] = m_elements[j].vertex[1];
             m_elements[j].vertex[1] = m_elements[j].vertex[2];
@@ -1810,12 +1747,12 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
             m_elements[j].vertex[3] = edgeP2[-p3 - 1];
 
           // Rearrange vertices such that point 0 is on the left.
-          while (m_vertices[m_elements[j].vertex[0]].x >
-                 m_vertices[m_elements[j].vertex[1]].x ||
-                 m_vertices[m_elements[j].vertex[0]].x >
-                 m_vertices[m_elements[j].vertex[2]].x ||
-                 m_vertices[m_elements[j].vertex[0]].x >
-                 m_vertices[m_elements[j].vertex[3]].x) {
+          while (m_vertices[m_elements[j].vertex[0]][0] >
+                 m_vertices[m_elements[j].vertex[1]][0] ||
+                 m_vertices[m_elements[j].vertex[0]][0] >
+                 m_vertices[m_elements[j].vertex[2]][0] ||
+                 m_vertices[m_elements[j].vertex[0]][0] >
+                 m_vertices[m_elements[j].vertex[3]][0]) {
             const int tmp = m_elements[j].vertex[0];
             m_elements[j].vertex[0] = m_elements[j].vertex[1];
             m_elements[j].vertex[1] = m_elements[j].vertex[2];
@@ -1921,9 +1858,19 @@ void ComponentTcad2d::Cleanup() {
   m_elements.clear();
   // Regions
   m_regions.clear();
+  // Potential and electric field.
+  m_potential.clear();
+  m_efield.clear();
   // Weighting fields and potentials
   m_wf.clear();
   m_wp.clear();
+  // Other data.
+  m_eVelocity.clear();
+  m_hVelocity.clear();
+  m_eMobility.clear();
+  m_hMobility.clear();
+  m_eLifetime.clear();
+  m_hLifetime.clear();
 }
 
 size_t ComponentTcad2d::FindElement(const double x, const double y, 
@@ -1935,7 +1882,7 @@ size_t ComponentTcad2d::FindElement(const double x, const double y,
     // Check if the point is still located in the previously found element.
     const Element& last = m_elements[m_lastElement];
     if (x >= last.xmin && x <= last.xmax && y >= last.ymin && y <= last.ymax) {
-      if (CheckElement(x, y, last, w)) return m_lastElement;
+      if (InElement(x, y, last, w)) return m_lastElement;
     }
   }
 
@@ -1949,7 +1896,7 @@ size_t ComponentTcad2d::FindElement(const double x, const double y,
     if (x < element.xmin || x > element.xmax || y < element.ymin ||
         y > element.ymax)
       continue;
-    if (CheckElement(x, y, element, w)) return idx;
+    if (InElement(x, y, element, w)) return idx;
   }
   // Point is outside the mesh.
   if (m_debug) {
@@ -1959,37 +1906,37 @@ size_t ComponentTcad2d::FindElement(const double x, const double y,
   return m_elements.size();
 }
 
-bool ComponentTcad2d::CheckElement(const double x, const double y,
-                                   const Element& element,
-                                   std::array<double, nMaxVertices>& w) const {
+bool ComponentTcad2d::InElement(const double x, const double y,
+                                const Element& element,
+                                std::array<double, nMaxVertices>& w) const {
   switch (element.type) {
     case 0:
-      return CheckPoint(x, y, element, w);
+      return AtPoint(x, y, element, w);
     case 1:
-      return CheckLine(x, y, element, w);
+      return OnLine(x, y, element, w);
     case 2:
-      return CheckTriangle(x, y, element, w);
+      return InTriangle(x, y, element, w);
     case 3:
-      return CheckRectangle(x, y, element, w);
+      return InRectangle(x, y, element, w);
     default:
-      std::cerr << m_className << "::CheckElement:\n"
+      std::cerr << m_className << "::InElement:\n"
                 << "    Unknown element type. Program bug!\n";
       break;
   }
   return false;
 }
 
-bool ComponentTcad2d::CheckRectangle(const double x, const double y,
-                                     const Element& element,
-                                     std::array<double, nMaxVertices>& w) const {
-  const Vertex& v0 = m_vertices[element.vertex[0]];
-  const Vertex& v1 = m_vertices[element.vertex[1]];
-  const Vertex& v3 = m_vertices[element.vertex[3]];
-  if (y < v0.y || x > v3.x || y > v1.y) return false;
+bool ComponentTcad2d::InRectangle(const double x, const double y,
+                                  const Element& element,
+                                  std::array<double, nMaxVertices>& w) const {
+  const auto& v0 = m_vertices[element.vertex[0]];
+  const auto& v1 = m_vertices[element.vertex[1]];
+  const auto& v3 = m_vertices[element.vertex[3]];
+  if (y < v0[1] || x > v3[0] || y > v1[1]) return false;
 
   // Map (x, y) to local variables (u, v) in [-1, 1].
-  const double u = (x - 0.5 * (v0.x + v3.x)) / (v3.x - v0.x);
-  const double v = (y - 0.5 * (v0.y + v1.y)) / (v1.y - v0.y);
+  const double u = (x - 0.5 * (v0[0] + v3[0])) / (v3[0] - v0[0]);
+  const double v = (y - 0.5 * (v0[1] + v1[1])) / (v1[1] - v0[1]);
   // Compute weighting factors for each corner.
   w[0] = (0.5 - u) * (0.5 - v);
   w[1] = (0.5 - u) * (0.5 + v);
@@ -1998,28 +1945,28 @@ bool ComponentTcad2d::CheckRectangle(const double x, const double y,
   return true;
 }
 
-bool ComponentTcad2d::CheckTriangle(const double x, const double y,
-                                    const Element& element,
-                                    std::array<double, nMaxVertices>& w) const {
-  const Vertex& v0 = m_vertices[element.vertex[0]];
-  const Vertex& v1 = m_vertices[element.vertex[1]];
-  const Vertex& v2 = m_vertices[element.vertex[2]];
-  if (x > v1.x && x > v2.x) return false;
-  if (y < v0.y && y < v1.y && y < v2.y) return false;
-  if (y > v0.y && y > v1.y && y > v2.y) return false;
+bool ComponentTcad2d::InTriangle(const double x, const double y,
+                                 const Element& element,
+                                 std::array<double, nMaxVertices>& w) const {
+  const auto& v0 = m_vertices[element.vertex[0]];
+  const auto& v1 = m_vertices[element.vertex[1]];
+  const auto& v2 = m_vertices[element.vertex[2]];
+  if (x > v1[0] && x > v2[0]) return false;
+  if (y < v0[1] && y < v1[1] && y < v2[1]) return false;
+  if (y > v0[1] && y > v1[1] && y > v2[1]) return false;
 
   // Map (x, y) onto local variables (b, c) such that
   // P = A + b * (B - A) + c * (C - A)
   // A point P is inside the triangle ABC if b, c > 0 and b + c < 1;
   // b, c are also weighting factors for points B, C
-  const double sx = v1.x - v0.x;
-  const double sy = v1.y - v0.y;
-  const double tx = v2.x - v0.x;
-  const double ty = v2.y - v0.y;
+  const double sx = v1[0] - v0[0];
+  const double sy = v1[1] - v0[1];
+  const double tx = v2[0] - v0[0];
+  const double ty = v2[1] - v0[1];
   const double d = 1. / (sx * ty - sy * tx);
-  w[1] = ((x - v0.x) * ty - (y - v0.y) * tx) * d;
+  w[1] = ((x - v0[0]) * ty - (y - v0[1]) * tx) * d;
   if (w[1] < 0. || w[1] > 1.) return false;
-  w[2] = ((v0.x - x) * sy - (v0.y - y) * sx) * d;
+  w[2] = ((v0[0] - x) * sy - (v0[1] - y) * sx) * d;
   if (w[2] < 0. || w[1] + w[2] > 1.) return false;
 
   // Weighting factor for point A
@@ -2028,17 +1975,17 @@ bool ComponentTcad2d::CheckTriangle(const double x, const double y,
   return true;
 }
 
-bool ComponentTcad2d::CheckLine(const double x, const double y,
-                                const Element& element,
-                                std::array<double, nMaxVertices>& w) const {
-  const Vertex& v0 = m_vertices[element.vertex[0]];
-  const Vertex& v1 = m_vertices[element.vertex[1]];
-  if (x > v1.x) return false;
-  if (y < v0.y && y < v1.y) return false;
-  if (y > v0.y && y > v1.y) return false;
-  const double tx = (x - v0.x) / (v1.x - v0.x);
+bool ComponentTcad2d::OnLine(const double x, const double y,
+                             const Element& element,
+                             std::array<double, nMaxVertices>& w) const {
+  const auto& v0 = m_vertices[element.vertex[0]];
+  const auto& v1 = m_vertices[element.vertex[1]];
+  if (x > v1[0]) return false;
+  if (y < v0[1] && y < v1[1]) return false;
+  if (y > v0[1] && y > v1[1]) return false;
+  const double tx = (x - v0[0]) / (v1[0] - v0[0]);
   if (tx < 0. || tx > 1.) return false;
-  const double ty = (y - v0.y) / (v1.y - v0.y);
+  const double ty = (y - v0[1]) / (v1[1] - v0[1]);
   if (ty < 0. || ty > 1.) return false;
   if (tx == ty) {
     // Compute weighting factors for endpoints A, B
@@ -2049,11 +1996,11 @@ bool ComponentTcad2d::CheckLine(const double x, const double y,
   return false;
 }
 
-bool ComponentTcad2d::CheckPoint(const double x, const double y,
-                                 const Element& element,
-                                 std::array<double, nMaxVertices>& w) const {
-  const Vertex& v0 = m_vertices[element.vertex[0]];
-  if (x != v0.x || y != v0.y) return false;
+bool ComponentTcad2d::AtPoint(const double x, const double y,
+                              const Element& element,
+                              std::array<double, nMaxVertices>& w) const {
+  const auto& v0 = m_vertices[element.vertex[0]];
+  if (x != v0[0] || y != v0[1]) return false;
   w[0] = 1;
   return true;
 }
@@ -2103,31 +2050,31 @@ void ComponentTcad2d::MapCoordinates(double& x, double& y, bool& xmirr,
                                      bool& ymirr) const {
   // In case of periodicity, reduce to the cell volume.
   xmirr = false;
-  const double cellsx = m_xMaxBB - m_xMinBB;
+  const double cellsx = m_bbMax[0] - m_bbMin[0];
   if (m_periodic[0]) {
-    x = m_xMinBB + fmod(x - m_xMinBB, cellsx);
-    if (x < m_xMinBB) x += cellsx;
+    x = m_bbMin[0] + fmod(x - m_bbMin[0], cellsx);
+    if (x < m_bbMin[0]) x += cellsx;
   } else if (m_mirrorPeriodic[0]) {
-    double xNew = m_xMinBB + fmod(x - m_xMinBB, cellsx);
-    if (xNew < m_xMinBB) xNew += cellsx;
+    double xNew = m_bbMin[0] + fmod(x - m_bbMin[0], cellsx);
+    if (xNew < m_bbMin[0]) xNew += cellsx;
     const int nx = int(floor(0.5 + (xNew - x) / cellsx));
     if (nx != 2 * (nx / 2)) {
-      xNew = m_xMinBB + m_xMaxBB - xNew;
+      xNew = m_bbMin[0] + m_bbMax[0] - xNew;
       xmirr = true;
     }
     x = xNew;
   }
   ymirr = false;
-  const double cellsy = m_yMaxBB - m_yMinBB;
+  const double cellsy = m_bbMax[1] - m_bbMin[1];
   if (m_periodic[1]) {
-    y = m_yMinBB + fmod(y - m_yMinBB, cellsy);
-    if (y < m_yMinBB) y += cellsy;
+    y = m_bbMin[1] + fmod(y - m_bbMin[1], cellsy);
+    if (y < m_bbMin[1]) y += cellsy;
   } else if (m_mirrorPeriodic[1]) {
-    double yNew = m_yMinBB + fmod(y - m_yMinBB, cellsy);
-    if (yNew < m_yMinBB) yNew += cellsy;
+    double yNew = m_bbMin[1] + fmod(y - m_bbMin[1], cellsy);
+    if (yNew < m_bbMin[1]) yNew += cellsy;
     const int ny = int(floor(0.5 + (yNew - y) / cellsy));
     if (ny != 2 * (ny / 2)) {
-      yNew = m_yMinBB + m_yMaxBB - yNew;
+      yNew = m_bbMin[1] + m_bbMax[1] - yNew;
       ymirr = true;
     }
     y = yNew;
