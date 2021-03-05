@@ -54,7 +54,7 @@ bool ComponentTcad2d::SetDonor(const size_t donorNumber,
   m_donors[donorNumber].xsech = hXsec;
   m_donors[donorNumber].conc = conc;
 
-  m_validTraps = CheckTraps();
+  UpdateAttachment();
   return true;
 }
 
@@ -69,77 +69,25 @@ bool ComponentTcad2d::SetAcceptor(const size_t acceptorNumber,
   m_acceptors[acceptorNumber].xsech = hXsec;
   m_acceptors[acceptorNumber].conc = conc;
 
-  m_validTraps = CheckTraps();
+  UpdateAttachment();
   return true;
 }
 
 bool ComponentTcad2d::HasAttachmentMap() const {
-  return (m_useAttachmentMap && m_validTraps);
+  return (m_useAttachmentMap && !(m_acceptors.empty() && m_donors.empty()));
 }
 
 bool ComponentTcad2d::ElectronAttachment(const double x, const double y,
                                          const double z, double& eta) {
   eta = 0.;
-  if (!m_validTraps) {
-    std::cerr << m_className << "::ElectronAttachment:\n"
-              << "    Trap cross-sections or concentrations are invalid.\n";
-    return false;
-  }
-
-  if (m_donors.empty() && m_acceptors.empty()) {
-    if (m_debug) {
-      std::cerr << m_className << "::ElectronAttachment: No traps defined.\n";
-    }
-    return true;
-  }
-
-  const size_t nAcceptors = m_acceptors.size();
-  for (size_t i = 0; i < nAcceptors; ++i) {
-    const Defect& acceptor = m_acceptors[i];
-    double f = 0.;
-    GetAcceptorOccupation(x, y, z, i, f);
-    eta += acceptor.conc * acceptor.xsece * (1. - f);
-  }
-  const size_t nDonors = m_donors.size();
-  for (size_t i = 0; i < nDonors; ++i) {
-    const Defect& donor = m_donors[i];
-    double f = 0.;
-    GetDonorOccupation(x, y, z, i, f);
-    eta += donor.conc * donor.xsece * f;
-  }
+  Interpolate(x, y, z, m_eAttachment, eta);
   return true;
 }
 
 bool ComponentTcad2d::HoleAttachment(const double x, const double y,
                                      const double z, double& eta) {
   eta = 0.;
-  if (!m_validTraps) {
-    std::cerr << m_className << "::HoleAttachment:\n"
-              << "    Trap cross-sections or concentrations are invalid.\n";
-    return false;
-  }
-
-  if (m_donors.empty() && m_acceptors.empty()) {
-    if (m_debug) {
-      std::cerr << m_className << "::HoleAttachment: No traps defined.\n";
-    }
-    return true;
-  }
-
-  const size_t nAcceptors = m_acceptors.size();
-  for (size_t i = 0; i < nAcceptors; ++i) {
-    const Defect& acceptor = m_acceptors[i];
-    double f = 0.;
-    GetAcceptorOccupation(x, y, z, i, f);
-    eta += acceptor.conc * acceptor.xsech * f;
-  }
-  const size_t nDonors = m_donors.size();
-  for (size_t i = 0; i < nDonors; ++i) {
-    const Defect& donor = m_donors[i];
-    double f = 0.;
-    GetDonorOccupation(x, y, z, i, f);
-    eta += donor.conc * donor.xsech * (1. - f);
-  }
+  Interpolate(x, y, z, m_hAttachment, eta);
   return true;
 }
 
@@ -185,12 +133,16 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
     return;
   }
 
+  if (m_hasRangeZ && (zin < m_bbMin[2] || zin > m_bbMax[2])) {
+    status = -6;
+    return;
+  }
   // In case of periodicity, reduce to the cell volume.
-  double x = xin, y = yin, z = zin;
+  double x = xin, y = yin;
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
   // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y, z)) {
+  if (!InsideBoundingBox(x, y)) {
     status = -6;
     return;
   }
@@ -224,11 +176,12 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
     double& fx, double& fy) {
 
   if (field.empty()) return false;
+  if (m_hasRangeZ && (z < m_bbMin[2] || z > m_bbMax[2])) return false;
   double x = xin, y = yin;
   // In case of periodicity, reduce to the cell volume.
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
-  if (!InsideBoundingBox(x, y, z)) return false;
+  if (!InsideBoundingBox(x, y)) return false;
 
   std::array<double, nMaxVertices> w;
   const auto i = FindElement(x, y, w);
@@ -252,11 +205,12 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
     const std::vector<double>& field, double& f) {
 
   if (field.empty()) return false;
+  if (m_hasRangeZ && (z < m_bbMin[2] || z > m_bbMax[2])) return false;
   double x = xin, y = yin;
   // In case of periodicity, reduce to the cell volume.
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
-  if (!InsideBoundingBox(x, y, z)) return false;
+  if (!InsideBoundingBox(x, y)) return false;
 
   std::array<double, nMaxVertices> w;
   const auto i = FindElement(x, y, w);
@@ -275,31 +229,14 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
 bool ComponentTcad2d::ElectronVelocity(const double x, const double y,
                                        const double z, double& vx, double& vy,
                                        double& vz) {
-  // Initialise.
   vx = vy = vz = 0.;
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    std::cerr << m_className << "::ElectronVelocity:\n"
-              << "    Field map is not available for interpolation.\n";
-    return false;
-  }
-
   return Interpolate(x, y, z, m_eVelocity, vx, vy);
 }
 
 bool ComponentTcad2d::HoleVelocity(const double x, const double y,
                                    const double z, double& vx, double& vy,
                                    double& vz) {
-  // Initialise.
   vx = vy = vz = 0.;
-
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    std::cerr << m_className << "::HoleVelocity:\n"
-              << "    Field map is not available for interpolation.\n";
-    return false;
-  }
-
   return Interpolate(x, y, z, m_hVelocity, vx, vy);
 }
 
@@ -312,12 +249,13 @@ Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
     return nullptr;
   }
 
-  double x = xin, y = yin, z = zin;
+  if (m_hasRangeZ && (zin < m_bbMin[2] || zin > m_bbMax[2])) return nullptr;
+  double x = xin, y = yin;
   // In case of periodicity, reduce to the cell volume.
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
   // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y, z)) return nullptr;
+  if (!InsideBoundingBox(x, y)) return nullptr;
 
   // Shape functions
   std::array<double, nMaxVertices> w;
@@ -334,141 +272,30 @@ Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
 bool ComponentTcad2d::GetElectronLifetime(const double x, const double y,
                                           const double z, double& tau) {
   tau = 0.;
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    std::cerr << m_className << "::GetElectronLifetime:\n"
-              << "    Field map is not available for interpolation.\n";
-    return false;
-  }
-
   return Interpolate(x, y, z, m_eLifetime, tau);
 }
 bool ComponentTcad2d::GetHoleLifetime(const double x, const double y,
                                       const double z, double& tau) {
   tau = 0.;
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    std::cerr << m_className << "::GetHoleLifetime:\n"
-              << "    Field map is not available for interpolation.\n";
-    return false;
-  }
-
   return Interpolate(x, y, z, m_hLifetime, tau);
 }
 
 bool ComponentTcad2d::GetElectronMobility(const double x, const double y,
                                           const double z, double& mob) {
   mob = 0.;
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    std::cerr << m_className << "::ElectronMobility:\n"
-              << "    Field map is not available for interpolation.\n";
-    return false;
-  }
   return Interpolate(x, y, z, m_eMobility, mob);
 }
 
 bool ComponentTcad2d::GetHoleMobility(const double x, const double y,
                                       const double z, double& mob) {
   mob = 0.;
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    std::cerr << m_className << "::HoleMobility:\n"
-              << "    Field map is not available for interpolation.\n";
-    return false;
-  }
   return Interpolate(x, y, z, m_hMobility, mob);
-}
-
-bool ComponentTcad2d::GetDonorOccupation(const double xin, const double yin,
-                                         const double zin,
-                                         const size_t donorNumber,
-                                         double& f) {
-  f = 0.;
-  if (donorNumber >= m_donors.size()) {
-    std::cerr << m_className << "::GetDonorOccupation:\n"
-              << "    Donor " << donorNumber << " does not exist.\n";
-    return false;
-  }
-
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    std::cerr << m_className << "::GetDonorOccupation:\n"
-              << "    Field map is not available for interpolation.\n";
-    return false;
-  }
-
-  double x = xin, y = yin, z = zin;
-  // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
-  // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y, z)) return false;
-
-  std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
-  if (i >= m_elements.size()) {
-    // Point is outside the mesh.
-    return false;
-  }
-
-  const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
-  for (size_t j = 0; j < nVertices; ++j) {
-    f += w[j] * m_donorOcc[element.vertex[j]][donorNumber];
-  }
-  m_lastElement = i;
-  return true;
-}
-
-bool ComponentTcad2d::GetAcceptorOccupation(const double xin, const double yin,
-                                            const double zin,
-                                            const size_t acceptorNumber,
-                                            double& f) {
-  f = 0.;
-  if (acceptorNumber >= m_acceptors.size()) {
-    std::cerr << m_className << "::GetAcceptorOccupation:\n"
-              << "    Acceptor " << acceptorNumber << " does not exist.\n";
-    return false;
-  }
-
-  // Make sure the field map has been loaded.
-  if (!m_ready) {
-    std::cerr << m_className << "::GetAcceptorOccupation:\n"
-              << "    Field map is not available for interpolation.\n";
-    return false;
-  }
-
-  double x = xin, y = yin, z = zin;
-  // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
-  // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y, z)) return false;
-
-  std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
-  if (i >= m_elements.size()) {
-    // Point is outside the mesh.
-    return false;
-  }
-
-  const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
-  for (size_t j = 0; j < nVertices; ++j) {
-    f += w[j] * m_acceptorOcc[element.vertex[j]][acceptorNumber];
-  }
-  m_lastElement = i;
-  return true;
 }
 
 bool ComponentTcad2d::Initialise(const std::string& gridfilename,
                                  const std::string& datafilename) {
   m_ready = false;
   Cleanup();
-  m_validTraps = false;
-  m_donors.clear();
-  m_acceptors.clear();
 
   // Import mesh data from .grd file.
   if (!LoadGrid(gridfilename)) {
@@ -477,11 +304,11 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
     return false;
   }
 
-  // Import electric field, potential, mobilities and
-  // trap occupation values from .dat file.
+  // Import electric field, potential and other data from .dat file.
   if (!LoadData(datafilename)) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Importing electric field and potential failed.\n";
+    Cleanup();
     return false;
   }
 
@@ -801,12 +628,6 @@ bool ComponentTcad2d::GetVoltageRange(double& vmin, double& vmax) {
 }
 
 void ComponentTcad2d::PrintRegions() const {
-  // Do not proceed if not properly initialised.
-  if (!m_ready) {
-    std::cerr << m_className << "::PrintRegions:\n"
-              << "    Field map not yet initialised.\n";
-    return;
-  }
 
   if (m_regions.empty()) {
     std::cerr << m_className << "::PrintRegions:\n"
@@ -967,16 +788,6 @@ bool ComponentTcad2d::LoadData(const std::string& datafilename) {
 
   const unsigned int nVertices = m_vertices.size();
   std::vector<unsigned int> fillCount(nVertices, 0);
-
-
-
-  m_hVelocity.assign(nVertices, {0., 0.});
-  m_eMobility.assign(nVertices, 0.);
-  m_hMobility.assign(nVertices, 0.);
-  m_donorOcc.clear();
-  m_acceptorOcc.clear();
-  m_donors.clear();
-  m_acceptors.clear();
 
   // Read the file line by line.
   std::string line;
@@ -1784,8 +1595,8 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
-    std::cerr << m_className << "::LoadGrid:\n";
-    std::cerr << "    Error reading file " << gridfilename << " (line " << iLine
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Error reading file " << gridfilename << " (line " << iLine
               << ").\n";
     Cleanup();
     gridfile.close();
@@ -1871,6 +1682,12 @@ void ComponentTcad2d::Cleanup() {
   m_hMobility.clear();
   m_eLifetime.clear();
   m_hLifetime.clear();
+  m_donors.clear();
+  m_acceptors.clear();
+  m_donorOcc.clear();
+  m_acceptorOcc.clear();
+  m_eAttachment.clear();
+  m_hAttachment.clear();
 }
 
 size_t ComponentTcad2d::FindElement(const double x, const double y, 
@@ -2081,14 +1898,42 @@ void ComponentTcad2d::MapCoordinates(double& x, double& y, bool& xmirr,
   }
 }
 
-bool ComponentTcad2d::CheckTraps() const {
-  for (const auto& trap : m_donors) {
-    if (trap.xsece < 0. || trap.xsech < 0. || trap.conc < 0.) return false;
-  }
+void ComponentTcad2d::UpdateAttachment() {
 
-  for (const auto& trap : m_acceptors) {
-    if (trap.xsece < 0. || trap.xsech < 0. || trap.conc < 0.) return false;
+  if (m_vertices.empty()) return;
+  const size_t nVertices = m_vertices.size();
+  m_eAttachment.assign(nVertices, 0.);
+  m_hAttachment.assign(nVertices, 0.);
+
+  const size_t nAcceptors = m_acceptors.size();
+  for (size_t i = 0; i < nAcceptors; ++i) { 
+    const auto& defect = m_acceptors[i];
+    if (defect.conc < 0.) continue;
+    for (size_t j = 0; j < nVertices; ++j) {
+      // Get the occupation probability.
+      const double f = m_acceptorOcc[j][i];
+      if (defect.xsece > 0.) {
+        m_eAttachment[j] += defect.conc * defect.xsece * (1. - f);
+      }
+      if (defect.xsech > 0.) {
+        m_hAttachment[j] += defect.conc * defect.xsech * f;
+      }
+    }
   }
-  return true;
+  const size_t nDonors = m_donors.size();
+  for (size_t i = 0; i < nDonors; ++i) {
+    const auto& defect = m_donors[i];
+    if (defect.conc < 0.) continue;
+    for (size_t j = 0; j < nVertices; ++j) { 
+      const double f = m_donorOcc[j][i];
+      if (defect.xsece > 0.) {
+        m_eAttachment[j] += defect.conc * defect.xsece * f;
+      }
+      if (defect.xsech > 0.) {
+        m_hAttachment[j] += defect.conc * defect.xsech * (1. - f);
+      }
+    }
+  }
 }
+
 }

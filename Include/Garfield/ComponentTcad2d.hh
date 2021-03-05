@@ -107,12 +107,6 @@ class ComponentTcad2d : public Component {
   int GetNumberOfDonors() { return m_donors.size(); }
   int GetNumberOfAcceptors() { return m_acceptors.size(); }
 
-  bool GetDonorOccupation(const double x, const double y, const double z,
-                          const size_t donorNumber,
-                          double& occupationFraction);
-  bool GetAcceptorOccupation(const double x, const double y, const double z,
-                             const size_t acceptorNumber,
-                             double& occupationFraction);
   bool SetDonor(const size_t donorNumber, const double eXsec,
                 const double hxSec, const double concentration);
   bool SetAcceptor(const size_t acceptorNumber, const double eXsec,
@@ -159,9 +153,12 @@ class ComponentTcad2d : public Component {
   // Trap occupations [dimensionless]
   std::vector<std::vector<float> > m_donorOcc;
   std::vector<std::vector<float> > m_acceptorOcc;
-  // Lifetimes [1/ns]
+  // Lifetimes [ns]
   std::vector<double> m_eLifetime;
   std::vector<double> m_hLifetime;
+  // Attachment coefficients [1 / cm]
+  std::vector<double> m_eAttachment;
+  std::vector<double> m_hAttachment;
 
   // Elements
   struct Element {
@@ -197,9 +194,6 @@ class ComponentTcad2d : public Component {
   // Use velocity and trapping maps or not.
   bool m_useVelocityMap = false;
   bool m_useAttachmentMap = false;
-
-  // Are all the cross-sections and concentrations valid and set.
-  bool m_validTraps = false;
 
   // Voltage range
   double m_pMin = 0.;
@@ -250,16 +244,15 @@ class ComponentTcad2d : public Component {
   size_t FindRegion(const std::string& name) const;
 
   void MapCoordinates(double& x, double& y, bool& xmirr, bool& ymirr) const;
-  bool InsideBoundingBox(const double x, const double y, 
-                         const double z) const {
+  bool InsideBoundingBox(const double x, const double y) const { 
     bool inside = true;
-    if (x < m_bbMin[0] || x > m_bbMax[0] || y < m_bbMin[1] || y > m_bbMax[1] ||
-        (m_hasRangeZ && (z < m_bbMin[2] || z > m_bbMax[2]))) {
+    if (x < m_bbMin[0] || x > m_bbMax[0] || 
+        y < m_bbMin[1] || y > m_bbMax[1]) {
       inside = false;
     }
     return inside;
   }
-  bool CheckTraps() const;
+  void UpdateAttachment();
 };
 }
 #endif
