@@ -79,14 +79,12 @@ bool ComponentTcad2d::HasAttachmentMap() const {
 
 bool ComponentTcad2d::ElectronAttachment(const double x, const double y,
                                          const double z, double& eta) {
-  eta = 0.;
   Interpolate(x, y, z, m_eAttachment, eta);
   return true;
 }
 
 bool ComponentTcad2d::HoleAttachment(const double x, const double y,
                                      const double z, double& eta) {
-  eta = 0.;
   Interpolate(x, y, z, m_hAttachment, eta);
   return true;
 }
@@ -142,7 +140,7 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
   // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y)) {
+  if (!InBoundingBox(x, y)) {
     status = -6;
     return;
   }
@@ -158,7 +156,7 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
   const Element& element = m_elements[i];
   const size_t nVertices = element.type + 1;
   for (size_t j = 0; j < nVertices; ++j) {
-    const auto index = element.vertex[j];
+    const size_t index = element.vertex[j];
     ex += w[j] * m_efield[index][0];
     ey += w[j] * m_efield[index][1];
     p += w[j] * m_potential[index];
@@ -175,13 +173,15 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
     const std::vector<std::array<double, 2> >& field,
     double& fx, double& fy) {
 
+  fx = fy = 0.;
   if (field.empty()) return false;
   if (m_hasRangeZ && (z < m_bbMin[2] || z > m_bbMax[2])) return false;
   double x = xin, y = yin;
   // In case of periodicity, reduce to the cell volume.
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
-  if (!InsideBoundingBox(x, y)) return false;
+  // Make sure the point is inside the bounding box.
+  if (!InBoundingBox(x, y)) return false;
 
   std::array<double, nMaxVertices> w;
   const auto i = FindElement(x, y, w);
@@ -191,8 +191,9 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
   const Element& element = m_elements[i];
   const size_t nVertices = element.type + 1;
   for (size_t j = 0; j < nVertices; ++j) {
-    fx += w[j] * field[element.vertex[j]][0];
-    fy += w[j] * field[element.vertex[j]][1];
+    const size_t index = element.vertex[j];
+    fx += w[j] * field[index][0];
+    fy += w[j] * field[index][1];
   }
   if (xmirr) fx = -fx;
   if (ymirr) fy = -fy;
@@ -204,13 +205,14 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
     const double z,
     const std::vector<double>& field, double& f) {
 
+  f = 0.;
   if (field.empty()) return false;
   if (m_hasRangeZ && (z < m_bbMin[2] || z > m_bbMax[2])) return false;
   double x = xin, y = yin;
   // In case of periodicity, reduce to the cell volume.
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
-  if (!InsideBoundingBox(x, y)) return false;
+  if (!InBoundingBox(x, y)) return false;
 
   std::array<double, nMaxVertices> w;
   const auto i = FindElement(x, y, w);
@@ -229,14 +231,14 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
 bool ComponentTcad2d::ElectronVelocity(const double x, const double y,
                                        const double z, double& vx, double& vy,
                                        double& vz) {
-  vx = vy = vz = 0.;
+  vz = 0.;
   return Interpolate(x, y, z, m_eVelocity, vx, vy);
 }
 
 bool ComponentTcad2d::HoleVelocity(const double x, const double y,
                                    const double z, double& vx, double& vy,
                                    double& vz) {
-  vx = vy = vz = 0.;
+  vz = 0.;
   return Interpolate(x, y, z, m_hVelocity, vx, vy);
 }
 
@@ -255,7 +257,7 @@ Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
   bool xmirr = false, ymirr = false;
   MapCoordinates(x, y, xmirr, ymirr);
   // Check if the point is inside the bounding box.
-  if (!InsideBoundingBox(x, y)) return nullptr;
+  if (!InBoundingBox(x, y)) return nullptr;
 
   // Shape functions
   std::array<double, nMaxVertices> w;
@@ -271,24 +273,20 @@ Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
 
 bool ComponentTcad2d::GetElectronLifetime(const double x, const double y,
                                           const double z, double& tau) {
-  tau = 0.;
   return Interpolate(x, y, z, m_eLifetime, tau);
 }
 bool ComponentTcad2d::GetHoleLifetime(const double x, const double y,
                                       const double z, double& tau) {
-  tau = 0.;
   return Interpolate(x, y, z, m_hLifetime, tau);
 }
 
 bool ComponentTcad2d::GetElectronMobility(const double x, const double y,
                                           const double z, double& mob) {
-  mob = 0.;
   return Interpolate(x, y, z, m_eMobility, mob);
 }
 
 bool ComponentTcad2d::GetHoleMobility(const double x, const double y,
                                       const double z, double& mob) {
-  mob = 0.;
   return Interpolate(x, y, z, m_hMobility, mob);
 }
 
@@ -588,16 +586,16 @@ bool ComponentTcad2d::GetBoundingBox(double& xmin, double& ymin, double& zmin,
                                      double& xmax, double& ymax, double& zmax) {
   if (!m_ready) return false;
   if (m_periodic[0] || m_mirrorPeriodic[0]) {
-    xmin = -INFINITY;
-    xmax = +INFINITY;
+    xmin = -std::numeric_limits<double>::infinity();
+    xmax = +std::numeric_limits<double>::infinity();
   } else {
     xmin = m_bbMin[0];
     xmax = m_bbMax[0];
   }
 
   if (m_periodic[1] || m_mirrorPeriodic[1]) {
-    ymin = -INFINITY;
-    ymax = +INFINITY;
+    ymin = -std::numeric_limits<double>::infinity();
+    ymax = +std::numeric_limits<double>::infinity();
   } else {
     ymin = m_bbMin[1];
     ymax = m_bbMax[1];
@@ -722,8 +720,8 @@ bool ComponentTcad2d::GetElement(const size_t i, double& vol,
     const auto& v0 = m_vertices[element.vertex[0]];
     const auto& v1 = m_vertices[element.vertex[1]];
     const auto& v2 = m_vertices[element.vertex[2]];
-    vol = 0.5 *
-          fabs((v2[0] - v0[0]) * (v1[1] - v0[1]) - (v2[1] - v0[1]) * (v1[0] - v0[0]));
+    vol = 0.5 * fabs((v2[0] - v0[0]) * (v1[1] - v0[1]) - 
+                     (v2[1] - v0[1]) * (v1[0] - v0[0]));
     const double a = std::hypot(v1[0] - v0[0], v1[1] - v0[1]);
     const double b = std::hypot(v2[0] - v0[0], v2[1] - v0[1]);
     const double c = std::hypot(v1[0] - v2[0], v1[1] - v2[1]);
@@ -748,14 +746,14 @@ bool ComponentTcad2d::GetElement(const size_t i, double& vol,
 
 bool ComponentTcad2d::GetElement(const size_t i, double& vol,
                                  double& dmin, double& dmax, int& type,
-                                 int& node1, int& node2, int& node3, int& node4,
-                                 int& reg) const {
+                                 std::vector<size_t>& nodes, int& reg) const {
+  nodes.clear();
   if (!GetElement(i, vol, dmin, dmax, type)) return false;
   const Element& element = m_elements[i];
-  node1 = element.vertex[0];
-  node2 = element.vertex[1];
-  node3 = element.vertex[2];
-  node4 = element.vertex[3];
+  const size_t nVertices = element.type + 1;
+  for (size_t i = 0; i < nVertices; ++i) {
+    nodes.push_back(element.vertex[0]);
+  }
   reg = element.region;
   return true;
 }
@@ -786,7 +784,7 @@ bool ComponentTcad2d::LoadData(const std::string& datafilename) {
     return false;
   }
 
-  const unsigned int nVertices = m_vertices.size();
+  const size_t nVertices = m_vertices.size();
   std::vector<unsigned int> fillCount(nVertices, 0);
 
   // Read the file line by line.
@@ -1695,12 +1693,10 @@ size_t ComponentTcad2d::FindElement(const double x, const double y,
 
   w.fill(0.);
  
-  if (m_lastElement >= 0) {
+  if (m_lastElement < m_elements.size()) {
     // Check if the point is still located in the previously found element.
     const Element& last = m_elements[m_lastElement];
-    if (x >= last.xmin && x <= last.xmax && y >= last.ymin && y <= last.ymax) {
-      if (InElement(x, y, last, w)) return m_lastElement;
-    }
+    if (InElement(x, y, last, w)) return m_lastElement;
   }
 
   // The point is not in the previous element nor in the adjacent ones.
@@ -1709,11 +1705,7 @@ size_t ComponentTcad2d::FindElement(const double x, const double y,
   const size_t nElementsToSearch = m_tree ? elementsToSearch.size() : m_elements.size(); 
   for (size_t i = 0; i < nElementsToSearch; ++i) {
     const size_t idx = m_tree ? elementsToSearch[i] : i;
-    const Element& element = m_elements[idx];
-    if (x < element.xmin || x > element.xmax || y < element.ymin ||
-        y > element.ymax)
-      continue;
-    if (InElement(x, y, element, w)) return idx;
+    if (InElement(x, y, m_elements[idx], w)) return idx;
   }
   // Point is outside the mesh.
   if (m_debug) {
@@ -1726,6 +1718,10 @@ size_t ComponentTcad2d::FindElement(const double x, const double y,
 bool ComponentTcad2d::InElement(const double x, const double y,
                                 const Element& element,
                                 std::array<double, nMaxVertices>& w) const {
+  if (x < element.xmin || x > element.xmax || y < element.ymin ||
+      y > element.ymax) {
+    return false;
+  }
   switch (element.type) {
     case 0:
       return AtPoint(x, y, element, w);

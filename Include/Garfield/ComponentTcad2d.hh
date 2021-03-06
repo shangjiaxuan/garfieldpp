@@ -77,8 +77,7 @@ class ComponentTcad2d : public Component {
   bool GetElement(const size_t i, double& vol, double& dmin, double& dmax,
                   int& type) const;
   bool GetElement(const size_t i, double& vol, double& dmin, double& dmax,
-                  int& type, int& node1, int& node2, int& node3, int& node4,
-                  int& reg) const;
+                  int& type, std::vector<size_t>& nodes, int& reg) const;
   size_t GetNumberOfNodes() const { return m_vertices.size(); }
   bool GetNode(const size_t i, double& x, double& y, double& v,
                double& ex, double& ey) const;
@@ -104,8 +103,8 @@ class ComponentTcad2d : public Component {
                        double& htau) override;
 
   // Trapping
-  int GetNumberOfDonors() { return m_donors.size(); }
-  int GetNumberOfAcceptors() { return m_acceptors.size(); }
+  size_t GetNumberOfDonors() { return m_donors.size(); }
+  size_t GetNumberOfAcceptors() { return m_acceptors.size(); }
 
   bool SetDonor(const size_t donorNumber, const double eXsec,
                 const double hxSec, const double concentration);
@@ -208,10 +207,11 @@ class ComponentTcad2d : public Component {
   std::unique_ptr<QuadTree> m_tree;
 
   // Element from the previous call
-  int m_lastElement = 0;
+  size_t m_lastElement = 0;
 
   void Reset() override;
   void UpdatePeriodicity() override;
+
   size_t FindElement(const double x, const double y,
                      std::array<double, nMaxVertices>& w) const;
   // Check whether a point is inside a given element and calculate the
@@ -244,7 +244,7 @@ class ComponentTcad2d : public Component {
   size_t FindRegion(const std::string& name) const;
 
   void MapCoordinates(double& x, double& y, bool& xmirr, bool& ymirr) const;
-  bool InsideBoundingBox(const double x, const double y) const { 
+  bool InBoundingBox(const double x, const double y) const { 
     bool inside = true;
     if (x < m_bbMin[0] || x > m_bbMax[0] || 
         y < m_bbMin[1] || y > m_bbMax[1]) {

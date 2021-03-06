@@ -91,15 +91,12 @@ class ComponentTcad3d : public Component {
   };
   std::vector<Region> m_regions;
 
-  // Vertices
-  struct Vertex {
-    // Coordinates [cm]
-    double x, y, z;
-    // Potential [V] and electric field [V / cm]
-    double p, ex, ey, ez;
-  };
-  std::vector<Vertex> m_vertices;
-
+  // Vertex coordinates [cm].
+  std::vector<std::array<double, 3> > m_vertices;
+  // Potential [V] at each vertex.
+  std::vector<double> m_potential;
+  // Electric field [V / cm].
+  std::vector<std::array<double, 3> > m_efield;
   // Weighting field and potential at each vertex.
   std::vector<std::array<double, 3> > m_wf;
   std::vector<double> m_wp;
@@ -122,11 +119,11 @@ class ComponentTcad3d : public Component {
     // Only types 2 and 5 are supported by this class.
     int type;
     // Associated region
-    int region;
+    unsigned int region;
     // Bounding box
-    double xmin, xmax;
-    double ymin, ymax;
-    double zmin, zmax;
+    float xmin, xmax;
+    float ymin, ymax;
+    float zmin, zmax;
   };
   std::vector<Element> m_elements;
 
@@ -142,8 +139,8 @@ class ComponentTcad3d : public Component {
   double m_pMax = 0.;
 
   // Bounding box
-  double m_xMinBB = 0., m_yMinBB = 0., m_zMinBB = 0.;
-  double m_xMaxBB = 0., m_yMaxBB = 0., m_zMaxBB = 0.;
+  std::array<double, 3> m_bbMin = {{0., 0., 0.}};
+  std::array<double, 3> m_bbMax = {{0., 0., 0.}};
 
   // Tetrahedral tree.
   std::unique_ptr<TetrahedralTree> m_tree;
@@ -153,30 +150,41 @@ class ComponentTcad3d : public Component {
 
   size_t FindElement(const double x, const double y, const double z,
                      std::array<double, nMaxVertices>& w) const;
-  bool CheckElement(const double x, const double y, const double z,
-                    const Element& element, 
-                    std::array<double, nMaxVertices>& w) const {
+  bool InElement(const double x, const double y, const double z,
+                 const Element& element, 
+                 std::array<double, nMaxVertices>& w) const {
+    if (x < element.xmin || x > element.xmax || 
+        y < element.ymin || y > element.ymax || 
+        z < element.zmin || z > element.zmax) {
+      return false;
+    }
     bool inside = false;
     switch (element.type) {
       case 2:
-        if (CheckTriangle(x, y, z, element, w)) inside = true;
+        if (InTriangle(x, y, z, element, w)) inside = true;
         break;
       case 5:
-        if (CheckTetrahedron(x, y, z, element, w)) inside = true;
+        if (InTetrahedron(x, y, z, element, w)) inside = true;
         break;
       default:
-        std::cerr << m_className << "::CheckElement:\n"
+        std::cerr << m_className << "::InElement:\n"
                   << "    Invalid element type (" << element.type << ").\n";
         break;
     }
     return inside;
   }
-  bool CheckTetrahedron(const double x, const double y, const double z,
-                        const Element& element, 
-                        std::array<double, nMaxVertices>& w) const;
-  bool CheckTriangle(const double x, const double y, const double z,
+  bool InTetrahedron(const double x, const double y, const double z,
                      const Element& element, 
                      std::array<double, nMaxVertices>& w) const;
+  bool InTriangle(const double x, const double y, const double z,
+                  const Element& element, 
+                  std::array<double, nMaxVertices>& w) const;
+  
+  bool Interpolate(const double x, const double y, const double z,
+                   const std::vector<double>& field, double& f);
+  bool Interpolate(const double x, const double y, const double z,
+                   const std::vector<std::array<double, 3> >& field, 
+                   double& fx, double& fy, double& fz);
 
   bool LoadGrid(const std::string& gridfilename);
   bool LoadData(const std::string& datafilename);
@@ -188,6 +196,15 @@ class ComponentTcad3d : public Component {
 
   void MapCoordinates(double& x, double& y, double& z, bool& xmirr, bool& ymirr,
                       bool& zmirr) const;
+  bool InBoundingBox(const double x, const double y, const double z) const {
+    bool inside = true;
+    if (x < m_bbMin[0] || x > m_bbMax[0] || 
+        y < m_bbMin[1] || y > m_bbMax[1] ||
+        z < m_bbMin[2] || z > m_bbMax[2]) {
+      inside = false;
+    }
+    return inside;
+  }
   size_t FindRegion(const std::string& name) const;
 };
 }
