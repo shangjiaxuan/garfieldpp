@@ -75,36 +75,7 @@ class ComponentTcad2d : public ComponentTcadBase<2> {
   bool GetNode(const size_t i, double& x, double& y, double& v,
                double& ex, double& ey) const;
 
-  // Mobilities
-  bool GetElectronMobility(const double x, const double y, const double z, 
-                           double& mob);
-  bool GetHoleMobility(const double x, const double y, const double z, 
-                       double& mob);
-
-  /// Switch use of the imported velocity map on/off.
-  void EnableVelocityMap(const bool on) { m_useVelocityMap = on; }
-  bool HasVelocityMap() const override { return m_useVelocityMap; }
-  bool ElectronVelocity(const double x, const double y, const double z,
-                        double& vx, double& vy, double& vz) override;
-  bool HoleVelocity(const double x, const double y, const double z, 
-                    double& vx, double& vy, double& vz) override;
-
-  // Lifetime field maps
-  bool GetElectronLifetime(const double x, const double y, const double z,
-                           double& etau) override;
-  bool GetHoleLifetime(const double x, const double y, const double z,
-                       double& htau) override;
-
-  bool ElectronAttachment(const double x, const double y, const double z,
-                          double& eta) override;
-  bool HoleAttachment(const double x, const double y, const double z,
-                      double& eta) override;
-
  private:
-
-  // Use velocity map or not.
-  bool m_useVelocityMap = false;
-
   // Bounding box
   bool m_hasRangeZ = false;
 
@@ -132,10 +103,10 @@ class ComponentTcad2d : public ComponentTcadBase<2> {
                std::array<double, nMaxVertices>& w) const;
 
   bool Interpolate(const double x, const double y, const double z,
-                   const std::vector<double>& field, double& f);
+                   const std::vector<double>& field, double& f) override;
   bool Interpolate(const double x, const double y, const double z,
                    const std::vector<std::array<double, 2> >& field, 
-                   double& fx, double& fy);
+                   double& fx, double& fy, double& fz) override;
 
   bool LoadGrid(const std::string& gridfilename);
   bool LoadData(const std::string& datafilename);

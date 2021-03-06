@@ -123,6 +123,58 @@ bool ComponentTcadBase<N>::SetAcceptor(const size_t acceptorNumber,
 }
 
 template<size_t N>
+bool ComponentTcadBase<N>::ElectronAttachment(const double x, const double y,
+                                              const double z, double& eta) {
+  Interpolate(x, y, z, m_eAttachment, eta);
+  return true;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::HoleAttachment(const double x, const double y,
+                                          const double z, double& eta) {
+  Interpolate(x, y, z, m_hAttachment, eta);
+  return true;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::ElectronVelocity(const double x, const double y,
+                                            const double z, double& vx, 
+                                            double& vy, double& vz) {
+  return Interpolate(x, y, z, m_eVelocity, vx, vy, vz);
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::HoleVelocity(const double x, const double y,
+                                        const double z, double& vx, 
+                                        double& vy, double& vz) {
+  return Interpolate(x, y, z, m_hVelocity, vx, vy, vz);
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::GetElectronLifetime(const double x, const double y,
+                                               const double z, double& tau) {
+  return Interpolate(x, y, z, m_eLifetime, tau);
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::GetHoleLifetime(const double x, const double y,
+                                           const double z, double& tau) {
+  return Interpolate(x, y, z, m_hLifetime, tau);
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::GetElectronMobility(const double x, const double y,
+                                               const double z, double& mob) {
+  return Interpolate(x, y, z, m_eMobility, mob);
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::GetHoleMobility(const double x, const double y,
+                                           const double z, double& mob) {
+  return Interpolate(x, y, z, m_hMobility, mob);
+}
+
+template<size_t N>
 void ComponentTcadBase<N>::UpdatePeriodicity() {
   if (!m_ready) {
     std::cerr << m_className << "::UpdatePeriodicity:\n"
@@ -177,6 +229,29 @@ void ComponentTcadBase<N>::Cleanup() {
   m_acceptorOcc.clear();
   m_eAttachment.clear();
   m_hAttachment.clear();
+}
+
+template<size_t N>
+void ComponentTcadBase<N>::MapCoordinates(std::array<double, N>& x, 
+                                          std::array<bool, N>& mirr) const {
+  mirr.fill(false);
+  for (size_t i = 0; i < N; ++i) {
+    // In case of periodicity, reduce to the cell volume.
+    const double cellsx = m_bbMax[i] - m_bbMin[i];
+    if (m_periodic[i]) {
+      x[i] = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
+      if (x[i] < m_bbMin[i]) x[i] += cellsx;
+    } else if (m_mirrorPeriodic[i]) {
+      double xNew = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
+      if (xNew < m_bbMin[i]) xNew += cellsx;
+      const int nx = int(floor(0.5 + (xNew - x[i]) / cellsx));
+      if (nx != 2 * (nx / 2)) {
+        xNew = m_bbMin[i] + m_bbMax[i] - xNew;
+        mirr[i] = true;
+      }
+      x[i] = xNew;
+    }
+  }
 }
 
 template<size_t N>

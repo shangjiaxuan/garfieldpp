@@ -115,10 +115,10 @@ class ComponentTcad3d : public ComponentTcadBase<3> {
                   std::array<double, nMaxVertices>& w) const;
   
   bool Interpolate(const double x, const double y, const double z,
-                   const std::vector<double>& field, double& f);
+                   const std::vector<double>& field, double& f) override;
   bool Interpolate(const double x, const double y, const double z,
                    const std::vector<std::array<double, 3> >& field, 
-                   double& fx, double& fy, double& fz);
+                   double& fx, double& fy, double& fz) override;
 
   bool LoadGrid(const std::string& gridfilename);
   bool LoadData(const std::string& datafilename);

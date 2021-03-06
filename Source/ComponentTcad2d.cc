@@ -39,18 +39,6 @@ namespace Garfield {
 
 ComponentTcad2d::ComponentTcad2d() : ComponentTcadBase("Tcad2d") {}
 
-bool ComponentTcad2d::ElectronAttachment(const double x, const double y,
-                                         const double z, double& eta) {
-  Interpolate(x, y, z, m_eAttachment, eta);
-  return true;
-}
-
-bool ComponentTcad2d::HoleAttachment(const double x, const double y,
-                                     const double z, double& eta) {
-  Interpolate(x, y, z, m_hAttachment, eta);
-  return true;
-}
-
 void ComponentTcad2d::WeightingField(const double x, const double y,
                                      const double z, double& wx, double& wy,
                                      double& wz, const std::string& /*label*/) {
@@ -59,7 +47,7 @@ void ComponentTcad2d::WeightingField(const double x, const double y,
     std::cerr << m_className << "::WeightingField: Not available.\n";
     return;
   }
-  Interpolate(x, y, z, m_wf, wx, wy);
+  Interpolate(x, y, z, m_wf, wx, wy, wz);
 }
 
 double ComponentTcad2d::WeightingPotential(const double x, const double y,
@@ -133,9 +121,9 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
 bool ComponentTcad2d::Interpolate(const double xin, const double yin,
     const double z,
     const std::vector<std::array<double, 2> >& field,
-    double& fx, double& fy) {
+    double& fx, double& fy, double& fz) {
 
-  fx = fy = 0.;
+  fx = fy = fz = 0.;
   if (field.empty()) return false;
   if (m_hasRangeZ && (z < m_bbMin[2] || z > m_bbMax[2])) return false;
   std::array<double, 2> x = {xin, yin};
@@ -190,20 +178,6 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
   return true;
 }
 
-bool ComponentTcad2d::ElectronVelocity(const double x, const double y,
-                                       const double z, double& vx, double& vy,
-                                       double& vz) {
-  vz = 0.;
-  return Interpolate(x, y, z, m_eVelocity, vx, vy);
-}
-
-bool ComponentTcad2d::HoleVelocity(const double x, const double y,
-                                   const double z, double& vx, double& vy,
-                                   double& vz) {
-  vz = 0.;
-  return Interpolate(x, y, z, m_hVelocity, vx, vy);
-}
-
 Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
                                    const double zin) {
   // Make sure the field map has been loaded.
@@ -229,25 +203,6 @@ Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
   }
   m_lastElement = i;
   return m_regions[m_elements[i].region].medium;
-}
-
-bool ComponentTcad2d::GetElectronLifetime(const double x, const double y,
-                                          const double z, double& tau) {
-  return Interpolate(x, y, z, m_eLifetime, tau);
-}
-bool ComponentTcad2d::GetHoleLifetime(const double x, const double y,
-                                      const double z, double& tau) {
-  return Interpolate(x, y, z, m_hLifetime, tau);
-}
-
-bool ComponentTcad2d::GetElectronMobility(const double x, const double y,
-                                          const double z, double& mob) {
-  return Interpolate(x, y, z, m_eMobility, mob);
-}
-
-bool ComponentTcad2d::GetHoleMobility(const double x, const double y,
-                                      const double z, double& mob) {
-  return Interpolate(x, y, z, m_hMobility, mob);
 }
 
 bool ComponentTcad2d::Initialise(const std::string& gridfilename,

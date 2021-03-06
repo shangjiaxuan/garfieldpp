@@ -42,6 +42,14 @@ class ComponentTcadBase : public Component {
   size_t GetNumberOfElements() const { return m_elements.size(); }
   /// Get the number of vertices in the mesh.
   size_t GetNumberOfNodes() const { return m_vertices.size(); }
+  
+  /// Switch use of the imported velocity map on/off.
+  void EnableVelocityMap(const bool on) { m_useVelocityMap = on; }
+  bool HasVelocityMap() const override { return m_useVelocityMap; }
+  bool ElectronVelocity(const double x, const double y, const double z,
+                        double& vx, double& vy, double& vz) override;
+  bool HoleVelocity(const double x, const double y, const double z, 
+                    double& vx, double& vy, double& vz) override;
 
   size_t GetNumberOfDonors() { return m_donors.size(); }
   size_t GetNumberOfAcceptors() { return m_acceptors.size(); }
@@ -56,7 +64,21 @@ class ComponentTcadBase : public Component {
   bool HasAttachmentMap() const override {
     return (m_useAttachmentMap && !(m_acceptors.empty() && m_donors.empty()));
   }
+  bool ElectronAttachment(const double x, const double y, const double z,
+                          double& eta) override;
+  bool HoleAttachment(const double x, const double y, const double z,
+                      double& eta) override;
 
+  bool GetElectronLifetime(const double x, const double y, const double z,
+                           double& etau) override;
+  bool GetHoleLifetime(const double x, const double y, const double z,
+                       double& htau) override;
+  
+  // Mobilities
+  bool GetElectronMobility(const double x, const double y, const double z, 
+                           double& mob);
+  bool GetHoleMobility(const double x, const double y, const double z, 
+                       double& mob);
  protected:
   // Max. number of vertices per element
   static constexpr size_t nMaxVertices = N == 2 ? 4 : 7;
@@ -136,6 +158,8 @@ class ComponentTcadBase : public Component {
   std::vector<Defect> m_donors;
   std::vector<Defect> m_acceptors;
  
+  // Use velocity map or not.
+  bool m_useVelocityMap = false;
   // Use trapping map or not.
   bool m_useAttachmentMap = false;
 
@@ -151,28 +175,15 @@ class ComponentTcadBase : public Component {
 
   void Cleanup();
 
+  virtual bool Interpolate(const double x, const double y, const double z,
+                           const std::vector<double>& field, double& f) = 0;
+  virtual bool Interpolate(const double x, const double y, const double z,
+                           const std::vector<std::array<double, N> >& field,
+                           double& fx, double& fy, double& fz) = 0;
+
   size_t FindRegion(const std::string& name) const;
   void MapCoordinates(std::array<double, N>& x, 
-                      std::array<bool, N>& mirr) const {
-    mirr.fill(false);
-    for (size_t i = 0; i < N; ++i) {
-      // In case of periodicity, reduce to the cell volume.
-      const double cellsx = m_bbMax[i] - m_bbMin[i];
-      if (m_periodic[i]) {
-        x[i] = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
-        if (x[i] < m_bbMin[i]) x[i] += cellsx;
-      } else if (m_mirrorPeriodic[i]) {
-        double xNew = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
-        if (xNew < m_bbMin[i]) xNew += cellsx;
-        const int nx = int(floor(0.5 + (xNew - x[i]) / cellsx));
-        if (nx != 2 * (nx / 2)) {
-          xNew = m_bbMin[i] + m_bbMax[i] - xNew;
-          mirr[i] = true;
-        }
-        x[i] = xNew;
-      }
-    }
-  }
+                      std::array<bool, N>& mirr) const;
   bool InBoundingBox(const std::array<double, N>& x) const {
     for (size_t i = 0; i < N; ++i) {
       if (x[i] < m_bbMin[i] || x[i] > m_bbMax[i]) return false;
