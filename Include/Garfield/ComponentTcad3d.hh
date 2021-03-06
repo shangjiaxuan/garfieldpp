@@ -107,6 +107,7 @@ class ComponentTcad3d : public Component {
 
   // Vertex coordinates [cm].
   std::vector<std::array<double, 3> > m_vertices;
+
   // Potential [V] at each vertex.
   std::vector<double> m_potential;
   // Electric field [V / cm].
@@ -114,6 +115,32 @@ class ComponentTcad3d : public Component {
   // Weighting field and potential at each vertex.
   std::vector<std::array<double, 3> > m_wf;
   std::vector<double> m_wp;
+  // Velocities [cm / ns]
+  std::vector<std::array<double, 3> > m_eVelocity; 
+  std::vector<std::array<double, 3> > m_hVelocity;
+  // Mobilities [cm2 / (V ns)]
+  std::vector<double> m_eMobility;
+  std::vector<double> m_hMobility; 
+  // Lifetimes [ns]
+  std::vector<double> m_eLifetime;
+  std::vector<double> m_hLifetime;
+  // Trap occupations [dimensionless]
+  std::vector<std::vector<float> > m_donorOcc;
+  std::vector<std::vector<float> > m_acceptorOcc;
+  // Attachment coefficients [1 / cm]
+  std::vector<double> m_eAttachment;
+  std::vector<double> m_hAttachment;
+  
+struct Defect {
+    // Electron cross-section
+    double xsece;
+    // Hole cross-section
+    double xsech;
+    // Concentration
+    double conc;
+  };
+  std::vector<Defect> m_donors;
+  std::vector<Defect> m_acceptors;
 
   // Elements
   struct Element {
@@ -208,6 +235,8 @@ class ComponentTcad3d : public Component {
                           std::vector<double>& wp);
   void Cleanup();
 
+  size_t FindRegion(const std::string& name) const;
+
   void MapCoordinates(double& x, double& y, double& z, bool& xmirr, bool& ymirr,
                       bool& zmirr) const;
   bool InBoundingBox(const double x, const double y, const double z) const {
@@ -219,7 +248,7 @@ class ComponentTcad3d : public Component {
     }
     return inside;
   }
-  size_t FindRegion(const std::string& name) const;
+
 };
 }
 #endif

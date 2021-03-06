@@ -163,15 +163,26 @@ class ComponentTcad2d : public Component {
   // Mobilities [cm2 / (V ns)]
   std::vector<double> m_eMobility;
   std::vector<double> m_hMobility; 
-  // Trap occupations [dimensionless]
-  std::vector<std::vector<float> > m_donorOcc;
-  std::vector<std::vector<float> > m_acceptorOcc;
   // Lifetimes [ns]
   std::vector<double> m_eLifetime;
   std::vector<double> m_hLifetime;
+  // Trap occupations [dimensionless]
+  std::vector<std::vector<float> > m_donorOcc;
+  std::vector<std::vector<float> > m_acceptorOcc;
   // Attachment coefficients [1 / cm]
   std::vector<double> m_eAttachment;
   std::vector<double> m_hAttachment;
+  
+  struct Defect {
+    // Electron cross-section
+    double xsece;
+    // Hole cross-section
+    double xsech;
+    // Concentration
+    double conc;
+  };
+  std::vector<Defect> m_donors;
+  std::vector<Defect> m_acceptors;
 
   // Elements
   struct Element {
@@ -192,17 +203,6 @@ class ComponentTcad2d : public Component {
     float ymin, ymax;
   };
   std::vector<Element> m_elements;
-
-  struct Defect {
-    // Electron cross-section
-    double xsece;
-    // Hole cross-section
-    double xsech;
-    // Concentration
-    double conc;
-  };
-  std::vector<Defect> m_donors;
-  std::vector<Defect> m_acceptors;
 
   // Use velocity and trapping maps or not.
   bool m_useVelocityMap = false;

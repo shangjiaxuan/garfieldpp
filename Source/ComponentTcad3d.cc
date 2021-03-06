@@ -10,6 +10,32 @@
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Utilities.hh"
 
+namespace {
+
+bool ExtractFromSquareBrackets(std::string& line) {
+
+  const auto bra = line.find('[');
+  const auto ket = line.find(']');
+  if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    return false;
+  }
+  line = line.substr(bra + 1, ket - bra - 1);
+  return true;
+}
+
+bool ExtractFromBrackets(std::string& line) {
+
+  const auto bra = line.find('(');
+  const auto ket = line.find(')');
+  if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    return false;
+  }
+  line = line.substr(bra + 1, ket - bra - 1);
+  return true;
+}
+
+}
+
 namespace Garfield {
 
 ComponentTcad3d::ComponentTcad3d() : Component("Tcad3d") {
@@ -177,10 +203,13 @@ Medium* ComponentTcad3d::GetMedium(const double xin, const double yin,
 bool ComponentTcad3d::Initialise(const std::string& gridfilename,
                                  const std::string& datafilename) {
   m_ready = false;
+  Cleanup();
+
   // Import mesh data from .grd file.
   if (!LoadGrid(gridfilename)) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Importing mesh data failed.\n";
+    Cleanup();
     return false;
   }
 
@@ -188,6 +217,7 @@ bool ComponentTcad3d::Initialise(const std::string& gridfilename,
   if (!LoadData(datafilename)) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Importing electric field and potential failed.\n";
+    Cleanup();
     return false;
   }
 
@@ -236,11 +266,19 @@ bool ComponentTcad3d::Initialise(const std::string& gridfilename,
   m_pMax = *std::max_element(m_potential.begin(), m_potential.end());
   std::cout << m_className << "::Initialise:\n"
             << "    Available data:\n";
-  if (!m_potential.empty()) {
-    std::cout << "      Electrostatic potential\n";
+  if (!m_potential.empty()) std::cout << "      Electrostatic potential\n";
+  if (!m_efield.empty()) std::cout << "      Electric field\n";
+  if (!m_eMobility.empty()) std::cout << "      Electron mobility\n";
+  if (!m_hMobility.empty()) std::cout << "      Hole mobility\n";
+  if (!m_eVelocity.empty()) std::cout << "      Electron velocity\n";
+  if (!m_hVelocity.empty()) std::cout << "      Hole velocity\n";
+  if (!m_eLifetime.empty()) std::cout << "      Electron lifetime\n";
+  if (!m_hLifetime.empty()) std::cout << "      Hole lifetime\n";
+  if (!m_donors.empty()) {
+    std::cout << "      " << m_donors.size() << " donor-type traps\n";
   }
-  if (!m_efield.empty()) {
-    std::cout << "      Electric field\n";
+  if (!m_acceptors.empty()) {
+    std::cout << "      " << m_acceptors.size() << " acceptor-type traps\n";
   }
   std::cout << m_className << "::Initialise:\n"
             << "    Bounding box:\n"
@@ -679,18 +717,17 @@ bool ComponentTcad3d::GetNode(const size_t i, double& x, double& y,
   return true;
 }
 
-bool ComponentTcad3d::LoadData(const std::string& datafilename) {
+bool ComponentTcad3d::LoadData(const std::string& filename) {
   std::ifstream datafile;
-  datafile.open(datafilename.c_str(), std::ios::in);
+  datafile.open(filename.c_str(), std::ios::in);
   if (!datafile) {
     std::cerr << m_className << "::LoadData:\n"
-              << "    Could not open file " << datafilename << ".\n";
+              << "    Could not open file " << filename << ".\n";
     return false;
   }
 
   const size_t nVertices = m_vertices.size();
-  m_potential.assign(nVertices, 0.);
-  m_efield.assign(nVertices, {0., 0., 0.});
+  std::vector<unsigned int> fillCount(nVertices, 0);
 
   // Read the file line by line.
   std::string line;
@@ -704,10 +741,9 @@ bool ComponentTcad3d::LoadData(const std::string& datafilename) {
     if (pEq == std::string::npos) {
       // No "=" found.
       std::cerr << m_className << "::LoadData:\n"
-                << "    Error reading file " << datafilename << ".\n"
+                << "    Error reading file " << filename << ".\n"
                 << "    Line:\n    " << line << "\n";
       datafile.close();
-      Cleanup();
       return false;
     }
     line = line.substr(pEq + 1);
@@ -728,13 +764,64 @@ bool ComponentTcad3d::LoadData(const std::string& datafilename) {
         m_efield.clear();
         return false;
       }
+    } else if (dataset == "eDriftVelocity") {
+      m_eVelocity.assign(nVertices, {0., 0., 0.});
+      if (!ReadDataset(datafile, dataset)) {
+        m_eVelocity.clear();
+        return false;
+      }
+    } else if (dataset == "hDriftVelocity") {
+      m_hVelocity.assign(nVertices, {0., 0., 0.});
+      if (!ReadDataset(datafile, dataset)) {
+        m_hVelocity.clear();
+        return false;
+      }
+    } else if (dataset == "eMobility") {
+      m_eMobility.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_eMobility.clear();
+        return false;
+      }
+    } else if (dataset == "hMobility") {
+      m_hMobility.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_hMobility.clear();
+        return false;
+      }
+    } else if (dataset == "eLifetime") {
+      m_eLifetime.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_eLifetime.clear();
+        return false;
+      }
+    } else if (dataset == "hLifetime") {
+      m_hLifetime.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_hLifetime.clear();
+        return false;
+      }
+    } else if (dataset.substr(0, 14) == "TrapOccupation" &&
+               dataset.substr(17, 2) == "Do") {
+      if (!ReadDataset(datafile, dataset)) return false;
+      Defect donor;
+      donor.xsece = -1.;
+      donor.xsech = -1.;
+      donor.conc = -1.;
+      m_donors.push_back(donor);
+    } else if (dataset.substr(0, 14) == "TrapOccupation" &&
+               dataset.substr(17, 2) == "Ac") {
+      if (!ReadDataset(datafile, dataset)) return false;
+      Defect acceptor;
+      acceptor.xsece = -1.;
+      acceptor.xsech = -1.;
+      acceptor.conc = -1.;
+      m_acceptors.push_back(acceptor);
     }
   }
   if (datafile.fail() && !datafile.eof()) {
     std::cerr << m_className << "::LoadData:\n"
-              << "    Error reading file " << datafilename << "\n";
+              << "    Error reading file " << filename << "\n";
     datafile.close();
-    Cleanup();
     return false;
   }
   datafile.close();
@@ -744,12 +831,42 @@ bool ComponentTcad3d::LoadData(const std::string& datafilename) {
 bool ComponentTcad3d::ReadDataset(std::ifstream& datafile,
                                   const std::string& dataset) {
   if (!datafile.is_open()) return false;
-  enum DataSet { ElectrostaticPotential, EField, Unknown };
+  enum DataSet { 
+    ElectrostaticPotential, 
+    EField, 
+    eDriftVelocity,
+    hDriftVelocity,
+    eMobility,
+    hMobility,
+    eLifetime,
+    hLifetime,
+    DonorTrapOccupation,
+    AcceptorTrapOccupation,
+    Unknown 
+  };
   DataSet ds = Unknown;
   if (dataset == "ElectrostaticPotential") {
     ds = ElectrostaticPotential;
   } else if (dataset == "ElectricField") {
     ds = EField;
+  } else if (dataset == "eDriftVelocity") {
+    ds = eDriftVelocity;
+  } else if (dataset == "hDriftVelocity") {
+    ds = hDriftVelocity;
+  } else if (dataset == "eMobility") {
+    ds = eMobility;
+  } else if (dataset == "hMobility") {
+    ds = hMobility;
+  } else if (dataset == "eLifetime") {
+    ds = eLifetime;
+  } else if (dataset == "hLifetime") {
+    ds = hLifetime;
+  } else if (dataset.substr(0, 14) == "TrapOccupation") {
+    if (dataset.substr(17, 2) == "Do") {
+      ds = DonorTrapOccupation;
+    } else if (dataset.substr(17, 2) == "Ac") {
+      ds = AcceptorTrapOccupation;
+    }
   } else {
     std::cerr << m_className << "::ReadDataset:\n"
               << "    Unexpected dataset " << dataset << ".\n";
@@ -760,23 +877,20 @@ bool ComponentTcad3d::ReadDataset(std::ifstream& datafile,
     isVector = true;
   }
 
+  if (!datafile.is_open()) return false;
   std::string line;
   std::getline(datafile, line);
   std::getline(datafile, line);
   std::getline(datafile, line);
   std::getline(datafile, line);
   // Get the region name (given in brackets).
-  auto bra = line.find('[');
-  auto ket = line.find(']');
-  if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+  if (!ExtractFromSquareBrackets(line)) {
     std::cerr << m_className << "::ReadDataset:\n"
               << "    Cannot extract region name.\n"
               << "    Line:\n    " << line << "\n";
     datafile.close();
-    Cleanup();
     return false;
   }
-  line = line.substr(bra + 1, ket - bra - 1);
   std::string name;
   std::istringstream data;
   data.str(line);
@@ -788,22 +902,17 @@ bool ComponentTcad3d::ReadDataset(std::ifstream& datafile,
     std::cerr << m_className << "::ReadDataset:\n"
               << "    Unknown region " << name << ".\n";
     datafile.close();
-    Cleanup();
     return false;
   }
   // Get the number of values.
   std::getline(datafile, line);
-  bra = line.find('(');
-  ket = line.find(')');
-  if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+  if (!ExtractFromBrackets(line)) {
     std::cerr << m_className << "::ReadDataset:\n"
               << "    Cannot extract number of values to be read.\n"
               << "    Line:\n    " << line << "\n";
     datafile.close();
-    Cleanup();
     return false;
   }
-  line = line.substr(bra + 1, ket - bra - 1);
   int nValues;
   data.str(line);
   data >> nValues;
@@ -840,7 +949,6 @@ bool ComponentTcad3d::ReadDataset(std::ifstream& datafile,
                 << "    Dataset " << dataset << " has more values than "
                 << "there are vertices in region " << name << "\n";
       datafile.close();
-      Cleanup();
       return false;
     }
     switch (ds) {
@@ -852,11 +960,44 @@ bool ComponentTcad3d::ReadDataset(std::ifstream& datafile,
         m_efield[ivertex][1] = val2;
         m_efield[ivertex][2] = val3;
         break;
+      case eDriftVelocity:
+        // Scale from cm/s to cm/ns.
+        m_eVelocity[ivertex][0] = val1 * 1.e-9;
+        m_eVelocity[ivertex][1] = val2 * 1.e-9;
+        m_eVelocity[ivertex][2] = val3 * 1.e-9;
+        break;
+      case hDriftVelocity:
+        // Scale from cm/s to cm/ns.
+        m_hVelocity[ivertex][0] = val1 * 1.e-9;
+        m_hVelocity[ivertex][1] = val2 * 1.e-9;
+        m_hVelocity[ivertex][2] = val3 * 1.e-9;
+        break;
+      case eMobility:
+        // Convert from cm2 / (V s) to cm2 / (V ns).
+        m_eMobility[ivertex] = val1 * 1.e-9;
+        break;
+      case hMobility:
+        // Convert from cm2 / (V s) to cm2 / (V ns).
+        m_hMobility[ivertex] = val1 * 1.e-9;
+        break;
+      case eLifetime:
+        // Convert from s to ns.
+        m_eLifetime[ivertex] = val1 * 1.e9;
+        break;
+      case hLifetime:
+        // Convert from s to ns.
+        m_hLifetime[ivertex] = val1 * 1.e9;
+        break;
+      case DonorTrapOccupation:
+        m_donorOcc[ivertex].push_back(val1);
+        break;
+      case AcceptorTrapOccupation:
+        m_acceptorOcc[ivertex].push_back(val1);
+        break;
       default:
         std::cerr << m_className << "::ReadDataset:\n"
                   << "    Unexpected dataset (" << ds << "). Program bug!\n";
         datafile.close();
-        Cleanup();
         return false;
     }
     ++ivertex;
@@ -1003,22 +1144,20 @@ bool ComponentTcad3d::LoadWeightingField(const std::string& datafilename,
   return true;
 }
 
-bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
+bool ComponentTcad3d::LoadGrid(const std::string& filename) {
   // Open the file containing the mesh description.
   std::ifstream gridfile;
-  gridfile.open(gridfilename.c_str(), std::ios::in);
+  gridfile.open(filename.c_str(), std::ios::in);
   if (!gridfile) {
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Could not open file " << gridfilename << ".\n";
+              << "    Could not open file " << filename << ".\n";
     return false;
   }
 
   // Delete existing mesh information.
   Cleanup();
-
   // Count line numbers.
   int iLine = 0;
-
   // Get the number of regions.
   size_t nRegions = 0;
   // Read the file line by line.
@@ -1034,7 +1173,6 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
       // No "=" sign found.
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of regions.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
@@ -1048,16 +1186,14 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     // Reached end of file.
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find entry 'nb_regions' in file\n"
-              << "    " << gridfilename << ".\n";
-    Cleanup();
+              << "    " << filename << ".\n";
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     // Error reading from the file.
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << " (line " << iLine
+              << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    Cleanup();
     gridfile.close();
     return false;
   }
@@ -1080,17 +1216,12 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     // Find entry 'regions'.
     if (line.substr(0, 7) != "regions") continue;
     // Get region names (given in brackets).
-    const auto bra = line.find('[');
-    const auto ket = line.find(']');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets [].
+    if (!ExtractFromSquareBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read region names.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
     for (size_t j = 0; j < nRegions; ++j) {
@@ -1106,16 +1237,14 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     // Reached end of file.
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find entry 'regions' in file\n"
-              << "    " << gridfilename << ".\n";
-    Cleanup();
+              << "    " << filename << ".\n";
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     // Error reading from the file.
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << " (line " << iLine
+              << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    Cleanup();
     gridfile.close();
     return false;
   }
@@ -1128,17 +1257,12 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     // Find section 'Vertices'.
     if (line.substr(0, 8) != "Vertices") continue;
     // Get number of vertices (given in brackets).
-    const auto bra = line.find('(');
-    const auto ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets [].
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of vertices.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
     data >> nVertices;
@@ -1150,22 +1274,20 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
       m_vertices[j][0] *= 1.e-4;
       m_vertices[j][1] *= 1.e-4;
       m_vertices[j][2] *= 1.e-4;
+      ++iLine;
     }
-    iLine += nVertices - 1;
     break;
   }
   if (gridfile.eof()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Vertices' in file\n"
-              << "    " << gridfilename << ".\n";
-    Cleanup();
+              << "    " << filename << ".\n";
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << " (line " << iLine
+              << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    Cleanup();
     gridfile.close();
     return false;
   }
@@ -1181,17 +1303,12 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     // Find section 'Edges'.
     if (line.substr(0, 5) != "Edges") continue;
     // Get the number of edges (given in brackets).
-    const auto bra = line.find('(');
-    const auto ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets ()
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of edges.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
     data >> nEdges;
@@ -1200,22 +1317,20 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     // Get the indices of the two endpoints.
     for (size_t j = 0; j < nEdges; ++j) {
       gridfile >> edgeP1[j] >> edgeP2[j];
+      ++iLine;
     }
-    iLine += nEdges - 1;
     break;
   }
   if (gridfile.eof()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Edges' in file\n"
-              << "    " << gridfilename << ".\n";
-    Cleanup();
+              << "    " << filename << ".\n";
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << " (line " << iLine
+              << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    Cleanup();
     gridfile.close();
     return false;
   }
@@ -1225,7 +1340,6 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     if (edgeP1[i] >= nVertices || edgeP2[i] >= nVertices) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Vertex index of edge " << i << " out of range.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
@@ -1233,7 +1347,6 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     if (edgeP1[i] == edgeP2[i]) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Edge " << i << " is degenerate.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
@@ -1248,17 +1361,12 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     // Find section 'Faces'.
     if (line.substr(0, 5) != "Faces") continue;
     // Get the number of faces (given in brackets).
-    const auto bra = line.find('(');
-    const auto ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets ()
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of faces.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
     data >> nFaces;
@@ -1270,7 +1378,6 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
         std::cerr << m_className << "::LoadGrid:\n"
                   << "    Face with index " << j
                   << " has invalid number of edges, " << faces[j].type << ".\n";
-        Cleanup();
         gridfile.close();
         return false;
       }
@@ -1284,15 +1391,13 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
   if (gridfile.eof()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Faces' in file\n"
-              << "    " << gridfilename << ".\n";
-    Cleanup();
+              << "    " << filename << ".\n";
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << " (line " << iLine
+              << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    Cleanup();
     gridfile.close();
     return false;
   }
@@ -1305,17 +1410,12 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     // Find section 'Elements'.
     if (line.substr(0, 8) != "Elements") continue;
     // Get number of elements (given in brackets).
-    const auto bra = line.find('(');
-    const auto ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets ().
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of elements.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
     data >> nElements;
@@ -1343,9 +1443,8 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
         if (edge0 >= (int)nEdges || edge1 >= (int)nEdges || 
             edge2 >= (int)nEdges) {
           std::cerr << m_className << "::LoadGrid:\n    Error reading file "
-                    << gridfilename << " (line " << iLine << ").\n"
+                    << filename << " (line " << iLine << ").\n"
                     << "    Edge index out of range.\n";
-          Cleanup();
           gridfile.close();
           return false;
         }
@@ -1373,9 +1472,8 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
         if (face0 >= (int)nFaces || face1 >= (int)nFaces || 
             face2 >= (int)nFaces || face3 >= (int)nFaces) {
           std::cerr << m_className << "::LoadGrid:\n    Error reading file "
-                    << gridfilename << " (line " << iLine << ").\n"
+                    << filename << " (line " << iLine << ").\n"
                     << "    Face index out of range.\n";
-          Cleanup();
           gridfile.close();
           return false;
         }
@@ -1390,9 +1488,8 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
         if (edge0 >= (int)nEdges || edge1 >= (int)nEdges || 
             edge2 >= (int)nEdges) {
           std::cerr << m_className << "::LoadGrid:\n"
-                    << "    Error reading file " << gridfilename << "\n"
+                    << "    Error reading file " << filename << "\n"
                     << "    Edge index in element " << j << " out of range.\n";
-          Cleanup();
           gridfile.close();
           return false;
         }
@@ -1430,16 +1527,15 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
           m_elements[j].vertex[3] = edgeP2[edge1];
         } else {
           std::cerr << m_className << "::LoadGrid:\n"
-                    << "    Error reading file " << gridfilename << "\n"
+                    << "    Error reading file " << filename << "\n"
                     << "    Face 1 of element " << j << " is degenerate.\n";
-          Cleanup();
           gridfile.close();
           return false;
         }
       } else {
         // Other element types are not allowed.
         std::cerr << m_className << "::LoadGrid:\n"
-                  << "    Error reading file " << gridfilename << " (line "
+                  << "    Error reading file " << filename << " (line "
                   << iLine << ").\n";
         if (type == 0 || type == 1) {
           std::cerr << "    Invalid element type (" << type
@@ -1449,26 +1545,24 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
                     << "    Remesh with option -t to create only"
                     << " triangles and tetrahedra.\n";
         }
-        Cleanup();
         gridfile.close();
         return false;
       }
       m_elements[j].type = type;
-      m_elements[j].region = -1;
+      m_elements[j].region = m_regions.size();
     }
     break;
   }
   if (gridfile.eof()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Elements' in file\n"
-              << "    " << gridfilename << ".\n";
+              << "    " << filename << ".\n";
     Cleanup();
-    gridfile.close();
     return false;
   } else if (gridfile.fail()) {
-    std::cerr << m_className << "::LoadGrid:\n    Error reading file "
-              << gridfilename << " (line " << iLine << ").\n";
-    Cleanup();
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Error reading file " << filename << " (line " << iLine 
+              << ").\n";
     gridfile.close();
     return false;
   }
@@ -1479,16 +1573,12 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     // Find section 'Region'.
     if (line.substr(0, 6) != "Region") continue;
     // Get region name (given in brackets).
-    auto bra = line.find('(');
-    auto ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read region name.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::istringstream data;
     data.str(line);
     std::string name;
@@ -1498,24 +1588,20 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
     if (index >= m_regions.size()) {
       // Specified region name is not in the list.
       std::cerr << m_className << "::LoadGrid:\n"
-                << "    Error reading file " << gridfilename << ".\n"
+                << "    Error reading file " << filename << ".\n"
                 << "    Unknown region " << name << ".\n";
       continue;
     }
     std::getline(gridfile, line);
     std::getline(gridfile, line);
-    bra = line.find('(');
-    ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
-      // No closed brackets ().
-      std::cerr << m_className << "::LoadGrid:\n    Error reading file "
-                << gridfilename << ".\n    Could not read number of elements "
-                << "in region " << name << ".\n";
-      Cleanup();
+    if (!ExtractFromBrackets(line)) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Error reading file " << filename << ".\n"
+                << "    Could not read number of elements in region " 
+                << name << ".\n";
       gridfile.close();
       return false;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     int nElementsRegion;
     size_t iElement;
     data.str(line);
@@ -1530,8 +1616,7 @@ bool ComponentTcad3d::LoadGrid(const std::string& gridfilename) {
   gridfile.close();
   if (gridfile.fail() && !gridfile.eof()) {
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << ".\n";
-    Cleanup();
+              << "    Error reading file " << filename << ".\n";
     return false;
   }
 
@@ -1545,9 +1630,25 @@ void ComponentTcad3d::Cleanup() {
   m_elements.clear();
   // Regions
   m_regions.clear();
+  // Potential and electric field.
+  m_potential.clear();
+  m_efield.clear();
   // Weighting fields and potentials.
   m_wf.clear();
   m_wp.clear();
+  // Other data.
+  m_eVelocity.clear();
+  m_hVelocity.clear();
+  m_eMobility.clear();
+  m_hMobility.clear();
+  m_eLifetime.clear();
+  m_hLifetime.clear();
+  m_donors.clear();
+  m_acceptors.clear();
+  m_donorOcc.clear();
+  m_acceptorOcc.clear();
+  m_eAttachment.clear();
+  m_hAttachment.clear();
 }
 
 bool ComponentTcad3d::InTetrahedron(

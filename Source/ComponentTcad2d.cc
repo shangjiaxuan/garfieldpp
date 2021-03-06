@@ -299,6 +299,7 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   if (!LoadGrid(gridfilename)) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Importing mesh data failed.\n";
+    Cleanup();
     return false;
   }
 
@@ -341,30 +342,14 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   m_pMax = *std::max_element(m_potential.begin(), m_potential.end());
   std::cout << m_className << "::Initialise:\n"
             << "    Available data:\n";
-  if (!m_potential.empty()) {
-    std::cout << "      Electrostatic potential\n";
-  }
-  if (!m_efield.empty()) {
-    std::cout << "      Electric field\n";
-  }
-  if (!m_eMobility.empty()) {
-    std::cout << "      Electron mobility\n";
-  }
-  if (!m_hMobility.empty()) {
-    std::cout << "      Hole mobility\n";
-  }
-  if (!m_eVelocity.empty()) {
-    std::cout << "      Electron velocity\n";
-  }
-  if (!m_hVelocity.empty()) {
-    std::cout << "      Hole velocity\n";
-  }
-  if (!m_eLifetime.empty()) {
-    std::cout << "      Electron lifetimes\n";
-  }
-  if (!m_hLifetime.empty()) {
-    std::cout << "      Hole lifetimes\n";
-  }
+  if (!m_potential.empty()) std::cout << "      Electrostatic potential\n";
+  if (!m_efield.empty()) std::cout << "      Electric field\n";
+  if (!m_eMobility.empty()) std::cout << "      Electron mobility\n";
+  if (!m_hMobility.empty()) std::cout << "      Hole mobility\n";
+  if (!m_eVelocity.empty()) std::cout << "      Electron velocity\n";
+  if (!m_hVelocity.empty()) std::cout << "      Hole velocity\n";
+  if (!m_eLifetime.empty()) std::cout << "      Electron lifetime\n";
+  if (!m_hLifetime.empty()) std::cout << "      Hole lifetime\n";
   if (!m_donors.empty()) {
     std::cout << "      " << m_donors.size() << " donor-type traps\n";
   }
@@ -768,12 +753,12 @@ bool ComponentTcad2d::GetNode(const size_t i, double& x, double& y,
   return true;
 }
 
-bool ComponentTcad2d::LoadData(const std::string& datafilename) {
+bool ComponentTcad2d::LoadData(const std::string& filename) {
   std::ifstream datafile;
-  datafile.open(datafilename.c_str(), std::ios::in);
+  datafile.open(filename.c_str(), std::ios::in);
   if (!datafile) {
     std::cerr << m_className << "::LoadData:\n"
-              << "    Could not open file " << datafilename << ".\n";
+              << "    Could not open file " << filename << ".\n";
     return false;
   }
 
@@ -792,10 +777,9 @@ bool ComponentTcad2d::LoadData(const std::string& datafilename) {
     if (pEq == std::string::npos) {
       // No "=" found.
       std::cerr << m_className << "::LoadData:\n"
-                << "    Error reading file " << datafilename << ".\n"
+                << "    Error reading file " << filename << ".\n"
                 << "    Line:\n    " << line << "\n";
       datafile.close();
-      Cleanup();
       return false;
     }
     line = line.substr(pEq + 1);
@@ -871,14 +855,11 @@ bool ComponentTcad2d::LoadData(const std::string& datafilename) {
   }
   if (datafile.fail() && !datafile.eof()) {
     std::cerr << m_className << "::LoadData:\n"
-              << "    Error reading file " << datafilename << "\n";
+              << "    Error reading file " << filename << "\n";
     datafile.close();
-    Cleanup();
     return false;
   }
-
   datafile.close();
-
   return true;
 }
 
@@ -943,7 +924,6 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
               << "    Cannot extract region name.\n"
               << "    Line:\n    " << line << "\n";
     datafile.close();
-    Cleanup();
     return false;
   }
   std::string name;
@@ -952,12 +932,11 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
   data >> name;
   data.clear();
   // Check if the region name matches one from the mesh file.
-  const auto index = FindRegion(name);
+  const size_t index = FindRegion(name);
   if (index >= m_regions.size()) {
     std::cerr << m_className << "::ReadDataset:\n"
               << "    Unknown region " << name << ".\n";
     datafile.close();
-    Cleanup();
     return false;
   }
   // Get the number of values.
@@ -967,7 +946,6 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
               << "    Cannot extract number of values to be read.\n"
               << "    Line:\n    " << line << "\n";
     datafile.close();
-    Cleanup();
     return false;
   }
   int nValues;
@@ -976,7 +954,7 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
   data.clear();
   if (isVector) nValues = nValues / 2;
   // Mark the vertices belonging to this region.
-  const unsigned int nVertices = m_vertices.size();
+  const size_t nVertices = m_vertices.size();
   std::vector<bool> isInRegion(nVertices, false);
   const size_t nElements = m_elements.size();
   for (size_t j = 0; j < nElements; ++j) {
@@ -1007,7 +985,6 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
                 << "    Dataset " << dataset
                 << " has more values than vertices in region " << name << "\n";
       datafile.close();
-      Cleanup();
       return false;
     }
     switch (ds) {
@@ -1054,7 +1031,6 @@ bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
         std::cerr << m_className << "::ReadDataset:\n"
                   << "    Unexpected dataset (" << ds << "). Program bug!\n";
         datafile.close();
-        Cleanup();
         return false;
     }
     ++ivertex;
@@ -1196,13 +1172,13 @@ bool ComponentTcad2d::LoadWeightingField(const std::string& datafilename,
   return true;
 }
 
-bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
+bool ComponentTcad2d::LoadGrid(const std::string& filename) {
   // Open the file containing the mesh description.
   std::ifstream gridfile;
-  gridfile.open(gridfilename.c_str(), std::ios::in);
+  gridfile.open(filename.c_str(), std::ios::in);
   if (!gridfile) {
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Could not open file " << gridfilename << ".\n";
+              << "    Could not open file " << filename << ".\n";
     return false;
   }
 
@@ -1224,7 +1200,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
       // No "=" sign found.
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of regions.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
@@ -1238,16 +1213,14 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     // Reached end of file.
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find entry 'nb_regions' in file\n"
-              << "    " << gridfilename << ".\n";
-    Cleanup();
+              << "    " << filename << ".\n";
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     // Error reading from the file.
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << " (line " << iLine
+              << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    Cleanup();
     gridfile.close();
     return false;
   }
@@ -1273,7 +1246,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     if (!ExtractFromSquareBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read region names.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
@@ -1292,22 +1264,20 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     // Reached end of file.
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find entry 'regions' in file\n"
-              << "    " << gridfilename << ".\n";
-    Cleanup();
+              << "    " << filename << ".\n";
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     // Error reading from the file.
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << " (line " << iLine
+              << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    Cleanup();
     gridfile.close();
     return false;
   }
 
   // Get the vertices.
-  unsigned int nVertices = 0;
+  size_t nVertices = 0;
   while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
@@ -1317,7 +1287,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of vertices.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
@@ -1338,21 +1307,19 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
   if (gridfile.eof()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Vertices' in file\n"
-              << "    " << gridfilename << ".\n";
-    Cleanup();
+              << "    " << filename << ".\n";
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << " (line " << iLine
+              << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    Cleanup();
     gridfile.close();
     return false;
   }
 
   // Get the "edges" (lines connecting two vertices).
-  int nEdges = 0;
+  size_t nEdges = 0;
   // Temporary arrays for storing edge points.
   std::vector<int> edgeP1;
   std::vector<int> edgeP2;
@@ -1365,7 +1332,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of edges.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
@@ -1375,7 +1341,7 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     edgeP1.resize(nEdges);
     edgeP2.resize(nEdges);
     // Get the indices of the two endpoints.
-    for (int j = 0; j < nEdges; ++j) {
+    for (size_t j = 0; j < nEdges; ++j) {
       gridfile >> edgeP1[j] >> edgeP2[j];
       ++iLine;
     }
@@ -1384,26 +1350,23 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
   if (gridfile.eof()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Edges' in file\n"
-              << "    " << gridfilename << ".\n";
-    Cleanup();
+              << "    " << filename << ".\n";
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << " (line " << iLine
+              << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    Cleanup();
     gridfile.close();
     return false;
   }
 
-  for (int i = 0; i < nEdges; ++i) {
+  for (size_t i = 0; i < nEdges; ++i) {
     // Make sure the indices of the edge endpoints are not out of range.
     if (edgeP1[i] < 0 || edgeP1[i] >= (int)nVertices || edgeP2[i] < 0 ||
         edgeP2[i] >= (int)nVertices) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Vertex index of edge " << i << " out of range.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
@@ -1411,7 +1374,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     if (edgeP1[i] == edgeP2[i]) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Edge " << i << " is degenerate.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
@@ -1428,7 +1390,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of elements.\n";
-      Cleanup();
       gridfile.close();
       return false;
     }
@@ -1451,10 +1412,9 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
           // Make sure the indices are not out of range.
           if (p0 >= (int)nVertices) {
             std::cerr << m_className << "::LoadGrid:\n"
-                      << "    Error reading file " << gridfilename << " (line "
+                      << "    Error reading file " << filename << " (line "
                       << iLine << ").\n"
                       << "    Vertex index out of range.\n";
-            Cleanup();
             gridfile.close();
             return false;
           }
@@ -1468,10 +1428,9 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
           // Make sure the indices are not out of range.
           if (p0 >= (int)nVertices || p1 >= (int)nVertices) {
             std::cerr << m_className << "::LoadGrid:\n"
-                      << "    Error reading file " << gridfilename << " (line "
+                      << "    Error reading file " << filename << " (line "
                       << iLine << ").\n"
                       << "    Vertex index out of range.\n";
-            Cleanup();
             gridfile.close();
             return false;
           }
@@ -1488,12 +1447,11 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
           if (p1 < 0) p1 = -p1 - 1;
           if (p2 < 0) p2 = -p2 - 1;
           // Make sure the indices are not out of range.
-          if (p0 >= nEdges || p1 >= nEdges || p2 >= nEdges) {
+          if (p0 >= (int)nEdges || p1 >= (int)nEdges || p2 >= (int)nEdges) {
             std::cerr << m_className << "::LoadGrid:\n"
-                      << "    Error reading file " << gridfilename << " (line "
+                      << "    Error reading file " << filename << " (line "
                       << iLine << ").\n"
                       << "    Edge index out of range.\n";
-            Cleanup();
             gridfile.close();
             return false;
           }
@@ -1520,14 +1478,14 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
           // Rectangle
           gridfile >> p0 >> p1 >> p2 >> p3;
           // Make sure the indices are not out of range.
-          if (p0 >= nEdges || -p0 - 1 >= nEdges || p1 >= nEdges ||
-              -p1 - 1 >= nEdges || p2 >= nEdges || -p2 - 1 >= nEdges ||
-              p3 >= nEdges || -p3 - 1 >= nEdges) {
+          if (p0 >= (int)nEdges || -p0 - 1 >= (int)nEdges || 
+              p1 >= (int)nEdges || -p1 - 1 >= (int)nEdges || 
+              p2 >= (int)nEdges || -p2 - 1 >= (int)nEdges ||
+              p3 >= (int)nEdges || -p3 - 1 >= (int)nEdges) {
             std::cerr << m_className << "::LoadGrid:\n"
-                      << "    Error reading file " << gridfilename << " (line "
+                      << "    Error reading file " << filename << " (line "
                       << iLine << ").\n"
                       << "    Edge index out of range.\n";
-            Cleanup();
             gridfile.close();
             return false;
           }
@@ -1565,11 +1523,10 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
         default:
           // Other element types are not permitted for 2d grids.
           std::cerr << m_className << "::LoadGrid:\n"
-                    << "    Error reading file " << gridfilename << " (line "
+                    << "    Error reading file " << filename << " (line "
                     << iLine << ").\n";
           std::cerr << "    Invalid element type (" << type
                     << ") for 2d mesh.\n";
-          Cleanup();
           gridfile.close();
           return false;
       }
@@ -1581,15 +1538,13 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
   if (gridfile.eof()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Elements' in file "
-              << gridfilename << ".\n";
-    Cleanup();
+              << filename << ".\n";
     gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << " (line " << iLine
+              << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    Cleanup();
     gridfile.close();
     return false;
   }
@@ -1612,11 +1567,11 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     std::string name;
     data >> name;
     data.clear();
-    const auto index = FindRegion(name);
+    const size_t index = FindRegion(name);
     if (index >= m_regions.size()) {
       // Specified region name is not in the list.
       std::cerr << m_className << "::LoadGrid:\n"
-                << "    Error reading file " << gridfilename << ".\n"
+                << "    Error reading file " << filename << ".\n"
                 << "    Unknown region " << name << ".\n";
       continue;
     }
@@ -1624,10 +1579,9 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
     std::getline(gridfile, line);
     if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
-                << "    Error reading file " << gridfilename << ".\n";
-      std::cerr << "    Could not read number of elements in region " << name
-                << ".\n";
-      Cleanup();
+                << "    Error reading file " << filename << ".\n"
+                << "    Could not read number of elements in region " 
+                << name << ".\n";
       gridfile.close();
       return false;
     }
@@ -1645,8 +1599,7 @@ bool ComponentTcad2d::LoadGrid(const std::string& gridfilename) {
   gridfile.close();
   if (gridfile.fail() && !gridfile.eof()) {
     std::cerr << m_className << "::LoadGrid:\n"
-              << "    Error reading file " << gridfilename << ".\n";
-    Cleanup();
+              << "    Error reading file " << filename << ".\n";
     return false;
   }
 
