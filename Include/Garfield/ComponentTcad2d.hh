@@ -1,17 +1,16 @@
 #ifndef G_COMPONENT_TCAD_2D_H
 #define G_COMPONENT_TCAD_2D_H
 
-#include <array>
 #include <memory>
 
-#include "Component.hh"
+#include "ComponentTcadBase.hh"
 #include "QuadTree.hh"
 
 namespace Garfield {
 
 /// Interpolation in a two-dimensional field map created by Sentaurus Device.
 
-class ComponentTcad2d : public Component {
+class ComponentTcad2d : public ComponentTcadBase<2> {
  public:
   /// Constructor
   ComponentTcad2d();
@@ -36,7 +35,6 @@ class ComponentTcad2d : public Component {
 
   Medium* GetMedium(const double x, const double y, const double z) override;
 
-  bool GetVoltageRange(double& vmin, double& vmax) override;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) override;
   /// Set the z-extent of the bounding box (default: unlimited).
@@ -61,23 +59,6 @@ class ComponentTcad2d : public Component {
   bool SetWeightingField(const std::string& datfile1,
                          const std::string& datfile2, const double dv);
 
-  /// List all currently defined regions.
-  void PrintRegions() const;
-  /// Get the number of regions in the device.
-  size_t GetNumberOfRegions() const { return m_regions.size(); }
-  /// Get the name of a region.
-  void GetRegion(const size_t i, std::string& name, bool& active) const;
-  /// Make a region active ("driftable").
-  void SetDriftRegion(const size_t ireg);
-  /// Make a region inactive.
-  void UnsetDriftRegion(const size_t ireg);
-  /// Set the medium for a given region.
-  void SetMedium(const size_t ireg, Medium* m);
-  /// Get the medium associated to a region.
-  Medium* GetMedium(const size_t ireg) const;
-
-  /// Get the number of elements in the mesh.
-  size_t GetNumberOfElements() const { return m_elements.size(); }
   /** Retrieve the properties of an element.
     * \param i index of the element
     * \param vol volume
@@ -89,8 +70,6 @@ class ComponentTcad2d : public Component {
     */
   bool GetElement(const size_t i, double& vol, double& dmin, double& dmax,
                   int& type, std::vector<size_t>& nodes, int& reg) const;
-  /// Get the number of vertices in the mesh.
-  size_t GetNumberOfNodes() const { return m_vertices.size(); }
   /// Get the coordinates of a mesh node and the potential 
   /// and electric field at this node.
   bool GetNode(const size_t i, double& x, double& y, double& v,
@@ -116,106 +95,18 @@ class ComponentTcad2d : public Component {
   bool GetHoleLifetime(const double x, const double y, const double z,
                        double& htau) override;
 
-  // Trapping
-  size_t GetNumberOfDonors() { return m_donors.size(); }
-  size_t GetNumberOfAcceptors() { return m_acceptors.size(); }
-
-  bool SetDonor(const size_t donorNumber, const double eXsec,
-                const double hxSec, const double concentration);
-  bool SetAcceptor(const size_t acceptorNumber, const double eXsec,
-                   const double hxSec, const double concentration);
-
-  /// Switch use of the imported trapping map on/off.
-  void EnableAttachmentMap(const bool on) { m_useAttachmentMap = on; }
-  bool HasAttachmentMap() const override;
   bool ElectronAttachment(const double x, const double y, const double z,
                           double& eta) override;
   bool HoleAttachment(const double x, const double y, const double z,
                       double& eta) override;
 
  private:
-  // Max. number of vertices per element
-  static constexpr size_t nMaxVertices = 4;
 
-  // Regions
-  struct Region {
-    // Name of region (from Tcad)
-    std::string name;
-    // Flag indicating if the region is active (i. e. a drift medium)
-    bool drift;
-    Medium* medium;
-  };
-  std::vector<Region> m_regions;
-
-  // Vertex coordinates [cm].
-  std::vector<std::array<double, 2> > m_vertices;
-
-  // Potential [V] at each vertex.
-  std::vector<double> m_potential;
-  // Electric field [V / cm].
-  std::vector<std::array<double, 2> > m_efield;
-  // Weighting field and potential at each vertex.
-  std::vector<std::array<double, 2> > m_wf;
-  std::vector<double> m_wp;
-  // Velocities [cm / ns]
-  std::vector<std::array<double, 2> > m_eVelocity; 
-  std::vector<std::array<double, 2> > m_hVelocity;
-  // Mobilities [cm2 / (V ns)]
-  std::vector<double> m_eMobility;
-  std::vector<double> m_hMobility; 
-  // Lifetimes [ns]
-  std::vector<double> m_eLifetime;
-  std::vector<double> m_hLifetime;
-  // Trap occupations [dimensionless]
-  std::vector<std::vector<float> > m_donorOcc;
-  std::vector<std::vector<float> > m_acceptorOcc;
-  // Attachment coefficients [1 / cm]
-  std::vector<double> m_eAttachment;
-  std::vector<double> m_hAttachment;
-  
-  struct Defect {
-    // Electron cross-section
-    double xsece;
-    // Hole cross-section
-    double xsech;
-    // Concentration
-    double conc;
-  };
-  std::vector<Defect> m_donors;
-  std::vector<Defect> m_acceptors;
-
-  // Elements
-  struct Element {
-    // Indices of vertices
-    int vertex[nMaxVertices];
-    // Type of element
-    // 0: Point
-    // 1: Segment (line)
-    // 2: Triangle
-    // 3: Rectangle
-    // 4: Polygon
-    // Types 1 - 3 are supported by this class.
-    int type;
-    // Associated region
-    unsigned int region;
-    // Bounding box
-    std::array<float, 2> bbMin;
-    std::array<float, 2> bbMax;
-  };
-  std::vector<Element> m_elements;
-
-  // Use velocity and trapping maps or not.
+  // Use velocity map or not.
   bool m_useVelocityMap = false;
-  bool m_useAttachmentMap = false;
-
-  // Voltage range
-  double m_pMin = 0.;
-  double m_pMax = 0.;
 
   // Bounding box
   bool m_hasRangeZ = false;
-  std::array<double, 3> m_bbMin = {{0., 0., 0.}};
-  std::array<double, 3> m_bbMax = {{0., 0., 0.}};
 
   // Tetrahedral tree.
   std::unique_ptr<QuadTree> m_tree;
@@ -224,7 +115,6 @@ class ComponentTcad2d : public Component {
   size_t m_lastElement = 0;
 
   void Reset() override;
-  void UpdatePeriodicity() override;
 
   size_t FindElement(const double x, const double y,
                      std::array<double, nMaxVertices>& w) const;
@@ -253,19 +143,6 @@ class ComponentTcad2d : public Component {
   bool LoadWeightingField(const std::string& datafilename,
                           std::vector<std::array<double, 2> >& wf,
                           std::vector<double>& wp);
-  void Cleanup();
-
-  size_t FindRegion(const std::string& name) const;
-
-  void MapCoordinates(std::array<double, 2>& x, 
-                      std::array<bool, 2>& mirr) const;
-  bool InBoundingBox(const std::array<double, 2>& x) const {
-    for (size_t i = 0; i < 2; ++i) {
-      if (x[i] < m_bbMin[i] || x[i] > m_bbMax[i]) return false;
-    }
-    return true;
-  }
-  void UpdateAttachment();
 };
 }
 #endif

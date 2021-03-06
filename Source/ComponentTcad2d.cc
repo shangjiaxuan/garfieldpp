@@ -37,45 +37,7 @@ bool ExtractFromBrackets(std::string& line) {
 
 namespace Garfield {
 
-ComponentTcad2d::ComponentTcad2d() : Component("Tcad2d") {
-  m_regions.reserve(10);
-  m_vertices.reserve(10000);
-  m_elements.reserve(10000);
-}
-
-bool ComponentTcad2d::SetDonor(const size_t donorNumber,
-                               const double eXsec, const double hXsec,
-                               const double conc) {
-  if (donorNumber >= m_donors.size()) {
-    std::cerr << m_className << "::SetDonor: Index out of range.\n";
-    return false;
-  }
-  m_donors[donorNumber].xsece = eXsec;
-  m_donors[donorNumber].xsech = hXsec;
-  m_donors[donorNumber].conc = conc;
-
-  UpdateAttachment();
-  return true;
-}
-
-bool ComponentTcad2d::SetAcceptor(const size_t acceptorNumber,
-                                  const double eXsec, const double hXsec,
-                                  const double conc) {
-  if (acceptorNumber >= m_acceptors.size()) {
-    std::cerr << m_className << "::SetAcceptor: Index out of range.\n";
-    return false;
-  }
-  m_acceptors[acceptorNumber].xsece = eXsec;
-  m_acceptors[acceptorNumber].xsech = hXsec;
-  m_acceptors[acceptorNumber].conc = conc;
-
-  UpdateAttachment();
-  return true;
-}
-
-bool ComponentTcad2d::HasAttachmentMap() const {
-  return (m_useAttachmentMap && !(m_acceptors.empty() && m_donors.empty()));
-}
+ComponentTcad2d::ComponentTcad2d() : ComponentTcadBase("Tcad2d") {}
 
 bool ComponentTcad2d::ElectronAttachment(const double x, const double y,
                                          const double z, double& eta) {
@@ -600,89 +562,6 @@ void ComponentTcad2d::SetRangeZ(const double zmin, const double zmax) {
   m_bbMin[2] = std::min(zmin, zmax);
   m_bbMax[2] = std::max(zmin, zmax);
   m_hasRangeZ = true;
-}
-
-bool ComponentTcad2d::GetVoltageRange(double& vmin, double& vmax) {
-  if (!m_ready) return false;
-  vmin = m_pMin;
-  vmax = m_pMax;
-  return true;
-}
-
-void ComponentTcad2d::PrintRegions() const {
-
-  if (m_regions.empty()) {
-    std::cerr << m_className << "::PrintRegions:\n"
-              << "    No regions are currently defined.\n";
-    return;
-  }
-
-  const size_t nRegions = m_regions.size();
-  std::cout << m_className << "::PrintRegions:\n"
-            << "    Currently " << nRegions << " regions are defined.\n"
-            << "      Index  Name       Medium\n";
-  for (size_t i = 0; i < nRegions; ++i) {
-    std::cout << "      " << i << "  " << m_regions[i].name;
-    if (!m_regions[i].medium) {
-      std::cout << "      none  ";
-    } else {
-      std::cout << "      " << m_regions[i].medium->GetName();
-    }
-    if (m_regions[i].drift) {
-      std::cout << " (active region)\n";
-    } else {
-      std::cout << "\n";
-    }
-  }
-}
-
-void ComponentTcad2d::GetRegion(const size_t i, std::string& name,
-                                bool& active) const {
-  if (i >= m_regions.size()) {
-    std::cerr << m_className << "::GetRegion: Index out of range.\n";
-    return;
-  }
-  name = m_regions[i].name;
-  active = m_regions[i].drift;
-}
-
-void ComponentTcad2d::SetDriftRegion(const size_t i) {
-  if (i >= m_regions.size()) {
-    std::cerr << m_className << "::SetDriftRegion: Index out of range.\n";
-    return;
-  }
-  m_regions[i].drift = true;
-}
-
-void ComponentTcad2d::UnsetDriftRegion(const size_t i) {
-  if (i >= m_regions.size()) {
-    std::cerr << m_className << "::UnsetDriftRegion: Index out of range.\n";
-    return;
-  }
-  m_regions[i].drift = false;
-}
-
-void ComponentTcad2d::SetMedium(const size_t i, Medium* medium) {
-  if (i >= m_regions.size()) {
-    std::cerr << m_className << "::SetMedium: Index out of range.\n";
-    return;
-  }
-
-  if (!medium) {
-    std::cerr << m_className << "::SetMedium: Null pointer.\n";
-    return;
-  }
-
-  m_regions[i].medium = medium;
-}
-
-Medium* ComponentTcad2d::GetMedium(const size_t i) const {
-  if (i >= m_regions.size()) {
-    std::cerr << m_className << "::GetMedium: Index out of range.\n";
-    return nullptr;
-  }
-
-  return m_regions[i].medium;
 }
 
 bool ComponentTcad2d::GetElement(const size_t i, double& vol,
@@ -1456,8 +1335,8 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
           }
           m_elements[j].vertex[0] = edgeP1[p0];
           m_elements[j].vertex[1] = edgeP2[p0];
-          if (edgeP1[p1] != m_elements[j].vertex[0] &&
-              edgeP1[p1] != m_elements[j].vertex[1]) {
+          if (edgeP1[p1] != (int)m_elements[j].vertex[0] &&
+              edgeP1[p1] != (int)m_elements[j].vertex[1]) {
             m_elements[j].vertex[2] = edgeP1[p1];
           } else {
             m_elements[j].vertex[2] = edgeP2[p1];
@@ -1605,34 +1484,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
   return true;
 }
 
-void ComponentTcad2d::Cleanup() {
-  // Vertices
-  m_vertices.clear();
-  // Elements
-  m_elements.clear();
-  // Regions
-  m_regions.clear();
-  // Potential and electric field.
-  m_potential.clear();
-  m_efield.clear();
-  // Weighting fields and potentials
-  m_wf.clear();
-  m_wp.clear();
-  // Other data.
-  m_eVelocity.clear();
-  m_hVelocity.clear();
-  m_eMobility.clear();
-  m_hMobility.clear();
-  m_eLifetime.clear();
-  m_hLifetime.clear();
-  m_donors.clear();
-  m_acceptors.clear();
-  m_donorOcc.clear();
-  m_acceptorOcc.clear();
-  m_eAttachment.clear();
-  m_hAttachment.clear();
-}
-
 size_t ComponentTcad2d::FindElement(const double x, const double y, 
     std::array<double, nMaxVertices>& w) const {
 
@@ -1767,101 +1618,6 @@ void ComponentTcad2d::Reset() {
   Cleanup();
   m_hasRangeZ = false;
   m_ready = false;
-}
-
-void ComponentTcad2d::UpdatePeriodicity() {
-  if (!m_ready) {
-    std::cerr << m_className << "::UpdatePeriodicity:\n"
-              << "    Field map not available.\n";
-    return;
-  }
-
-  // Check for conflicts.
-  for (size_t i = 0; i < 3; ++i) {
-    if (m_periodic[i] && m_mirrorPeriodic[i]) {
-      std::cerr << m_className << "::UpdatePeriodicity:\n"
-                << "    Both simple and mirror periodicity requested. Reset.\n";
-      m_periodic[i] = m_mirrorPeriodic[i] = false;
-    }
-    if (m_axiallyPeriodic[i]) {
-      std::cerr << m_className << "::UpdatePeriodicity:\n"
-                 << "    Axial symmetry is not supported. Reset.\n";
-      m_axiallyPeriodic.fill(false);
-    }
-    if (m_rotationSymmetric[i]) {
-      std::cerr << m_className << "::UpdatePeriodicity:\n"
-                << "    Rotation symmetry is not supported. Reset.\n";
-      m_rotationSymmetric.fill(false);
-    }
-  }
-}
-
-size_t ComponentTcad2d::FindRegion(const std::string& name) const {
-  const auto nRegions = m_regions.size();
-  for (size_t j = 0; j < nRegions; ++j) {
-    if (name == m_regions[j].name) return j;
-  }
-  return m_regions.size();
-}
-
-void ComponentTcad2d::MapCoordinates(std::array<double, 2>& x,
-                                     std::array<bool, 2>& mirr) const {
-  mirr.fill(false);
-  for (size_t i = 0; i < 2; ++i) {
-    // In case of periodicity, reduce to the cell volume.
-    const double cellsx = m_bbMax[i] - m_bbMin[i];
-    if (m_periodic[i]) {
-      x[i] = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
-      if (x[i] < m_bbMin[i]) x[i] += cellsx;
-    } else if (m_mirrorPeriodic[i]) {
-      double xNew = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
-      if (xNew < m_bbMin[i]) xNew += cellsx;
-      const int nx = int(floor(0.5 + (xNew - x[i]) / cellsx));
-      if (nx != 2 * (nx / 2)) {
-        xNew = m_bbMin[i] + m_bbMax[i] - xNew;
-        mirr[i] = true;
-      }
-      x[i] = xNew;
-    }
-  }
-}
-
-void ComponentTcad2d::UpdateAttachment() {
-
-  if (m_vertices.empty()) return;
-  const size_t nVertices = m_vertices.size();
-  m_eAttachment.assign(nVertices, 0.);
-  m_hAttachment.assign(nVertices, 0.);
-
-  const size_t nAcceptors = m_acceptors.size();
-  for (size_t i = 0; i < nAcceptors; ++i) { 
-    const auto& defect = m_acceptors[i];
-    if (defect.conc < 0.) continue;
-    for (size_t j = 0; j < nVertices; ++j) {
-      // Get the occupation probability.
-      const double f = m_acceptorOcc[j][i];
-      if (defect.xsece > 0.) {
-        m_eAttachment[j] += defect.conc * defect.xsece * (1. - f);
-      }
-      if (defect.xsech > 0.) {
-        m_hAttachment[j] += defect.conc * defect.xsech * f;
-      }
-    }
-  }
-  const size_t nDonors = m_donors.size();
-  for (size_t i = 0; i < nDonors; ++i) {
-    const auto& defect = m_donors[i];
-    if (defect.conc < 0.) continue;
-    for (size_t j = 0; j < nVertices; ++j) { 
-      const double f = m_donorOcc[j][i];
-      if (defect.xsece > 0.) {
-        m_eAttachment[j] += defect.conc * defect.xsece * f;
-      }
-      if (defect.xsech > 0.) {
-        m_hAttachment[j] += defect.conc * defect.xsech * (1. - f);
-      }
-    }
-  }
 }
 
 }

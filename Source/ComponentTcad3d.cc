@@ -38,11 +38,7 @@ bool ExtractFromBrackets(std::string& line) {
 
 namespace Garfield {
 
-ComponentTcad3d::ComponentTcad3d() : Component("Tcad3d") {
-  m_regions.reserve(10);
-  m_vertices.reserve(10000);
-  m_elements.reserve(10000);
-}
+ComponentTcad3d::ComponentTcad3d() : ComponentTcadBase("Tcad3d") {}
 
 void ComponentTcad3d::ElectricField(const double xin, const double yin,
                                     const double zin, double& ex, double& ey,
@@ -501,96 +497,6 @@ bool ComponentTcad3d::GetBoundingBox(double& xmin, double& ymin, double& zmin,
     zmin = -std::numeric_limits<double>::infinity();
     zmax = +std::numeric_limits<double>::infinity();
   }
-  return true;
-}
-
-bool ComponentTcad3d::GetVoltageRange(double& vmin, double& vmax) {
-  if (!m_ready) return false;
-  vmin = m_pMin;
-  vmax = m_pMax;
-  return true;
-}
-
-void ComponentTcad3d::PrintRegions() {
-  // Do not proceed if not properly initialised.
-  if (!m_ready) {
-    std::cerr << m_className << "::PrintRegions:\n"
-              << "    Field map not yet initialised.\n";
-    return;
-  }
-
-  if (m_regions.empty()) {
-    std::cerr << m_className << "::PrintRegions:\n"
-              << "    No regions are currently defined.\n";
-    return;
-  }
-
-  const size_t nRegions = m_regions.size();
-  std::cout << m_className << "::PrintRegions:\n"
-            << "    Currently " << nRegions << " regions are defined.\n"
-            << "      Index  Name      Medium\n";
-  for (size_t i = 0; i < nRegions; ++i) {
-    std::cout << "      " << i << "  " << m_regions[i].name;
-    if (!m_regions[i].medium) {
-      std::cout << "      none  ";
-    } else {
-      std::cout << "      " << m_regions[i].medium->GetName();
-    }
-    if (m_regions[i].drift) {
-      std::cout << " (active region)\n";
-    } else {
-      std::cout << "\n";
-    }
-  }
-}
-
-void ComponentTcad3d::GetRegion(const size_t i, std::string& name,
-                                bool& active) const {
-  if (i >= m_regions.size()) {
-    std::cerr << m_className << "::GetRegion: Index out of range.\n";
-    return;
-  }
-  name = m_regions[i].name;
-  active = m_regions[i].drift;
-}
-
-void ComponentTcad3d::SetDriftRegion(const size_t i) {
-  if (i >= m_regions.size()) {
-    std::cerr << m_className << "::SetDriftRegion: Index out of range.\n";
-    return;
-  }
-  m_regions[i].drift = true;
-}
-
-void ComponentTcad3d::UnsetDriftRegion(const size_t i) {
-  if (i >= m_regions.size()) {
-    std::cerr << m_className << "::UnsetDriftRegion: Index out of range.\n";
-    return;
-  }
-  m_regions[i].drift = false;
-}
-
-void ComponentTcad3d::SetMedium(const size_t i, Medium* medium) {
-  if (i >= m_regions.size()) {
-    std::cerr << m_className << "::SetMedium: Index out of range.\n";
-    return;
-  }
-
-  if (!medium) {
-    std::cerr << m_className << "::SetMedium: Null pointer.\n";
-    return;
-  }
-  m_regions[i].medium = medium;
-}
-
-bool ComponentTcad3d::GetMedium(const size_t i, Medium*& m) const {
-  if (i >= m_regions.size()) {
-    std::cerr << m_className << "::GetMedium: Index out of range.\n";
-    return false;
-  }
-
-  m = m_regions[i].medium;
-  if (!m) return false;
   return true;
 }
 
@@ -1608,34 +1514,6 @@ bool ComponentTcad3d::LoadGrid(const std::string& filename) {
   return true;
 }
 
-void ComponentTcad3d::Cleanup() {
-  // Vertices
-  m_vertices.clear();
-  // Elements
-  m_elements.clear();
-  // Regions
-  m_regions.clear();
-  // Potential and electric field.
-  m_potential.clear();
-  m_efield.clear();
-  // Weighting fields and potentials.
-  m_wf.clear();
-  m_wp.clear();
-  // Other data.
-  m_eVelocity.clear();
-  m_hVelocity.clear();
-  m_eMobility.clear();
-  m_hMobility.clear();
-  m_eLifetime.clear();
-  m_hLifetime.clear();
-  m_donors.clear();
-  m_acceptors.clear();
-  m_donorOcc.clear();
-  m_acceptorOcc.clear();
-  m_eAttachment.clear();
-  m_hAttachment.clear();
-}
-
 bool ComponentTcad3d::InTetrahedron(
     const double x, const double y, const double z, const Element& element,
     std::array<double, nMaxVertices>& w) const {
@@ -1760,62 +1638,4 @@ void ComponentTcad3d::Reset() {
   m_ready = false;
 }
 
-void ComponentTcad3d::UpdatePeriodicity() {
-  if (!m_ready) {
-    std::cerr << m_className << "::UpdatePeriodicity:\n"
-              << "    Field map not available.\n";
-    return;
-  }
-
-  for (size_t i = 0; i < 3; ++i) {
-    // Check for conflicts.
-    if (m_periodic[i] && m_mirrorPeriodic[i]) {
-      std::cerr << m_className << "::UpdatePeriodicity:\n"
-                << "    Both simple and mirror periodicity requested. Reset.\n";
-      m_periodic[i] = m_mirrorPeriodic[i] = false;
-    }
-  }
-
-  if (m_axiallyPeriodic[0] || m_axiallyPeriodic[1] || m_axiallyPeriodic[2]) {
-    std::cerr << m_className << "::UpdatePeriodicity:\n"
-              << "    Axial symmetry is not supported. Reset.\n";
-    m_axiallyPeriodic.fill(false);
-  }
-
-  if (m_rotationSymmetric[0] || m_rotationSymmetric[1] ||
-      m_rotationSymmetric[2]) {
-    std::cerr << m_className << "::UpdatePeriodicity:\n"
-              << "    Rotation symmetry is not supported. Reset.\n";
-    m_rotationSymmetric.fill(false);
-  }
-}
-
-void ComponentTcad3d::MapCoordinates(std::array<double, 3>& x,
-                                     std::array<bool, 3>& mirr) const {
-  mirr.fill(false);
-  for (size_t i = 0; i < 3; ++i) {
-    const double cellsx = m_bbMax[i] - m_bbMin[i];
-    if (m_periodic[i]) {
-      x[i] = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
-      if (x[i] < m_bbMin[i]) x[i] += cellsx;
-    } else if (m_mirrorPeriodic[i]) {
-      double xNew = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
-      if (xNew < m_bbMin[i]) xNew += cellsx;
-      const int nx = int(floor(0.5 + (xNew - x[i]) / cellsx));
-      if (nx != 2 * (nx / 2)) {
-        xNew = m_bbMin[i] + m_bbMax[i] - xNew;
-        mirr[i] = true;
-      }
-      x[i] = xNew;
-    }
-  }
-}
-
-size_t ComponentTcad3d::FindRegion(const std::string& name) const {
-  const size_t nRegions = m_regions.size();
-  for (size_t j = 0; j < nRegions; ++j) {
-    if (name == m_regions[j].name) return j;
-  }
-  return nRegions;
-}
 }
