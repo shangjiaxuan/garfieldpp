@@ -162,9 +162,8 @@ struct Defect {
     // Associated region
     unsigned int region;
     // Bounding box
-    float xmin, xmax;
-    float ymin, ymax;
-    float zmin, zmax;
+    std::array<float, 3> bbMin;
+    std::array<float, 3> bbMax;
   };
   std::vector<Element> m_elements;
 
@@ -194,9 +193,9 @@ struct Defect {
   bool InElement(const double x, const double y, const double z,
                  const Element& element, 
                  std::array<double, nMaxVertices>& w) const {
-    if (x < element.xmin || x > element.xmax || 
-        y < element.ymin || y > element.ymax || 
-        z < element.zmin || z > element.zmax) {
+    if (x < element.bbMin[0] || x > element.bbMax[0] || 
+        y < element.bbMin[1] || y > element.bbMax[1] || 
+        z < element.bbMin[2] || z > element.bbMax[2]) {
       return false;
     }
     bool inside = false;
@@ -237,16 +236,13 @@ struct Defect {
 
   size_t FindRegion(const std::string& name) const;
 
-  void MapCoordinates(double& x, double& y, double& z, bool& xmirr, bool& ymirr,
-                      bool& zmirr) const;
-  bool InBoundingBox(const double x, const double y, const double z) const {
-    bool inside = true;
-    if (x < m_bbMin[0] || x > m_bbMax[0] || 
-        y < m_bbMin[1] || y > m_bbMax[1] ||
-        z < m_bbMin[2] || z > m_bbMax[2]) {
-      inside = false;
+  void MapCoordinates(std::array<double, 3>& x, 
+                      std::array<bool, 3>& mirr) const;
+  bool InBoundingBox(const std::array<double, 3>& x) const {
+    for (size_t i = 0; i < 3; ++i) {
+      if (x[i] < m_bbMin[i] || x[i] > m_bbMax[i]) return false;
     }
-    return inside;
+    return true;
   }
 
 };

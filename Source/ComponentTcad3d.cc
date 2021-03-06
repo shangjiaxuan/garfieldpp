@@ -57,14 +57,13 @@ void ComponentTcad3d::ElectricField(const double xin, const double yin,
     status = -10;
     return;
   }
-
-  double x = xin, y = yin, z = zin;
+  std::array<double, 3> x = {xin, yin, zin};
+  std::array<bool, 3> mirr = {false, false, false};
   // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false, zmirr = false;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr);
+  MapCoordinates(x, mirr);
 
   // Check if the point is inside the bounding box.
-  if (!InBoundingBox(x, y, z)) {
+  if (!InBoundingBox(x)) {
     status = -6;
     return;
   }
@@ -72,7 +71,7 @@ void ComponentTcad3d::ElectricField(const double xin, const double yin,
   // Assume this will work.
   status = 0;
   std::array<double, nMaxVertices> w;
-  const size_t i = FindElement(x, y, z, w);
+  const size_t i = FindElement(x[0], x[1], x[2], w);
   if (i >= m_elements.size()) {
     // Point is outside the mesh.
     status = -6;
@@ -87,9 +86,9 @@ void ComponentTcad3d::ElectricField(const double xin, const double yin,
     ez += w[j] * m_efield[index][2];
     p += w[j] * m_potential[index];
   }
-  if (xmirr) ex = -ex;
-  if (ymirr) ey = -ey;
-  if (zmirr) ez = -ez;
+  if (mirr[0]) ex = -ex;
+  if (mirr[1]) ey = -ey;
+  if (mirr[2]) ez = -ez;
   const auto& region = m_regions[element.region];
   m = region.medium;
   if (!region.drift || !m) status = -5;
@@ -108,29 +107,29 @@ bool ComponentTcad3d::Interpolate(
     double& fx, double& fy, double& fz) {
 
   if (field.empty()) return false;
-  double x = xin, y = yin, z = zin;
+  std::array<double, 3> x = {xin, yin, zin};
+  std::array<bool, 3> mirr = {false, false, false};
   // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false, zmirr = false;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr);
+  MapCoordinates(x, mirr);
 
   // Make sure the point is inside the bounding box.
-  if (!InBoundingBox(x, y, z)) return false;
+  if (!InBoundingBox(x)) return false;
 
   std::array<double, nMaxVertices> w;
-  const size_t i = FindElement(x, y, z, w);
+  const size_t i = FindElement(x[0], x[1], x[2], w);
   // Stop if the point is outside the mesh.
   if (i >= m_elements.size()) return false;
   const Element& element = m_elements[i];
-  const unsigned int nVertices = element.type == 2 ? 3 : 4;
-  for (unsigned int j = 0; j < nVertices; ++j) {
+  const size_t nVertices = element.type == 2 ? 3 : 4;
+  for (size_t j = 0; j < nVertices; ++j) {
     const auto index = element.vertex[j];
     fx += w[j] * field[index][0];
     fy += w[j] * field[index][1];
     fz += w[j] * field[index][2];
   }
-  if (xmirr) fx = -fx;
-  if (ymirr) fy = -fy;
-  if (zmirr) fz = -fz;
+  if (mirr[0]) fx = -fx;
+  if (mirr[1]) fy = -fy;
+  if (mirr[2]) fz = -fz;
   return true;
 } 
 
@@ -141,20 +140,20 @@ bool ComponentTcad3d::Interpolate(
   f = 0.;
   if (field.empty()) return false;
   // In case of periodicity, reduce to the cell volume.
-  double x = xin, y = yin, z = zin;
-  bool xmirr = false, ymirr = false, zmirr = false;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr);
+  std::array<double, 3> x = {xin, yin, zin};
+  std::array<bool, 3> mirr = {false, false, false};
+  MapCoordinates(x, mirr);
   // Make sure the point is inside the bounding box.
-  if (!InBoundingBox(x, y, z)) return 0.;
+  if (!InBoundingBox(x)) return false;
 
   std::array<double, nMaxVertices> w;
-  const size_t i = FindElement(x, y, z, w);
+  const size_t i = FindElement(x[0], x[1], x[2], w);
   // Stop if the point is outside the mesh.
   if (i >= m_elements.size()) return false;
 
   const Element& element = m_elements[i];
-  const unsigned int nVertices = element.type == 2 ? 3 : 4;
-  for (unsigned int j = 0; j < nVertices; ++j) {
+  const size_t nVertices = element.type == 2 ? 3 : 4;
+  for (size_t j = 0; j < nVertices; ++j) {
     f += w[j] * field[element.vertex[j]];
   }
   return true;
@@ -183,15 +182,15 @@ Medium* ComponentTcad3d::GetMedium(const double xin, const double yin,
     return nullptr;
   }
 
-  double x = xin, y = yin, z = zin;
-  bool xmirr = false, ymirr = false, zmirr = false;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr);
+  std::array<double, 3> x = {xin, yin, zin};
+  std::array<bool, 3> mirr = {false, false, false};
+  MapCoordinates(x, mirr);
 
   // Check if the point is inside the bounding box.
-  if (!InBoundingBox(x, y, z)) return nullptr;
+  if (!InBoundingBox(x)) return nullptr;
 
   std::array<double, nMaxVertices> w;
-  const size_t i = FindElement(x, y, z, w);
+  const size_t i = FindElement(x[0], x[1], x[2], w);
   if (i >= m_elements.size()) {
     // Point is outside the mesh.
     return nullptr;
@@ -249,12 +248,12 @@ bool ComponentTcad3d::Initialise(const std::string& gridfilename,
       if (vj[2] > zmax) zmax = vj[2];
     }
     constexpr double tol = 1.e-6;
-    element.xmin = xmin - tol;
-    element.xmax = xmax + tol;
-    element.ymin = ymin - tol;
-    element.ymax = ymax + tol;
-    element.zmin = zmin - tol;
-    element.zmax = zmax + tol;
+    element.bbMin[0] = xmin - tol;
+    element.bbMax[0] = xmax + tol;
+    element.bbMin[1] = ymin - tol;
+    element.bbMax[1] = ymax + tol;
+    element.bbMin[2] = zmin - tol;
+    element.bbMax[2] = zmax + tol;
     m_bbMin[0] = std::min(m_bbMin[0], xmin);
     m_bbMax[0] = std::max(m_bbMax[0], xmax);
     m_bbMin[1] = std::min(m_bbMin[1], ymin);
@@ -410,7 +409,8 @@ bool ComponentTcad3d::Initialise(const std::string& gridfilename,
   // Insert the mesh elements in the tree.
   for (size_t i = 0; i < nElements; ++i) {
     const Element& e = m_elements[i];
-    const double bb[6] = {e.xmin, e.ymin, e.zmin, e.xmax, e.ymax, e.zmax};
+    const double bb[6] = {e.bbMin[0], e.bbMin[1], e.bbMin[2], 
+                          e.bbMax[0], e.bbMax[1], e.bbMax[2]};
     m_tree->InsertMeshElement(bb, i);
   }
 
@@ -931,11 +931,11 @@ bool ComponentTcad3d::ReadDataset(std::ifstream& datafile,
   unsigned int ivertex = 0;
   for (int j = 0; j < nValues; ++j) {
     // Read the next value.
-    double val1 = 0., val2 = 0., val3 = 0.;
+    std::array<double, 3> val = {0., 0., 0.};
     if (isVector) {
-      datafile >> val1 >> val2 >> val3;
+      for (size_t k = 0; k < 3; ++k) datafile >> val[k];
     } else {
-      datafile >> val1;
+      datafile >> val[0];
     }
     // Find the next vertex belonging to the region.
     while (ivertex < nVertices) {
@@ -953,46 +953,44 @@ bool ComponentTcad3d::ReadDataset(std::ifstream& datafile,
     }
     switch (ds) {
       case ElectrostaticPotential:
-        m_potential[ivertex] = val1;
+        m_potential[ivertex] = val[0];
         break;
       case EField:
-        m_efield[ivertex][0] = val1;
-        m_efield[ivertex][1] = val2;
-        m_efield[ivertex][2] = val3;
+        for (size_t k = 0; k < 3; ++k) m_efield[ivertex][k] = val[k];
         break;
       case eDriftVelocity:
         // Scale from cm/s to cm/ns.
-        m_eVelocity[ivertex][0] = val1 * 1.e-9;
-        m_eVelocity[ivertex][1] = val2 * 1.e-9;
-        m_eVelocity[ivertex][2] = val3 * 1.e-9;
+        for (size_t k = 0; k < 3; ++k) {
+          m_eVelocity[ivertex][k] = val[k] * 1.e-9;
+        }
         break;
       case hDriftVelocity:
         // Scale from cm/s to cm/ns.
-        m_hVelocity[ivertex][0] = val1 * 1.e-9;
-        m_hVelocity[ivertex][1] = val2 * 1.e-9;
-        m_hVelocity[ivertex][2] = val3 * 1.e-9;
+        for (size_t k = 0; k < 3; ++k) {
+          m_hVelocity[ivertex][k] = val[k] * 1.e-9;
+        }
         break;
       case eMobility:
         // Convert from cm2 / (V s) to cm2 / (V ns).
-        m_eMobility[ivertex] = val1 * 1.e-9;
+        m_eMobility[ivertex] = val[0] * 1.e-9;
         break;
       case hMobility:
         // Convert from cm2 / (V s) to cm2 / (V ns).
-        m_hMobility[ivertex] = val1 * 1.e-9;
+        m_hMobility[ivertex] = val[0] * 1.e-9;
         break;
       case eLifetime:
         // Convert from s to ns.
-        m_eLifetime[ivertex] = val1 * 1.e9;
+        m_eLifetime[ivertex] = val[0] * 1.e9;
         break;
       case hLifetime:
         // Convert from s to ns.
-        m_hLifetime[ivertex] = val1 * 1.e9;
+        m_hLifetime[ivertex] = val[0] * 1.e9;
         break;
       case DonorTrapOccupation:
-        m_donorOcc[ivertex].push_back(val1);
+        m_donorOcc[ivertex].push_back(val[0]);
         break;
       case AcceptorTrapOccupation:
-        m_acceptorOcc[ivertex].push_back(val1);
+        m_acceptorOcc[ivertex].push_back(val[0]);
         break;
       default:
         std::cerr << m_className << "::ReadDataset:\n"
@@ -1557,7 +1555,6 @@ bool ComponentTcad3d::LoadGrid(const std::string& filename) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Elements' in file\n"
               << "    " << filename << ".\n";
-    Cleanup();
     return false;
   } else if (gridfile.fail()) {
     std::cerr << m_className << "::LoadGrid:\n"
@@ -1805,53 +1802,24 @@ void ComponentTcad3d::UpdatePeriodicity() {
   }
 }
 
-void ComponentTcad3d::MapCoordinates(double& x, double& y, double& z,
-                                     bool& xmirr, bool& ymirr,
-                                     bool& zmirr) const {
-  xmirr = false;
-  const double cellsx = m_bbMax[0] - m_bbMin[0];
-  if (m_periodic[0]) {
-    x = m_bbMin[0] + fmod(x - m_bbMin[0], cellsx);
-    if (x < m_bbMin[0]) x += cellsx;
-  } else if (m_mirrorPeriodic[0]) {
-    double xNew = m_bbMin[0] + fmod(x - m_bbMin[0], cellsx);
-    if (xNew < m_bbMin[0]) xNew += cellsx;
-    const int nx = int(floor(0.5 + (xNew - x) / cellsx));
-    if (nx != 2 * (nx / 2)) {
-      xNew = m_bbMin[0] + m_bbMax[0] - xNew;
-      xmirr = true;
+void ComponentTcad3d::MapCoordinates(std::array<double, 3>& x,
+                                     std::array<bool, 3>& mirr) const {
+  mirr.fill(false);
+  for (size_t i = 0; i < 3; ++i) {
+    const double cellsx = m_bbMax[i] - m_bbMin[i];
+    if (m_periodic[i]) {
+      x[i] = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
+      if (x[i] < m_bbMin[i]) x[i] += cellsx;
+    } else if (m_mirrorPeriodic[i]) {
+      double xNew = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
+      if (xNew < m_bbMin[i]) xNew += cellsx;
+      const int nx = int(floor(0.5 + (xNew - x[i]) / cellsx));
+      if (nx != 2 * (nx / 2)) {
+        xNew = m_bbMin[i] + m_bbMax[i] - xNew;
+        mirr[i] = true;
+      }
+      x[i] = xNew;
     }
-    x = xNew;
-  }
-  ymirr = false;
-  const double cellsy = m_bbMax[1] - m_bbMin[1];
-  if (m_periodic[1]) {
-    y = m_bbMin[1] + fmod(y - m_bbMin[1], cellsy);
-    if (y < m_bbMin[1]) y += cellsy;
-  } else if (m_mirrorPeriodic[1]) {
-    double yNew = m_bbMin[1] + fmod(y - m_bbMin[1], cellsy);
-    if (yNew < m_bbMin[1]) yNew += cellsy;
-    const int ny = int(floor(0.5 + (yNew - y) / cellsy));
-    if (ny != 2 * (ny / 2)) {
-      yNew = m_bbMin[1] + m_bbMax[1] - yNew;
-      ymirr = true;
-    }
-    y = yNew;
-  }
-  zmirr = false;
-  const double cellsz = m_bbMax[2] - m_bbMin[2];
-  if (m_periodic[2]) {
-    z = m_bbMin[2] + fmod(z - m_bbMin[2], cellsz);
-    if (z < m_bbMin[2]) z += cellsz;
-  } else if (m_mirrorPeriodic[2]) {
-    double zNew = m_bbMin[2] + fmod(z - m_bbMin[2], cellsz);
-    if (zNew < m_bbMin[2]) zNew += cellsz;
-    const int nz = int(floor(0.5 + (zNew - z) / cellsz));
-    if (nz != 2 * (nz / 2)) {
-      zNew = m_bbMin[2] + m_bbMax[2] - zNew;
-      zmirr = true;
-    }
-    z = zNew;
   }
 }
 

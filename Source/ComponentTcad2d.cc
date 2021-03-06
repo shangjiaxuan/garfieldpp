@@ -136,17 +136,17 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
     return;
   }
   // In case of periodicity, reduce to the cell volume.
-  double x = xin, y = yin;
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
+  std::array<double, 2> x = {xin, yin};
+  std::array<bool, 2> mirr = {false, false};
+  MapCoordinates(x, mirr);
   // Check if the point is inside the bounding box.
-  if (!InBoundingBox(x, y)) {
+  if (!InBoundingBox(x)) {
     status = -6;
     return;
   }
 
   std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
+  const auto i = FindElement(x[0], x[1], w);
   if (i >= m_elements.size()) {
     // Point is outside the mesh.
     status = -6;
@@ -161,8 +161,8 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
     ey += w[j] * m_efield[index][1];
     p += w[j] * m_potential[index];
   }
-  if (xmirr) ex = -ex;
-  if (ymirr) ey = -ey;
+  if (mirr[0]) ex = -ex;
+  if (mirr[1]) ey = -ey;
   m = m_regions[element.region].medium;
   if (!m_regions[element.region].drift || !m) status = -5;
   m_lastElement = i;
@@ -176,15 +176,15 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
   fx = fy = 0.;
   if (field.empty()) return false;
   if (m_hasRangeZ && (z < m_bbMin[2] || z > m_bbMax[2])) return false;
-  double x = xin, y = yin;
+  std::array<double, 2> x = {xin, yin};
+  std::array<bool, 2> mirr = {false, false};
   // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
+  MapCoordinates(x, mirr);
   // Make sure the point is inside the bounding box.
-  if (!InBoundingBox(x, y)) return false;
+  if (!InBoundingBox(x)) return false;
 
   std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
+  const auto i = FindElement(x[0], x[1], w);
   // Stop if the point is outside the mesh.
   if (i >= m_elements.size()) return false;
 
@@ -195,8 +195,8 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
     fx += w[j] * field[index][0];
     fy += w[j] * field[index][1];
   }
-  if (xmirr) fx = -fx;
-  if (ymirr) fy = -fy;
+  if (mirr[0]) fx = -fx;
+  if (mirr[1]) fy = -fy;
   m_lastElement = i;
   return true;
 }
@@ -208,14 +208,14 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
   f = 0.;
   if (field.empty()) return false;
   if (m_hasRangeZ && (z < m_bbMin[2] || z > m_bbMax[2])) return false;
-  double x = xin, y = yin;
+  std::array<double, 2> x = {xin, yin};
+  std::array<bool, 2> mirr = {false, false};
   // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
-  if (!InBoundingBox(x, y)) return false;
+  MapCoordinates(x, mirr);
+  if (!InBoundingBox(x)) return false;
 
   std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
+  const auto i = FindElement(x[0], x[1], w);
   // Stop if the point is outside the mesh.
   if (i >= m_elements.size()) return false;
 
@@ -252,16 +252,16 @@ Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
   }
 
   if (m_hasRangeZ && (zin < m_bbMin[2] || zin > m_bbMax[2])) return nullptr;
-  double x = xin, y = yin;
+  std::array<double, 2> x = {xin, yin};
+  std::array<bool, 2> mirr = {false, false};
   // In case of periodicity, reduce to the cell volume.
-  bool xmirr = false, ymirr = false;
-  MapCoordinates(x, y, xmirr, ymirr);
+  MapCoordinates(x, mirr);
   // Check if the point is inside the bounding box.
-  if (!InBoundingBox(x, y)) return nullptr;
+  if (!InBoundingBox(x)) return nullptr;
 
   // Shape functions
   std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x, y, w);
+  const auto i = FindElement(x[0], x[1], w);
   if (i >= m_elements.size()) {
     // Point is outside the mesh.
     return nullptr;
@@ -329,10 +329,10 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
       ymax = std::max(ymax, v[1]);
     }
     constexpr double tol = 1.e-6;
-    element.xmin = xmin - tol;
-    element.xmax = xmax + tol;
-    element.ymin = ymin - tol;
-    element.ymax = ymax + tol;
+    element.bbMin[0] = xmin - tol;
+    element.bbMax[0] = xmax + tol;
+    element.bbMin[1] = ymin - tol;
+    element.bbMax[1] = ymax + tol;
     m_bbMin[0] = std::min(m_bbMin[0], xmin);
     m_bbMax[0] = std::max(m_bbMax[0], xmax);
     m_bbMin[1] = std::min(m_bbMin[1], ymin);
@@ -491,7 +491,7 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   // Insert the mesh elements in the tree.
   for (size_t i = 0; i < nElements; ++i) {
     const Element& e = m_elements[i];
-    const double bb[4] = {e.xmin, e.ymin, e.xmax, e.ymax};
+    const double bb[4] = {e.bbMin[0], e.bbMin[1], e.bbMax[0], e.bbMax[1]};
     m_tree->InsertMeshElement(bb, i);
   }
 
@@ -1664,8 +1664,8 @@ size_t ComponentTcad2d::FindElement(const double x, const double y,
 bool ComponentTcad2d::InElement(const double x, const double y,
                                 const Element& element,
                                 std::array<double, nMaxVertices>& w) const {
-  if (x < element.xmin || x > element.xmax || y < element.ymin ||
-      y > element.ymax) {
+  if (x < element.bbMin[0] || x > element.bbMax[0] || 
+      y < element.bbMin[1] || y > element.bbMax[1]) {
     return false;
   }
   switch (element.type) {
@@ -1805,38 +1805,25 @@ size_t ComponentTcad2d::FindRegion(const std::string& name) const {
   return m_regions.size();
 }
 
-void ComponentTcad2d::MapCoordinates(double& x, double& y, bool& xmirr,
-                                     bool& ymirr) const {
-  // In case of periodicity, reduce to the cell volume.
-  xmirr = false;
-  const double cellsx = m_bbMax[0] - m_bbMin[0];
-  if (m_periodic[0]) {
-    x = m_bbMin[0] + fmod(x - m_bbMin[0], cellsx);
-    if (x < m_bbMin[0]) x += cellsx;
-  } else if (m_mirrorPeriodic[0]) {
-    double xNew = m_bbMin[0] + fmod(x - m_bbMin[0], cellsx);
-    if (xNew < m_bbMin[0]) xNew += cellsx;
-    const int nx = int(floor(0.5 + (xNew - x) / cellsx));
-    if (nx != 2 * (nx / 2)) {
-      xNew = m_bbMin[0] + m_bbMax[0] - xNew;
-      xmirr = true;
+void ComponentTcad2d::MapCoordinates(std::array<double, 2>& x,
+                                     std::array<bool, 2>& mirr) const {
+  mirr.fill(false);
+  for (size_t i = 0; i < 2; ++i) {
+    // In case of periodicity, reduce to the cell volume.
+    const double cellsx = m_bbMax[i] - m_bbMin[i];
+    if (m_periodic[i]) {
+      x[i] = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
+      if (x[i] < m_bbMin[i]) x[i] += cellsx;
+    } else if (m_mirrorPeriodic[i]) {
+      double xNew = m_bbMin[i] + fmod(x[i] - m_bbMin[i], cellsx);
+      if (xNew < m_bbMin[i]) xNew += cellsx;
+      const int nx = int(floor(0.5 + (xNew - x[i]) / cellsx));
+      if (nx != 2 * (nx / 2)) {
+        xNew = m_bbMin[i] + m_bbMax[i] - xNew;
+        mirr[i] = true;
+      }
+      x[i] = xNew;
     }
-    x = xNew;
-  }
-  ymirr = false;
-  const double cellsy = m_bbMax[1] - m_bbMin[1];
-  if (m_periodic[1]) {
-    y = m_bbMin[1] + fmod(y - m_bbMin[1], cellsy);
-    if (y < m_bbMin[1]) y += cellsy;
-  } else if (m_mirrorPeriodic[1]) {
-    double yNew = m_bbMin[1] + fmod(y - m_bbMin[1], cellsy);
-    if (yNew < m_bbMin[1]) yNew += cellsy;
-    const int ny = int(floor(0.5 + (yNew - y) / cellsy));
-    if (ny != 2 * (ny / 2)) {
-      yNew = m_bbMin[1] + m_bbMax[1] - yNew;
-      ymirr = true;
-    }
-    y = yNew;
   }
 }
 

@@ -199,8 +199,8 @@ class ComponentTcad2d : public Component {
     // Associated region
     unsigned int region;
     // Bounding box
-    float xmin, xmax;
-    float ymin, ymax;
+    std::array<float, 2> bbMin;
+    std::array<float, 2> bbMax;
   };
   std::vector<Element> m_elements;
 
@@ -257,14 +257,13 @@ class ComponentTcad2d : public Component {
 
   size_t FindRegion(const std::string& name) const;
 
-  void MapCoordinates(double& x, double& y, bool& xmirr, bool& ymirr) const;
-  bool InBoundingBox(const double x, const double y) const { 
-    bool inside = true;
-    if (x < m_bbMin[0] || x > m_bbMax[0] || 
-        y < m_bbMin[1] || y > m_bbMax[1]) {
-      inside = false;
+  void MapCoordinates(std::array<double, 2>& x, 
+                      std::array<bool, 2>& mirr) const;
+  bool InBoundingBox(const std::array<double, 2>& x) const {
+    for (size_t i = 0; i < 2; ++i) {
+      if (x[i] < m_bbMin[i] || x[i] > m_bbMax[i]) return false;
     }
-    return inside;
+    return true;
   }
   void UpdateAttachment();
 };
