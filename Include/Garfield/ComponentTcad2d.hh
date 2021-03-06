@@ -39,6 +39,7 @@ class ComponentTcad2d : public Component {
   bool GetVoltageRange(double& vmin, double& vmax) override;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) override;
+  /// Set the z-extent of the bounding box (default: unlimited).
   void SetRangeZ(const double zmin, const double zmax);
 
   /** Import mesh and field map from files.
@@ -64,21 +65,34 @@ class ComponentTcad2d : public Component {
   void PrintRegions() const;
   /// Get the number of regions in the device.
   size_t GetNumberOfRegions() const { return m_regions.size(); }
+  /// Get the name of a region.
   void GetRegion(const size_t i, std::string& name, bool& active) const;
+  /// Make a region active ("driftable").
   void SetDriftRegion(const size_t ireg);
+  /// Make a region inactive.
   void UnsetDriftRegion(const size_t ireg);
   /// Set the medium for a given region.
   void SetMedium(const size_t ireg, Medium* m);
-  /// Get the medium for a given region.
+  /// Get the medium associated to a region.
   Medium* GetMedium(const size_t ireg) const;
 
-  // Retrieve information about the mesh.
+  /// Get the number of elements in the mesh.
   size_t GetNumberOfElements() const { return m_elements.size(); }
-  bool GetElement(const size_t i, double& vol, double& dmin, double& dmax,
-                  int& type) const;
+  /** Retrieve the properties of an element.
+    * \param i index of the element
+    * \param vol volume
+    * \param dmin smallest length in the element
+    * \param dmax largest length in the element
+    * \param type element type
+    * \param nodes indices of the constituent vertices
+    * \param reg region
+    */
   bool GetElement(const size_t i, double& vol, double& dmin, double& dmax,
                   int& type, std::vector<size_t>& nodes, int& reg) const;
+  /// Get the number of vertices in the mesh.
   size_t GetNumberOfNodes() const { return m_vertices.size(); }
+  /// Get the coordinates of a mesh node and the potential 
+  /// and electric field at this node.
   bool GetNode(const size_t i, double& x, double& y, double& v,
                double& ex, double& ey) const;
 

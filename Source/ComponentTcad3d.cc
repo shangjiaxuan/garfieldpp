@@ -588,7 +588,9 @@ size_t ComponentTcad3d::FindElement(
 }
 
 bool ComponentTcad3d::GetElement(const size_t i, double& vol,
-                                 double& dmin, double& dmax, int& type) const {
+                                 double& dmin, double& dmax, int& type,
+                                 std::vector<size_t>& nodes, int& reg) const {
+  nodes.clear();
   if (i >= m_elements.size()) {
     std::cerr << m_className << "::GetElement: Index out of range.\n";
     return false;
@@ -649,15 +651,6 @@ bool ComponentTcad3d::GetElement(const size_t i, double& vol,
               << "    Unexpected element type (" << type << ").\n";
     return false;
   }
-  return true;
-}
-
-bool ComponentTcad3d::GetElement(const size_t i, double& vol, 
-                                 double& dmin, double& dmax, int& type,
-                                 std::vector<size_t>& nodes,
-                                 int& reg) const {
-  if (!GetElement(i, vol, dmin, dmax, type)) return false;
-  const Element& element = m_elements[i];
   const size_t nVertices = element.type + 1;
   for (size_t j = 0; j < nVertices; ++j) {
     nodes.push_back(element.vertex[j]);
