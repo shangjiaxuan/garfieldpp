@@ -48,6 +48,8 @@ void ComponentTcad3d::ElectricField(const double xin, const double yin,
                                     const double zin, double& ex, double& ey,
                                     double& ez, double& p, Medium*& m,
                                     int& status) {
+  // Assume this will work.
+  status = 0;
   ex = ey = ez = p = 0.;
   m = nullptr;
   // Make sure the field map has been loaded.
@@ -61,15 +63,12 @@ void ComponentTcad3d::ElectricField(const double xin, const double yin,
   std::array<bool, 3> mirr = {false, false, false};
   // In case of periodicity, reduce to the cell volume.
   MapCoordinates(x, mirr);
-
   // Check if the point is inside the bounding box.
   if (!InBoundingBox(x)) {
     status = -6;
     return;
   }
 
-  // Assume this will work.
-  status = 0;
   std::array<double, nMaxVertices> w;
   const size_t i = FindElement(x[0], x[1], x[2], w);
   if (i >= m_elements.size()) {
@@ -89,9 +88,8 @@ void ComponentTcad3d::ElectricField(const double xin, const double yin,
   if (mirr[0]) ex = -ex;
   if (mirr[1]) ey = -ey;
   if (mirr[2]) ez = -ez;
-  const auto& region = m_regions[element.region];
-  m = region.medium;
-  if (!region.drift || !m) status = -5;
+  m = m_regions[element.region].medium;
+  if (!m_regions[element.region].drift || !m) status = -5;
 }
 
 void ComponentTcad3d::ElectricField(const double x, const double y,
@@ -111,7 +109,6 @@ bool ComponentTcad3d::Interpolate(
   std::array<bool, 3> mirr = {false, false, false};
   // In case of periodicity, reduce to the cell volume.
   MapCoordinates(x, mirr);
-
   // Make sure the point is inside the bounding box.
   if (!InBoundingBox(x)) return false;
 
@@ -119,6 +116,7 @@ bool ComponentTcad3d::Interpolate(
   const size_t i = FindElement(x[0], x[1], x[2], w);
   // Stop if the point is outside the mesh.
   if (i >= m_elements.size()) return false;
+
   const Element& element = m_elements[i];
   const size_t nVertices = element.type == 2 ? 3 : 4;
   for (size_t j = 0; j < nVertices; ++j) {
@@ -139,15 +137,15 @@ bool ComponentTcad3d::Interpolate(
 
   f = 0.;
   if (field.empty()) return false;
-  // In case of periodicity, reduce to the cell volume.
   std::array<double, 3> x = {xin, yin, zin};
   std::array<bool, 3> mirr = {false, false, false};
+  // In case of periodicity, reduce to the cell volume.
   MapCoordinates(x, mirr);
   // Make sure the point is inside the bounding box.
   if (!InBoundingBox(x)) return false;
 
   std::array<double, nMaxVertices> w;
-  const size_t i = FindElement(x[0], x[1], x[2], w);
+  const auto i = FindElement(x[0], x[1], x[2], w);
   // Stop if the point is outside the mesh.
   if (i >= m_elements.size()) return false;
 
@@ -185,18 +183,17 @@ Medium* ComponentTcad3d::GetMedium(const double xin, const double yin,
   std::array<double, 3> x = {xin, yin, zin};
   std::array<bool, 3> mirr = {false, false, false};
   MapCoordinates(x, mirr);
-
   // Check if the point is inside the bounding box.
   if (!InBoundingBox(x)) return nullptr;
 
+  // Determine the shape functions.
   std::array<double, nMaxVertices> w;
   const size_t i = FindElement(x[0], x[1], x[2], w);
   if (i >= m_elements.size()) {
     // Point is outside the mesh.
     return nullptr;
   }
-  const Element& element = m_elements[i];
-  return m_regions[element.region].medium;
+  return m_regions[m_elements[i].region].medium;
 }
 
 bool ComponentTcad3d::Initialise(const std::string& gridfilename,
@@ -224,10 +221,7 @@ bool ComponentTcad3d::Initialise(const std::string& gridfilename,
   m_bbMax[0] = m_vertices[m_elements[0].vertex[0]][0];
   m_bbMax[1] = m_vertices[m_elements[0].vertex[0]][1];
   m_bbMax[2] = m_vertices[m_elements[0].vertex[0]][2];
-  m_bbMin[0] = m_bbMax[0];
-  m_bbMin[1] = m_bbMax[1];
-  m_bbMin[2] = m_bbMax[2];
-
+  m_bbMin = m_bbMax;
   const size_t nElements = m_elements.size();
   for (size_t i = 0; i < nElements; ++i) {
     Element& element = m_elements[i];
@@ -1053,16 +1047,13 @@ bool ComponentTcad3d::LoadWeightingField(const std::string& datafilename,
     std::getline(datafile, line);
     std::getline(datafile, line);
     // Get the region name (given in brackets).
-    auto bra = line.find('[');
-    auto ket = line.find(']');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    if (!ExtractFromSquareBrackets(line)) {
       std::cerr << m_className << "::LoadWeightingField:\n"
                 << "    Cannot extract region name.\n"
                 << "    Line:\n    " << line << "\n";
       ok = false;
       break;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     std::string name;
     data.str(line);
     data >> name;
@@ -1077,16 +1068,13 @@ bool ComponentTcad3d::LoadWeightingField(const std::string& datafilename,
     }
     // Get the number of values.
     std::getline(datafile, line);
-    bra = line.find('(');
-    ket = line.find(')');
-    if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadWeightingField:\n"
                 << "    Cannot extract number of values to be read.\n"
                 << "    Line:\n    " << line << "\n";
       ok = false;
       break;
     }
-    line = line.substr(bra + 1, ket - bra - 1);
     int nValues;
     data.str(line);
     data >> nValues;

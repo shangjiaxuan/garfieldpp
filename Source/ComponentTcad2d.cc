@@ -191,7 +191,7 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
   const Element& element = m_elements[i];
   const size_t nVertices = element.type + 1;
   for (size_t j = 0; j < nVertices; ++j) {
-    const size_t index = element.vertex[j];
+    const auto index = element.vertex[j];
     fx += w[j] * field[index][0];
     fy += w[j] * field[index][1];
   }
@@ -254,21 +254,19 @@ Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
   if (m_hasRangeZ && (zin < m_bbMin[2] || zin > m_bbMax[2])) return nullptr;
   std::array<double, 2> x = {xin, yin};
   std::array<bool, 2> mirr = {false, false};
-  // In case of periodicity, reduce to the cell volume.
   MapCoordinates(x, mirr);
   // Check if the point is inside the bounding box.
   if (!InBoundingBox(x)) return nullptr;
 
-  // Shape functions
+  // Determine the shape functions.
   std::array<double, nMaxVertices> w;
-  const auto i = FindElement(x[0], x[1], w);
+  const size_t i = FindElement(x[0], x[1], w);
   if (i >= m_elements.size()) {
     // Point is outside the mesh.
     return nullptr;
   }
   m_lastElement = i;
-  const Element& element = m_elements[i];
-  return m_regions[element.region].medium;
+  return m_regions[m_elements[i].region].medium;
 }
 
 bool ComponentTcad2d::GetElectronLifetime(const double x, const double y,
@@ -312,8 +310,9 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
   }
 
   // Find min./max. coordinates and potentials.
-  m_bbMax[0] = m_bbMin[0] = m_vertices[m_elements[0].vertex[0]][0];
-  m_bbMax[1] = m_bbMin[1] = m_vertices[m_elements[0].vertex[0]][1];
+  m_bbMax[0] = m_vertices[m_elements[0].vertex[0]][0];
+  m_bbMax[1] = m_vertices[m_elements[0].vertex[0]][1];
+  m_bbMin = m_bbMax;
   for (auto& element : m_elements) {
     const auto& v0 = m_vertices[element.vertex[0]];
     double xmin = v0[0];
@@ -1122,8 +1121,8 @@ bool ComponentTcad2d::LoadWeightingField(const std::string& datafilename,
     if (field) nValues /= 2;
     // Mark the vertices belonging to this region.
     std::vector<bool> isInRegion(nVertices, false);
-    const unsigned int nElements = m_elements.size();
-    for (unsigned int j = 0; j < nElements; ++j) {
+    const size_t nElements = m_elements.size();
+    for (size_t j = 0; j < nElements; ++j) {
       if (m_elements[j].region != index) continue;
       for (int k = 0; k <= m_elements[j].type; ++k) {
         isInRegion[m_elements[j].vertex[k]] = true;
