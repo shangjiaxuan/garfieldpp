@@ -34,13 +34,6 @@ class ComponentTcad2d : public ComponentTcadBase<2> {
   /// Set the z-extent of the bounding box (default: unlimited).
   void SetRangeZ(const double zmin, const double zmax);
 
-  /** Import mesh and field map from files.
-    * \param gridfilename name of the .grd file containing the mesh 
-    * \param datafilename name of the .dat file containing the nodal solution
-    */
-  bool Initialise(const std::string& gridfilename,
-                  const std::string& datafilename);
-
   /** Retrieve the properties of an element.
     * \param i index of the element
     * \param vol volume
@@ -93,7 +86,7 @@ class ComponentTcad2d : public ComponentTcadBase<2> {
   bool Interpolate(const double x, const double y, const double z,
                    const std::vector<std::array<double, 2> >& field, 
                    double& fx, double& fy, double& fz) override;
-
+  void FillTree() override;
 };
 }
 #endif

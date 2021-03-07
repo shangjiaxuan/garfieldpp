@@ -28,13 +28,6 @@ class ComponentTcad3d : public ComponentTcadBase<3> {
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) override;
 
-  /** Import mesh and field map from files.
-    * \param gridfilename name of the .grd file containing the mesh 
-    * \param datafilename name of the .dat file containing the nodal solution
-    */
-  bool Initialise(const std::string& gridfilename,
-                  const std::string& datafilename);
-
   /** Retrieve the properties of an element.
     * \param i index of the element
     * \param vol volume
@@ -98,6 +91,7 @@ class ComponentTcad3d : public ComponentTcadBase<3> {
   bool Interpolate(const double x, const double y, const double z,
                    const std::vector<std::array<double, 3> >& field, 
                    double& fx, double& fy, double& fz) override;
+  void FillTree() override;
 
 };
 }

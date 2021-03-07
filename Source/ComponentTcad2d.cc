@@ -1,13 +1,10 @@
 #include <algorithm>
 #include <cmath>
-#include <fstream>
 #include <iostream>
-#include <sstream>
+#include <limits>
 #include <string>
 
 #include "Garfield/ComponentTcad2d.hh"
-#include "Garfield/GarfieldConstants.hh"
-#include "Garfield/Utilities.hh"
 
 namespace Garfield {
 
@@ -155,194 +152,7 @@ Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
   return m_regions[m_elements[i].region].medium;
 }
 
-bool ComponentTcad2d::Initialise(const std::string& gridfilename,
-                                 const std::string& datafilename) {
-  m_ready = false;
-  Cleanup();
-
-  // Import mesh data from .grd file.
-  if (!LoadGrid(gridfilename)) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Importing mesh data failed.\n";
-    Cleanup();
-    return false;
-  }
-
-  // Import electric field, potential and other data from .dat file.
-  if (!LoadData(datafilename)) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Importing electric field and potential failed.\n";
-    Cleanup();
-    return false;
-  }
-
-  // Find min./max. coordinates and potentials.
-  m_bbMax[0] = m_vertices[m_elements[0].vertex[0]][0];
-  m_bbMax[1] = m_vertices[m_elements[0].vertex[0]][1];
-  m_bbMin = m_bbMax;
-  for (auto& element : m_elements) {
-    const auto& v0 = m_vertices[element.vertex[0]];
-    double xmin = v0[0];
-    double xmax = v0[0];
-    double ymin = v0[1];
-    double ymax = v0[1];
-    const size_t nVertices = element.type + 1;
-    for (size_t j = 0; j < nVertices; ++j) {
-      const auto& v = m_vertices[element.vertex[j]];
-      xmin = std::min(xmin, v[0]);
-      xmax = std::max(xmax, v[0]);
-      ymin = std::min(ymin, v[1]);
-      ymax = std::max(ymax, v[1]);
-    }
-    constexpr double tol = 1.e-6;
-    element.bbMin[0] = xmin - tol;
-    element.bbMax[0] = xmax + tol;
-    element.bbMin[1] = ymin - tol;
-    element.bbMax[1] = ymax + tol;
-    m_bbMin[0] = std::min(m_bbMin[0], xmin);
-    m_bbMax[0] = std::max(m_bbMax[0], xmax);
-    m_bbMin[1] = std::min(m_bbMin[1], ymin);
-    m_bbMax[1] = std::max(m_bbMax[1], ymax);
-  }
-  m_pMin = *std::min_element(m_potential.begin(), m_potential.end());
-  m_pMax = *std::max_element(m_potential.begin(), m_potential.end());
-  std::cout << m_className << "::Initialise:\n"
-            << "    Available data:\n";
-  if (!m_potential.empty()) std::cout << "      Electrostatic potential\n";
-  if (!m_efield.empty()) std::cout << "      Electric field\n";
-  if (!m_eMobility.empty()) std::cout << "      Electron mobility\n";
-  if (!m_hMobility.empty()) std::cout << "      Hole mobility\n";
-  if (!m_eVelocity.empty()) std::cout << "      Electron velocity\n";
-  if (!m_hVelocity.empty()) std::cout << "      Hole velocity\n";
-  if (!m_eLifetime.empty()) std::cout << "      Electron lifetime\n";
-  if (!m_hLifetime.empty()) std::cout << "      Hole lifetime\n";
-  if (!m_donors.empty()) {
-    std::cout << "      " << m_donors.size() << " donor-type traps\n";
-  }
-  if (!m_acceptors.empty()) {
-    std::cout << "      " << m_acceptors.size() << " acceptor-type traps\n";
-  }
-  std::cout << "    Bounding box:\n"
-            << "      " << m_bbMin[0] << " < x [cm] < " << m_bbMax[0] << "\n"
-            << "      " << m_bbMin[1] << " < y [cm] < " << m_bbMax[1] << "\n"
-            << "    Voltage range:\n"
-            << "      " << m_pMin << " < V < " << m_pMax << "\n";
-
-  bool ok = true;
-
-  // Count the number of elements belonging to a region.
-  const auto nRegions = m_regions.size();
-  std::vector<int> nElementsRegion(nRegions, 0);
-
-  // Count the different element shapes.
-  unsigned int nPoints = 0;
-  unsigned int nLines = 0;
-  unsigned int nTriangles = 0;
-  unsigned int nRectangles = 0;
-  unsigned int nOtherShapes = 0;
-
-  // Check if there are elements which are not part of any region.
-  unsigned int nLoose = 0;
-  std::vector<int> looseElements;
-
-  // Check if there are degenerate elements.
-  unsigned int nDegenerate = 0;
-  std::vector<int> degenerateElements;
-
-  const auto nElements = m_elements.size();
-  for (size_t i = 0; i < nElements; ++i) {
-    const Element& element = m_elements[i];
-    if (element.type == 0) {
-      ++nPoints;
-    } else if (element.type == 1) {
-      ++nLines;
-      if (element.vertex[0] == element.vertex[1]) {
-        degenerateElements.push_back(i);
-        ++nDegenerate;
-      }
-    } else if (element.type == 2) {
-      ++nTriangles;
-      if (element.vertex[0] == element.vertex[1] ||
-          element.vertex[1] == element.vertex[2] ||
-          element.vertex[2] == element.vertex[0]) {
-        degenerateElements.push_back(i);
-        ++nDegenerate;
-      }
-    } else if (element.type == 3) {
-      ++nRectangles;
-      if (element.vertex[0] == element.vertex[1] ||
-          element.vertex[0] == element.vertex[2] ||
-          element.vertex[0] == element.vertex[3] ||
-          element.vertex[1] == element.vertex[2] ||
-          element.vertex[1] == element.vertex[3] ||
-          element.vertex[2] == element.vertex[3]) {
-        degenerateElements.push_back(i);
-        ++nDegenerate;
-      }
-    } else {
-      // Other shapes should not occur, since they were excluded in LoadGrid.
-      ++nOtherShapes;
-    }
-    if (element.region < nRegions) {
-      ++nElementsRegion[element.region];
-    } else {
-      looseElements.push_back(i);
-      ++nLoose;
-    }
-  }
-
-  if (nDegenerate > 0) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    The following elements are degenerate:\n";
-    for (unsigned int i = 0; i < nDegenerate; ++i) {
-      std::cerr << "      " << degenerateElements[i] << "\n";
-    }
-    ok = false;
-  }
-
-  if (nLoose > 0) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    The following elements are not part of any region:\n";
-    for (unsigned int i = 0; i < nLoose; ++i) {
-      std::cerr << "      " << looseElements[i] << "\n";
-    }
-    ok = false;
-  }
-
-  std::cout << m_className << "::Initialise:\n"
-            << "    Number of regions: " << nRegions << "\n";
-  for (size_t i = 0; i < nRegions; ++i) {
-    std::cout << "      " << i << ": " << m_regions[i].name << ", "
-              << nElementsRegion[i] << " elements\n";
-  }
-
-  std::cout << "    Number of elements: " << nElements << "\n";
-  if (nPoints > 0) {
-    std::cout << "      " << nPoints << " points\n";
-  }
-  if (nLines > 0) {
-    std::cout << "      " << nLines << " lines\n";
-  }
-  if (nTriangles > 0) {
-    std::cout << "      " << nTriangles << " triangles\n";
-  }
-  if (nRectangles > 0) {
-    std::cout << "      " << nRectangles << " rectangles\n";
-  }
-  if (nOtherShapes > 0) {
-    std::cerr << "      " << nOtherShapes << " elements of unknown type.\n"
-              << "      Program bug!\n";
-    m_ready = false;
-    Cleanup();
-    return false;
-  }
-
-  std::cout << "    Number of vertices: " << m_vertices.size() << "\n";
-  if (!ok) {
-    m_ready = false;
-    Cleanup();
-    return false;
-  }
+void ComponentTcad2d::FillTree() {
 
   // Set up the quad tree.
   const double hx = 0.5 * (m_bbMax[0] - m_bbMin[0]);
@@ -354,17 +164,15 @@ bool ComponentTcad2d::Initialise(const std::string& gridfilename,
     m_tree->InsertMeshNode(m_vertices[i][0], m_vertices[i][1], i);
   }
 
+  const auto nElements = m_elements.size();
   // Insert the mesh elements in the tree.
   for (size_t i = 0; i < nElements; ++i) {
-    const Element& e = m_elements[i];
-    const double bb[4] = {e.bbMin[0], e.bbMin[1], e.bbMax[0], e.bbMax[1]};
+    const Element& element = m_elements[i];
+    const double bb[4] = {element.bbMin[0], element.bbMin[1], 
+                          element.bbMax[0], element.bbMax[1]};
     m_tree->InsertMeshElement(bb, i);
   }
 
-  m_ready = true;
-  UpdatePeriodicity();
-  std::cout << m_className << "::Initialise: Initialisation finished.\n";
-  return true;
 }
 
 bool ComponentTcad2d::GetBoundingBox(double& xmin, double& ymin, double& zmin,

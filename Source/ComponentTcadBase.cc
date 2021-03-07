@@ -2,6 +2,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <sstream>
 #include <string>
 
@@ -69,6 +70,183 @@ double ComponentTcadBase<N>::WeightingPotential(const double x, const double y,
   double v = 0.;
   Interpolate(x, y, z, m_wp, v);
   return v;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::Initialise(const std::string& gridfilename,
+                                      const std::string& datafilename) {
+
+  m_ready = false;
+  Cleanup();
+  // Import mesh data from .grd file.
+  if (!LoadGrid(gridfilename)) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Importing mesh data failed.\n";
+    Cleanup();
+    return false;
+  }
+  // Import electric field, potential and other data from .dat file.
+  if (!LoadData(datafilename)) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Importing electric field and potential failed.\n";
+    Cleanup();
+    return false;
+  }
+
+  // Find min./max. coordinates and potentials.
+  for (size_t i = 0; i < N; ++i) {
+    m_bbMax[i] = m_vertices[m_elements[0].vertex[0]][i];
+    m_bbMin[i] = m_bbMax[i];
+  }
+  const size_t nElements = m_elements.size();
+  for (size_t i = 0; i < nElements; ++i) {
+    Element& element = m_elements[i];
+    std::array<double, N> xmin = m_vertices[element.vertex[0]];
+    std::array<double, N> xmax = m_vertices[element.vertex[0]];
+    const size_t nV = std::min(m_elements[i].type + 1, 4);
+    for (size_t j = 0; j < nV; ++j) {
+      const auto& v = m_vertices[m_elements[i].vertex[j]];
+      for (size_t k = 0; k < N; ++k) {
+        xmin[k] = std::min(xmin[k], v[k]);
+        xmax[k] = std::max(xmax[k], v[k]);
+      }
+    }
+    constexpr double tol = 1.e-6;
+    for (size_t k = 0; k < N; ++k) {
+      m_elements[i].bbMin[k] = xmin[k] - tol;
+      m_elements[i].bbMax[k] = xmax[k] + tol;
+      m_bbMin[k] = std::min(m_bbMin[k], xmin[k]);
+      m_bbMax[k] = std::max(m_bbMax[k], xmax[k]);
+    }
+  }
+  m_pMin = *std::min_element(m_potential.begin(), m_potential.end());
+  m_pMax = *std::max_element(m_potential.begin(), m_potential.end());
+
+  std::cout << m_className << "::Initialise:\n"
+            << "    Available data:\n";
+  if (!m_potential.empty()) std::cout << "      Electrostatic potential\n";
+  if (!m_efield.empty())    std::cout << "      Electric field\n";
+  if (!m_eMobility.empty()) std::cout << "      Electron mobility\n";
+  if (!m_hMobility.empty()) std::cout << "      Hole mobility\n";
+  if (!m_eVelocity.empty()) std::cout << "      Electron velocity\n";
+  if (!m_hVelocity.empty()) std::cout << "      Hole velocity\n";
+  if (!m_eLifetime.empty()) std::cout << "      Electron lifetime\n";
+  if (!m_hLifetime.empty()) std::cout << "      Hole lifetime\n";
+  if (!m_donors.empty()) {
+    std::cout << "      " << m_donors.size() << " donor-type traps\n";
+  }
+  if (!m_acceptors.empty()) {
+    std::cout << "      " << m_acceptors.size() << " acceptor-type traps\n";
+  }
+  const std::array<std::string, 3> axes = {"x", "y", "z"};
+  std::cout << "    Bounding box:\n";
+  for (size_t i = 0; i < N; ++i) {
+    std::cout << "      " << m_bbMin[i] << " < " << axes[i] << " [cm] < " 
+              << m_bbMax[i] << "\n";
+  }
+  std::cout << "    Voltage range:\n"
+            << "      " << m_pMin << " < V < " << m_pMax << "\n";
+
+  bool ok = true;
+
+  // Count the number of elements belonging to a region.
+  const auto nRegions = m_regions.size();
+  std::vector<size_t> nElementsByRegion(nRegions, 0);
+  // Keep track of elements that are not part of any region.
+  std::vector<size_t> looseElements;
+
+  // Count the different element shapes.
+  std::map<int, unsigned int> nElementsByShape;
+  if (N == 2) {
+    nElementsByShape = {{0, 0}, {1, 0}, {2, 0}, {3, 0}};
+  } else {
+    nElementsByShape = {{2, 0}, {5, 0}};
+  }
+  unsigned int nElementsOther = 0;
+
+  // Keep track of degenerate elements.
+  std::vector<size_t> degenerateElements;
+
+  for (size_t i = 0; i < nElements; ++i) {
+    const Element& element = m_elements[i];
+    if (element.region < nRegions) {
+      ++nElementsByRegion[element.region];
+    } else {
+      looseElements.push_back(i);
+    }
+    if (nElementsByShape.count(element.type) == 0) {
+      ++nElementsOther;
+      continue;
+    }
+    nElementsByShape[element.type] += 1;
+    bool degenerate = false;
+    const size_t nV = std::min(m_elements[i].type + 1, 4);
+    for (size_t j = 0; j < nV; ++j) {
+      for (size_t k = j  + 1; k < nV; ++k) {
+        if (element.vertex[j] == element.vertex[k]) {
+          degenerate = true;
+          break;
+        }
+      }
+      if (degenerate) break;
+    } 
+    if (degenerate) {
+      degenerateElements.push_back(i);
+    }
+  }
+
+  if (!degenerateElements.empty()) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    The following elements are degenerate:\n";
+    for (size_t i : degenerateElements) std::cerr << "      " << i << "\n";
+    ok = false;
+  }
+
+  if (!looseElements.empty()) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    The following elements are not part of any region:\n";
+    for (size_t i : looseElements) std::cerr << "      " << i << "\n";
+    ok = false;
+  }
+
+  std::cout << m_className << "::Initialise:\n"
+            << "    Number of regions: " << nRegions << "\n";
+  for (size_t i = 0; i < nRegions; ++i) {
+    std::cout << "      " << i << ": " << m_regions[i].name << ", "
+              << nElementsByRegion[i] << " elements\n";
+  }
+
+  std::map<int, std::string> shapes = {
+    {0, "points"}, {1, "lines"}, {2, "triangles"}, {3, "rectangles"},
+    {5, "tetrahedra"}}; 
+
+  std::cout << "    Number of elements: " << nElements << "\n";
+  for (const auto& n : nElementsByShape) {
+    if (n.second > 0) {
+      std::cout << "      " << n.second << " " << shapes[n.first] << "\n";
+    }
+  } 
+  if (nElementsOther > 0) {
+    std::cerr << "      " << nElementsOther << " elements of unknown type.\n"
+              << "      Program bug!\n";
+    m_ready = false;
+    Cleanup();
+    return false;
+  }
+
+  std::cout << "    Number of vertices: " << m_vertices.size() << "\n";
+  if (!ok) {
+    m_ready = false;
+    Cleanup();
+    return false;
+  }
+
+  FillTree();
+
+  m_ready = true;
+  UpdatePeriodicity();
+  std::cout << m_className << "::Initialise: Initialisation finished.\n";
+  return true;
 }
 
 template<size_t N>
@@ -450,8 +628,8 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
           }
           m_elements[j].vertex[0] = edgeP1[p0];
           m_elements[j].vertex[1] = edgeP2[p0];
-          if (edgeP1[p1] != (int)m_elements[j].vertex[0] &&
-              edgeP1[p1] != (int)m_elements[j].vertex[1]) {
+          if (edgeP1[p1] != m_elements[j].vertex[0] &&
+              edgeP1[p1] != m_elements[j].vertex[1]) {
             m_elements[j].vertex[2] = edgeP1[p1];
           } else {
             m_elements[j].vertex[2] = edgeP2[p1];

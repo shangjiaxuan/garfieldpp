@@ -30,6 +30,13 @@ class ComponentTcadBase : public Component {
                             const std::string& label) override;
 
   bool GetVoltageRange(double& vmin, double& vmax) override;
+  
+  /** Import mesh and field map from files.
+    * \param gridfilename name of the .grd file containing the mesh 
+    * \param datafilename name of the .dat file containing the nodal solution
+    */
+  bool Initialise(const std::string& gridfilename,
+                  const std::string& datafilename);
 
   /** Import field maps defining the weighting field and potential.
     * \param datfile1 .dat file containing the field map at nominal bias.
@@ -200,6 +207,7 @@ class ComponentTcadBase : public Component {
   virtual bool Interpolate(const double x, const double y, const double z,
                            const std::vector<std::array<double, N> >& field,
                            double& fx, double& fy, double& fz) = 0;
+  virtual void FillTree() = 0;
 
   size_t FindRegion(const std::string& name) const;
   void MapCoordinates(std::array<double, N>& x, 
