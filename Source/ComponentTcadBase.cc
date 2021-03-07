@@ -373,6 +373,15 @@ bool ComponentTcadBase<N>::SetWeightingFieldShift(
 }
 
 template<size_t N>
+void ComponentTcadBase<N>::EnableVelocityMap(const bool on) {
+  m_useVelocityMap = on;
+  if (m_ready && (m_eVelocity.empty() && m_hVelocity.empty())) {
+    std::cout << m_className << "::EnableVelocityMap:\n"
+              << "    Warning: current map does not include velocity data.\n"; 
+  }
+} 
+
+template<size_t N>
 bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
   // Open the file containing the mesh description.
   std::ifstream gridfile;

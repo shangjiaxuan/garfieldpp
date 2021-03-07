@@ -77,8 +77,10 @@ class ComponentTcadBase : public Component {
   size_t GetNumberOfNodes() const { return m_vertices.size(); }
   
   /// Switch use of the imported velocity map on/off.
-  void EnableVelocityMap(const bool on) { m_useVelocityMap = on; }
-  bool HasVelocityMap() const override { return m_useVelocityMap; }
+  void EnableVelocityMap(const bool on);
+  bool HasVelocityMap() const override { 
+    return m_useVelocityMap && !(m_eVelocity.empty() && m_hVelocity.empty());
+  }
   bool ElectronVelocity(const double x, const double y, const double z,
                         double& vx, double& vy, double& vz) override;
   bool HoleVelocity(const double x, const double y, const double z, 
@@ -89,10 +91,17 @@ class ComponentTcadBase : public Component {
   /// Get the number of acceptor states found in the map.
   size_t GetNumberOfAcceptors() { return m_acceptors.size(); }
 
-  bool SetDonor(const size_t donorNumber, const double eXsec,
-                const double hxSec, const double concentration);
-  bool SetAcceptor(const size_t acceptorNumber, const double eXsec,
-                   const double hxSec, const double concentration);
+  /** Set the properties of a donor-type defect state.
+    * \param donorNumber index of the donor
+    * \param exsec cross-section [cm2] for electrons
+    * \param hxsec cross-section [cm2] for holes
+    * \param concentration defect density [cm-3]
+    */
+  bool SetDonor(const size_t donorNumber, const double exsec,
+                const double hxsec, const double concentration);
+  /// Set the properties of an acceptor-type defect state.
+  bool SetAcceptor(const size_t acceptorNumber, const double exsec,
+                   const double hxsec, const double concentration);
 
   /// Switch use of the imported trapping map on/off.
   void EnableAttachmentMap(const bool on) { m_useAttachmentMap = on; }
@@ -116,7 +125,7 @@ class ComponentTcadBase : public Component {
                        double& mob);
  protected:
   // Max. number of vertices per element
-  static constexpr size_t nMaxVertices = N == 2 ? 4 : 7;
+  static constexpr size_t nMaxVertices = 4;
 
   // Regions
   struct Region {
