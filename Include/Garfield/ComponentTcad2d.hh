@@ -91,8 +91,6 @@ class ComponentTcad2d : public ComponentTcadBase<2> {
                    double& fx, double& fy, double& fz) override;
 
   bool LoadGrid(const std::string& gridfilename);
-  bool LoadData(const std::string& datafilename);
-  bool ReadDataset(std::ifstream& datafile, const std::string& dataset);
 };
 }
 #endif

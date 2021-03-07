@@ -141,18 +141,301 @@ bool ComponentTcadBase<N>::SetWeightingField(const std::string& datfile1,
 }
 
 template<size_t N>
-bool ComponentTcadBase<N>::LoadWeightingField(
-    const std::string& datafilename,
-    std::vector<std::array<double, N> >& wf, std::vector<double>& wp) {
+bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
 
   std::ifstream datafile;
-  datafile.open(datafilename.c_str(), std::ios::in);
+  datafile.open(filename, std::ios::in);
   if (!datafile) {
-    std::cerr << m_className << "::LoadWeightingField:\n"
-              << "    Could not open file " << datafilename << ".\n";
+    std::cerr << m_className << "::LoadData:\n"
+              << "    Could not open file " << filename << ".\n";
     return false;
   }
   const size_t nVertices = m_vertices.size();
+  std::vector<unsigned int> fillCount(nVertices, 0);
+
+  std::array<double, N> zeroVector{};
+  // Read the file line by line.
+  std::string line;
+  while (std::getline(datafile, line)) {
+    // Strip white space from the beginning of the line.
+    ltrim(line);
+    // Find data section.
+    if (line.substr(0, 8) != "function") continue;
+    // Read type of data set.
+    const auto pEq = line.find('=');
+    if (pEq == std::string::npos) {
+      // No "=" found.
+      std::cerr << m_className << "::LoadData:\n"
+                << "    Error reading file " << filename << ".\n"
+                << "    Line:\n    " << line << "\n";
+      return false;
+    }
+    line = line.substr(pEq + 1);
+    std::string dataset;
+    std::istringstream data;
+    data.str(line);
+    data >> dataset;
+    data.clear();
+    if (dataset == "ElectrostaticPotential") {
+      m_potential.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_potential.clear();
+        return false;
+      }
+    } else if (dataset == "ElectricField") {
+      m_efield.assign(nVertices, zeroVector);
+      if (!ReadDataset(datafile, dataset)) {
+        m_efield.clear();
+        return false;
+      }
+    } else if (dataset == "eDriftVelocity") {
+      m_eVelocity.assign(nVertices, zeroVector);
+      if (!ReadDataset(datafile, dataset)) {
+        m_eVelocity.clear();
+        return false;
+      }
+    } else if (dataset == "hDriftVelocity") {
+      m_hVelocity.assign(nVertices, zeroVector);
+      if (!ReadDataset(datafile, dataset)) {
+        m_hVelocity.clear();
+        return false;
+      }
+    } else if (dataset == "eMobility") {
+      m_eMobility.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_eMobility.clear();
+        return false;
+      }
+    } else if (dataset == "hMobility") {
+      m_hMobility.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_hMobility.clear();
+        return false;
+      }
+    } else if (dataset == "eLifetime") {
+      m_eLifetime.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_eLifetime.clear();
+        return false;
+      }
+    } else if (dataset == "hLifetime") {
+      m_hLifetime.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_hLifetime.clear();
+        return false;
+      }
+    } else if (dataset.substr(0, 14) == "TrapOccupation" &&
+               dataset.substr(17, 2) == "Do") {
+      if (!ReadDataset(datafile, dataset)) return false;
+      Defect donor;
+      donor.xsece = -1.;
+      donor.xsech = -1.;
+      donor.conc = -1.;
+      m_donors.push_back(donor);
+    } else if (dataset.substr(0, 14) == "TrapOccupation" &&
+               dataset.substr(17, 2) == "Ac") {
+      if (!ReadDataset(datafile, dataset)) return false;
+      Defect acceptor;
+      acceptor.xsece = -1.;
+      acceptor.xsech = -1.;
+      acceptor.conc = -1.;
+      m_acceptors.push_back(acceptor);
+    }
+  }
+  if (datafile.fail() && !datafile.eof()) {
+    std::cerr << m_className << "::LoadData:\n"
+              << "    Error reading file " << filename << "\n";
+    return false;
+  }
+  return true;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
+                                       const std::string& dataset) {
+
+  if (!datafile.is_open()) return false;
+  enum DataSet { 
+    ElectrostaticPotential, 
+    EField, 
+    eDriftVelocity,
+    hDriftVelocity,
+    eMobility,
+    hMobility,
+    eLifetime,
+    hLifetime,
+    DonorTrapOccupation,
+    AcceptorTrapOccupation,
+    Unknown 
+  };
+  DataSet ds = Unknown;
+  if (dataset == "ElectrostaticPotential") {
+    ds = ElectrostaticPotential;
+  } else if (dataset == "ElectricField") {
+    ds = EField;
+  } else if (dataset == "eDriftVelocity") {
+    ds = eDriftVelocity;
+  } else if (dataset == "hDriftVelocity") {
+    ds = hDriftVelocity;
+  } else if (dataset == "eMobility") {
+    ds = eMobility;
+  } else if (dataset == "hMobility") {
+    ds = hMobility;
+  } else if (dataset == "eLifetime") {
+    ds = eLifetime;
+  } else if (dataset == "hLifetime") {
+    ds = hLifetime;
+  } else if (dataset.substr(0, 14) == "TrapOccupation") {
+    if (dataset.substr(17, 2) == "Do") {
+      ds = DonorTrapOccupation;
+    } else if (dataset.substr(17, 2) == "Ac") {
+      ds = AcceptorTrapOccupation;
+    }
+  } else {
+    std::cerr << m_className << "::ReadDataset:\n"
+              << "    Unexpected dataset " << dataset << ".\n";
+    return false;
+  }
+  bool isVector = false;
+  if (ds == EField || ds == eDriftVelocity || ds == hDriftVelocity) {
+    isVector = true;
+  }
+
+  std::string line;
+  std::getline(datafile, line);
+  std::getline(datafile, line);
+  std::getline(datafile, line);
+  std::getline(datafile, line);
+  // Get the region name (given in brackets).
+  if (!ExtractFromSquareBrackets(line)) {
+    std::cerr << m_className << "::ReadDataset:\n"
+              << "    Cannot extract region name.\n"
+              << "    Line:\n    " << line << "\n";
+    return false;
+  }
+  std::string name;
+  std::istringstream data;
+  data.str(line);
+  data >> name;
+  data.clear();
+  // Check if the region name matches one from the mesh file.
+  const size_t index = FindRegion(name);
+  if (index >= m_regions.size()) {
+    std::cerr << m_className << "::ReadDataset:\n"
+              << "    Unknown region " << name << ".\n";
+    return false;
+  }
+  // Get the number of values.
+  std::getline(datafile, line);
+  if (!ExtractFromBrackets(line)) {
+    std::cerr << m_className << "::ReadDataset:\n"
+              << "    Cannot extract number of values to be read.\n"
+              << "    Line:\n    " << line << "\n";
+    return false;
+  }
+  int nValues;
+  data.str(line);
+  data >> nValues;
+  if (isVector) nValues /= N;
+  // Mark the vertices belonging to this region.
+  const size_t nVertices = m_vertices.size();
+  std::vector<bool> isInRegion(nVertices, false);
+  const size_t nElements = m_elements.size();
+  for (size_t j = 0; j < nElements; ++j) {
+    if (m_elements[j].region != index) continue;
+    for (int k = 0; k <= m_elements[j].type; ++k) {
+      isInRegion[m_elements[j].vertex[k]] = true;
+    }
+  }
+
+  unsigned int ivertex = 0;
+  for (int j = 0; j < nValues; ++j) {
+    // Read the next value.
+    std::array<double, N> val;
+    if (isVector) {
+      for (size_t k = 0; k < N; ++k) datafile >> val[k];
+    } else {
+      datafile >> val[0];
+    }
+    // Find the next vertex belonging to the region.
+    while (ivertex < nVertices) {
+      if (isInRegion[ivertex]) break;
+      ++ivertex;
+    }
+    // Check if there is a mismatch between the number of m_vertices
+    // and the number of potential values.
+    if (ivertex >= nVertices) {
+      std::cerr << m_className << "::ReadDataset:\n"
+                << "    Dataset " << dataset << " has more values than "
+                << "there are vertices in region " << name << "\n";
+      return false;
+    }
+
+    switch (ds) {
+      case ElectrostaticPotential:
+        m_potential[ivertex] = val[0];
+        break;
+      case EField:
+        for (size_t k = 0; k < N; ++k) m_efield[ivertex][k] = val[k];
+        break;
+      case eDriftVelocity:
+        // Scale from cm/s to cm/ns.
+        for (size_t k = 0; k < N; ++k) {
+          m_eVelocity[ivertex][k] = val[k] * 1.e-9;
+        }
+        break;
+      case hDriftVelocity:
+        // Scale from cm/s to cm/ns.
+        for (size_t k = 0; k < N; ++k) {
+          m_hVelocity[ivertex][k] = val[k] * 1.e-9;
+        }
+        break;
+      case eMobility:
+        // Convert from cm2 / (V s) to cm2 / (V ns).
+        m_eMobility[ivertex] = val[0] * 1.e-9;
+        break;
+      case hMobility:
+        // Convert from cm2 / (V s) to cm2 / (V ns).
+        m_hMobility[ivertex] = val[0] * 1.e-9;
+        break;
+      case eLifetime:
+        // Convert from s to ns.
+        m_eLifetime[ivertex] = val[0] * 1.e9;
+        break;
+      case hLifetime:
+        // Convert from s to ns.
+        m_hLifetime[ivertex] = val[0] * 1.e9;
+        break;
+      case DonorTrapOccupation:
+        m_donorOcc[ivertex].push_back(val[0]);
+        break;
+      case AcceptorTrapOccupation:
+        m_acceptorOcc[ivertex].push_back(val[0]);
+        break;
+      default:
+        std::cerr << m_className << "::ReadDataset:\n"
+                  << "    Unexpected dataset (" << ds << "). Program bug!\n";
+        return false;
+    }
+    ++ivertex;
+  }
+  return true;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::LoadWeightingField(
+    const std::string& filename,
+    std::vector<std::array<double, N> >& wf, std::vector<double>& wp) {
+
+  std::ifstream datafile;
+  datafile.open(filename.c_str(), std::ios::in);
+  if (!datafile) {
+    std::cerr << m_className << "::LoadWeightingField:\n"
+              << "    Could not open file " << filename << ".\n";
+    return false;
+  }
+  const size_t nVertices = m_vertices.size();
+  const std::array<double, N> zeroVector{};
   bool ok = true;
   // Read the file line by line.
   std::string line;
@@ -166,9 +449,8 @@ bool ComponentTcadBase<N>::LoadWeightingField(
     if (pEq == std::string::npos) {
       // No "=" found.
       std::cerr << m_className << "::LoadWeightingField:\n"
-                << "    Error reading file " << datafilename << ".\n"
+                << "    Error reading file " << filename << ".\n"
                 << "    Line:\n    " << line << "\n";
-      datafile.close();
       return false;
     }
     line = line.substr(pEq + 1);
@@ -182,8 +464,7 @@ bool ComponentTcadBase<N>::LoadWeightingField(
     }
     bool field = false;
     if (dataset == "ElectricField") {
-      wf.clear();
-      wf.resize(nVertices);
+      wf.assign(nVertices, zeroVector);
       field = true;
     } else {
       wp.assign(nVertices, 0.);
@@ -269,11 +550,9 @@ bool ComponentTcadBase<N>::LoadWeightingField(
 
   if (!ok || (datafile.fail() && !datafile.eof())) {
     std::cerr << m_className << "::LoadWeightingField:\n"
-              << "    Error reading file " << datafilename << "\n";
-    datafile.close();
+              << "    Error reading file " << filename << "\n";
     return false;
   }
-  datafile.close();
   return true;
 }
 

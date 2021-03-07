@@ -496,291 +496,6 @@ bool ComponentTcad2d::GetNode(const size_t i, double& x, double& y,
   return true;
 }
 
-bool ComponentTcad2d::LoadData(const std::string& filename) {
-  std::ifstream datafile;
-  datafile.open(filename.c_str(), std::ios::in);
-  if (!datafile) {
-    std::cerr << m_className << "::LoadData:\n"
-              << "    Could not open file " << filename << ".\n";
-    return false;
-  }
-
-  const size_t nVertices = m_vertices.size();
-  std::vector<unsigned int> fillCount(nVertices, 0);
-
-  // Read the file line by line.
-  std::string line;
-  while (std::getline(datafile, line)) {
-    // Strip white space from the beginning of the line.
-    ltrim(line);
-    // Find data section.
-    if (line.substr(0, 8) != "function") continue;
-    // Read type of data set.
-    const std::string::size_type pEq = line.find('=');
-    if (pEq == std::string::npos) {
-      // No "=" found.
-      std::cerr << m_className << "::LoadData:\n"
-                << "    Error reading file " << filename << ".\n"
-                << "    Line:\n    " << line << "\n";
-      datafile.close();
-      return false;
-    }
-    line = line.substr(pEq + 1);
-    std::string dataset;
-    std::istringstream data;
-    data.str(line);
-    data >> dataset;
-    if (dataset == "ElectrostaticPotential") {
-      m_potential.assign(nVertices, 0.);
-      if (!ReadDataset(datafile, dataset)) {
-        m_potential.clear();
-        return false;
-      }
-    } else if (dataset == "ElectricField") {
-      m_efield.assign(nVertices, {0., 0.});
-      if (!ReadDataset(datafile, dataset)) {
-        m_efield.clear();
-        return false;
-      }
-    } else if (dataset == "eDriftVelocity") {
-      m_eVelocity.assign(nVertices, {0., 0.});
-      if (!ReadDataset(datafile, dataset)) {
-        m_eVelocity.clear();
-        return false;
-      }
-    } else if (dataset == "hDriftVelocity") {
-      m_hVelocity.assign(nVertices, {0., 0.});
-      if (!ReadDataset(datafile, dataset)) {
-        m_hVelocity.clear();
-        return false;
-      }
-    } else if (dataset == "eMobility") {
-      m_eMobility.assign(nVertices, 0.);
-      if (!ReadDataset(datafile, dataset)) {
-        m_eMobility.clear();
-        return false;
-      }
-    } else if (dataset == "hMobility") {
-      m_hMobility.assign(nVertices, 0.);
-      if (!ReadDataset(datafile, dataset)) {
-        m_hMobility.clear();
-        return false;
-      }
-    } else if (dataset == "eLifetime") {
-      m_eLifetime.assign(nVertices, 0.);
-      if (!ReadDataset(datafile, dataset)) {
-        m_eLifetime.clear();
-        return false;
-      }
-    } else if (dataset == "hLifetime") {
-      m_hLifetime.assign(nVertices, 0.);
-      if (!ReadDataset(datafile, dataset)) {
-        m_hLifetime.clear();
-        return false;
-      }
-    } else if (dataset.substr(0, 14) == "TrapOccupation" &&
-               dataset.substr(17, 2) == "Do") {
-      if (!ReadDataset(datafile, dataset)) return false;
-      Defect donor;
-      donor.xsece = -1.;
-      donor.xsech = -1.;
-      donor.conc = -1.;
-      m_donors.push_back(donor);
-    } else if (dataset.substr(0, 14) == "TrapOccupation" &&
-               dataset.substr(17, 2) == "Ac") {
-      if (!ReadDataset(datafile, dataset)) return false;
-      Defect acceptor;
-      acceptor.xsece = -1.;
-      acceptor.xsech = -1.;
-      acceptor.conc = -1.;
-      m_acceptors.push_back(acceptor);
-    }
-  }
-  if (datafile.fail() && !datafile.eof()) {
-    std::cerr << m_className << "::LoadData:\n"
-              << "    Error reading file " << filename << "\n";
-    datafile.close();
-    return false;
-  }
-  datafile.close();
-  return true;
-}
-
-bool ComponentTcad2d::ReadDataset(std::ifstream& datafile,
-                                  const std::string& dataset) {
-  enum DataSet {
-    ElectrostaticPotential,
-    EField,
-    eDriftVelocity,
-    hDriftVelocity,
-    eMobility,
-    hMobility,
-    eLifetime,
-    hLifetime,
-    DonorTrapOccupation,
-    AcceptorTrapOccupation,
-    Unknown
-  };
-  DataSet ds = Unknown;
-  if (dataset == "ElectrostaticPotential") {
-    ds = ElectrostaticPotential;
-  } else if (dataset == "ElectricField") {
-    ds = EField;
-  } else if (dataset == "eDriftVelocity") {
-    ds = eDriftVelocity;
-  } else if (dataset == "hDriftVelocity") {
-    ds = hDriftVelocity;
-  } else if (dataset == "eMobility") {
-    ds = eMobility;
-  } else if (dataset == "hMobility") {
-    ds = hMobility;
-  } else if (dataset == "eLifetime") {
-    ds = eLifetime;
-  } else if (dataset == "hLifetime") {
-    ds = hLifetime;
-  } else if (dataset.substr(0, 14) == "TrapOccupation") {
-    if (dataset.substr(17, 2) == "Do") {
-      ds = DonorTrapOccupation;
-    } else if (dataset.substr(17, 2) == "Ac") {
-      ds = AcceptorTrapOccupation;
-    }
-  } else {
-    std::cerr << m_className << "::ReadDataset:\n"
-              << "    Unexpected dataset " << dataset << ".\n";
-    return false;
-  }
-
-  bool isVector = false;
-  if (ds == EField || ds == eDriftVelocity || ds == hDriftVelocity) {
-    isVector = true;
-  }
-
-  if (!datafile.is_open()) return false;
-  std::string line;
-  std::getline(datafile, line);
-  std::getline(datafile, line);
-  std::getline(datafile, line);
-  std::getline(datafile, line);
-  // Get the region name (given in brackets).
-  if (!ExtractFromSquareBrackets(line)) {
-    std::cerr << m_className << "::ReadDataset:\n"
-              << "    Cannot extract region name.\n"
-              << "    Line:\n    " << line << "\n";
-    datafile.close();
-    return false;
-  }
-  std::string name;
-  std::istringstream data;
-  data.str(line);
-  data >> name;
-  data.clear();
-  // Check if the region name matches one from the mesh file.
-  const size_t index = FindRegion(name);
-  if (index >= m_regions.size()) {
-    std::cerr << m_className << "::ReadDataset:\n"
-              << "    Unknown region " << name << ".\n";
-    datafile.close();
-    return false;
-  }
-  // Get the number of values.
-  std::getline(datafile, line);
-  if (!ExtractFromBrackets(line)) {
-    std::cerr << m_className << "::ReadDataset:\n"
-              << "    Cannot extract number of values to be read.\n"
-              << "    Line:\n    " << line << "\n";
-    datafile.close();
-    return false;
-  }
-  int nValues;
-  data.str(line);
-  data >> nValues;
-  data.clear();
-  if (isVector) nValues = nValues / 2;
-  // Mark the vertices belonging to this region.
-  const size_t nVertices = m_vertices.size();
-  std::vector<bool> isInRegion(nVertices, false);
-  const size_t nElements = m_elements.size();
-  for (size_t j = 0; j < nElements; ++j) {
-    if (m_elements[j].region != index) continue;
-    for (int k = 0; k <= m_elements[j].type; ++k) {
-      isInRegion[m_elements[j].vertex[k]] = true;
-    }
-  }
-
-  unsigned int ivertex = 0;
-  for (int j = 0; j < nValues; ++j) {
-    // Read the next value.
-    double val1 = 0., val2 = 0.;
-    if (isVector) {
-      datafile >> val1 >> val2;
-    } else {
-      datafile >> val1;
-    }
-    // Find the next vertex belonging to the region.
-    while (ivertex < nVertices) {
-      if (isInRegion[ivertex]) break;
-      ++ivertex;
-    }
-    // Check if there is a mismatch between the number of vertices
-    // and the number of values.
-    if (ivertex >= nVertices) {
-      std::cerr << m_className << "::ReadDataset:\n"
-                << "    Dataset " << dataset
-                << " has more values than vertices in region " << name << "\n";
-      datafile.close();
-      return false;
-    }
-    switch (ds) {
-      case ElectrostaticPotential:
-        m_potential[ivertex] = val1;
-        break;
-      case EField:
-        m_efield[ivertex][0] = val1;
-        m_efield[ivertex][1] = val2;
-        break;
-      case eDriftVelocity:
-        // Scale from cm/s to cm/ns.
-        m_eVelocity[ivertex][0] = val1 * 1.e-9;
-        m_eVelocity[ivertex][1] = val2 * 1.e-9;
-        break;
-      case hDriftVelocity:
-        // Scale from cm/s to cm/ns.
-        m_hVelocity[ivertex][0] = val1 * 1.e-9;
-        m_hVelocity[ivertex][1] = val2 * 1.e-9;
-        break;
-      case eMobility:
-        // Convert from cm2 / (V s) to cm2 / (V ns).
-        m_eMobility[ivertex] = val1 * 1.e-9;
-        break;
-      case hMobility:
-        // Convert from cm2 / (V s) to cm2 / (V ns).
-        m_hMobility[ivertex] = val1 * 1.e-9;
-        break;
-      case eLifetime:
-        // Convert from s to ns.
-        m_eLifetime[ivertex] = val1 * 1.e9;
-        break;
-      case hLifetime:
-        // Convert from s to ns.
-        m_hLifetime[ivertex] = val1 * 1.e9;
-        break;
-      case DonorTrapOccupation:
-        m_donorOcc[ivertex].push_back(val1);
-        break;
-      case AcceptorTrapOccupation:
-        m_acceptorOcc[ivertex].push_back(val1);
-        break;
-      default:
-        std::cerr << m_className << "::ReadDataset:\n"
-                  << "    Unexpected dataset (" << ds << "). Program bug!\n";
-        datafile.close();
-        return false;
-    }
-    ++ivertex;
-  }
-  return true;
-}
-
 bool ComponentTcad2d::LoadGrid(const std::string& filename) {
   // Open the file containing the mesh description.
   std::ifstream gridfile;
@@ -809,7 +524,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
       // No "=" sign found.
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of regions.\n";
-      gridfile.close();
       return false;
     }
     line = line.substr(pEq + 1);
@@ -823,14 +537,12 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find entry 'nb_regions' in file\n"
               << "    " << filename << ".\n";
-    gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     // Error reading from the file.
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    gridfile.close();
     return false;
   }
   m_regions.resize(nRegions);
@@ -855,7 +567,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
     if (!ExtractFromSquareBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read region names.\n";
-      gridfile.close();
       return false;
     }
     std::istringstream data;
@@ -874,14 +585,12 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find entry 'regions' in file\n"
               << "    " << filename << ".\n";
-    gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     // Error reading from the file.
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    gridfile.close();
     return false;
   }
 
@@ -896,7 +605,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
     if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of vertices.\n";
-      gridfile.close();
       return false;
     }
     std::istringstream data;
@@ -917,13 +625,11 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Vertices' in file\n"
               << "    " << filename << ".\n";
-    gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    gridfile.close();
     return false;
   }
 
@@ -941,7 +647,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
     if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of edges.\n";
-      gridfile.close();
       return false;
     }
     std::istringstream data;
@@ -960,13 +665,11 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Edges' in file\n"
               << "    " << filename << ".\n";
-    gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    gridfile.close();
     return false;
   }
 
@@ -976,14 +679,12 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
         edgeP2[i] >= (int)nVertices) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Vertex index of edge " << i << " out of range.\n";
-      gridfile.close();
       return false;
     }
     // Make sure the edge is non-degenerate.
     if (edgeP1[i] == edgeP2[i]) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Edge " << i << " is degenerate.\n";
-      gridfile.close();
       return false;
     }
   }
@@ -999,7 +700,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
     if (!ExtractFromBrackets(line)) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read number of elements.\n";
-      gridfile.close();
       return false;
     }
     std::istringstream data;
@@ -1024,7 +724,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
                       << "    Error reading file " << filename << " (line "
                       << iLine << ").\n"
                       << "    Vertex index out of range.\n";
-            gridfile.close();
             return false;
           }
           m_elements[j].vertex[0] = p0;
@@ -1040,7 +739,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
                       << "    Error reading file " << filename << " (line "
                       << iLine << ").\n"
                       << "    Vertex index out of range.\n";
-            gridfile.close();
             return false;
           }
           m_elements[j].vertex[0] = p0;
@@ -1061,7 +759,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
                       << "    Error reading file " << filename << " (line "
                       << iLine << ").\n"
                       << "    Edge index out of range.\n";
-            gridfile.close();
             return false;
           }
           m_elements[j].vertex[0] = edgeP1[p0];
@@ -1095,7 +792,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
                       << "    Error reading file " << filename << " (line "
                       << iLine << ").\n"
                       << "    Edge index out of range.\n";
-            gridfile.close();
             return false;
           }
           if (p0 >= 0)
@@ -1136,7 +832,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
                     << iLine << ").\n";
           std::cerr << "    Invalid element type (" << type
                     << ") for 2d mesh.\n";
-          gridfile.close();
           return false;
       }
       m_elements[j].type = type;
@@ -1148,13 +843,11 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not find section 'Elements' in file "
               << filename << ".\n";
-    gridfile.close();
     return false;
   } else if (gridfile.fail()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Error reading file " << filename << " (line " << iLine
               << ").\n";
-    gridfile.close();
     return false;
   }
 
@@ -1168,7 +861,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
       std::cerr << m_className << "::LoadGrid:\n"
                 << "    Could not read region name.\n";
       Cleanup();
-      gridfile.close();
       return false;
     }
     std::istringstream data;
@@ -1191,7 +883,6 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
                 << "    Error reading file " << filename << ".\n"
                 << "    Could not read number of elements in region " 
                 << name << ".\n";
-      gridfile.close();
       return false;
     }
     int nElementsRegion;
@@ -1205,13 +896,11 @@ bool ComponentTcad2d::LoadGrid(const std::string& filename) {
     }
   }
 
-  gridfile.close();
   if (gridfile.fail() && !gridfile.eof()) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Error reading file " << filename << ".\n";
     return false;
   }
-
   return true;
 }
 
