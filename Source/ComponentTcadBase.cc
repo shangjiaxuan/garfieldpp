@@ -45,30 +45,47 @@ void PrintError(const std::string& fcn, const std::string& filename,
 namespace Garfield {
 
 template<size_t N>
-void ComponentTcadBase<N>::WeightingField(const double x, const double y,
-                                          const double z, double& wx, 
-                                          double& wy, double& wz, 
-                                          const std::string& /*label*/) {
+void ComponentTcadBase<N>::WeightingField(
+    const double xin, const double yin, const double zin, 
+    double& wx, double& wy, double& wz, const std::string& label) {
   wx = wy = wz = 0.;
-  if (m_wf.empty()) {
+  if (m_wfield.empty()) {
     std::cerr << m_className << "::WeightingField: Not available.\n";
     return;
   }
-  Interpolate(x, y, z, m_wf, wx, wy, wz);
+  const size_t n = m_wlabel.size();
+  for (size_t i = 0; i < n; ++i) {
+    if (label == m_wlabel[i]) {
+      const double x = xin - m_wshift[i][0];
+      const double y = yin - m_wshift[i][1];
+      const double z = zin - m_wshift[i][2];
+      Interpolate(x, y, z, m_wfield, wx, wy, wz);
+      return;
+    }
+  }
 }
 
 template<size_t N>
-double ComponentTcadBase<N>::WeightingPotential(const double x, const double y,
-                                                const double z, 
-                                                const std::string& /*label*/) {
+double ComponentTcadBase<N>::WeightingPotential(
+    const double xin, const double yin, const double zin, 
+    const std::string& label) {
 
-  if (m_wp.empty()) {
+  if (m_wpot.empty()) {
     std::cerr << m_className << "::WeightingPotential: Not available.\n";
     return 0.;
   }
-  double v = 0.;
-  Interpolate(x, y, z, m_wp, v);
-  return v;
+  const size_t n = m_wlabel.size();
+  for (size_t i = 0; i < n; ++i) {
+    if (label == m_wlabel[i]) {
+      const double x = xin - m_wshift[i][0];
+      const double y = yin - m_wshift[i][1];
+      const double z = zin - m_wshift[i][2];
+      double v = 0.;
+      Interpolate(x, y, z, m_wpot, v);
+      return v;
+    }
+  }
+  return 0.;
 }
 
 template<size_t N>
@@ -118,12 +135,12 @@ bool ComponentTcadBase<N>::Initialise(const std::string& gridfilename,
       m_bbMax[k] = std::max(m_bbMax[k], xmax[k]);
     }
   }
-  m_pMin = *std::min_element(m_potential.begin(), m_potential.end());
-  m_pMax = *std::max_element(m_potential.begin(), m_potential.end());
+  m_pMin = *std::min_element(m_epot.begin(), m_epot.end());
+  m_pMax = *std::max_element(m_epot.begin(), m_epot.end());
 
   std::cout << m_className << "::Initialise:\n"
             << "    Available data:\n";
-  if (!m_potential.empty()) std::cout << "      Electrostatic potential\n";
+  if (!m_epot.empty()) std::cout << "      Electrostatic potential\n";
   if (!m_efield.empty())    std::cout << "      Electric field\n";
   if (!m_eMobility.empty()) std::cout << "      Electron mobility\n";
   if (!m_hMobility.empty()) std::cout << "      Hole mobility\n";
@@ -259,7 +276,8 @@ bool ComponentTcadBase<N>::GetVoltageRange(double& vmin, double& vmax) {
 template<size_t N>
 bool ComponentTcadBase<N>::SetWeightingField(const std::string& datfile1,
                                              const std::string& datfile2,
-                                             const double dv) {
+                                             const double dv,
+                                             const std::string& label) {
 
   if (!m_ready) {
     std::cerr << m_className << "::SetWeightingField:\n"
@@ -272,8 +290,11 @@ bool ComponentTcadBase<N>::SetWeightingField(const std::string& datfile1,
      return false;
   }
   const double s = 1. / dv;
-  m_wf.clear();
-  m_wp.clear();
+  m_wfield.clear();
+  m_wpot.clear();
+  m_wlabel.clear();
+  m_wshift.clear();
+
   // Load first the field/potential at nominal bias.
   std::vector<std::array<double, N> > wf1;
   std::vector<double> wp1;
@@ -286,7 +307,6 @@ bool ComponentTcadBase<N>::SetWeightingField(const std::string& datfile1,
   // Then load the field/potential for the configuration with the potential 
   // at the electrode to be read out increased by small voltage dv. 
   std::vector<std::array<double, N> > wf2;
-  std::vector<double> wy2;
   std::vector<double> wp2;
   if (!LoadWeightingField(datfile2, wf2, wp2)) {
     std::cerr << m_className << "::SetWeightingField:\n"
@@ -308,19 +328,47 @@ bool ComponentTcadBase<N>::SetWeightingField(const std::string& datfile1,
   }
   if (!foundField && !foundPotential) return false;
   if (foundField) {
-    m_wf.resize(nVertices);
+    m_wfield.resize(nVertices);
     for (size_t i = 0; i < nVertices; ++i) {
       for (size_t j = 0; j < N; ++j) {
-        m_wf[i][j] = (wf2[i][j] - wf1[i][j]) * s;
+        m_wfield[i][j] = (wf2[i][j] - wf1[i][j]) * s;
       } 
     }
   }
   if (foundPotential) {
-    m_wp.assign(nVertices, 0.);
+    m_wpot.assign(nVertices, 0.);
     for (size_t i = 0; i < nVertices; ++i) {
-      m_wp[i] = (wp2[i] - wp1[i]) * s; 
+      m_wpot[i] = (wp2[i] - wp1[i]) * s; 
     }
   }
+  m_wlabel.push_back(label);
+  m_wshift.push_back({0., 0., 0.});
+  return true;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::SetWeightingFieldShift(
+  const std::string& label, const double x, const double y, const double z) {
+  if (m_wlabel.empty()) {
+    std::cerr << m_className << "::SetWeightingFieldShift:\n"
+              << "    No map of weighting potentials/fields loaded.\n";
+    return false;
+  }
+  const size_t n = m_wlabel.size();
+  for (size_t i = 0; i < n; ++i) {
+    if (m_wlabel[i] == label) {
+      m_wshift[i] = {x, y, z};
+      std::cout << m_className << "::SetWeightingFieldShift:\n"
+                << "    Changing offset of electrode \'" << label 
+                << "\' to (" << x << ", " << y << ", " << z << ") cm.\n";
+      return true;
+    }
+  } 
+  m_wlabel.push_back(label);
+  m_wshift.push_back({x, y, z});
+  std::cout << m_className << "::SetWeightingFieldShift:\n"
+            << "    Adding electrode \'" << label << "\' with offset (" 
+            << x << ", " << y << ", " << z << ") cm.\n";
   return true;
 }
 
@@ -893,9 +941,9 @@ bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
     data >> dataset;
     data.clear();
     if (dataset == "ElectrostaticPotential") {
-      m_potential.assign(nVertices, 0.);
+      m_epot.assign(nVertices, 0.);
       if (!ReadDataset(datafile, dataset)) {
-        m_potential.clear();
+        m_epot.clear();
         return false;
       }
     } else if (dataset == "ElectricField") {
@@ -1090,7 +1138,7 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
 
     switch (ds) {
       case ElectrostaticPotential:
-        m_potential[ivertex] = val[0];
+        m_epot[ivertex] = val[0];
         break;
       case EField:
         for (size_t k = 0; k < N; ++k) m_efield[ivertex][k] = val[k];
@@ -1466,11 +1514,14 @@ void ComponentTcadBase<N>::Cleanup() {
   // Regions
   m_regions.clear();
   // Potential and electric field.
-  m_potential.clear();
+  m_epot.clear();
   m_efield.clear();
-  // Weighting fields and potentials
-  m_wf.clear();
-  m_wp.clear();
+  // Weighting potential and field.
+  m_wpot.clear();
+  m_wfield.clear();
+  m_wlabel.clear();
+  m_wshift.clear();
+
   // Other data.
   m_eVelocity.clear();
   m_hVelocity.clear();

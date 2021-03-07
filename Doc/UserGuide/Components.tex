@@ -349,7 +349,8 @@ void EnableConvergenceWarnings(const bool on);
 
 Electric fields calculated using the device simulation program 
 Synopsys Sentaurus \cite{Synopsys} can be imported with the classes 
-\texttt{ComponentTcad2d} and \texttt{ComponentTcad3d}.
+\texttt{ComponentTcad2d} and \texttt{ComponentTcad3d} (derived from 
+the base class \texttt{ComponentTcadBase}).
 
 The function to import the field map is 
 \begin{lstlisting}
@@ -431,15 +432,23 @@ In \texttt{ComponentTcad2d} and \texttt{ComponentTcad3d} the weighting
 field and potential loaded using
 \begin{lstlisting} 
 SetWeightingField(const std::string& datfile1, const std::string& datfile2,
-                  const double dv); 
+                  const double dv, const std::string& label); 
 \end{lstlisting}
 \begin{description}
   \item[datfile1] \texttt{.dat} file containing the solution $\mathbf{E}_0, V_0$,
   \item[datfile2] \texttt{.dat} file containing the solution $\mathbf{E}_+, V_+$,
-  \item[dv] potential difference $\Delta V$
+  \item[dv] potential difference $\Delta V$,
+  \item[label] identifier of the electrode.
 \end{description}
 The mesh is assumed to be the same as the one for the drift field 
 (imported using \texttt{Initialise}).
+
+Using the function
+\begin{lstlisting}
+bool SetWeightingFieldShift(const std::string& label,
+                            const double x, const double y, const double z);
+\end{lstlisting}
+one can set an offset to be applied to the map of weighting fields and potentials imported from TCAD.
 
 \subsection{Elmer}
 

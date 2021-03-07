@@ -45,11 +45,18 @@ class ComponentTcadBase : public Component {
                       with the potential at the electrode to be read out
                       increased by a small voltage dv.
     * \param dv increase in electrode potential between the two field maps. 
+    * \param label name of the electrode
     *
     * The field maps must use the same mesh as the drift field.
     */ 
   bool SetWeightingField(const std::string& datfile1,
-                         const std::string& datfile2, const double dv);
+                         const std::string& datfile2, const double dv,
+                         const std::string& label);
+  /// Shift the maps of weighting field/potential for a given electrode 
+  /// with respect to the original mesh. If the electrode does not exist 
+  /// yet, a new one will be added to the list. 
+  bool SetWeightingFieldShift(const std::string& label, 
+                              const double x, const double y, const double z);
 
   /// List all currently defined regions.
   void PrintRegions() const;
@@ -152,13 +159,17 @@ class ComponentTcadBase : public Component {
   std::vector<Element> m_elements;
 
   // Potential [V] at each vertex.
-  std::vector<double> m_potential;
+  std::vector<double> m_epot;
   // Electric field [V / cm].
   std::vector<std::array<double, N> > m_efield;
 
   // Weighting field and potential at each vertex.
-  std::vector<std::array<double, N> > m_wf;
-  std::vector<double> m_wp;
+  std::vector<std::array<double, N> > m_wfield;
+  std::vector<double> m_wpot;
+  // Weighting field labels and offsets.
+  std::vector<std::string> m_wlabel;
+  std::vector<std::array<double, 3> > m_wshift;
+ 
   // Velocities [cm / ns]
   std::vector<std::array<double, N> > m_eVelocity; 
   std::vector<std::array<double, N> > m_hVelocity;

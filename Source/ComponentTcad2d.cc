@@ -56,7 +56,7 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
     const size_t index = element.vertex[j];
     ex += w[j] * m_efield[index][0];
     ey += w[j] * m_efield[index][1];
-    p += w[j] * m_potential[index];
+    p += w[j] * m_epot[index];
   }
   if (mirr[0]) ex = -ex;
   if (mirr[1]) ey = -ey;
@@ -270,7 +270,7 @@ bool ComponentTcad2d::GetNode(const size_t i, double& x, double& y,
 
   x = m_vertices[i][0];
   y = m_vertices[i][1];
-  if (!m_potential.empty()) v = m_potential[i];
+  if (!m_epot.empty()) v = m_epot[i];
   if (!m_efield.empty()) {
     ex = m_efield[i][0];
     ey = m_efield[i][1];
