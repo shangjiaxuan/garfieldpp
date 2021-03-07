@@ -51,7 +51,7 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
   }
 
   const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
+  const size_t nVertices = ElementVertices(element);
   for (size_t j = 0; j < nVertices; ++j) {
     const size_t index = element.vertex[j];
     ex += w[j] * m_efield[index][0];
@@ -86,7 +86,7 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
   if (i >= m_elements.size()) return false;
 
   const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
+  const size_t nVertices = ElementVertices(element);
   for (size_t j = 0; j < nVertices; ++j) {
     const auto index = element.vertex[j];
     fx += w[j] * field[index][0];
@@ -117,7 +117,7 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
   if (i >= m_elements.size()) return false;
 
   const Element& element = m_elements[i];
-  const size_t nVertices = element.type + 1;
+  const size_t nVertices = ElementVertices(element);
   for (size_t j = 0; j < nVertices; ++j) {
     f += w[j] * field[element.vertex[j]];
   }
@@ -253,9 +253,9 @@ bool ComponentTcad2d::GetElement(const size_t i, double& vol,
               << "    Unexpected element type (" << type << ")\n";
     return false;
   }
-  const size_t nVertices = element.type + 1;
+  const size_t nVertices = ElementVertices(element);
   for (size_t i = 0; i < nVertices; ++i) {
-    nodes.push_back(element.vertex[0]);
+    nodes.push_back(element.vertex[i]);
   }
   reg = element.region;
   return true;

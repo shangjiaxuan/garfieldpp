@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -103,8 +102,8 @@ bool ComponentTcadBase<N>::Initialise(const std::string& gridfilename,
     Element& element = m_elements[i];
     std::array<double, N> xmin = m_vertices[element.vertex[0]];
     std::array<double, N> xmax = m_vertices[element.vertex[0]];
-    const size_t nV = std::min(m_elements[i].type + 1, 4);
-    for (size_t j = 0; j < nV; ++j) {
+    const auto nV = ElementVertices(m_elements[i]);
+    for (unsigned int j = 0; j < nV; ++j) {
       const auto& v = m_vertices[m_elements[i].vertex[j]];
       for (size_t k = 0; k < N; ++k) {
         xmin[k] = std::min(xmin[k], v[k]);
@@ -180,9 +179,9 @@ bool ComponentTcadBase<N>::Initialise(const std::string& gridfilename,
     }
     nElementsByShape[element.type] += 1;
     bool degenerate = false;
-    const size_t nV = std::min(m_elements[i].type + 1, 4);
-    for (size_t j = 0; j < nV; ++j) {
-      for (size_t k = j  + 1; k < nV; ++k) {
+    const auto nV = ElementVertices(m_elements[i]);
+    for (unsigned int j = 0; j < nV; ++j) {
+      for (unsigned int k = j  + 1; k < nV; ++k) {
         if (element.vertex[j] == element.vertex[k]) {
           degenerate = true;
           break;
@@ -582,7 +581,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
     // Get type and constituting edges of each element.
     for (size_t j = 0; j < nElements; ++j) {
       ++iLine;
-      int type = 0;
+      unsigned int type = 0;
       gridfile >> type;
       if (N == 2) {
         if (type == 0) {
@@ -1060,7 +1059,8 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
   const size_t nElements = m_elements.size();
   for (size_t j = 0; j < nElements; ++j) {
     if (m_elements[j].region != index) continue;
-    for (int k = 0; k <= m_elements[j].type; ++k) {
+    const unsigned int nV = ElementVertices(m_elements[j]);
+    for (unsigned int k = 0; k < nV; ++k) {
       isInRegion[m_elements[j].vertex[k]] = true;
     }
   }
@@ -1229,7 +1229,8 @@ bool ComponentTcadBase<N>::LoadWeightingField(
     const size_t nElements = m_elements.size();
     for (size_t j = 0; j < nElements; ++j) {
       if (m_elements[j].region != index) continue;
-      for (int k = 0; k <= m_elements[j].type; ++k) {
+      const unsigned int nV = ElementVertices(m_elements[j]);
+      for (unsigned int k = 0; k < nV; ++k) {
         isInRegion[m_elements[j].vertex[k]] = true;
       }
     }

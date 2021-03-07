@@ -43,7 +43,7 @@ void ComponentTcad3d::ElectricField(const double xin, const double yin,
     return;
   }
   const Element& element = m_elements[i];
-  const unsigned int nVertices = element.type == 2 ? 3 : 4;
+  const unsigned int nVertices = ElementVertices(element);
   for (unsigned int j = 0; j < nVertices; ++j) {
     const auto index = element.vertex[j];
     ex += w[j] * m_efield[index][0];
@@ -84,7 +84,7 @@ bool ComponentTcad3d::Interpolate(
   if (i >= m_elements.size()) return false;
 
   const Element& element = m_elements[i];
-  const size_t nVertices = element.type == 2 ? 3 : 4;
+  const size_t nVertices = ElementVertices(element);
   for (size_t j = 0; j < nVertices; ++j) {
     const auto index = element.vertex[j];
     fx += w[j] * field[index][0];
@@ -116,7 +116,7 @@ bool ComponentTcad3d::Interpolate(
   if (i >= m_elements.size()) return false;
 
   const Element& element = m_elements[i];
-  const size_t nVertices = element.type == 2 ? 3 : 4;
+  const size_t nVertices = ElementVertices(element);
   for (size_t j = 0; j < nVertices; ++j) {
     f += w[j] * field[element.vertex[j]];
   }
@@ -287,7 +287,7 @@ bool ComponentTcad3d::GetElement(const size_t i, double& vol,
               << "    Unexpected element type (" << type << ").\n";
     return false;
   }
-  const size_t nVertices = element.type + 1;
+  const size_t nVertices = ElementVertices(element);
   for (size_t j = 0; j < nVertices; ++j) {
     nodes.push_back(element.vertex[j]);
   }

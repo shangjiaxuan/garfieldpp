@@ -1,6 +1,7 @@
 #ifndef G_COMPONENT_TCAD_BASE_H
 #define G_COMPONENT_TCAD_BASE_H
 
+#include <algorithm>
 #include <array>
 
 #include "Component.hh"
@@ -141,7 +142,7 @@ class ComponentTcadBase : public Component {
     // 10: Polyhedron
     // In 2D, types 1 - 3 are supported.
     // In 3D, only types 2 and 5 are supported.
-    int type;
+    unsigned int type;
     // Associated region
     unsigned int region;
     // Bounding box
@@ -202,6 +203,9 @@ class ComponentTcadBase : public Component {
 
   void Cleanup();
 
+  static unsigned int ElementVertices(const Element& element) {
+    return std::min(element.type + 1, 4U); 
+  } 
   virtual bool Interpolate(const double x, const double y, const double z,
                            const std::vector<double>& field, double& f) = 0;
   virtual bool Interpolate(const double x, const double y, const double z,
