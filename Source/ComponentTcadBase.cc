@@ -9,13 +9,271 @@
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Utilities.hh"
 
+namespace {
+
+bool ExtractFromSquareBrackets(std::string& line) {
+
+  const auto bra = line.find('[');
+  const auto ket = line.find(']');
+  if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    return false;
+  }
+  line = line.substr(bra + 1, ket - bra - 1);
+  return true;
+}
+
+bool ExtractFromBrackets(std::string& line) {
+
+  const auto bra = line.find('(');
+  const auto ket = line.find(')');
+  if (ket < bra || bra == std::string::npos || ket == std::string::npos) {
+    return false;
+  }
+  line = line.substr(bra + 1, ket - bra - 1);
+  return true;
+}
+
+}
+
 namespace Garfield {
+
+template<size_t N>
+void ComponentTcadBase<N>::WeightingField(const double x, const double y,
+                                          const double z, double& wx, 
+                                          double& wy, double& wz, 
+                                          const std::string& /*label*/) {
+  wx = wy = wz = 0.;
+  if (m_wf.empty()) {
+    std::cerr << m_className << "::WeightingField: Not available.\n";
+    return;
+  }
+  Interpolate(x, y, z, m_wf, wx, wy, wz);
+}
+
+template<size_t N>
+double ComponentTcadBase<N>::WeightingPotential(const double x, const double y,
+                                                const double z, 
+                                                const std::string& /*label*/) {
+
+  if (m_wp.empty()) {
+    std::cerr << m_className << "::WeightingPotential: Not available.\n";
+    return 0.;
+  }
+  double v = 0.;
+  Interpolate(x, y, z, m_wp, v);
+  return v;
+}
 
 template<size_t N>
 bool ComponentTcadBase<N>::GetVoltageRange(double& vmin, double& vmax) {
   if (!m_ready) return false;
   vmin = m_pMin;
   vmax = m_pMax;
+  return true;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::SetWeightingField(const std::string& datfile1,
+                                             const std::string& datfile2,
+                                             const double dv) {
+
+  if (!m_ready) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Mesh is not available. Call Initialise first.\n";
+    return false;
+  }
+  if (dv < Small) {
+     std::cerr << m_className << "::SetWeightingField:\n"
+               << "    Voltage difference must be > 0.\n";
+     return false;
+  }
+  const double s = 1. / dv;
+  m_wf.clear();
+  m_wp.clear();
+  // Load first the field/potential at nominal bias.
+  std::vector<std::array<double, N> > wf1;
+  std::vector<double> wp1;
+  if (!LoadWeightingField(datfile1, wf1, wp1)) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not import data from " << datfile1 << ".\n";
+    return false;
+  }
+
+  // Then load the field/potential for the configuration with the potential 
+  // at the electrode to be read out increased by small voltage dv. 
+  std::vector<std::array<double, N> > wf2;
+  std::vector<double> wy2;
+  std::vector<double> wp2;
+  if (!LoadWeightingField(datfile2, wf2, wp2)) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not import data from " << datfile2 << ".\n";
+    return false;
+  }
+  const size_t nVertices = m_vertices.size();
+  bool foundField = true;
+  if (wf1.size() != nVertices || wf2.size() != nVertices) {
+    foundField = false;
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not load electric field values.\n";
+  }
+  bool foundPotential = true;
+  if (wp1.size() != nVertices || wp2.size() != nVertices) {
+    foundPotential = false;
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not load electrostatic potentials.\n";
+  }
+  if (!foundField && !foundPotential) return false;
+  if (foundField) {
+    m_wf.resize(nVertices);
+    for (size_t i = 0; i < nVertices; ++i) {
+      for (size_t j = 0; j < N; ++j) {
+        m_wf[i][j] = (wf2[i][j] - wf1[i][j]) * s;
+      } 
+    }
+  }
+  if (foundPotential) {
+    m_wp.assign(nVertices, 0.);
+    for (size_t i = 0; i < nVertices; ++i) {
+      m_wp[i] = (wp2[i] - wp1[i]) * s; 
+    }
+  }
+  return true;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::LoadWeightingField(
+    const std::string& datafilename,
+    std::vector<std::array<double, N> >& wf, std::vector<double>& wp) {
+
+  std::ifstream datafile;
+  datafile.open(datafilename.c_str(), std::ios::in);
+  if (!datafile) {
+    std::cerr << m_className << "::LoadWeightingField:\n"
+              << "    Could not open file " << datafilename << ".\n";
+    return false;
+  }
+  const size_t nVertices = m_vertices.size();
+  bool ok = true;
+  // Read the file line by line.
+  std::string line;
+  while (std::getline(datafile, line)) {
+    // Strip white space from the beginning of the line.
+    ltrim(line);
+    // Find data section.
+    if (line.substr(0, 8) != "function") continue;
+    // Read type of data set.
+    const auto pEq = line.find('=');
+    if (pEq == std::string::npos) {
+      // No "=" found.
+      std::cerr << m_className << "::LoadWeightingField:\n"
+                << "    Error reading file " << datafilename << ".\n"
+                << "    Line:\n    " << line << "\n";
+      datafile.close();
+      return false;
+    }
+    line = line.substr(pEq + 1);
+    std::string dataset;
+    std::istringstream data;
+    data.str(line);
+    data >> dataset;
+    data.clear();
+    if (dataset != "ElectrostaticPotential" && dataset != "ElectricField") {
+      continue;
+    }
+    bool field = false;
+    if (dataset == "ElectricField") {
+      wf.clear();
+      wf.resize(nVertices);
+      field = true;
+    } else {
+      wp.assign(nVertices, 0.);
+    }
+    std::getline(datafile, line);
+    std::getline(datafile, line);
+    std::getline(datafile, line);
+    std::getline(datafile, line);
+    // Get the region name (given in brackets).
+    if (!ExtractFromSquareBrackets(line)) {
+      std::cerr << m_className << "::LoadWeightingField:\n"
+                << "    Cannot extract region name.\n"
+                << "    Line:\n    " << line << "\n";
+      ok = false;
+      break;
+    }
+    std::string name;
+    data.str(line);
+    data >> name;
+    data.clear();
+    // Check if the region name matches one from the mesh file.
+    const auto index = FindRegion(name);
+    if (index >= m_regions.size()) {
+      std::cerr << m_className << "::LoadWeightingField:\n"
+                << "    Unknown region " << name << ".\n";
+      ok = false;
+      break;
+    }
+    // Get the number of values.
+    std::getline(datafile, line);
+    if (!ExtractFromBrackets(line)) {
+      std::cerr << m_className << "::LoadWeightingField:\n"
+                << "    Cannot extract number of values to be read.\n"
+                << "    Line:\n    " << line << "\n";
+      ok = false;
+      break;
+    }
+    int nValues;
+    data.str(line);
+    data >> nValues;
+    data.clear();
+    if (field) nValues /= N;
+    // Mark the vertices belonging to this region.
+    std::vector<bool> isInRegion(nVertices, false);
+    const size_t nElements = m_elements.size();
+    for (size_t j = 0; j < nElements; ++j) {
+      if (m_elements[j].region != index) continue;
+      for (int k = 0; k <= m_elements[j].type; ++k) {
+        isInRegion[m_elements[j].vertex[k]] = true;
+      }
+    }
+    unsigned int ivertex = 0;
+    for (int j = 0; j < nValues; ++j) {
+      // Read the next value.
+      std::array<double, N> val;
+      if (field) {
+        for (size_t k = 0; k < N; ++k) datafile >> val[k];
+      } else {
+        datafile >> val[0];
+      }
+      // Find the next vertex belonging to the region.
+      while (ivertex < nVertices) {
+        if (isInRegion[ivertex]) break;
+        ++ivertex;
+      }
+      // Check if there is a mismatch between the number of vertices
+      // and the number of values.
+      if (ivertex >= nVertices) {
+        std::cerr << m_className << "::LoadWeightingField:\n"
+                  << "    Dataset " << dataset
+                  << " has more values than vertices in region " << name << "\n";
+        ok = false;
+        break;
+      }
+      if (field) {
+        wf[ivertex] = val;
+      } else {
+        wp[ivertex] = val[0];
+      }
+      ++ivertex;
+    }
+  }
+
+  if (!ok || (datafile.fail() && !datafile.eof())) {
+    std::cerr << m_className << "::LoadWeightingField:\n"
+              << "    Error reading file " << datafilename << "\n";
+    datafile.close();
+    return false;
+  }
+  datafile.close();
   return true;
 }
 

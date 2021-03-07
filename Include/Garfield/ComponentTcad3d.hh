@@ -23,12 +23,6 @@ class ComponentTcad3d : public ComponentTcadBase<3> {
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
 
-  void WeightingField(const double x, const double y, const double z,
-                      double& wx, double& wy, double& wz,
-                      const std::string& label) override;
-  double WeightingPotential(const double x, const double y, const double z,
-                            const std::string& label) override;
-
   Medium* GetMedium(const double x, const double y, const double z) override;
 
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
@@ -40,18 +34,6 @@ class ComponentTcad3d : public ComponentTcadBase<3> {
     */
   bool Initialise(const std::string& gridfilename,
                   const std::string& datafilename);
-
-  /** Import field maps defining the weighting field and potential.
-    * \param datfile1 .dat file containing the field map at nominal bias.
-    * \param datfile2 .dat file containing the field map for a configuration 
-                      with the potential at the electrode to be read out
-                      increased by a small voltage dv.
-    * \param dv increase in electrode potential between the two field maps. 
-    *
-    * The field maps must use the same mesh as the drift field. 
-    */ 
-  bool SetWeightingField(const std::string& datfile1,
-                         const std::string& datfile2, const double dv);
 
   /** Retrieve the properties of an element.
     * \param i index of the element
@@ -123,9 +105,6 @@ class ComponentTcad3d : public ComponentTcadBase<3> {
   bool LoadGrid(const std::string& gridfilename);
   bool LoadData(const std::string& datafilename);
   bool ReadDataset(std::ifstream& datafile, const std::string& dataset);
-  bool LoadWeightingField(const std::string& datafilename,
-                          std::vector<std::array<double, 3> >& wf, 
-                          std::vector<double>& wp);
 };
 }
 #endif

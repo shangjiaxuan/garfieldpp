@@ -23,7 +23,25 @@ class ComponentTcadBase : public Component {
   /// Destructor
   virtual ~ComponentTcadBase() {}
 
+  void WeightingField(const double x, const double y, const double z,
+                      double& wx, double& wy, double& wz,
+                      const std::string& label) override;
+  double WeightingPotential(const double x, const double y, const double z,
+                            const std::string& label) override;
+
   bool GetVoltageRange(double& vmin, double& vmax) override;
+
+  /** Import field maps defining the weighting field and potential.
+    * \param datfile1 .dat file containing the field map at nominal bias.
+    * \param datfile2 .dat file containing the field map for a configuration 
+                      with the potential at the electrode to be read out
+                      increased by a small voltage dv.
+    * \param dv increase in electrode potential between the two field maps. 
+    *
+    * The field maps must use the same mesh as the drift field.
+    */ 
+  bool SetWeightingField(const std::string& datfile1,
+                         const std::string& datfile2, const double dv);
 
   /// List all currently defined regions.
   void PrintRegions() const;
@@ -51,7 +69,9 @@ class ComponentTcadBase : public Component {
   bool HoleVelocity(const double x, const double y, const double z, 
                     double& vx, double& vy, double& vz) override;
 
+  /// Get the number of donor states found in the map.
   size_t GetNumberOfDonors() { return m_donors.size(); }
+  /// Get the number of acceptor states found in the map.
   size_t GetNumberOfAcceptors() { return m_acceptors.size(); }
 
   bool SetDonor(const size_t donorNumber, const double eXsec,
@@ -191,6 +211,10 @@ class ComponentTcadBase : public Component {
     return true;
   }
   void UpdateAttachment();
+  
+  bool LoadWeightingField(const std::string& datafilename,
+                          std::vector<std::array<double, N> >& wf,
+                          std::vector<double>& wp);
 };
 }
 #endif
