@@ -67,7 +67,11 @@ class ComponentTcad2d : public ComponentTcadBase<2> {
   // Element from the previous call
   size_t m_lastElement = 0;
 
-  void Reset() override;
+  void Reset() override {
+    Cleanup();
+    m_hasRangeZ = false;
+    m_ready = false;
+  }
 
   size_t FindElement(const double x, const double y,
                      std::array<double, nMaxVertices>& w) const;
@@ -90,7 +94,6 @@ class ComponentTcad2d : public ComponentTcadBase<2> {
                    const std::vector<std::array<double, 2> >& field, 
                    double& fx, double& fy, double& fz) override;
 
-  bool LoadGrid(const std::string& gridfilename);
 };
 }
 #endif

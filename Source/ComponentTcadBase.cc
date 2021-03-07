@@ -33,6 +33,13 @@ bool ExtractFromBrackets(std::string& line) {
   return true;
 }
 
+void PrintError(const std::string& fcn, const std::string& filename,
+                const unsigned int line) {
+  std::cerr << fcn << ":\n"
+            << "    Error reading file " << filename 
+            << " (line " << line << ").\n";
+}
+
 }
 
 namespace Garfield {
@@ -136,6 +143,538 @@ bool ComponentTcadBase<N>::SetWeightingField(const std::string& datfile1,
     for (size_t i = 0; i < nVertices; ++i) {
       m_wp[i] = (wp2[i] - wp1[i]) * s; 
     }
+  }
+  return true;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
+  // Open the file containing the mesh description.
+  std::ifstream gridfile;
+  gridfile.open(filename, std::ios::in);
+  if (!gridfile) {
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Could not open file " << filename << ".\n";
+    return false;
+  }
+  // Delete existing mesh information.
+  Cleanup();
+  // Count line numbers.
+  unsigned int iLine = 0;
+  // Get the number of regions.
+  size_t nRegions = 0;
+  // Read the file line by line.
+  std::string line;
+  while (std::getline(gridfile, line)) {
+    ++iLine;
+    // Strip white space from the beginning of the line.
+    ltrim(line);
+    // Find entry 'nb_regions'.
+    if (line.substr(0, 10) != "nb_regions") continue;
+    const auto pEq = line.find('=');
+    if (pEq == std::string::npos) {
+      // No "=" sign found.
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read number of regions.\n";
+      return false;
+    }
+    line = line.substr(pEq + 1);
+    std::istringstream data;
+    data.str(line);
+    data >> nRegions;
+    break;
+  }
+  if (gridfile.eof()) {
+    // Reached end of file.
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Could not find entry 'nb_regions' in file\n"
+              << "    " << filename << ".\n";
+    return false;
+  } else if (gridfile.fail()) {
+    // Error reading from the file.
+    PrintError(m_className + "::LoadGrid", filename, iLine);
+    return false;
+  }
+  m_regions.resize(nRegions);
+  for (size_t j = 0; j < nRegions; ++j) {
+    m_regions[j].name = "";
+    m_regions[j].drift = false;
+    m_regions[j].medium = nullptr;
+  }
+  if (m_debug) {
+    std::cout << m_className << "::LoadGrid:\n"
+              << "    Found " << nRegions << " regions.\n";
+  }
+  // Get the region names.
+  while (std::getline(gridfile, line)) {
+    ++iLine;
+    ltrim(line);
+    // Find entry 'regions'.
+    if (line.substr(0, 7) != "regions") continue;
+    // Get region names (given in brackets).
+    if (!ExtractFromSquareBrackets(line)) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read region names.\n";
+      return false;
+    }
+    std::istringstream data;
+    data.str(line);
+    for (size_t j = 0; j < nRegions; ++j) {
+      data >> m_regions[j].name;
+      data.clear();
+      // Assume by default that all regions are active.
+      m_regions[j].drift = true;
+      m_regions[j].medium = nullptr;
+    }
+    break;
+  }
+  if (gridfile.eof()) {
+    // Reached end of file.
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Could not find entry 'regions' in file\n"
+              << "    " << filename << ".\n";
+    return false;
+  } else if (gridfile.fail()) {
+    // Error reading from the file.
+    PrintError(m_className + "::LoadGrid", filename, iLine);
+    return false;
+  }
+
+  // Get the vertices.
+  size_t nVertices = 0;
+  while (std::getline(gridfile, line)) {
+    ++iLine;
+    ltrim(line);
+    // Find section 'Vertices'.
+    if (line.substr(0, 8) != "Vertices") continue;
+    // Get number of vertices (given in brackets).
+    if (!ExtractFromBrackets(line)) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read number of vertices.\n";
+      return false;
+    }
+    std::istringstream data;
+    data.str(line);
+    data >> nVertices;
+    m_vertices.resize(nVertices);
+    // Get the coordinates of every vertex.
+    for (size_t j = 0; j < nVertices; ++j) {
+      for (size_t k = 0; k < N; ++k) {
+        gridfile >> m_vertices[j][k];
+        // Change units from micron to cm.
+        m_vertices[j][k] *= 1.e-4;
+      }
+      ++iLine;
+    }
+    break;
+  }
+  if (gridfile.eof()) {
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Could not find section 'Vertices' in file\n"
+              << "    " << filename << ".\n";
+    return false;
+  } else if (gridfile.fail()) {
+    PrintError(m_className + "::LoadGrid", filename, iLine);
+    return false;
+  }
+
+  // Get the "edges" (lines connecting two vertices).
+  size_t nEdges = 0;
+  // Temporary arrays for storing edge points.
+  std::vector<unsigned > edgeP1;
+  std::vector<unsigned > edgeP2;
+  while (std::getline(gridfile, line)) {
+    ++iLine;
+    ltrim(line);
+    // Find section 'Edges'.
+    if (line.substr(0, 5) != "Edges") continue;
+    // Get the number of edges (given in brackets).
+    if (!ExtractFromBrackets(line)) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read number of edges.\n";
+      return false;
+    }
+    std::istringstream data;
+    data.str(line);
+    data >> nEdges;
+    edgeP1.resize(nEdges);
+    edgeP2.resize(nEdges);
+    // Get the indices of the two endpoints.
+    for (size_t j = 0; j < nEdges; ++j) {
+      gridfile >> edgeP1[j] >> edgeP2[j];
+      ++iLine;
+    }
+    break;
+  }
+  if (gridfile.eof()) {
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Could not find section 'Edges' in file\n"
+              << "    " << filename << ".\n";
+    return false;
+  } else if (gridfile.fail()) {
+    PrintError(m_className + "::LoadGrid", filename, iLine);
+    return false;
+  }
+
+  for (size_t i = 0; i < nEdges; ++i) {
+    // Make sure the indices of the edge endpoints are not out of range.
+    if (edgeP1[i] >= nVertices || edgeP2[i] >= nVertices) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Vertex index of edge " << i << " out of range.\n";
+      return false;
+    }
+    // Make sure the edge is non-degenerate.
+    if (edgeP1[i] == edgeP2[i]) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Edge " << i << " is degenerate.\n";
+      return false;
+    }
+  }
+
+  // Get the "faces" (only for 3D maps).
+  struct Face {
+    // Indices of edges
+    int edge[4];
+    int type;
+  };
+  size_t nFaces = 0;
+  std::vector<Face> faces;
+  if (N == 3) {
+    while (std::getline(gridfile, line)) {
+      ++iLine;
+      ltrim(line);
+      // Find section 'Faces'.
+      if (line.substr(0, 5) != "Faces") continue;
+      // Get the number of faces (given in brackets).
+      if (!ExtractFromBrackets(line)) {
+        std::cerr << m_className << "::LoadGrid:\n"
+                  << "    Could not read number of faces.\n";
+        return false;
+      }
+      std::istringstream data;
+      data.str(line);
+      data >> nFaces;
+      faces.resize(nFaces);
+      // Get the indices of the edges constituting this face.
+      for (size_t j = 0; j < nFaces; ++j) {
+        gridfile >> faces[j].type;
+        if (faces[j].type != 3 && faces[j].type != 4) {
+          std::cerr << m_className << "::LoadGrid:\n"
+                    << "    Face with index " << j
+                    << " has invalid number of edges, " << faces[j].type << ".\n";
+          return false;
+        }
+        for (int k = 0; k < faces[j].type; ++k) {
+          gridfile >> faces[j].edge[k];
+        }
+      }
+      iLine += nFaces - 1;
+      break;
+    }
+    if (gridfile.eof()) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not find section 'Faces' in file\n"
+                << "    " << filename << ".\n";
+      return false;
+    } else if (gridfile.fail()) {
+      PrintError(m_className + "::LoadGrid", filename, iLine);
+      return false;
+    }
+  }
+
+  // Get the elements.
+  size_t nElements = 0;
+  while (std::getline(gridfile, line)) {
+    ++iLine;
+    ltrim(line);
+    // Find section 'Elements'.
+    if (line.substr(0, 8) != "Elements") continue;
+    // Get number of elements (given in brackets).
+    if (!ExtractFromBrackets(line)) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read number of elements.\n";
+      return false;
+    }
+    std::istringstream data;
+    data.str(line);
+    data >> nElements;
+    data.clear();
+    // Resize the list of elements.
+    m_elements.resize(nElements);
+    // Get type and constituting edges of each element.
+    for (size_t j = 0; j < nElements; ++j) {
+      ++iLine;
+      int type = 0;
+      gridfile >> type;
+      if (N == 2) {
+        if (type == 0) {
+          // Point
+          unsigned int p = 0; 
+          gridfile >> p;
+          // Make sure the index is not out of range.
+          if (p >= nVertices) {
+            PrintError(m_className + "::LoadGrid", filename, iLine);
+            std::cerr << "    Vertex index out of range.\n";
+            return false;
+          }
+          m_elements[j].vertex[0] = p;
+        } else if (type == 1) {
+          // Line
+          for (size_t k = 0; k < 2; ++k) {
+            int p = 0;
+            gridfile >> p;
+            if (p < 0) p = -p - 1;
+            // Make sure the index is not out of range.
+            if (p >= (int)nVertices) {
+              PrintError(m_className + "::LoadGrid", filename, iLine);
+              std::cerr << "    Vertex index out of range.\n";
+              return false;
+            }
+            m_elements[j].vertex[k] = p;
+          }
+        } else if (type == 2) {
+          // Triangle
+          int p0 = 0, p1 = 0, p2 = 0;
+          gridfile >> p0 >> p1 >> p2;
+          // Negative edge index means that the sequence of the two points
+          // is supposed to be inverted.
+          // The actual index is then given by "-index - 1".
+          if (p0 < 0) p0 = -p0 - 1;
+          if (p1 < 0) p1 = -p1 - 1;
+          if (p2 < 0) p2 = -p2 - 1;
+          // Make sure the indices are not out of range.
+          if (p0 >= (int)nEdges || p1 >= (int)nEdges || p2 >= (int)nEdges) {
+            PrintError(m_className + "::LoadGrid", filename, iLine);
+            std::cerr << "    Edge index out of range.\n";
+            return false;
+          }
+          m_elements[j].vertex[0] = edgeP1[p0];
+          m_elements[j].vertex[1] = edgeP2[p0];
+          if (edgeP1[p1] != (int)m_elements[j].vertex[0] &&
+              edgeP1[p1] != (int)m_elements[j].vertex[1]) {
+            m_elements[j].vertex[2] = edgeP1[p1];
+          } else {
+            m_elements[j].vertex[2] = edgeP2[p1];
+          }
+          // Rearrange vertices such that point 0 is on the left.
+          while (m_vertices[m_elements[j].vertex[0]][0] >
+                 m_vertices[m_elements[j].vertex[1]][0] ||
+                 m_vertices[m_elements[j].vertex[0]][0] >
+                 m_vertices[m_elements[j].vertex[2]][0]) {
+            const int tmp = m_elements[j].vertex[0];
+            m_elements[j].vertex[0] = m_elements[j].vertex[1];
+            m_elements[j].vertex[1] = m_elements[j].vertex[2];
+            m_elements[j].vertex[2] = tmp;
+          }
+        } else if (type == 3) {
+          // Rectangle
+          for (size_t k = 0; k < 4; ++k) {
+            int p = 0;
+            gridfile >> p;
+            // Make sure the index is not out of range.
+            if (p >= (int)nEdges || -p - 1 >= (int)nEdges) {
+              PrintError(m_className + "::LoadGrid", filename, iLine);
+              std::cerr << "    Edge index out of range.\n";
+              return false;
+            }
+            if (p >= 0) { 
+              m_elements[j].vertex[k] = edgeP1[p];
+            } else {
+              m_elements[j].vertex[k] = edgeP2[-p - 1];
+            }
+          }
+          // Rearrange vertices such that point 0 is on the left.
+          while (m_vertices[m_elements[j].vertex[0]][0] >
+                 m_vertices[m_elements[j].vertex[1]][0] ||
+                 m_vertices[m_elements[j].vertex[0]][0] >
+                 m_vertices[m_elements[j].vertex[2]][0] ||
+                 m_vertices[m_elements[j].vertex[0]][0] >
+                 m_vertices[m_elements[j].vertex[3]][0]) {
+            const int tmp = m_elements[j].vertex[0];
+            m_elements[j].vertex[0] = m_elements[j].vertex[1];
+            m_elements[j].vertex[1] = m_elements[j].vertex[2];
+            m_elements[j].vertex[2] = m_elements[j].vertex[3];
+            m_elements[j].vertex[3] = tmp;
+          }
+        } else {
+          // Other element types are not permitted for 2d grids.
+          PrintError(m_className + "::LoadGrid", filename, iLine);
+          std::cerr << "    Invalid element type (" << type
+                    << ") for 2d mesh.\n";
+          return false;
+        }
+      } else if (N == 3) {
+        if (type == 2) {
+          // Triangle
+          int edge0, edge1, edge2;
+          gridfile >> edge0 >> edge1 >> edge2;
+          // Get the vertices.
+          // Negative edge index means that the sequence of the two points
+          // is supposed to be inverted.
+          // The actual index is then given by "-index - 1".
+          // For our purposes, the orientation does not matter.
+          if (edge0 < 0) edge0 = -edge0 - 1;
+          if (edge1 < 0) edge1 = -edge1 - 1;
+          if (edge2 < 0) edge2 = -edge2 - 1;
+          // Make sure the indices are not out of range.
+          if (edge0 >= (int)nEdges || edge1 >= (int)nEdges || 
+              edge2 >= (int)nEdges) {
+              PrintError(m_className + "::LoadGrid", filename, iLine);
+              std::cerr << "    Edge index out of range.\n";
+            return false;
+          }
+          m_elements[j].vertex[0] = edgeP1[edge0];
+          m_elements[j].vertex[1] = edgeP2[edge0];
+          if (edgeP1[edge1] != m_elements[j].vertex[0] &&
+              edgeP1[edge1] != m_elements[j].vertex[1]) {
+            m_elements[j].vertex[2] = edgeP1[edge1];
+          } else {
+            m_elements[j].vertex[2] = edgeP2[edge1];
+          }
+        } else if (type == 5) {
+          // Tetrahedron
+          // Get the faces.
+          // Negative face index means that the sequence of the edges
+          // is supposed to be inverted.
+          // For our purposes, the orientation does not matter.
+          int face0, face1, face2, face3;
+          gridfile >> face0 >> face1 >> face2 >> face3;
+          if (face0 < 0) face0 = -face0 - 1;
+          if (face1 < 0) face1 = -face1 - 1;
+          if (face2 < 0) face2 = -face2 - 1;
+          if (face3 < 0) face3 = -face3 - 1;
+          // Make sure the face indices are not out of range.
+          if (face0 >= (int)nFaces || face1 >= (int)nFaces || 
+              face2 >= (int)nFaces || face3 >= (int)nFaces) {
+            PrintError(m_className + "::LoadGrid", filename, iLine);
+            std::cerr << "    Face index out of range.\n";
+            return false;
+          }
+          // Get the edges of the first face.
+          int edge0 = faces[face0].edge[0];
+          int edge1 = faces[face0].edge[1];
+          int edge2 = faces[face0].edge[2];
+          if (edge0 < 0) edge0 = -edge0 - 1;
+          if (edge1 < 0) edge1 = -edge1 - 1;
+          if (edge2 < 0) edge2 = -edge2 - 1;
+          // Make sure the edge indices are not out of range.
+          if (edge0 >= (int)nEdges || edge1 >= (int)nEdges || 
+              edge2 >= (int)nEdges) {
+            PrintError(m_className + "::LoadGrid", filename, iLine);
+            std::cerr << "    Edge index out of range.\n";
+            return false;
+          }
+          // Get the first three vertices.
+          m_elements[j].vertex[0] = edgeP1[edge0];
+          m_elements[j].vertex[1] = edgeP2[edge0];
+          if (edgeP1[edge1] != m_elements[j].vertex[0] &&
+              edgeP1[edge1] != m_elements[j].vertex[1]) {
+            m_elements[j].vertex[2] = edgeP1[edge1];
+          } else {
+            m_elements[j].vertex[2] = edgeP2[edge1];
+          }
+          // Get the fourth vertex from face 1.
+          edge0 = faces[face1].edge[0];
+          edge1 = faces[face1].edge[1];
+          edge2 = faces[face1].edge[2];
+          if (edge0 < 0) edge0 = -edge0 - 1;
+          if (edge1 < 0) edge1 = -edge1 - 1;
+          if (edge2 < 0) edge2 = -edge2 - 1;
+          const auto v0 = m_elements[j].vertex[0];
+          const auto v1 = m_elements[j].vertex[1];
+          const auto v2 = m_elements[j].vertex[2];
+          if (edgeP1[edge0] != v0 && edgeP1[edge0] != v1 && edgeP1[edge0] != v2) {
+            m_elements[j].vertex[3] = edgeP1[edge0];
+          } else if (edgeP2[edge0] != v0 && edgeP2[edge0] != v1 && 
+                     edgeP2[edge0] != v2) {
+            m_elements[j].vertex[3] = edgeP2[edge0];
+          } else if (edgeP1[edge1] != v0 &&
+                     edgeP1[edge1] != v1 &&
+                     edgeP1[edge1] != v2) {
+            m_elements[j].vertex[3] = edgeP1[edge1];
+          } else if (edgeP2[edge1] != v0 &&
+                     edgeP2[edge1] != v1 &&
+                     edgeP2[edge1] != v2) {
+              m_elements[j].vertex[3] = edgeP2[edge1];
+          } else {
+            PrintError(m_className + "::LoadGrid", filename, iLine);
+            std::cerr << "    Face 1 of element " << j << " is degenerate.\n";
+            return false;
+          }
+        } else {
+          // Other element types are not allowed.
+          PrintError(m_className + "::LoadGrid", filename, iLine);
+          if (type == 0 || type == 1) {
+            std::cerr << "    Invalid element type (" << type
+                      << ") for 3d mesh.\n";
+          } else {
+            std::cerr << "    Element type " << type << " is not supported.\n"
+                      << "    Remesh with option -t to create only"
+                      << " triangles and tetrahedra.\n";
+          }
+          return false;
+        }
+      }
+      m_elements[j].type = type;
+      m_elements[j].region = m_regions.size();
+    }
+    break;
+  }
+  if (gridfile.eof()) {
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Could not find section 'Elements' in file\n"
+              << "    " << filename << ".\n";
+    return false;
+  } else if (gridfile.fail()) {
+    PrintError(m_className + "::LoadGrid", filename, iLine);
+    return false;
+  }
+
+  // Assign regions to elements.
+  while (std::getline(gridfile, line)) {
+    ltrim(line);
+    // Find section 'Region'.
+    if (line.substr(0, 6) != "Region") continue;
+    // Get region name (given in brackets).
+    if (!ExtractFromBrackets(line)) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read region name.\n";
+      return false;
+    }
+    std::istringstream data;
+    data.str(line);
+    std::string name;
+    data >> name;
+    data.clear();
+    const size_t index = FindRegion(name);
+    if (index >= m_regions.size()) {
+      // Specified region name is not in the list.
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Unknown region " << name << ".\n";
+      continue;
+    }
+    std::getline(gridfile, line);
+    std::getline(gridfile, line);
+    if (!ExtractFromBrackets(line)) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read number of elements in region " 
+                << name << ".\n";
+      return false;
+    }
+    int nElementsRegion;
+    int iElement;
+    data.str(line);
+    data >> nElementsRegion;
+    data.clear();
+    for (int j = 0; j < nElementsRegion; ++j) {
+      gridfile >> iElement;
+      m_elements[iElement].region = index;
+    }
+  }
+  if (gridfile.fail() && !gridfile.eof()) {
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Error reading file " << filename << ".\n";
+    return false;
   }
   return true;
 }

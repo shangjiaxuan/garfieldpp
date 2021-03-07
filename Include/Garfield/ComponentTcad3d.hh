@@ -52,17 +52,14 @@ class ComponentTcad3d : public ComponentTcadBase<3> {
                double& ex, double& ey, double& ez) const;
 
  private:
-  // Face
-  struct Face {
-    // Indices of edges
-    int edge[4];
-    int type;
-  };
 
   // Tetrahedral tree.
   std::unique_ptr<TetrahedralTree> m_tree;
 
-  void Reset() override;
+  void Reset() override {
+    Cleanup();
+    m_ready = false;
+  }
 
   size_t FindElement(const double x, const double y, const double z,
                      std::array<double, nMaxVertices>& w) const;
@@ -102,7 +99,6 @@ class ComponentTcad3d : public ComponentTcadBase<3> {
                    const std::vector<std::array<double, 3> >& field, 
                    double& fx, double& fy, double& fz) override;
 
-  bool LoadGrid(const std::string& gridfilename);
 };
 }
 #endif

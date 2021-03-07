@@ -212,6 +212,7 @@ class ComponentTcadBase : public Component {
   }
   void UpdateAttachment();
 
+  bool LoadGrid(const std::string& gridfilename);
   bool LoadData(const std::string& datafilename); 
   bool ReadDataset(std::ifstream& datafile, const std::string& dataset);
   bool LoadWeightingField(const std::string& datafilename,
