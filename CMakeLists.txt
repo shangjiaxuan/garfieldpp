@@ -39,12 +39,6 @@ include(GNUInstallDirs)
 include(BuildUtils)
 force_color_output()
 
-#--- Add neBEM------------------------------------------------------------------
-add_subdirectory(NeBem)
-
-#--- Add Magboltz
-add_subdirectory(Magboltz)
-
 #--- Dependencies---------------------------------------------------------------
 if(DEFINED ENV{ROOTSYS})
     list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
@@ -67,6 +61,12 @@ endif()
 
 find_package(GSL REQUIRED)
 find_package(OpenMP)
+
+#--- Add neBEM------------------------------------------------------------------
+add_subdirectory(NeBem)
+
+#--- Add Magboltz
+add_subdirectory(Magboltz)
 
 # Creating the main Garfield library
 add_library(Garfield SHARED "")

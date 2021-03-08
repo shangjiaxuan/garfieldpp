@@ -24,6 +24,8 @@ set_property( TARGET ${libname} PROPERTY CXX_STANDARD 11)
 set_property( TARGET ${libname} PROPERTY CMAKE_CXX_STANDARD_REQUIRED ON)
 set_property( TARGET ${libname} PROPERTY CXX_EXTENSIONS OFF)
 
+target_link_libraries(${libname} PUBLIC GSL::gsl)
+
 target_include_directories(${libname} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
     
