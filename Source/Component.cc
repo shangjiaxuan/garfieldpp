@@ -1,8 +1,8 @@
-#include <iostream>
 #include <cmath>
+#include <iostream>
 
-#include "Garfield/FundamentalConstants.hh"
 #include "Garfield/Component.hh"
+#include "Garfield/FundamentalConstants.hh"
 
 namespace Garfield {
 
@@ -20,52 +20,67 @@ void Component::SetGeometry(Geometry* geo) {
   m_geometry = geo;
 }
 
-Medium* Component::GetMedium(const double x, const double y,
-                                 const double z) {
+Medium* Component::GetMedium(const double x, const double y, const double z) {
   if (!m_geometry) return nullptr;
   return m_geometry->GetMedium(x, y, z);
 }
 
 void Component::Clear() {
   m_geometry = nullptr;
+  m_ready = false;
+  // Reset periodicities.
+  m_periodic.fill(false);
+  m_mirrorPeriodic.fill(false);
+  m_axiallyPeriodic.fill(false);
+  m_rotationSymmetric.fill(false);
+  // Reset the magnetic field.
+  m_b0.fill(0.);
   Reset();
 }
 
 void Component::WeightingField(const double /*x*/, const double /*y*/,
-                                   const double /*z*/, double& wx, double& wy,
-                                   double& wz, const std::string& /*label*/) {
+                               const double /*z*/, double& wx, double& wy,
+                               double& wz, const std::string& /*label*/) {
   if (m_debug) {
     std::cerr << m_className << "::WeightingField: Function not implemented.\n";
   }
   wx = wy = wz = 0.;
 }
 
-void Component::DelayedWeightingField(const double /*x*/, 
-                                          const double /*y*/,
-                                          const double /*z*/, 
-                                          const double /*t*/,
-                                          double& wx, double& wy, double& wz,
-                                          const std::string& /*label*/) {
+void Component::DelayedWeightingField(const double /*x*/, const double /*y*/,
+                                      const double /*z*/, const double /*t*/,
+                                      double& wx, double& wy, double& wz,
+                                      const std::string& /*label*/) {
   if (m_debug) {
-    std::cerr << m_className << "::DelayedWeightingField: "
-              << "Function not implemented.\n";
+    std::cerr << m_className << "::DelayedWeightingField: Not implemented.\n";
   }
   wx = wy = wz = 0.;
 }
 
 double Component::WeightingPotential(const double /*x*/, const double /*y*/,
-                                         const double /*z*/,
-                                         const std::string& /*label*/) {
+                                     const double /*z*/,
+                                     const std::string& /*label*/) {
   if (m_debug) {
-    std::cerr << m_className << "::WeightingPotential: "
-              << "Function not implemented.\n";
+    std::cerr << m_className << "::WeightingPotential: Not implemented.\n";
   }
   return 0.;
 }
 
-void Component::MagneticField(const double x, const double y,
-                                  const double z, double& bx, double& by,
-                                  double& bz, int& status) {
+double Component::DelayedWeightingPotential(const double /*x*/,
+                                            const double /*y*/,
+                                            const double /*z*/,
+                                            const double /*t*/,
+                                            const std::string& /*label*/) {
+  if (m_debug) {
+    std::cerr << m_className 
+              << "::DelayedWeightingPotential: Not implemented.\n";
+  }
+  return 0.;
+}
+
+
+void Component::MagneticField(const double x, const double y, const double z,
+                              double& bx, double& by, double& bz, int& status) {
   bx = m_b0[0];
   by = m_b0[1];
   bz = m_b0[2];
@@ -78,37 +93,35 @@ void Component::MagneticField(const double x, const double y,
 }
 
 void Component::SetMagneticField(const double bx, const double by,
-                                     const double bz) {
+                                 const double bz) {
   m_b0 = {bx, by, bz};
 }
 
 bool Component::GetBoundingBox(double& xmin, double& ymin, double& zmin,
-                                   double& xmax, double& ymax, double& zmax) {
+                               double& xmax, double& ymax, double& zmax) {
   if (!m_geometry) return false;
   return m_geometry->GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax);
 }
 
 bool Component::IsWireCrossed(const double /*x0*/, const double /*y0*/,
-                                  const double /*z0*/, const double /*x1*/,
-                                  const double /*y1*/, const double /*z1*/,
-                                  double& /*xc*/, double& /*yc*/, 
-                                  double& /*zc*/, const bool /*centre*/,
-                                  double& /*rc*/) {
+                              const double /*z0*/, const double /*x1*/,
+                              const double /*y1*/, const double /*z1*/,
+                              double& /*xc*/, double& /*yc*/, double& /*zc*/,
+                              const bool /*centre*/, double& /*rc*/) {
   return false;
 }
 
 bool Component::IsInTrapRadius(const double /*q0*/, const double x0,
-                                   const double y0, const double /*z0*/,
-                                   double& xw, double& yw, double& rw) {
+                               const double y0, const double /*z0*/, double& xw,
+                               double& yw, double& rw) {
   xw = x0;
   yw = y0;
   rw = 0.;
   return false;
 }
 
-double Component::IntegrateFluxCircle(const double xc, const double yc, 
-                                          const double r, 
-                                          const unsigned int nI) {
+double Component::IntegrateFluxCircle(const double xc, const double yc,
+                                      const double r, const unsigned int nI) {
   // FLDIN2, FCHK3
   if (nI == 0) {
     std::cerr << m_className << "::IntegrateFluxCircle:\n"
@@ -116,14 +129,14 @@ double Component::IntegrateFluxCircle(const double xc, const double yc,
     return 0.;
   }
   // Number of Gaussian quadrature points per interval.
-  constexpr unsigned int nG = 6;
-  constexpr std::array<double, nG> t = { 
-     -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
+  constexpr size_t nG = 6;
+  constexpr std::array<double, nG> t = {
+      -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
       0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
   constexpr std::array<double, nG> w = {
-     0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
-     0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
-  
+      0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
+      0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+
   // Width and half-width of intervals.
   const double d = TwoPi / nI;
   const double h = 0.5 * d;
@@ -133,7 +146,7 @@ double Component::IntegrateFluxCircle(const double xc, const double yc,
   int status = 0;
   // Perform the integration.
   double s = 0.;
-  for (unsigned int i = 0; i < nG; ++i) {
+  for (size_t i = 0; i < nG; ++i) {
     const double phi0 = h * (1. + t[i]);
     for (unsigned int k = 0; k < nI; ++k) {
       const double phi = phi0 + k * d;
@@ -146,9 +159,9 @@ double Component::IntegrateFluxCircle(const double xc, const double yc,
   return h * s * VacuumPermittivity;
 }
 
-double Component::IntegrateFluxSphere(const double xc, const double yc, 
-                                          const double zc, const double r,
-                                          const unsigned int nI) {
+double Component::IntegrateFluxSphere(const double xc, const double yc,
+                                      const double zc, const double r,
+                                      const unsigned int nI) {
   // FLDIN3, FCHK2, FCHK1
   if (nI == 0) {
     std::cerr << m_className << "::IntegrateFluxSphere:\n"
@@ -156,13 +169,13 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
     return 0.;
   }
   // Number of Gaussian quadrature points.
-  constexpr unsigned int nG = 6;
-  constexpr std::array<double, nG> t = { 
-     -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
+  constexpr size_t nG = 6;
+  constexpr std::array<double, nG> t = {
+      -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
       0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
   constexpr std::array<double, nG> w = {
-     0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
-     0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+      0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
+      0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
 
   const double r2 = r * r;
   // Width and half-width of theta intervals.
@@ -178,7 +191,7 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
   // Perform the integration.
   double s2 = 0.;
   // Loop over theta.
-  for (unsigned int i = 0; i < nG; ++i) {
+  for (size_t i = 0; i < nG; ++i) {
     const double theta0 = ht * (1. + t[i]) - HalfPi;
     for (unsigned int k = 0; k < nI; ++k) {
       const double theta = theta0 + k * dt;
@@ -187,7 +200,7 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
       const double z = zc + st * r;
       double s1 = 0.;
       // Loop over phi.
-      for (unsigned int ii = 0; ii < nG; ++ii) {
+      for (size_t ii = 0; ii < nG; ++ii) {
         const double phi0 = hp * (1. + t[ii]);
         for (unsigned int kk = 0; kk < nI; ++kk) {
           const double phi = phi0 + kk * dp;
@@ -206,11 +219,9 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
 }
 
 double Component::IntegrateFluxParallelogram(
-    const double x0, const double y0, const double z0,
-    const double dx1, const double dy1, const double dz1,
-    const double dx2, const double dy2, const double dz2,
-    const unsigned int nU, const unsigned int nV) {
-
+    const double x0, const double y0, const double z0, const double dx1,
+    const double dy1, const double dz1, const double dx2, const double dy2,
+    const double dz2, const unsigned int nU, const unsigned int nV) {
   // FLDIN4, FCHK4, FCHK5
   if (nU <= 1 || nV <= 1) {
     std::cerr << m_className << "::IntegrateFluxParallelogram:\n"
@@ -218,28 +229,29 @@ double Component::IntegrateFluxParallelogram(
     return 0.;
   }
   // Number of Gaussian quadrature points.
-  constexpr unsigned int nG = 6;
-  constexpr std::array<double, nG> t = { 
-     -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
+  constexpr size_t nG = 6;
+  constexpr std::array<double, nG> t = {
+      -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
       0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
   constexpr std::array<double, nG> w = {
-     0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
-     0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+      0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
+      0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
 
   // Compute the normal vector.
   const double xn = dy1 * dz2 - dz1 * dy2;
   const double yn = dz1 * dx2 - dx1 * dz2;
   const double zn = dx1 * dy2 - dy1 * dx2;
   if (m_debug) {
-    std::cout << m_className << "::IntegrateFlux: Normal vector = "
-              << xn << ", " << yn << ", " << zn << ".\n";
+    std::cout << m_className << "::IntegrateFluxParallelogram:\n"
+              << "    Normal vector = " << xn << ", " << yn << ", " << zn 
+              << ".\n";
   }
   // If this vector has zero norm, return 0 flux.
   const double d1 = dx1 * dx1 + dy1 * dy1 + dz1 * dz1;
   const double d2 = dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
   if (xn * xn + yn * yn + zn * zn < 1.e-10 * sqrt(d1 * d2) ||
       d1 < 1.e-10 * d2 || d2 < 1.e-10 * d1) {
-    std::cerr << m_className << "::IntegrateFlux:\n"
+    std::cerr << m_className << "::IntegrateFluxParallelogram:\n"
               << "    Parallelogram does not have non-zero area.\n";
     return 0.;
   }
@@ -255,12 +267,12 @@ double Component::IntegrateFluxParallelogram(
   int status = 0;
   // Perform the integration.
   double s2 = 0.;
-  for (unsigned int i = 0; i < nG; ++i) {
+  for (size_t i = 0; i < nG; ++i) {
     const double v0 = hv * (1. + t[i]);
     for (unsigned int k = 0; k < nV; ++k) {
       const double v = v0 + k * dv;
       double s1 = 0.;
-      for (unsigned int ii = 0; ii < nG; ++ii) {
+      for (size_t ii = 0; ii < nG; ++ii) {
         const double u0 = hu * (1. + t[ii]);
         for (unsigned int kk = 0; kk < nU; ++kk) {
           const double u = u0 + kk * du;
@@ -270,24 +282,25 @@ double Component::IntegrateFluxParallelogram(
           ElectricField(x, y, z, ex, ey, ez, m, status);
           s1 += w[ii] * (ex * xn + ey * yn + ez * zn);
         }
-      } 
+      }
       s2 += w[i] * hu * s1;
     }
   }
   return hv * s2;
 }
 
-double Component::IntegrateFluxLine(
-    const double x0, const double y0, const double z0,
-    const double x1, const double y1, const double z1,
-    const double xp, const double yp, const double zp,
-    const unsigned int nI, const int isign) { 
-
+double Component::IntegrateFluxLine(const double x0, const double y0,
+                                    const double z0, const double x1,
+                                    const double y1, const double z1,
+                                    const double xp, const double yp,
+                                    const double zp, const unsigned int nI,
+                                    const int isign) {
   // FLDIN5
   // Normalise the norm vector.
   const double pmag2 = xp * xp + yp * yp + zp * zp;
   if (pmag2 <= 0.) {
-    std::cerr << " Normal vector has zero length; flux set to 0.\n";
+    std::cerr << m_className << "::IntegrateFluxLine:\n"
+              << "    Normal vector has zero length; flux set to 0.\n";
     return 0.;
   }
   const double pmag = sqrt(pmag2);
@@ -297,7 +310,8 @@ double Component::IntegrateFluxLine(
 
   // Check integration points.
   if (nI <= 1) {
-    std::cerr << " Number of points to integrate over must be > 1.\n";
+    std::cerr << m_className << "::IntegrateFluxLine:\n"
+              << "    Number of points to integrate over must be > 1.\n";
     return 0.;
   }
   // Ensure the segment has non-zero length.
@@ -306,24 +320,26 @@ double Component::IntegrateFluxLine(
   const double vz = z1 - z0;
   const double vmag2 = vx * vx + vy * vy + vz * vz;
   if (vmag2 <= 0.) {
-    std::cerr << " Segment has zero length; flux set to 0.\n";
+    std::cerr << m_className << "::IntegrateFluxLine:\n"
+              << "    Segment has zero length; flux set to 0.\n";
     return 0.;
   }
   const double vmag = sqrt(vmag2);
   // Segment should be perpendicular to the norm vector.
   if (fabs(vx * xn + vy * yn + vz * zn) > 1.e-4 * vmag) {
-    std::cerr << " Segment is not perpendicular to norm vector.\n";
+    std::cerr << m_className << "::IntegrateFluxLine:\n"
+              << "    Segment is not perpendicular to norm vector.\n";
     return 0.;
   }
 
   // Perform the integration.
-  constexpr unsigned int nG = 6;
-  constexpr std::array<double, nG> t = { 
-     -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
+  constexpr size_t nG = 6;
+  constexpr std::array<double, nG> t = {
+      -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
       0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
   constexpr std::array<double, nG> w = {
-     0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
-     0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+      0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
+      0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
 
   const double d = 1. / nI;
   const double h = 0.5 * d;
@@ -332,7 +348,7 @@ double Component::IntegrateFluxLine(
   Medium* m = nullptr;
   int status = 0;
   double s = 0.;
-  for (unsigned int i = 0; i < nG; ++i) {
+  for (size_t i = 0; i < nG; ++i) {
     const double u0 = h * (1. + t[i]);
     for (unsigned int k = 0; k < nI; ++k) {
       const double u = u0 + k * d;
@@ -351,4 +367,4 @@ double Component::IntegrateFluxLine(
   return s * vmag;
 }
 
-}
+}  // namespace Garfield

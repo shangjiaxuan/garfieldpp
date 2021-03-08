@@ -539,8 +539,8 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
   }
   if (m_view) {
     // If requested, add the drift line to a plot.
-    int id = 0;
-    const unsigned int nPoints = m_x.size();
+    size_t id = 0;
+    const size_t nPoints = m_x.size();
     if (particle == Particle::Ion || particle == Particle::NegativeIon) {
       m_view->NewIonDriftLine(nPoints, id, xi, yi, zi);
     } else if (particle == Particle::Electron ||
@@ -549,7 +549,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     } else if (particle == Particle::Hole) {
       m_view->NewHoleDriftLine(nPoints, id, xi, yi, zi);
     }
-    for (unsigned int i = 0; i < nPoints; ++i) {
+    for (size_t i = 0; i < nPoints; ++i) {
       const auto& x = m_x[i];
       m_view->SetDriftLinePoint(id, i, x[0], x[1], x[2]);
     }

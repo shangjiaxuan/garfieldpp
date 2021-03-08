@@ -70,7 +70,8 @@ find_package(OpenMP)
 
 # Creating the main Garfield library
 add_library(Garfield SHARED "")
-target_sources(Garfield PRIVATE Source/AvalancheMC.cc
+target_sources(Garfield PRIVATE Source/AvalancheGrid.cc
+                                Source/AvalancheMC.cc
                                 Source/AvalancheMicroscopic.cc
                                 Source/Component.cc
                                 Source/ComponentAnalyticField.cc
@@ -86,8 +87,10 @@ target_sources(Garfield PRIVATE Source/AvalancheMC.cc
                                 Source/ComponentNeBem2d.cc
                                 Source/ComponentNeBem3d.cc
                                 Source/ComponentNeBem3dMap.cc
+                                Source/ComponentParallelPlate.cc
                                 Source/ComponentTcad2d.cc
                                 Source/ComponentTcad3d.cc
+                                Source/ComponentTcadBase.cc
                                 Source/ComponentUser.cc
                                 Source/ComponentVoxel.cc
                                 Source/DriftLineRKF.cc
@@ -106,6 +109,7 @@ target_sources(Garfield PRIVATE Source/AvalancheMC.cc
                                 Source/OpticalData.cc
                                 Source/PlottingEngineRoot.cc
                                 Source/Polygon.cc
+                                Source/QuadTree.cc
                                 Source/Random.cc
                                 Source/RandomEngineRoot.cc
                                 Source/Sensor.cc

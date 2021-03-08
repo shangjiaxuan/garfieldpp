@@ -15,8 +15,10 @@
 
 #ifdef __cplusplus
 #include <cmath>
+#ifdef _GLIBCXX_HAVE_OBSOLETE_ISINF_ISNAN
 using std::isnan;
 using std::isinf;
+#endif
 namespace neBEM {
 #endif
 

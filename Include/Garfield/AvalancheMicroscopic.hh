@@ -29,35 +29,27 @@ class AvalancheMicroscopic {
   /// Switch off drift line plotting.
   void DisablePlotting() { m_viewer = nullptr; }
   /// Draw a marker at every excitation or not.
-  void EnableExcitationMarkers(const bool on = true) { 
-    m_plotExcitations = on; 
-  }
+  void EnableExcitationMarkers(const bool on = true) { m_plotExcitations = on; }
   /// Draw a marker at every ionising collision or not.
-  void EnableIonisationMarkers(const bool on = true) { 
-    m_plotIonisations = on; 
-  }
+  void EnableIonisationMarkers(const bool on = true) { m_plotIonisations = on; }
   /// Draw a marker at every attachment or not.
-  void EnableAttachmentMarkers(const bool on = true) { 
-    m_plotAttachments = on; 
-  }
+  void EnableAttachmentMarkers(const bool on = true) { m_plotAttachments = on; }
 
   /// Switch on calculation of induced currents (default: off).
   void EnableSignalCalculation(const bool on = true) { m_doSignal = on; }
-  /// Use the weighting potential (as opposed to the weighting field) 
+  /// Use the weighting potential (as opposed to the weighting field)
   /// for calculating the induced current.
-  void UseWeightingPotential(const bool on = true) { 
-    m_useWeightingPotential = on; 
+  void UseWeightingPotential(const bool on = true) {
+    m_useWeightingPotential = on;
   }
-  /// Integrate the weighting field over a drift line step when 
+  /// Integrate the weighting field over a drift line step when
   /// calculating the induced current (default: off).
-  void EnableWeightingFieldIntegration(const bool on = true) { 
+  void EnableWeightingFieldIntegration(const bool on = true) {
     m_integrateWeightingField = on;
   }
 
   /// Switch on calculation of the total induced charge (default: off).
-  void EnableInducedChargeCalculation(const bool on = true) { 
-    m_doInducedCharge = on; 
-  }
+  void UseInducedCharge(const bool on = true) { m_doInducedCharge = on; }
 
   /// Fill a histogram with the electron energy distribution.
   void EnableElectronEnergyHistogramming(TH1* histo);
@@ -69,11 +61,11 @@ class AvalancheMicroscopic {
   void DisableHoleEnergyHistogramming() { m_histHoleEnergy = nullptr; }
 
   /** Fill histograms of the distance between successive collisions.
-    * \param histo
-             pointer to the histogram to be filled
-    * \param opt
-             direction ('x', 'y', 'z', 'r')
-    */
+   * \param histo
+   pointer to the histogram to be filled
+   * \param opt
+   direction ('x', 'y', 'z', 'r')
+   */
   void SetDistanceHistogram(TH1* histo, const char opt = 'r');
   /// Fill distance distribution histograms for a given collision type.
   void EnableDistanceHistogramming(const int type);
@@ -90,21 +82,21 @@ class AvalancheMicroscopic {
   void EnableDriftLines(const bool on = true) { m_useDriftLines = on; }
 
   /** Switch on photon transport.
-    * \remark This feature has not been tested thoroughly. */
+   * \remark This feature has not been tested thoroughly. */
   void EnablePhotonTransport(const bool on = true) { m_usePhotons = on; }
 
   /// Switch on stepping according to band structure E(k), for semiconductors.
-  void EnableBandStructure(const bool on = true) { 
+  void EnableBandStructure(const bool on = true) {
     m_useBandStructureDefault = on;
   }
 
   /// Switch on update of coordinates for null-collision steps (default: off).
-  void EnableNullCollisionSteps(const bool on = true) { 
-    m_useNullCollisionSteps = on; 
+  void EnableNullCollisionSteps(const bool on = true) {
+    m_useNullCollisionSteps = on;
   }
 
   /** Set a (lower) energy threshold for electron transport.
-    * This can be useful for simulating delta electrons. */
+   * This can be useful for simulating delta electrons. */
   void SetElectronTransportCut(const double cut) { m_deltaCut = cut; }
   /// Retrieve the value of the energy threshold.
   double GetElectronTransportCut() const { return m_deltaCut; }
@@ -115,9 +107,9 @@ class AvalancheMicroscopic {
   double GetPhotonTransportCut() const { return m_gammaCut; }
 
   /** Set a max. avalanche size (i. e. ignore ionising collisions
-      once this size has been reached). */
+   once this size has been reached). */
   void EnableAvalancheSizeLimit(const unsigned int size) { m_sizeCut = size; }
-  /// Do not apply a limit on the avalanche size. 
+  /// Do not apply a limit on the avalanche size.
   void DisableAvalancheSizeLimit() { m_sizeCut = 0; }
   /// Retrieve the currently set size limit.
   int GetAvalancheSizeLimit() const { return m_sizeCut; }
@@ -145,18 +137,18 @@ class AvalancheMicroscopic {
   }
 
   /** Return the number of electron trajectories in the last
-    * simulated avalanche (including captured electrons). */
+   * simulated avalanche (including captured electrons). */
   unsigned int GetNumberOfElectronEndpoints() const {
     return m_endpointsElectrons.size();
   }
   /** Return the coordinates and time of start and end point of a given
-    * electron drift line.
-    * \param i index of the drift line
-    * \param x0,y0,z0,t0 coordinates and time of the starting point
-    * \param x1,y1,z1,t1 coordinates and time of the end point
-    * \param e0,e1 initial and final energy
-    * \param status status code (see GarfieldConstants.hh)
-    */
+   * electron drift line.
+   * \param i index of the drift line
+   * \param x0,y0,z0,t0 coordinates and time of the starting point
+   * \param x1,y1,z1,t1 coordinates and time of the end point
+   * \param e0,e1 initial and final energy
+   * \param status status code (see GarfieldConstants.hh)
+   */
   void GetElectronEndpoint(const unsigned int i, double& x0, double& y0,
                            double& z0, double& t0, double& e0, double& x1,
                            double& y1, double& z1, double& t1, double& e1,
@@ -190,11 +182,11 @@ class AvalancheMicroscopic {
                  double& t1, int& status) const;
 
   /** Calculate an electron drift line.
-    * \param x0,y0,z0,t0 starting point of the electron
-    * \param e0 initial energy of the electron
-    * \param dx0,dy0,dz0 initial direction of the electron
-    * If the initial direction is not specified, it is sampled randomly.
-    * Secondary electrons are not transported. */
+   * \param x0,y0,z0,t0 starting point of the electron
+   * \param e0 initial energy of the electron
+   * \param dx0,dy0,dz0 initial direction of the electron
+   * If the initial direction is not specified, it is sampled randomly.
+   * Secondary electrons are not transported. */
   bool DriftElectron(const double x0, const double y0, const double z0,
                      const double t0, const double e0, const double dx0 = 0.,
                      const double dy0 = 0., const double dz0 = 0.);
@@ -214,9 +206,9 @@ class AvalancheMicroscopic {
   /// Set a user handling procedure, to be called at every (real) collision.
   void SetUserHandleCollision(void (*f)(double x, double y, double z, double t,
                                         int type, int level, Medium* m,
-                                        double e0, double e1,
-                                        double dx0, double dy0, double dz0,
-                                        double dx1, double dy1, double dz1));
+                                        double e0, double e1, double dx0,
+                                        double dy0, double dz0, double dx1,
+                                        double dy1, double dz1));
   /// Deactivate the user handle called at every collision.
   void UnsetUserHandleCollision() { m_userHandleCollision = nullptr; }
   /// Set a user handling procedure, to be called at every attachment.
@@ -320,9 +312,8 @@ class AvalancheMicroscopic {
                            double dx, double dy, double dz,
                            bool hole) = nullptr;
   void (*m_userHandleCollision)(double x, double y, double z, double t,
-                                int type, int level, Medium* m,
-                                double e0, double e1,
-                                double dx0, double dy0, double dz0,
+                                int type, int level, Medium* m, double e0,
+                                double e1, double dx0, double dy0, double dz0,
                                 double dx1, double dy1, double dz1) = nullptr;
   void (*m_userHandleAttachment)(double x, double y, double z, double t,
                                  int type, int level, Medium* m) = nullptr;

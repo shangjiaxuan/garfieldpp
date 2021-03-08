@@ -12,9 +12,7 @@ ComponentAnsys123::ComponentAnsys123() : ComponentFieldMap("Ansys123") {}
 bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
                                    std::string mplist, std::string prnsol,
                                    std::string unit) {
-  m_ready = false;
-  m_warning = false;
-  m_nWarnings = 10;
+  Reset();
   // Keep track of the success.
   bool ok = true;
 
@@ -574,7 +572,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       il++;
       continue;
     }
-// Skip page feed if ansys > v15.x
+    // Skip page feed if ansys > v15.x
     if (strstr(line,"***") != NULL) {
       fprnsol.getline(line, size, '\n');
       il++;
@@ -642,14 +640,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
         << "    Field map could not be read and can not be interpolated.\n";
     return false;
   }
-
-  // Remove weighting fields (if any).
-  m_wfields.clear();
-  m_wfieldsOk.clear();
-
-  // Establish the ranges
-  SetRange();
-  UpdatePeriodicity();
+  Prepare();
   return true;
 }
 

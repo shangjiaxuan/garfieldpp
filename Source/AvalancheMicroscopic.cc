@@ -14,17 +14,17 @@ double Mag(const double x, const double y, const double z) {
   return sqrt(x * x + y * y + z * z);
 }
 
-void ToLocal(const std::array<std::array<double, 3>, 3>& rot,
-             const double xg, const double yg, const double zg,
-             double& xl, double& yl, double& zl) {
+void ToLocal(const std::array<std::array<double, 3>, 3>& rot, const double xg,
+             const double yg, const double zg, double& xl, double& yl,
+             double& zl) {
   xl = rot[0][0] * xg + rot[0][1] * yg + rot[0][2] * zg;
   yl = rot[1][0] * xg + rot[1][1] * yg + rot[1][2] * zg;
   zl = rot[2][0] * xg + rot[2][1] * yg + rot[2][2] * zg;
 }
 
-void ToGlobal(const std::array<std::array<double, 3>, 3>& rot,
-              const double xl, const double yl, const double zl,
-              double& xg, double& yg, double& zg) {
+void ToGlobal(const std::array<std::array<double, 3>, 3>& rot, const double xl,
+              const double yl, const double zl, double& xg, double& yg,
+              double& zg) {
   xg = rot[0][0] * xl + rot[1][0] * yl + rot[2][0] * zl;
   yg = rot[0][1] * xl + rot[1][1] * yl + rot[2][1] * zl;
   zg = rot[0][2] * xl + rot[1][2] * yl + rot[2][2] * zl;
@@ -84,7 +84,7 @@ void PrintStatus(const std::string& hdr, const std::string& status,
   std::cout << hdr << eh << status << " at " << x << ", " << y << ", " << z
             << "\n";
 }
-}
+}  // namespace
 
 namespace Garfield {
 
@@ -92,7 +92,6 @@ AvalancheMicroscopic::AvalancheMicroscopic() {
   m_endpointsElectrons.reserve(10000);
   m_endpointsHoles.reserve(10000);
   m_photons.reserve(1000);
-
 }
 
 void AvalancheMicroscopic::SetSensor(Sensor* s) {
@@ -429,10 +428,10 @@ void AvalancheMicroscopic::SetUserHandleStep(
   m_userHandleStep = f;
 }
 
-void AvalancheMicroscopic::SetUserHandleCollision(void (*f)(
-    double x, double y, double z, double t, int type, int level, Medium* m,
-    double e0, double e1, double dx0, double dy0, double dz0, 
-    double dx1, double dy1, double dz1)) {
+void AvalancheMicroscopic::SetUserHandleCollision(
+    void (*f)(double x, double y, double z, double t, int type, int level,
+              Medium* m, double e0, double e1, double dx0, double dy0,
+              double dz0, double dx1, double dy1, double dz1)) {
   m_userHandleCollision = f;
 }
 
@@ -650,7 +649,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         by *= scale;
         bz *= scale;
         const double bmag = Mag(bx, by, bz);
-        // Calculate the rotation matrix to a local coordinate system 
+        // Calculate the rotation matrix to a local coordinate system
         // with B along x and E in the x-z plane.
         RotationMatrix(bx, by, bz, bmag, ex, ey, ez, rot);
         // Calculate the cyclotron frequency.
@@ -779,8 +778,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
             const double ky1 = ky + ey * cdt;
             const double kz1 = kz + ez * cdt;
             double vx1 = 0., vy1 = 0., vz1 = 0.;
-            en1 = medium->GetElectronEnergy(kx1, ky1, kz1, 
-                                            vx1, vy1, vz1, band);
+            en1 = medium->GetElectronEnergy(kx1, ky1, kz1, vx1, vy1, vz1, band);
           } else {
             en1 = en + (a1 + a2 * dt) * dt;
           }
@@ -838,7 +836,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           } else {
             dy = vy * dt;
             dz = vz * dt + c2 * ez * dt * dt;
-          } 
+          }
           // Rotate back to the global frame.
           ToGlobal(rot, dx, dy, dz, dx, dy, dz);
         } else if (useBandStructure) {
@@ -848,8 +846,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           ky1 = ky + ey * cdt;
           kz1 = kz + ez * cdt;
           double vx1 = 0., vy1 = 0, vz1 = 0.;
-          en1 = medium->GetElectronEnergy(kx1, ky1, kz1, 
-                                          vx1, vy1, vz1, band);
+          en1 = medium->GetElectronEnergy(kx1, ky1, kz1, vx1, vy1, vz1, band);
           dx = 0.5 * (vx + vx1) * dt;
           dy = 0.5 * (vy + vy1) * dt;
           dz = 0.5 * (vz + vz1) * dt;
@@ -885,7 +882,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           Terminate(x, y, z, t, x1, y1, z1, t1);
           if (m_doSignal) {
             const int q = hole ? 1 : -1;
-            m_sensor->AddSignal(q, t, t1, x, y, z, x1, y1, z1, 
+            m_sensor->AddSignal(q, t, t1, x, y, z, x1, y1, z1,
                                 m_integrateWeightingField,
                                 m_useWeightingPotential);
           }
@@ -907,8 +904,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         // Check if the electron/hole has crossed a wire.
         double xc = x, yc = y, zc = z;
         double rc = 0.;
-        if (m_sensor->IsWireCrossed(x, y, z, x1, y1, z1, 
-                                    xc, yc, zc, false, rc)) {
+        if (m_sensor->IsWireCrossed(x, y, z, x1, y1, z1, xc, yc, zc, false,
+                                    rc)) {
           const double dc = Mag(xc - x, yc - y, zc - z);
           const double tc = t + dt * dc / Mag(dx, dy, dz);
           // If switched on, calculated the induced signal over this step.
@@ -968,8 +965,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         int cstype = 0;
         int level = 0;
         int ndxc = 0;
-        medium->GetElectronCollision(en1, cstype, level, en, kx1,
-                                     ky1, kz1, secondaries, ndxc, band);
+        medium->GetElectronCollision(en1, cstype, level, en, kx1, ky1, kz1,
+                                     secondaries, ndxc, band);
         // If activated, histogram the distance with respect to the
         // last collision.
         if (m_histDistance && !m_distanceHistogramType.empty()) {
@@ -991,9 +988,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
                 m_histDistance->Fill((*it).zLast - z);
                 break;
               case 'r':
-                m_histDistance->Fill(Mag((*it).xLast - x, 
-                                         (*it).yLast - y, 
-                                         (*it).zLast - z));
+                m_histDistance->Fill(
+                    Mag((*it).xLast - x, (*it).yLast - y, (*it).zLast - z));
                 break;
             }
             (*it).xLast = x;
@@ -1004,8 +1000,8 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
         }
 
         if (m_userHandleCollision) {
-          m_userHandleCollision(x, y, z, t, cstype, level, medium, en1,
-                                en, kx, ky, kz, kx1, ky1, kz1);
+          m_userHandleCollision(x, y, z, t, cstype, level, medium, en1, en, kx,
+                                ky, kz, kx1, ky1, kz1);
         }
         switch (cstype) {
           // Elastic collision
@@ -1121,7 +1117,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
                 // Check if this location is inside a drift medium/area.
                 if (status != 0 || !m_sensor->IsInArea(xp, yp, zp)) continue;
                 // Make sure we haven't jumped across a wire.
-                if (m_sensor->IsWireCrossed(x, y, z, xp, yp, zp, xc, yc, zc, 
+                if (m_sensor->IsWireCrossed(x, y, z, xp, yp, zp, xc, yc, zc,
                                             false, rc)) {
                   continue;
                 }
@@ -1225,31 +1221,31 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
   // Plot the drift paths and photon tracks.
   if (m_viewer) {
     // Electrons
-    const unsigned int nElectronEndpoints = m_endpointsElectrons.size();
-    for (unsigned int i = 0; i < nElectronEndpoints; ++i) {
-      const int np = GetNumberOfElectronDriftLinePoints(i);
-      int jL;
+    const size_t nElectronEndpoints = m_endpointsElectrons.size();
+    for (size_t i = 0; i < nElectronEndpoints; ++i) {
+      const size_t np = GetNumberOfElectronDriftLinePoints(i);
       if (np <= 0) continue;
+      size_t k;
       const Electron& p = m_endpointsElectrons[i];
-      m_viewer->NewElectronDriftLine(np, jL, p.x0, p.y0, p.z0);
-      for (int jP = np; jP--;) {
+      m_viewer->NewElectronDriftLine(np, k, p.x0, p.y0, p.z0);
+      for (size_t j = 0; j < np; ++j) {
         double x = 0., y = 0., z = 0., t = 0.;
-        GetElectronDriftLinePoint(x, y, z, t, jP, i);
-        m_viewer->SetDriftLinePoint(jL, jP, x, y, z);
+        GetElectronDriftLinePoint(x, y, z, t, j, i);
+        m_viewer->SetDriftLinePoint(k, j, x, y, z);
       }
     }
     // Holes
-    const unsigned int nHoleEndpoints = m_endpointsHoles.size();
-    for (unsigned int i = 0; i < nHoleEndpoints; ++i) {
-      const int np = GetNumberOfHoleDriftLinePoints(i);
-      int jL;
+    const size_t nHoleEndpoints = m_endpointsHoles.size();
+    for (size_t i = 0; i < nHoleEndpoints; ++i) {
+      const size_t np = GetNumberOfHoleDriftLinePoints(i);
       if (np <= 0) continue;
+      size_t k;
       const Electron& p = m_endpointsHoles[i];
-      m_viewer->NewHoleDriftLine(np, jL, p.x0, p.y0, p.z0);
-      for (int jP = np; jP--;) {
+      m_viewer->NewHoleDriftLine(np, k, p.x0, p.y0, p.z0);
+      for (size_t j = 0; j < np; ++j) {
         double x = 0., y = 0., z = 0., t = 0.;
-        GetHoleDriftLinePoint(x, y, z, t, jP, i);
-        m_viewer->SetDriftLinePoint(jL, jP, x, y, z);
+        GetHoleDriftLinePoint(x, y, z, t, j, i);
+        m_viewer->SetDriftLinePoint(k, j, x, y, z);
       }
     }
     // Photons
@@ -1499,4 +1495,5 @@ void AvalancheMicroscopic::Terminate(double x0, double y0, double z0, double t0,
     }
   }
 }
-}
+
+}  // namespace Garfield

@@ -84,7 +84,7 @@ bool TrackSrim::ReadFile(const std::string& file) {
   std::ifstream fsrim;
   fsrim.open(file.c_str(), std::ios::in);
   if (fsrim.fail()) {
-    std::cerr << hdr << "Could not open SRIM  file " << file
+    std::cerr << hdr << "Could not open SRIM file " << file
               << " for reading.\n    The file perhaps does not exist.\n";
     return false;
   }
@@ -94,9 +94,9 @@ bool TrackSrim::ReadFile(const std::string& file) {
   if (m_debug) {
     std::cout << hdr << "SRIM header records from file " << file << "\n";
   }
-  const int size = 100;
+  constexpr size_t size = 100;
   char line[size];
-  while (fsrim.getline(line, 100, '\n')) {
+  while (fsrim.getline(line, size, '\n')) {
     nread++;
     if (strstr(line, "SRIM version") != NULL) {
       if (m_debug) std::cout << "\t" << line << "\n";
@@ -122,13 +122,13 @@ bool TrackSrim::ReadFile(const std::string& file) {
   m_mion = std::atof(token) * AtomicMassUnitElectronVolt;
 
   // Find the target density
-  if (!fsrim.getline(line, 100, '\n')) {
+  if (!fsrim.getline(line, size, '\n')) {
     std::cerr << hdr << "Premature EOF looking for target density (line "
               << nread << ").\n";
     return false;
   }
   nread++;
-  if (!fsrim.getline(line, 100, '\n')) {
+  if (!fsrim.getline(line, size, '\n')) {
     std::cerr << hdr << "Premature EOF looking for target density (line "
               << nread << ").\n";
     return false;
@@ -142,7 +142,7 @@ bool TrackSrim::ReadFile(const std::string& file) {
   SetDensity(std::atof(token));
 
   // Check the stopping units
-  while (fsrim.getline(line, 100, '\n')) {
+  while (fsrim.getline(line, size, '\n')) {
     nread++;
     if (strstr(line, "Stopping Units") == NULL) continue;
     if (strstr(line, "Stopping Units =  MeV / (mg/cm2)") != NULL ||
@@ -158,7 +158,7 @@ bool TrackSrim::ReadFile(const std::string& file) {
   }
 
   // Skip to the table
-  while (fsrim.getline(line, 100, '\n')) {
+  while (fsrim.getline(line, size, '\n')) {
     nread++;
     if (strstr(line, "-----------") != NULL) break;
   }
@@ -171,7 +171,7 @@ bool TrackSrim::ReadFile(const std::string& file) {
   m_transstraggle.clear();
   m_longstraggle.clear();
   unsigned int ntable = 0;
-  while (fsrim.getline(line, 100, '\n')) {
+  while (fsrim.getline(line, size, '\n')) {
     nread++;
     if (strstr(line, "-----------") != NULL) break;
     // Energy
@@ -255,7 +255,7 @@ bool TrackSrim::ReadFile(const std::string& file) {
 
   // Find the scaling factor and convert to MeV/cm
   double scale = -1.;
-  while (fsrim.getline(line, 100, '\n')) {
+  while (fsrim.getline(line, size, '\n')) {
     nread++;
     if (strstr(line, "=============") != NULL) {
       break;

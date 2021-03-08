@@ -46,7 +46,7 @@ void HeedPhoton::physics(std::vector<gparticle*>& /*secondaries*/) {
   if (m_photon_absorbed) return;
   if (m_nextpos.prange <= 0.0) return;
   // Get least address of volume
-  const absvol* av = m_currpos.tid.G_lavol();
+  const absvol* av = m_currpos.volume();
   HeedMatterDef* hmd = nullptr;
   auto etcs = dynamic_cast<const EnTransfCS*>(av);
   if (etcs) {
@@ -113,8 +113,8 @@ void HeedPhoton::physics_after_new_speed(std::vector<gparticle*>& secondaries) {
   if (!m_photon_absorbed) return;
   // Stop if the delta electrons have already been generated.
   if (m_delta_generated) return;
-  // Get least address of volume
-  const absvol* av = m_currpos.tid.G_lavol();
+  // Get local volume.
+  const absvol* av = m_currpos.volume();
   HeedMatterDef* hmd = nullptr;
   auto etcs = dynamic_cast<const EnTransfCS*>(av);
   if (etcs) {

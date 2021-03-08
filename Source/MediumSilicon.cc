@@ -252,7 +252,7 @@ bool MediumSilicon::ElectronAttachment(const double ex, const double ey,
       double vx, vy, vz;
       ElectronVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
       eta = m_eTrapTime * sqrt(vx * vx + vy * vy + vz * vz);
-      if (eta > 0.) eta = 1. / eta;
+      if (eta > 0.) eta = -1. / eta;
       break;
     default:
       std::cerr << m_className << "::ElectronAttachment: Unknown model. Bug!\n";
@@ -380,7 +380,7 @@ bool MediumSilicon::HoleAttachment(const double ex, const double ey,
       double vx, vy, vz;
       HoleVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
       eta = m_hTrapTime * sqrt(vx * vx + vy * vy + vz * vz);
-      if (eta > 0.) eta = 1. / eta;
+      if (eta > 0.) eta = -1. / eta;
       break;
     default:
       std::cerr << m_className << "::HoleAttachment: Unknown model. Bug!\n";

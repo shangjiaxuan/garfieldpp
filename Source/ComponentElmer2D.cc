@@ -51,10 +51,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
                                 const std::string& volt,
                                 const std::string& unit) {
   const std::string hdr = m_className + "::Initialise:";
-  m_debug = false;
-  m_ready = false;
-  m_warning = false;
-  m_nWarnings = 0;
+  Reset();
 
   // Keep track of the success.
   bool ok = true;
@@ -419,9 +416,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   m_wfields.clear();
   m_wfieldsOk.clear();
 
-  // Establish the ranges.
-  SetRange();
-  UpdatePeriodicity();
+  Prepare();
   return true;
 }
 

@@ -118,7 +118,7 @@ class TrackSrim : public Track {
   std::vector<double> m_longstraggle;
 
   /// Index of the next cluster to be returned
-  unsigned int m_currcluster = 0;
+  size_t m_currcluster = 0;
   /// Fluctuation model (0 = none, 1 = Landau, 2 = Vavilov,
   ///                    3 = Gaussian, 4 = Combined)
   unsigned int m_model = 4;

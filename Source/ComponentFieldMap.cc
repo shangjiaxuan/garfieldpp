@@ -1,22 +1,21 @@
+#include "Garfield/ComponentFieldMap.hh"
+
+#include <math.h>
 #include <stdio.h>
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-
-#include <math.h>
 #include <string>
 
-#include "Garfield/ComponentFieldMap.hh"
 #include "Garfield/FundamentalConstants.hh"
 
 namespace Garfield {
 
-ComponentFieldMap::ComponentFieldMap(const std::string& name) 
+ComponentFieldMap::ComponentFieldMap(const std::string& name)
     : Component(name) {}
 
-ComponentFieldMap::~ComponentFieldMap() {
-  if (m_tetTree) delete m_tetTree;
-}
+ComponentFieldMap::~ComponentFieldMap() {}
 
 void ComponentFieldMap::PrintMaterials() {
   // Do not proceed if not properly initialised.
@@ -140,24 +139,13 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
                                     double& det) {
   // Check if bounding boxes of elements have been computed
   if (!m_cacheElemBoundingBoxes) {
-    std::cout << m_className << "::FindElement5:\n"
-              << "    Caching the bounding boxes of all elements...";
-    CalculateElementBoundingBoxes();
-    std::cout << " done.\n";
     m_cacheElemBoundingBoxes = true;
   }
 
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
-  if (m_useTetrahedralTree) {
-    if (!m_isTreeInitialized) {
-      if (!InitializeTetrahedralTree()) {
-        std::cerr << m_className << "::FindElement5:\n";
-        std::cerr << "    Tetrahedral tree initialization failed.\n";
-        return -1;
-      }
-    }
-    tetList = m_tetTree->GetTetListInBlock(Vec3(x, y, z));
+  if (m_useTetrahedralTree && m_octree) {
+    tetList = m_octree->GetElementsInBlock(Vec3(x, y, z));
   }
   // Backup
   double jacbak[4][4], detbak = 1.;
@@ -189,7 +177,8 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
 
   // Number of elements to scan.
   // With tetra tree disabled, all elements are scanned.
-  const int numElemToSearch = m_useTetrahedralTree ? tetList.size() : m_elements.size();
+  const int numElemToSearch =
+      m_useTetrahedralTree ? tetList.size() : m_elements.size();
   for (int i = 0; i < numElemToSearch; ++i) {
     const int idxToElemList = m_useTetrahedralTree ? tetList[i] : i;
     const Element& element = m_elements[idxToElemList];
@@ -294,15 +283,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
                                      const double z, double& t1, double& t2,
                                      double& t3, double& t4, double jac[4][4],
                                      double& det) {
-  // Check if bounding boxes of elements have been computed
-  if (!m_cacheElemBoundingBoxes) {
-    std::cout << m_className << "::FindElement13:\n"
-              << "    Caching the bounding boxes of all elements...";
-    CalculateElementBoundingBoxes();
-    std::cout << " done.\n";
-    m_cacheElemBoundingBoxes = true;
-  }
-
   // Backup
   double jacbak[4][4];
   double detbak = 1.;
@@ -325,19 +305,13 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
 
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
-  if (m_useTetrahedralTree) {
-    if (!m_isTreeInitialized) {
-      if (!InitializeTetrahedralTree()) {
-        std::cerr << m_className << "::FindElement13:\n";
-        std::cerr << "    Tetrahedral tree initialization failed.\n";
-        return -1;
-      }
-    }
-    tetList = m_tetTree->GetTetListInBlock(Vec3(x, y, z));
+  if (m_useTetrahedralTree && m_octree) {
+    tetList = m_octree->GetElementsInBlock(Vec3(x, y, z));
   }
   // Number of elements to scan.
   // With tetra tree disabled, all elements are scanned.
-  const int numElemToSearch = m_useTetrahedralTree ? tetList.size() : m_elements.size();
+  const int numElemToSearch =
+      m_useTetrahedralTree ? tetList.size() : m_elements.size();
   // Verify the count of volumes that contain the point.
   int nfound = 0;
   int imap = -1;
@@ -479,7 +453,8 @@ int ComponentFieldMap::FindElementCube(const double x, const double y,
   }
   CoordinatesCube(x, y, z, t1, t2, t3, jac, dN, m_elements[imap]);
   if (m_debug) {
-    PrintElement("FindElementCube", x, y, z, t1, t2, t3, 0., m_elements[imap], 8);
+    PrintElement("FindElementCube", x, y, z, t1, t2, t3, 0., m_elements[imap],
+                 8);
   }
   return imap;
 }
@@ -523,7 +498,6 @@ void ComponentFieldMap::Jacobian3(const Element& element, const double u,
 void ComponentFieldMap::Jacobian5(const Element& element, const double u,
                                   const double v, double& det,
                                   double jac[4][4]) const {
-
   const Node& n0 = m_nodes[element.emap[0]];
   const Node& n1 = m_nodes[element.emap[1]];
   const Node& n2 = m_nodes[element.emap[2]];
@@ -554,10 +528,12 @@ void ComponentFieldMap::Jacobian5(const Element& element, const double u,
   const double two7y = 2 * n7.y;
   // Determinant of the quadrilateral serendipity Jacobian
   det =
-      (-twou * u2 * ((n2.x + n3.x - two6x) * (n0.y + n1.y - two4y) -
-                     (n0.x + n1.x - two4x) * (n2.y + n3.y - two6y)) +
-       twov * v2 * (-((n0.x + n3.x - two7x) * (n1.y + n2.y - two5y)) +
-                    (n1.x + n2.x - two5x) * (n0.y + n3.y - two7y)) +
+      (-twou * u2 *
+           ((n2.x + n3.x - two6x) * (n0.y + n1.y - two4y) -
+            (n0.x + n1.x - two4x) * (n2.y + n3.y - two6y)) +
+       twov * v2 *
+           (-((n0.x + n3.x - two7x) * (n1.y + n2.y - two5y)) +
+            (n1.x + n2.x - two5x) * (n0.y + n3.y - two7y)) +
        2 * (-((n5.x - n7.x) * (n4.y - n6.y)) + (n4.x - n6.x) * (n5.y - n7.y)) +
        v * (-(n6.x * n0.y) - two7x * n0.y + n6.x * n1.y - two7x * n1.y -
             n6.x * n2.y - two7x * n2.y + n4.x * (n0.y - n1.y + n2.y - n3.y) +
@@ -687,7 +663,6 @@ void ComponentFieldMap::Jacobian13(const Element& element, const double t,
                                    const double u, const double v,
                                    const double w, double& det,
                                    double jac[4][4]) const {
-
   const Node& n0 = m_nodes[element.emap[0]];
   const Node& n1 = m_nodes[element.emap[1]];
   const Node& n2 = m_nodes[element.emap[2]];
@@ -708,9 +683,9 @@ void ComponentFieldMap::Jacobian13(const Element& element, const double t,
   const double x0 = (-1 + fourt) * n0.x;
   const double y0 = (-1 + fourt) * n0.y;
   const double z0 = (-1 + fourt) * n0.z;
-  const double xp = fouru * n4.x + fourv * n5.x + fourw * n6.x; 
-  const double yp = fouru * n4.y + fourv * n5.y + fourw * n6.y; 
-  const double zp = fouru * n4.z + fourv * n5.z + fourw * n6.z; 
+  const double xp = fouru * n4.x + fourv * n5.x + fourw * n6.x;
+  const double yp = fouru * n4.y + fourv * n5.y + fourw * n6.y;
+  const double zp = fouru * n4.z + fourv * n5.z + fourw * n6.z;
 
   const double tx = x0 + xp;
   const double ty = y0 + yp;
@@ -748,7 +723,7 @@ void ComponentFieldMap::Jacobian13(const Element& element, const double t,
   const double wx = x3 + xs;
   const double wy = y3 + ys;
   const double wz = z3 + zs;
-  
+
   const double ax = x1 - x3 + xq - xs;
   const double ay = y1 - y3 + yq - ys;
 
@@ -903,9 +878,12 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
   const Node& n0 = m_nodes[element.emap[0]];
   const Node& n1 = m_nodes[element.emap[1]];
   const Node& n2 = m_nodes[element.emap[2]];
-  const double d1 = (n0.x - n1.x) * (n2.y - n1.y) - (n2.x - n1.x) * (n0.y - n1.y);
-  const double d2 = (n1.x - n2.x) * (n0.y - n2.y) - (n0.x - n2.x) * (n1.y - n2.y);
-  const double d3 = (n2.x - n0.x) * (n1.y - n0.y) - (n1.x - n0.x) * (n2.y - n0.y);
+  const double d1 =
+      (n0.x - n1.x) * (n2.y - n1.y) - (n2.x - n1.x) * (n0.y - n1.y);
+  const double d2 =
+      (n1.x - n2.x) * (n0.y - n2.y) - (n0.x - n2.x) * (n1.y - n2.y);
+  const double d3 =
+      (n2.x - n0.x) * (n1.y - n0.y) - (n1.x - n0.x) * (n2.y - n0.y);
   if (d1 == 0 || d2 == 0 || d3 == 0) {
     std::cerr << m_className << "::Coordinates3:\n";
     std::cerr << "    Calculation of linear coordinates failed; abandoned.\n";
@@ -933,14 +911,14 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
     const double f0 = td1 * (2 * td1 - 1);
     const double f1 = td2 * (2 * td2 - 1);
     const double f2 = td3 * (2 * td3 - 1);
-    const double f3 = 4 * td1 * td2; 
-    const double f4 = 4 * td1 * td3; 
-    const double f5 = 4 * td2 * td3; 
+    const double f3 = 4 * td1 * td2;
+    const double f4 = 4 * td1 * td3;
+    const double f5 = 4 * td2 * td3;
     // Re-compute the (x,y,z) position for this coordinate.
-    const double xr = n0.x * f0 + n1.x * f1 + n2.x * f2 + 
-                      n3.x * f3 + n4.x * f4 + n5.x * f5;
-    const double yr = n0.y * f0 + n1.y * f1 + n2.y * f2 + 
-                      n3.y * f3 + n4.y * f4 + n5.y * f5;
+    const double xr =
+        n0.x * f0 + n1.x * f1 + n2.x * f2 + n3.x * f3 + n4.x * f4 + n5.x * f5;
+    const double yr =
+        n0.y * f0 + n1.y * f1 + n2.y * f2 + n3.y * f3 + n4.y * f4 + n5.y * f5;
     const double sr = td1 + td2 + td3;
     // Compute the Jacobian.
     Jacobian3(element, td1, td2, td3, det, jac);
@@ -1008,13 +986,13 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
     const double f0 = td1 * (2 * td1 - 1);
     const double f1 = td2 * (2 * td2 - 1);
     const double f2 = td3 * (2 * td3 - 1);
-    const double f3 = 4 * td1 * td2; 
-    const double f4 = 4 * td1 * td3; 
-    const double f5 = 4 * td2 * td3; 
-    const double xr = n0.x * f0 + n1.x * f1 + n2.x * f2 + 
-                      n3.x * f3 + n4.x * f4 + n5.x * f5;
-    const double yr = n0.y * f0 + n1.y * f1 + n2.y * f2 + 
-                      n3.y * f3 + n4.y * f4 + n5.y * f5;
+    const double f3 = 4 * td1 * td2;
+    const double f4 = 4 * td1 * td3;
+    const double f5 = 4 * td2 * td3;
+    const double xr =
+        n0.x * f0 + n1.x * f1 + n2.x * f2 + n3.x * f3 + n4.x * f4 + n5.x * f5;
+    const double yr =
+        n0.y * f0 + n1.y * f1 + n2.y * f2 + n3.y * f3 + n4.y * f4 + n5.y * f5;
     const double sr = td1 + td2 + td3;
     std::cout << m_className << "::Coordinates3:\n";
     std::cout << "    Position requested:     (" << x << ", " << y << ")\n";
@@ -1030,8 +1008,8 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
 
 int ComponentFieldMap::Coordinates4(const double x, const double y,
                                     const double z, double& t1, double& t2,
-                                    double& t3, double& t4, 
-                                    double& det, const Element& element) const {
+                                    double& t3, double& t4, double& det,
+                                    const Element& element) const {
   // Debugging
   if (m_debug) {
     std::cout << m_className << "::Coordinates4:\n";
@@ -1401,7 +1379,6 @@ void ComponentFieldMap::Coordinates12(const double x, const double y,
               << ", " << z - zr << ")\n";
     std::cout << "    Checksum - 1:           " << sr - 1 << "\n";
   }
-
 }
 
 int ComponentFieldMap::Coordinates13(const double x, const double y,
@@ -1463,10 +1440,10 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
     const double f6 = 4 * td1 * td4;
     const double f7 = 4 * td2 * td3;
     const double f8 = 4 * td2 * td4;
-    const double f9 = 4 * td3 * td4; 
+    const double f9 = 4 * td3 * td4;
     // Re-compute the (x,y,z) position for this coordinate.
     const double xr = n0.x * f0 + n1.x * f1 + n2.x * f2 + n3.x * f3 +
-                      n4.x * f4 + n5.x * f5 + n6.x * f6 + n7.x * f7 + 
+                      n4.x * f4 + n5.x * f5 + n6.x * f6 + n7.x * f7 +
                       n8.x * f8 + n9.x * f9;
     const double yr = n0.y * f0 + n1.y * f1 + n2.y * f2 + n3.y * f3 +
                       n4.y * f4 + n5.y * f5 + n6.y * f6 + n7.y * f7 +
@@ -1512,8 +1489,8 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
 
     // Check for convergence.
     constexpr double tol = 1.e-5;
-    if (fabs(corr[0]) < tol && fabs(corr[1]) < tol &&
-        fabs(corr[2]) < tol && fabs(corr[3]) < tol) {
+    if (fabs(corr[0]) < tol && fabs(corr[1]) < tol && fabs(corr[2]) < tol &&
+        fabs(corr[3]) < tol) {
       if (m_debug) {
         std::cout << m_className << "::Coordinates13: Convergence reached.\n";
       }
@@ -1536,7 +1513,7 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
         std::cout << m_className << "::Coordinates13:\n"
                   << "    No convergence achieved "
                   << "when refining internal isoparametric coordinates\n"
-                  << "    at position (" << x << ", " << y << ", " << z 
+                  << "    at position (" << x << ", " << y << ", " << z
                   << ").\n";
       }
       t1 = t2 = t3 = t4 = -1;
@@ -1563,16 +1540,13 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
     const double f6 = 4 * td1 * td4;
     const double f7 = 4 * td2 * td3;
     const double f8 = 4 * td2 * td4;
-    const double f9 = 4 * td3 * td4; 
-    double xr = n0.x * f0 + n1.x * f1 + n2.x * f2 + n3.x * f3 +
-                n4.x * f4 + n5.x * f5 + n6.x * f6 + n7.x * f7 +
-                n8.x * f8 + n9.x * f9;
-    double yr = n0.y * f0 + n1.y * f1 + n2.y * f2 + n3.y * f3 +
-                n4.y * f4 + n5.y * f5 + n6.y * f6 + n7.y * f7 +
-                n8.y * f8 + n9.y * f9;
-    double zr = n0.z * f0 + n1.z * f1 + n2.z * f2 + n3.z * f3 +
-                n4.z * f4 + n5.z * f5 + n6.z * f6 + n7.z * f7 +
-                n8.z * f8 + n9.z * f9;
+    const double f9 = 4 * td3 * td4;
+    double xr = n0.x * f0 + n1.x * f1 + n2.x * f2 + n3.x * f3 + n4.x * f4 +
+                n5.x * f5 + n6.x * f6 + n7.x * f7 + n8.x * f8 + n9.x * f9;
+    double yr = n0.y * f0 + n1.y * f1 + n2.y * f2 + n3.y * f3 + n4.y * f4 +
+                n5.y * f5 + n6.y * f6 + n7.y * f7 + n8.y * f8 + n9.y * f9;
+    double zr = n0.z * f0 + n1.z * f1 + n2.z * f2 + n3.z * f3 + n4.z * f4 +
+                n5.z * f5 + n6.z * f6 + n7.z * f7 + n8.z * f8 + n9.z * f9;
     double sr = td1 + td2 + td3 + td4;
     std::cout << "    Position requested:     (" << x << ", " << y << ", " << z
               << ")\n";
@@ -1660,6 +1634,37 @@ int ComponentFieldMap::CoordinatesCube(const double x, const double y,
   // This should always work.
   ifail = 0;
   return ifail;
+}
+
+void ComponentFieldMap::Reset() {
+
+  m_ready = false;
+
+  m_elements.clear();
+  m_nodes.clear();
+  m_materials.clear();
+  m_wfields.clear();
+  m_wfieldsOk.clear();
+  m_hasBoundingBox = false;
+  m_warning = false;
+  m_nWarnings = 0;
+
+  m_octree.reset(nullptr);
+  m_cacheElemBoundingBoxes = false;
+  m_lastElement = -1;
+}
+
+void ComponentFieldMap::Prepare() {
+
+  // Establish the ranges.
+  SetRange();
+  UpdatePeriodicity();
+  std::cout << m_className << "::Prepare:\n"
+            << "    Caching the bounding boxes of all elements...";
+  CalculateElementBoundingBoxes();
+  std::cout << " done.\n";
+  // Initialize the tetrahedral tree.
+  InitializeTetrahedralTree();
 }
 
 void ComponentFieldMap::UpdatePeriodicityCommon() {
@@ -1987,13 +1992,14 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
   // If chamber is periodic, reduce to the cell volume.
   xmirrored = false;
   if (m_periodic[0]) {
-    xpos = m_mapmin[0] + fmod(xpos - m_mapmin[0], m_mapmax[0] - m_mapmin[0]);
-    if (xpos < m_mapmin[0]) xpos += m_mapmax[0] - m_mapmin[0];
+    const double xrange = m_mapmax[0] - m_mapmin[0];
+    xpos = m_mapmin[0] + fmod(xpos - m_mapmin[0], xrange);
+    if (xpos < m_mapmin[0]) xpos += xrange;
   } else if (m_mirrorPeriodic[0]) {
-    double xnew =
-        m_mapmin[0] + fmod(xpos - m_mapmin[0], m_mapmax[0] - m_mapmin[0]);
-    if (xnew < m_mapmin[0]) xnew += m_mapmax[0] - m_mapmin[0];
-    int nx = int(floor(0.5 + (xnew - xpos) / (m_mapmax[0] - m_mapmin[0])));
+    const double xrange = m_mapmax[0] - m_mapmin[0];
+    double xnew = m_mapmin[0] + fmod(xpos - m_mapmin[0], xrange);
+    if (xnew < m_mapmin[0]) xnew += xrange;
+    int nx = int(floor(0.5 + (xnew - xpos) / xrange));
     if (nx != 2 * (nx / 2)) {
       xnew = m_mapmin[0] + m_mapmax[0] - xnew;
       xmirrored = true;
@@ -2003,13 +2009,11 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
   if (m_axiallyPeriodic[0] && (zpos != 0 || ypos != 0)) {
     const double auxr = sqrt(zpos * zpos + ypos * ypos);
     double auxphi = atan2(zpos, ypos);
-    const double phirange = (m_mapamax[0] - m_mapamin[0]);
+    const double phirange = m_mapamax[0] - m_mapamin[0];
     const double phim = 0.5 * (m_mapamin[0] + m_mapamax[0]);
     rotation = phirange * floor(0.5 + (auxphi - phim) / phirange);
-    if (auxphi - rotation < m_mapamin[0])
-      rotation = rotation - phirange;
-    if (auxphi - rotation > m_mapamax[0])
-      rotation = rotation + phirange;
+    if (auxphi - rotation < m_mapamin[0]) rotation -= phirange;
+    if (auxphi - rotation > m_mapamax[0]) rotation += phirange;
     auxphi = auxphi - rotation;
     ypos = auxr * cos(auxphi);
     zpos = auxr * sin(auxphi);
@@ -2017,13 +2021,14 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
 
   ymirrored = false;
   if (m_periodic[1]) {
-    ypos = m_mapmin[1] + fmod(ypos - m_mapmin[1], m_mapmax[1] - m_mapmin[1]);
-    if (ypos < m_mapmin[1]) ypos += m_mapmax[1] - m_mapmin[1];
+    const double yrange = m_mapmax[1] - m_mapmin[1];
+    ypos = m_mapmin[1] + fmod(ypos - m_mapmin[1], yrange);
+    if (ypos < m_mapmin[1]) ypos += yrange;
   } else if (m_mirrorPeriodic[1]) {
-    double ynew =
-        m_mapmin[1] + fmod(ypos - m_mapmin[1], m_mapmax[1] - m_mapmin[1]);
-    if (ynew < m_mapmin[1]) ynew += m_mapmax[1] - m_mapmin[1];
-    int ny = int(floor(0.5 + (ynew - ypos) / (m_mapmax[1] - m_mapmin[1])));
+    const double yrange = m_mapmax[1] - m_mapmin[1];
+    double ynew = m_mapmin[1] + fmod(ypos - m_mapmin[1], yrange);
+    if (ynew < m_mapmin[1]) ynew += yrange;
+    int ny = int(floor(0.5 + (ynew - ypos) / yrange));
     if (ny != 2 * (ny / 2)) {
       ynew = m_mapmin[1] + m_mapmax[1] - ynew;
       ymirrored = true;
@@ -2036,10 +2041,8 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
     const double phirange = (m_mapamax[1] - m_mapamin[1]);
     const double phim = 0.5 * (m_mapamin[1] + m_mapamax[1]);
     rotation = phirange * floor(0.5 + (auxphi - phim) / phirange);
-    if (auxphi - rotation < m_mapamin[1])
-      rotation = rotation - phirange;
-    if (auxphi - rotation > m_mapamax[1])
-      rotation = rotation + phirange;
+    if (auxphi - rotation < m_mapamin[1]) rotation -= phirange;
+    if (auxphi - rotation > m_mapamax[1]) rotation += phirange;
     auxphi = auxphi - rotation;
     zpos = auxr * cos(auxphi);
     xpos = auxr * sin(auxphi);
@@ -2047,13 +2050,14 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
 
   zmirrored = false;
   if (m_periodic[2]) {
-    zpos = m_mapmin[2] + fmod(zpos - m_mapmin[2], m_mapmax[2] - m_mapmin[2]);
-    if (zpos < m_mapmin[2]) zpos += m_mapmax[2] - m_mapmin[2];
+    const double zrange = m_mapmax[2] - m_mapmin[2];
+    zpos = m_mapmin[2] + fmod(zpos - m_mapmin[2], zrange);
+    if (zpos < m_mapmin[2]) zpos += zrange;
   } else if (m_mirrorPeriodic[2]) {
-    double znew =
-        m_mapmin[2] + fmod(zpos - m_mapmin[2], m_mapmax[2] - m_mapmin[2]);
-    if (znew < m_mapmin[2]) znew += m_mapmax[2] - m_mapmin[2];
-    int nz = int(floor(0.5 + (znew - zpos) / (m_mapmax[2] - m_mapmin[2])));
+    const double zrange = m_mapmax[2] - m_mapmin[2];
+    double znew = m_mapmin[2] + fmod(zpos - m_mapmin[2], zrange);
+    if (znew < m_mapmin[2]) znew += zrange;
+    int nz = int(floor(0.5 + (znew - zpos) / zrange));
     if (nz != 2 * (nz / 2)) {
       znew = m_mapmin[2] + m_mapmax[2] - znew;
       zmirrored = true;
@@ -2063,13 +2067,11 @@ void ComponentFieldMap::MapCoordinates(double& xpos, double& ypos, double& zpos,
   if (m_axiallyPeriodic[2] && (ypos != 0 || xpos != 0)) {
     const double auxr = sqrt(ypos * ypos + xpos * xpos);
     double auxphi = atan2(ypos, xpos);
-    const double phirange = (m_mapamax[2] - m_mapamin[2]);
+    const double phirange = m_mapamax[2] - m_mapamin[2];
     const double phim = 0.5 * (m_mapamin[2] + m_mapamax[2]);
     rotation = phirange * floor(0.5 + (auxphi - phim) / phirange);
-    if (auxphi - rotation < m_mapamin[2])
-      rotation = rotation - phirange;
-    if (auxphi - rotation > m_mapamax[2])
-      rotation = rotation + phirange;
+    if (auxphi - rotation < m_mapamin[2]) rotation -= phirange;
+    if (auxphi - rotation > m_mapamax[2]) rotation += phirange;
     auxphi = auxphi - rotation;
     xpos = auxr * cos(auxphi);
     ypos = auxr * sin(auxphi);
@@ -2203,7 +2205,7 @@ double ComponentFieldMap::ReadDouble(char* token, double def, bool& error) {
   return atof(token);
 }
 
-void ComponentFieldMap::CalculateElementBoundingBoxes(void) {
+void ComponentFieldMap::CalculateElementBoundingBoxes() {
   // Do not proceed if not properly initialised.
   if (!m_ready) {
     PrintNotReady("CalculateElementBoundingBoxes");
@@ -2283,44 +2285,41 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   const double hx = 0.5 * (xmax - xmin);
   const double hy = 0.5 * (ymax - ymin);
   const double hz = 0.5 * (zmax - zmin);
-  m_tetTree = new TetrahedralTree(Vec3(xmin + hx, ymin + hy, zmin + hz),
-                                  Vec3(hx, hy, hz));
+  m_octree.reset(new TetrahedralTree(Vec3(xmin + hx, ymin + hy, zmin + hz),
+                                     Vec3(hx, hy, hz)));
 
   if (m_debug) std::cout << "    Tree instantiated.\n";
 
   // Insert all mesh nodes in the tree
   for (unsigned int i = 0; i < m_nodes.size(); i++) {
     const Node& n = m_nodes[i];
-    m_tetTree->InsertMeshNode(Vec3(n.x, n.y, n.z), i);
+    m_octree->InsertMeshNode(Vec3(n.x, n.y, n.z), i);
   }
 
-  if (m_debug) std::cout << "    Tree nodes initialized successfully.\n"; 
+  if (m_debug) std::cout << "    Tree nodes initialized successfully.\n";
 
   // Insert all mesh elements (tetrahedrons) in the tree
   for (unsigned int i = 0; i < m_elements.size(); i++) {
     const Element& e = m_elements[i];
     const double bb[6] = {e.xmin, e.ymin, e.zmin, e.xmax, e.ymax, e.zmax};
-    m_tetTree->InsertTetrahedron(bb, i);
+    m_octree->InsertMeshElement(bb, i);
   }
 
   std::cout << m_className << "::InitializeTetrahedralTree: Success.\n";
-
-  m_isTreeInitialized = true;
   return true;
 }
 
-size_t ComponentFieldMap::GetWeightingFieldIndex(const std::string& label) const {
-
+size_t ComponentFieldMap::GetWeightingFieldIndex(
+    const std::string& label) const {
   const size_t nWeightingFields = m_wfields.size();
   for (size_t i = 0; i < nWeightingFields; ++i) {
     if (m_wfields[i] == label) return i;
   }
-  return nWeightingFields; 
+  return nWeightingFields;
 }
 
 size_t ComponentFieldMap::GetOrCreateWeightingFieldIndex(
     const std::string& label) {
-
   // Check if a weighting field with the same label already exists.
   size_t nWeightingFields = m_wfields.size();
   for (size_t i = 0; i < nWeightingFields; ++i) {
@@ -2331,6 +2330,7 @@ size_t ComponentFieldMap::GetOrCreateWeightingFieldIndex(
   m_wfieldsOk.resize(nWeightingFields);
   for (auto& node : m_nodes) {
     node.w.resize(nWeightingFields);
+    node.dw.resize(nWeightingFields);
   }
   m_wfields.back() = label;
   return nWeightingFields - 1;
@@ -2355,4 +2355,4 @@ void ComponentFieldMap::PrintElement(const std::string& header, const double x,
            node.z, v);
   }
 }
-}
+}  // namespace Garfield

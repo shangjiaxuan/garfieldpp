@@ -29,53 +29,50 @@
 /// \brief Implementation of the GarfieldSteppingAction class
 
 #include "GarfieldSteppingAction.hh"
-#include "GarfieldEventAction.hh"
-#include "GarfieldDetectorConstruction.hh"
 
-#include "G4Step.hh"
 #include "G4RunManager.hh"
+#include "G4Step.hh"
+#include "GarfieldDetectorConstruction.hh"
+#include "GarfieldEventAction.hh"
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 GarfieldSteppingAction::GarfieldSteppingAction(
-		const GarfieldDetectorConstruction* detectorConstruction,
-		GarfieldEventAction* eventAction) :
-		G4UserSteppingAction(), fDetConstruction(detectorConstruction), fEventAction(
-				eventAction) {
-}
+    const GarfieldDetectorConstruction* detectorConstruction,
+    GarfieldEventAction* eventAction)
+    : G4UserSteppingAction(),
+      fDetConstruction(detectorConstruction),
+      fEventAction(eventAction) {}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-GarfieldSteppingAction::~GarfieldSteppingAction() {
-}
+GarfieldSteppingAction::~GarfieldSteppingAction() {}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 void GarfieldSteppingAction::UserSteppingAction(const G4Step* step) {
-// Collect energy and track length step by step
+  // Collect energy and track length step by step
 
-// get volume of the current step
-	G4VPhysicalVolume* volume =
-			step->GetPreStepPoint()->GetTouchableHandle()->GetVolume();
+  // get volume of the current step
+  G4VPhysicalVolume* volume =
+      step->GetPreStepPoint()->GetTouchableHandle()->GetVolume();
 
-	// energy deposit
-	G4double edep = step->GetTotalEnergyDeposit();
+  // energy deposit
+  G4double edep = step->GetTotalEnergyDeposit();
 
-	// step length
-	G4double stepLength = 0.;
-	if (step->GetTrack()->GetDefinition()->GetPDGCharge() != 0.) {
-		stepLength = step->GetStepLength();
+  // step length
+  G4double stepLength = 0.;
+  if (step->GetTrack()->GetDefinition()->GetPDGCharge() != 0.) {
+    stepLength = step->GetStepLength();
+  }
 
-	}
+  if (volume == fDetConstruction->GetAbsorberPV()) {
+    fEventAction->AddAbs(edep, stepLength);
+  }
 
-	if (volume == fDetConstruction->GetAbsorberPV()) {
-		fEventAction->AddAbs(edep, stepLength);
-	}
-
-	if (volume == fDetConstruction->GetGasPV()) {
-		fEventAction->AddGas(edep);
-
-	}
+  if (volume == fDetConstruction->GetGasPV()) {
+    fEventAction->AddGas(edep);
+  }
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

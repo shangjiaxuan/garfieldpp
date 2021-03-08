@@ -70,7 +70,7 @@ void HeedDeltaElectron::physics_mrange(double& fmrange) {
     return;
   }
   // Get local volume and convert it to a cross-section object.
-  const absvol* av = m_currpos.tid.G_lavol();
+  const absvol* av = m_currpos.volume();
   auto hdecs = dynamic_cast<const HeedDeltaElectronCS*>(av);
   if (!hdecs) return;
   if (m_print_listing) Iprintnf(mcout, fmrange);
@@ -146,7 +146,7 @@ void HeedDeltaElectron::physics_after_new_speed(
   if (m_currpos.prange <= 0.0) {
     if (m_curr_ekin <= 0.0) {
       // Get local volume.
-      absvol* av = m_currpos.tid.G_lavol();
+      absvol* av = m_currpos.volume();
       if (av && av->s_sensitive && m_fieldMap->inside(m_currpos.ptloc)) {
         if (m_print_listing) mcout << "Convert to conduction electron.\n";
         conduction_electrons.emplace_back(
@@ -158,7 +158,7 @@ void HeedDeltaElectron::physics_after_new_speed(
     return;
   }
   // Get local volume and convert it to a cross-section object.
-  const absvol* av = m_currpos.tid.G_lavol();
+  const absvol* av = m_currpos.volume();
   auto hdecs = dynamic_cast<const HeedDeltaElectronCS*>(av);
   if (!hdecs) return;
   double ek = m_curr_ekin / MeV;
@@ -193,7 +193,7 @@ void HeedDeltaElectron::physics_after_new_speed(
     m_curr_gamma_1 = m_curr_ekin / resten;
     m_currpos.speed = c_light * lorbeta(m_curr_gamma_1);
   }
-  absvol* vav = m_currpos.tid.G_lavol();
+  absvol* vav = m_currpos.volume();
   if (vav && vav->s_sensitive) {
     if (m_print_listing) {
       mcout << "volume is sensitive\n";
@@ -207,7 +207,7 @@ void HeedDeltaElectron::physics_after_new_speed(
   }
   if (!m_alive) {
     // Done tracing the delta electron. Create the last conduction electron.
-    vav = m_currpos.tid.G_lavol();
+    vav = m_currpos.volume();
     if (vav && vav->s_sensitive && m_fieldMap->inside(m_currpos.ptloc)) {
       if (m_print_listing) mcout << "Last conduction electron\n";
       conduction_electrons.emplace_back(
@@ -234,10 +234,7 @@ void HeedDeltaElectron::physics_after_new_speed(
   if (m_print_listing) Iprintnf(mcout, m_q_low_path_length);
 #ifdef RANDOM_POIS
   if (m_q_low_path_length > 0.0) {
-    int ierror = 0;
-    long random_q_low_path_length = pois(m_q_low_path_length, ierror);
-    check_econd11a(ierror, == 1,
-                   " q_low_path_length=" << m_q_low_path_length << '\n', mcerr);
+    long random_q_low_path_length = pois(m_q_low_path_length);
     m_q_low_path_length = long(random_q_low_path_length);
     if (m_print_listing) {
       mcout << "After pois:\n";

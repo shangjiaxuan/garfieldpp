@@ -11,9 +11,8 @@ class ComponentComsol : public ComponentFieldMap {
   /// Default constructor.
   ComponentComsol();
   /// Constructor from file names.
-  ComponentComsol(const std::string& mesh, 
-                  const std::string& mplist, const std::string& field,
-                  const std::string& unit = "m");
+  ComponentComsol(const std::string& mesh, const std::string& mplist,
+                  const std::string& field, const std::string& unit = "m");
   /// Destructor.
   ~ComponentComsol() {}
 
@@ -29,21 +28,30 @@ class ComponentComsol : public ComponentFieldMap {
 
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
+  double DelayedWeightingPotential(const double x, const double y,
+                                   const double z, const double t,
+                                   const std::string& label) override;
 
   Medium* GetMedium(const double x, const double y, const double z) override;
 
   /** Import a field map.
-    * \param header name of the file containing the list of nodes
-    * \param mplist name of the file containing the material properties
-    * \param field name of the file containing the potentials at the nodes
-    * \param unit length unit
-    */ 
+   * \param header name of the file containing the list of nodes
+   * \param mplist name of the file containing the material properties
+   * \param field name of the file containing the potentials at the nodes
+   * \param unit length unit
+   */
   bool Initialise(const std::string& header = "mesh.mphtxt",
                   const std::string& mplist = "dielectrics.dat",
                   const std::string& field = "field.txt",
                   const std::string& unit = "m");
-  /// Import weighting field maps.
+  /// Import the time-independent weighting field maps.
   bool SetWeightingField(const std::string& file, const std::string& label);
+  /// Import the time-dependent weighting field maps.
+  bool SetDelayedWeightingPotential(const std::string& file,
+                                    const std::string& label);
+  /// Set the time interval of the time-dependent weighting field.
+  void SetTimeInterval(const double mint, const double maxt,
+                       const double stept);
 
  protected:
   void UpdatePeriodicity() override { UpdatePeriodicityCommon(); }
@@ -51,8 +59,11 @@ class ComponentComsol : public ComponentFieldMap {
   double GetElementVolume(const unsigned int i) override;
   void GetAspectRatio(const unsigned int i, double& dmin,
                       double& dmax) override;
+
  private:
   double m_unit = 100.;
+  bool m_timeset = false;
 
+  bool GetTimeInterval(const std::string& file);
 };
-}
+}  // namespace Garfield
