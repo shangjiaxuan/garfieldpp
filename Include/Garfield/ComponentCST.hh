@@ -198,11 +198,6 @@ class ComponentCST : public ComponentFieldMap {
   double GetElementVolume(const unsigned int i) override;
   void GetAspectRatio(const unsigned int i, double& dmin,
                       double& dmax) override;
-  //  static bool Greater(const double& a, const double& b) {
-  //    return (a > b);
-  //  };
-
-  //  void GetNodesForElement(int element, std::vector<int>& nodes);
 
   /**
    * Calculate the index in the vectors m_xlines, m_ylines, m_zlines, which is
@@ -231,9 +226,9 @@ class ComponentCST : public ComponentFieldMap {
                         double& rcoordinate, double& rotation);
 
  private:
-  std::vector<double> m_xlines;  ///< x positions in used in the CST mesh
-  std::vector<double> m_ylines;  ///< y positions in used in the CST mesh
-  std::vector<double> m_zlines;  ///< z positions in used in the CST mesh
+  std::vector<double> m_xlines;  ///< x positions used in the CST mesh
+  std::vector<double> m_ylines;  ///< y positions used in the CST mesh
+  std::vector<double> m_zlines;  ///< z positions used in the CST mesh
   /// Potentials resulting from the CST simulation.
   std::vector<float> m_potential;  
   /// Map of weighting field potentials
@@ -249,8 +244,6 @@ class ComponentCST : public ComponentFieldMap {
   // If true x,y,z fields of this component are disabled (e=0 V/cm).
   bool disableFieldComponent[3] = {false, false, false};
   bool doShaping = false;
-  /// Size of the header in binary files used in the CST export
-  static const unsigned int headerSize = 1000;  
 
   void ElectricFieldBinary(const double x, const double y, const double z,
                            double& ex, double& ey, double& ez, double& v,

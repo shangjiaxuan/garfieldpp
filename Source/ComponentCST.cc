@@ -639,9 +639,9 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
       m_materials.at(index).driftmedium = false;
     }
     delete[] c;
-    float tmp_eps;
-    result = fread(&(tmp_eps), sizeof(float), 1, f);
-    m_materials.at(index).eps = tmp_eps;
+    float eps;
+    result = fread(&(eps), sizeof(float), 1, f);
+    m_materials.at(index).eps = eps;
     if (result != 1) {
       fputs("Reading error while reading eps.", stderr);
       exit(3);
@@ -1057,12 +1057,12 @@ Medium* ComponentCST::GetMedium(const double x, const double y,
 
 void ComponentCST::SetRange() {
   // Establish the ranges
-  m_mapmin[0] = *m_xlines.begin();
-  m_mapmax[0] = *(m_xlines.end() - 1);
-  m_mapmin[1] = *m_ylines.begin();
-  m_mapmax[1] = *(m_ylines.end() - 1);
-  m_mapmin[2] = *m_zlines.begin();
-  m_mapmax[2] = *(m_zlines.end() - 1);
+  m_mapmin[0] = m_xlines.front();
+  m_mapmax[0] = m_xlines.back();
+  m_mapmin[1] = m_ylines.front();
+  m_mapmax[1] = m_ylines.back();
+  m_mapmin[2] = m_zlines.front();
+  m_mapmax[2] = m_zlines.back();
   m_mapvmin = *std::min_element(m_potential.begin(), m_potential.end());
   m_mapvmax = *std::max_element(m_potential.begin(), m_potential.end());
 
@@ -1177,23 +1177,21 @@ void ComponentCST::GetAspectRatio(const unsigned int element, double& dmin,
   }
   unsigned int i, j, k;
   Element2Index(element, i, j, k);
-  std::vector<double> distances;
-  distances.push_back(m_xlines.at(i + 1) - m_xlines.at(i));
-  distances.push_back(m_ylines.at(j + 1) - m_ylines.at(j));
-  distances.push_back(m_zlines.at(k + 1) - m_zlines.at(k));
-  std::sort(distances.begin(), distances.end());
-  dmin = distances.at(0);
-  dmax = distances.at(2);
+  const double dx = fabs(m_xlines.at(i + 1) - m_xlines.at(i));
+  const double dy = fabs(m_ylines.at(j + 1) - m_ylines.at(j));
+  const double dz = fabs(m_zlines.at(k + 1) - m_zlines.at(k));
+  dmin = std::min({dx, dy, dz});
+  dmax = std::max({dx, dy, dz});
 }
 
 double ComponentCST::GetElementVolume(const unsigned int element) {
   if (element >= m_nElements) return 0.;
   unsigned int i, j, k;
   Element2Index(element, i, j, k);
-  const double volume = fabs((m_xlines.at(i + 1) - m_xlines.at(i)) *
-                             (m_xlines.at(j + 1) - m_ylines.at(j)) *
-                             (m_xlines.at(k + 1) - m_zlines.at(k)));
-  return volume;
+  const double dx = fabs(m_xlines.at(i + 1) - m_xlines.at(i));
+  const double dy = fabs(m_ylines.at(j + 1) - m_ylines.at(j));
+  const double dz = fabs(m_zlines.at(k + 1) - m_zlines.at(k));
+  return dx * dy * dz;
 }
 
 void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
