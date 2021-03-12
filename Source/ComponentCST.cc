@@ -1,4 +1,3 @@
-// Copied and modified ComponentAnsys123.cc
 #include <math.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -375,7 +374,6 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   std::cout << m_className << "::Initialise:" << std::endl;
   std::cout << "    Read " << m_nNodes << " nodes from file " << nlist << "."
             << std::endl;
-  // Check number of nodes
 
   // Open the element list
   std::ifstream felist;
@@ -618,6 +616,8 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
       fputs("Input error while reading material id.", stderr);
       exit(3);
     }
+    // const unsigned int index = id;
+    const unsigned int index = i;
     unsigned int description_size = 0;
     result = fread(&(description_size), sizeof(int), 1, f);
     if (result != 1) {
@@ -634,19 +634,19 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
     st << "  Read material: " << name.c_str();
     if (name.compare("gas") == 0) {
       st << " (considered as drift medium)";
-      m_materials.at(id).driftmedium = true;
+      m_materials.at(index).driftmedium = true;
     } else {
-      m_materials.at(id).driftmedium = false;
+      m_materials.at(index).driftmedium = false;
     }
     delete[] c;
     float tmp_eps;
     result = fread(&(tmp_eps), sizeof(float), 1, f);
-    m_materials.at(id).eps = tmp_eps;
+    m_materials.at(index).eps = tmp_eps;
     if (result != 1) {
       fputs("Reading error while reading eps.", stderr);
       exit(3);
     }
-    st << "; eps is: " << m_materials.at(id).eps;
+    st << "; eps is: " << m_materials.at(index).eps;
     // float mue;
     // result = fread(&(mue), sizeof(float), 1, f);
     // if (result != 1) {
@@ -665,14 +665,6 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
     // Skip mue and rho
     fseek(f, 2 * sizeof(float), SEEK_CUR);
     // ToDo: Check if rho should be used to decide, which material is driftable
-  }
-  if (m_debug) {
-    std::cout << st.str();
-    for (auto it = m_materials.begin(), it_end = m_materials.end(); it != it_end;
-         it++) {
-      std::cout << "Material id: " << std::distance(m_materials.begin(), it)
-                << " \t driftable: " << (*it).driftmedium << std::endl;
-    }
   }
   // To be sure that they are sorted (should be already be the case)
   std::sort(m_xlines.begin(), m_xlines.end());
