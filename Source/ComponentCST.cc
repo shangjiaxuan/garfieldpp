@@ -908,17 +908,14 @@ void ComponentCST::WeightingField(const double xin, const double yin,
   // Map the coordinates onto field map coordinates and get indexes
   bool mirrored[3];
   unsigned int i, j, k;
-  double position_mapped[3] = {0., 0., 0.};
-  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored)) {
+  double pos[3] = {0., 0., 0.};
+  if (!Coordinate2Index(x, y, z, i, j, k, pos, mirrored)) {
     return;
   }
 
-  double rx = (position_mapped[0] - m_xlines.at(i)) /
-              (m_xlines.at(i + 1) - m_xlines.at(i));
-  double ry = (position_mapped[1] - m_ylines.at(j)) /
-              (m_ylines.at(j + 1) - m_ylines.at(j));
-  double rz = (position_mapped[2] - m_zlines.at(k)) /
-              (m_zlines.at(k + 1) - m_zlines.at(k));
+  double rx = (pos[0] - m_xlines.at(i)) / (m_xlines.at(i + 1) - m_xlines.at(i));
+  double ry = (pos[1] - m_ylines.at(j)) / (m_ylines.at(j + 1) - m_ylines.at(j));
+  double rz = (pos[2] - m_zlines.at(k)) / (m_zlines.at(k + 1) - m_zlines.at(k));
 
   float fwx = 0., fwy = 0., fwz = 0.;
   if (!disableFieldComponent[0])
@@ -966,15 +963,15 @@ double ComponentCST::WeightingPotential(const double xin, const double yin,
   // Map the coordinates onto field map coordinates
   bool mirrored[3];
   unsigned int i, j, k;
-  double position_mapped[3] = {0., 0., 0.};
-  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored)) {
+  double pos[3] = {0., 0., 0.};
+  if (!Coordinate2Index(x, y, z, i, j, k, pos, mirrored)) {
     return 0.;
   }
-  double rx = (position_mapped[0] - m_xlines.at(i)) /
+  double rx = (pos[0] - m_xlines.at(i)) /
               (m_xlines.at(i + 1) - m_xlines.at(i));
-  double ry = (position_mapped[1] - m_ylines.at(j)) /
+  double ry = (pos[1] - m_ylines.at(j)) /
               (m_ylines.at(j + 1) - m_ylines.at(j));
-  double rz = (position_mapped[2] - m_zlines.at(k)) /
+  double rz = (pos[2] - m_zlines.at(k)) /
               (m_zlines.at(k + 1) - m_zlines.at(k));
 
   double potential = GetPotential(i, j, k, rx, ry, rz, &((*it).second));
@@ -1013,7 +1010,7 @@ double ComponentCST::WeightingPotential(const double xin, const double yin,
 }
 
 void ComponentCST::GetNumberOfMeshLines(unsigned int& n_x, unsigned int& n_y,
-                                        unsigned int& n_z) {
+                                        unsigned int& n_z) const {
   n_x = m_xlines.size();
   n_y = m_ylines.size();
   n_z = m_zlines.size();
@@ -1022,7 +1019,7 @@ void ComponentCST::GetNumberOfMeshLines(unsigned int& n_x, unsigned int& n_y,
 void ComponentCST::GetElementBoundaries(unsigned int element, double& xmin,
                                         double& xmax, double& ymin,
                                         double& ymax, double& zmin,
-                                        double& zmax) {
+                                        double& zmax) const {
   unsigned int i, j, k;
   Element2Index(element, i, j, k);
   xmin = m_xlines.at(i);
@@ -1038,16 +1035,15 @@ Medium* ComponentCST::GetMedium(const double x, const double y,
   unsigned int i, j, k;
   Coordinate2Index(x, y, z, i, j, k);
   if (m_debug) {
-    std::cout << m_className << "::GetMedium:" << std::endl;
-    std::cout << "    Found position (" << x << ", " << y << ", " << z
-              << "): " << std::endl;
-    std::cout << "    Indices are: x: " << i << "/" << m_xlines.size()
+    std::cout << m_className << "::GetMedium:\n"
+              << "    Position (" << x << ", " << y << ", " << z << "):\n"
+              << "    Indices are: x: " << i << "/" << m_xlines.size()
               << "\t y: " << j << "/" << m_ylines.size() 
               << "\t z: " << k << "/" << m_zlines.size() << std::endl;
-    std::cout << "    Element material index: " << Index2Element(i, j, k)
-              << std::endl;
-    std::cout << "    Element index: "
-              << (int)m_elementMaterial.at(Index2Element(i, j, k)) << std::endl;
+    const auto element = Index2Element(i, j, k);
+    std::cout << "    Element index: " << element << std::endl
+              << "    Material index: "
+              << (int)m_elementMaterial.at(element) << std::endl;
   }
   return m_materials.at(m_elementMaterial.at(Index2Element(i, j, k))).medium;
 }
@@ -1090,52 +1086,44 @@ void ComponentCST::SetRangeZ(const double zmin, const double zmax) {
 
 bool ComponentCST::Coordinate2Index(const double x, const double y,
                                     const double z, unsigned int& i,
-                                    unsigned int& j, unsigned int& k) {
+                                    unsigned int& j, unsigned int& k) const {
   bool mirrored[3] = {false, false, false};
-  double position_mapped[3] = {0., 0., 0.};
-  return Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored);
+  double pos[3] = {0., 0., 0.};
+  return Coordinate2Index(x, y, z, i, j, k, pos, mirrored);
 }
 
-int ComponentCST::Index2Element(const unsigned int i, const unsigned int j,
-                                const unsigned int k) {
-  if (i > m_nx - 2 || j > m_ny - 2 || k > m_nz - 2) {
-    throw "ComponentCST::Index2Element: Error. Element indices out of bounds.";
-  }
-  return i + j * (m_nx - 1) + k * (m_nx - 1) * (m_ny - 1);
-}
 
 bool ComponentCST::Coordinate2Index(const double xin, const double yin,
                                     const double zin, unsigned int& i,
                                     unsigned int& j, unsigned int& k,
-                                    double* position_mapped, bool* mirrored) {
+                                    double* pos, bool* mirrored) const {
   // Map the coordinates onto field map coordinates
-  position_mapped[0] = xin;
-  position_mapped[1] = yin;
-  position_mapped[2] = zin;
+  pos[0] = xin;
+  pos[1] = yin;
+  pos[2] = zin;
   double rcoordinate = 0.;
   double rotation = 0.;
-  MapCoordinates(position_mapped[0], position_mapped[1], position_mapped[2],
+  MapCoordinates(pos[0], pos[1], pos[2],
                  mirrored[0], mirrored[1], mirrored[2], rcoordinate, rotation);
 
   auto it_x =
-      std::lower_bound(m_xlines.begin(), m_xlines.end(), position_mapped[0]);
+      std::lower_bound(m_xlines.begin(), m_xlines.end(), pos[0]);
   auto it_y =
-      std::lower_bound(m_ylines.begin(), m_ylines.end(), position_mapped[1]);
+      std::lower_bound(m_ylines.begin(), m_ylines.end(), pos[1]);
   auto it_z =
-      std::lower_bound(m_zlines.begin(), m_zlines.end(), position_mapped[2]);
+      std::lower_bound(m_zlines.begin(), m_zlines.end(), pos[2]);
   if (it_x == m_xlines.end() || it_y == m_ylines.end() ||
-      it_z == m_zlines.end() || position_mapped[0] < m_xlines.at(0) ||
-      position_mapped[1] < m_ylines.at(0) ||
-      position_mapped[2] < m_zlines.at(0)) {
+      it_z == m_zlines.end() || pos[0] < m_xlines.at(0) ||
+      pos[1] < m_ylines.at(0) ||
+      pos[2] < m_zlines.at(0)) {
     if (m_debug) {
       std::cerr << m_className << "::ElectricFieldBinary:" << std::endl;
       std::cerr << "    Could not find the given coordinate!" << std::endl;
       std::cerr << "    You ask for the following position: " << xin << ", "
                 << yin << ", " << zin << std::endl;
-      std::cerr << "    The mapped position is: " << position_mapped[0] << ", "
-                << position_mapped[1] << ", " << position_mapped[2]
+      std::cerr << "    The mapped position is: " << pos[0] << ", "
+                << pos[1] << ", " << pos[2]
                 << std::endl;
-      PrintRange();
     }
     return false;
   }
@@ -1158,6 +1146,14 @@ bool ComponentCST::Coordinate2Index(const double xin, const double yin,
   else
     k = std::distance(m_zlines.begin(), it_z - 1);
   return true;
+}
+
+int ComponentCST::Index2Element(const unsigned int i, const unsigned int j,
+                                const unsigned int k) const {
+  if (i > m_nx - 2 || j > m_ny - 2 || k > m_nz - 2) {
+    throw "ComponentCST::Index2Element: Error. Element indices out of bounds.";
+  }
+  return i + j * (m_nx - 1) + k * (m_nx - 1) * (m_ny - 1);
 }
 
 void ComponentCST::UpdatePeriodicity() {
@@ -1193,7 +1189,7 @@ double ComponentCST::GetElementVolume(const unsigned int element) {
 void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
                                        const double zin, double& ex, double& ey,
                                        double& ez, double& volt, Medium*& m,
-                                       int& status, bool calculatePotential) {
+                                       int& status, bool calculatePotential) const {
   // Copy the coordinates
   double x = xin, y = yin, z = zin;
 
@@ -1201,16 +1197,13 @@ void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
 
   bool mirrored[3];
   unsigned int i, j, k;
-  double position_mapped[3] = {0., 0., 0.};
-  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored)) {
+  double pos[3] = {0., 0., 0.};
+  if (!Coordinate2Index(x, y, z, i, j, k, pos, mirrored)) {
     return;
   }
-  double rx = (position_mapped[0] - m_xlines.at(i)) /
-              (m_xlines.at(i + 1) - m_xlines.at(i));
-  double ry = (position_mapped[1] - m_ylines.at(j)) /
-              (m_ylines.at(j + 1) - m_ylines.at(j));
-  double rz = (position_mapped[2] - m_zlines.at(k)) /
-              (m_zlines.at(k + 1) - m_zlines.at(k));
+  double rx = (pos[0] - m_xlines.at(i)) / (m_xlines.at(i + 1) - m_xlines.at(i));
+  double ry = (pos[1] - m_ylines.at(j)) / (m_ylines.at(j + 1) - m_ylines.at(j));
+  double rz = (pos[2] - m_zlines.at(k)) / (m_zlines.at(k + 1) - m_zlines.at(k));
 
   float fex = GetFieldComponent(i, j, k, rx, ry, rz, 'x', &m_potential);
   float fey = GetFieldComponent(i, j, k, rx, ry, rz, 'y', &m_potential);
@@ -1241,12 +1234,13 @@ void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
     std::cout << "    Electric field is: " << fex << ", " << fey << ", " << fez
               << "): " << std::endl;
   }
-  // get the material index of the element and return the medium taken from the
+  // Get the material index of the element and return the medium taken from the
   // materials (since the material id is equal to the material vector position)
-  m = m_materials.at(m_elementMaterial.at(Index2Element(i, j, k))).medium;
+  const auto imat = m_elementMaterial.at(Index2Element(i, j, k));
+  m = m_materials.at(imat).medium;
   //  m = materials[elements[imap].matmap].medium;
   status = -5;
-  if (m_materials.at(m_elementMaterial.at(Index2Element(i, j, k))).driftmedium) {
+  if (m_materials.at(imat).driftmedium) {
     if (m) {
       if (m->IsDriftable()) status = 0;
     }
@@ -1263,7 +1257,7 @@ float ComponentCST::GetFieldComponent(const unsigned int i,
                                       const unsigned int k, const double rx,
                                       const double ry, const double rz,
                                       const char component,
-                                      const std::vector<float>* potentials) {
+                                      const std::vector<float>* potentials)  const {
   float dv1 = 0, dv2 = 0, dv3 = 0, dv4 = 0;
   float dv11 = 0, dv21 = 0, dv = 0;
   float e = 0;
@@ -1318,7 +1312,7 @@ float ComponentCST::GetFieldComponent(const unsigned int i,
 float ComponentCST::GetPotential(const unsigned int i, const unsigned int j,
                                  const unsigned int k, const double rx,
                                  const double ry, const double rz,
-                                 const std::vector<float>* potentials) {
+                                 const std::vector<float>* potentials) const {
   double t1 = rx * 2. - 1;
   double t2 = ry * 2. - 1;
   double t3 = rz * 2. - 1;
@@ -1344,13 +1338,13 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
                               const double ry, const double rz,
                               const unsigned int i, const unsigned int j,
                               const unsigned int k,
-                              std::vector<float>* potentials) {
-  int m1 = 0, m2 = 0;
-  if ((i == 0 && rx >= 0.5) || (i == m_xlines.size() - 2 && rx < 0.5) ||
-      (i > 0 && i < m_xlines.size() - 2)) {
-    m1 = m_elementMaterial.at(Index2Element(i, j, k));
+                              const std::vector<float>* potentials) const {
+
+  const int m1 = m_elementMaterial.at(Index2Element(i, j, k));
+  const auto imax = m_xlines.size() - 2;
+  if ((i == 0 && rx >= 0.5) || (i == imax && rx < 0.5) || (i > 0 && i < imax)) {
     if (rx >= 0.5) {
-      m2 = m_elementMaterial.at(Index2Element(i + 1, j, k));
+      const auto m2 = m_elementMaterial.at(Index2Element(i + 1, j, k));
       if (m1 == m2) {
         float ex_next =
             GetFieldComponent(i + 1, j, k, 0.5, ry, rz, 'x', potentials);
@@ -1360,7 +1354,7 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
                  (m_xlines.at(i + 2) - m_xlines.at(i + 1));
       }
     } else {
-      m2 = m_elementMaterial.at(Index2Element(i - 1, j, k));
+      const auto m2 = m_elementMaterial.at(Index2Element(i - 1, j, k));
       if (m1 == m2) {
         float ex_before =
             GetFieldComponent(i - 1, j, k, 0.5, ry, rz, 'x', potentials);
@@ -1372,11 +1366,10 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
     }
   }
 
-  if ((j == 0 && ry >= 0.5) || (j == m_ylines.size() - 2 && ry < 0.5) ||
-      (j > 0 && j < m_ylines.size() - 2)) {
-    m1 = m_elementMaterial.at(Index2Element(i, j, k));
+  const auto jmax = m_ylines.size() - 2;
+  if ((j == 0 && ry >= 0.5) || (j == jmax && ry < 0.5) || (j > 0 && j < jmax)) {
     if (ry >= 0.5) {
-      m2 = m_elementMaterial.at(Index2Element(i, j + 1, k));
+      const auto m2 = m_elementMaterial.at(Index2Element(i, j + 1, k));
       if (m1 == m2) {
         float ey_next =
             GetFieldComponent(i, j + 1, k, rx, 0.5, rz, 'y', potentials);
@@ -1386,7 +1379,7 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
                  (m_ylines.at(j + 2) - m_ylines.at(j + 1));
       }
     } else {
-      m2 = m_elementMaterial.at(Index2Element(i, j - 1, k));
+      const auto m2 = m_elementMaterial.at(Index2Element(i, j - 1, k));
       if (m1 == m2) {
         float ey_next =
             GetFieldComponent(i, j - 1, k, rx, 0.5, rz, 'y', potentials);
@@ -1397,12 +1390,10 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
       }
     }
   }
-
-  if ((k == 0 && rz >= 0.5) || (k == m_zlines.size() - 2 && rz < 0.5) ||
-      (k > 0 && k < m_zlines.size() - 2)) {
-    m1 = m_elementMaterial.at(Index2Element(i, j, k));
+  const auto kmax = m_zlines.size() - 2;
+  if ((k == 0 && rz >= 0.5) || (k == kmax && rz < 0.5) || (k > 0 && k < kmax)) {
     if (rz >= 0.5) {
-      m2 = m_elementMaterial.at(Index2Element(i, j, k + 1));
+      const auto m2 = m_elementMaterial.at(Index2Element(i, j, k + 1));
       if (m1 == m2) {
         float ez_next =
             GetFieldComponent(i, j, k + 1, rx, ry, 0.5, 'z', potentials);
@@ -1412,7 +1403,7 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
                  (m_zlines.at(k + 2) - m_zlines.at(k + 1));
       }
     } else {
-      m2 = m_elementMaterial.at(Index2Element(i, j, k - 1));
+      const auto m2 = m_elementMaterial.at(Index2Element(i, j, k - 1));
       if (m1 == m2) {
         float ez_next =
             GetFieldComponent(i, j, k - 1, rx, ry, 0.5, 'z', potentials);
@@ -1426,17 +1417,18 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
 }
 
 void ComponentCST::Element2Index(int element, unsigned int& i, unsigned int& j,
-                                 unsigned int& k) {
-  int tmp = element;
-  k = element / ((m_xlines.size() - 1) * (m_ylines.size() - 1));
-  tmp -= k * (m_xlines.size() - 1) * (m_ylines.size() - 1);
-  j = tmp / (m_xlines.size() - 1);
-  i = element - j * (m_xlines.size() - 1) -
-      k * (m_xlines.size() - 1) * (m_ylines.size() - 1);
+                                 unsigned int& k) const {
+  const auto nx = m_xlines.size() - 1;
+  const auto ny = (m_ylines.size() - 1);
+  const auto nxy = nx * ny;
+  k = element / nxy;
+  const int tmp = element - k * nxy;
+  j = tmp / nx;
+  i = tmp - j * nx;
 }
 
 int ComponentCST::Index2Node(const unsigned int i, const unsigned int j,
-                             const unsigned int k) {
+                             const unsigned int k) const {
   if (i > m_nx - 1 || j > m_ny - 1 || k > m_nz - 1) {
     throw "ComponentCST::Index2Node: Error. Node indices out of bounds.";
   }

@@ -23,11 +23,11 @@ class ComponentCST : public ComponentFieldMap {
                       const double zShift);
 
   Medium* GetMedium(const double x, const double y, const double z) override;
-  void GetNumberOfMeshLines(unsigned int& n_x, unsigned int& n_y,
-                            unsigned int& n_z);
+  void GetNumberOfMeshLines(unsigned int& nx, unsigned int& ny,
+                            unsigned int& nz) const;
   void GetElementBoundaries(unsigned int element, double& xmin, double& xmax,
                             double& ymin, double& ymax, double& zmin,
-                            double& zmax);
+                            double& zmax) const;
   int GetElementMaterial(unsigned int element) {
     return m_elementMaterial.at(element);
   }
@@ -181,7 +181,7 @@ class ComponentCST : public ComponentFieldMap {
    * This is public since it is used in ViewFEMesh::DrawCST.
    */
   int Index2Element(const unsigned int i, const unsigned int j,
-                    const unsigned int k);
+                    const unsigned int k) const;
   /**
    * Find the positions in the x/y/z position vectors (m_xlines, m_ylines,
    * m_zlines) for a given point.
@@ -190,7 +190,7 @@ class ComponentCST : public ComponentFieldMap {
    * returned for a point inside the mesh.
    */
   bool Coordinate2Index(const double x, const double y, const double z,
-                        unsigned int& i, unsigned int& j, unsigned int& k);
+                        unsigned int& i, unsigned int& j, unsigned int& k) const;
 
  protected:
   // Verify periodicities
@@ -218,7 +218,7 @@ class ComponentCST : public ComponentFieldMap {
    */
   bool Coordinate2Index(const double x, const double y, const double z,
                         unsigned int& i, unsigned int& j, unsigned int& k,
-                        double* position_mapped, bool* mirrored);
+                        double* position_mapped, bool* mirrored) const;
 
  private:
   std::vector<double> m_xlines;  ///< x positions used in the CST mesh
@@ -243,31 +243,31 @@ class ComponentCST : public ComponentFieldMap {
   void ElectricFieldBinary(const double x, const double y, const double z,
                            double& ex, double& ey, double& ez, double& v,
                            Medium*& m, int& status,
-                           const bool calculatePotential = false);
+                           const bool calculatePotential = false) const;
   float GetFieldComponent(const unsigned int i, const unsigned int j,
                           const unsigned int k, const double rx,
                           const double ry, const double rz,
                           const char component,
-                          const std::vector<float>* potentials);
+                          const std::vector<float>* potentials) const;
 
   float GetPotential(const unsigned int i, const unsigned int j,
                      const unsigned int k, const double rx, const double ry,
-                     const double rz, const std::vector<float>* potentials);
+                     const double rz, const std::vector<float>* potentials) const;
 
   void ShapeField(float& ex, float& ey, float& ez, const double rx,
                   const double ry, const double rz, const unsigned int i,
                   const unsigned int j, const unsigned int k,
-                  std::vector<float>* potentials);
+                  const std::vector<float>* potentials) const;
 
   /* Calculate the index (i,j,k) along x,y,z direction of the given element.
    * i,j,k start at 0 and reach at maximum
    * m_xlines-1,m_ylines-1,m_zlines-1
    */
   void Element2Index(int element, unsigned int& i, unsigned int& j,
-                     unsigned int& k);
+                     unsigned int& k) const;
 
   int Index2Node(const unsigned int i, const unsigned int j,
-                 const unsigned int k);
+                 const unsigned int k) const;
 };
 
 /// Helper struct for drawing the mesh with ViewFEMesh.
