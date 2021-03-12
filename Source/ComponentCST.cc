@@ -11,8 +11,71 @@
 #include <vector>
 
 #include "Garfield/ComponentCST.hh"
-#include "TMath.h"
 
+namespace {
+
+bool ReadHeader(FILE* f, const int fileSize, const bool debug, 
+                int& nX, int& nY, int& nZ, int& nNS,
+                int& nES, int& nEM, int& nMaterials) {
+
+  if (!f) return false;
+  // Size of the header in binary files used in the CST export
+  static constexpr int headerSize = 1000;
+  if (fileSize < headerSize) {
+    std::cerr << "ComponentCST::ReadHeader:\n"
+              << "     Error. The file is extremely short and does not seem to "
+              << "contain a header or data." << std::endl;
+    return false;
+  }
+  char header[headerSize];
+  size_t result = fread(header, sizeof(char), headerSize, f);
+  if (result != headerSize) {
+    std::cerr << "ComponentCST::ReadHeader: Could not read the header.\n";
+    return false;
+  }
+
+  int nMeshX = 0, nMeshY = 0, nMeshZ = 0;
+  int nNx = 0, nNy = 0, nNz = 0;
+  int nEx = 0, nEy = 0, nEz = 0;
+
+  std::string fmt = "mesh_nx=%d mesh_ny=%d mesh_nz=%d\n";
+  fmt += "mesh_xlines=%d mesh_ylines=%d mesh_zlines=%d\n";
+  fmt += "nodes_scalar=%d ";
+  fmt += "nodes_vector_x=%d nodes_vector_y=%d nodes_vector_z=%d\n";
+  fmt += "elements_scalar=%d elements_vector_x=%d ";
+  fmt += "elements_vector_y=%d elements_vector_z=%d\n";
+  fmt += "elements_material=%d\n";
+  fmt += "n_materials=%d\n";
+  int filled = std::sscanf(header, fmt.c_str(),
+      &nMeshX, &nMeshY, &nMeshZ, &nX, &nY, &nZ, 
+      &nNS, &nNx, &nNy, &nNz, &nES, &nEx, &nEy, &nEz, &nEM, &nMaterials);
+  if (filled != 16) {
+    std::cerr << "ComponentCST::ReadHeader: File header is broken.\n";
+    return false;
+  }
+  if (fileSize < 1000 + (nX + nY + nZ) * 8 +
+                 (nNS + nNx + nNy + nNz + nES + nEx + nEy + nEz) * 4 +
+                  nEM * 1 + nMaterials * 20) {
+    std::cerr << "ComponentCST::ReadHeader: Unexpected file size.\n";
+    return false;
+  }
+  if (debug) {
+    std::cout << "ComponentCST::ReadHeader:\n"
+              << "  Mesh (nx): " << nMeshX << "\t Mesh (ny): " << nMeshY
+              << "\t Mesh (nz): " << nMeshZ << std::endl
+              << "  Mesh (x_lines): " << nX << "\t Mesh (y_lines): " << nY 
+              << "\t Mesh (z_lines): " << nZ << std::endl
+              << "  Nodes (scalar): " << nNS << "\t Nodes (x): " << nNx
+              << "\t Nodes (y): " << nNy << "\t Nodes (z): " << nNz << "\n"
+              << "  Field (scalar): " << nES << "\t Field (x): " << nEx
+              << "\t Field (y): " << nEy << "\t Field (z): " << nEz << "\n"
+              << "  Elements: " << nEM << "\t Materials: " << nMaterials
+              << std::endl;
+  }
+  return true;
+}
+
+}
 namespace Garfield {
 
 ComponentCST::ComponentCST() : ComponentFieldMap("CST") {
@@ -482,86 +545,27 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   stat(dataFile.c_str(), &fileStatus);
   int fileSize = fileStatus.st_size;
 
-  if (fileSize < 1000) {
-    fclose(f);
-    std::cerr << m_className << "::Initialise:\n"
-              << "     Error. The file is extremely short and does not seem to "
-              << "contain a header or data." << std::endl;
-    return false;
-  }
-
-  char header[headerSize];
-  size_t result = fread(header, sizeof(char), headerSize, f);
-  if (result != headerSize) {
-    fputs("Reading error while reading header.", stderr);
-    exit(3);
-  }
-
-  int nx = 0, ny = 0, nz = 0;
-  int m_x = 0, m_y = 0, m_z = 0;
-  int n_s = 0, n_x = 0, n_y = 0, n_z = 0;
-  int e_s = 0, e_x = 0, e_y = 0, e_z = 0;
-  int e_m = 0;
-
+  int nLinesX = 0, nLinesY = 0, nLinesZ = 0;
+  int nNS = 0, nES = 0, nEM = 0;
   int nMaterials = 0;
-  int filled = 0;
-  filled = std::sscanf(
-      header,
-      (std::string("mesh_nx=%d mesh_ny=%d mesh_nz=%d\n") +
-       std::string("mesh_xlines=%d mesh_ylines=%d mesh_zlines=%d\n") +
-       std::string("nodes_scalar=%d nodes_vector_x=%d nodes_vector_y=%d "
-                   "nodes_vector_z=%d\n") +
-       std::string("elements_scalar=%d elements_vector_x=%d "
-                   "elements_vector_y=%d elements_vector_z=%d\n") +
-       std::string("elements_material=%d\n") + std::string("n_materials=%d\n"))
-          .c_str(),
-      &nx, &ny, &nz, &m_x, &m_y, &m_z, &n_s, &n_x, &n_y, &n_z, &e_s, &e_x, &e_y,
-      &e_z, &e_m, &nMaterials);
-  if (filled != 16) {
-    fclose(f);
-    std::cerr << m_className << "::Initialise:\n"
-              << "    File header of " << dataFile << " is broken.\n";
+  if (!ReadHeader(f, fileSize, m_debug, nLinesX, nLinesY, nLinesZ,
+                  nNS, nES, nEM, nMaterials)) {
+    if (f) fclose(f);
     return false;
-  }
-  if (fileSize < 1000 + (m_x + m_y + m_z) * 8 +
-                     (n_s + n_x + n_y + n_z + e_s + e_x + e_y + e_z) * 4 +
-                     e_m * 1 + (int)nMaterials * 20) {
-    fclose(f);
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Unexpected file size.\n";
-    return false;
-  }
-  if (m_debug) {
-    std::cout << m_className << "::Initialise:" << std::endl;
-    std::cout << "  Information about the data stored in the given binary file:"
-              << std::endl;
-    std::cout << "  Mesh (nx): " << nx << "\t Mesh (ny): " << ny
-              << "\t Mesh (nz): " << nz << std::endl;
-    std::cout << "  Mesh (x_lines): " << m_x << "\t Mesh (y_lines): " << m_y
-              << "\t Mesh (z_lines): " << m_z << std::endl;
-    std::cout << "  Nodes (scalar): " << n_s << "\t Nodes (x): " << n_x
-              << "\t Nodes (y): " << n_y << "\t Nodes (z): " << n_z
-              << std::endl;
-    std::cout << "  Field (scalar): " << e_s << "\t Field (x): " << e_x
-              << "\t Field (y): " << e_y << "\t Field (z): " << e_z
-              << std::endl;
-    std::cout << "  Elements: " << e_m << "\t Materials: " << nMaterials
-              << std::endl;
-  }
-  m_nx = m_x;
-  m_ny = m_y;
-  m_nz = m_z;
+  } 
+  m_nx = nLinesX;
+  m_ny = nLinesY;
+  m_nz = nLinesZ;
   m_nNodes = m_nx * m_ny * m_nz;
   m_nElements = (m_nx - 1) * (m_ny - 1) * (m_nz - 1);
 
-  m_xlines.resize(m_x);
-  m_ylines.resize(m_y);
-  m_zlines.resize(m_z);
-  m_potential.resize(n_s);
-  m_elementMaterial.resize(e_m);
-  //	elements_scalar.resize(e_s);
+  m_xlines.resize(nLinesX);
+  m_ylines.resize(nLinesY);
+  m_zlines.resize(nLinesZ);
+  m_potential.resize(nNS);
+  m_elementMaterial.resize(nEM);
   m_materials.resize(nMaterials);
-  result = fread(m_xlines.data(), sizeof(double), m_xlines.size(), f);
+  auto result = fread(m_xlines.data(), sizeof(double), m_xlines.size(), f);
   if (result != m_xlines.size()) {
     fputs("Reading error while reading xlines.", stderr);
     exit(3);
@@ -579,7 +583,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   }
   result = fread(m_zlines.data(), sizeof(double), m_zlines.size(), f);
   if (result != m_zlines.size()) {
-    fputs("Reading error while reasing zlines", stderr);
+    fputs("Reading error while reading zlines", stderr);
     exit(3);
   } else if (result == 0) {
     fputs("No zlines are stored in the data file.", stderr);
@@ -593,7 +597,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
     fputs("No potentials are stored in the data file.", stderr);
     exit(3);
   }
-  fseek(f, e_s * sizeof(float), SEEK_CUR);
+  fseek(f, nES * sizeof(float), SEEK_CUR);
   // not needed in principle - thus it is ok if nothing is read
   result = fread(m_elementMaterial.data(), sizeof(unsigned char),
                  m_elementMaterial.size(), f);
@@ -642,20 +646,23 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
       fputs("Reading error while reading eps.", stderr);
       exit(3);
     }
-    //		float mue, rho;
-    //		result = fread(&(mue), sizeof(float), 1, f);
-    //		if (result != 1) {fputs ("Reading error while reading
-    //mue.",stderr);
-    // exit (3);}
-    //		result = fread(&(rho), sizeof(float), 1, f);
-    //		if (result != 1) {fputs ("Reading error while reading
-    //rho.",stderr);
-    // exit (3);}
-    st << "; eps is: " << m_materials.at(id).eps <<
-        //				"\t mue is: " << mue <<
-        //				"\t rho is: " << rho <<
-        "\t id is: " << id << std::endl;
-    // skip mue and rho
+    st << "; eps is: " << m_materials.at(id).eps;
+    // float mue;
+    // result = fread(&(mue), sizeof(float), 1, f);
+    // if (result != 1) {
+    //   fputs ("Reading error while reading mue.", stderr);
+    //   exit (3);
+    // }
+    // st << "\t mue is: " << mue;
+    // float rho;
+    // result = fread(&(rho), sizeof(float), 1, f);
+    // if (result != 1) {
+    //   fputs ("Reading error while reading rho.", stderr);
+    //   exit (3);
+    // }
+    // st << "\t rho is: " << rho;
+    st << "\t id is: " << id << std::endl;
+    // Skip mue and rho
     fseek(f, 2 * sizeof(float), SEEK_CUR);
     // ToDo: Check if rho should be used to decide, which material is driftable
   }
@@ -759,85 +766,24 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
     stat(prnsol.c_str(), &fileStatus);
     int fileSize = fileStatus.st_size;
 
-    if (fileSize < 1000) {
-      fclose(f);
-      std::cerr << m_className << "::SetWeightingField:" << std::endl;
-      std::cerr << "     Error. The file is extremely short and does not seem "
-                   "to contain a header or data.\n";
-      return false;
-    }
-
-    char header[headerSize];
-    size_t result;
-    result = fread(header, sizeof(char), headerSize, f);
-    if (result != headerSize) {
-      fputs("Reading error while reading header.", stderr);
-      exit(3);
-    }
-
-    int nx = 0, ny = 0, nz = 0;
-    int m_x = 0, m_y = 0, m_z = 0;
-    int n_x = 0, n_y = 0, n_z = 0;
-    int e_s = 0, e_x = 0, e_y = 0, e_z = 0;
-    int e_m = 0;
-
+    int nLinesX = 0, nLinesY = 0, nLinesZ = 0;
+    int nES = 0, nEM = 0;
     int nMaterials = 0;
-    int filled = 0;
-    filled = std::sscanf(
-        header,
-        (std::string("mesh_nx=%d mesh_ny=%d mesh_nz=%d\n") +
-         std::string("mesh_xlines=%d mesh_ylines=%d mesh_zlines=%d\n") +
-         std::string("nodes_scalar=%d nodes_vector_x=%d nodes_vector_y=%d "
-                     "nodes_vector_z=%d\n") +
-         std::string("elements_scalar=%d elements_vector_x=%d "
-                     "elements_vector_y=%d elements_vector_z=%d\n") +
-         std::string("elements_material=%d\n") +
-         std::string("n_materials=%d\n"))
-            .c_str(),
-        &nx, &ny, &nz, &m_x, &m_y, &m_z, &nread, &n_x, &n_y, &n_z, &e_s, &e_x,
-        &e_y, &e_z, &e_m, &nMaterials);
-    if (filled != 16) {
-      fclose(f);
-      std::cerr << m_className << "::SetWeightingField:\n"
-                << "    File header of " << prnsol << " is broken.\n";
+    if (!ReadHeader(f, fileSize, m_debug, nLinesX, nLinesY, nLinesZ,
+                    nread, nES, nEM, nMaterials)) {
+      if (f) fclose(f);
       return false;
-    }
-    if (fileSize < 1000 + (m_x + m_y + m_z) * 8 +
-                       (nread + n_x + n_y + n_z + e_s + e_x + e_y + e_z) * 4 +
-                       e_m * 1 + (int)nMaterials * 20) {
-      fclose(f);
-      std::cerr << m_className << "::SetWeightingField:\n"
-                << "    Unexpected file size.\n";
-      return false;
-    }
-    if (m_debug) {
-      std::cout << m_className << "::SetWeightingField:" << std::endl;
-      std::cout
-          << "  Information about the data stored in the given binary file:"
-          << std::endl;
-      std::cout << "  Mesh (nx): " << nx << "\t Mesh (ny): " << ny
-                << "\t Mesh (nz): " << nz << std::endl;
-      std::cout << "  Mesh (x_lines): " << m_x << "\t Mesh (y_lines): " << m_y
-                << "\t Mesh (z_lines): " << m_z << std::endl;
-      std::cout << "  Nodes (scalar): " << nread << "\t Nodes (x): " << n_x
-                << "\t Nodes (y): " << n_y << "\t Nodes (z): " << n_z
-                << std::endl;
-      std::cout << "  Field (scalar): " << e_s << "\t Field (x): " << e_x
-                << "\t Field (y): " << e_y << "\t Field (z): " << e_z
-                << std::endl;
-      std::cout << "  Elements: " << e_m << "\t Materials: " << nMaterials
-                << std::endl;
-    }
-    // skip everything, but the potential
-    fseek(f, m_x * sizeof(double), SEEK_CUR);
-    fseek(f, m_y * sizeof(double), SEEK_CUR);
-    fseek(f, m_z * sizeof(double), SEEK_CUR);
-    result = fread(potentials.data(), sizeof(float), potentials.size(), f);
+    } 
+    // Skip everything, but the potential
+    fseek(f, nLinesX * sizeof(double), SEEK_CUR);
+    fseek(f, nLinesY * sizeof(double), SEEK_CUR);
+    fseek(f, nLinesZ * sizeof(double), SEEK_CUR);
+    auto result = fread(potentials.data(), sizeof(float), potentials.size(), f);
     if (result != potentials.size()) {
       fputs("Reading error while reading nodes.", stderr);
       exit(3);
     } else if (result == 0) {
-      fputs("No wighting potentials are stored in the data file.", stderr);
+      fputs("No weighting potentials are stored in the data file.", stderr);
       exit(3);
     }
     fprnsol.close();
@@ -1098,17 +1044,17 @@ void ComponentCST::GetElementBoundaries(unsigned int element, double& xmin,
   zmax = m_zlines.at(k + 1);
 }
 
-Medium* ComponentCST::GetMedium(const double xin, const double yin,
-                                const double zin) {
+Medium* ComponentCST::GetMedium(const double x, const double y,
+                                const double z) {
   unsigned int i, j, k;
-  Coordinate2Index(xin, yin, zin, i, j, k);
+  Coordinate2Index(x, y, z, i, j, k);
   if (m_debug) {
     std::cout << m_className << "::GetMedium:" << std::endl;
-    std::cout << "    Found position (" << xin << ", " << yin << ", " << zin
+    std::cout << "    Found position (" << x << ", " << y << ", " << z
               << "): " << std::endl;
     std::cout << "    Indices are: x: " << i << "/" << m_xlines.size()
-              << "\t y: " << j << "/" << m_ylines.size() << "\t z: " << k << "/"
-              << m_zlines.size() << std::endl;
+              << "\t y: " << j << "/" << m_ylines.size() 
+              << "\t z: " << k << "/" << m_zlines.size() << std::endl;
     std::cout << "    Element material index: " << Index2Element(i, j, k)
               << std::endl;
     std::cout << "    Element index: "
@@ -1166,7 +1112,7 @@ bool ComponentCST::Coordinate2Index(const double x, const double y,
 int ComponentCST::Index2Element(const unsigned int i, const unsigned int j,
                                 const unsigned int k) {
   if (i > m_nx - 2 || j > m_ny - 2 || k > m_nz - 2) {
-    throw "FieldMap::ElementByIndex: Error. Element indexes out of bounds.";
+    throw "ComponentCST::Index2Element: Error. Element indices out of bounds.";
   }
   return i + j * (m_nx - 1) + k * (m_nx - 1) * (m_ny - 1);
 }
@@ -1494,7 +1440,7 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
     }
   }
 }
-//
+
 void ComponentCST::Element2Index(int element, unsigned int& i, unsigned int& j,
                                  unsigned int& k) {
   int tmp = element;
@@ -1508,7 +1454,7 @@ void ComponentCST::Element2Index(int element, unsigned int& i, unsigned int& j,
 int ComponentCST::Index2Node(const unsigned int i, const unsigned int j,
                              const unsigned int k) {
   if (i > m_nx - 1 || j > m_ny - 1 || k > m_nz - 1) {
-    throw "FieldMap::NodeByIndex: Error. Node indexes out of bounds.";
+    throw "ComponentCST::Index2Node: Error. Node indices out of bounds.";
   }
   return i + j * m_nx + k * m_nx * m_ny;
 }
