@@ -215,15 +215,10 @@ class ComponentCST : public ComponentFieldMap {
    * \param position_mapped The calculated mapped position (x,y,z) -> (x_mapped,
    * y_mapped, z_mapped)
    * \param mirrored Information if x, y, or z direction is mirrored.
-   * \param rcoordinate Information about rotation of the component. See
-   * ComponentFieldMap::MapCoordinates.
-   * \param rotation Information about rotation of the component. See
-   * ComponentFieldMap::MapCoordinates.
    */
   bool Coordinate2Index(const double x, const double y, const double z,
                         unsigned int& i, unsigned int& j, unsigned int& k,
-                        double* position_mapped, bool* mirrored,
-                        double& rcoordinate, double& rotation);
+                        double* position_mapped, bool* mirrored);
 
  private:
   std::vector<double> m_xlines;  ///< x positions used in the CST mesh

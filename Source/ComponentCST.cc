@@ -907,12 +907,11 @@ void ComponentCST::WeightingField(const double xin, const double yin,
 
   // Map the coordinates onto field map coordinates and get indexes
   bool mirrored[3];
-  double rcoordinate, rotation;
   unsigned int i, j, k;
   double position_mapped[3] = {0., 0., 0.};
-  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored,
-                        rcoordinate, rotation))
+  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored)) {
     return;
+  }
 
   double rx = (position_mapped[0] - m_xlines.at(i)) /
               (m_xlines.at(i + 1) - m_xlines.at(i));
@@ -966,13 +965,11 @@ double ComponentCST::WeightingPotential(const double xin, const double yin,
 
   // Map the coordinates onto field map coordinates
   bool mirrored[3];
-  double rcoordinate, rotation;
   unsigned int i, j, k;
   double position_mapped[3] = {0., 0., 0.};
-  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored,
-                        rcoordinate, rotation))
+  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored)) {
     return 0.;
-
+  }
   double rx = (position_mapped[0] - m_xlines.at(i)) /
               (m_xlines.at(i + 1) - m_xlines.at(i));
   double ry = (position_mapped[1] - m_ylines.at(j)) /
@@ -1096,9 +1093,7 @@ bool ComponentCST::Coordinate2Index(const double x, const double y,
                                     unsigned int& j, unsigned int& k) {
   bool mirrored[3] = {false, false, false};
   double position_mapped[3] = {0., 0., 0.};
-  double rcoordinate, rotation;
-  return Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored,
-                          rcoordinate, rotation);
+  return Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored);
 }
 
 int ComponentCST::Index2Element(const unsigned int i, const unsigned int j,
@@ -1112,12 +1107,13 @@ int ComponentCST::Index2Element(const unsigned int i, const unsigned int j,
 bool ComponentCST::Coordinate2Index(const double xin, const double yin,
                                     const double zin, unsigned int& i,
                                     unsigned int& j, unsigned int& k,
-                                    double* position_mapped, bool* mirrored,
-                                    double& rcoordinate, double& rotation) {
+                                    double* position_mapped, bool* mirrored) {
   // Map the coordinates onto field map coordinates
   position_mapped[0] = xin;
   position_mapped[1] = yin;
   position_mapped[2] = zin;
+  double rcoordinate = 0.;
+  double rotation = 0.;
   MapCoordinates(position_mapped[0], position_mapped[1], position_mapped[2],
                  mirrored[0], mirrored[1], mirrored[2], rcoordinate, rotation);
 
@@ -1204,13 +1200,11 @@ void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
   ex = ey = ez = 0;
 
   bool mirrored[3];
-  double rcoordinate, rotation;
   unsigned int i, j, k;
   double position_mapped[3] = {0., 0., 0.};
-  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored,
-                        rcoordinate, rotation))
+  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored)) {
     return;
-
+  }
   double rx = (position_mapped[0] - m_xlines.at(i)) /
               (m_xlines.at(i + 1) - m_xlines.at(i));
   double ry = (position_mapped[1] - m_ylines.at(j)) /
