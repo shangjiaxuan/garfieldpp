@@ -441,6 +441,16 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
    * faster.
    */
 
+  // Helper struct.
+  struct PolygonInfo {
+    double p1[2];
+    double p2[2];
+    double p3[2];
+    double p4[2];
+    int element;
+    int material;
+  };
+
   // Get the map boundaries from the component
   double mapxmax = m_component->m_mapmax[0];
   double mapxmin = m_component->m_mapmin[0];

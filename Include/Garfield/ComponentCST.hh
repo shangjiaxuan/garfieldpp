@@ -281,15 +281,6 @@ class ComponentCST : public ComponentFieldMap {
                   unsigned int& k) const;
 };
 
-/// Helper struct for drawing the mesh with ViewFEMesh.
-struct PolygonInfo {
-  double p1[2];
-  double p2[2];
-  double p3[2];
-  double p4[2];
-  int element;
-  int material;
-};
 }
 
 #endif
