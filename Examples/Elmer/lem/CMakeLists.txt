@@ -1,13 +1,15 @@
-#---Setup the example project---------------------------------------------------
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+#######################################################
+# Use the code in this section for standalone projects
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project(LEM)
-
-#---Find Garfield package-------------------------------------------------------
-find_package(Garfield REQUIRED)
+if(NOT TARGET Garfield::Garfield::Garfield::Garfield)
+  find_package(Garfield::Garfield REQUIRED)
+endif()
+#######################################################
 
 #---Build executable------------------------------------------------------------
 add_executable(avalanche avalanche.cc)
-target_link_libraries(avalanche Garfield)
+target_link_libraries(avalanche Garfield::Garfield)
 
 #---Copy all files locally to the build directory-------------------------------
 foreach(_file gemcell/mesh.header gemcell/mesh.elements gemcell/mesh.nodes gemcell/dielectrics.dat gemcell/gemcell.result)

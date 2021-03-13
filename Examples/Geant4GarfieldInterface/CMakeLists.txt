@@ -1,3 +1,12 @@
+#######################################################
+# Use the code in this section for standalone projects
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+project(Geant4Garfield)
+if(NOT TARGET Garfield::Garfield)
+  find_package(Garfield REQUIRED)
+endif()
+#######################################################
+
 #---Find Geant4 package, activating all available UI and Vis drivers by default-
 #   You can set WITH_GEANT4_UIVIS to OFF via the command line or ccmake/cmake-gui
 #   to build a batch mode only executable
@@ -24,7 +33,7 @@ file(GLOB headers ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hh)
 
 #---Add the executable, and link it to the Geant4 libraries---------------------
 add_executable(exampleGeant4Interface exampleGarfield.cc ${sources} ${headers})
-target_link_libraries(exampleGeant4Interface ${Geant4_LIBRARIES} Garfield)
+target_link_libraries(exampleGeant4Interface ${Geant4_LIBRARIES} Garfield::Garfield)
 target_include_directories(exampleGeant4Interface PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
 #---Copy all scripts to the build directory-------------------------------------

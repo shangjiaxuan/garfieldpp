@@ -1,6 +1,15 @@
+#######################################################
+# Use the code in this section for standalone projects
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+project(Srim)
+if(NOT TARGET Garfield::Garfield)
+  find_package(Garfield REQUIRED)
+endif()
+#######################################################
+
 #---Build executable------------------------------------------------------------
 add_executable(srim srim.C)
-target_link_libraries(srim Garfield)
+target_link_libraries(srim Garfield::Garfield)
 
 #---Copy all files locally to the build directory-------------------------------
 foreach(_file alpha_ArCO2_70_30.txt)
