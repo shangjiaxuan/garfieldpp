@@ -221,11 +221,6 @@ void ViewFEMesh::DrawElements() {
     if (m_disabledMaterial[mat]) continue;
     // -- Tetrahedral elements
 
-    // Coordinates of vertices
-    double vx1, vy1, vz1;
-    double vx2, vy2, vz2;
-    double vx3, vy3, vz3;
-    double vx4, vy4, vz4;
 
     TGraph gr;
     const short col = m_colorMap.count(mat) != 0 ? m_colorMap[mat] : 1;
@@ -241,53 +236,58 @@ void ViewFEMesh::DrawElements() {
     if (m_fillMesh) opt += "f";
     opt += "same";
 
-    const auto& n0 = m_component->m_nodes[element.emap[0]];
-    const auto& n1 = m_component->m_nodes[element.emap[1]];
-    const auto& n2 = m_component->m_nodes[element.emap[2]];
-    const auto& n3 = m_component->m_nodes[element.emap[3]];
+    // Get the vertex coordinates in the basic cell.
+    std::vector<double> vx0;
+    std::vector<double> vy0;
+    std::vector<double> vz0;
+    const size_t nNodes = 4;
+    for (size_t j = 0; j < nNodes; ++j) {
+      const auto& node = m_component->m_nodes[element.emap[j]];
+      vx0.push_back(node.x);
+      vy0.push_back(node.y);
+      vz0.push_back(node.z);
+    }
+    // Coordinates of vertices
+    std::vector<double> vx(nNodes, 0.);
+    std::vector<double> vy(nNodes, 0.);
+    std::vector<double> vz(nNodes, 0.);
     // Loop over the periodicities in x.
     for (int nx = nMinX; nx <= nMaxX; nx++) {
-      // Determine the x-coordinates of the tetrahedral vertices.
+      // Determine the x-coordinates of the vertices.
       if (m_component->m_mirrorPeriodic[0] && nx != 2 * (nx / 2)) {
-        vx1 = mapxmin + (mapxmax - n0.x) + sx * nx;
-        vx2 = mapxmin + (mapxmax - n1.x) + sx * nx;
-        vx3 = mapxmin + (mapxmax - n2.x) + sx * nx;
-        vx4 = mapxmin + (mapxmax - n3.x) + sx * nx;
+        for (size_t j = 0; j < nNodes; ++j) {
+          vx[j] = mapxmin + (mapxmax - vx0[j]) + sx * nx;
+        }
       } else {
-        vx1 = n0.x + sx * nx;
-        vx2 = n1.x + sx * nx;
-        vx3 = n2.x + sx * nx;
-        vx4 = n3.x + sx * nx;
+        for (size_t j = 0; j < nNodes; ++j) {
+          vx[j] = vx0[j] + sx * nx;
+        }
       }
 
       // Loop over the periodicities in y.
       for (int ny = nMinY; ny <= nMaxY; ny++) {
-        // Determine the y-coordinates of the tetrahedral vertices.
+        // Determine the y-coordinates of the vertices.
         if (m_component->m_mirrorPeriodic[1] && ny != 2 * (ny / 2)) {
-          vy1 = mapymin + (mapymax - n0.y) + sy * ny;
-          vy2 = mapymin + (mapymax - n1.y) + sy * ny;
-          vy3 = mapymin + (mapymax - n2.y) + sy * ny;
-          vy4 = mapymin + (mapymax - n3.y) + sy * ny;
+          for (size_t j = 0; j < nNodes; ++j) {
+            vy[j] = mapymin + (mapymax - vy0[j]) + sy * ny;
+          }
         } else {
-          vy1 = n0.y + sy * ny;
-          vy2 = n1.y + sy * ny;
-          vy3 = n2.y + sy * ny;
-          vy4 = n3.y + sy * ny;
+          for (size_t j = 0; j < nNodes; ++j) {
+            vy[j] = vy0[j] + sy * ny;
+          }
         }
 
         // Loop over the periodicities in z.
         for (int nz = nMinZ; nz <= nMaxZ; nz++) {
-          // Determine the z-coordinates of the tetrahedral vertices.
+          // Determine the z-coordinates of the vertices.
           if (m_component->m_mirrorPeriodic[2] && nz != 2 * (nz / 2)) {
-            vz1 = mapzmin + (mapzmax - n0.z) + sz * nz;
-            vz2 = mapzmin + (mapzmax - n1.z) + sz * nz;
-            vz3 = mapzmin + (mapzmax - n2.z) + sz * nz;
-            vz4 = mapzmin + (mapzmax - n3.z) + sz * nz;
+            for (size_t j = 0; j < nNodes; ++j) {
+              vz[j] = mapzmin + (mapzmax - vz0[j]) + sz * nz;
+            }
           } else {
-            vz1 = n0.z + sz * nz;
-            vz2 = n1.z + sz * nz;
-            vz3 = n2.z + sz * nz;
-            vz4 = n3.z + sz * nz;
+            for (size_t j = 0; j < nNodes; ++j) {
+              vz[j] = vz0[j] + sz * nz;
+            }
           }
 
           // Store the x and y coordinates of the relevant mesh vertices.
@@ -296,74 +296,32 @@ void ViewFEMesh::DrawElements() {
 
           // Value used to determine whether a vertex is in the plane.
           const double pcf = std::max(
-              {std::abs(vx1), std::abs(vy1), std::abs(vz1), std::abs(fx),
-               std::abs(fy), std::abs(fz), std::abs(dist)});
+              {std::abs(vx[0]), std::abs(vy[0]), std::abs(vz[0]), 
+               std::abs(fx), std::abs(fy), std::abs(fz), std::abs(dist)});
           const double tol = 1.e-4 * pcf;
           // First isolate the vertices that are in the viewing plane.
-          bool in1 = (std::abs(fx * vx1 + fy * vy1 + fz * vz1 - dist) < tol);
-          bool in2 = (std::abs(fx * vx2 + fy * vy2 + fz * vz2 - dist) < tol);
-          bool in3 = (std::abs(fx * vx3 + fy * vy3 + fz * vz3 - dist) < tol);
-          bool in4 = (std::abs(fx * vx4 + fy * vy4 + fz * vz4 - dist) < tol);
-
-          // Calculate the planar coordinates for the points that are in the
-          // plane.
-          double xp = 0., yp = 0.;
-          if (in1) {
-            ToPlane(vx1, vy1, vz1, xp, yp);
-            vX.push_back(xp);
-            vY.push_back(yp);
+          std::vector<bool> in(nNodes, false);
+          for (size_t j = 0; j < nNodes; ++j) {
+            if (std::abs(fx * vx[j] + fy * vy[j] + fz * vz[j] - dist) < tol) {
+              // Point is in the plane.
+              in[j] = true;
+              // Calculate the planar coordinates.
+              double xp = 0., yp = 0.;
+              ToPlane(vx[j], vy[j], vz[j], xp, yp);
+              vX.push_back(xp);
+              vY.push_back(yp);
+            }
           }
-          if (in2) {
-            ToPlane(vx2, vy2, vz2, xp, yp);
-            vX.push_back(xp);
-            vY.push_back(yp);
-          }
-          if (in3) {
-            ToPlane(vx3, vy3, vz3, xp, yp);
-            vX.push_back(xp);
-            vY.push_back(yp);
-          }
-          if (in4) {
-            ToPlane(vx4, vy4, vz4, xp, yp);
-            vX.push_back(xp);
-            vY.push_back(yp);
-          }
-
+         
           // Cut the sides that are not in the plane.
-          if (!(in1 || in2)) {
-            if (PlaneCut(vx1, vy1, vz1, vx2, vy2, vz2, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
-            }
-          }
-          if (!(in1 || in3)) {
-            if (PlaneCut(vx1, vy1, vz1, vx3, vy3, vz3, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
-            }
-          }
-          if (!(in1 || in4)) {
-            if (PlaneCut(vx1, vy1, vz1, vx4, vy4, vz4, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
-            }
-          }
-          if (!(in2 || in3)) {
-            if (PlaneCut(vx2, vy2, vz2, vx3, vy3, vz3, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
-            }
-          }
-          if (!(in2 || in4)) {
-            if (PlaneCut(vx2, vy2, vz2, vx4, vy4, vz4, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
-            }
-          }
-          if (!(in3 || in4)) {
-            if (PlaneCut(vx3, vy3, vz3, vx4, vy4, vz4, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
+          for (size_t j = 0; j < nNodes; ++j) {
+            for (size_t k = j + 1; k < nNodes; ++k) {
+              if (in[j] || in[k]) continue;
+              if (PlaneCut(vx[j], vy[j], vz[j], 
+                           vx[k], vy[k], vz[k], xMat)) {
+                vX.push_back(xMat(0, 0));
+                vY.push_back(xMat(1, 0));
+              }
             }
           }
           if (vX.size() < 3) continue;
