@@ -1,13 +1,13 @@
-#######################################################
+# ########################################################################################
 # Use the code in this section for standalone projects
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project(neBEM)
 if(NOT TARGET Garfield::Garfield)
   find_package(Garfield REQUIRED)
 endif()
-#######################################################
+# ########################################################################################
 
-#---Build executables-----------------------------------------------------------
+# ---Build executables-----------------------------------------------------------
 add_executable(RPCbyneBEM RPCbyneBEM.C)
 target_link_libraries(RPCbyneBEM Garfield::Garfield)
 
@@ -25,4 +25,3 @@ target_link_libraries(crossingWires Garfield::Garfield)
 
 add_executable(parallelPlatesWeightingField parallelPlatesWeightingField.C)
 target_link_libraries(parallelPlatesWeightingField Garfield::Garfield)
-

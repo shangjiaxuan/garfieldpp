@@ -1,26 +1,26 @@
-#--- GEM
+# --- GEM
 add_subdirectory(Gem)
 
-#--- Drift tube 
+# --- Drift tube
 add_subdirectory(DriftTube)
 
-#--- Gas files
+# --- Gas files
 add_subdirectory(GasFile)
 
-#--- Analytic fields
+# --- Analytic fields
 add_subdirectory(AnalyticField)
 
-#--- Regular grid
+# --- Regular grid
 add_subdirectory(Grid)
 
-#--- Heed
+# --- Heed
 add_subdirectory(Heed)
 
-#--- SRIM
+# --- SRIM
 add_subdirectory(Srim)
 
-#--- Geant4-Garfield interface
+# --- Geant4-Garfield interface
 add_subdirectory(Geant4GarfieldInterface)
 
-#--- neBEM
+# --- neBEM
 add_subdirectory(neBEM)

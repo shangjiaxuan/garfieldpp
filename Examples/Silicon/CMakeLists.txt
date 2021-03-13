@@ -1,13 +1,12 @@
-#######################################################
+# ########################################################################################
 # Use the code in this section for standalone projects
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project(Silicon)
 if(NOT TARGET Garfield::Garfield)
   find_package(Garfield REQUIRED)
 endif()
-#######################################################
+# ########################################################################################
 
-#---Build executable------------------------------------------------------------
+# ---Build executable------------------------------------------------------------
 add_executable(signal signal.C)
 target_link_libraries(signal Garfield::Garfield)
-
