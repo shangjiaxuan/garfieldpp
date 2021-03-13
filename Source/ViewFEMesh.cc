@@ -48,8 +48,30 @@ bool ViewFEMesh::Plot() {
   if (!RangeSet(pad)) {
     SetRange(pad, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
   }
+  
+  if (m_drawAxes) {
+    if (!m_xaxis && !m_yaxis) {
+      // Draw default axes.
+      auto frame = pad->DrawFrame(m_xMinPlot, m_yMinPlot,
+                                  m_xMaxPlot, m_yMaxPlot);
+      if (m_xaxisTitle.empty()) {
+        frame->GetXaxis()->SetTitle(LabelX().c_str());
+      } else { 
+        frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
+      }
+      if (m_yaxisTitle.empty()) {
+        frame->GetYaxis()->SetTitle(LabelY().c_str());
+      } else {
+        frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
+      }
+    } else {
+      // Draw custom axes.
+      if (m_xaxis) m_xaxis->Draw();
+      if (m_yaxis) m_yaxis->Draw();
+    }
+  }
 
-  // Plot the elements
+  // Plot the mesh elements.
   ComponentCST* componentCST = dynamic_cast<ComponentCST*>(m_component);
   if (componentCST) {
     std::cout << m_className << "::Plot: CST component. Calling DrawCST.\n";
@@ -57,8 +79,50 @@ bool ViewFEMesh::Plot() {
   } else {
     DrawElements();
   }
-  gPad->Update();
+  
+  // If we have an associated ViewDrift object, plot the drift lines.
+  if (m_viewDrift) {
+    // Plot a 2D projection of the drift line.
+    for (const auto& dline : m_viewDrift->m_driftLines) {
+      TGraph gr;
+      if (dline.second == ViewDrift::Particle::Electron) {
+        gr.SetLineColor(kOrange - 3);
+      } else {
+        gr.SetLineColor(kRed + 1);
+      }
+      std::vector<float> xgr;
+      std::vector<float> ygr;
+      // Loop over the points.
+      for (const auto& point : dline.first) {
+        // Project this point onto the plane.
+        float xp = 0., yp = 0.;
+        ToPlane(point[0], point[1], point[2], xp, yp);
+        // Add this point if it is within the view.
+        if (InView(xp, yp)) {
+          xgr.push_back(xp);
+          ygr.push_back(yp);
+        }
+      }
+      if (!xgr.empty()) {
+        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
+      }
+    }
+  }
 
+  if (m_drawViewRegion && !m_viewRegionX.empty()) {
+    TPolyLine poly;
+    poly.SetLineColor(kSpring + 4);
+    poly.SetLineWidth(3);
+    std::vector<double> xv = m_viewRegionX;
+    std::vector<double> yv = m_viewRegionY;
+    // Close the polygon.
+    xv.push_back(m_viewRegionX[0]);
+    yv.push_back(m_viewRegionY[0]);
+    poly.DrawPolyLine(xv.size(), xv.data(), yv.data(), "same");
+  }
+  gPad->Update();
+  // Draw axes again so they are on top
+  gPad->RedrawAxis("g");
   return true;
 }
 
@@ -168,31 +232,6 @@ void ViewFEMesh::DrawElements() {
   const bool perZ =
       m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
 
-  auto pad = GetCanvas();
-  pad->cd();
-
-  if (m_drawAxes) {
-    if (!m_xaxis && !m_yaxis) {
-      // Draw default axes.
-      auto frame = pad->DrawFrame(m_xMinPlot, m_yMinPlot,
-                                  m_xMaxPlot, m_yMaxPlot);
-      if (m_xaxisTitle.empty()) {
-        frame->GetXaxis()->SetTitle(LabelX().c_str());
-      } else { 
-        frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
-      }
-      if (m_yaxisTitle.empty()) {
-        frame->GetYaxis()->SetTitle(LabelY().c_str());
-      } else {
-        frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
-      }
-    } else {
-      // Draw custom axes.
-      if (m_xaxis) m_xaxis->Draw();
-      if (m_yaxis) m_yaxis->Draw();
-    }
-  }
-
   // Get the plane information.
   const double fx = m_plane[0];
   const double fy = m_plane[1];
@@ -210,6 +249,9 @@ void ViewFEMesh::DrawElements() {
   const int nMinZ = perZ ? int(m_zMinBox / sz) - 1 : 0;
   const int nMaxZ = perZ ? int(m_zMaxBox / sz) + 1 : 0;
 
+  bool cst = false;
+  if (dynamic_cast<ComponentCST*>(m_component)) cst = true;
+
   // Loop over all elements.
   const auto nElements = m_component->GetNumberOfElements();
   for (size_t i = 0; i < nElements; ++i) {
@@ -221,7 +263,7 @@ void ViewFEMesh::DrawElements() {
     if (driftmedium && !m_plotMeshBorders) continue;
     // Do not create polygons for disabled materials.
     if (m_disabledMaterial[mat]) continue;
-    // -- Tetrahedral elements
+
     TGraph gr;
     const short col = m_colorMap.count(mat) != 0 ? m_colorMap[mat] : 1;
     gr.SetLineColor(col);
@@ -310,8 +352,10 @@ void ViewFEMesh::DrawElements() {
           const double tol = 1.e-4 * pcf;
           // First isolate the vertices that are in the viewing plane.
           std::vector<bool> in(nNodes, false);
+          int cnt = 0;
           for (size_t j = 0; j < nNodes; ++j) {
-            if (std::abs(fx * vx[j] + fy * vy[j] + fz * vz[j] - dist) < tol) {
+            const double d = fx * vx[j] + fy * vy[j] + fz * vz[j] - dist;
+            if (std::abs(d) < tol) {
               // Point is in the plane.
               in[j] = true;
               // Calculate the planar coordinates.
@@ -319,17 +363,42 @@ void ViewFEMesh::DrawElements() {
               ToPlane(vx[j], vy[j], vz[j], xp, yp);
               vX.push_back(xp);
               vY.push_back(yp);
+            } else {
+              if (d > 0.) {
+                cnt += 1;
+              } else { 
+                cnt -= 1;
+              }
             }
           }
-         
+          // Stop if all points are on the same side of the plane.
+          if (std::abs(cnt) == (int)nNodes) continue;
           // Cut the sides that are not in the plane.
-          for (size_t j = 0; j < nNodes; ++j) {
-            for (size_t k = j + 1; k < nNodes; ++k) {
-              if (in[j] || in[k]) continue;
-              if (PlaneCut(vx[j], vy[j], vz[j], 
-                           vx[k], vy[k], vz[k], xMat)) {
-                vX.push_back(xMat(0, 0));
-                vY.push_back(xMat(1, 0));
+          if (cst) {
+            const std::array<std::array<unsigned int, 3>, 8> neighbours = {{
+              {1, 2, 4}, {0, 3, 5}, {0, 3, 6}, {1, 2, 7},
+              {0, 5, 6}, {1, 4, 7}, {2, 4, 7}, {3, 5, 6}
+            }};
+            for (size_t j = 0; j < nNodes; ++j) {
+              for (unsigned int k : neighbours[j]) {
+                if (in[j] || in[k]) continue;
+                if (PlaneCut(vx[j], vy[j], vz[j], 
+                             vx[k], vy[k], vz[k], xMat)) {
+                  vX.push_back(xMat(0, 0));
+                  vY.push_back(xMat(1, 0));
+                }
+              }
+            } 
+          } else { 
+            // Tetrahedron.
+            for (size_t j = 0; j < nNodes; ++j) {
+              for (size_t k = j + 1; k < nNodes; ++k) {
+                if (in[j] || in[k]) continue;
+                if (PlaneCut(vx[j], vy[j], vz[j], 
+                             vx[k], vy[k], vz[k], xMat)) {
+                  vX.push_back(xMat(0, 0));
+                  vY.push_back(xMat(1, 0));
+                }
               }
             }
           }
@@ -348,7 +417,6 @@ void ViewFEMesh::DrawElements() {
 
           // If we have more than 2 vertices, add the polygon.
           if (cX.size() <= 2) continue;
-
           // Again eliminate crossings of the polygon lines.
           RemoveCrossings(cX, cY);
   
@@ -361,49 +429,6 @@ void ViewFEMesh::DrawElements() {
     }      // end x-periodicity loop
   }        // end loop over elements
 
-  // If we have an associated ViewDrift object, plot the drift lines.
-  if (m_viewDrift) {
-    // Plot a 2D projection of the drift line.
-    for (const auto& dline : m_viewDrift->m_driftLines) {
-      TGraph gr;
-      if (dline.second == ViewDrift::Particle::Electron) {
-        gr.SetLineColor(kOrange - 3);
-      } else {
-        gr.SetLineColor(kRed + 1);
-      }
-      std::vector<float> xgr;
-      std::vector<float> ygr;
-      // Loop over the points.
-      for (const auto& point : dline.first) {
-        // Project this point onto the plane.
-        float xp = 0., yp = 0.;
-        ToPlane(point[0], point[1], point[2], xp, yp);
-        // Add this point if it is within the view.
-        if (InView(xp, yp)) {
-          xgr.push_back(xp);
-          ygr.push_back(yp);
-        }
-      }
-      if (!xgr.empty()) {
-        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
-      }
-    }  // end loop over drift lines
-  }    // end if(m_viewDrift != 0)
-
-  if (m_drawViewRegion && !m_viewRegionX.empty()) {
-    TPolyLine poly;
-    poly.SetLineColor(kSpring + 4);
-    poly.SetLineWidth(3);
-    std::vector<double> xv = m_viewRegionX;
-    std::vector<double> yv = m_viewRegionY;
-    // Close the polygon.
-    xv.push_back(m_viewRegionX[0]);
-    yv.push_back(m_viewRegionY[0]);
-    poly.DrawPolyLine(xv.size(), xv.data(), yv.data(), "same");
-  }
-
-  // Draw axes again so they are on top
-  gPad->RedrawAxis("g");
 }
 
 void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
@@ -415,6 +440,7 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
    * is much
    * faster.
    */
+
   // Get the map boundaries from the component
   double mapxmax = m_component->m_mapmax[0];
   double mapxmin = m_component->m_mapmin[0];
@@ -621,27 +647,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   auto pad = GetCanvas();
   pad->cd();
 
-  if (m_drawAxes) {
-    if (!m_xaxis && !m_yaxis) {
-      // Draw default axes.
-      auto frame = pad->DrawFrame(uMin, vMin, uMax, vMax);
-      if (m_xaxisTitle.empty()) {
-        frame->GetXaxis()->SetTitle(LabelX().c_str());
-      } else { 
-        frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
-      }
-      if (m_yaxisTitle.empty()) {
-        frame->GetYaxis()->SetTitle(LabelY().c_str());
-      } else {
-        frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
-      }
-    } else {
-      // Draw custom axes.
-      if (m_xaxis) m_xaxis->Draw();
-      if (m_yaxis) m_yaxis->Draw();
-    }
-  }
-
   std::cout << m_className << "::DrawCST:\n"
             << "    Number of elements in the projection of the unit cell:"
             << elements.size() << std::endl;
@@ -706,36 +711,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     }    // end v-periodicity loop
   }      // end u-periodicity loop
 
-  if (m_viewDrift) {
-    for (const auto& dline : m_viewDrift->m_driftLines) {
-      // Plot a 2D projection of the drift line.
-      TGraph gr;
-      if (dline.second == ViewDrift::Particle::Electron) {
-        gr.SetLineColor(kOrange - 3);
-      } else {
-        gr.SetLineColor(kRed + 1);
-      }
-      std::vector<float> xgr;
-      std::vector<float> ygr;
-      // Loop over the points.
-      for (const auto& point : dline.first) {
-        // Project this point onto the plane.
-        float u = 0., v = 0.;
-        ToPlane(point[0], point[1], point[2], u, v);
-        // Add this point if it is within the view
-        if (u >= uMin && u <= uMax && v >= vMin && v <= vMax) {
-          xgr.push_back(u);
-          ygr.push_back(v);
-        }
-      }
-      if (!xgr.empty()) {
-        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
-      }
-    }  // end loop over drift lines
-  }    // end if(m_viewDrift != 0)
-
-  // Draw axes again so they are on top
-  gPad->RedrawAxis("g");
 }
 
 // Removes duplicate points and line crossings by correctly ordering
