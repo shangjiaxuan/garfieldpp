@@ -431,7 +431,7 @@ void ViewFEMesh::DrawElements() {
 
 }
 
-void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
+void ViewFEMesh::DrawCST(ComponentCST* cst) {
   /*The method is based on ViewFEMesh::Draw, thus the first part is copied from
    * there.
    * At the moment only x-y, x-z, and y-z are available due to the simple
@@ -448,7 +448,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     double p3[2];
     double p4[2];
     int element;
-    int material;
   };
 
   // Get the map boundaries from the component
@@ -470,9 +469,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   const bool perZ =
       m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
 
-  // Construct single-column matrix for use as coordinate vector.
-  TMatrixD xMat(3, 1);
-
   // Determine the number of periods present in the cell.
   const int nMinX = perX ? int(m_xMinBox / sx) - 1 : 0;
   const int nMaxX = perX ? int(m_xMaxBox / sx) + 1 : 0;
@@ -481,7 +477,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   const int nMinZ = perZ ? int(m_zMinBox / sz) - 1 : 0;
   const int nMaxZ = perZ ? int(m_zMaxBox / sz) + 1 : 0;
 
-  int elem = 0;
   std::vector<PolygonInfo> elements;
   int nMinU = 0, nMaxU = 0, nMinV = 0, nMaxV = 0;
   double mapumin = 0., mapumax = 0., mapvmin = 0., mapvmax = 0.;
@@ -489,25 +484,22 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   bool mirroru = false, mirrorv = false;
   double uMin, vMin, uMax, vMax;
   unsigned int n_x, n_y, n_z;
-  componentCST->GetNumberOfMeshLines(n_x, n_y, n_z);
-  double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
+  cst->GetNumberOfMeshLines(n_x, n_y, n_z);
+
   const double fx = m_plane[0];
   const double fy = m_plane[1];
   const double fz = m_plane[2];
-  // xy view
   if (fx == 0 && fy == 0 && fz == 1) {
+    // xy view
     std::cout << m_className << "::DrawCST: Creating x-y mesh view.\n";
-    ViewFEMesh::SetXaxisTitle("x [cm]");
-    ViewFEMesh::SetYaxisTitle("y [cm]");
-    // calculate the z position
+    // Calculate the z position.
     unsigned int i, j, z;
     const double z0 = m_plane[3] * fz;
-    if (!componentCST->Coordinate2Index(0, 0, z0, i, j, z)) {
-      std::cerr << "    Could not determine the position of the plane in "
-                << "z direction.\n";
+    if (!cst->Coordinate2Index(0, 0, z0, i, j, z)) {
+      std::cerr << "    Could not determine the z-index of the plane.\n";
       return;
     }
-    std::cout << "    The plane position in z direction is: " << z0 << "\n";
+    std::cout << "    The z-index of the plane is " << z << ".\n";
     nMinU = nMinX;
     nMaxU = nMaxX;
     nMinV = nMinY;
@@ -527,9 +519,10 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     mirrorv = perY;
     for (unsigned int y = 0; y < (n_y - 1); y++) {
       for (unsigned int x = 0; x < (n_x - 1); x++) {
-        elem = componentCST->Index2Element(x, y, z);
-        componentCST->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
-                                           e_zmin, e_zmax);
+        auto elem = cst->Index2Element(x, y, z);
+        double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
+        cst->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
+                                        e_zmin, e_zmax);
         PolygonInfo tmp_info;
         tmp_info.element = elem;
         tmp_info.p1[0] = e_xmin;
@@ -540,24 +533,20 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         tmp_info.p2[1] = e_ymin;
         tmp_info.p3[1] = e_ymax;
         tmp_info.p4[1] = e_ymax;
-        tmp_info.material = componentCST->GetElementMaterial(elem);
         elements.push_back(std::move(tmp_info));
       }
     }
-    // xz-view
   } else if (fx == 0 && fy == -1 && fz == 0) {
+    // xz-view
     std::cout << m_className << "::DrawCST: Creating x-z mesh view.\n";
-    ViewFEMesh::SetXaxisTitle("x [cm]");
-    ViewFEMesh::SetYaxisTitle("z [cm]");
-    // calculate the y position
+    // Calculate the y position.
     unsigned int i = 0, j = 0, y = 0;
     const double y0 = m_plane[3] * fy;
-    if (!componentCST->Coordinate2Index(0, y0, 0, i, y, j)) {
-      std::cerr << "    Could not determine the position of the plane in "
-                << "y direction.\n";
+    if (!cst->Coordinate2Index(0, y0, 0, i, y, j)) {
+      std::cerr << "    Could not determine the y-index of the plane.\n";
       return;
     }
-    std::cout << "    The plane position in y direction is: " << y0 << "\n";
+    std::cout << "    The y-index of the plane is " << y << ".\n";
 
     nMinU = nMinX;
     nMaxU = nMaxX;
@@ -578,9 +567,10 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     mirrorv = perZ;
     for (unsigned int z = 0; z < (n_z - 1); z++) {
       for (unsigned int x = 0; x < (n_x - 1); x++) {
-        elem = componentCST->Index2Element(x, y, z);
-        componentCST->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
-                                           e_zmin, e_zmax);
+        auto elem = cst->Index2Element(x, y, z);
+        double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
+        cst->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
+                                        e_zmin, e_zmax);
         PolygonInfo tmp_info;
         tmp_info.element = elem;
         tmp_info.p1[0] = e_xmin;
@@ -591,25 +581,20 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         tmp_info.p2[1] = e_zmin;
         tmp_info.p3[1] = e_zmax;
         tmp_info.p4[1] = e_zmax;
-        tmp_info.material = componentCST->GetElementMaterial(elem);
         elements.push_back(std::move(tmp_info));
       }
     }
-
-    // yz-view
   } else if (fx == -1 && fy == 0 && fz == 0) {
+    // yz-view
     std::cout << m_className << "::DrawCST: Creating z-y mesh view.\n";
-    ViewFEMesh::SetXaxisTitle("z [cm]");
-    ViewFEMesh::SetYaxisTitle("y [cm]");
-    // calculate the x position
+    // Calculate the x position.
     unsigned int i, j, x;
     const double x0 = m_plane[3] * fx;
-    if (!componentCST->Coordinate2Index(x0, 0, 0, x, i, j)) {
-      std::cerr << "    Could not determine the position of the plane in "
-                << "x direction.\n";
+    if (!cst->Coordinate2Index(x0, 0, 0, x, i, j)) {
+      std::cerr << "    Could not determine the x-index of the plane.\n";
       return;
     }
-    std::cout << "    The plane position in x direction is: " << x0 << "\n";
+    std::cout << "    The x-index of the plane is " << x << ".\n";
     nMinU = nMinZ;
     nMaxU = nMaxZ;
     nMinV = nMinY;
@@ -629,9 +614,10 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     mirrorv = perY;
     for (unsigned int z = 0; z < (n_z - 1); z++) {
       for (unsigned int y = 0; y < (n_y - 1); y++) {
-        elem = componentCST->Index2Element(x, y, z);
-        componentCST->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
-                                           e_zmin, e_zmax);
+        auto elem = cst->Index2Element(x, y, z);
+        double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
+        cst->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
+                                        e_zmin, e_zmax);
         PolygonInfo tmp_info;
         tmp_info.element = elem;
         tmp_info.p1[0] = e_zmin;
@@ -642,7 +628,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         tmp_info.p2[1] = e_ymin;
         tmp_info.p3[1] = e_ymax;
         tmp_info.p4[1] = e_ymax;
-        tmp_info.material = componentCST->GetElementMaterial(elem);
         // Add the polygon to the mesh
         elements.push_back(std::move(tmp_info));
       }
@@ -654,34 +639,32 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     return;
   }
 
-  auto pad = GetCanvas();
-  pad->cd();
+  std::cout << m_className << "::DrawCST:\n    " << elements.size()
+            << " elements in the projection of the unit cell.\n";
+  for (const auto& element : elements) {
+    size_t mat = 0;
+    bool driftmedium = false;
+    std::vector<size_t> nodes;
+    cst->GetElement(element.element, mat, driftmedium, nodes);
+    // Do not plot the drift medium.
+    if (driftmedium && !m_plotMeshBorders) continue;
+    // Do not create polygons for disabled materials.
+    if (m_disabledMaterial[mat]) continue;
+    TGraph gr;
+    const short col = m_colorMap.count(mat) > 0 ? m_colorMap[mat] : 1;
+    gr.SetLineColor(col);
+    if (m_colorMap_fill.count(mat) > 0) {
+      gr.SetFillColor(m_colorMap_fill[mat]);
+    } else {
+      gr.SetFillColor(col);
+    }
+    if (m_plotMeshBorders)
+      gr.SetLineWidth(3);
+    else
+      gr.SetLineWidth(1);
 
-  std::cout << m_className << "::DrawCST:\n"
-            << "    Number of elements in the projection of the unit cell:"
-            << elements.size() << std::endl;
-
-  for (int nu = nMinU; nu <= nMaxU; nu++) {
-    for (int nv = nMinV; nv <= nMaxV; nv++) {
-      for (const auto& element : elements) {
-        const auto mat = element.material;
-        if (m_disabledMaterial[mat]) {
-          // Do not create polygons for disabled materials.
-          continue;
-        }
-        TGraph gr;
-        const short col = m_colorMap.count(mat) > 0 ? m_colorMap[mat] : 1;
-        gr.SetLineColor(col);
-        if (m_colorMap_fill.count(mat) > 0) {
-          gr.SetFillColor(m_colorMap_fill[mat]);
-        } else {
-          gr.SetFillColor(col);
-        }
-        if (m_plotMeshBorders)
-          gr.SetLineWidth(3);
-        else
-          gr.SetLineWidth(1);
-
+    for (int nu = nMinU; nu <= nMaxU; nu++) {
+      for (int nv = nMinV; nv <= nMaxV; nv++) {
         // Add 4 points of the square
         float tmp_u[4], tmp_v[4];
         if (mirroru && nu != 2 * (nu / 2)) {
@@ -717,9 +700,9 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         if (m_fillMesh) opt += "f";
         opt += "same";
         gr.DrawGraph(4, tmp_u, tmp_v, opt.c_str());
-      }  // end element loop
-    }    // end v-periodicity loop
-  }      // end u-periodicity loop
+      }
+    }
+  }
 
 }
 

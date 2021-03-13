@@ -29,9 +29,6 @@ class ComponentCST : public ComponentFieldMap {
                   std::vector<size_t>& nodes) const override;
   size_t GetNumberOfNodes() const override { return m_nNodes; }
   bool GetNode(const size_t i, double& x, double& y, double& z) const override; 
-  int GetElementMaterial(unsigned int element) {
-    return m_elementMaterial.at(element);
-  }
 
   void GetElementBoundaries(unsigned int element, double& xmin, double& xmax,
                             double& ymin, double& ymax, double& zmin,
