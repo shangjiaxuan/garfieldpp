@@ -919,14 +919,14 @@ void ComponentCST::WeightingField(const double xin, const double yin,
 
   float fwx = 0., fwy = 0., fwz = 0.;
   if (!disableFieldComponent[0])
-    fwx = GetFieldComponent(i, j, k, rx, ry, rz, 'x', &((*it).second));
+    fwx = GetFieldComponent(i, j, k, rx, ry, rz, 'x', (*it).second);
   if (!disableFieldComponent[1])
-    fwy = GetFieldComponent(i, j, k, rx, ry, rz, 'y', &((*it).second));
+    fwy = GetFieldComponent(i, j, k, rx, ry, rz, 'y', (*it).second);
   if (!disableFieldComponent[2])
-    fwz = GetFieldComponent(i, j, k, rx, ry, rz, 'z', &((*it).second));
+    fwz = GetFieldComponent(i, j, k, rx, ry, rz, 'z', (*it).second);
 
   if (m_elementMaterial.size() > 0 && doShaping) {
-    ShapeField(fwx, fwy, fwz, rx, ry, rz, i, j, k, &((*it).second));
+    ShapeField(fwx, fwy, fwz, rx, ry, rz, i, j, k, (*it).second);
   }
   if (mirrored[0]) fwx *= -1.f;
   if (mirrored[1]) fwy *= -1.f;
@@ -974,7 +974,7 @@ double ComponentCST::WeightingPotential(const double xin, const double yin,
   double rz = (pos[2] - m_zlines.at(k)) /
               (m_zlines.at(k + 1) - m_zlines.at(k));
 
-  double potential = GetPotential(i, j, k, rx, ry, rz, &((*it).second));
+  double potential = GetPotential(i, j, k, rx, ry, rz, (*it).second);
 
   if (m_debug) {
     std::cout << m_className << "::WeightingPotential:" << std::endl;
@@ -1205,12 +1205,12 @@ void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
   double ry = (pos[1] - m_ylines.at(j)) / (m_ylines.at(j + 1) - m_ylines.at(j));
   double rz = (pos[2] - m_zlines.at(k)) / (m_zlines.at(k + 1) - m_zlines.at(k));
 
-  float fex = GetFieldComponent(i, j, k, rx, ry, rz, 'x', &m_potential);
-  float fey = GetFieldComponent(i, j, k, rx, ry, rz, 'y', &m_potential);
-  float fez = GetFieldComponent(i, j, k, rx, ry, rz, 'z', &m_potential);
+  float fex = GetFieldComponent(i, j, k, rx, ry, rz, 'x', m_potential);
+  float fey = GetFieldComponent(i, j, k, rx, ry, rz, 'y', m_potential);
+  float fez = GetFieldComponent(i, j, k, rx, ry, rz, 'z', m_potential);
 
   if (m_elementMaterial.size() > 0 && doShaping) {
-    ShapeField(fex, fey, fez, rx, ry, rz, i, j, k, &m_potential);
+    ShapeField(fex, fey, fez, rx, ry, rz, i, j, k, m_potential);
   }
   if (mirrored[0]) fex *= -1.f;
   if (mirrored[1]) fey *= -1.f;
@@ -1249,27 +1249,25 @@ void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
   if (!disableFieldComponent[1]) ey = fey;
   if (!disableFieldComponent[2]) ez = fez;
   if (calculatePotential)
-    volt = GetPotential(i, j, k, rx, ry, rz, &m_potential);
+    volt = GetPotential(i, j, k, rx, ry, rz, m_potential);
 }
 
-float ComponentCST::GetFieldComponent(const unsigned int i,
-                                      const unsigned int j,
-                                      const unsigned int k, const double rx,
-                                      const double ry, const double rz,
-                                      const char component,
-                                      const std::vector<float>* potentials)  const {
+float ComponentCST::GetFieldComponent(
+    const unsigned int i, const unsigned int j, const unsigned int k, 
+    const double rx, const double ry, const double rz,
+    const char component, const std::vector<float>& potentials) const {
   float dv1 = 0, dv2 = 0, dv3 = 0, dv4 = 0;
   float dv11 = 0, dv21 = 0, dv = 0;
   float e = 0;
   if (component == 'x') {
-    dv1 = potentials->at(Index2Node(i + 1, j, k)) -
-          potentials->at(Index2Node(i, j, k));
-    dv2 = potentials->at(Index2Node(i + 1, j + 1, k)) -
-          potentials->at(Index2Node(i, j + 1, k));
-    dv3 = potentials->at(Index2Node(i + 1, j + 1, k + 1)) -
-          potentials->at(Index2Node(i, j + 1, k + 1));
-    dv4 = potentials->at(Index2Node(i + 1, j, k + 1)) -
-          potentials->at(Index2Node(i, j, k + 1));
+    dv1 = potentials.at(Index2Node(i + 1, j, k)) -
+          potentials.at(Index2Node(i, j, k));
+    dv2 = potentials.at(Index2Node(i + 1, j + 1, k)) -
+          potentials.at(Index2Node(i, j + 1, k));
+    dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
+          potentials.at(Index2Node(i, j + 1, k + 1));
+    dv4 = potentials.at(Index2Node(i + 1, j, k + 1)) -
+          potentials.at(Index2Node(i, j, k + 1));
 
     dv11 = dv1 + (dv4 - dv1) * rz;
     dv21 = dv2 + (dv3 - dv2) * rz;
@@ -1277,14 +1275,14 @@ float ComponentCST::GetFieldComponent(const unsigned int i,
     e = -1 * dv / (m_xlines.at(i + 1) - m_xlines.at(i));
   }
   if (component == 'y') {
-    dv1 = potentials->at(Index2Node(i, j + 1, k)) -
-          potentials->at(Index2Node(i, j, k));
-    dv2 = potentials->at(Index2Node(i, j + 1, k + 1)) -
-          potentials->at(Index2Node(i, j, k + 1));
-    dv3 = potentials->at(Index2Node(i + 1, j + 1, k + 1)) -
-          potentials->at(Index2Node(i + 1, j, k + 1));
-    dv4 = potentials->at(Index2Node(i + 1, j + 1, k)) -
-          potentials->at(Index2Node(i + 1, j, k));
+    dv1 = potentials.at(Index2Node(i, j + 1, k)) -
+          potentials.at(Index2Node(i, j, k));
+    dv2 = potentials.at(Index2Node(i, j + 1, k + 1)) -
+          potentials.at(Index2Node(i, j, k + 1));
+    dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
+          potentials.at(Index2Node(i + 1, j, k + 1));
+    dv4 = potentials.at(Index2Node(i + 1, j + 1, k)) -
+          potentials.at(Index2Node(i + 1, j, k));
 
     dv11 = dv1 + (dv4 - dv1) * rx;
     dv21 = dv2 + (dv3 - dv2) * rx;
@@ -1292,14 +1290,14 @@ float ComponentCST::GetFieldComponent(const unsigned int i,
     e = -1 * dv / (m_ylines.at(j + 1) - m_ylines.at(j));
   }
   if (component == 'z') {
-    dv1 = potentials->at(Index2Node(i, j, k + 1)) -
-          potentials->at(Index2Node(i, j, k));
-    dv2 = potentials->at(Index2Node(i + 1, j, k + 1)) -
-          potentials->at(Index2Node(i + 1, j, k));
-    dv3 = potentials->at(Index2Node(i + 1, j + 1, k + 1)) -
-          potentials->at(Index2Node(i + 1, j + 1, k));
-    dv4 = potentials->at(Index2Node(i, j + 1, k + 1)) -
-          potentials->at(Index2Node(i, j + 1, k));
+    dv1 = potentials.at(Index2Node(i, j, k + 1)) -
+          potentials.at(Index2Node(i, j, k));
+    dv2 = potentials.at(Index2Node(i + 1, j, k + 1)) -
+          potentials.at(Index2Node(i + 1, j, k));
+    dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
+          potentials.at(Index2Node(i + 1, j + 1, k));
+    dv4 = potentials.at(Index2Node(i, j + 1, k + 1)) -
+          potentials.at(Index2Node(i, j + 1, k));
 
     dv11 = dv1 + (dv4 - dv1) * ry;
     dv21 = dv2 + (dv3 - dv2) * ry;
@@ -1309,38 +1307,37 @@ float ComponentCST::GetFieldComponent(const unsigned int i,
   return e;
 }
 
-float ComponentCST::GetPotential(const unsigned int i, const unsigned int j,
-                                 const unsigned int k, const double rx,
-                                 const double ry, const double rz,
-                                 const std::vector<float>* potentials) const {
+float ComponentCST::GetPotential(
+    const unsigned int i, const unsigned int j, const unsigned int k, 
+    const double rx, const double ry, const double rz,
+    const std::vector<float>& potentials) const {
   double t1 = rx * 2. - 1;
   double t2 = ry * 2. - 1;
   double t3 = rz * 2. - 1;
-  return (potentials->at(Index2Node(i + 1, j, k)) * (1 - t1) * (1 - t2) *
+  return (potentials.at(Index2Node(i + 1, j, k)) * (1 - t1) * (1 - t2) *
               (1 - t3) +
-          potentials->at(Index2Node(i + 1, j + 1, k)) * (1 + t1) * (1 - t2) *
+          potentials.at(Index2Node(i + 1, j + 1, k)) * (1 + t1) * (1 - t2) *
               (1 - t3) +
-          potentials->at(Index2Node(i, j + 1, k)) * (1 + t1) * (1 + t2) *
+          potentials.at(Index2Node(i, j + 1, k)) * (1 + t1) * (1 + t2) *
               (1 - t3) +
-          potentials->at(Index2Node(i, j, k)) * (1 - t1) * (1 + t2) * (1 - t3) +
-          potentials->at(Index2Node(i + 1, j, k + 1)) * (1 - t1) * (1 - t2) *
+          potentials.at(Index2Node(i, j, k)) * (1 - t1) * (1 + t2) * (1 - t3) +
+          potentials.at(Index2Node(i + 1, j, k + 1)) * (1 - t1) * (1 - t2) *
               (1 + t3) +
-          potentials->at(Index2Node(i + 1, j + 1, k + 1)) * (1 + t1) *
+          potentials.at(Index2Node(i + 1, j + 1, k + 1)) * (1 + t1) *
               (1 - t2) * (1 + t3) +
-          potentials->at(Index2Node(i, j + 1, k + 1)) * (1 + t1) * (1 + t2) *
+          potentials.at(Index2Node(i, j + 1, k + 1)) * (1 + t1) * (1 + t2) *
               (1 + t3) +
-          potentials->at(Index2Node(i, j, k + 1)) * (1 - t1) * (1 + t2) *
+          potentials.at(Index2Node(i, j, k + 1)) * (1 - t1) * (1 + t2) *
               (1 + t3)) /
          8.;
 }
 
-void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
-                              const double ry, const double rz,
-                              const unsigned int i, const unsigned int j,
-                              const unsigned int k,
-                              const std::vector<float>* potentials) const {
+void ComponentCST::ShapeField(float& ex, float& ey, float& ez, 
+    const double rx, const double ry, const double rz,
+    const unsigned int i, const unsigned int j, const unsigned int k,
+    const std::vector<float>& potentials) const {
 
-  const int m1 = m_elementMaterial.at(Index2Element(i, j, k));
+  const auto m1 = m_elementMaterial.at(Index2Element(i, j, k));
   const auto imax = m_xlines.size() - 2;
   if ((i == 0 && rx >= 0.5) || (i == imax && rx < 0.5) || (i > 0 && i < imax)) {
     if (rx >= 0.5) {

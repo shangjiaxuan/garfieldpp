@@ -248,16 +248,17 @@ class ComponentCST : public ComponentFieldMap {
                           const unsigned int k, const double rx,
                           const double ry, const double rz,
                           const char component,
-                          const std::vector<float>* potentials) const;
+                          const std::vector<float>& potentials) const;
 
   float GetPotential(const unsigned int i, const unsigned int j,
-                     const unsigned int k, const double rx, const double ry,
-                     const double rz, const std::vector<float>* potentials) const;
+                     const unsigned int k, 
+                     const double rx, const double ry, const double rz, 
+                     const std::vector<float>& potentials) const;
 
   void ShapeField(float& ex, float& ey, float& ez, const double rx,
                   const double ry, const double rz, const unsigned int i,
                   const unsigned int j, const unsigned int k,
-                  const std::vector<float>* potentials) const;
+                  const std::vector<float>& potentials) const;
 
   /* Calculate the index (i,j,k) along x,y,z direction of the given element.
    * i,j,k start at 0 and reach at maximum
