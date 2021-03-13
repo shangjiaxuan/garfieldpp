@@ -48,8 +48,30 @@ bool ViewFEMesh::Plot() {
   if (!RangeSet(pad)) {
     SetRange(pad, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
   }
+  
+  if (m_drawAxes) {
+    if (!m_xaxis && !m_yaxis) {
+      // Draw default axes.
+      auto frame = pad->DrawFrame(m_xMinPlot, m_yMinPlot,
+                                  m_xMaxPlot, m_yMaxPlot);
+      if (m_xaxisTitle.empty()) {
+        frame->GetXaxis()->SetTitle(LabelX().c_str());
+      } else { 
+        frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
+      }
+      if (m_yaxisTitle.empty()) {
+        frame->GetYaxis()->SetTitle(LabelY().c_str());
+      } else {
+        frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
+      }
+    } else {
+      // Draw custom axes.
+      if (m_xaxis) m_xaxis->Draw();
+      if (m_yaxis) m_yaxis->Draw();
+    }
+  }
 
-  // Plot the elements
+  // Plot the mesh elements.
   ComponentCST* componentCST = dynamic_cast<ComponentCST*>(m_component);
   if (componentCST) {
     std::cout << m_className << "::Plot: CST component. Calling DrawCST.\n";
@@ -57,8 +79,50 @@ bool ViewFEMesh::Plot() {
   } else {
     DrawElements();
   }
-  gPad->Update();
+  
+  // If we have an associated ViewDrift object, plot the drift lines.
+  if (m_viewDrift) {
+    // Plot a 2D projection of the drift line.
+    for (const auto& dline : m_viewDrift->m_driftLines) {
+      TGraph gr;
+      if (dline.second == ViewDrift::Particle::Electron) {
+        gr.SetLineColor(kOrange - 3);
+      } else {
+        gr.SetLineColor(kRed + 1);
+      }
+      std::vector<float> xgr;
+      std::vector<float> ygr;
+      // Loop over the points.
+      for (const auto& point : dline.first) {
+        // Project this point onto the plane.
+        float xp = 0., yp = 0.;
+        ToPlane(point[0], point[1], point[2], xp, yp);
+        // Add this point if it is within the view.
+        if (InView(xp, yp)) {
+          xgr.push_back(xp);
+          ygr.push_back(yp);
+        }
+      }
+      if (!xgr.empty()) {
+        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
+      }
+    }
+  }
 
+  if (m_drawViewRegion && !m_viewRegionX.empty()) {
+    TPolyLine poly;
+    poly.SetLineColor(kSpring + 4);
+    poly.SetLineWidth(3);
+    std::vector<double> xv = m_viewRegionX;
+    std::vector<double> yv = m_viewRegionY;
+    // Close the polygon.
+    xv.push_back(m_viewRegionX[0]);
+    yv.push_back(m_viewRegionY[0]);
+    poly.DrawPolyLine(xv.size(), xv.data(), yv.data(), "same");
+  }
+  gPad->Update();
+  // Draw axes again so they are on top
+  gPad->RedrawAxis("g");
   return true;
 }
 
@@ -168,31 +232,6 @@ void ViewFEMesh::DrawElements() {
   const bool perZ =
       m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
 
-  auto pad = GetCanvas();
-  pad->cd();
-
-  if (m_drawAxes) {
-    if (!m_xaxis && !m_yaxis) {
-      // Draw default axes.
-      auto frame = pad->DrawFrame(m_xMinPlot, m_yMinPlot,
-                                  m_xMaxPlot, m_yMaxPlot);
-      if (m_xaxisTitle.empty()) {
-        frame->GetXaxis()->SetTitle(LabelX().c_str());
-      } else { 
-        frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
-      }
-      if (m_yaxisTitle.empty()) {
-        frame->GetYaxis()->SetTitle(LabelY().c_str());
-      } else {
-        frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
-      }
-    } else {
-      // Draw custom axes.
-      if (m_xaxis) m_xaxis->Draw();
-      if (m_yaxis) m_yaxis->Draw();
-    }
-  }
-
   // Get the plane information.
   const double fx = m_plane[0];
   const double fy = m_plane[1];
@@ -210,22 +249,20 @@ void ViewFEMesh::DrawElements() {
   const int nMinZ = perZ ? int(m_zMinBox / sz) - 1 : 0;
   const int nMaxZ = perZ ? int(m_zMaxBox / sz) + 1 : 0;
 
+  bool cst = false;
+  if (dynamic_cast<ComponentCST*>(m_component)) cst = true;
+
   // Loop over all elements.
-  for (const auto& element : m_component->m_elements) {
-    const auto mat = element.matmap;
+  const auto nElements = m_component->GetNumberOfElements();
+  for (size_t i = 0; i < nElements; ++i) {
+    size_t mat = 0;
+    bool driftmedium = false;
+    std::vector<size_t> nodes;
+    if (!m_component->GetElement(i, mat, driftmedium, nodes)) continue;
     // Do not plot the drift medium.
-    if (m_component->m_materials[mat].driftmedium && !m_plotMeshBorders) {
-      continue;
-    }
+    if (driftmedium && !m_plotMeshBorders) continue;
     // Do not create polygons for disabled materials.
     if (m_disabledMaterial[mat]) continue;
-    // -- Tetrahedral elements
-
-    // Coordinates of vertices
-    double vx1, vy1, vz1;
-    double vx2, vy2, vz2;
-    double vx3, vy3, vz3;
-    double vx4, vy4, vz4;
 
     TGraph gr;
     const short col = m_colorMap.count(mat) != 0 ? m_colorMap[mat] : 1;
@@ -241,53 +278,67 @@ void ViewFEMesh::DrawElements() {
     if (m_fillMesh) opt += "f";
     opt += "same";
 
-    const auto& n0 = m_component->m_nodes[element.emap[0]];
-    const auto& n1 = m_component->m_nodes[element.emap[1]];
-    const auto& n2 = m_component->m_nodes[element.emap[2]];
-    const auto& n3 = m_component->m_nodes[element.emap[3]];
+    // Get the vertex coordinates in the basic cell.
+    std::vector<double> vx0;
+    std::vector<double> vy0;
+    std::vector<double> vz0;
+    const size_t nNodes = nodes.size();
+    for (size_t j = 0; j < nNodes; ++j) {
+      double xn = 0., yn = 0., zn = 0.;
+      if (!m_component->GetNode(nodes[j], xn, yn, zn)) continue;
+      vx0.push_back(xn);
+      vy0.push_back(yn);
+      vz0.push_back(zn);
+    }
+    if (vx0.size() != nNodes) {
+      std::cerr << m_className << "::DrawElements:\n"
+                << "    Error retrieving nodes of element " << i << ".\n";
+      continue;
+    }
+    // Coordinates of vertices
+    std::vector<double> vx(nNodes, 0.);
+    std::vector<double> vy(nNodes, 0.);
+    std::vector<double> vz(nNodes, 0.);
     // Loop over the periodicities in x.
     for (int nx = nMinX; nx <= nMaxX; nx++) {
-      // Determine the x-coordinates of the tetrahedral vertices.
+      const double dx = sx * nx;
+      // Determine the x-coordinates of the vertices.
       if (m_component->m_mirrorPeriodic[0] && nx != 2 * (nx / 2)) {
-        vx1 = mapxmin + (mapxmax - n0.x) + sx * nx;
-        vx2 = mapxmin + (mapxmax - n1.x) + sx * nx;
-        vx3 = mapxmin + (mapxmax - n2.x) + sx * nx;
-        vx4 = mapxmin + (mapxmax - n3.x) + sx * nx;
+        for (size_t j = 0; j < nNodes; ++j) {
+          vx[j] = mapxmin + (mapxmax - vx0[j]) + dx;
+        }
       } else {
-        vx1 = n0.x + sx * nx;
-        vx2 = n1.x + sx * nx;
-        vx3 = n2.x + sx * nx;
-        vx4 = n3.x + sx * nx;
+        for (size_t j = 0; j < nNodes; ++j) {
+          vx[j] = vx0[j] + dx;
+        }
       }
 
       // Loop over the periodicities in y.
       for (int ny = nMinY; ny <= nMaxY; ny++) {
-        // Determine the y-coordinates of the tetrahedral vertices.
+        const double dy = sy * ny;
+        // Determine the y-coordinates of the vertices.
         if (m_component->m_mirrorPeriodic[1] && ny != 2 * (ny / 2)) {
-          vy1 = mapymin + (mapymax - n0.y) + sy * ny;
-          vy2 = mapymin + (mapymax - n1.y) + sy * ny;
-          vy3 = mapymin + (mapymax - n2.y) + sy * ny;
-          vy4 = mapymin + (mapymax - n3.y) + sy * ny;
+          for (size_t j = 0; j < nNodes; ++j) {
+            vy[j] = mapymin + (mapymax - vy0[j]) + dy;
+          }
         } else {
-          vy1 = n0.y + sy * ny;
-          vy2 = n1.y + sy * ny;
-          vy3 = n2.y + sy * ny;
-          vy4 = n3.y + sy * ny;
+          for (size_t j = 0; j < nNodes; ++j) {
+            vy[j] = vy0[j] + dy;
+          }
         }
 
         // Loop over the periodicities in z.
         for (int nz = nMinZ; nz <= nMaxZ; nz++) {
-          // Determine the z-coordinates of the tetrahedral vertices.
+          const double dz = sz * nz;
+          // Determine the z-coordinates of the vertices.
           if (m_component->m_mirrorPeriodic[2] && nz != 2 * (nz / 2)) {
-            vz1 = mapzmin + (mapzmax - n0.z) + sz * nz;
-            vz2 = mapzmin + (mapzmax - n1.z) + sz * nz;
-            vz3 = mapzmin + (mapzmax - n2.z) + sz * nz;
-            vz4 = mapzmin + (mapzmax - n3.z) + sz * nz;
+            for (size_t j = 0; j < nNodes; ++j) {
+              vz[j] = mapzmin + (mapzmax - vz0[j]) + dz;
+            }
           } else {
-            vz1 = n0.z + sz * nz;
-            vz2 = n1.z + sz * nz;
-            vz3 = n2.z + sz * nz;
-            vz4 = n3.z + sz * nz;
+            for (size_t j = 0; j < nNodes; ++j) {
+              vz[j] = vz0[j] + dz;
+            }
           }
 
           // Store the x and y coordinates of the relevant mesh vertices.
@@ -296,74 +347,59 @@ void ViewFEMesh::DrawElements() {
 
           // Value used to determine whether a vertex is in the plane.
           const double pcf = std::max(
-              {std::abs(vx1), std::abs(vy1), std::abs(vz1), std::abs(fx),
-               std::abs(fy), std::abs(fz), std::abs(dist)});
+              {std::abs(vx[0]), std::abs(vy[0]), std::abs(vz[0]), 
+               std::abs(fx), std::abs(fy), std::abs(fz), std::abs(dist)});
           const double tol = 1.e-4 * pcf;
           // First isolate the vertices that are in the viewing plane.
-          bool in1 = (std::abs(fx * vx1 + fy * vy1 + fz * vz1 - dist) < tol);
-          bool in2 = (std::abs(fx * vx2 + fy * vy2 + fz * vz2 - dist) < tol);
-          bool in3 = (std::abs(fx * vx3 + fy * vy3 + fz * vz3 - dist) < tol);
-          bool in4 = (std::abs(fx * vx4 + fy * vy4 + fz * vz4 - dist) < tol);
-
-          // Calculate the planar coordinates for the points that are in the
-          // plane.
-          double xp = 0., yp = 0.;
-          if (in1) {
-            ToPlane(vx1, vy1, vz1, xp, yp);
-            vX.push_back(xp);
-            vY.push_back(yp);
+          std::vector<bool> in(nNodes, false);
+          int cnt = 0;
+          for (size_t j = 0; j < nNodes; ++j) {
+            const double d = fx * vx[j] + fy * vy[j] + fz * vz[j] - dist;
+            if (std::abs(d) < tol) {
+              // Point is in the plane.
+              in[j] = true;
+              // Calculate the planar coordinates.
+              double xp = 0., yp = 0.;
+              ToPlane(vx[j], vy[j], vz[j], xp, yp);
+              vX.push_back(xp);
+              vY.push_back(yp);
+            } else {
+              if (d > 0.) {
+                cnt += 1;
+              } else { 
+                cnt -= 1;
+              }
+            }
           }
-          if (in2) {
-            ToPlane(vx2, vy2, vz2, xp, yp);
-            vX.push_back(xp);
-            vY.push_back(yp);
-          }
-          if (in3) {
-            ToPlane(vx3, vy3, vz3, xp, yp);
-            vX.push_back(xp);
-            vY.push_back(yp);
-          }
-          if (in4) {
-            ToPlane(vx4, vy4, vz4, xp, yp);
-            vX.push_back(xp);
-            vY.push_back(yp);
-          }
-
+          // Stop if all points are on the same side of the plane.
+          if (std::abs(cnt) == (int)nNodes) continue;
           // Cut the sides that are not in the plane.
-          if (!(in1 || in2)) {
-            if (PlaneCut(vx1, vy1, vz1, vx2, vy2, vz2, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
-            }
-          }
-          if (!(in1 || in3)) {
-            if (PlaneCut(vx1, vy1, vz1, vx3, vy3, vz3, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
-            }
-          }
-          if (!(in1 || in4)) {
-            if (PlaneCut(vx1, vy1, vz1, vx4, vy4, vz4, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
-            }
-          }
-          if (!(in2 || in3)) {
-            if (PlaneCut(vx2, vy2, vz2, vx3, vy3, vz3, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
-            }
-          }
-          if (!(in2 || in4)) {
-            if (PlaneCut(vx2, vy2, vz2, vx4, vy4, vz4, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
-            }
-          }
-          if (!(in3 || in4)) {
-            if (PlaneCut(vx3, vy3, vz3, vx4, vy4, vz4, xMat)) {
-              vX.push_back(xMat(0, 0));
-              vY.push_back(xMat(1, 0));
+          if (cst) {
+            const std::array<std::array<unsigned int, 3>, 8> neighbours = {{
+              {1, 2, 4}, {0, 3, 5}, {0, 3, 6}, {1, 2, 7},
+              {0, 5, 6}, {1, 4, 7}, {2, 4, 7}, {3, 5, 6}
+            }};
+            for (size_t j = 0; j < nNodes; ++j) {
+              for (unsigned int k : neighbours[j]) {
+                if (in[j] || in[k]) continue;
+                if (PlaneCut(vx[j], vy[j], vz[j], 
+                             vx[k], vy[k], vz[k], xMat)) {
+                  vX.push_back(xMat(0, 0));
+                  vY.push_back(xMat(1, 0));
+                }
+              }
+            } 
+          } else { 
+            // Tetrahedron.
+            for (size_t j = 0; j < nNodes; ++j) {
+              for (size_t k = j + 1; k < nNodes; ++k) {
+                if (in[j] || in[k]) continue;
+                if (PlaneCut(vx[j], vy[j], vz[j], 
+                             vx[k], vy[k], vz[k], xMat)) {
+                  vX.push_back(xMat(0, 0));
+                  vY.push_back(xMat(1, 0));
+                }
+              }
             }
           }
           if (vX.size() < 3) continue;
@@ -381,7 +417,6 @@ void ViewFEMesh::DrawElements() {
 
           // If we have more than 2 vertices, add the polygon.
           if (cX.size() <= 2) continue;
-
           // Again eliminate crossings of the polygon lines.
           RemoveCrossings(cX, cY);
   
@@ -394,52 +429,9 @@ void ViewFEMesh::DrawElements() {
     }      // end x-periodicity loop
   }        // end loop over elements
 
-  // If we have an associated ViewDrift object, plot the drift lines.
-  if (m_viewDrift) {
-    // Plot a 2D projection of the drift line.
-    for (const auto& dline : m_viewDrift->m_driftLines) {
-      TGraph gr;
-      if (dline.second == ViewDrift::Particle::Electron) {
-        gr.SetLineColor(kOrange - 3);
-      } else {
-        gr.SetLineColor(kRed + 1);
-      }
-      std::vector<float> xgr;
-      std::vector<float> ygr;
-      // Loop over the points.
-      for (const auto& point : dline.first) {
-        // Project this point onto the plane.
-        float xp = 0., yp = 0.;
-        ToPlane(point[0], point[1], point[2], xp, yp);
-        // Add this point if it is within the view.
-        if (InView(xp, yp)) {
-          xgr.push_back(xp);
-          ygr.push_back(yp);
-        }
-      }
-      if (!xgr.empty()) {
-        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
-      }
-    }  // end loop over drift lines
-  }    // end if(m_viewDrift != 0)
-
-  if (m_drawViewRegion && !m_viewRegionX.empty()) {
-    TPolyLine poly;
-    poly.SetLineColor(kSpring + 4);
-    poly.SetLineWidth(3);
-    std::vector<double> xv = m_viewRegionX;
-    std::vector<double> yv = m_viewRegionY;
-    // Close the polygon.
-    xv.push_back(m_viewRegionX[0]);
-    yv.push_back(m_viewRegionY[0]);
-    poly.DrawPolyLine(xv.size(), xv.data(), yv.data(), "same");
-  }
-
-  // Draw axes again so they are on top
-  gPad->RedrawAxis("g");
 }
 
-void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
+void ViewFEMesh::DrawCST(ComponentCST* cst) {
   /*The method is based on ViewFEMesh::Draw, thus the first part is copied from
    * there.
    * At the moment only x-y, x-z, and y-z are available due to the simple
@@ -448,6 +440,16 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
    * is much
    * faster.
    */
+
+  // Helper struct.
+  struct PolygonInfo {
+    double p1[2];
+    double p2[2];
+    double p3[2];
+    double p4[2];
+    int element;
+  };
+
   // Get the map boundaries from the component
   double mapxmax = m_component->m_mapmax[0];
   double mapxmin = m_component->m_mapmin[0];
@@ -467,9 +469,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   const bool perZ =
       m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
 
-  // Construct single-column matrix for use as coordinate vector.
-  TMatrixD xMat(3, 1);
-
   // Determine the number of periods present in the cell.
   const int nMinX = perX ? int(m_xMinBox / sx) - 1 : 0;
   const int nMaxX = perX ? int(m_xMaxBox / sx) + 1 : 0;
@@ -478,7 +477,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   const int nMinZ = perZ ? int(m_zMinBox / sz) - 1 : 0;
   const int nMaxZ = perZ ? int(m_zMaxBox / sz) + 1 : 0;
 
-  int elem = 0;
   std::vector<PolygonInfo> elements;
   int nMinU = 0, nMaxU = 0, nMinV = 0, nMaxV = 0;
   double mapumin = 0., mapumax = 0., mapvmin = 0., mapvmax = 0.;
@@ -486,25 +484,22 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
   bool mirroru = false, mirrorv = false;
   double uMin, vMin, uMax, vMax;
   unsigned int n_x, n_y, n_z;
-  componentCST->GetNumberOfMeshLines(n_x, n_y, n_z);
-  double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
+  cst->GetNumberOfMeshLines(n_x, n_y, n_z);
+
   const double fx = m_plane[0];
   const double fy = m_plane[1];
   const double fz = m_plane[2];
-  // xy view
   if (fx == 0 && fy == 0 && fz == 1) {
+    // xy view
     std::cout << m_className << "::DrawCST: Creating x-y mesh view.\n";
-    ViewFEMesh::SetXaxisTitle("x [cm]");
-    ViewFEMesh::SetYaxisTitle("y [cm]");
-    // calculate the z position
+    // Calculate the z position.
     unsigned int i, j, z;
     const double z0 = m_plane[3] * fz;
-    if (!componentCST->Coordinate2Index(0, 0, z0, i, j, z)) {
-      std::cerr << "    Could not determine the position of the plane in "
-                << "z direction.\n";
+    if (!cst->Coordinate2Index(0, 0, z0, i, j, z)) {
+      std::cerr << "    Could not determine the z-index of the plane.\n";
       return;
     }
-    std::cout << "    The plane position in z direction is: " << z0 << "\n";
+    std::cout << "    The z-index of the plane is " << z << ".\n";
     nMinU = nMinX;
     nMaxU = nMaxX;
     nMinV = nMinY;
@@ -524,9 +519,10 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     mirrorv = perY;
     for (unsigned int y = 0; y < (n_y - 1); y++) {
       for (unsigned int x = 0; x < (n_x - 1); x++) {
-        elem = componentCST->Index2Element(x, y, z);
-        componentCST->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
-                                           e_zmin, e_zmax);
+        auto elem = cst->Index2Element(x, y, z);
+        double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
+        cst->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
+                                        e_zmin, e_zmax);
         PolygonInfo tmp_info;
         tmp_info.element = elem;
         tmp_info.p1[0] = e_xmin;
@@ -537,24 +533,20 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         tmp_info.p2[1] = e_ymin;
         tmp_info.p3[1] = e_ymax;
         tmp_info.p4[1] = e_ymax;
-        tmp_info.material = componentCST->GetElementMaterial(elem);
         elements.push_back(std::move(tmp_info));
       }
     }
-    // xz-view
   } else if (fx == 0 && fy == -1 && fz == 0) {
+    // xz-view
     std::cout << m_className << "::DrawCST: Creating x-z mesh view.\n";
-    ViewFEMesh::SetXaxisTitle("x [cm]");
-    ViewFEMesh::SetYaxisTitle("z [cm]");
-    // calculate the y position
+    // Calculate the y position.
     unsigned int i = 0, j = 0, y = 0;
     const double y0 = m_plane[3] * fy;
-    if (!componentCST->Coordinate2Index(0, y0, 0, i, y, j)) {
-      std::cerr << "    Could not determine the position of the plane in "
-                << "y direction.\n";
+    if (!cst->Coordinate2Index(0, y0, 0, i, y, j)) {
+      std::cerr << "    Could not determine the y-index of the plane.\n";
       return;
     }
-    std::cout << "    The plane position in y direction is: " << y0 << "\n";
+    std::cout << "    The y-index of the plane is " << y << ".\n";
 
     nMinU = nMinX;
     nMaxU = nMaxX;
@@ -575,9 +567,10 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     mirrorv = perZ;
     for (unsigned int z = 0; z < (n_z - 1); z++) {
       for (unsigned int x = 0; x < (n_x - 1); x++) {
-        elem = componentCST->Index2Element(x, y, z);
-        componentCST->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
-                                           e_zmin, e_zmax);
+        auto elem = cst->Index2Element(x, y, z);
+        double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
+        cst->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
+                                        e_zmin, e_zmax);
         PolygonInfo tmp_info;
         tmp_info.element = elem;
         tmp_info.p1[0] = e_xmin;
@@ -588,25 +581,20 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         tmp_info.p2[1] = e_zmin;
         tmp_info.p3[1] = e_zmax;
         tmp_info.p4[1] = e_zmax;
-        tmp_info.material = componentCST->GetElementMaterial(elem);
         elements.push_back(std::move(tmp_info));
       }
     }
-
-    // yz-view
   } else if (fx == -1 && fy == 0 && fz == 0) {
+    // yz-view
     std::cout << m_className << "::DrawCST: Creating z-y mesh view.\n";
-    ViewFEMesh::SetXaxisTitle("z [cm]");
-    ViewFEMesh::SetYaxisTitle("y [cm]");
-    // calculate the x position
+    // Calculate the x position.
     unsigned int i, j, x;
     const double x0 = m_plane[3] * fx;
-    if (!componentCST->Coordinate2Index(x0, 0, 0, x, i, j)) {
-      std::cerr << "    Could not determine the position of the plane in "
-                << "x direction.\n";
+    if (!cst->Coordinate2Index(x0, 0, 0, x, i, j)) {
+      std::cerr << "    Could not determine the x-index of the plane.\n";
       return;
     }
-    std::cout << "    The plane position in x direction is: " << x0 << "\n";
+    std::cout << "    The x-index of the plane is " << x << ".\n";
     nMinU = nMinZ;
     nMaxU = nMaxZ;
     nMinV = nMinY;
@@ -626,9 +614,10 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     mirrorv = perY;
     for (unsigned int z = 0; z < (n_z - 1); z++) {
       for (unsigned int y = 0; y < (n_y - 1); y++) {
-        elem = componentCST->Index2Element(x, y, z);
-        componentCST->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
-                                           e_zmin, e_zmax);
+        auto elem = cst->Index2Element(x, y, z);
+        double e_xmin, e_xmax, e_ymin, e_ymax, e_zmin, e_zmax;
+        cst->GetElementBoundaries(elem, e_xmin, e_xmax, e_ymin, e_ymax,
+                                        e_zmin, e_zmax);
         PolygonInfo tmp_info;
         tmp_info.element = elem;
         tmp_info.p1[0] = e_zmin;
@@ -639,7 +628,6 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         tmp_info.p2[1] = e_ymin;
         tmp_info.p3[1] = e_ymax;
         tmp_info.p4[1] = e_ymax;
-        tmp_info.material = componentCST->GetElementMaterial(elem);
         // Add the polygon to the mesh
         elements.push_back(std::move(tmp_info));
       }
@@ -651,55 +639,32 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
     return;
   }
 
-  auto pad = GetCanvas();
-  pad->cd();
-
-  if (m_drawAxes) {
-    if (!m_xaxis && !m_yaxis) {
-      // Draw default axes.
-      auto frame = pad->DrawFrame(uMin, vMin, uMax, vMax);
-      if (m_xaxisTitle.empty()) {
-        frame->GetXaxis()->SetTitle(LabelX().c_str());
-      } else { 
-        frame->GetXaxis()->SetTitle(m_xaxisTitle.c_str());
-      }
-      if (m_yaxisTitle.empty()) {
-        frame->GetYaxis()->SetTitle(LabelY().c_str());
-      } else {
-        frame->GetYaxis()->SetTitle(m_yaxisTitle.c_str());
-      }
+  std::cout << m_className << "::DrawCST:\n    " << elements.size()
+            << " elements in the projection of the unit cell.\n";
+  for (const auto& element : elements) {
+    size_t mat = 0;
+    bool driftmedium = false;
+    std::vector<size_t> nodes;
+    cst->GetElement(element.element, mat, driftmedium, nodes);
+    // Do not plot the drift medium.
+    if (driftmedium && !m_plotMeshBorders) continue;
+    // Do not create polygons for disabled materials.
+    if (m_disabledMaterial[mat]) continue;
+    TGraph gr;
+    const short col = m_colorMap.count(mat) > 0 ? m_colorMap[mat] : 1;
+    gr.SetLineColor(col);
+    if (m_colorMap_fill.count(mat) > 0) {
+      gr.SetFillColor(m_colorMap_fill[mat]);
     } else {
-      // Draw custom axes.
-      if (m_xaxis) m_xaxis->Draw();
-      if (m_yaxis) m_yaxis->Draw();
+      gr.SetFillColor(col);
     }
-  }
+    if (m_plotMeshBorders)
+      gr.SetLineWidth(3);
+    else
+      gr.SetLineWidth(1);
 
-  std::cout << m_className << "::DrawCST:\n"
-            << "    Number of elements in the projection of the unit cell:"
-            << elements.size() << std::endl;
-
-  for (int nu = nMinU; nu <= nMaxU; nu++) {
-    for (int nv = nMinV; nv <= nMaxV; nv++) {
-      for (const auto& element : elements) {
-        const auto mat = element.material;
-        if (m_disabledMaterial[mat]) {
-          // Do not create polygons for disabled materials.
-          continue;
-        }
-        TGraph gr;
-        const short col = m_colorMap.count(mat) > 0 ? m_colorMap[mat] : 1;
-        gr.SetLineColor(col);
-        if (m_colorMap_fill.count(mat) > 0) {
-          gr.SetFillColor(m_colorMap_fill[mat]);
-        } else {
-          gr.SetFillColor(col);
-        }
-        if (m_plotMeshBorders)
-          gr.SetLineWidth(3);
-        else
-          gr.SetLineWidth(1);
-
+    for (int nu = nMinU; nu <= nMaxU; nu++) {
+      for (int nv = nMinV; nv <= nMaxV; nv++) {
         // Add 4 points of the square
         float tmp_u[4], tmp_v[4];
         if (mirroru && nu != 2 * (nu / 2)) {
@@ -735,40 +700,10 @@ void ViewFEMesh::DrawCST(ComponentCST* componentCST) {
         if (m_fillMesh) opt += "f";
         opt += "same";
         gr.DrawGraph(4, tmp_u, tmp_v, opt.c_str());
-      }  // end element loop
-    }    // end v-periodicity loop
-  }      // end u-periodicity loop
+      }
+    }
+  }
 
-  if (m_viewDrift) {
-    for (const auto& dline : m_viewDrift->m_driftLines) {
-      // Plot a 2D projection of the drift line.
-      TGraph gr;
-      if (dline.second == ViewDrift::Particle::Electron) {
-        gr.SetLineColor(kOrange - 3);
-      } else {
-        gr.SetLineColor(kRed + 1);
-      }
-      std::vector<float> xgr;
-      std::vector<float> ygr;
-      // Loop over the points.
-      for (const auto& point : dline.first) {
-        // Project this point onto the plane.
-        float u = 0., v = 0.;
-        ToPlane(point[0], point[1], point[2], u, v);
-        // Add this point if it is within the view
-        if (u >= uMin && u <= uMax && v >= vMin && v <= vMax) {
-          xgr.push_back(u);
-          ygr.push_back(v);
-        }
-      }
-      if (!xgr.empty()) {
-        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
-      }
-    }  // end loop over drift lines
-  }    // end if(m_viewDrift != 0)
-
-  // Draw axes again so they are on top
-  gPad->RedrawAxis("g");
 }
 
 // Removes duplicate points and line crossings by correctly ordering

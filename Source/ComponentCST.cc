@@ -1,4 +1,3 @@
-// Copied and modified ComponentAnsys123.cc
 #include <math.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -11,8 +10,71 @@
 #include <vector>
 
 #include "Garfield/ComponentCST.hh"
-#include "TMath.h"
 
+namespace {
+
+bool ReadHeader(FILE* f, const int fileSize, const bool debug, 
+                int& nX, int& nY, int& nZ, int& nNS,
+                int& nES, int& nEM, int& nMaterials) {
+
+  if (!f) return false;
+  // Size of the header in binary files used in the CST export
+  static constexpr int headerSize = 1000;
+  if (fileSize < headerSize) {
+    std::cerr << "ComponentCST::ReadHeader:\n"
+              << "     Error. The file is extremely short and does not seem to "
+              << "contain a header or data." << std::endl;
+    return false;
+  }
+  char header[headerSize];
+  size_t result = fread(header, sizeof(char), headerSize, f);
+  if (result != headerSize) {
+    std::cerr << "ComponentCST::ReadHeader: Could not read the header.\n";
+    return false;
+  }
+
+  int nMeshX = 0, nMeshY = 0, nMeshZ = 0;
+  int nNx = 0, nNy = 0, nNz = 0;
+  int nEx = 0, nEy = 0, nEz = 0;
+
+  std::string fmt = "mesh_nx=%d mesh_ny=%d mesh_nz=%d\n";
+  fmt += "mesh_xlines=%d mesh_ylines=%d mesh_zlines=%d\n";
+  fmt += "nodes_scalar=%d ";
+  fmt += "nodes_vector_x=%d nodes_vector_y=%d nodes_vector_z=%d\n";
+  fmt += "elements_scalar=%d elements_vector_x=%d ";
+  fmt += "elements_vector_y=%d elements_vector_z=%d\n";
+  fmt += "elements_material=%d\n";
+  fmt += "n_materials=%d\n";
+  int filled = std::sscanf(header, fmt.c_str(),
+      &nMeshX, &nMeshY, &nMeshZ, &nX, &nY, &nZ, 
+      &nNS, &nNx, &nNy, &nNz, &nES, &nEx, &nEy, &nEz, &nEM, &nMaterials);
+  if (filled != 16) {
+    std::cerr << "ComponentCST::ReadHeader: File header is broken.\n";
+    return false;
+  }
+  if (fileSize < 1000 + (nX + nY + nZ) * 8 +
+                 (nNS + nNx + nNy + nNz + nES + nEx + nEy + nEz) * 4 +
+                  nEM * 1 + nMaterials * 20) {
+    std::cerr << "ComponentCST::ReadHeader: Unexpected file size.\n";
+    return false;
+  }
+  if (debug) {
+    std::cout << "ComponentCST::ReadHeader:\n"
+              << "  Mesh (nx): " << nMeshX << "\t Mesh (ny): " << nMeshY
+              << "\t Mesh (nz): " << nMeshZ << std::endl
+              << "  Mesh (x_lines): " << nX << "\t Mesh (y_lines): " << nY 
+              << "\t Mesh (z_lines): " << nZ << std::endl
+              << "  Nodes (scalar): " << nNS << "\t Nodes (x): " << nNx
+              << "\t Nodes (y): " << nNy << "\t Nodes (z): " << nNz << "\n"
+              << "  Field (scalar): " << nES << "\t Field (x): " << nEx
+              << "\t Field (y): " << nEy << "\t Field (z): " << nEz << "\n"
+              << "  Elements: " << nEM << "\t Materials: " << nMaterials
+              << std::endl;
+  }
+  return true;
+}
+
+}
 namespace Garfield {
 
 ComponentCST::ComponentCST() : ComponentFieldMap("CST") {
@@ -312,7 +374,6 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   std::cout << m_className << "::Initialise:" << std::endl;
   std::cout << "    Read " << m_nNodes << " nodes from file " << nlist << "."
             << std::endl;
-  // Check number of nodes
 
   // Open the element list
   std::ifstream felist;
@@ -482,86 +543,27 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   stat(dataFile.c_str(), &fileStatus);
   int fileSize = fileStatus.st_size;
 
-  if (fileSize < 1000) {
-    fclose(f);
-    std::cerr << m_className << "::Initialise:\n"
-              << "     Error. The file is extremely short and does not seem to "
-              << "contain a header or data." << std::endl;
-    return false;
-  }
-
-  char header[headerSize];
-  size_t result = fread(header, sizeof(char), headerSize, f);
-  if (result != headerSize) {
-    fputs("Reading error while reading header.", stderr);
-    exit(3);
-  }
-
-  int nx = 0, ny = 0, nz = 0;
-  int m_x = 0, m_y = 0, m_z = 0;
-  int n_s = 0, n_x = 0, n_y = 0, n_z = 0;
-  int e_s = 0, e_x = 0, e_y = 0, e_z = 0;
-  int e_m = 0;
-
+  int nLinesX = 0, nLinesY = 0, nLinesZ = 0;
+  int nNS = 0, nES = 0, nEM = 0;
   int nMaterials = 0;
-  int filled = 0;
-  filled = std::sscanf(
-      header,
-      (std::string("mesh_nx=%d mesh_ny=%d mesh_nz=%d\n") +
-       std::string("mesh_xlines=%d mesh_ylines=%d mesh_zlines=%d\n") +
-       std::string("nodes_scalar=%d nodes_vector_x=%d nodes_vector_y=%d "
-                   "nodes_vector_z=%d\n") +
-       std::string("elements_scalar=%d elements_vector_x=%d "
-                   "elements_vector_y=%d elements_vector_z=%d\n") +
-       std::string("elements_material=%d\n") + std::string("n_materials=%d\n"))
-          .c_str(),
-      &nx, &ny, &nz, &m_x, &m_y, &m_z, &n_s, &n_x, &n_y, &n_z, &e_s, &e_x, &e_y,
-      &e_z, &e_m, &nMaterials);
-  if (filled != 16) {
-    fclose(f);
-    std::cerr << m_className << "::Initialise:\n"
-              << "    File header of " << dataFile << " is broken.\n";
+  if (!ReadHeader(f, fileSize, m_debug, nLinesX, nLinesY, nLinesZ,
+                  nNS, nES, nEM, nMaterials)) {
+    if (f) fclose(f);
     return false;
-  }
-  if (fileSize < 1000 + (m_x + m_y + m_z) * 8 +
-                     (n_s + n_x + n_y + n_z + e_s + e_x + e_y + e_z) * 4 +
-                     e_m * 1 + (int)nMaterials * 20) {
-    fclose(f);
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Unexpected file size.\n";
-    return false;
-  }
-  if (m_debug) {
-    std::cout << m_className << "::Initialise:" << std::endl;
-    std::cout << "  Information about the data stored in the given binary file:"
-              << std::endl;
-    std::cout << "  Mesh (nx): " << nx << "\t Mesh (ny): " << ny
-              << "\t Mesh (nz): " << nz << std::endl;
-    std::cout << "  Mesh (x_lines): " << m_x << "\t Mesh (y_lines): " << m_y
-              << "\t Mesh (z_lines): " << m_z << std::endl;
-    std::cout << "  Nodes (scalar): " << n_s << "\t Nodes (x): " << n_x
-              << "\t Nodes (y): " << n_y << "\t Nodes (z): " << n_z
-              << std::endl;
-    std::cout << "  Field (scalar): " << e_s << "\t Field (x): " << e_x
-              << "\t Field (y): " << e_y << "\t Field (z): " << e_z
-              << std::endl;
-    std::cout << "  Elements: " << e_m << "\t Materials: " << nMaterials
-              << std::endl;
-  }
-  m_nx = m_x;
-  m_ny = m_y;
-  m_nz = m_z;
+  } 
+  m_nx = nLinesX;
+  m_ny = nLinesY;
+  m_nz = nLinesZ;
   m_nNodes = m_nx * m_ny * m_nz;
   m_nElements = (m_nx - 1) * (m_ny - 1) * (m_nz - 1);
 
-  m_xlines.resize(m_x);
-  m_ylines.resize(m_y);
-  m_zlines.resize(m_z);
-  m_potential.resize(n_s);
-  m_elementMaterial.resize(e_m);
-  //	elements_scalar.resize(e_s);
+  m_xlines.resize(nLinesX);
+  m_ylines.resize(nLinesY);
+  m_zlines.resize(nLinesZ);
+  m_potential.resize(nNS);
+  m_elementMaterial.resize(nEM);
   m_materials.resize(nMaterials);
-  result = fread(m_xlines.data(), sizeof(double), m_xlines.size(), f);
+  auto result = fread(m_xlines.data(), sizeof(double), m_xlines.size(), f);
   if (result != m_xlines.size()) {
     fputs("Reading error while reading xlines.", stderr);
     exit(3);
@@ -579,7 +581,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   }
   result = fread(m_zlines.data(), sizeof(double), m_zlines.size(), f);
   if (result != m_zlines.size()) {
-    fputs("Reading error while reasing zlines", stderr);
+    fputs("Reading error while reading zlines", stderr);
     exit(3);
   } else if (result == 0) {
     fputs("No zlines are stored in the data file.", stderr);
@@ -593,7 +595,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
     fputs("No potentials are stored in the data file.", stderr);
     exit(3);
   }
-  fseek(f, e_s * sizeof(float), SEEK_CUR);
+  fseek(f, nES * sizeof(float), SEEK_CUR);
   // not needed in principle - thus it is ok if nothing is read
   result = fread(m_elementMaterial.data(), sizeof(unsigned char),
                  m_elementMaterial.size(), f);
@@ -614,6 +616,8 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
       fputs("Input error while reading material id.", stderr);
       exit(3);
     }
+    // const unsigned int index = id;
+    const unsigned int index = i;
     unsigned int description_size = 0;
     result = fread(&(description_size), sizeof(int), 1, f);
     if (result != 1) {
@@ -630,42 +634,37 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
     st << "  Read material: " << name.c_str();
     if (name.compare("gas") == 0) {
       st << " (considered as drift medium)";
-      m_materials.at(id).driftmedium = true;
+      m_materials.at(index).driftmedium = true;
     } else {
-      m_materials.at(id).driftmedium = false;
+      m_materials.at(index).driftmedium = false;
     }
     delete[] c;
-    float tmp_eps;
-    result = fread(&(tmp_eps), sizeof(float), 1, f);
-    m_materials.at(id).eps = tmp_eps;
+    float eps;
+    result = fread(&(eps), sizeof(float), 1, f);
+    m_materials.at(index).eps = eps;
     if (result != 1) {
       fputs("Reading error while reading eps.", stderr);
       exit(3);
     }
-    //		float mue, rho;
-    //		result = fread(&(mue), sizeof(float), 1, f);
-    //		if (result != 1) {fputs ("Reading error while reading
-    //mue.",stderr);
-    // exit (3);}
-    //		result = fread(&(rho), sizeof(float), 1, f);
-    //		if (result != 1) {fputs ("Reading error while reading
-    //rho.",stderr);
-    // exit (3);}
-    st << "; eps is: " << m_materials.at(id).eps <<
-        //				"\t mue is: " << mue <<
-        //				"\t rho is: " << rho <<
-        "\t id is: " << id << std::endl;
-    // skip mue and rho
+    st << "; eps is: " << m_materials.at(index).eps;
+    // float mue;
+    // result = fread(&(mue), sizeof(float), 1, f);
+    // if (result != 1) {
+    //   fputs ("Reading error while reading mue.", stderr);
+    //   exit (3);
+    // }
+    // st << "\t mue is: " << mue;
+    // float rho;
+    // result = fread(&(rho), sizeof(float), 1, f);
+    // if (result != 1) {
+    //   fputs ("Reading error while reading rho.", stderr);
+    //   exit (3);
+    // }
+    // st << "\t rho is: " << rho;
+    st << "\t id is: " << id << std::endl;
+    // Skip mue and rho
     fseek(f, 2 * sizeof(float), SEEK_CUR);
     // ToDo: Check if rho should be used to decide, which material is driftable
-  }
-  if (m_debug) {
-    std::cout << st.str();
-    for (auto it = m_materials.begin(), it_end = m_materials.end(); it != it_end;
-         it++) {
-      std::cout << "Material id: " << std::distance(m_materials.begin(), it)
-                << " \t driftable: " << (*it).driftmedium << std::endl;
-    }
   }
   // To be sure that they are sorted (should be already be the case)
   std::sort(m_xlines.begin(), m_xlines.end());
@@ -759,85 +758,24 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
     stat(prnsol.c_str(), &fileStatus);
     int fileSize = fileStatus.st_size;
 
-    if (fileSize < 1000) {
-      fclose(f);
-      std::cerr << m_className << "::SetWeightingField:" << std::endl;
-      std::cerr << "     Error. The file is extremely short and does not seem "
-                   "to contain a header or data.\n";
-      return false;
-    }
-
-    char header[headerSize];
-    size_t result;
-    result = fread(header, sizeof(char), headerSize, f);
-    if (result != headerSize) {
-      fputs("Reading error while reading header.", stderr);
-      exit(3);
-    }
-
-    int nx = 0, ny = 0, nz = 0;
-    int m_x = 0, m_y = 0, m_z = 0;
-    int n_x = 0, n_y = 0, n_z = 0;
-    int e_s = 0, e_x = 0, e_y = 0, e_z = 0;
-    int e_m = 0;
-
+    int nLinesX = 0, nLinesY = 0, nLinesZ = 0;
+    int nES = 0, nEM = 0;
     int nMaterials = 0;
-    int filled = 0;
-    filled = std::sscanf(
-        header,
-        (std::string("mesh_nx=%d mesh_ny=%d mesh_nz=%d\n") +
-         std::string("mesh_xlines=%d mesh_ylines=%d mesh_zlines=%d\n") +
-         std::string("nodes_scalar=%d nodes_vector_x=%d nodes_vector_y=%d "
-                     "nodes_vector_z=%d\n") +
-         std::string("elements_scalar=%d elements_vector_x=%d "
-                     "elements_vector_y=%d elements_vector_z=%d\n") +
-         std::string("elements_material=%d\n") +
-         std::string("n_materials=%d\n"))
-            .c_str(),
-        &nx, &ny, &nz, &m_x, &m_y, &m_z, &nread, &n_x, &n_y, &n_z, &e_s, &e_x,
-        &e_y, &e_z, &e_m, &nMaterials);
-    if (filled != 16) {
-      fclose(f);
-      std::cerr << m_className << "::SetWeightingField:\n"
-                << "    File header of " << prnsol << " is broken.\n";
+    if (!ReadHeader(f, fileSize, m_debug, nLinesX, nLinesY, nLinesZ,
+                    nread, nES, nEM, nMaterials)) {
+      if (f) fclose(f);
       return false;
-    }
-    if (fileSize < 1000 + (m_x + m_y + m_z) * 8 +
-                       (nread + n_x + n_y + n_z + e_s + e_x + e_y + e_z) * 4 +
-                       e_m * 1 + (int)nMaterials * 20) {
-      fclose(f);
-      std::cerr << m_className << "::SetWeightingField:\n"
-                << "    Unexpected file size.\n";
-      return false;
-    }
-    if (m_debug) {
-      std::cout << m_className << "::SetWeightingField:" << std::endl;
-      std::cout
-          << "  Information about the data stored in the given binary file:"
-          << std::endl;
-      std::cout << "  Mesh (nx): " << nx << "\t Mesh (ny): " << ny
-                << "\t Mesh (nz): " << nz << std::endl;
-      std::cout << "  Mesh (x_lines): " << m_x << "\t Mesh (y_lines): " << m_y
-                << "\t Mesh (z_lines): " << m_z << std::endl;
-      std::cout << "  Nodes (scalar): " << nread << "\t Nodes (x): " << n_x
-                << "\t Nodes (y): " << n_y << "\t Nodes (z): " << n_z
-                << std::endl;
-      std::cout << "  Field (scalar): " << e_s << "\t Field (x): " << e_x
-                << "\t Field (y): " << e_y << "\t Field (z): " << e_z
-                << std::endl;
-      std::cout << "  Elements: " << e_m << "\t Materials: " << nMaterials
-                << std::endl;
-    }
-    // skip everything, but the potential
-    fseek(f, m_x * sizeof(double), SEEK_CUR);
-    fseek(f, m_y * sizeof(double), SEEK_CUR);
-    fseek(f, m_z * sizeof(double), SEEK_CUR);
-    result = fread(potentials.data(), sizeof(float), potentials.size(), f);
+    } 
+    // Skip everything, but the potential
+    fseek(f, nLinesX * sizeof(double), SEEK_CUR);
+    fseek(f, nLinesY * sizeof(double), SEEK_CUR);
+    fseek(f, nLinesZ * sizeof(double), SEEK_CUR);
+    auto result = fread(potentials.data(), sizeof(float), potentials.size(), f);
     if (result != potentials.size()) {
       fputs("Reading error while reading nodes.", stderr);
       exit(3);
     } else if (result == 0) {
-      fputs("No wighting potentials are stored in the data file.", stderr);
+      fputs("No weighting potentials are stored in the data file.", stderr);
       exit(3);
     }
     fprnsol.close();
@@ -969,30 +907,26 @@ void ComponentCST::WeightingField(const double xin, const double yin,
 
   // Map the coordinates onto field map coordinates and get indexes
   bool mirrored[3];
-  double rcoordinate, rotation;
   unsigned int i, j, k;
-  double position_mapped[3] = {0., 0., 0.};
-  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored,
-                        rcoordinate, rotation))
+  double pos[3] = {0., 0., 0.};
+  if (!Coordinate2Index(x, y, z, i, j, k, pos, mirrored)) {
     return;
+  }
 
-  double rx = (position_mapped[0] - m_xlines.at(i)) /
-              (m_xlines.at(i + 1) - m_xlines.at(i));
-  double ry = (position_mapped[1] - m_ylines.at(j)) /
-              (m_ylines.at(j + 1) - m_ylines.at(j));
-  double rz = (position_mapped[2] - m_zlines.at(k)) /
-              (m_zlines.at(k + 1) - m_zlines.at(k));
+  double rx = (pos[0] - m_xlines.at(i)) / (m_xlines.at(i + 1) - m_xlines.at(i));
+  double ry = (pos[1] - m_ylines.at(j)) / (m_ylines.at(j + 1) - m_ylines.at(j));
+  double rz = (pos[2] - m_zlines.at(k)) / (m_zlines.at(k + 1) - m_zlines.at(k));
 
   float fwx = 0., fwy = 0., fwz = 0.;
   if (!disableFieldComponent[0])
-    fwx = GetFieldComponent(i, j, k, rx, ry, rz, 'x', &((*it).second));
+    fwx = GetFieldComponent(i, j, k, rx, ry, rz, 'x', (*it).second);
   if (!disableFieldComponent[1])
-    fwy = GetFieldComponent(i, j, k, rx, ry, rz, 'y', &((*it).second));
+    fwy = GetFieldComponent(i, j, k, rx, ry, rz, 'y', (*it).second);
   if (!disableFieldComponent[2])
-    fwz = GetFieldComponent(i, j, k, rx, ry, rz, 'z', &((*it).second));
+    fwz = GetFieldComponent(i, j, k, rx, ry, rz, 'z', (*it).second);
 
   if (m_elementMaterial.size() > 0 && doShaping) {
-    ShapeField(fwx, fwy, fwz, rx, ry, rz, i, j, k, &((*it).second));
+    ShapeField(fwx, fwy, fwz, rx, ry, rz, i, j, k, (*it).second);
   }
   if (mirrored[0]) fwx *= -1.f;
   if (mirrored[1]) fwy *= -1.f;
@@ -1028,21 +962,19 @@ double ComponentCST::WeightingPotential(const double xin, const double yin,
 
   // Map the coordinates onto field map coordinates
   bool mirrored[3];
-  double rcoordinate, rotation;
   unsigned int i, j, k;
-  double position_mapped[3] = {0., 0., 0.};
-  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored,
-                        rcoordinate, rotation))
+  double pos[3] = {0., 0., 0.};
+  if (!Coordinate2Index(x, y, z, i, j, k, pos, mirrored)) {
     return 0.;
-
-  double rx = (position_mapped[0] - m_xlines.at(i)) /
+  }
+  double rx = (pos[0] - m_xlines.at(i)) /
               (m_xlines.at(i + 1) - m_xlines.at(i));
-  double ry = (position_mapped[1] - m_ylines.at(j)) /
+  double ry = (pos[1] - m_ylines.at(j)) /
               (m_ylines.at(j + 1) - m_ylines.at(j));
-  double rz = (position_mapped[2] - m_zlines.at(k)) /
+  double rz = (pos[2] - m_zlines.at(k)) /
               (m_zlines.at(k + 1) - m_zlines.at(k));
 
-  double potential = GetPotential(i, j, k, rx, ry, rz, &((*it).second));
+  double potential = GetPotential(i, j, k, rx, ry, rz, (*it).second);
 
   if (m_debug) {
     std::cout << m_className << "::WeightingPotential:" << std::endl;
@@ -1078,16 +1010,55 @@ double ComponentCST::WeightingPotential(const double xin, const double yin,
 }
 
 void ComponentCST::GetNumberOfMeshLines(unsigned int& n_x, unsigned int& n_y,
-                                        unsigned int& n_z) {
+                                        unsigned int& n_z) const {
   n_x = m_xlines.size();
   n_y = m_ylines.size();
   n_z = m_zlines.size();
 }
 
+bool ComponentCST::GetElement(const size_t element, size_t& mat, bool& drift,
+                              std::vector<size_t>& nodes) const {
+  if (element >= m_nElements || element >= m_elementMaterial.size()) {
+    std::cerr << m_className << "::GetElement: Index out of range.\n";
+    return false;
+  }
+  mat = m_elementMaterial[element];
+  drift = m_materials[mat].driftmedium;
+  nodes.clear(); 
+  unsigned int i0 = 0, j0 = 0, k0 = 0;
+  Element2Index(element, i0, j0, k0);
+  const auto i1 = i0 + 1;
+  const auto j1 = j0 + 1;
+  const auto k1 = k0 + 1; 
+  nodes.push_back(Index2Node(i0, j0, k0));
+  nodes.push_back(Index2Node(i1, j0, k0));
+  nodes.push_back(Index2Node(i0, j1, k0));
+  nodes.push_back(Index2Node(i1, j1, k0));
+  nodes.push_back(Index2Node(i0, j0, k1));
+  nodes.push_back(Index2Node(i1, j0, k1));
+  nodes.push_back(Index2Node(i0, j1, k1));
+  nodes.push_back(Index2Node(i1, j1, k1));
+  return true;
+}
+
+bool ComponentCST::GetNode(const size_t node, 
+                           double& x, double& y, double& z) const {
+  if (node >= m_nNodes) {
+    std::cerr << m_className << "::GetNode: Index out of range.\n";
+    return false;
+  }
+  unsigned int i = 0, j = 0, k = 0;
+  Node2Index(node, i, j, k);
+  x = m_xlines[i];
+  y = m_ylines[j];
+  z = m_zlines[k];
+  return true; 
+}
+
 void ComponentCST::GetElementBoundaries(unsigned int element, double& xmin,
                                         double& xmax, double& ymin,
                                         double& ymax, double& zmin,
-                                        double& zmax) {
+                                        double& zmax) const {
   unsigned int i, j, k;
   Element2Index(element, i, j, k);
   xmin = m_xlines.at(i);
@@ -1098,33 +1069,32 @@ void ComponentCST::GetElementBoundaries(unsigned int element, double& xmin,
   zmax = m_zlines.at(k + 1);
 }
 
-Medium* ComponentCST::GetMedium(const double xin, const double yin,
-                                const double zin) {
+Medium* ComponentCST::GetMedium(const double x, const double y,
+                                const double z) {
   unsigned int i, j, k;
-  Coordinate2Index(xin, yin, zin, i, j, k);
+  Coordinate2Index(x, y, z, i, j, k);
   if (m_debug) {
-    std::cout << m_className << "::GetMedium:" << std::endl;
-    std::cout << "    Found position (" << xin << ", " << yin << ", " << zin
-              << "): " << std::endl;
-    std::cout << "    Indices are: x: " << i << "/" << m_xlines.size()
-              << "\t y: " << j << "/" << m_ylines.size() << "\t z: " << k << "/"
-              << m_zlines.size() << std::endl;
-    std::cout << "    Element material index: " << Index2Element(i, j, k)
-              << std::endl;
-    std::cout << "    Element index: "
-              << (int)m_elementMaterial.at(Index2Element(i, j, k)) << std::endl;
+    std::cout << m_className << "::GetMedium:\n"
+              << "    Position (" << x << ", " << y << ", " << z << "):\n"
+              << "    Indices are: x: " << i << "/" << m_xlines.size()
+              << "\t y: " << j << "/" << m_ylines.size() 
+              << "\t z: " << k << "/" << m_zlines.size() << std::endl;
+    const auto element = Index2Element(i, j, k);
+    std::cout << "    Element index: " << element << std::endl
+              << "    Material index: "
+              << (int)m_elementMaterial.at(element) << std::endl;
   }
   return m_materials.at(m_elementMaterial.at(Index2Element(i, j, k))).medium;
 }
 
 void ComponentCST::SetRange() {
   // Establish the ranges
-  m_mapmin[0] = *m_xlines.begin();
-  m_mapmax[0] = *(m_xlines.end() - 1);
-  m_mapmin[1] = *m_ylines.begin();
-  m_mapmax[1] = *(m_ylines.end() - 1);
-  m_mapmin[2] = *m_zlines.begin();
-  m_mapmax[2] = *(m_zlines.end() - 1);
+  m_mapmin[0] = m_xlines.front();
+  m_mapmax[0] = m_xlines.back();
+  m_mapmin[1] = m_ylines.front();
+  m_mapmax[1] = m_ylines.back();
+  m_mapmin[2] = m_zlines.front();
+  m_mapmax[2] = m_zlines.back();
   m_mapvmin = *std::min_element(m_potential.begin(), m_potential.end());
   m_mapvmax = *std::max_element(m_potential.begin(), m_potential.end());
 
@@ -1155,53 +1125,44 @@ void ComponentCST::SetRangeZ(const double zmin, const double zmax) {
 
 bool ComponentCST::Coordinate2Index(const double x, const double y,
                                     const double z, unsigned int& i,
-                                    unsigned int& j, unsigned int& k) {
+                                    unsigned int& j, unsigned int& k) const {
   bool mirrored[3] = {false, false, false};
-  double position_mapped[3] = {0., 0., 0.};
-  double rcoordinate, rotation;
-  return Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored,
-                          rcoordinate, rotation);
+  double pos[3] = {0., 0., 0.};
+  return Coordinate2Index(x, y, z, i, j, k, pos, mirrored);
 }
 
-int ComponentCST::Index2Element(const unsigned int i, const unsigned int j,
-                                const unsigned int k) {
-  if (i > m_nx - 2 || j > m_ny - 2 || k > m_nz - 2) {
-    throw "FieldMap::ElementByIndex: Error. Element indexes out of bounds.";
-  }
-  return i + j * (m_nx - 1) + k * (m_nx - 1) * (m_ny - 1);
-}
 
 bool ComponentCST::Coordinate2Index(const double xin, const double yin,
                                     const double zin, unsigned int& i,
                                     unsigned int& j, unsigned int& k,
-                                    double* position_mapped, bool* mirrored,
-                                    double& rcoordinate, double& rotation) {
+                                    double* pos, bool* mirrored) const {
   // Map the coordinates onto field map coordinates
-  position_mapped[0] = xin;
-  position_mapped[1] = yin;
-  position_mapped[2] = zin;
-  MapCoordinates(position_mapped[0], position_mapped[1], position_mapped[2],
+  pos[0] = xin;
+  pos[1] = yin;
+  pos[2] = zin;
+  double rcoordinate = 0.;
+  double rotation = 0.;
+  MapCoordinates(pos[0], pos[1], pos[2],
                  mirrored[0], mirrored[1], mirrored[2], rcoordinate, rotation);
 
   auto it_x =
-      std::lower_bound(m_xlines.begin(), m_xlines.end(), position_mapped[0]);
+      std::lower_bound(m_xlines.begin(), m_xlines.end(), pos[0]);
   auto it_y =
-      std::lower_bound(m_ylines.begin(), m_ylines.end(), position_mapped[1]);
+      std::lower_bound(m_ylines.begin(), m_ylines.end(), pos[1]);
   auto it_z =
-      std::lower_bound(m_zlines.begin(), m_zlines.end(), position_mapped[2]);
+      std::lower_bound(m_zlines.begin(), m_zlines.end(), pos[2]);
   if (it_x == m_xlines.end() || it_y == m_ylines.end() ||
-      it_z == m_zlines.end() || position_mapped[0] < m_xlines.at(0) ||
-      position_mapped[1] < m_ylines.at(0) ||
-      position_mapped[2] < m_zlines.at(0)) {
+      it_z == m_zlines.end() || pos[0] < m_xlines.at(0) ||
+      pos[1] < m_ylines.at(0) ||
+      pos[2] < m_zlines.at(0)) {
     if (m_debug) {
       std::cerr << m_className << "::ElectricFieldBinary:" << std::endl;
       std::cerr << "    Could not find the given coordinate!" << std::endl;
       std::cerr << "    You ask for the following position: " << xin << ", "
                 << yin << ", " << zin << std::endl;
-      std::cerr << "    The mapped position is: " << position_mapped[0] << ", "
-                << position_mapped[1] << ", " << position_mapped[2]
+      std::cerr << "    The mapped position is: " << pos[0] << ", "
+                << pos[1] << ", " << pos[2]
                 << std::endl;
-      PrintRange();
     }
     return false;
   }
@@ -1226,6 +1187,14 @@ bool ComponentCST::Coordinate2Index(const double xin, const double yin,
   return true;
 }
 
+int ComponentCST::Index2Element(const unsigned int i, const unsigned int j,
+                                const unsigned int k) const {
+  if (i > m_nx - 2 || j > m_ny - 2 || k > m_nz - 2) {
+    throw "ComponentCST::Index2Element: Error. Element indices out of bounds.";
+  }
+  return i + j * (m_nx - 1) + k * (m_nx - 1) * (m_ny - 1);
+}
+
 void ComponentCST::UpdatePeriodicity() {
   UpdatePeriodicity2d();
   UpdatePeriodicityCommon();
@@ -1239,55 +1208,48 @@ void ComponentCST::GetAspectRatio(const unsigned int element, double& dmin,
   }
   unsigned int i, j, k;
   Element2Index(element, i, j, k);
-  std::vector<double> distances;
-  distances.push_back(m_xlines.at(i + 1) - m_xlines.at(i));
-  distances.push_back(m_ylines.at(j + 1) - m_ylines.at(j));
-  distances.push_back(m_zlines.at(k + 1) - m_zlines.at(k));
-  std::sort(distances.begin(), distances.end());
-  dmin = distances.at(0);
-  dmax = distances.at(2);
+  const double dx = fabs(m_xlines.at(i + 1) - m_xlines.at(i));
+  const double dy = fabs(m_ylines.at(j + 1) - m_ylines.at(j));
+  const double dz = fabs(m_zlines.at(k + 1) - m_zlines.at(k));
+  dmin = std::min({dx, dy, dz});
+  dmax = std::max({dx, dy, dz});
 }
 
 double ComponentCST::GetElementVolume(const unsigned int element) {
   if (element >= m_nElements) return 0.;
   unsigned int i, j, k;
   Element2Index(element, i, j, k);
-  const double volume = fabs((m_xlines.at(i + 1) - m_xlines.at(i)) *
-                             (m_xlines.at(j + 1) - m_ylines.at(j)) *
-                             (m_xlines.at(k + 1) - m_zlines.at(k)));
-  return volume;
+  const double dx = fabs(m_xlines.at(i + 1) - m_xlines.at(i));
+  const double dy = fabs(m_ylines.at(j + 1) - m_ylines.at(j));
+  const double dz = fabs(m_zlines.at(k + 1) - m_zlines.at(k));
+  return dx * dy * dz;
 }
 
 void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
                                        const double zin, double& ex, double& ey,
                                        double& ez, double& volt, Medium*& m,
-                                       int& status, bool calculatePotential) {
+                                       int& status, bool calculatePotential) const {
   // Copy the coordinates
   double x = xin, y = yin, z = zin;
 
   ex = ey = ez = 0;
 
   bool mirrored[3];
-  double rcoordinate, rotation;
   unsigned int i, j, k;
-  double position_mapped[3] = {0., 0., 0.};
-  if (!Coordinate2Index(x, y, z, i, j, k, position_mapped, mirrored,
-                        rcoordinate, rotation))
+  double pos[3] = {0., 0., 0.};
+  if (!Coordinate2Index(x, y, z, i, j, k, pos, mirrored)) {
     return;
+  }
+  double rx = (pos[0] - m_xlines.at(i)) / (m_xlines.at(i + 1) - m_xlines.at(i));
+  double ry = (pos[1] - m_ylines.at(j)) / (m_ylines.at(j + 1) - m_ylines.at(j));
+  double rz = (pos[2] - m_zlines.at(k)) / (m_zlines.at(k + 1) - m_zlines.at(k));
 
-  double rx = (position_mapped[0] - m_xlines.at(i)) /
-              (m_xlines.at(i + 1) - m_xlines.at(i));
-  double ry = (position_mapped[1] - m_ylines.at(j)) /
-              (m_ylines.at(j + 1) - m_ylines.at(j));
-  double rz = (position_mapped[2] - m_zlines.at(k)) /
-              (m_zlines.at(k + 1) - m_zlines.at(k));
-
-  float fex = GetFieldComponent(i, j, k, rx, ry, rz, 'x', &m_potential);
-  float fey = GetFieldComponent(i, j, k, rx, ry, rz, 'y', &m_potential);
-  float fez = GetFieldComponent(i, j, k, rx, ry, rz, 'z', &m_potential);
+  float fex = GetFieldComponent(i, j, k, rx, ry, rz, 'x', m_potential);
+  float fey = GetFieldComponent(i, j, k, rx, ry, rz, 'y', m_potential);
+  float fez = GetFieldComponent(i, j, k, rx, ry, rz, 'z', m_potential);
 
   if (m_elementMaterial.size() > 0 && doShaping) {
-    ShapeField(fex, fey, fez, rx, ry, rz, i, j, k, &m_potential);
+    ShapeField(fex, fey, fez, rx, ry, rz, i, j, k, m_potential);
   }
   if (mirrored[0]) fex *= -1.f;
   if (mirrored[1]) fey *= -1.f;
@@ -1311,12 +1273,13 @@ void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
     std::cout << "    Electric field is: " << fex << ", " << fey << ", " << fez
               << "): " << std::endl;
   }
-  // get the material index of the element and return the medium taken from the
+  // Get the material index of the element and return the medium taken from the
   // materials (since the material id is equal to the material vector position)
-  m = m_materials.at(m_elementMaterial.at(Index2Element(i, j, k))).medium;
+  const auto imat = m_elementMaterial.at(Index2Element(i, j, k));
+  m = m_materials.at(imat).medium;
   //  m = materials[elements[imap].matmap].medium;
   status = -5;
-  if (m_materials.at(m_elementMaterial.at(Index2Element(i, j, k))).driftmedium) {
+  if (m_materials.at(imat).driftmedium) {
     if (m) {
       if (m->IsDriftable()) status = 0;
     }
@@ -1325,102 +1288,97 @@ void ComponentCST::ElectricFieldBinary(const double xin, const double yin,
   if (!disableFieldComponent[1]) ey = fey;
   if (!disableFieldComponent[2]) ez = fez;
   if (calculatePotential)
-    volt = GetPotential(i, j, k, rx, ry, rz, &m_potential);
+    volt = GetPotential(i, j, k, rx, ry, rz, m_potential);
 }
 
-float ComponentCST::GetFieldComponent(const unsigned int i,
-                                      const unsigned int j,
-                                      const unsigned int k, const double rx,
-                                      const double ry, const double rz,
-                                      const char component,
-                                      const std::vector<float>* potentials) {
-  float dv1 = 0, dv2 = 0, dv3 = 0, dv4 = 0;
-  float dv11 = 0, dv21 = 0, dv = 0;
-  float e = 0;
+float ComponentCST::GetFieldComponent(
+    const unsigned int i, const unsigned int j, const unsigned int k, 
+    const double rx, const double ry, const double rz,
+    const char component, const std::vector<float>& potentials) const {
+  float e = 0.;
   if (component == 'x') {
-    dv1 = potentials->at(Index2Node(i + 1, j, k)) -
-          potentials->at(Index2Node(i, j, k));
-    dv2 = potentials->at(Index2Node(i + 1, j + 1, k)) -
-          potentials->at(Index2Node(i, j + 1, k));
-    dv3 = potentials->at(Index2Node(i + 1, j + 1, k + 1)) -
-          potentials->at(Index2Node(i, j + 1, k + 1));
-    dv4 = potentials->at(Index2Node(i + 1, j, k + 1)) -
-          potentials->at(Index2Node(i, j, k + 1));
+    const float dv1 = potentials.at(Index2Node(i + 1, j, k)) -
+                      potentials.at(Index2Node(i, j, k));
+    const float dv2 = potentials.at(Index2Node(i + 1, j + 1, k)) -
+                      potentials.at(Index2Node(i, j + 1, k));
+    const float dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
+                      potentials.at(Index2Node(i, j + 1, k + 1));
+    const float dv4 = potentials.at(Index2Node(i + 1, j, k + 1)) -
+                      potentials.at(Index2Node(i, j, k + 1));
 
-    dv11 = dv1 + (dv4 - dv1) * rz;
-    dv21 = dv2 + (dv3 - dv2) * rz;
-    dv = dv11 + (dv21 - dv11) * ry;
+    const float dv11 = dv1 + (dv4 - dv1) * rz;
+    const float dv21 = dv2 + (dv3 - dv2) * rz;
+    const float dv = dv11 + (dv21 - dv11) * ry;
     e = -1 * dv / (m_xlines.at(i + 1) - m_xlines.at(i));
   }
   if (component == 'y') {
-    dv1 = potentials->at(Index2Node(i, j + 1, k)) -
-          potentials->at(Index2Node(i, j, k));
-    dv2 = potentials->at(Index2Node(i, j + 1, k + 1)) -
-          potentials->at(Index2Node(i, j, k + 1));
-    dv3 = potentials->at(Index2Node(i + 1, j + 1, k + 1)) -
-          potentials->at(Index2Node(i + 1, j, k + 1));
-    dv4 = potentials->at(Index2Node(i + 1, j + 1, k)) -
-          potentials->at(Index2Node(i + 1, j, k));
+    const float dv1 = potentials.at(Index2Node(i, j + 1, k)) -
+                      potentials.at(Index2Node(i, j, k));
+    const float dv2 = potentials.at(Index2Node(i, j + 1, k + 1)) -
+                      potentials.at(Index2Node(i, j, k + 1));
+    const float dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
+                      potentials.at(Index2Node(i + 1, j, k + 1));
+    const float dv4 = potentials.at(Index2Node(i + 1, j + 1, k)) -
+                      potentials.at(Index2Node(i + 1, j, k));
 
-    dv11 = dv1 + (dv4 - dv1) * rx;
-    dv21 = dv2 + (dv3 - dv2) * rx;
-    dv = dv11 + (dv21 - dv11) * rz;
+    const float dv11 = dv1 + (dv4 - dv1) * rx;
+    const float dv21 = dv2 + (dv3 - dv2) * rx;
+    const float dv = dv11 + (dv21 - dv11) * rz;
     e = -1 * dv / (m_ylines.at(j + 1) - m_ylines.at(j));
   }
   if (component == 'z') {
-    dv1 = potentials->at(Index2Node(i, j, k + 1)) -
-          potentials->at(Index2Node(i, j, k));
-    dv2 = potentials->at(Index2Node(i + 1, j, k + 1)) -
-          potentials->at(Index2Node(i + 1, j, k));
-    dv3 = potentials->at(Index2Node(i + 1, j + 1, k + 1)) -
-          potentials->at(Index2Node(i + 1, j + 1, k));
-    dv4 = potentials->at(Index2Node(i, j + 1, k + 1)) -
-          potentials->at(Index2Node(i, j + 1, k));
+    const float dv1 = potentials.at(Index2Node(i, j, k + 1)) -
+                      potentials.at(Index2Node(i, j, k));
+    const float dv2 = potentials.at(Index2Node(i + 1, j, k + 1)) -
+                      potentials.at(Index2Node(i + 1, j, k));
+    const float dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
+                      potentials.at(Index2Node(i + 1, j + 1, k));
+    const float dv4 = potentials.at(Index2Node(i, j + 1, k + 1)) -
+                      potentials.at(Index2Node(i, j + 1, k));
 
-    dv11 = dv1 + (dv4 - dv1) * ry;
-    dv21 = dv2 + (dv3 - dv2) * ry;
-    dv = dv11 + (dv21 - dv11) * rx;
+    const float dv11 = dv1 + (dv4 - dv1) * ry;
+    const float dv21 = dv2 + (dv3 - dv2) * ry;
+    const float dv = dv11 + (dv21 - dv11) * rx;
     e = -1 * dv / (m_zlines.at(k + 1) - m_zlines.at(k));
   }
   return e;
 }
 
-float ComponentCST::GetPotential(const unsigned int i, const unsigned int j,
-                                 const unsigned int k, const double rx,
-                                 const double ry, const double rz,
-                                 const std::vector<float>* potentials) {
+float ComponentCST::GetPotential(
+    const unsigned int i, const unsigned int j, const unsigned int k, 
+    const double rx, const double ry, const double rz,
+    const std::vector<float>& potentials) const {
   double t1 = rx * 2. - 1;
   double t2 = ry * 2. - 1;
   double t3 = rz * 2. - 1;
-  return (potentials->at(Index2Node(i + 1, j, k)) * (1 - t1) * (1 - t2) *
+  return (potentials.at(Index2Node(i + 1, j, k)) * (1 - t1) * (1 - t2) *
               (1 - t3) +
-          potentials->at(Index2Node(i + 1, j + 1, k)) * (1 + t1) * (1 - t2) *
+          potentials.at(Index2Node(i + 1, j + 1, k)) * (1 + t1) * (1 - t2) *
               (1 - t3) +
-          potentials->at(Index2Node(i, j + 1, k)) * (1 + t1) * (1 + t2) *
+          potentials.at(Index2Node(i, j + 1, k)) * (1 + t1) * (1 + t2) *
               (1 - t3) +
-          potentials->at(Index2Node(i, j, k)) * (1 - t1) * (1 + t2) * (1 - t3) +
-          potentials->at(Index2Node(i + 1, j, k + 1)) * (1 - t1) * (1 - t2) *
+          potentials.at(Index2Node(i, j, k)) * (1 - t1) * (1 + t2) * (1 - t3) +
+          potentials.at(Index2Node(i + 1, j, k + 1)) * (1 - t1) * (1 - t2) *
               (1 + t3) +
-          potentials->at(Index2Node(i + 1, j + 1, k + 1)) * (1 + t1) *
+          potentials.at(Index2Node(i + 1, j + 1, k + 1)) * (1 + t1) *
               (1 - t2) * (1 + t3) +
-          potentials->at(Index2Node(i, j + 1, k + 1)) * (1 + t1) * (1 + t2) *
+          potentials.at(Index2Node(i, j + 1, k + 1)) * (1 + t1) * (1 + t2) *
               (1 + t3) +
-          potentials->at(Index2Node(i, j, k + 1)) * (1 - t1) * (1 + t2) *
+          potentials.at(Index2Node(i, j, k + 1)) * (1 - t1) * (1 + t2) *
               (1 + t3)) /
          8.;
 }
 
-void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
-                              const double ry, const double rz,
-                              const unsigned int i, const unsigned int j,
-                              const unsigned int k,
-                              std::vector<float>* potentials) {
-  int m1 = 0, m2 = 0;
-  if ((i == 0 && rx >= 0.5) || (i == m_xlines.size() - 2 && rx < 0.5) ||
-      (i > 0 && i < m_xlines.size() - 2)) {
-    m1 = m_elementMaterial.at(Index2Element(i, j, k));
+void ComponentCST::ShapeField(float& ex, float& ey, float& ez, 
+    const double rx, const double ry, const double rz,
+    const unsigned int i, const unsigned int j, const unsigned int k,
+    const std::vector<float>& potentials) const {
+
+  const auto m1 = m_elementMaterial.at(Index2Element(i, j, k));
+  const auto imax = m_xlines.size() - 2;
+  if ((i == 0 && rx >= 0.5) || (i == imax && rx < 0.5) || (i > 0 && i < imax)) {
     if (rx >= 0.5) {
-      m2 = m_elementMaterial.at(Index2Element(i + 1, j, k));
+      const auto m2 = m_elementMaterial.at(Index2Element(i + 1, j, k));
       if (m1 == m2) {
         float ex_next =
             GetFieldComponent(i + 1, j, k, 0.5, ry, rz, 'x', potentials);
@@ -1430,7 +1388,7 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
                  (m_xlines.at(i + 2) - m_xlines.at(i + 1));
       }
     } else {
-      m2 = m_elementMaterial.at(Index2Element(i - 1, j, k));
+      const auto m2 = m_elementMaterial.at(Index2Element(i - 1, j, k));
       if (m1 == m2) {
         float ex_before =
             GetFieldComponent(i - 1, j, k, 0.5, ry, rz, 'x', potentials);
@@ -1442,11 +1400,10 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
     }
   }
 
-  if ((j == 0 && ry >= 0.5) || (j == m_ylines.size() - 2 && ry < 0.5) ||
-      (j > 0 && j < m_ylines.size() - 2)) {
-    m1 = m_elementMaterial.at(Index2Element(i, j, k));
+  const auto jmax = m_ylines.size() - 2;
+  if ((j == 0 && ry >= 0.5) || (j == jmax && ry < 0.5) || (j > 0 && j < jmax)) {
     if (ry >= 0.5) {
-      m2 = m_elementMaterial.at(Index2Element(i, j + 1, k));
+      const auto m2 = m_elementMaterial.at(Index2Element(i, j + 1, k));
       if (m1 == m2) {
         float ey_next =
             GetFieldComponent(i, j + 1, k, rx, 0.5, rz, 'y', potentials);
@@ -1456,7 +1413,7 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
                  (m_ylines.at(j + 2) - m_ylines.at(j + 1));
       }
     } else {
-      m2 = m_elementMaterial.at(Index2Element(i, j - 1, k));
+      const auto m2 = m_elementMaterial.at(Index2Element(i, j - 1, k));
       if (m1 == m2) {
         float ey_next =
             GetFieldComponent(i, j - 1, k, rx, 0.5, rz, 'y', potentials);
@@ -1467,12 +1424,10 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
       }
     }
   }
-
-  if ((k == 0 && rz >= 0.5) || (k == m_zlines.size() - 2 && rz < 0.5) ||
-      (k > 0 && k < m_zlines.size() - 2)) {
-    m1 = m_elementMaterial.at(Index2Element(i, j, k));
+  const auto kmax = m_zlines.size() - 2;
+  if ((k == 0 && rz >= 0.5) || (k == kmax && rz < 0.5) || (k > 0 && k < kmax)) {
     if (rz >= 0.5) {
-      m2 = m_elementMaterial.at(Index2Element(i, j, k + 1));
+      const auto m2 = m_elementMaterial.at(Index2Element(i, j, k + 1));
       if (m1 == m2) {
         float ez_next =
             GetFieldComponent(i, j, k + 1, rx, ry, 0.5, 'z', potentials);
@@ -1482,7 +1437,7 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
                  (m_zlines.at(k + 2) - m_zlines.at(k + 1));
       }
     } else {
-      m2 = m_elementMaterial.at(Index2Element(i, j, k - 1));
+      const auto m2 = m_elementMaterial.at(Index2Element(i, j, k - 1));
       if (m1 == m2) {
         float ez_next =
             GetFieldComponent(i, j, k - 1, rx, ry, 0.5, 'z', potentials);
@@ -1494,22 +1449,36 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez, const double rx,
     }
   }
 }
-//
-void ComponentCST::Element2Index(int element, unsigned int& i, unsigned int& j,
-                                 unsigned int& k) {
-  int tmp = element;
-  k = element / ((m_xlines.size() - 1) * (m_ylines.size() - 1));
-  tmp -= k * (m_xlines.size() - 1) * (m_ylines.size() - 1);
-  j = tmp / (m_xlines.size() - 1);
-  i = element - j * (m_xlines.size() - 1) -
-      k * (m_xlines.size() - 1) * (m_ylines.size() - 1);
+
+void ComponentCST::Element2Index(const size_t element, 
+    unsigned int& i, unsigned int& j, unsigned int& k) const {
+  const auto nx = m_xlines.size() - 1;
+  const auto ny = m_ylines.size() - 1;
+  const auto nxy = nx * ny;
+  k = element / nxy;
+  const auto tmp = element - k * nxy;
+  j = tmp / nx;
+  i = tmp - j * nx;
 }
 
 int ComponentCST::Index2Node(const unsigned int i, const unsigned int j,
-                             const unsigned int k) {
+                             const unsigned int k) const {
   if (i > m_nx - 1 || j > m_ny - 1 || k > m_nz - 1) {
-    throw "FieldMap::NodeByIndex: Error. Node indexes out of bounds.";
+    throw "ComponentCST::Index2Node: Error. Node indices out of bounds.";
   }
   return i + j * m_nx + k * m_nx * m_ny;
 }
+
+void ComponentCST::Node2Index(const size_t node, 
+    unsigned int& i, unsigned int& j, unsigned int& k) const {
+
+  const auto nx = m_xlines.size();
+  const auto ny = m_ylines.size(); 
+  const auto nxy = nx * ny;
+  k = node / nxy;
+  const auto tmp = node - k * nxy;
+  j = tmp / nx;
+  i = tmp - j * nx;
+} 
+
 }
