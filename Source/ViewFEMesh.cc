@@ -211,17 +211,17 @@ void ViewFEMesh::DrawElements() {
   const int nMaxZ = perZ ? int(m_zMaxBox / sz) + 1 : 0;
 
   // Loop over all elements.
-  for (const auto& element : m_component->m_elements) {
-    const auto mat = element.matmap;
+  const auto nElements = m_component->GetNumberOfElements();
+  for (size_t i = 0; i < nElements; ++i) {
+    size_t mat = 0;
+    bool driftmedium = false;
+    std::vector<size_t> nodes;
+    if (!m_component->GetElement(i, mat, driftmedium, nodes)) continue;
     // Do not plot the drift medium.
-    if (m_component->m_materials[mat].driftmedium && !m_plotMeshBorders) {
-      continue;
-    }
+    if (driftmedium && !m_plotMeshBorders) continue;
     // Do not create polygons for disabled materials.
     if (m_disabledMaterial[mat]) continue;
     // -- Tetrahedral elements
-
-
     TGraph gr;
     const short col = m_colorMap.count(mat) != 0 ? m_colorMap[mat] : 1;
     gr.SetLineColor(col);
@@ -240,12 +240,18 @@ void ViewFEMesh::DrawElements() {
     std::vector<double> vx0;
     std::vector<double> vy0;
     std::vector<double> vz0;
-    const size_t nNodes = 4;
+    const size_t nNodes = nodes.size();
     for (size_t j = 0; j < nNodes; ++j) {
-      const auto& node = m_component->m_nodes[element.emap[j]];
-      vx0.push_back(node.x);
-      vy0.push_back(node.y);
-      vz0.push_back(node.z);
+      double xn = 0., yn = 0., zn = 0.;
+      if (!m_component->GetNode(nodes[j], xn, yn, zn)) continue;
+      vx0.push_back(xn);
+      vy0.push_back(yn);
+      vz0.push_back(zn);
+    }
+    if (vx0.size() != nNodes) {
+      std::cerr << m_className << "::DrawElements:\n"
+                << "    Error retrieving nodes of element " << i << ".\n";
+      continue;
     }
     // Coordinates of vertices
     std::vector<double> vx(nNodes, 0.);
@@ -253,40 +259,43 @@ void ViewFEMesh::DrawElements() {
     std::vector<double> vz(nNodes, 0.);
     // Loop over the periodicities in x.
     for (int nx = nMinX; nx <= nMaxX; nx++) {
+      const double dx = sx * nx;
       // Determine the x-coordinates of the vertices.
       if (m_component->m_mirrorPeriodic[0] && nx != 2 * (nx / 2)) {
         for (size_t j = 0; j < nNodes; ++j) {
-          vx[j] = mapxmin + (mapxmax - vx0[j]) + sx * nx;
+          vx[j] = mapxmin + (mapxmax - vx0[j]) + dx;
         }
       } else {
         for (size_t j = 0; j < nNodes; ++j) {
-          vx[j] = vx0[j] + sx * nx;
+          vx[j] = vx0[j] + dx;
         }
       }
 
       // Loop over the periodicities in y.
       for (int ny = nMinY; ny <= nMaxY; ny++) {
+        const double dy = sy * ny;
         // Determine the y-coordinates of the vertices.
         if (m_component->m_mirrorPeriodic[1] && ny != 2 * (ny / 2)) {
           for (size_t j = 0; j < nNodes; ++j) {
-            vy[j] = mapymin + (mapymax - vy0[j]) + sy * ny;
+            vy[j] = mapymin + (mapymax - vy0[j]) + dy;
           }
         } else {
           for (size_t j = 0; j < nNodes; ++j) {
-            vy[j] = vy0[j] + sy * ny;
+            vy[j] = vy0[j] + dy;
           }
         }
 
         // Loop over the periodicities in z.
         for (int nz = nMinZ; nz <= nMaxZ; nz++) {
+          const double dz = sz * nz;
           // Determine the z-coordinates of the vertices.
           if (m_component->m_mirrorPeriodic[2] && nz != 2 * (nz / 2)) {
             for (size_t j = 0; j < nNodes; ++j) {
-              vz[j] = mapzmin + (mapzmax - vz0[j]) + sz * nz;
+              vz[j] = mapzmin + (mapzmax - vz0[j]) + dz;
             }
           } else {
             for (size_t j = 0; j < nNodes; ++j) {
-              vz[j] = vz0[j] + sz * nz;
+              vz[j] = vz0[j] + dz;
             }
           }
 

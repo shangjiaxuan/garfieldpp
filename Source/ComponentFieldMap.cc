@@ -121,7 +121,7 @@ Medium* ComponentFieldMap::GetMedium(const unsigned int imat) const {
   return m_materials[imat].medium;
 }
 
-bool ComponentFieldMap::GetElement(const unsigned int i, double& vol,
+bool ComponentFieldMap::GetElement(const size_t i, double& vol,
                                    double& dmin, double& dmax) {
   if (i >= m_elements.size()) {
     std::cerr << m_className << "::GetElement: Index out of range.\n";
@@ -130,6 +130,32 @@ bool ComponentFieldMap::GetElement(const unsigned int i, double& vol,
 
   vol = GetElementVolume(i);
   GetAspectRatio(i, dmin, dmax);
+  return true;
+}
+
+bool ComponentFieldMap::GetElement(const size_t i, size_t& mat, bool& drift,
+                                   std::vector<size_t>& nodes) const {
+  if (i >= m_elements.size()) {
+    std::cerr << m_className << "::GetElement: Index out of range.\n";
+    return false;
+  }
+  const auto& element = m_elements[i];
+  mat = element.matmap;
+  drift = m_materials[mat].driftmedium;
+  nodes.resize(4);
+  for (size_t j = 0; j < 4; ++j) nodes[j] = element.emap[j];
+  return true; 
+}
+
+bool ComponentFieldMap::GetNode(const size_t i, double& x, double& y,
+                                double& z) const {
+  if (i >= m_nodes.size()) {
+    std::cerr << m_className << "::GetNode: Index out of range.\n";
+    return false;
+  }
+  x = m_nodes[i].x;
+  y = m_nodes[i].y;
+  z = m_nodes[i].z;
   return true;
 }
 

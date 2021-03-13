@@ -25,6 +25,12 @@ class ComponentCST : public ComponentFieldMap {
   Medium* GetMedium(const double x, const double y, const double z) override;
   void GetNumberOfMeshLines(unsigned int& nx, unsigned int& ny,
                             unsigned int& nz) const;
+  size_t GetNumberOfElements() const override { return m_nElements; }
+  bool GetElement(const size_t i, size_t& mat, bool& drift,
+                  std::vector<size_t>& nodes) const override;
+  size_t GetNumberOfNodes() const override { return m_nNodes; }
+  bool GetNode(const size_t i, double& x, double& y, double& z) const override; 
+
   void GetElementBoundaries(unsigned int element, double& xmin, double& xmax,
                             double& ymin, double& ymax, double& zmin,
                             double& zmax) const;
@@ -234,8 +240,8 @@ class ComponentCST : public ComponentFieldMap {
   unsigned int m_nx = 0;  ///< Number of mesh lines in x direction
   unsigned int m_ny = 0;  ///< Number of mesh lines in y direction
   unsigned int m_nz = 0;  ///< Number of mesh lines in z direction
-  unsigned int m_nElements = 0; ///< Number of elements
-  unsigned int m_nNodes = 0;    ///< Number of nodes
+  size_t m_nElements = 0; ///< Number of elements
+  size_t m_nNodes = 0;    ///< Number of nodes
   // If true x,y,z fields of this component are disabled (e=0 V/cm).
   bool disableFieldComponent[3] = {false, false, false};
   bool doShaping = false;
@@ -264,11 +270,14 @@ class ComponentCST : public ComponentFieldMap {
    * i,j,k start at 0 and reach at maximum
    * m_xlines-1,m_ylines-1,m_zlines-1
    */
-  void Element2Index(int element, unsigned int& i, unsigned int& j,
+  void Element2Index(const size_t element, unsigned int& i, unsigned int& j,
                      unsigned int& k) const;
 
   int Index2Node(const unsigned int i, const unsigned int j,
                  const unsigned int k) const;
+
+  void Node2Index(const size_t node, unsigned int& i, unsigned int& j,
+                  unsigned int& k) const;
 };
 
 /// Helper struct for drawing the mesh with ViewFEMesh.

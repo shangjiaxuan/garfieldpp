@@ -47,7 +47,7 @@ class ComponentFieldMap : public Component {
   /// Flag a field map materials as a non-drift medium.
   void NotDriftMedium(const unsigned int imat);
   /// Return the number of materials in the field map.
-  unsigned int GetNumberOfMaterials() const { return m_materials.size(); }
+  size_t GetNumberOfMaterials() const { return m_materials.size(); }
   /// Return the permittivity of a field map material.
   double GetPermittivity(const unsigned int imat) const;
   /// Return the conductivity of a field map material.
@@ -58,13 +58,15 @@ class ComponentFieldMap : public Component {
   Medium* GetMedium(const unsigned int i) const;
   using Component::GetMedium;
 
-  unsigned int GetNumberOfMedia() const { return m_materials.size(); }
-
   /// Return the number of mesh elements.
-  unsigned int GetNumberOfElements() const { return m_elements.size(); }
+  virtual size_t GetNumberOfElements() const { return m_elements.size(); } 
   /// Return the volume and aspect ratio of a mesh element.
-  bool GetElement(const unsigned int i, double& vol, double& dmin,
-                  double& dmax);
+  bool GetElement(const size_t i, double& vol, double& dmin, double& dmax);
+  /// Return the material and node indices of a mesh element.
+  virtual bool GetElement(const size_t i, size_t& mat, bool& drift, 
+                          std::vector<size_t>& nodes) const;
+  virtual size_t GetNumberOfNodes() const { return m_nodes.size(); }
+  virtual bool GetNode(const size_t i, double& x, double& y, double& z) const;
 
   // Options
   void EnableCheckMapIndices(const bool on = true) {

@@ -1016,6 +1016,42 @@ void ComponentCST::GetNumberOfMeshLines(unsigned int& n_x, unsigned int& n_y,
   n_z = m_zlines.size();
 }
 
+bool ComponentCST::GetElement(const size_t element, size_t& mat, bool& drift,
+                              std::vector<size_t>& nodes) const {
+  if (element >= m_nElements || element >= m_elementMaterial.size()) {
+    std::cerr << m_className << "::GetElement: Index out of range.\n";
+    return false;
+  }
+  mat = m_elementMaterial[element];
+  drift = m_materials[mat].driftmedium;
+  nodes.clear(); 
+  unsigned int i = 0, j = 0, k = 0;
+  Element2Index(element, i, j, k);
+  nodes.push_back(Index2Node(i, j, k));
+  nodes.push_back(Index2Node(i, j, k + 1));
+  nodes.push_back(Index2Node(i, j + 1, k));
+  nodes.push_back(Index2Node(i, j + 1, k + 1));
+  nodes.push_back(Index2Node(i + 1, j, k));
+  nodes.push_back(Index2Node(i + 1, j, k + 1));
+  nodes.push_back(Index2Node(i + 1, j + 1, k));
+  nodes.push_back(Index2Node(i + 1, j + 1, k + 1));
+  return true;
+}
+
+bool ComponentCST::GetNode(const size_t node, 
+                           double& x, double& y, double& z) const {
+  if (node >= m_nNodes) {
+    std::cerr << m_className << "::GetNode: Index out of range.\n";
+    return false;
+  }
+  unsigned int i = 0, j = 0, k = 0;
+  Node2Index(node, i, j, k);
+  x = m_xlines[i];
+  y = m_ylines[j];
+  z = m_zlines[k];
+  return true; 
+}
+
 void ComponentCST::GetElementBoundaries(unsigned int element, double& xmin,
                                         double& xmax, double& ymin,
                                         double& ymax, double& zmin,
@@ -1413,13 +1449,13 @@ void ComponentCST::ShapeField(float& ex, float& ey, float& ez,
   }
 }
 
-void ComponentCST::Element2Index(int element, unsigned int& i, unsigned int& j,
-                                 unsigned int& k) const {
+void ComponentCST::Element2Index(const size_t element, 
+    unsigned int& i, unsigned int& j, unsigned int& k) const {
   const auto nx = m_xlines.size() - 1;
-  const auto ny = (m_ylines.size() - 1);
+  const auto ny = m_ylines.size() - 1;
   const auto nxy = nx * ny;
   k = element / nxy;
-  const int tmp = element - k * nxy;
+  const auto tmp = element - k * nxy;
   j = tmp / nx;
   i = tmp - j * nx;
 }
@@ -1431,4 +1467,17 @@ int ComponentCST::Index2Node(const unsigned int i, const unsigned int j,
   }
   return i + j * m_nx + k * m_nx * m_ny;
 }
+
+void ComponentCST::Node2Index(const size_t node, 
+    unsigned int& i, unsigned int& j, unsigned int& k) const {
+
+  const auto nx = m_xlines.size();
+  const auto ny = m_ylines.size(); 
+  const auto nxy = nx * ny;
+  k = node / nxy;
+  const auto tmp = node - k * nxy;
+  j = tmp / nx;
+  i = tmp - j * nx;
+} 
+
 }
