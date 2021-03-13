@@ -1025,16 +1025,19 @@ bool ComponentCST::GetElement(const size_t element, size_t& mat, bool& drift,
   mat = m_elementMaterial[element];
   drift = m_materials[mat].driftmedium;
   nodes.clear(); 
-  unsigned int i = 0, j = 0, k = 0;
-  Element2Index(element, i, j, k);
-  nodes.push_back(Index2Node(i, j, k));
-  nodes.push_back(Index2Node(i, j, k + 1));
-  nodes.push_back(Index2Node(i, j + 1, k));
-  nodes.push_back(Index2Node(i, j + 1, k + 1));
-  nodes.push_back(Index2Node(i + 1, j, k));
-  nodes.push_back(Index2Node(i + 1, j, k + 1));
-  nodes.push_back(Index2Node(i + 1, j + 1, k));
-  nodes.push_back(Index2Node(i + 1, j + 1, k + 1));
+  unsigned int i0 = 0, j0 = 0, k0 = 0;
+  Element2Index(element, i0, j0, k0);
+  const auto i1 = i0 + 1;
+  const auto j1 = j0 + 1;
+  const auto k1 = k0 + 1; 
+  nodes.push_back(Index2Node(i0, j0, k0));
+  nodes.push_back(Index2Node(i1, j0, k0));
+  nodes.push_back(Index2Node(i0, j1, k0));
+  nodes.push_back(Index2Node(i1, j1, k0));
+  nodes.push_back(Index2Node(i0, j0, k1));
+  nodes.push_back(Index2Node(i1, j0, k1));
+  nodes.push_back(Index2Node(i0, j1, k1));
+  nodes.push_back(Index2Node(i1, j1, k1));
   return true;
 }
 
@@ -1292,52 +1295,50 @@ float ComponentCST::GetFieldComponent(
     const unsigned int i, const unsigned int j, const unsigned int k, 
     const double rx, const double ry, const double rz,
     const char component, const std::vector<float>& potentials) const {
-  float dv1 = 0, dv2 = 0, dv3 = 0, dv4 = 0;
-  float dv11 = 0, dv21 = 0, dv = 0;
-  float e = 0;
+  float e = 0.;
   if (component == 'x') {
-    dv1 = potentials.at(Index2Node(i + 1, j, k)) -
-          potentials.at(Index2Node(i, j, k));
-    dv2 = potentials.at(Index2Node(i + 1, j + 1, k)) -
-          potentials.at(Index2Node(i, j + 1, k));
-    dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
-          potentials.at(Index2Node(i, j + 1, k + 1));
-    dv4 = potentials.at(Index2Node(i + 1, j, k + 1)) -
-          potentials.at(Index2Node(i, j, k + 1));
+    const float dv1 = potentials.at(Index2Node(i + 1, j, k)) -
+                      potentials.at(Index2Node(i, j, k));
+    const float dv2 = potentials.at(Index2Node(i + 1, j + 1, k)) -
+                      potentials.at(Index2Node(i, j + 1, k));
+    const float dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
+                      potentials.at(Index2Node(i, j + 1, k + 1));
+    const float dv4 = potentials.at(Index2Node(i + 1, j, k + 1)) -
+                      potentials.at(Index2Node(i, j, k + 1));
 
-    dv11 = dv1 + (dv4 - dv1) * rz;
-    dv21 = dv2 + (dv3 - dv2) * rz;
-    dv = dv11 + (dv21 - dv11) * ry;
+    const float dv11 = dv1 + (dv4 - dv1) * rz;
+    const float dv21 = dv2 + (dv3 - dv2) * rz;
+    const float dv = dv11 + (dv21 - dv11) * ry;
     e = -1 * dv / (m_xlines.at(i + 1) - m_xlines.at(i));
   }
   if (component == 'y') {
-    dv1 = potentials.at(Index2Node(i, j + 1, k)) -
-          potentials.at(Index2Node(i, j, k));
-    dv2 = potentials.at(Index2Node(i, j + 1, k + 1)) -
-          potentials.at(Index2Node(i, j, k + 1));
-    dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
-          potentials.at(Index2Node(i + 1, j, k + 1));
-    dv4 = potentials.at(Index2Node(i + 1, j + 1, k)) -
-          potentials.at(Index2Node(i + 1, j, k));
+    const float dv1 = potentials.at(Index2Node(i, j + 1, k)) -
+                      potentials.at(Index2Node(i, j, k));
+    const float dv2 = potentials.at(Index2Node(i, j + 1, k + 1)) -
+                      potentials.at(Index2Node(i, j, k + 1));
+    const float dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
+                      potentials.at(Index2Node(i + 1, j, k + 1));
+    const float dv4 = potentials.at(Index2Node(i + 1, j + 1, k)) -
+                      potentials.at(Index2Node(i + 1, j, k));
 
-    dv11 = dv1 + (dv4 - dv1) * rx;
-    dv21 = dv2 + (dv3 - dv2) * rx;
-    dv = dv11 + (dv21 - dv11) * rz;
+    const float dv11 = dv1 + (dv4 - dv1) * rx;
+    const float dv21 = dv2 + (dv3 - dv2) * rx;
+    const float dv = dv11 + (dv21 - dv11) * rz;
     e = -1 * dv / (m_ylines.at(j + 1) - m_ylines.at(j));
   }
   if (component == 'z') {
-    dv1 = potentials.at(Index2Node(i, j, k + 1)) -
-          potentials.at(Index2Node(i, j, k));
-    dv2 = potentials.at(Index2Node(i + 1, j, k + 1)) -
-          potentials.at(Index2Node(i + 1, j, k));
-    dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
-          potentials.at(Index2Node(i + 1, j + 1, k));
-    dv4 = potentials.at(Index2Node(i, j + 1, k + 1)) -
-          potentials.at(Index2Node(i, j + 1, k));
+    const float dv1 = potentials.at(Index2Node(i, j, k + 1)) -
+                      potentials.at(Index2Node(i, j, k));
+    const float dv2 = potentials.at(Index2Node(i + 1, j, k + 1)) -
+                      potentials.at(Index2Node(i + 1, j, k));
+    const float dv3 = potentials.at(Index2Node(i + 1, j + 1, k + 1)) -
+                      potentials.at(Index2Node(i + 1, j + 1, k));
+    const float dv4 = potentials.at(Index2Node(i, j + 1, k + 1)) -
+                      potentials.at(Index2Node(i, j + 1, k));
 
-    dv11 = dv1 + (dv4 - dv1) * ry;
-    dv21 = dv2 + (dv3 - dv2) * ry;
-    dv = dv11 + (dv21 - dv11) * rx;
+    const float dv11 = dv1 + (dv4 - dv1) * ry;
+    const float dv21 = dv2 + (dv3 - dv2) * ry;
+    const float dv = dv11 + (dv21 - dv11) * rx;
     e = -1 * dv / (m_zlines.at(k + 1) - m_zlines.at(k));
   }
   return e;

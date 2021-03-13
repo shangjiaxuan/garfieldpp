@@ -22,7 +22,6 @@ class ComponentCST : public ComponentFieldMap {
   void ShiftComponent(const double xShift, const double yShift,
                       const double zShift);
 
-  Medium* GetMedium(const double x, const double y, const double z) override;
   void GetNumberOfMeshLines(unsigned int& nx, unsigned int& ny,
                             unsigned int& nz) const;
   size_t GetNumberOfElements() const override { return m_nElements; }
@@ -30,13 +29,15 @@ class ComponentCST : public ComponentFieldMap {
                   std::vector<size_t>& nodes) const override;
   size_t GetNumberOfNodes() const override { return m_nNodes; }
   bool GetNode(const size_t i, double& x, double& y, double& z) const override; 
+  int GetElementMaterial(unsigned int element) {
+    return m_elementMaterial.at(element);
+  }
 
   void GetElementBoundaries(unsigned int element, double& xmin, double& xmax,
                             double& ymin, double& ymax, double& zmin,
                             double& zmax) const;
-  int GetElementMaterial(unsigned int element) {
-    return m_elementMaterial.at(element);
-  }
+
+  Medium* GetMedium(const double x, const double y, const double z) override;
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
   void ElectricField(const double x, const double y, const double z, double& ex,
