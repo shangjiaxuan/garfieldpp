@@ -15,6 +15,7 @@ set( nebem_sources ComputeProperties.c
 set_source_files_properties(${nebem_sources} PROPERTIES LANGUAGE CXX)
 
 add_library( ${libname} SHARED "" )
+add_library( Garfield::${libname} ALIAS ${libname})
 target_sources(${libname} PRIVATE ${nebem_sources})
 
 garfield_set_all_default_properties(${libname})

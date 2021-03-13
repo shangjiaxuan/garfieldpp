@@ -5,6 +5,7 @@ set( lib_apiver 11 )
 #Creating the target as a shared library
 message(STATUS "Creating a new library named ${libname} with API version ${lib_apiver}" )
 add_library(${libname} SHARED "" )
+add_library(Garfield::${libname} ALIAS ${libname})
 target_sources( ${libname} PRIVATE
                 magboltz.f)
 # Sets the API version of the library

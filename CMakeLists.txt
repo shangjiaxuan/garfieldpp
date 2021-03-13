@@ -70,6 +70,7 @@ add_subdirectory(Magboltz)
 
 # Creating the main Garfield library
 add_library(Garfield SHARED "")
+add_library(Garfield::Garfield ALIAS Garfield)
 target_sources(Garfield PRIVATE Source/AvalancheGrid.cc
                                 Source/AvalancheMC.cc
                                 Source/AvalancheMicroscopic.cc
@@ -186,7 +187,7 @@ mark_as_advanced(BUILD_WITH_VERSION_NUMBER)
 #--- Add Heed sources-------------------------------------------------------------------
 add_subdirectory(Heed)
 
-target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d GSL::gsl NeBem magboltz)
+target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d GSL::gsl Garfield::NeBem Garfield::magboltz)
 if(OpenMP_CXX_FOUND)
   target_link_libraries(Garfield PRIVATE OpenMP::OpenMP_CXX)
 endif()
