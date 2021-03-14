@@ -159,6 +159,34 @@ bool ComponentFieldMap::GetNode(const size_t i, double& x, double& y,
   return true;
 }
 
+bool ComponentFieldMap::SetDefaultDriftMedium() {
+
+  // Find lowest epsilon and set drift medium flags.
+  const size_t nMaterials = m_materials.size(); 
+  double epsmin = -1;
+  size_t iepsmin = 0;
+  for (size_t i = 0; i < nMaterials; ++i) {
+    m_materials[i].driftmedium = false;
+    if (m_materials[i].eps < 0) continue;
+    // Check for eps == 0.
+    if (m_materials[i].eps == 0) {
+      std::cerr << m_className << "::SetDefaultDriftMedium:\n"
+                << "    Material " << i << " has zero permittivity.\n";
+      m_materials[i].eps = -1.;
+    } else if (epsmin < 0. || epsmin > m_materials[i].eps) {
+      epsmin = m_materials[i].eps;
+      iepsmin = i;
+    }
+  }
+  if (epsmin < 0.) {
+    std::cerr << m_className << "::SetDefaultDriftMedium:\n"
+              << "    Found no material with positive permittivity.\n";
+    return false;
+  }
+  m_materials[iepsmin].driftmedium = true;
+  return true;
+}
+
 int ComponentFieldMap::FindElement5(const double x, const double y,
                                     double const z, double& t1, double& t2,
                                     double& t3, double& t4, double jac[4][4],
@@ -208,8 +236,9 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
   for (int i = 0; i < numElemToSearch; ++i) {
     const int idxToElemList = m_useTetrahedralTree ? tetList[i] : i;
     const Element& element = m_elements[idxToElemList];
-    if (x < element.xmin || x > element.xmax || y < element.ymin ||
-        y > element.ymax || z < element.zmin || z > element.zmax)
+    if (x < element.bbMin[0] || x > element.bbMax[0] || 
+        y < element.bbMin[1] || y > element.bbMax[1] || 
+        z < element.bbMin[2] || z > element.bbMax[2])
       continue;
     if (element.degenerate) {
       // Degenerate element
@@ -346,8 +375,9 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
   for (int i = 0; i < numElemToSearch; i++) {
     const int idxToElemList = m_useTetrahedralTree ? tetList[i] : i;
     const Element& element = m_elements[idxToElemList];
-    if (x < element.xmin || x > element.xmax || y < element.ymin ||
-        y > element.ymax || z < element.zmin || z > element.zmax)
+    if (x < element.bbMin[0] || x > element.bbMax[0] || 
+        y < element.bbMin[1] || y > element.bbMax[1] || 
+        z < element.bbMin[2] || z > element.bbMax[2])
       continue;
     if (Coordinates13(x, y, z, t1, t2, t3, t4, jac, det, element) != 0) {
       continue;
@@ -2244,23 +2274,23 @@ void ComponentFieldMap::CalculateElementBoundingBoxes() {
     const Node& n1 = m_nodes[element.emap[1]];
     const Node& n2 = m_nodes[element.emap[2]];
     const Node& n3 = m_nodes[element.emap[3]];
-    element.xmin = std::min({n0.x, n1.x, n2.x, n3.x});
-    element.xmax = std::max({n0.x, n1.x, n2.x, n3.x});
-    element.ymin = std::min({n0.y, n1.y, n2.y, n3.y});
-    element.ymax = std::max({n0.y, n1.y, n2.y, n3.y});
-    element.zmin = std::min({n0.z, n1.z, n2.z, n3.z});
-    element.zmax = std::max({n0.z, n1.z, n2.z, n3.z});
+    element.bbMin[0] = std::min({n0.x, n1.x, n2.x, n3.x});
+    element.bbMax[0] = std::max({n0.x, n1.x, n2.x, n3.x});
+    element.bbMin[1] = std::min({n0.y, n1.y, n2.y, n3.y});
+    element.bbMax[1] = std::max({n0.y, n1.y, n2.y, n3.y});
+    element.bbMin[2] = std::min({n0.z, n1.z, n2.z, n3.z});
+    element.bbMax[2] = std::max({n0.z, n1.z, n2.z, n3.z});
     // Add tolerances.
-    constexpr double f = 0.2;
-    const double tolx = f * (element.xmax - element.xmin);
-    element.xmin -= tolx;
-    element.xmax += tolx;
-    const double toly = f * (element.ymax - element.ymin);
-    element.ymin -= toly;
-    element.ymax += toly;
-    const double tolz = f * (element.zmax - element.zmin);
-    element.zmin -= tolz;
-    element.zmax += tolz;
+    constexpr float f = 0.2;
+    const float tolx = f * (element.bbMax[0] - element.bbMin[0]);
+    element.bbMin[0] -= tolx;
+    element.bbMax[0] += tolx;
+    const float toly = f * (element.bbMax[1] - element.bbMin[1]);
+    element.bbMin[1] -= toly;
+    element.bbMax[1] += toly;
+    const float tolz = f * (element.bbMax[2] - element.bbMin[2]);
+    element.bbMin[2] -= tolz;
+    element.bbMax[2] += tolz;
   }
 }
 
@@ -2291,14 +2321,13 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   double xmax = xmin;
   double ymax = ymin;
   double zmax = zmin;
-  for (unsigned int i = 0; i < m_nodes.size(); i++) {
-    const Node& n = m_nodes[i];
-    xmin = std::min(xmin, n.x);
-    xmax = std::max(xmax, n.x);
-    ymin = std::min(ymin, n.y);
-    ymax = std::max(ymax, n.y);
-    zmin = std::min(zmin, n.z);
-    zmax = std::max(zmax, n.z);
+  for (const auto& node : m_nodes) {
+    xmin = std::min(xmin, node.x);
+    xmax = std::max(xmax, node.x);
+    ymin = std::min(ymin, node.y);
+    ymax = std::max(ymax, node.y);
+    zmin = std::min(zmin, node.z);
+    zmax = std::max(zmax, node.z);
   }
 
   if (m_debug) {
@@ -2327,7 +2356,8 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   // Insert all mesh elements (tetrahedrons) in the tree
   for (unsigned int i = 0; i < m_elements.size(); i++) {
     const Element& e = m_elements[i];
-    const double bb[6] = {e.xmin, e.ymin, e.zmin, e.xmax, e.ymax, e.zmax};
+    const double bb[6] = {e.bbMin[0], e.bbMin[1], e.bbMin[2], 
+                          e.bbMax[0], e.bbMax[1], e.bbMax[2]};
     m_octree->InsertMeshElement(bb, i);
   }
 
@@ -2360,6 +2390,26 @@ size_t ComponentFieldMap::GetOrCreateWeightingFieldIndex(
   }
   m_wfields.back() = label;
   return nWeightingFields - 1;
+}
+
+void ComponentFieldMap::PrintWarning(const std::string& header) {
+
+  if (!m_warning || m_nWarnings > 10) return;
+  std::cerr << m_className << "::" << header << ":\n"
+            << "    Warnings have been issued for this field map.\n";
+  ++m_nWarnings;
+}
+
+void ComponentFieldMap::PrintNotReady(const std::string& header) const {
+  std::cerr << m_className << "::" << header << ":\n"
+            << "    Field map not yet initialised.\n";
+}
+
+void ComponentFieldMap::PrintCouldNotOpen(const std::string& header, 
+                                          const std::string& filename) const {
+  std::cerr << m_className << "::" << header << ":\n"
+            << "    Could not open file " << filename << " for reading.\n"
+            << "    The file perhaps does not exist.\n";
 }
 
 void ComponentFieldMap::PrintElement(const std::string& header, const double x,

@@ -1,5 +1,3 @@
-// Copied and modified ComponentAnsys123.cc
-
 #include <math.h>
 #include <stdlib.h>
 #include <fstream>
@@ -15,12 +13,6 @@ void PrintErrorReadingFile(const std::string& hdr, const std::string& file,
             << ").\n";
 }
 
-void PrintErrorOpeningFile(const std::string& hdr, const std::string& filetype,
-                           const std::string& filename) {
-  std::cerr << hdr << "\n    Could not open " << filetype << " file "
-            << filename << " for reading.\n";
-  std::cerr << "    The file perhaps does not exist.\n";
-}
 }
 
 namespace Garfield {
@@ -56,7 +48,8 @@ bool ComponentElmer::Initialise(const std::string& header,
   std::ifstream fheader;
   fheader.open(header.c_str(), std::ios::in);
   if (fheader.fail()) {
-    PrintErrorOpeningFile(hdr, "header", header);
+    PrintCouldNotOpen("Initialise", header);
+    return false;
   }
 
   // Temporary variables for use in file reading
@@ -86,7 +79,8 @@ bool ComponentElmer::Initialise(const std::string& header,
   std::ifstream fnodes;
   fnodes.open(nlist.c_str(), std::ios::in);
   if (fnodes.fail()) {
-    PrintErrorOpeningFile(hdr, "nodes", nlist);
+    PrintCouldNotOpen("Initialise", nlist);
+    return false;
   }
 
   // Check the value of the unit.
@@ -136,7 +130,8 @@ bool ComponentElmer::Initialise(const std::string& header,
   std::ifstream fvolt;
   fvolt.open(volt.c_str(), std::ios::in);
   if (fvolt.fail()) {
-    PrintErrorOpeningFile(hdr, "potentials", volt);
+    PrintCouldNotOpen("Initialise", volt);
+    return false;
   }
 
   // Reset the line counter.
@@ -184,7 +179,8 @@ bool ComponentElmer::Initialise(const std::string& header,
   std::ifstream fmplist;
   fmplist.open(mplist.c_str(), std::ios::in);
   if (fmplist.fail()) {
-    PrintErrorOpeningFile(hdr, "materials", mplist);
+    PrintCouldNotOpen("Initialise", mplist);
+    return false;
   }
 
   // Read the dielectric constants from the materials file.
@@ -222,37 +218,15 @@ bool ComponentElmer::Initialise(const std::string& header,
   // Close the materials file.
   fmplist.close();
 
-  // Find the lowest epsilon, check for eps = 0, set default drift media.
-  double epsmin = -1.;
-  unsigned int iepsmin = 0;
-  for (unsigned int imat = 0; imat < nMaterials; ++imat) {
-    if (m_materials[imat].eps < 0) continue;
-    if (m_materials[imat].eps == 0) {
-      std::cerr << hdr << "\n    Material " << imat
-                << " has been assigned a permittivity equal to zero in\n    "
-                << mplist << ".\n";
-      ok = false;
-    } else if (epsmin < 0. || epsmin > m_materials[imat].eps) {
-      epsmin = m_materials[imat].eps;
-      iepsmin = imat;
-    }
-  }
-
-  if (epsmin < 0.) {
-    std::cerr << hdr << "\n    No material with positive permittivity found \n"
-              << "    in material list " << mplist << ".\n";
-    ok = false;
-  } else {
-    for (unsigned int imat = 0; imat < nMaterials; ++imat) {
-      m_materials[imat].driftmedium = imat == iepsmin ? true : false;
-    }
-  }
+  // Find lowest epsilon, check for eps = 0, set default drift medium.
+  if (!SetDefaultDriftMedium()) ok = false;
 
   // Open the elements file.
   std::ifstream felems;
   felems.open(elist.c_str(), std::ios::in);
   if (felems.fail()) {
-    PrintErrorOpeningFile(hdr, "elements", elist);
+    PrintCouldNotOpen("Initialise", elist);
+    return false;
   }
 
   // Read the elements and their material indices.
@@ -414,7 +388,7 @@ bool ComponentElmer::SetWeightingField(std::string wvolt, std::string label) {
   std::ifstream fwvolt;
   fwvolt.open(wvolt.c_str(), std::ios::in);
   if (fwvolt.fail()) {
-    PrintErrorOpeningFile(hdr, "potential", wvolt);
+    PrintCouldNotOpen("SetWeightingField", wvolt);
     return false;
   }
 

@@ -1,8 +1,10 @@
 #ifndef G_COMPONENT_FIELD_MAP_H
 #define G_COMPONENT_FIELD_MAP_H
 
+#include <array>
 #include <iostream>
 #include <memory>
+#include <vector>
 #include "Component.hh"
 #include "TMatrixD.h"
 #include "TetrahedralTree.hh"
@@ -103,7 +105,8 @@ class ComponentFieldMap : public Component {
     unsigned int matmap;
     bool degenerate;
     // Bounding box of the element
-    double xmin, ymin, zmin, xmax, ymax, zmax;
+    std::array<float, 3> bbMin;
+    std::array<float, 3> bbMax;
   };
   std::vector<Element> m_elements;
 
@@ -179,6 +182,9 @@ class ComponentFieldMap : public Component {
   void UpdatePeriodicity2d();
   void UpdatePeriodicityCommon();
 
+  /// Find lowest epsilon, check for eps = 0, set default drift media flags.
+  bool SetDefaultDriftMedium();
+ 
   /// Find the element for a point in curved quadratic quadrilaterals.
   int FindElement5(const double x, const double y, const double z, double& t1,
                    double& t2, double& t3, double& t4, double jac[4][4],
@@ -212,16 +218,10 @@ class ComponentFieldMap : public Component {
   size_t GetWeightingFieldIndex(const std::string& label) const;
   size_t GetOrCreateWeightingFieldIndex(const std::string& label);
 
-  void PrintWarning(const std::string& header) {
-    if (!m_warning || m_nWarnings > 10) return;
-    std::cerr << m_className << "::" << header << ":\n"
-              << "    Warnings have been issued for this field map.\n";
-    ++m_nWarnings;
-  }
-  void PrintNotReady(const std::string& header) const {
-    std::cerr << m_className << "::" << header << ":\n"
-              << "    Field map not yet initialised.\n";
-  }
+  void PrintWarning(const std::string& header);
+  void PrintNotReady(const std::string& header) const;
+  void PrintCouldNotOpen(const std::string& header, 
+                         const std::string& filename) const;
   void PrintElement(const std::string& header, const double x, const double y,
                     const double z, const double t1, const double t2,
                     const double t3, const double t4, const Element& element,

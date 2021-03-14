@@ -970,9 +970,9 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
   // Set up a coordinate vector (RHS of equation)
   TArrayD dataCoords(3);
   TMatrixD coordMat(3, 1);
-  dataCoords[0] = x1 - m_plane[3] * m_plane[0];
-  dataCoords[1] = y1 - m_plane[3] * m_plane[1];
-  dataCoords[2] = z1 - m_plane[3] * m_plane[2];
+  dataCoords[0] = x1 - m_proj[2][0];
+  dataCoords[1] = y1 - m_proj[2][1];
+  dataCoords[2] = z1 - m_proj[2][2];
   coordMat.SetMatrixArray(dataCoords.GetArray());
 
   // Invert the cut matrix and multiply to get the solution
@@ -1023,7 +1023,7 @@ bool ViewFEMesh::IntersectPlaneArea(double& xmin, double& ymin,
               for (auto& p : intersect_points) {
                 const double dx = xMat(0, 0) - p(0, 0);
                 const double dy = xMat(1, 0) - p(1, 0);
-                if (std::sqrt(dx * dx + dy * dy) < 1e-10) {
+                if (std::hypot(dx, dy) < 1e-10) {
                   skip = true;
                   break;
                 }

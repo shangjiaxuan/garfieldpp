@@ -24,10 +24,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   std::ifstream fmplist;
   fmplist.open(mplist.c_str(), std::ios::in);
   if (fmplist.fail()) {
-    std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Could not open material file " << mplist
-              << " for reading.\n"
-              << "    The file perhaps does not exist.\n";
+    PrintCouldNotOpen("Initialise", mplist);
     return false;
   }
 
@@ -189,41 +186,11 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
       }
     }
   }
-
   // Close the file
   fmplist.close();
 
-  // Find the lowest epsilon, check for eps = 0, set default drift media
-  double epsmin = -1;
-  unsigned int iepsmin = 0;
-  for (unsigned int imat = 0; imat < m_materials.size(); ++imat) {
-    if (m_materials[imat].eps < 0) continue;
-    if (m_materials[imat].eps == 0) {
-      std::cerr << m_className << "::Initialise:\n";
-      std::cerr << "    Material " << imat
-                << " has been assigned a permittivity\n";
-      std::cerr << "    equal to zero in " << mplist << ".\n";
-      ok = false;
-    } else if (epsmin < 0. || epsmin > m_materials[imat].eps) {
-      epsmin = m_materials[imat].eps;
-      iepsmin = imat;
-    }
-  }
-
-  if (epsmin < 0.) {
-    std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    No material with positive permittivity found \n";
-    std::cerr << "    in material list " << mplist << ".\n";
-    ok = false;
-  } else {
-    for (unsigned int imat = 0; imat < m_materials.size(); ++imat) {
-      if (imat == iepsmin) {
-        m_materials[imat].driftmedium = true;
-      } else {
-        m_materials[imat].driftmedium = false;
-      }
-    }
-  }
+  // Find lowest epsilon, check for eps = 0, set default drift medium.
+  if (!SetDefaultDriftMedium()) ok = false;
 
   // Tell how many lines read
   std::cout << m_className << "::Initialise:\n"
@@ -235,10 +202,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   std::ifstream felist;
   felist.open(elist.c_str(), std::ios::in);
   if (felist.fail()) {
-    std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Could not open element file " << elist
-              << " for reading.\n";
-    std::cerr << "    The file perhaps does not exist.\n";
+    PrintCouldNotOpen("Initialise", elist);
     return false;
   }
 
@@ -451,9 +415,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   std::ifstream fnlist;
   fnlist.open(nlist.c_str(), std::ios::in);
   if (fnlist.fail()) {
-    std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Could not open nodes file " << nlist << " for reading.\n";
-    std::cerr << "    The file perhaps does not exist.\n";
+    PrintCouldNotOpen("Initialise", nlist);
     return false;
   }
 
@@ -546,10 +508,7 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   std::ifstream fprnsol;
   fprnsol.open(prnsol.c_str(), std::ios::in);
   if (fprnsol.fail()) {
-    std::cerr << m_className << "::Initialise:\n";
-    std::cerr << "    Could not open potential file " << prnsol
-              << " for reading.\n";
-    std::cerr << "    The file perhaps does not exist.\n";
+    PrintCouldNotOpen("Initialise", prnsol);
     return false;
   }
 
@@ -656,10 +615,7 @@ bool ComponentAnsys123::SetWeightingField(std::string prnsol,
   std::ifstream fprnsol;
   fprnsol.open(prnsol.c_str(), std::ios::in);
   if (fprnsol.fail()) {
-    std::cerr << m_className << "::SetWeightingField:\n";
-    std::cerr << "    Could not open potential file " << prnsol
-              << " for reading.\n";
-    std::cerr << "    The file perhaps does not exist.\n";
+    PrintCouldNotOpen("SetWeightingField", prnsol);
     return false;
   }
 

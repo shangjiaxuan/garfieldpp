@@ -98,10 +98,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   std::ifstream fmplist;
   fmplist.open(mplist.c_str(), std::ios::in);
   if (fmplist.fail()) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Could not open material file " << mplist
-              << " for reading.\n"
-              << "    The file perhaps does not exist." << std::endl;
+    PrintCouldNotOpen("Initialise", mplist);
     return false;
   }
 
@@ -209,36 +206,10 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   }
   // Close the file
   fmplist.close();
-  // Find the lowest epsilon, check for eps = 0, set default drift media
-  double epsmin = -1.;
-  unsigned int iepsmin = 0;
-  for (unsigned int imat = 0; imat < m_materials.size(); ++imat) {
-    if (m_materials[imat].eps < 0) continue;
-    if (m_materials[imat].eps == 0) {
-      std::cout << m_className << "::Initialise:" << std::endl;
-      std::cout << "    Material " << imat
-                << " has been assigned a permittivity" << std::endl;
-      std::cout << "    equal to zero in " << mplist << "." << std::endl;
-      ok = false;
-    } else if (epsmin < 0. || epsmin > m_materials[imat].eps) {
-      epsmin = m_materials[imat].eps;
-      iepsmin = imat;
-    }
-  }
-  if (epsmin < 0.) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "     No material with positive permittivity found in\n"
-              << "     material list " << mplist << ".\n";
-    ok = false;
-  } else {
-    for (unsigned int imat = 0; imat < m_materials.size(); ++imat) {
-      if (imat == iepsmin) {
-        m_materials[imat].driftmedium = true;
-      } else {
-        m_materials[imat].driftmedium = false;
-      }
-    }
-  }
+
+  // Find lowest epsilon, check for eps = 0, set default drift medium.
+  if (!SetDefaultDriftMedium()) ok = false;
+
   // Tell how many lines read
   std::cout << m_className << "::Initialise:\n"
             << "    Read properties of " << m_materials.size() << " materials\n"
@@ -262,9 +233,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   std::ifstream fnlist;
   fnlist.open(nlist.c_str(), std::ios::in);
   if (fnlist.fail()) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Could not open nodes file " << nlist << " for reading.\n"
-              << "    The file perhaps does not exist." << std::endl;
+    PrintCouldNotOpen("Initialise", nlist);
     return false;
   }
   // Read the node list
@@ -379,10 +348,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   std::ifstream felist;
   felist.open(elist.c_str(), std::ios::in);
   if (felist.fail()) {
-    std::cerr << m_className << "::Initialise:" << std::endl;
-    std::cerr << "    Could not open element file " << elist << " for reading."
-              << std::endl;
-    std::cerr << "    The file perhaps does not exist." << std::endl;
+    PrintCouldNotOpen("Initialise", elist);
     return false;
   }
   // Read the element list
@@ -449,10 +415,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   std::ifstream fprnsol;
   fprnsol.open(prnsol.c_str(), std::ios::in);
   if (fprnsol.fail()) {
-    std::cerr << m_className << "::Initialise:" << std::endl;
-    std::cerr << "    Could not open potential file " << prnsol
-              << " for reading." << std::endl;
-    std::cerr << "    The file perhaps does not exist." << std::endl;
+    PrintCouldNotOpen("Initialise", prnsol);
     return false;
   }
   // Read the voltage list
@@ -534,8 +497,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   }
   FILE* f = fopen(dataFile.c_str(), "rb");
   if (f == nullptr) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Could not open file " << dataFile << std::endl;
+    PrintCouldNotOpen("Initialise", dataFile);
     return false;
   }
 
@@ -713,10 +675,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
   std::ifstream fprnsol;
   fprnsol.open(prnsol.c_str(), std::ios::in);
   if (fprnsol.fail()) {
-    std::cerr << m_className << "::SetWeightingField:" << std::endl;
-    std::cerr << "    Could not open potential file " << prnsol
-              << " for reading." << std::endl;
-    std::cerr << "    The file perhaps does not exist." << std::endl;
+    PrintCouldNotOpen("SetWeightingField", prnsol);
     return false;
   }
   // Check if a weighting field with the same label already exists.
@@ -749,8 +708,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
               << prnsol.c_str() << std::endl;
     FILE* f = fopen(prnsol.c_str(), "rb");
     if (f == nullptr) {
-      std::cerr << m_className << "::SetWeightingField:\n"
-                << "    Could not open file:" << prnsol.c_str() << ".\n";
+      PrintCouldNotOpen("SetWeightingField", prnsol);
       return false;
     }
 

@@ -77,8 +77,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   std::ifstream fmplist;
   fmplist.open(mplist.c_str(), std::ios::in);
   if (fmplist.fail()) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Could not open materials file " << mplist << ".\n";
+    PrintCouldNotOpen("Initialise", mplist);
     return false;
   }
   unsigned int nMaterials;
@@ -110,37 +109,14 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   }
   fmplist.close();
 
-  // Find the lowest epsilon, check for eps = 0, set default drift media.
-  double epsmin = -1.;
-  unsigned int iepsmin = 0;
-  for (unsigned int i = 0; i < nMaterials; ++i) {
-    if (m_materials[i].eps < 0) continue;
-    if (m_materials[i].eps == 0) {
-      std::cerr << m_className << "::Initialise:\n"
-                << "    Material " << i
-                << " has been assigned a permittivity equal to zero in\n    "
-                << mplist << ".\n";
-      m_materials[i].eps = -1.;
-    } else if (epsmin < 0. || epsmin > m_materials[i].eps) {
-      epsmin = m_materials[i].eps;
-      iepsmin = i;
-    }
-  }
-
-  if (epsmin < 0.) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    No material with positive permittivity found \n"
-              << "    in material list " << mplist << ".\n";
-    return false;
-  }
-  m_materials[iepsmin].driftmedium = true;
+  // Find lowest epsilon, check for eps = 0, set default drift medium.
+  if (!SetDefaultDriftMedium()) return false;
 
   m_nodes.clear();
   std::ifstream fmesh;
   fmesh.open(mesh.c_str(), std::ios::in);
   if (fmesh.fail()) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Could not open nodes file " << mesh << ".\n";
+    PrintCouldNotOpen("Initialise", mesh);
     return false;
   }
 
@@ -226,8 +202,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   std::ifstream ffield;
   ffield.open(field.c_str(), std::ios::in);
   if (ffield.fail()) {
-    std::cerr << m_className << "::Initialise:\n"
-              << "    Could not open potentials file " << field << ".\n";
+    PrintCouldNotOpen("Initialise", field);
     return false;
   }
 
@@ -336,8 +311,7 @@ bool ComponentComsol::SetWeightingField(const std::string& field,
   std::ifstream ffield;
   ffield.open(field.c_str(), std::ios::in);
   if (ffield.fail()) {
-    std::cerr << m_className << "::SetWeightingField:\n"
-              << "    Could not open potentials file " << field << ".\n";
+    PrintCouldNotOpen("SetWeightingField", field);
     return false;
   }
 
@@ -945,8 +919,7 @@ bool ComponentComsol::GetTimeInterval(const std::string& field) {
   ffield.open(field.c_str(), std::ios::in);
 
   if (ffield.fail()) {
-    std::cerr << m_className << "::SetDelayedWeightingField:\n"
-              << "    Could not open potentials file " << field << ".\n";
+    PrintCouldNotOpen("SetDelayedWeightingField", field);
     return false;
   }
 
