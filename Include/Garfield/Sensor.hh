@@ -145,6 +145,8 @@ class Sensor {
   void SetTransferFunction(Shaper& shaper);
   /// Evaluate the transfer function at a given time.
   double GetTransferFunction(const double t);
+  /// Print some information about the presently set transfer function.
+  void PrintTransferFunction();
   /// Cache integral and FFT of the transfer function
   /// instead of recomputing it at every call (default: on).
   void EnableTransferFunctionCache(const bool on = true) {

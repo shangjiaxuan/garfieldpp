@@ -1023,13 +1023,14 @@ double Sensor::InterpolateTransferFunctionTable(const double t) const {
   }
   // Find the proper interval in the table.
   const auto begin = m_fTransferTab.cbegin();
-  const auto it1 =
-      std::upper_bound(begin, m_fTransferTab.cend(), std::make_pair(t, 0.));
+  const auto end = m_fTransferTab.cend();
+  const auto it1 = std::upper_bound(begin, end, std::make_pair(t, 0.));
+  if (it1 == end) return 0.;
   if (it1 == begin) return m_fTransferTab.front().second;
   const auto it0 = std::prev(it1);
   const double t0 = (*it0).first;
   const double t1 = (*it1).first;
-  const double f = t - t0 / (t1 - t0);
+  const double f = t0 == t1 ? 0. : (t - t0) / (t1 - t0);
   // Linear interpolation.
   return (*it0).second * (1. - f) + (*it1).second * f;
 }
@@ -1041,6 +1042,38 @@ double Sensor::GetTransferFunction(const double t) {
     return m_shaper->Shape(t);
   }
   return InterpolateTransferFunctionTable(t);
+}
+
+void Sensor::PrintTransferFunction() {
+
+  std::cout << m_className << "::PrintTransferFunction:\n";
+  if (m_fTransfer) {
+      std::cout << "    User-defined function.";
+  } else if (m_shaper) {
+    std::string shaperType = "Unknown";
+    if (m_shaper->IsUnipolar()) {
+      shaperType = "Unipolar";
+    } else if (m_shaper->IsBipolar()) {
+      shaperType = "Bipolar";
+    }
+    unsigned int n = 1;
+    double tp = 0.;
+    m_shaper->GetParameters(n, tp);
+    std::printf("    %s shaper with order %u and %5.1f ns peaking time.\n",
+                shaperType.c_str(), n, tp);
+  } else if (!m_fTransferTab.empty()) {
+    std::cout << "    Table with " << m_fTransferTab.size() << " entries.\n";
+  } else {
+    std::cout << "    No transfer function set.\n";
+    return;
+  }
+  std::cout << "      Time [ns]    Transfer function\n";
+  const double dt = m_nTimeBins * m_tStep / 10.; 
+  for (size_t i = 0; i < 10; ++i) {
+    const double t = m_tStart + (i + 0.5) * dt;
+    const double f = GetTransferFunction(t);
+    std::printf("    %10.3f      %10.5f\n", t, f);
+  }
 }
 
 bool Sensor::ConvoluteSignal(const std::string& label, const bool fft) {

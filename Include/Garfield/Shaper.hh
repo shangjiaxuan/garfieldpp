@@ -30,7 +30,17 @@ class Shaper {
   /// Return the integral of the transfer function squared.
   double TransferFuncSq() const { return m_transfer_func_sq; }
 
-  private:
+  /// Is it a unipolar shaper?
+  bool IsUnipolar() const { return (m_type == ShaperType::Unipolar); } 
+  /// Is it a bipolar shaper?
+  bool IsBipolar() const { return (m_type == ShaperType::Bipolar); }
+  /// Retrieve the parameters.
+  void GetParameters(unsigned int& n, double& tp) {
+    n = m_n;
+    tp = m_tp;
+  }
+ 
+ private:
   std::string m_className = "Shaper";
 
   // Shaper type.
