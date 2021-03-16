@@ -6,11 +6,11 @@ project(DriftTube)
 find_package(Garfield REQUIRED)
 
 #---Build executable------------------------------------------------------------
-add_executable(signal signal.C)
-target_link_libraries(signal Garfield)
+add_executable(mdt mdt.C)
+target_link_libraries(mdt Garfield)
 
-add_executable(signal_mt signal_mt.C)
-target_link_libraries(signal_mt Garfield)
+add_executable(mdt_mt mdt_mt.C)
+target_link_libraries(mdt_mt Garfield)
 
 #---Copy all files locally to the build directory-------------------------------
 foreach(_file ar_93_co2_7_3bar.gas mdt_elx_delta.txt)
