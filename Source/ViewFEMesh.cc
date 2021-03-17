@@ -135,9 +135,9 @@ bool ViewFEMesh::GetPlotLimits() {
     std::vector<double> yg(4, 0.);
     std::vector<double> zg(4, 0.);
     for (size_t i = 0; i < 4; ++i) {
-      xg[i] = m_prmat[0][0] * xp[i] + m_prmat[1][0] * yp[i];
-      yg[i] = m_prmat[0][1] * xp[i] + m_prmat[1][1] * yp[i];
-      zg[i] = m_prmat[0][2] * xp[i] + m_prmat[1][2] * yp[i];
+      xg[i] = m_proj[0][0] * xp[i] + m_proj[1][0] * yp[i] + m_proj[2][0];
+      yg[i] = m_proj[0][1] * xp[i] + m_proj[1][1] * yp[i] + m_proj[2][1];
+      zg[i] = m_proj[0][2] * xp[i] + m_proj[1][2] * yp[i] + m_proj[2][2];
     }
     m_xMinBox = *std::min_element(xg.begin(), xg.end());
     m_xMaxBox = *std::max_element(xg.begin(), xg.end());
