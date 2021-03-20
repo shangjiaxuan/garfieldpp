@@ -179,19 +179,97 @@ a three-dimensional view of the cell layout.
 
 \subsection{Ansys}
 
+\begin{figure}
+\centering
+\begin{tikzpicture}[line join=round,>=stealth]
+\coordinate (n0) at ( 1.81,  4.31);
+\coordinate (n1) at ( 1.00,  1.00);
+\coordinate (n2) at ( 7.27,  1.00);
+\coordinate (n3) at ( 8.35,  3.89);
+\coordinate (n4) at ( 1.40,  2.66);
+\coordinate (n5) at ( 4.13,  1.00);
+\coordinate (n6) at ( 7.81,  2.45);
+\coordinate (n7) at ( 5.08,  4.10);
+\draw[thick,blue,->] (0,0) -- (9,0) node[below]{$x$};
+\draw[thick,blue,->] (0,0) -- (0,5) node[left]{$y$};
+
+\filldraw[black] (n0) circle (2pt) node[above left]{0};
+\filldraw[black] (n1) circle (2pt) node[below left]{1};
+\filldraw[black] (n2) circle (2pt) node[below right]{2};
+\filldraw[black] (n3) circle (2pt) node[above right]{3};
+\filldraw[black] (n4) circle (2pt) node[left]{4};
+\filldraw[black] (n5) circle (2pt) node[below]{5};
+\filldraw[black] (n6) circle (2pt) node[right]{6};
+\filldraw[black] (n7) circle (2pt) node[above]{7};
+
+\draw (n0) to[quadratic={(n4)}] (n1);
+\draw (n1) to[quadratic={(n5)}] (n2);
+\draw (n2) to[quadratic={(n6)}] (n3);
+\draw (n3) to[quadratic={(n7)}] (n0);
+\end{tikzpicture}
+\caption{Eight-node quadrilateral element used in 2D Ansys field maps.}
+\label{Fig:Plane121}
+\end{figure}
+
+\tdplotsetmaincoords{60}{120}
+\begin{figure}
+\centering
+\begin{tikzpicture}[line join=round,>=stealth,tdplot_main_coords]
+\coordinate (n0) at (-3.36, -1.40,  2.24);
+\coordinate (n1) at ( 5.10, -0.94,  1.57);
+\coordinate (n2) at (-4.36, -2.24, -4.56);
+\coordinate (n3) at ( 0.61,  4.17,  0.75);
+\coordinate (n4) at ( 0.87, -1.17,  1.90);
+\coordinate (n5) at ( 0.37, -1.59, -1.49);
+\coordinate (n6) at (-3.86, -1.82, -1.16);
+\coordinate (n7) at (-1.37,  1.39,  1.49);
+\coordinate (n8) at ( 2.86,  1.62,  1.16);
+\coordinate (n9) at (-1.87,  0.97, -1.90);
+\draw[thick,blue,->] (0,0,0) -- (5,0,0) node[below left]{$x$};
+\draw[thick,blue,->] (0,0,0) -- (0,5,0) node[right]{$y$};
+\draw[thick,blue,->] (0,0,0) -- (0,0,5) node[above]{$z$};
+
+\filldraw[black] (n0) circle (2pt) node[above]{0};
+\filldraw[black] (n1) circle (2pt) node[left]{1};
+\filldraw[black] (n2) circle (2pt) node[below]{2};
+\filldraw[black] (n3) circle (2pt) node[right]{3};
+\filldraw[black] (n4) circle (2pt) node[above left]{4};
+\filldraw[black] (n5) circle (2pt) node[below left]{5};
+\filldraw[black] (n6) circle (2pt) node[right]{6};
+\filldraw[black] (n7) circle (2pt) node[above right]{7};
+\filldraw[black] (n8) circle (2pt) node[below]{8};
+\filldraw[black] (n9) circle (2pt) node[below right]{9};
+
+\draw (n0) to[quadratic={(n4)}] (n1);
+\draw (n1) to[quadratic={(n5)}] (n2);
+\draw (n2) to[quadratic={(n6)}] (n0);
+\draw (n0) to[quadratic={(n7)}] (n3);
+\draw[dashed] (n1) to[quadratic={(n8)}] (n3);
+\draw (n2) to[quadratic={(n9)}] (n3);
+\end{tikzpicture}
+\caption{Ten-node tetrahedral element used in 3D Ansys field maps. The
+         node numbering scheme shown here is the one used in Ansys 
+         and differs slightly from the one used internally in 
+         \texttt{ComponentAnsys123}.}
+\label{Fig:Solid123}
+\end{figure}
+
 The interpolation of FEM field maps 
 created with the program Ansys \cite{ANSYS} 
 is dealt with by the classes
 \texttt{ComponentAnsys121} and \texttt{ComponentAnsys123}. 
 The class names refer to the type of mesh element used by Ansys:
-  \begin{itemize}
+\begin{itemize}
   \item
   \texttt{ComponentAnsys121} reads two-dimensional field maps 
-with 8-node curved quadrilaterals (known as ``plane121'' in Ansys). 
+  with eight-node curved quadrilaterals (Fig.~\ref{Fig:Plane121}),
+  known as ``plane121'' in Ansys). 
   \item
   \texttt{ComponentAnsys123} reads three-dimensional field maps 
-with quadric curved tetrahedra (known as ``solid123'' in Ansys).
-  \end{itemize}
+  with quadratic curved tetrahedra (Fig.~\ref{Fig:Solid123}),
+  known as ``solid123'' in Ansys).
+\end{itemize}
+
 The field map is imported with the function
 \begin{lstlisting}
 bool Initialise(std::string elist, std::string nlist,
@@ -223,7 +301,7 @@ In order to enable charge transport and ionization,
 the materials in the map need to be associated with \texttt{Medium} classes.
 \begin{lstlisting}
 // Get the number of materials in the map.
-unsigned int GetNumberOfMaterials();
+size_t GetNumberOfMaterials();
 // Associate a material with a Medium class.
 void SetMedium(const unsigned int imat, Medium* medium);
 \end{lstlisting}
