@@ -1695,11 +1695,6 @@ void ComponentNeBem2d::UpdatePeriodicity() {
 void ComponentNeBem2d::ToLocal(const double xIn, const double yIn, 
                                const double cphi, const double sphi,
                                double& xOut, double& yOut) const {
-  if (fabs(sphi) < 1.e-12) {
-    xOut = xIn;
-    yOut = yIn;
-    return;
-  }
   xOut = +cphi * xIn + sphi * yIn;
   yOut = -sphi * xIn + cphi * yIn;
 }
@@ -1707,11 +1702,6 @@ void ComponentNeBem2d::ToLocal(const double xIn, const double yIn,
 void ComponentNeBem2d::ToGlobal(const double xIn, const double yIn,
                                 const double cphi, const double sphi,
                                 double& xOut, double& yOut) const {
-  if (fabs(sphi) < 1.e-12) {
-    xOut = xIn;
-    yOut = yIn;
-    return;
-  }
   xOut = cphi * xIn - sphi * yIn;
   yOut = sphi * xIn + cphi * yIn;
 }
