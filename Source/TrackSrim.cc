@@ -720,7 +720,10 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
     printf("      Cluster size         %d\n", m_nsize);
   }
 
-  // Reset the cluster count
+  // Plot.
+  if (m_viewer) PlotNewTrack(x0, y0, z0);
+ 
+  // Reset the cluster count.
   m_currcluster = 0;
   m_clusters.clear();
 
@@ -900,6 +903,7 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
                 << ",\n    pool = " << epool << " MeV.\n";
     }
     m_clusters.push_back(std::move(cluster));
+    if (m_viewer) PlotCluster(x, y, z);
 
     // Keep track of the length and energy
     dsum += step;
