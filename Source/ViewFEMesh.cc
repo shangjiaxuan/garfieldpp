@@ -48,7 +48,7 @@ bool ViewFEMesh::Plot() {
   if (!RangeSet(pad)) {
     SetRange(pad, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
   }
-  
+
   if (m_drawAxes) {
     if (!m_xaxis && !m_yaxis) {
       // Draw default axes.
@@ -128,36 +128,51 @@ bool ViewFEMesh::Plot() {
 
 bool ViewFEMesh::GetPlotLimits() {
 
+  if (m_userPlotLimits) {
+    std::vector<double> xp = {m_xMinPlot, m_xMinPlot, m_xMaxPlot, m_xMaxPlot};
+    std::vector<double> yp = {m_yMinPlot, m_yMaxPlot, m_yMaxPlot, m_yMinPlot};
+    std::vector<double> xg(4, 0.);
+    std::vector<double> yg(4, 0.);
+    std::vector<double> zg(4, 0.);
+    for (size_t i = 0; i < 4; ++i) {
+      xg[i] = m_prmat[0][0] * xp[i] + m_prmat[1][0] * yp[i];
+      yg[i] = m_prmat[0][1] * xp[i] + m_prmat[1][1] * yp[i];
+      zg[i] = m_prmat[0][2] * xp[i] + m_prmat[1][2] * yp[i];
+    }
+    m_xMinBox = *std::min_element(xg.begin(), xg.end());
+    m_xMaxBox = *std::max_element(xg.begin(), xg.end());
+    m_yMinBox = *std::min_element(yg.begin(), yg.end());
+    m_yMaxBox = *std::max_element(yg.begin(), yg.end());
+    m_zMinBox = *std::min_element(zg.begin(), zg.end());
+    m_zMaxBox = *std::max_element(zg.begin(), zg.end());
+    m_viewRegionX = xp;
+    m_viewRegionY = yp;
+    return true;
+  }
   if (!m_userBox) {
     // If not set by the user, get the bounding box of the component.
-    if (!m_component) {
-      if (!m_userPlotLimits) return false;
-    } else {
-      if (!m_component->GetBoundingBox(m_xMinBox, m_yMinBox, m_zMinBox,
-                                       m_xMaxBox, m_yMaxBox, m_zMaxBox) &&
-          !m_userPlotLimits) {
-        std::cerr << m_className << "::GetPlotLimits:\n"
-                  << "    Bounding box of the component is not defined.\n"
-                  << "    Please set the limits explicitly (SetArea).\n";
-        return false;
-      }
+    if (!m_component) return false;
+    if (!m_component->GetBoundingBox(m_xMinBox, m_yMinBox, m_zMinBox,
+                                     m_xMaxBox, m_yMaxBox, m_zMaxBox)) {
+      std::cerr << m_className << "::GetPlotLimits:\n"
+                << "    Bounding box of the component is not defined.\n"
+                << "    Please set the limits explicitly (SetArea).\n";
+      return false;
     }
   }
   // Determine the intersection of the viewing plane and the box.
   double xmin = 0., xmax = 0., ymin = 0., ymax = 0.;
   IntersectPlaneArea(xmin, ymin, xmax, ymax);
-  if (!m_userPlotLimits) {
-    if (m_viewRegionX.empty()) {
-      std::cerr << m_className << "::GetPlotLimits: Empty view.\n"
-                << "    Make sure the viewing plane (SetPlane)\n"
-                << "    intersects with the bounding box.\n";
-      return false;
-    }
-    m_xMinPlot = xmin;
-    m_xMaxPlot = xmax;
-    m_yMinPlot = ymin;
-    m_yMaxPlot = ymax;
+  if (m_viewRegionX.empty()) {
+    std::cerr << m_className << "::GetPlotLimits: Empty view.\n"
+              << "    Make sure the viewing plane (SetPlane)\n"
+              << "    intersects with the bounding box.\n";
+    return false;
   }
+  m_xMinPlot = xmin;
+  m_xMaxPlot = xmax;
+  m_yMinPlot = ymin;
+  m_yMaxPlot = ymax;
   return true;
 }
 
@@ -970,9 +985,9 @@ bool ViewFEMesh::PlaneCut(double x1, double y1, double z1, double x2, double y2,
   // Set up a coordinate vector (RHS of equation)
   TArrayD dataCoords(3);
   TMatrixD coordMat(3, 1);
-  dataCoords[0] = x1 - m_plane[3] * m_plane[0];
-  dataCoords[1] = y1 - m_plane[3] * m_plane[1];
-  dataCoords[2] = z1 - m_plane[3] * m_plane[2];
+  dataCoords[0] = x1 - m_proj[2][0];
+  dataCoords[1] = y1 - m_proj[2][1];
+  dataCoords[2] = z1 - m_proj[2][2];
   coordMat.SetMatrixArray(dataCoords.GetArray());
 
   // Invert the cut matrix and multiply to get the solution
@@ -1023,7 +1038,7 @@ bool ViewFEMesh::IntersectPlaneArea(double& xmin, double& ymin,
               for (auto& p : intersect_points) {
                 const double dx = xMat(0, 0) - p(0, 0);
                 const double dy = xMat(1, 0) - p(1, 0);
-                if (std::sqrt(dx * dx + dy * dy) < 1e-10) {
+                if (std::hypot(dx, dy) < 1e-10) {
                   skip = true;
                   break;
                 }
