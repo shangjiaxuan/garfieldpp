@@ -6,6 +6,8 @@
 # generation system should be reviewed. For now I just add the sources to the main
 # garfield library. Needs the absolute path because it will be used from the garfield
 # folder
+# Because the sources are added to the sources of a target defined in another directory
+# we need to provide the absolute path
 target_sources(
   Garfield
   PRIVATE ${CMAKE_CURRENT_LIST_DIR}/heed++/code/BGMesh.cpp
