@@ -254,8 +254,8 @@ bool ComponentTcad2d::GetElement(const size_t i, double& vol,
     return false;
   }
   const size_t nVertices = ElementVertices(element);
-  for (size_t i = 0; i < nVertices; ++i) {
-    nodes.push_back(element.vertex[i]);
+  for (size_t j = 0; j < nVertices; ++j) {
+    nodes.push_back(element.vertex[j]);
   }
   reg = element.region;
   return true;
