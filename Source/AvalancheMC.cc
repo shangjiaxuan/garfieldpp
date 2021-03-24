@@ -517,22 +517,49 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
 bool AvalancheMC::AvalancheElectron(const double x0, const double y0,
                                     const double z0, const double t0,
                                     const bool holes) {
-  return Avalanche({x0, y0, z0}, t0, 1, 0, true, holes);
+  std::vector<DriftPoint> aval;
+  AddPoint({x0, y0, z0}, t0, Particle::Electron, 1, aval);
+  return Avalanche(aval, true, holes);
 }
 
 bool AvalancheMC::AvalancheHole(const double x0, const double y0,
                                 const double z0, const double t0,
                                 const bool electrons) {
-  return Avalanche({x0, y0, z0}, t0, 0, 1, electrons, true);
+  std::vector<DriftPoint> aval;
+  AddPoint({x0, y0, z0}, t0, Particle::Hole, 1, aval);
+  return Avalanche(aval, electrons, true);
 }
 
 bool AvalancheMC::AvalancheElectronHole(const double x0, const double y0,
                                         const double z0, const double t0) {
-  return Avalanche({x0, y0, z0}, t0, 1, 1, true, true);
+  std::vector<DriftPoint> aval;
+  AddPoint({x0, y0, z0}, t0, Particle::Electron, 1, aval);
+  AddPoint({x0, y0, z0}, t0, Particle::Hole, 1, aval);
+  return Avalanche(aval, true, true);
 }
 
-bool AvalancheMC::Avalanche(const std::array<double, 3>& x0, const double t0,
-                            const unsigned int ne, const unsigned int nh,
+bool AvalancheMC::ResumeAvalanche(const bool electrons, const bool holes) {
+
+  std::vector<DriftPoint> aval;
+  for (const auto& p: m_endpointsElectrons) {
+    if (p.status == StatusAlive || p.status == StatusOutsideTimeWindow) {
+      AddPoint(p.x1, p.t1, Particle::Electron, 1, aval);
+    } 
+  }
+  for (const auto& p: m_endpointsHoles) {
+    if (p.status == StatusAlive || p.status == StatusOutsideTimeWindow) {
+      AddPoint(p.x1, p.t1, Particle::Hole, 1, aval);
+    } 
+  }
+  for (const auto& p: m_endpointsIons) {
+    if (p.status == StatusAlive || p.status == StatusOutsideTimeWindow) {
+      AddPoint(p.x1, p.t1, Particle::Ion, 1, aval);
+    } 
+  }
+  return Avalanche(aval, electrons, holes);
+}
+
+bool AvalancheMC::Avalanche(std::vector<DriftPoint>& aval, 
                             const bool withE, const bool withH) {
   // -----------------------------------------------------------------------
   //   DLCMCA - Subroutine that computes a drift line using a Monte-Carlo
@@ -550,14 +577,18 @@ bool AvalancheMC::Avalanche(const std::array<double, 3>& x0, const double t0,
     return false;
   }
 
-  m_nElectrons = ne;
-  m_nHoles = nh;
+  m_nElectrons = 0;
+  m_nHoles = 0;
   m_nIons = 0;
-
-  // Add the first point(s) to the list.
-  std::vector<DriftPoint> aval;
-  if (ne > 0) AddPoint(x0, t0, Particle::Electron, ne, aval);
-  if (nh > 0) AddPoint(x0, t0, Particle::Hole, nh, aval);
+  for (const auto& point : aval) {
+    if (point.particle == Particle::Electron) {
+      ++m_nElectrons;
+    } else if (point.particle == Particle::Hole) {
+      ++m_nHoles;
+    } else {
+      ++m_nIons;
+    }
+  }
 
   if (!withH && !withE) {
     std::cerr << m_className + "::Avalanche: "

@@ -110,7 +110,7 @@ class AvalancheMC {
   /// Return the number of electrons and ions/holes in the avalanche.
   void GetAvalancheSize(unsigned int& ne, unsigned int& ni) const {
     ne = m_nElectrons;
-    ni = m_nIons;
+    ni = std::max(m_nIons, m_nHoles);
   }
 
   /// Return the number of points along the last simulated drift line.
@@ -172,6 +172,7 @@ class AvalancheMC {
   /// Simulate an avalanche initiated by an electron-hole pair.
   bool AvalancheElectronHole(const double x0, const double y0, const double z0,
                              const double t0);
+  bool ResumeAvalanche(const bool electron = true, const bool hole = true);
 
   /// Switch debugging messages on/off (default: off).
   void EnableDebugging(const bool on = true) { m_debug = on; }
@@ -270,9 +271,8 @@ class AvalancheMC {
                  const Particle particle,
                  std::vector<DriftPoint>& secondaries,
                  const bool aval = false);
-  /// Compute an avalanche with starting point x0.
-  bool Avalanche(const std::array<double, 3>& x0, const double t0, 
-                 const unsigned int ne, const unsigned int nh,
+  /// Compute an avalanche.
+  bool Avalanche(std::vector<DriftPoint>& aval,
                  const bool withElectrons, const bool withHoles);
 
   void AddPoint(const std::array<double, 3>& x, const double t,
