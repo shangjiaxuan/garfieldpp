@@ -10,8 +10,6 @@
 #include <TAxis.h>
 
 #include "Garfield/MediumSilicon.hh"
-#include "Garfield/SolidBox.hh"
-#include "Garfield/GeometrySimple.hh"
 #include "Garfield/ComponentConstant.hh"
 #include "Garfield/Sensor.hh"
 #include "Garfield/TrackHeed.hh"
@@ -26,14 +24,11 @@ int main(int argc, char * argv[]) {
 
   MediumSilicon si;
 
-  constexpr double width = 50.e-4;
-  SolidBox box(0, 0, 0, 2, 2, width);
-  GeometrySimple geo;
-  geo.AddSolid(&box, &si);
-
   // Make a component
   ComponentConstant cmp;
-  cmp.SetGeometry(&geo);
+  constexpr double width = 50.e-4;
+  cmp.SetArea(-2, -2, 0, 2, 2, width);
+  cmp.SetMedium(&si);
   cmp.SetElectricField(0., 0., 20.);
 
   // Make a sensor
