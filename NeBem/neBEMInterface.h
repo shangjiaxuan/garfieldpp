@@ -156,19 +156,6 @@ INTFACEGLOBAL int ReadPrimitives(void);
 INTFACEGLOBAL int WriteElements(void);
 INTFACEGLOBAL int ReadElements(void);
 
-// following variables are made global since they facilitates smooth
-// transfer of values from the older approach of creating input files to
-// the present neBEM which does not need input files as such.
-INTFACEGLOBAL int tmpNbPrimitives, *tmpNbVertices, *tmpNbXSegs, *tmpNbZSegs;
-INTFACEGLOBAL int *tmpVolRef1, *tmpVolRef2, *tmpVolShape, *tmpVolMaterial,
-    *tmpVolBoundaryType;
-INTFACEGLOBAL int *tmpPeriodicTypeX, *tmpPeriodicTypeY, *tmpPeriodicTypeZ;
-INTFACEGLOBAL int *tmpPeriodicInX, *tmpPeriodicInY, *tmpPeriodicInZ;
-INTFACEGLOBAL double **tmpXvert, **tmpYvert, **tmpZvert;
-INTFACEGLOBAL double *tmpXNorm, *tmpYNorm, *tmpZNorm;
-INTFACEGLOBAL double *tmpVolEpsilon, *tmpVolPotential, *tmpVolCharge;
-INTFACEGLOBAL double *tmpXPeriod, *tmpYPeriod, *tmpZPeriod;
-
 #ifdef __cplusplus
 } // namespace
 #endif
