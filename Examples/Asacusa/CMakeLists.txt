@@ -1,11 +1,12 @@
-#---Setup the example project---------------------------------------------------
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+# ########################################################################################
+# Use the code in this section for standalone projects
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project(Asacusa)
+if(NOT TARGET Garfield::Garfield)
+  find_package(Garfield REQUIRED)
+endif()
+# ########################################################################################
 
-#---Find Garfield package-------------------------------------------------------
-find_package(Garfield REQUIRED)
-
-#---Build executable------------------------------------------------------------
+# ---Build executable------------------------------------------------------------
 add_executable(example example.cpp)
-target_link_libraries(example Garfield)
-
+target_link_libraries(example Garfield::Garfield)

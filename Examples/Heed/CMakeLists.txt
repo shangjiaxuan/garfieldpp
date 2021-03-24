@@ -1,22 +1,24 @@
-#---Setup the example project---------------------------------------------------
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+# ########################################################################################
+# Use the code in this section for standalone projects
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project(Heed)
+if(NOT TARGET Garfield::Garfield)
+  find_package(Garfield REQUIRED)
+endif()
+# ########################################################################################
 
-#---Find Garfield package-------------------------------------------------------
-find_package(Garfield REQUIRED)
-
-#---Build executable------------------------------------------------------------
+# ---Build executable------------------------------------------------------------
 add_executable(edep edep.C)
-target_link_libraries(edep Garfield)
+target_link_libraries(edep Garfield::Garfield)
 
 add_executable(qdepSi qdepSi.C)
-target_link_libraries(qdepSi Garfield)
+target_link_libraries(qdepSi Garfield::Garfield)
 
 add_executable(rangeSi rangeSi.C)
-target_link_libraries(rangeSi Garfield)
+target_link_libraries(rangeSi Garfield::Garfield)
 
 add_executable(fe55 fe55.C)
-target_link_libraries(fe55 Garfield)
+target_link_libraries(fe55 Garfield::Garfield)
 
 add_executable(plotdedx plotdedx.C)
-target_link_libraries(plotdedx Garfield)
+target_link_libraries(plotdedx Garfield::Garfield)
