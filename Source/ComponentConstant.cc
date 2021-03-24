@@ -1,4 +1,5 @@
 #include <iostream>
+#include <numeric>
 
 #include "Garfield/ComponentConstant.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -7,18 +8,22 @@ namespace Garfield {
 
 ComponentConstant::ComponentConstant() : Component("Constant") {}
 
+Medium* ComponentConstant::GetMedium(const double x, const double y, 
+                                     const double z) {
+
+  if (!m_hasArea) return Component::GetMedium(x, y, z);
+  return InArea(x, y, z) ? m_medium : nullptr; 
+}
+
 void ComponentConstant::ElectricField(const double x, const double y,
                                       const double z, double& ex, double& ey,
                                       double& ez, Medium*& m, int& status) {
-  ex = m_fx;
-  ey = m_fy;
-  ez = m_fz;
+  ex = m_efield[0];
+  ey = m_efield[1];
+  ez = m_efield[2];
   m = GetMedium(x, y, z);
   if (!m) {
-    if (m_debug) {
-      std::cout << m_className << "::ElectricField: No medium at ("
-                << x << ", " << y << ", " << z << ").\n";
-    }
+    // No medium at this point.
     status = -6;
     return;
   }
@@ -34,18 +39,19 @@ void ComponentConstant::ElectricField(const double x, const double y,
                                       const double z, double& ex, double& ey,
                                       double& ez, double& v, Medium*& m,
                                       int& status) {
-  ex = m_fx;
-  ey = m_fy;
-  ez = m_fz;
+  ex = m_efield[0];
+  ey = m_efield[1];
+  ez = m_efield[2];
   if (m_hasPotential) {
-    v = m_v0 - (x - m_x0) * m_fx - (y - m_y0) * m_fy - (z - m_z0) * m_fz;
+    // Compute the potential at this point.
+    const std::array<double, 3> d = {x - m_x0, y - m_y0, z - m_z0};
+    v = m_v0 - std::inner_product(d.begin(), d.end(), m_efield.begin(), 0.);
   } else {
     v = 0.;
     if (m_debug) {
       std::cerr << m_className << "::ElectricField: Potential not defined.\n";
     }
   }
-
   m = GetMedium(x, y, z);
   if (!m) {
     if (m_debug) {
@@ -66,10 +72,6 @@ void ComponentConstant::ElectricField(const double x, const double y,
 bool ComponentConstant::GetVoltageRange(double& vmin, double& vmax) {
   if (!m_hasPotential) return false;
 
-  if (!m_geometry) {
-    std::cerr << m_className << "::GetVoltageRange: Geometry not set.\n";
-    return false;
-  }
   double xmin, ymin, zmin;
   double xmax, ymax, zmax;
   if (!GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax)) {
@@ -78,12 +80,12 @@ bool ComponentConstant::GetVoltageRange(double& vmin, double& vmax) {
     return false;
   }
   // Calculate potentials at each corner
-  const double pxmin = m_v0 - (xmin - m_x0) * m_fx;
-  const double pxmax = m_v0 - (xmax - m_x0) * m_fx;
-  const double pymin = m_v0 - (ymin - m_y0) * m_fy;
-  const double pymax = m_v0 - (ymax - m_y0) * m_fy;
-  const double pzmin = m_v0 - (zmin - m_z0) * m_fz;
-  const double pzmax = m_v0 - (zmax - m_z0) * m_fz;
+  const double pxmin = m_v0 - (xmin - m_x0) * m_efield[0];
+  const double pxmax = m_v0 - (xmax - m_x0) * m_efield[0];
+  const double pymin = m_v0 - (ymin - m_y0) * m_efield[1];
+  const double pymax = m_v0 - (ymax - m_y0) * m_efield[1];
+  const double pzmin = m_v0 - (zmin - m_z0) * m_efield[2];
+  const double pzmax = m_v0 - (zmax - m_z0) * m_efield[2];
   double p[8];
   p[0] = pxmin + pymin + pzmin;
   p[1] = pxmin + pymin + pzmax;
@@ -102,10 +104,26 @@ bool ComponentConstant::GetVoltageRange(double& vmin, double& vmax) {
   return true;
 }
 
+bool ComponentConstant::GetBoundingBox(
+    double& xmin, double& ymin, double& zmin,
+    double& xmax, double& ymax, double& zmax) {
+
+  if (!m_hasArea) {
+    return Component::GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax);
+  }
+  xmin = m_xmin[0];
+  ymin = m_xmin[1];
+  zmin = m_xmin[2];
+  xmax = m_xmax[0];
+  ymax = m_xmax[1];
+  zmax = m_xmax[2];
+  return true;
+}
+
 void ComponentConstant::WeightingField(const double x, const double y,
                                        const double z, double& wx, double& wy,
                                        double& wz, const std::string& label) {
-  if (!m_hasWeightingField || label != m_wfield) return;
+  if (!m_hasWeightingField || label != m_label) return;
 
   Medium* m = GetMedium(x, y, z);
   if (!m) {
@@ -116,30 +134,28 @@ void ComponentConstant::WeightingField(const double x, const double y,
     }
     return;
   }
-  wx = m_fwx;
-  wy = m_fwy;
-  wz = m_fwz;
+  wx = m_wfield[0];
+  wy = m_wfield[1];
+  wz = m_wfield[2];
 }
 
 double ComponentConstant::WeightingPotential(const double x, const double y,
                                              const double z,
                                              const std::string& label) {
-  if (!m_hasWeightingPotential || label != m_wfield) return 0.;
-
-  Medium* m = GetMedium(x, y, z);
-  if (!m) return 0.;
-
-  return m_w0 - (x - m_wx0) * m_fwx - (y - m_wy0) * m_fwy - (z - m_wz0) * m_fwz;
+  if (!m_hasWeightingPotential || label != m_label) return 0.;
+  // Make sure we are in the active area.
+  if (!GetMedium(x, y, z)) return 0.;
+  // Compute the potential.
+  const std::array<double, 3> d = {x - m_wx0, y - m_wy0, z - m_wz0};
+  return m_w0 - std::inner_product(d.begin(), d.end(), m_wfield.begin(), 0.);
 }
 
 void ComponentConstant::SetElectricField(const double ex, const double ey,
                                          const double ez) {
-  m_fx = ex;
-  m_fy = ey;
-  m_fz = ez;
-  if (m_fx * m_fx + m_fy * m_fy + m_fz * m_fz > Small) return;
-
-  std::cerr << m_className << "::SetElectricField: Field set to zero.\n";
+  m_efield = {ex, ey, ez};
+  if (ex * ex + ey * ey + ez * ez < Small) {
+    std::cerr << m_className << "::SetElectricField: Field set to zero.\n";
+  }
   m_ready = true;
 }
 
@@ -155,10 +171,8 @@ void ComponentConstant::SetPotential(const double x, const double y,
 void ComponentConstant::SetWeightingField(const double wx, const double wy,
                                           const double wz,
                                           const std::string label) {
-  m_wfield = label;
-  m_fwx = wx;
-  m_fwy = wy;
-  m_fwz = wz;
+  m_label = label;
+  m_wfield = {wx, wy, wz};
   m_hasWeightingField = true;
 }
 
@@ -176,13 +190,35 @@ void ComponentConstant::SetWeightingPotential(const double x, const double y,
   m_hasWeightingPotential = true;
 }
 
+void ComponentConstant::SetArea(
+    const double xmin, const double ymin, const double zmin,
+    const double xmax, const double ymax, const double zmax) {
+
+  m_xmin[0] = std::min(xmin, xmax);
+  m_xmin[1] = std::min(ymin, ymax);
+  m_xmin[2] = std::min(zmin, zmax);
+  m_xmax[0] = std::max(xmin, xmax);
+  m_xmax[1] = std::max(ymin, ymax);
+  m_xmax[2] = std::max(zmin, zmax);
+  m_hasArea = true; 
+}
+
+void ComponentConstant::UnsetArea() {
+  m_xmin.fill(0.);
+  m_xmax.fill(0.);
+  m_hasArea = false;
+}
+
 void ComponentConstant::Reset() {
-  m_fx = m_fy = m_fz = 0.;
+  m_efield.fill(0.);
   m_hasPotential = false;
+  m_wfield.fill(0.);
   m_hasWeightingField = false;
   m_hasWeightingPotential = false;
-  m_wfield = "";
+  m_label = "";
   m_ready = false;
+  UnsetArea();
+  m_medium = nullptr;
 }
 
 void ComponentConstant::UpdatePeriodicity() {

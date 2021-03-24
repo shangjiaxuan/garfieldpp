@@ -6,8 +6,6 @@
 #include <TH1F.h>
 
 #include "Garfield/MediumMagboltz.hh"
-#include "Garfield/SolidBox.hh"
-#include "Garfield/GeometrySimple.hh"
 #include "Garfield/ComponentConstant.hh"
 #include "Garfield/Sensor.hh"
 #include "Garfield/TrackHeed.hh"
@@ -33,16 +31,13 @@ int main(int argc, char * argv[]) {
   gas.SetTemperature(293.15);
   gas.SetPressure(760.);
 
-  // Detector geometry
-  // Gap [cm]
+  // Thickness of the gas gap [cm]
   constexpr double width = 1.;
-  SolidBox box(0.5 * width, 0, 0, 0.5 * width, 10., 10.);
-  GeometrySimple geo;
-  geo.AddSolid(&box, &gas);
 
   // Make a component
   ComponentConstant cmp;
-  cmp.SetGeometry(&geo);
+  cmp.SetArea(0., -10., -10., width, 10., 10.);
+  cmp.SetMedium(&gas);
   cmp.SetElectricField(100., 0., 0.);
 
   // Make a sensor
