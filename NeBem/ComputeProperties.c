@@ -792,7 +792,6 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
       // This could be based on localPP and the subtended solid angle.
       // If 1, then only primitive influence will be considered.
       int PrimOK = 0;
-
       if (PrimOK) {
         // Only primitive influence will be considered
         // Potential and flux (local system) due to base primitive
@@ -926,17 +925,16 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                 if ((xrpt == 0) && (yrpt == 0) && (zrpt == 0)) continue;
 
                 // Basic primitive repeated
-                int PrimOK = 0;
-
+                int repPrimOK = 0;
                 // consider primitive representation accurate enough if it is
                 // repeated and beyond PrimAfter repetitions.
                 if (PrimAfter == 0) {
                   // If PrimAfter is zero, PrimOK is always zero
-                  PrimOK = 0;
+                  repPrimOK = 0;
                 } else if ((abs(xrpt) > PrimAfter) && (abs(yrpt) > PrimAfter)) {
-                  PrimOK = 1;
+                  repPrimOK = 1;
                 }
-                if (PrimOK) {
+                if (repPrimOK) {
                   // Use primitive representation
                   // Rotate point from global to local system
                   double InitialVector[3] = {xfld - XPOfRpt, yfld - YPOfRpt, zfld - ZPOfRpt};
@@ -1086,8 +1084,8 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                         MirrorDistXFromOrigin[primsrc], &DirCos);
 
                     // check whether primitive description is good enough
-                    int PrimOK = 0;
-                    if (PrimOK) {
+                    int mirrPrimOK = 0;
+                    if (mirrPrimOK) {
                       GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
                                    &DirCos);
                       const double qpr = AvChDen[primsrc] + AvAsgndChDen[primsrc];
@@ -1151,8 +1149,8 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                                                 &DirCos);
 
                     // check whether primitive description is good enough
-                    int PrimOK = 0;
-                    if (PrimOK) {
+                    int mirrPrimOK = 0;
+                    if (mirrPrimOK) {
                       GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
                                    &DirCos);
                       const double qpr = AvChDen[primsrc] + AvAsgndChDen[primsrc];
@@ -1216,8 +1214,8 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                                                 &DirCos);
 
                     // check whether primitive description is good enough
-                    int PrimOK = 0;
-                    if (PrimOK) {
+                    int mirrPrimOK = 0;
+                    if (mirrPrimOK) {
                       GetPrimPFGCS(primsrc, &localPPRM, &tmpPot, &tmpF,
                                    &DirCos);
                       const double qpr = AvChDen[primsrc] + AvAsgndChDen[primsrc];
@@ -1566,25 +1564,13 @@ printf("q: %d,  type: %d\n", vq, vtype);
 // named and then imported by ComponentNeBem3dMap.
 int MapFPR(void) {
   int dbgFn = 0;
-  int fstatus;
-
-  int nbXCells;
-  int nbYCells;
-  int nbZCells;
-  double startX;
-  double startY;
-  double startZ;
-  double delX;
-  double delY;
-  double delZ;
 
   printf("\nPotential and field computation for 3dMap data export\n");
 
   char MapInfoFile[256];
-  FILE *fMapInfo;
   strcpy(MapInfoFile, BCOutDir);
   strcat(MapInfoFile, "/MapInfo.out");
-  fMapInfo = fopen(MapInfoFile, "w");
+  FILE *fMapInfo = fopen(MapInfoFile, "w");
   if (fMapInfo == NULL) {
     neBEMMessage("MapFPR - MapInfoFile");
     return -1;
@@ -1594,7 +1580,7 @@ int MapFPR(void) {
     fflush(stdout);
   }
 
-  // in certain versions, we may have only the version number in the header and
+  // In certain versions, we may have only the version number in the header and
   // nothing more. In that case, it is unsafe to assume that OptMap or
   // OptStaggerMap will be at all present in the output file. This decision
   // may need to be taken immediately after reading the MapVersion value.
@@ -1611,14 +1597,13 @@ int MapFPR(void) {
   fprintf(fMapInfo, "%le\n", Map.YStagger * 100.0);
   fprintf(fMapInfo, "%le\n", Map.ZStagger * 100.0);
   fprintf(fMapInfo, "MapFPR.out\n");
-  // if(OptStaggerMap) fprintf(fMapInfo, "StgrMapFPR.out\n"); not being read
+  // if (OptStaggerMap) fprintf(fMapInfo, "StgrMapFPR.out\n"); /// not being read
   fclose(fMapInfo);
 
   char MapFile[256];
-  FILE *fMap;
   strcpy(MapFile, BCOutDir);
   strcat(MapFile, "/MapFPR.out");
-  fMap = fopen(MapFile, "w");
+  FILE *fMap = fopen(MapFile, "w");
   if (fMap == NULL) {
     neBEMMessage("MapFPR - MapFile");
     return -1;
@@ -1632,22 +1617,20 @@ int MapFPR(void) {
       fMap,
       "# X(cm)\tY(cm)\tZ(cm)\tFX(V/cm)\tFY(V/cm)\tFZ(V/cm)\tPot(V)\tRegion\n");
 
-  nbXCells = Map.NbXCells;
-  nbYCells = Map.NbYCells;
-  nbZCells = Map.NbZCells;
-  startX = Map.Xmin;
-  startY = Map.Ymin;
-  startZ = Map.Zmin;
-  delX = (Map.Xmax - Map.Xmin) / nbXCells;
-  delY = (Map.Ymax - Map.Ymin) / nbYCells;
-  delZ = (Map.Zmax - Map.Zmin) / nbZCells;
+  int nbXCells = Map.NbXCells;
+  int nbYCells = Map.NbYCells;
+  int nbZCells = Map.NbZCells;
+  double startX = Map.Xmin;
+  double startY = Map.Ymin;
+  double startZ = Map.Zmin;
+  double delX = (Map.Xmax - Map.Xmin) / nbXCells;
+  double delY = (Map.Ymax - Map.Ymin) / nbYCells;
+  double delZ = (Map.Zmax - Map.Zmin) / nbZCells;
 
-  int ivol;  // relates XYZ position to volume number using Garfield subroutine
-  double *MapFX, *MapFY, *MapFZ, *MapP;
-  MapFX = dvector(0, nbZCells + 1);
-  MapFY = dvector(0, nbZCells + 1);
-  MapFZ = dvector(0, nbZCells + 1);
-  MapP = dvector(0, nbZCells + 1);
+  double *MapFX = dvector(0, nbZCells + 1);
+  double *MapFY = dvector(0, nbZCells + 1);
+  double *MapFZ = dvector(0, nbZCells + 1);
+  double *MapP = dvector(0, nbZCells + 1);
 
   if (dbgFn) {
     printf("nbXCells, nbYCells, nbZCells: %d, %d, %d\n", nbXCells, nbYCells,
@@ -1699,7 +1682,7 @@ int MapFPR(void) {
           }
 
           if (OptReadFastPF) {
-            fstatus = FastPFAtPoint(&point, &potential, &field);
+            int fstatus = FastPFAtPoint(&point, &potential, &field);
             if (fstatus != 0) {
               neBEMMessage("wrong FastPFAtPoint return value in MapFPR\n");
               // return -1;
@@ -1707,7 +1690,7 @@ int MapFPR(void) {
           } else {
             neBEMMessage(
                 "Suggestion: Use of FastVol can expedite generation of Map.\n");
-            fstatus = PFAtPoint(&point, &potential, &field);
+            int fstatus = PFAtPoint(&point, &potential, &field);
             if (fstatus != 0) {
               neBEMMessage("wrong PFAtPoint return value in MapFPR\n");
               // return -1;
@@ -1729,26 +1712,25 @@ int MapFPR(void) {
         }  // loop k
       }    // pragma omp parallel
 
-      for (int k = 1; k <= nbZCells + 1; ++k)  // file output
-      {
+      for (int k = 1; k <= nbZCells + 1; ++k) {
+        // file output
         point.X = startX + (i - 1) * delX;
         point.Y = startY + (j - 1) * delY;
         point.Z = startZ + (k - 1) * delZ;
 
-        ivol = neBEMVolumePoint(point.X, point.Y, point.Z);
+        int ivol = neBEMVolumePoint(point.X, point.Y, point.Z);
         /*
         volMaterial[ivol];	// region linked to material
         neBEMVolumeDescription(ivol, &vshp, &vmat, &veps, &vpot, &vq, &vtype);
-if(dbgFn)
-{
-printf("volref: %d\n", ivol);
-printf("shape: %d,  material: %d\n", volShape[ivol], volMaterial[ivol]);
-printf("eps: %d,  pot: %d\n", volEpsilon[ivol], volPotential[ivol]);
-printf("q: %d,  type: %d\n", volCharge[ivol], volBoundaryType[ivol]);
-printf("shape: %d,  material: %d\n", vshp, vmat);
-printf("eps: %d,  pot: %d\n", veps, vpot);
-printf("q: %d,  type: %d\n", vq, vtype);
-}
+        if (dbgFn) {
+          printf("volref: %d\n", ivol);
+          printf("shape: %d,  material: %d\n", volShape[ivol], volMaterial[ivol]);
+          printf("eps: %d,  pot: %d\n", volEpsilon[ivol], volPotential[ivol]);
+          printf("q: %d,  type: %d\n", volCharge[ivol], volBoundaryType[ivol]);
+          printf("shape: %d,  material: %d\n", vshp, vmat);
+          printf("eps: %d,  pot: %d\n", veps, vpot);
+          printf("q: %d,  type: %d\n", vq, vtype);
+        }
         */
 
         fprintf(fMap, "%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%4d\n",
@@ -1758,8 +1740,6 @@ printf("q: %d,  type: %d\n", vq, vtype);
                 ivol + 1);
       }
       fflush(fMap);  // file output over
-
-      // printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
     }  // loop j
   }    // loop i
 
@@ -1772,11 +1752,10 @@ printf("q: %d,  type: %d\n", vq, vtype);
 
   // If staggered map
   if (OptStaggerMap) {
-    char MapFile[256];
-    FILE *fMap;
-    strcpy(MapFile, BCOutDir);
-    strcat(MapFile, "/StgrMapFPR.out");
-    fMap = fopen(MapFile, "w");
+    char StgrMapFile[256];
+    strcpy(StgrMapFile, BCOutDir);
+    strcat(StgrMapFile, "/StgrMapFPR.out");
+    fMap = fopen(StgrMapFile, "w");
     if (fMap == NULL) {
       neBEMMessage("StgrMapFPR - Staggered MapFile");
       return -1;
@@ -1790,9 +1769,9 @@ printf("q: %d,  type: %d\n", vq, vtype);
         fMap,
         "# "
         "X(cm)\tY(cm)\tZ(cm)\tFX(V/cm)\tFY(V/cm)\tFZ(V/cm)\tPot(V)\tRegion\n");
-
+    // Very static stagger where X-shift is one map long
     double LX = (Map.Xmax - Map.Xmin);
-    Map.Xmin = Map.Xmax;  // very static stagger where X-shift is one map long
+    Map.Xmin = Map.Xmax;  
     Map.Xmax = Map.Xmin + LX;
     double LY = (Map.Ymax - Map.Ymin);
     Map.Ymin = Map.Ymin + Map.YStagger;
@@ -1801,16 +1780,13 @@ printf("q: %d,  type: %d\n", vq, vtype);
     nbYCells = Map.NbYCells;
     nbZCells = Map.NbZCells;
     startX = Map.Xmin;
-    startY =
-        Map.Ymin + Map.YStagger;  // and y-shift is of the presecribed amount
+    // and y-shift is of the presecribed amount
+    startY = Map.Ymin + Map.YStagger;  
     startZ = Map.Zmin;
     delX = (Map.Xmax - Map.Xmin) / nbXCells;
     delY = (Map.Ymax - Map.Ymin) / nbYCells;
     delZ = (Map.Zmax - Map.Zmin) / nbZCells;
 
-    int ivol;  // relates XYZ position to volume number using Garfield
-               // subroutine
-    double *MapFX, *MapFY, *MapFZ, *MapP;
     MapFX = dvector(0, nbZCells + 1);
     MapFY = dvector(0, nbZCells + 1);
     MapFZ = dvector(0, nbZCells + 1);
@@ -1866,7 +1842,7 @@ printf("q: %d,  type: %d\n", vq, vtype);
             }
 
             if (OptReadFastPF) {
-              fstatus = FastPFAtPoint(&point, &potential, &field);
+              int fstatus = FastPFAtPoint(&point, &potential, &field);
               if (fstatus != 0) {
                 neBEMMessage("wrong FastPFAtPoint return value in MapFPR\n");
                 // return -1;
@@ -1875,7 +1851,7 @@ printf("q: %d,  type: %d\n", vq, vtype);
               neBEMMessage(
                   "Suggestion: Use of FastVol can expedite generation of "
                   "Map.\n");
-              fstatus = PFAtPoint(&point, &potential, &field);
+              int fstatus = PFAtPoint(&point, &potential, &field);
               if (fstatus != 0) {
                 neBEMMessage("wrong PFAtPoint return value in MapFPR\n");
                 // return -1;
@@ -1897,26 +1873,25 @@ printf("q: %d,  type: %d\n", vq, vtype);
           }  // loop k
         }    // pragma omp parallel
 
-        for (int k = 1; k <= nbZCells + 1; ++k)  // file output
-        {
+        for (int k = 1; k <= nbZCells + 1; ++k) {
+          // file output
           point.X = startX + (i - 1) * delX;
           point.Y = startY + (j - 1) * delY;
           point.Z = startZ + (k - 1) * delZ;
 
-          ivol = neBEMVolumePoint(point.X, point.Y, point.Z);
+          int ivol = neBEMVolumePoint(point.X, point.Y, point.Z);
           /*
           volMaterial[ivol];	// region linked to material
           neBEMVolumeDescription(ivol, &vshp, &vmat, &veps, &vpot, &vq, &vtype);
-  if(dbgFn)
-  {
-  printf("volref: %d\n", ivol);
-  printf("shape: %d,  material: %d\n", volShape[ivol], volMaterial[ivol]);
-  printf("eps: %d,  pot: %d\n", volEpsilon[ivol], volPotential[ivol]);
-  printf("q: %d,  type: %d\n", volCharge[ivol], volBoundaryType[ivol]);
-  printf("shape: %d,  material: %d\n", vshp, vmat);
-  printf("eps: %d,  pot: %d\n", veps, vpot);
-  printf("q: %d,  type: %d\n", vq, vtype);
-  }
+          if (dbgFn) {
+            printf("volref: %d\n", ivol);
+            printf("shape: %d,  material: %d\n", volShape[ivol], volMaterial[ivol]);
+            printf("eps: %d,  pot: %d\n", volEpsilon[ivol], volPotential[ivol]);
+            printf("q: %d,  type: %d\n", volCharge[ivol], volBoundaryType[ivol]);
+            printf("shape: %d,  material: %d\n", vshp, vmat);
+            printf("eps: %d,  pot: %d\n", veps, vpot);
+            printf("q: %d,  type: %d\n", vq, vtype);
+          }
           */
 
           fprintf(
@@ -1927,7 +1902,6 @@ printf("q: %d,  type: %d\n", vq, vtype);
         }              // for k <= nbZCells
         fflush(fMap);  // file output over
 
-        // printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
       }  // loop j
     }    // loop i
 
