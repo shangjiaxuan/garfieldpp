@@ -1911,7 +1911,7 @@ int neBEMReadGeometry(void) {
 // Discretize the primitives using discretization information supplied by the
 // user.
 int neBEMDiscretize(int **NbElemsOnPrimitives) {
-  int fstatus;
+  // int fstatus;
 
   // For a model and a mesh that were defined before and for which data were
   // stored in two files - one for primitives and one for elements
@@ -1920,7 +1920,7 @@ int neBEMDiscretize(int **NbElemsOnPrimitives) {
   // independent of each other. However, for a stored element file to be useful,
   // both the model and mesh have to be old (not new).
   if ((!NewModel) && (!NewMesh) && (!NewBC) && (OptStoreElements)) {
-    fstatus = ReadElements();
+    int fstatus = ReadElements();
     if (fstatus) {
       neBEMMessage("neBEMDiscretize - problem reading stored Elements.\n");
       return -1;
@@ -1969,7 +1969,7 @@ int neBEMDiscretize(int **NbElemsOnPrimitives) {
     if (NbVertices[prim] == 4) {
       NbSurfSegX[prim] = NbElemsOnPrimitives[prim][1];
       NbSurfSegZ[prim] = NbElemsOnPrimitives[prim][2];
-      fstatus = AnalyzePrimitive(prim, &NbSurfSegX[prim], &NbSurfSegZ[prim]);
+      int fstatus = AnalyzePrimitive(prim, &NbSurfSegX[prim], &NbSurfSegZ[prim]);
       if (fstatus == 0) {
         neBEMMessage("neBEMDiscretize - AnalyzePrimitve");
         return -1;
@@ -1979,7 +1979,7 @@ int neBEMDiscretize(int **NbElemsOnPrimitives) {
     if (NbVertices[prim] == 3) {
       NbSurfSegX[prim] = NbElemsOnPrimitives[prim][1];
       NbSurfSegZ[prim] = NbElemsOnPrimitives[prim][2];
-      fstatus = AnalyzePrimitive(prim, &NbSurfSegX[prim], &NbSurfSegZ[prim]);
+      int fstatus = AnalyzePrimitive(prim, &NbSurfSegX[prim], &NbSurfSegZ[prim]);
       if (fstatus == 0) {
         neBEMMessage("neBEMDiscretize - AnalyzePrimitive");
         return -1;
@@ -1989,7 +1989,7 @@ int neBEMDiscretize(int **NbElemsOnPrimitives) {
     if (NbVertices[prim] == 2) {
       int itmp;
       NbWireSeg[prim] = NbElemsOnPrimitives[prim][1];
-      fstatus = AnalyzePrimitive(prim, &NbWireSeg[prim], &itmp);
+      int fstatus = AnalyzePrimitive(prim, &NbWireSeg[prim], &itmp);
       if (fstatus == 0) {
         neBEMMessage("neBEMDiscretize - AnalyzePrimitive");
         return -1;
@@ -2189,7 +2189,7 @@ int neBEMDiscretize(int **NbElemsOnPrimitives) {
   // Store element related data in a file for a new mesh created, if opted for
   if (NewMesh && OptStoreElements) {
     if (OptFormattedFile) {
-      fstatus = WriteElements();
+      int fstatus = WriteElements();
       if (fstatus) {
         neBEMMessage("neBEMDiscretize - problem writing Elements.\n");
         return -1;
@@ -4134,9 +4134,8 @@ int neBEMSolve(void) {
       }
     }
 
-    int fstatus;
     if (NewModel) {  // effectively, NewMesh = NewBC = NewPP = 1;
-      fstatus = ComputeSolution();
+      int fstatus = ComputeSolution();
       if (fstatus != 0) {
         neBEMMessage("neBEMSolve - NewModel");
         return -1;
@@ -4144,21 +4143,21 @@ int neBEMSolve(void) {
     } else { // NewModel == 0
       if (NewMesh) {
         // effectively, NewBC = NewPP = 1;
-        fstatus = ComputeSolution();
+        int fstatus = ComputeSolution();
         if (fstatus != 0) {
           neBEMMessage("neBEMSolve - NewMesh");
           return -1;
         }
       } else { // NewModel == NewMesh == 0
         if (NewBC) {  // effectively, NewPP = 1;
-          fstatus = ComputeSolution();
+          int fstatus = ComputeSolution();
           if (fstatus != 0) {
             neBEMMessage("neBEMSolve - Failure computing new solution");
             return -1;
           }
         } else { // NewBC == 0
           if (NewPP) {
-            fstatus = ReadSolution();
+            int fstatus = ReadSolution();
             if (fstatus != 0) {
               neBEMMessage("neBEMSolve - Failure reading solution");
               return (-1);
@@ -5304,11 +5303,8 @@ int ReadElements(void) {
 }  // ReadElements ends
 
 // returns the time elapsed between start and stop
-// Interface.h
-double neBEMTimeElapsed(clock_t startClock, clock_t stopClock) {
-  double elapsedTime;
-
-  elapsedTime = ((double)(stopClock - startClock)) / CLOCKS_PER_SEC;
+double neBEMTimeElapsed(clock_t t0, clock_t t1) {
+  double elapsedTime = ((double)(t1 - t0)) / CLOCKS_PER_SEC;
   printf("neBEMV%s TimeElapsed ===> %lg seconds ", neBEMVersion, elapsedTime);
 
   return (elapsedTime);
