@@ -693,11 +693,10 @@ int LHMatrix(void) {
     printf("storing the influence matrix in a formatted file ...\n");
     fflush(stdout);
 
-    FILE *fInf;
     char InflFile[256];
     strcpy(InflFile, MeshOutDir);
     strcat(InflFile, "/Infl.out");
-    fInf = fopen(InflFile, "w+");
+    FILE *fInf = fopen(InflFile, "w+");
     if (fInf == NULL) {
       neBEMMessage("LHMatrix - InflFile");
       return -1;
@@ -720,11 +719,10 @@ int LHMatrix(void) {
         "LHMatrix - Binary write of Infl matrix not implemented yet.\n");
     return -1;
 
-    FILE *fInf;  // I'm not sure!
     char InflFile[256];
     strcpy(InflFile, MeshOutDir);
     strcat(InflFile, "/RawInfl.out");
-    fInf = fopen(InflFile, "wb");
+    FILE *fInf = fopen(InflFile, "wb");
     if (fInf == NULL) {
       neBEMMessage("LHMatrix - RawInflFile");
       return -1;
@@ -1168,10 +1166,9 @@ if(OptStoreInfVec && OptFormattedFile)
         printf("storing the influence matrix in a formatted file ...\n");
         fflush(stdout);
 
-        FILE *fInfVec;
         char InfVecFile[256];
         strcpy(InfVecFile, MeshOutDir); strcat(InfVecFile, "/InfVec.out");
-        fInfVec = fopen(InfVecFile, "w+");
+        FILE *fInfVec = fopen(InfVecFile, "w+");
         if(fInfVec == NULL)
                 {
                 neBEMMessage("InfluenceVector - InfVecFile");
@@ -1192,10 +1189,9 @@ now.
 routines - neBEMMessage("LHMatrix - Binary write of Infl matrix not implemented
 yet.\n"); return -1;
 
-  FILE *fInfVec;	// I'm not sure!
   char InfVecFile[256];
   strcpy(InfVecFile, MeshOutDir); strcat(InfVecFile, "/RawInfVec.out");
-  fInfVec = fopen(InfVecFile, "wb");
+  FILE *fInfVec = fopen(InfVecFile, "wb");
         if(fInfVec == NULL)
                 {
                 neBEMMessage("InfluenceVector - RawInfVecFile");
@@ -1906,14 +1902,12 @@ Two functions to be tried later */
 // coefficient matrix which makes the computation much faster.
 int RHVector(void) {
   double value, valueKnCh, valueChUp;
-  char outfile[256];
-  FILE *fout;
 
   if (TimeStep == 1) RHS = dvector(1, NbEqns);
-
+  char outfile[256];
   strcpy(outfile, BCOutDir);
   strcat(outfile, "/BCondns.out");
-  fout = fopen(outfile, "w");
+  FILE *fout = fopen(outfile, "w");
   fprintf(fout, "#BCondn Vector\n");
   fprintf(fout, "#elefld\tAssigned\tBC\tKnCh\tChUp\tRHValue\n");
 
@@ -2371,7 +2365,7 @@ double EffectChUp(int elefld) { return (ValueChUp(elefld)); }
 
 // Effect of charging up on the Dirichlet boundary conditions
 double ValueChUp(int elefld) {
-  double value = 0.0;
+
   printf("In ValueChUp ...\n");
 
   // prepare LHMatrix to compute EffectChUp
@@ -2382,10 +2376,9 @@ double ValueChUp(int elefld) {
       printf("reading influence coefficient matrix from formatted file...\n");
 
       char InflFile[256];
-      FILE *fInf;
       strcpy(InflFile, MeshOutDir);
       strcat(InflFile, "/Infl.out");
-      fInf = fopen(InflFile, "r");
+      FILE *fInf = fopen(InflFile, "r");
       // assert(fInf != NULL);
       if (fInf == NULL) {
         neBEMMessage("Solve - InflFile in OptValidate.");
@@ -2404,12 +2397,11 @@ double ValueChUp(int elefld) {
 
       Inf = dmatrix(1, NbEqns, 1, NbUnknowns);
 
-      for (int elefld = 1; elefld <= NbEqns; ++elefld)
-        for (int elesrc = 1; elesrc <= NbUnknowns; ++elesrc)
-          fscanf(fInf, "%le\n", &Inf[elefld][elesrc]);
+      for (int ifld = 1; ifld <= NbEqns; ++ifld)
+        for (int jsrc = 1; jsrc <= NbUnknowns; ++jsrc)
+          fscanf(fInf, "%le\n", &Inf[ifld][jsrc]);
       fclose(fInf);
-    }  // stored influence matrix and formatted file
-    else {
+    } else {
       printf("repeating influence coefficient matrix computation ...\n");
 
       int fstatus = LHMatrix();
@@ -2429,6 +2421,7 @@ double ValueChUp(int elefld) {
 
   // This approach works because Inf is supposed to contain information of
   // repetitions, mirrors and other geometrical attributes of the system
+  double value = 0.0;
   for (int elesrc = 1; elesrc <= NbElements; ++elesrc) {
     value += Inf[elefld][elesrc] * (EleArr + elesrc - 1)->Assigned;
     if (0) {
@@ -2438,7 +2431,7 @@ double ValueChUp(int elefld) {
   }
 
   printf("Exiting ValueChUp ...\n");
-  return (value);
+  return value;
 }  // ValueChUp ends
 
 // Effect of charging up on the Neumann boundary condition
@@ -2833,10 +2826,9 @@ int Solve(void) {
     double xerrMax = 0.0, yerrMax = 0.0, zerrMax = 0.0;
 
     char Errfile[256];
-    FILE *fErr;
     strcpy(Errfile, BCOutDir);
     strcat(Errfile, "/Errors.out");
-    fErr = fopen(Errfile, "w");
+    FILE *fErr = fopen(Errfile, "w");
     if (fErr == NULL) {
       neBEMMessage("Solve - ErrFile");
       return -1;
@@ -3624,30 +3616,28 @@ int Solve(void) {
 // In case we are PostProcessing only the solution needs to be read in
 // from an existing Solution file present in the BCOutDir
 int ReadSolution(void) {
-  int itmp;
-  double dtmp, Solution;
-  char SolnFile[256], instr[256];
-  FILE *fSoln;
-
+  char SolnFile[256];
   strcpy(SolnFile, BCOutDir);
   strcat(SolnFile, "/Soln.out");
-  fSoln = fopen(SolnFile, "r");
+  FILE *fSoln = fopen(SolnFile, "r");
   // assert(fSoln != NULL);
   if (fSoln == NULL) {
     neBEMMessage("ReadSoln - unable to open solution file.");
     return -1;
   }
 
+  int itmp;
+  double dtmp, sol;
+  char instr[256];
   fgets(instr, 256, fSoln);
   for (int ele = 1; ele <= NbElements; ++ele) {
-    fscanf(fSoln, "%d %lg %lg %lg %lg\n", &itmp, &dtmp, &dtmp, &dtmp,
-           &Solution);
+    fscanf(fSoln, "%d %lg %lg %lg %lg\n", &itmp, &dtmp, &dtmp, &dtmp, &sol);
     // assert(ele == itmp);
     if (ele != itmp) {
       neBEMMessage("ReadSolution - ele_itmp in ReadSolution");
       return -1;
     }
-    (EleArr + ele - 1)->Solution = Solution;
+    (EleArr + ele - 1)->Solution = sol;
   }
   printf("\nReadSolution: Solution read in for all elements ...\n");
   fflush(stdout);
@@ -3678,10 +3668,10 @@ int ReadSolution(void) {
     AvAsgndChDen[prim] = 0.0;
 
     for (int ele = ElementBgn[prim]; ele <= ElementEnd[prim]; ++ele) {
-      area += (EleArr + ele - 1)->G.dA;
-      AvChDen[prim] += (EleArr + ele - 1)->Solution * (EleArr + ele - 1)->G.dA;
-      AvAsgndChDen[prim] +=
-          (EleArr + ele - 1)->Assigned * (EleArr + ele - 1)->G.dA;
+      const double dA = (EleArr + ele - 1)->G.dA;
+      area += dA;
+      AvChDen[prim] += (EleArr + ele - 1)->Solution * dA;
+      AvAsgndChDen[prim] += (EleArr + ele - 1)->Assigned * dA;
     }
 
     AvChDen[prim] /= area;

@@ -262,9 +262,6 @@ neBEMGLOBAL char GnuplotTmpDir[256], GnuplotScriptFile[256];  // Dirs and files
 neBEMGLOBAL char DeviceOutDir[256], ModelOutDir[256], NativeOutDir[256],
     NativePrimDir[256], MeshOutDir[256], BCOutDir[256], PPOutDir[256];
 
-// We have a single map now for both potential and flux
-neBEMGLOBAL char MapFile[256];
-
 // Source code: PreProcess/ReTrim.c
 neBEMGLOBAL int SurfaceElements(int prim, int nvertex, double xvert[],
                                 double yvert[], double zvert[], double xnorm,
