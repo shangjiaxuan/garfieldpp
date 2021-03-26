@@ -54,12 +54,12 @@ elseif(DEFINED ROOTSYS)
   list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 elseif(DEFINED ROOT_CMAKE_DIR)
   list(APPEND CMAKE_PREFIX_PATH ${ROOT_CMAKE_DIR})
-else()
-  message(
-    FATAL_ERROR
-      "Please consider to set ROOTSYS or use -DROOTSYS=..."
-      "If still there is a problem, point to the directory which includes FindROOT.cmake using -DROOT_CMAKE_DIR=..."
-  )
+# else()
+#   message(
+#     STATUS
+#       "Please consider to set ROOTSYS or use -DROOTSYS=..."
+#       "If still there is a problem, point to the directory which includes FindROOT.cmake using -DROOT_CMAKE_DIR=..."
+# )
 endif(DEFINED ENV{ROOTSYS})
 
 find_package(ROOT 6.0 REQUIRED COMPONENTS Geom Gdml)
