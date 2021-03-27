@@ -14,7 +14,6 @@ include(CMakeFindDependencyMacro)
 
 find_dependency( ROOT 6.0 COMPONENTS Geom Gdml)
 find_dependency(GSL)
-find_dependency(OpenMP)
 
 check_required_components(GARFIELD)
 

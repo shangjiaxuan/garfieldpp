@@ -30,4 +30,4 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${ConfigFileName}" "${VersionFilePath
         DESTINATION "${CMAKE_INSTALL_DIR}")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.sh.in
-               ${CMAKE_CURRENT_BINARY_DIR}/setup.sh @ONLY)
+               ${PROJECT_BINARY_DIR}/setup.sh @ONLY)
