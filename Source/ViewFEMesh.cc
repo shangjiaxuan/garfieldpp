@@ -159,6 +159,29 @@ bool ViewFEMesh::GetPlotLimits() {
                 << "    Please set the limits explicitly (SetArea).\n";
       return false;
     }
+    if (std::isinf(m_xMinBox) || std::isinf(m_xMaxBox) || 
+        std::isinf(m_yMinBox) || std::isinf(m_yMaxBox) ||
+        std::isinf(m_zMinBox) || std::isinf(m_zMaxBox)) {
+      double x0 = 0., y0 = 0., z0 = 0.;
+      double x1 = 0., y1 = 0., z1 = 0.;
+      if (!m_component->GetElementaryCell(x0, y0, z0, x1, y1, z1)) {
+        std::cerr << m_className << "::GetPlotLimits:\n"
+                  << "    Cell boundaries are not defined.\n"
+                  << "    Please set the limits explicitly (SetArea).\n";
+      }
+      if (std::isinf(m_xMinBox) || std::isinf(m_xMaxBox)) {
+        m_xMinBox = x0;
+        m_xMaxBox = x1;
+      }
+      if (std::isinf(m_yMinBox) || std::isinf(m_yMaxBox)) {
+        m_yMinBox = y0;
+        m_yMaxBox = y1;
+      }
+      if (std::isinf(m_zMinBox) || std::isinf(m_zMaxBox)) {
+        m_zMinBox = z0;
+        m_zMaxBox = z1;
+      }
+    }
   }
   // Determine the intersection of the viewing plane and the box.
   double xmin = 0., xmax = 0., ymin = 0., ymax = 0.;
