@@ -316,14 +316,20 @@ bool ComponentAnalyticField::GetVoltageRange(double& pmin, double& pmax) {
   return true;
 }
 
-bool ComponentAnalyticField::GetBoundingBox(double& x0, double& y0, double& z0,
-                                            double& x1, double& y1,
-                                            double& z1) {
+bool ComponentAnalyticField::GetBoundingBox(
+    double& x0, double& y0, double& z0,
+    double& x1, double& y1, double& z1) {
   // If a geometry is present, try to get the bounding box from there.
   if (m_geometry) {
     if (m_geometry->GetBoundingBox(x0, y0, z0, x1, y1, z1)) return true;
   }
   // Otherwise, return the cell dimensions.
+  return GetElementaryCell(x0, y0, z0, x1, y1, z1);
+}
+
+bool ComponentAnalyticField::GetElementaryCell(
+    double& x0, double& y0, double& z0,
+    double& x1, double& y1, double& z1) {
   if (!m_cellset && !Prepare()) return false;
   if (m_polar) {
     double rmax, thetamax;

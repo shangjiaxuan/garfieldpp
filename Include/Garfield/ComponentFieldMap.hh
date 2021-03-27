@@ -33,8 +33,10 @@ class ComponentFieldMap : public Component {
            z >= m_minBoundingBox[2] && y <= m_maxBoundingBox[2];
   }
 
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
-                      double& ymax, double& zmax) override;
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
+                      double& xmax, double& ymax, double& zmax) override;
+  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
+                         double& xmax, double& ymax, double& zmax) override;
 
   bool GetVoltageRange(double& vmin, double& vmax) override {
     vmin = m_mapvmin;

@@ -47,8 +47,10 @@ class ComponentVoxel : public Component {
   bool GetVoltageRange(double& vmin, double& vmax) override;
   bool GetElectricFieldRange(double& exmin, double& exmax, double& eymin,
                              double& eymax, double& ezmin, double& ezmax);
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
-                      double& ymax, double& zmax) override;
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
+                      double& xmax, double& ymax, double& zmax) override;
+  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
+                         double& xmax, double& ymax, double& zmax) override;
 
   /** Define the grid.
     * \param nx,ny,nz number of bins along x, y, z.

@@ -201,6 +201,26 @@ bool ComponentTcad2d::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   return true;
 }
 
+bool ComponentTcad2d::GetElementaryCell(
+    double& xmin, double& ymin, double& zmin,
+    double& xmax, double& ymax, double& zmax) {
+  if (!m_ready) return false;
+  xmin = m_bbMin[0];
+  xmax = m_bbMax[0];
+  ymin = m_bbMin[1];
+  ymax = m_bbMax[1];
+  if (m_hasRangeZ) {
+    zmin = m_bbMin[2];
+    zmax = m_bbMax[2];
+  } else {
+    const double xymax = std::max({fabs(xmin), fabs(xmax), 
+                                   fabs(ymin), fabs(ymax)});
+    zmin = -xymax;
+    zmax = +xymax;
+  }
+  return true;
+}
+
 void ComponentTcad2d::SetRangeZ(const double zmin, const double zmax) {
   if (fabs(zmax - zmin) <= 0.) {
     std::cerr << m_className << "::SetRangeZ: Zero range is not permitted.\n";

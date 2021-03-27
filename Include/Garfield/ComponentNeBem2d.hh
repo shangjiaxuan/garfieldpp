@@ -25,6 +25,8 @@ class ComponentNeBem2d : public Component {
 
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                       double& xmax, double& ymax, double& zmax) override;
+  bool GetElementaryCell(double& xmin, double& ymin, double& zmin,
+                         double& xmax, double& ymax, double& zmax) override;
 
   bool IsWireCrossed(const double x0, const double y0, const double z0,
                      const double x1, const double y1, const double z1,

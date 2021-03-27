@@ -1013,6 +1013,20 @@ bool ComponentGrid::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   return true;
 }
 
+bool ComponentGrid::GetElementaryCell(
+    double& xmin, double& ymin, double& zmin,
+    double& xmax, double& ymax, double& zmax) {
+
+  if (!m_ready) return false;
+  xmin = m_xMin[0];
+  xmax = m_xMax[0];
+  ymin = m_xMin[1];
+  ymax = m_xMax[1];
+  zmin = m_xMin[2];
+  zmax = m_xMax[2];
+  return true;
+}
+
 bool ComponentGrid::GetVoltageRange(double& vmin, double& vmax) {
   if (!m_ready) return false;
   vmin = m_pMin;
