@@ -109,7 +109,7 @@ void AvalancheMicroscopic::EnablePlotting(ViewDrift* view) {
   }
 
   m_viewer = view;
-  if (!m_useDriftLines) {
+  if (!m_storeDriftLines) {
     std::cout << m_className << "::EnablePlotting:\n"
               << "    Enabling storage of drift line.\n";
     EnableDriftLines();
@@ -313,7 +313,7 @@ unsigned int AvalancheMicroscopic::GetNumberOfElectronDriftLinePoints(
     return 0;
   }
 
-  if (!m_useDriftLines) return 2;
+  if (!m_storeDriftLines) return 2;
 
   return m_endpointsElectrons[i].driftLine.size() + 2;
 }
@@ -326,7 +326,7 @@ unsigned int AvalancheMicroscopic::GetNumberOfHoleDriftLinePoints(
     return 0;
   }
 
-  if (!m_useDriftLines) return 2;
+  if (!m_storeDriftLines) return 2;
 
   return m_endpointsHoles[i].driftLine.size() + 2;
 }
@@ -454,15 +454,9 @@ bool AvalancheMicroscopic::DriftElectron(const double x0, const double y0,
                                          const double z0, const double t0,
                                          const double e0, const double dx0,
                                          const double dy0, const double dz0) {
-  // Clear the list of electrons and photons.
-  m_endpointsElectrons.clear();
-  m_endpointsHoles.clear();
-  m_photons.clear();
-
-  // Reset the particle counters.
-  m_nElectrons = m_nHoles = m_nIons = 0;
-
-  return TransportElectron(x0, y0, z0, t0, e0, dx0, dy0, dz0, false, false);
+  std::vector<Electron> stack;
+  AddToStack(x0, y0, z0, t0, e0, dx0, dy0, dz0, 0, false, stack);
+  return TransportElectrons(stack, false);
 }
 
 bool AvalancheMicroscopic::AvalancheElectron(const double x0, const double y0,
@@ -470,6 +464,31 @@ bool AvalancheMicroscopic::AvalancheElectron(const double x0, const double y0,
                                              const double e0, const double dx0,
                                              const double dy0,
                                              const double dz0) {
+  std::vector<Electron> stack;
+  AddToStack(x0, y0, z0, t0, e0, dx0, dy0, dz0, 0, false, stack);
+  return TransportElectrons(stack, true);
+}
+
+bool AvalancheMicroscopic::ResumeAvalanche() {
+  std::vector<Electron> stack;
+  for (const auto& p : m_endpointsElectrons) {
+    if (p.status == StatusAlive || p.status == StatusOutsideTimeWindow) { 
+      AddToStack(p.x, p.y, p.z, p.t, p.energy, 
+                 p.kx, p.ky, p.kz, p.band, false, stack);
+    }
+  }
+  for (const auto& p : m_endpointsHoles) {
+    if (p.status == StatusAlive || p.status == StatusOutsideTimeWindow) { 
+      AddToStack(p.x, p.y, p.z, p.t, p.energy, 
+                 p.kx, p.ky, p.kz, p.band, true, stack);
+    }
+  }
+  return TransportElectrons(stack, true);
+}
+
+bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
+                                              const bool aval) {
+
   // Clear the list of electrons, holes and photons.
   m_endpointsElectrons.clear();
   m_endpointsHoles.clear();
@@ -478,14 +497,6 @@ bool AvalancheMicroscopic::AvalancheElectron(const double x0, const double y0,
   // Reset the particle counters.
   m_nElectrons = m_nHoles = m_nIons = 0;
 
-  return TransportElectron(x0, y0, z0, t0, e0, dx0, dy0, dz0, true, false);
-}
-
-bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
-                                             const double z0, const double t0,
-                                             double e0, const double dx0,
-                                             const double dy0, const double dz0,
-                                             const bool aval, bool hole0) {
   const std::string hdr = m_className + "::TransportElectron: ";
   // Make sure that the sensor is defined.
   if (!m_sensor) {
@@ -493,103 +504,75 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
     return false;
   }
 
-  // Make sure that the starting point is inside a medium.
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(x0, y0, z0, medium) || !medium) {
-    std::cerr << hdr << "No medium at initial position.\n";
-    return false;
+  // Loop over the initial set of electrons/holes.
+  for (auto& p : stack) {
+    // Make sure that the starting point is inside a medium.
+    Medium* medium = nullptr;
+    if (!m_sensor->GetMedium(p.x0, p.y0, p.z0, medium) || !medium) {
+      std::cerr << hdr << "No medium at initial position.\n";
+      return false;
+    } 
+    // Make sure that the medium is "driftable" and microscopic.
+    if (!medium->IsDriftable() || !medium->IsMicroscopic()) {
+      std::cerr << hdr << "Medium does not have cross-section data.\n";
+      return false;
+    }
+    // Make sure the initial energy is positive.
+    p.e0 = std::max(p.e0, Small);
+    if (medium->IsSemiconductor() && m_useBandStructure) {
+      if (p.band < 0) {
+        // Sample the initial momentum and band.
+        medium->GetElectronMomentum(p.e0, p.kx, p.ky, p.kz, p.band);
+      }
+    } else {
+      p.band = 0;
+      const double kmag = Mag(p.kx, p.ky, p.kz);
+      if (fabs(kmag) < Small) {
+        // Direction has zero norm, draw a random direction.
+        RndmDirection(p.kx, p.ky, p.kz);
+      } else {
+        // Normalise the direction to 1.
+        p.kx /= kmag;
+        p.ky /= kmag;
+        p.kz /= kmag;
+      }
+    }
+    if (p.hole) {
+      ++m_nHoles;
+    } else {
+      ++m_nElectrons;
+    }
   }
-
-  // Make sure that the medium is "driftable" and microscopic.
-  if (!medium->IsDriftable() || !medium->IsMicroscopic()) {
-    std::cerr << hdr << "Medium does not have cross-section data.\n";
-    return false;
-  }
-
-  // If the medium is a semiconductor, we may use "band structure" stepping.
-  bool useBandStructure =
-      medium->IsSemiconductor() && m_useBandStructureDefault;
-  if (m_debug) {
-    std::cout << hdr << "Start drifting in medium " << medium->GetName()
-              << ".\n";
-  }
-
-  // Get the id number of the drift medium.
-  int id = medium->GetId();
 
   // Numerical prefactors in equation of motion
   const double c1 = SpeedOfLight * sqrt(2. / ElectronMass);
   const double c2 = c1 * c1 / 4.;
 
-  // Make sure the initial energy is positive.
-  e0 = std::max(e0, Small);
-
-  std::vector<Electron> stackOld;
   std::vector<Electron> stackNew;
-  stackOld.reserve(10000);
   stackNew.reserve(1000);
   std::vector<std::pair<double, double> > stackPhotons;
   std::vector<std::pair<int, double> > secondaries;
 
-  // Put the initial electron on the stack.
-  if (useBandStructure) {
-    // With band structure, (kx, ky, kz) represents the momentum.
-    // No normalization in this case.
-    int band = -1;
-    double kx = 0., ky = 0., kz = 0.;
-    medium->GetElectronMomentum(e0, kx, ky, kz, band);
-    AddToStack(x0, y0, z0, t0, e0, kx, ky, kz, band, hole0, stackOld);
-  } else {
-    double kx = dx0;
-    double ky = dy0;
-    double kz = dz0;
-    // Check the given initial direction.
-    const double kmag = Mag(kx, ky, kz);
-    if (fabs(kmag) < Small) {
-      // Direction has zero norm, draw a random direction.
-      RndmDirection(kx, ky, kz);
-    } else {
-      // Normalise the direction to 1.
-      kx /= kmag;
-      ky /= kmag;
-      kz /= kmag;
-    }
-    AddToStack(x0, y0, z0, t0, e0, kx, ky, kz, 0, hole0, stackOld);
-  }
-  if (hole0) {
-    ++m_nHoles;
-  } else {
-    ++m_nElectrons;
-  }
-
-  // Get the null-collision rate.
-  double fLim = medium->GetElectronNullCollisionRate(stackOld.front().band);
-  if (fLim <= 0.) {
-    std::cerr << hdr << "Got null-collision rate <= 0.\n";
-    return false;
-  }
-  double fInv = 1. / fLim;
-
   while (true) {
     // Remove all inactive items from the stack.
-    stackOld.erase(std::remove_if(stackOld.begin(), stackOld.end(), IsInactive),
-                   stackOld.end());
-    // Add the electrons produced in the last iteration.
+    stack.erase(std::remove_if(stack.begin(), stack.end(), IsInactive),
+                stack.end());
+    // Add the secondaries produced in the last iteration.
     if (aval && m_sizeCut > 0) {
       // If needed, reduce the number of electrons to add.
-      if (stackOld.size() > m_sizeCut) {
+      if (stack.size() > m_sizeCut) {
         stackNew.clear();
-      } else if (stackOld.size() + stackNew.size() > m_sizeCut) {
-        stackNew.resize(m_sizeCut - stackOld.size());
+      } else if (stack.size() + stackNew.size() > m_sizeCut) {
+        stackNew.resize(m_sizeCut - stack.size());
       }
     }
-    stackOld.insert(stackOld.end(), std::make_move_iterator(stackNew.begin()),
-                    std::make_move_iterator(stackNew.end()));
+    stack.insert(stack.end(), std::make_move_iterator(stackNew.begin()),
+                 std::make_move_iterator(stackNew.end()));
     stackNew.clear();
     // If the list of electrons/holes is exhausted, we're done.
-    if (stackOld.empty()) break;
+    if (stack.empty()) break;
     // Loop over all electrons/holes in the avalanche.
-    for (auto it = stackOld.begin(), end = stackOld.end(); it != end; ++it) {
+    for (auto it = stack.begin(), end = stack.end(); it != end; ++it) {
       // Get an electron/hole from the stack.
       double x = (*it).x;
       double y = (*it).y;
@@ -609,6 +592,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
 
       // Get the local electric field and medium.
       double ex = 0., ey = 0., ez = 0.;
+      Medium* medium = nullptr;
       int status = 0;
       m_sensor->ElectricField(x, y, z, ex, ey, ez, medium, status);
       // Sign change for electrons.
@@ -619,21 +603,32 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
       }
       if (m_debug) {
         const std::string eh = hole ? "hole " : "electron ";
-        std::cout << hdr + "Drifting " + eh << it - stackOld.begin() << ".\n"
+        std::cout << hdr + "Drifting " + eh << it - stack.begin() << ".\n"
                   << "    Field [V/cm] at (" << x << ", " << y << ", " << z
                   << "): " << ex << ", " << ey << ", " << ez
                   << "\n    Status: " << status << "\n";
         if (medium) std::cout << "    Medium: " << medium->GetName() << "\n";
       }
 
-      if (status != 0) {
-        // Electron is not inside a drift medium.
+      if (status != 0 || !medium || !medium->IsDriftable() || 
+          !medium->IsMicroscopic()) {
+        // Electron is not inside a microscopic drift medium.
         Update(it, x, y, z, t, en, kx, ky, kz, band);
         (*it).status = StatusLeftDriftMedium;
         AddToEndPoints(*it, hole);
         if (m_debug) PrintStatus(hdr, "left the drift medium", x, y, z, hole);
         continue;
       }
+      // Get the id number of the drift medium.
+      auto id = medium->GetId();
+      bool sc = (medium->IsSemiconductor() && m_useBandStructure);
+      // Get the null-collision rate.
+      double fLim = medium->GetElectronNullCollisionRate(band);
+      if (fLim <= 0.) {
+        std::cerr << hdr << "Got null-collision rate <= 0.\n";
+        return false;
+      }
+      double fInv = 1. / fLim;
 
       // If switched on, get the local magnetic field.
       double bx = 0., by = 0., bz = 0.;
@@ -708,8 +703,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
             break;
           }
           id = medium->GetId();
-          useBandStructure =
-              (medium->IsSemiconductor() && m_useBandStructureDefault);
+          sc = (medium->IsSemiconductor() && m_useBandStructure);
           // Update the null-collision rate.
           fLim = medium->GetElectronNullCollisionRate(band);
           if (fLim <= 0.) {
@@ -734,7 +728,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
             a1 += vz * ez;
             a2 += c2 * ez * ez;
           }
-        } else if (useBandStructure) {
+        } else if (sc) {
           en = medium->GetElectronEnergy(kx, ky, kz, vx, vy, vz, band);
         } else {
           // No band structure, no magnetic field.
@@ -772,7 +766,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
               a4 = (1. - cphi) / omega;
               en1 += ez * (vz * a3 - vy * a4);
             }
-          } else if (useBandStructure) {
+          } else if (sc) {
             const double cdt = dt * SpeedOfLight;
             const double kx1 = kx + ex * cdt;
             const double ky1 = ky + ey * cdt;
@@ -795,7 +789,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
             dt += log(r) * fInv;
             // Increase the null collision rate and try again.
             std::cerr << hdr << "Increasing null-collision rate by 5%.\n";
-            if (useBandStructure) std::cerr << "    Band " << band << "\n";
+            if (sc) std::cerr << "    Band " << band << "\n";
             fLim *= 1.05;
             fInv = 1. / fLim;
             continue;
@@ -839,7 +833,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
           }
           // Rotate back to the global frame.
           ToGlobal(rot, dx, dy, dz, dx, dy, dz);
-        } else if (useBandStructure) {
+        } else if (sc) {
           // Update the wave-vector.
           const double cdt = dt * SpeedOfLight;
           kx1 = kx + ex * cdt;
@@ -1023,7 +1017,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
                 ++m_nElectrons;
                 if (!aval) continue;
                 // Add the secondary electron to the stack.
-                if (useBandStructure) {
+                if (sc) {
                   double kxs = 0., kys = 0., kzs = 0.;
                   int bs = -1;
                   medium->GetElectronMomentum(esec, kxs, kys, kzs, bs);
@@ -1038,7 +1032,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
                 ++m_nHoles;
                 if (!aval) continue;
                 // Add the secondary hole to the stack.
-                if (useBandStructure) {
+                if (sc) {
                   double kxs = 0., kys = 0., kzs = 0.;
                   int bs = -1;
                   medium->GetElectronMomentum(esec, kxs, kys, kzs, bs);
@@ -1187,7 +1181,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
 
       if (!ok) continue;
 
-      if (!useBandStructure) {
+      if (!sc) {
         // Normalise the direction vector.
         const double scale = 1. / Mag(kx, ky, kz);
         kx *= scale;
@@ -1197,7 +1191,7 @@ bool AvalancheMicroscopic::TransportElectron(const double x0, const double y0,
       // Update the stack.
       Update(it, x, y, z, t, en, kx, ky, kz, band);
       // Add a new point to the drift line (if enabled).
-      if (m_useDriftLines) {
+      if (m_storeDriftLines) {
         point newPoint;
         newPoint.x = x;
         newPoint.y = y;

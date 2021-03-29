@@ -79,7 +79,7 @@ class AvalancheMicroscopic {
   void DisableSecondaryEnergyHistogramming() { m_histSecondary = nullptr; }
 
   /// Switch on storage of drift lines (default: off).
-  void EnableDriftLines(const bool on = true) { m_useDriftLines = on; }
+  void EnableDriftLines(const bool on = true) { m_storeDriftLines = on; }
 
   /** Switch on photon transport.
    * \remark This feature has not been tested thoroughly. */
@@ -87,7 +87,7 @@ class AvalancheMicroscopic {
 
   /// Switch on stepping according to band structure E(k), for semiconductors.
   void EnableBandStructure(const bool on = true) {
-    m_useBandStructureDefault = on;
+    m_useBandStructure = on;
   }
 
   /// Switch on update of coordinates for null-collision steps (default: off).
@@ -197,6 +197,8 @@ class AvalancheMicroscopic {
                          const double dx0 = 0., const double dy0 = 0.,
                          const double dz0 = 0.);
 
+  bool ResumeAvalanche();
+
   /// Set a user handling procedure. This function is called at every step.
   void SetUserHandleStep(void (*f)(double x, double y, double z, double t,
                                    double e, double dx, double dy, double dz,
@@ -288,9 +290,9 @@ class AvalancheMicroscopic {
   bool m_useWeightingPotential = false;
   bool m_integrateWeightingField = false;
   bool m_doInducedCharge = false;
-  bool m_useDriftLines = false;
+  bool m_storeDriftLines = false;
   bool m_usePhotons = false;
-  bool m_useBandStructureDefault = true;
+  bool m_useBandStructure = true;
   bool m_useNullCollisionSteps = false;
   bool m_useBfield = false;
 
@@ -325,12 +327,7 @@ class AvalancheMicroscopic {
   // Switch on/off debugging messages
   bool m_debug = false;
 
-  // Electron transport
-  bool TransportElectron(const double x0, const double y0, const double z0,
-                         const double t0, double e0, const double dx0,
-                         const double dy0, const double dz0, const bool aval,
-                         bool hole);
-  // Photon transport
+  bool TransportElectrons(std::vector<Electron>& stack, const bool aval);
   void TransportPhoton(const double x, const double y, const double z,
                        const double t, const double e,
                        std::vector<Electron>& stack);
