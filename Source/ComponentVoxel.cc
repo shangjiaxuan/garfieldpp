@@ -590,6 +590,19 @@ bool ComponentVoxel::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   return true;
 }
 
+bool ComponentVoxel::GetElementaryCell(
+    double& xmin, double& ymin, double& zmin,
+    double& xmax, double& ymax, double& zmax) {
+  if (!m_ready) return false;
+  xmin = m_xMin;
+  xmax = m_xMax;
+  ymin = m_yMin;
+  ymax = m_yMax;
+  zmin = m_zMin;
+  zmax = m_zMax;
+  return true;
+}
+
 bool ComponentVoxel::GetVoltageRange(double& vmin, double& vmax) {
   if (!m_ready) return false;
   vmin = m_pMin;

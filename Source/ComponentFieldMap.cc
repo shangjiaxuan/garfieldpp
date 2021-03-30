@@ -1726,12 +1726,11 @@ void ComponentFieldMap::Prepare() {
 void ComponentFieldMap::UpdatePeriodicityCommon() {
   // Check the required data is available.
   if (!m_ready) {
-    std::cerr << m_className << "::UpdatePeriodicityCommon:\n";
-    std::cerr << "    No valid field map available.\n";
+    PrintNotReady("UpdatePeriodicityCommon");
     return;
   }
 
-  for (unsigned int i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < 3; ++i) {
     // No regular and mirror periodicity at the same time.
     if (m_periodic[i] && m_mirrorPeriodic[i]) {
       std::cerr << m_className << "::UpdatePeriodicityCommon:\n"
@@ -1750,10 +1749,9 @@ void ComponentFieldMap::UpdatePeriodicityCommon() {
       }
       if (fabs(m_mapna[i] - int(0.5 + m_mapna[i])) > 0.001 ||
           m_mapna[i] < 1.5) {
-        std::cerr
-            << m_className << "::UpdatePeriodicityCommon:\n"
-            << "    Axial symmetry has been requested but the map\n"
-            << "    does not cover an integral fraction of 2 pi. Reset.\n";
+        std::cerr << m_className << "::UpdatePeriodicityCommon:\n"
+                  << "    Axial symmetry has been requested but map does not\n"
+                  << "    cover an integral fraction of 2 pi. Reset.\n";
         m_axiallyPeriodic[i] = false;
         m_warning = true;
       }
@@ -1764,8 +1762,8 @@ void ComponentFieldMap::UpdatePeriodicityCommon() {
   if ((m_rotationSymmetric[0] && m_rotationSymmetric[1]) ||
       (m_rotationSymmetric[0] && m_rotationSymmetric[2]) ||
       (m_rotationSymmetric[1] && m_rotationSymmetric[2])) {
-    std::cerr << m_className << "::UpdatePeriodicityCommon:\n";
-    std::cerr << "    Only 1 rotational symmetry allowed; reset.\n";
+    std::cerr << m_className << "::UpdatePeriodicityCommon:\n"
+              << "    Only one rotational symmetry allowed; reset.\n";
     m_rotationSymmetric.fill(false);
     m_warning = true;
   }
@@ -1774,9 +1772,9 @@ void ComponentFieldMap::UpdatePeriodicityCommon() {
   if ((m_rotationSymmetric[0] || m_rotationSymmetric[1] ||
        m_rotationSymmetric[2]) &&
       (m_axiallyPeriodic[0] || m_axiallyPeriodic[1] || m_axiallyPeriodic[2])) {
-    std::cerr << m_className << "::UpdatePeriodicityCommon:\n";
-    std::cerr << "    Not allowed to combine rotational symmetry\n";
-    std::cerr << "    and axial periodicity; reset.\n";
+    std::cerr << m_className << "::UpdatePeriodicityCommon:\n"
+              << "    Not allowed to combine rotational symmetry\n"
+              << "    and axial periodicity; reset.\n";
     m_axiallyPeriodic.fill(false);
     m_rotationSymmetric.fill(false);
     m_warning = true;
@@ -1786,85 +1784,54 @@ void ComponentFieldMap::UpdatePeriodicityCommon() {
   if (m_rotationSymmetric[0] || m_rotationSymmetric[1] ||
       m_rotationSymmetric[2]) {
     if (m_mapmin[0] * m_mapmax[0] < 0) {
-      std::cerr << m_className << "::UpdatePeriodicityCommon:\n";
-      std::cerr << "    Rotational symmetry requested, \n";
-      std::cerr << "    but x-range straddles 0; reset.\n";
+      std::cerr << m_className << "::UpdatePeriodicityCommon:\n"
+                << "    Rotational symmetry requested, \n"
+                << "    but x-range straddles 0; reset.\n";
       m_rotationSymmetric.fill(false);
       m_warning = true;
     }
   }
 
   // Recompute the cell ranges.
-  for (unsigned int i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < 3; ++i) {
     m_minBoundingBox[i] = m_mapmin[i];
     m_maxBoundingBox[i] = m_mapmax[i];
     m_cells[i] = fabs(m_mapmax[i] - m_mapmin[i]);
   }
-  if (m_rotationSymmetric[0]) {
-    m_minBoundingBox[0] = m_mapmin[1];
-    m_maxBoundingBox[0] = m_mapmax[1];
-    m_minBoundingBox[1] = -std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-    m_maxBoundingBox[1] = +std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-    m_minBoundingBox[2] = -std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-    m_maxBoundingBox[2] = +std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-  } else if (m_rotationSymmetric[1]) {
-    m_minBoundingBox[0] = -std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-    m_maxBoundingBox[0] = +std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-    m_minBoundingBox[1] = m_mapmin[1];
-    m_maxBoundingBox[1] = m_mapmax[1];
-    m_minBoundingBox[2] = -std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-    m_maxBoundingBox[2] = +std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-  } else if (m_rotationSymmetric[2]) {
-    m_minBoundingBox[0] = -std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-    m_maxBoundingBox[0] = +std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-    m_minBoundingBox[1] = -std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-    m_maxBoundingBox[1] = +std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
-    m_minBoundingBox[2] = m_mapmin[1];
-    m_maxBoundingBox[2] = m_mapmax[1];
+  for (size_t i = 0; i < 3; ++i) {
+    if (!m_rotationSymmetric[i]) continue;
+    const double r = std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0]));
+    m_minBoundingBox.fill(-r);
+    m_maxBoundingBox.fill(+r);
+    m_minBoundingBox[i] = m_mapmin[1];
+    m_maxBoundingBox[i] = m_mapmax[1];
+    break;
   }
 
   if (m_axiallyPeriodic[0]) {
-    m_minBoundingBox[1] =
-        -std::max(std::max(fabs(m_mapmin[1]), fabs(m_mapmax[1])),
-                  std::max(fabs(m_mapmin[2]), fabs(m_mapmax[2])));
-    m_maxBoundingBox[1] =
-        +std::max(std::max(fabs(m_mapmin[1]), fabs(m_mapmax[1])),
-                  std::max(fabs(m_mapmin[2]), fabs(m_mapmax[2])));
-    m_minBoundingBox[2] =
-        -std::max(std::max(fabs(m_mapmin[1]), fabs(m_mapmax[1])),
-                  std::max(fabs(m_mapmin[2]), fabs(m_mapmax[2])));
-    m_maxBoundingBox[2] =
-        +std::max(std::max(fabs(m_mapmin[1]), fabs(m_mapmax[1])),
-                  std::max(fabs(m_mapmin[2]), fabs(m_mapmax[2])));
+    const double yzmax = std::max({fabs(m_mapmin[1]), fabs(m_mapmax[1]), 
+                                   fabs(m_mapmin[2]), fabs(m_mapmax[2])});
+    m_minBoundingBox[1] = -yzmax;
+    m_maxBoundingBox[1] = +yzmax;
+    m_minBoundingBox[2] = -yzmax;
+    m_maxBoundingBox[2] = +yzmax;
   } else if (m_axiallyPeriodic[1]) {
-    m_minBoundingBox[0] =
-        -std::max(std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0])),
-                  std::max(fabs(m_mapmin[2]), fabs(m_mapmax[2])));
-    m_maxBoundingBox[0] =
-        +std::max(std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0])),
-                  std::max(fabs(m_mapmin[2]), fabs(m_mapmax[2])));
-    m_minBoundingBox[2] =
-        -std::max(std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0])),
-                  std::max(fabs(m_mapmin[2]), fabs(m_mapmax[2])));
-    m_maxBoundingBox[2] =
-        +std::max(std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0])),
-                  std::max(fabs(m_mapmin[2]), fabs(m_mapmax[2])));
+    const double xzmax = std::max({fabs(m_mapmin[0]), fabs(m_mapmax[0]),
+                                   fabs(m_mapmin[2]), fabs(m_mapmax[2])});
+    m_minBoundingBox[0] = -xzmax;
+    m_maxBoundingBox[0] = +xzmax;
+    m_minBoundingBox[2] = -xzmax;
+    m_maxBoundingBox[2] = +xzmax;
   } else if (m_axiallyPeriodic[2]) {
-    m_minBoundingBox[0] =
-        -std::max(std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0])),
-                  std::max(fabs(m_mapmin[1]), fabs(m_mapmax[1])));
-    m_maxBoundingBox[0] =
-        +std::max(std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0])),
-                  std::max(fabs(m_mapmin[1]), fabs(m_mapmax[1])));
-    m_minBoundingBox[1] =
-        -std::max(std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0])),
-                  std::max(fabs(m_mapmin[1]), fabs(m_mapmax[1])));
-    m_maxBoundingBox[1] =
-        +std::max(std::max(fabs(m_mapmin[0]), fabs(m_mapmax[0])),
-                  std::max(fabs(m_mapmin[1]), fabs(m_mapmax[1])));
+    const double xymax = std::max({fabs(m_mapmin[0]), fabs(m_mapmax[0]),
+                                   fabs(m_mapmin[1]), fabs(m_mapmax[1])}); 
+    m_minBoundingBox[0] = -xymax;
+    m_maxBoundingBox[0] = +xymax;
+    m_minBoundingBox[1] = -xymax;
+    m_maxBoundingBox[1] = +xymax;
   }
 
-  for (unsigned int i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < 3; ++i) {
     if (m_periodic[i] || m_mirrorPeriodic[i]) {
       m_minBoundingBox[i] = -INFINITY;
       m_maxBoundingBox[i] = +INFINITY;
@@ -1878,16 +1845,15 @@ void ComponentFieldMap::UpdatePeriodicityCommon() {
 void ComponentFieldMap::UpdatePeriodicity2d() {
   // Check the required data is available.
   if (!m_ready) {
-    std::cerr << m_className << "::UpdatePeriodicity2d:\n";
-    std::cerr << "    No valid field map available.\n";
+    PrintNotReady("UpdatePeriodicity2d");
     return;
   }
 
   // No z-periodicity in 2d
   if (m_periodic[2] || m_mirrorPeriodic[2]) {
-    std::cerr << m_className << "::UpdatePeriodicity2d:\n";
-    std::cerr << "    Simple or mirror periodicity along z\n";
-    std::cerr << "    requested for a 2d map; reset.\n";
+    std::cerr << m_className << "::UpdatePeriodicity2d:\n"
+              << "    Simple or mirror periodicity along z\n"
+              << "    requested for a 2d map; reset.\n";
     m_periodic[2] = false;
     m_mirrorPeriodic[2] = false;
     m_warning = true;
@@ -1895,9 +1861,9 @@ void ComponentFieldMap::UpdatePeriodicity2d() {
 
   // Only z-axial periodicity in 2d maps
   if (m_axiallyPeriodic[0] || m_axiallyPeriodic[1]) {
-    std::cerr << m_className << "::UpdatePeriodicity2d:\n";
-    std::cerr << "    Axial symmetry has been requested \n";
-    std::cerr << "    around x or y for a 2D map; reset.\n";
+    std::cerr << m_className << "::UpdatePeriodicity2d:\n"
+              << "    Axial symmetry has been requested \n"
+              << "    around x or y for a 2d map; reset.\n";
     m_axiallyPeriodic[0] = false;
     m_axiallyPeriodic[1] = false;
     m_warning = true;
@@ -2024,9 +1990,9 @@ void ComponentFieldMap::PrintRange() {
   }
 }
 
-bool ComponentFieldMap::GetBoundingBox(double& xmin, double& ymin, double& zmin,
-                                       double& xmax, double& ymax,
-                                       double& zmax) {
+bool ComponentFieldMap::GetBoundingBox(
+    double& xmin, double& ymin, double& zmin,
+    double& xmax, double& ymax, double& zmax) {
   if (!m_ready) return false;
 
   xmin = m_minBoundingBox[0];
@@ -2035,6 +2001,20 @@ bool ComponentFieldMap::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   ymax = m_maxBoundingBox[1];
   zmin = m_minBoundingBox[2];
   zmax = m_maxBoundingBox[2];
+  return true;
+}
+
+bool ComponentFieldMap::GetElementaryCell(
+    double& xmin, double& ymin, double& zmin,
+    double& xmax, double& ymax, double& zmax) {
+
+  if (!m_ready) return false;
+  xmin = m_mapmin[0];
+  xmax = m_mapmax[0];
+  ymin = m_mapmin[1];
+  ymax = m_mapmax[1];
+  zmin = m_mapmin[2];
+  zmax = m_mapmax[2];
   return true;
 }
 

@@ -16,7 +16,6 @@ void Component::SetGeometry(Geometry* geo) {
     std::cerr << m_className << "::SetGeometry: Null pointer.\n";
     return;
   }
-
   m_geometry = geo;
 }
 
@@ -101,6 +100,11 @@ bool Component::GetBoundingBox(double& xmin, double& ymin, double& zmin,
                                double& xmax, double& ymax, double& zmax) {
   if (!m_geometry) return false;
   return m_geometry->GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax);
+}
+
+bool Component::GetElementaryCell(double& xmin, double& ymin, double& zmin,
+                                  double& xmax, double& ymax, double& zmax) {
+  return GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax);
 }
 
 bool Component::IsWireCrossed(const double /*x0*/, const double /*y0*/,

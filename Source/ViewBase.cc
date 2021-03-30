@@ -638,6 +638,25 @@ bool ViewBase::PlotLimits(Component* cmp,
               << "    Please set the plot limits explicitly (SetArea).\n";
     return false;
   }
+  if (std::isinf(bbmin[0]) || std::isinf(bbmax[0]) ||
+      std::isinf(bbmin[1]) || std::isinf(bbmax[1]) ||
+      std::isinf(bbmin[2]) || std::isinf(bbmax[2])) {
+    std::array<double, 3> cellmin = {0., 0., 0.};
+    std::array<double, 3> cellmax = {0., 0., 0.};
+    if (!cmp->GetElementaryCell(cellmin[0], cellmin[1], cellmin[2],
+                                cellmax[0], cellmax[1], cellmax[2])) {
+      std::cerr << m_className << "::PlotLimits:\n"
+                << "    Cell boundaries are not defined.\n"
+                << "    Please set the plot limits explicitly (SetArea).\n";
+      return false;
+    }
+    for (size_t i = 0; i < 3; ++i) {
+      if (std::isinf(bbmin[i]) || std::isinf(bbmax[i])) {
+        bbmin[i] = cellmin[i];
+        bbmax[i] = cellmax[i];
+      }
+    }
+  }
   return PlotLimits(bbmin, bbmax, xmin, ymin, xmax, ymax);
 }
 

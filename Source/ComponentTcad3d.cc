@@ -198,6 +198,19 @@ bool ComponentTcad3d::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   return true;
 }
 
+bool ComponentTcad3d::GetElementaryCell(
+    double& xmin, double& ymin, double& zmin,
+    double& xmax, double& ymax, double& zmax) {
+  if (!m_ready) return false;
+  xmin = m_bbMin[0];
+  ymin = m_bbMin[1];
+  zmin = m_bbMin[2];
+  xmax = m_bbMax[0];
+  ymax = m_bbMax[1];
+  zmax = m_bbMax[2];
+  return true;
+}
+
 size_t ComponentTcad3d::FindElement(
     const double x, const double y, const double z,
     std::array<double, nMaxVertices>& w) const {

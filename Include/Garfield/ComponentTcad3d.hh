@@ -25,8 +25,10 @@ class ComponentTcad3d : public ComponentTcadBase<3> {
 
   Medium* GetMedium(const double x, const double y, const double z) override;
 
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
-                      double& ymax, double& zmax) override;
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
+                      double& xmax, double& ymax, double& zmax) override;
+  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
+                         double& xmax, double& ymax, double& zmax) override;
 
   /** Retrieve the properties of an element.
     * \param i index of the element

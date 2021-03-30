@@ -368,6 +368,13 @@ bool ComponentNeBem2d::GetBoundingBox(
   if (m_geometry) {
     return m_geometry->GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax);
   }
+  return GetElementaryCell(xmin, ymin, zmin, xmax, ymax, zmax);
+}
+
+bool ComponentNeBem2d::GetElementaryCell(
+    double& xmin, double& ymin, double& zmin,
+    double& xmax, double& ymax, double& zmax) {
+
   zmin = m_zmin;
   zmax = m_zmax;
   bool gotValue = false;

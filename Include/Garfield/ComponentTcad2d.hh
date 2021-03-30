@@ -29,8 +29,10 @@ class ComponentTcad2d : public ComponentTcadBase<2> {
 
   Medium* GetMedium(const double x, const double y, const double z) override;
 
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
-                      double& ymax, double& zmax) override;
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
+                      double& xmax, double& ymax, double& zmax) override;
+  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
+                         double& xmax, double& ymax, double& zmax) override;
   /// Set the z-extent of the bounding box (default: unlimited).
   void SetRangeZ(const double zmin, const double zmax);
 

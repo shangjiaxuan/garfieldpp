@@ -109,6 +109,10 @@ class Component {
   virtual bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                               double& xmax, double& ymax, double& zmax);
 
+  /// Get the coordinates of the elementary cell.
+  virtual bool GetElementaryCell(double& xmin, double& ymin, double& zmin,
+                                 double& xmax, double& ymax, double& zmax);
+
   /** Integrate the normal component of the electric field over a circle.
    * \param xc,yc centre of the circle [cm]
    * \param r radius [cm]
