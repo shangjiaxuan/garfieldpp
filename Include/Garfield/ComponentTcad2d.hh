@@ -59,9 +59,6 @@ class ComponentTcad2d : public ComponentTcadBase<2> {
   // Tetrahedral tree.
   std::unique_ptr<QuadTree> m_tree;
 
-  // Element from the previous call
-  size_t m_lastElement = 0;
-
   void Reset() override {
     Cleanup();
     m_hasRangeZ = false;
