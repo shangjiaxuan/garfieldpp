@@ -97,12 +97,6 @@ int main(int argc, char * argv[]) {
   const double thr1 = -1000. * ElementaryCharge;  
   std::cout << "Threshold: " << thr1 << " fC\n";
 
-  // Electron/hole transport.
-  AvalancheMC drift;
-  drift.SetDistanceSteps(1.e-4);
-  drift.SetSensor(&sensor);
-  drift.EnableSignalCalculation();
-
   // Charged-particle track.
   TrackHeed track;
   track.SetSensor(&sensor);
@@ -129,29 +123,43 @@ int main(int argc, char * argv[]) {
     track.NewTrack(x0, 0., 0., t0, 0., 1., 0.);
     double xc = 0., yc = 0., zc = 0., tc = 0., ec = 0., dummy = 0.;
     int ne = 0, nh = 0;
-    unsigned int nc = 0;
-    unsigned int nesum = 0;
+    std::vector<std::array<double, 4> > electrons;
+    std::vector<std::array<double, 4> > holes;
     while (track.GetCluster(xc, yc, zc, tc, ne, nh, ec, dummy)) {
-      ++nc;
-      nesum += ne;
-      if (nc % 100 == 0) std::cout << "    Cluster " << nc << "\n";
-      drift.DisablePlotting();
-      if (plotDrift && RndmUniform() < 0.05) {
-        drift.EnablePlotting(&vDrift);
-      }
-      double xe, ye, ze, te, ee, dxe, dye, dze;
       for (int i = 0; i < ne; ++i) {
+        double xe, ye, ze, te, ee, dxe, dye, dze;
         track.GetElectron(i, xe, ye, ze, te, ee, dxe, dye, dze);
-        drift.DriftElectron(xe, ye, ze, te);
+        electrons.push_back({xe, ye, ze, te});
       }
-      double xh, yh, zh, th;
       for (int i = 0; i < nh; ++i) {
+        double xh, yh, zh, th;
         track.GetIon(i, xh, yh, zh, th);
-        drift.DriftHole(xh, yh, zh, th);
+        holes.push_back({xh, yh, zh, th});
       }
     }
+    const auto nesum = electrons.size();
     std::cout << nesum << " electrons, " 
               << nesum * ElementaryCharge << " fC.\n";
+    #pragma omp parallel for
+    for (size_t i = 0; i < nesum; ++i) {
+      AvalancheMC drift;
+      drift.SetDistanceSteps(1.e-4);
+      drift.SetSensor(&sensor);
+      drift.EnableSignalCalculation();
+      if (plotDrift && RndmUniform() < 0.05) drift.EnablePlotting(&vDrift);
+      drift.DriftElectron(electrons[i][0], electrons[i][1], electrons[i][2],
+                          electrons[i][3]);
+    }
+    const auto nhsum = holes.size();
+    #pragma omp parallel for
+    for (size_t i = 0; i < nhsum; ++i) {
+      AvalancheMC drift;
+      drift.SetDistanceSteps(1.e-4);
+      drift.SetSensor(&sensor);
+      drift.EnableSignalCalculation();
+      if (plotDrift && RndmUniform() < 0.05) drift.EnablePlotting(&vDrift);
+      drift.DriftHole(holes[i][0], holes[i][1], holes[i][2], holes[i][3]);
+    }
     // Convolute the signal with the transfer function.
     sensor.ConvoluteSignals();
     // Plot the signal.
