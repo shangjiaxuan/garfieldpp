@@ -3,15 +3,17 @@ import os, sys
 import math
 import ctypes
 
-path = os.getenv('GARFIELD_HOME')
+path = os.getenv('GARFIELD_INSTALL')
 if sys.platform == 'darwin':
-  ROOT.gSystem.Load(path + '/install/lib/libGarfield.dylib')
+  ROOT.gSystem.Load(path + '/lib/libmagboltz.dylib')
+  ROOT.gSystem.Load(path + '/lib/libGarfield.dylib')
 else:
-  ROOT.gSystem.Load(path + '/install/lib/libGarfield.so')
+  ROOT.gSystem.Load(path + '/lib/libmagboltz.so')
+  ROOT.gSystem.Load(path + '/lib/libGarfield.so')
 
 gas = ROOT.Garfield.MediumMagboltz()
 gas.LoadGasFile('ar_93_co2_7_3bar.gas')
-gas.LoadIonMobility(path + '/Data/IonMobility_Ar+_Ar.txt')
+gas.LoadIonMobility(os.getenv('GARFIELD_HOME') + '/Data/IonMobility_Ar+_Ar.txt')
 
 cmp = ROOT.Garfield.ComponentAnalyticField()
 cmp.SetMedium(gas)

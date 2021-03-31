@@ -1,0 +1,5 @@
+# Setup a minimal environment to build and run the examples
+
+setenv GARFIELD_INSTALL @CMAKE_INSTALL_PREFIX@
+setenv CMAKE_PREFIX_PATH @CMAKE_INSTALL_PREFIX@:$CMAKE_PREFIX_PATH
+setenv HEED_DATABASE $GARFIELD_INSTALL/Heed/heed++/database
