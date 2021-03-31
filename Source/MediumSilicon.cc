@@ -1249,6 +1249,8 @@ bool MediumSilicon::Initialise() {
 }
 
 bool MediumSilicon::UpdateTransportParameters() {
+  std::lock_guard<std::mutex> guard(m_mutex);
+
   // Calculate impact ionisation coefficients
   switch (m_impactIonisationModel) {
     case ImpactIonisation::VanOverstraeten:
