@@ -2,16 +2,18 @@ import ROOT
 import os, sys
 import ctypes
 
-path = os.getenv('GARFIELD_HOME')
+path = os.getenv('GARFIELD_INSTALL')
 if sys.platform == 'darwin':
-  ROOT.gSystem.Load(path + '/install/lib/libGarfield.dylib')
+  ROOT.gSystem.Load(path + '/lib/libmagboltz.dylib')
+  ROOT.gSystem.Load(path + '/lib/libGarfield.dylib')
 else:
-  ROOT.gSystem.Load(path + '/install/lib/libGarfield.so')
+  ROOT.gSystem.Load(path + '/lib/libmagboltz.so')
+  ROOT.gSystem.Load(path + '/lib/libGarfield.so')
 
 # Set up the gas.
 gas = ROOT.Garfield.MediumMagboltz()
 gas.LoadGasFile('ar_80_co2_20_2T.gas')
-gas.LoadIonMobility(path + '/Data/IonMobility_Ar+_Ar.txt')
+gas.LoadIonMobility(os.getenv('GARFIELD_HOME') + '/Data/IonMobility_Ar+_Ar.txt')
 gas.PrintGas()
 
 view = ROOT.Garfield.ViewMedium()
