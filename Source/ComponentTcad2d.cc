@@ -62,7 +62,6 @@ void ComponentTcad2d::ElectricField(const double xin, const double yin,
   if (mirr[1]) ey = -ey;
   m = m_regions[element.region].medium;
   if (!m_regions[element.region].drift || !m) status = -5;
-  m_lastElement = i;
 }
 
 bool ComponentTcad2d::Interpolate(const double xin, const double yin,
@@ -94,7 +93,6 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
   }
   if (mirr[0]) fx = -fx;
   if (mirr[1]) fy = -fy;
-  m_lastElement = i;
   return true;
 }
 
@@ -121,7 +119,6 @@ bool ComponentTcad2d::Interpolate(const double xin, const double yin,
   for (size_t j = 0; j < nVertices; ++j) {
     f += w[j] * field[element.vertex[j]];
   }
-  m_lastElement = i;
   return true;
 }
 
@@ -148,7 +145,6 @@ Medium* ComponentTcad2d::GetMedium(const double xin, const double yin,
     // Point is outside the mesh.
     return nullptr;
   }
-  m_lastElement = i;
   return m_regions[m_elements[i].region].medium;
 }
 
@@ -303,13 +299,6 @@ size_t ComponentTcad2d::FindElement(const double x, const double y,
 
   w.fill(0.);
  
-  if (m_lastElement < m_elements.size()) {
-    // Check if the point is still located in the previously found element.
-    const Element& last = m_elements[m_lastElement];
-    if (InElement(x, y, last, w)) return m_lastElement;
-  }
-
-  // The point is not in the previous element.
   std::vector<int> elementsToSearch;
   if (m_tree) elementsToSearch = m_tree->GetElementsInBlock(x, y);
   const size_t nElementsToSearch = m_tree ? elementsToSearch.size() : m_elements.size(); 

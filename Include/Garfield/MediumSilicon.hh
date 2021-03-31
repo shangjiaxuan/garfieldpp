@@ -1,6 +1,10 @@
 #ifndef G_MEDIUM_SILICON_H
 #define G_MEDIUM_SILICON_H
 
+#include <mutex>
+#include <string>
+#include <vector>
+
 #include "Medium.hh"
 
 namespace Garfield {
@@ -153,6 +157,8 @@ class MediumSilicon : public Medium {
   enum class SaturationVelocity { Minimos = 0, Canali, Reggiani };
   enum class HighFieldMobility { Minimos = 0, Canali, Reggiani, Constant };
   enum class ImpactIonisation { VanOverstraeten = 0, Grant, Massey };
+
+  std::mutex m_mutex;
 
   // Diffusion scaling factor
   double m_diffScale = 1.;

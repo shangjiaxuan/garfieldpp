@@ -181,6 +181,7 @@ bool Sensor::GetMedium(const double x, const double y, const double z,
 }
 
 bool Sensor::SetArea() {
+  std::lock_guard<std::mutex> guard(m_mutex);
   if (!GetBoundingBox(m_xMinUser, m_yMinUser, m_zMinUser, m_xMaxUser,
                       m_yMaxUser, m_zMaxUser)) {
     std::cerr << m_className << "::SetArea: Bounding box is not known.\n";
@@ -206,6 +207,7 @@ bool Sensor::SetArea() {
 
 bool Sensor::SetArea(const double xmin, const double ymin, const double zmin,
                      const double xmax, const double ymax, const double zmax) {
+  std::lock_guard<std::mutex> guard(m_mutex);
   if (fabs(xmax - xmin) < Small || fabs(ymax - ymin) < Small ||
       fabs(zmax - zmin) < Small) {
     std::cerr << m_className << "::SetArea: Invalid range.\n";
@@ -375,6 +377,7 @@ void Sensor::AddElectrode(Component* cmp, const std::string& label) {
 }
 
 void Sensor::Clear() {
+  std::lock_guard<std::mutex> guard(m_mutex);
   m_components.clear();
   m_lastComponent = nullptr;
   m_electrodes.clear();
