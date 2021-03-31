@@ -328,10 +328,6 @@ class Sensor {
     }
   }
 
-  void FillSignalComponents(Electrode& electrode, const double q,
-                            const std::vector<double>& ts,
-                            const std::vector<double>& is);
-
   void IntegrateSignal(Electrode& electrode);
   void ConvoluteSignal(Electrode& electrode, const std::vector<double>& tab);
   bool ConvoluteSignalFFT();
