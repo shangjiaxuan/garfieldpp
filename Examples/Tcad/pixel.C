@@ -114,13 +114,13 @@ int main(int argc, char * argv[]) {
   vSignal.SetSensor(&sensor);
 
   ViewDrift vDrift;
-  constexpr bool plotDrift = false;
+  constexpr bool plotDrift = true;
   if (plotDrift) {
     vDrift.SetArea(0., 0., width, gap); 
     track.EnablePlotting(&vDrift);
   }
 
-  const unsigned int nEvents = 10;
+  const unsigned int nEvents = 1;
   for (unsigned int j = 0; j < nEvents; ++j) {
     sensor.ClearSignal();
     double x0 = 0.5 * width;
