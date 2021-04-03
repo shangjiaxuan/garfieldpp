@@ -770,11 +770,7 @@ int ApproxRecSurf(double X, double Y, double Z, double xlo, double zlo,
 // Expressions from:
 int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
                  Vector3D *Flux) {
-  double D11, D21, D12, Hypot, Zhyp;
-  double G, E1, E2, H1, H2;
-  int S1, SY;
-  double modY, R1, I1, I2;
-  double DTerm1, DTerm2;
+
   double LTerm1, TanhTerm1;
   gsl_complex LTerm2, TanhTerm2;
   double Pot = 0.0;
@@ -808,42 +804,41 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
   if (fabs(X) < MINDIST) X = 0.0;
   if (fabs(Y) < MINDIST) Y = 0.0;
   if (fabs(Z) < MINDIST) Z = 0.0;
-  modY = fabs(Y);
+  double modY = fabs(Y);
   if (modY < MINDIST) modY = 0.0;
-  S1 = Sign(Z);
-  SY = Sign(Y);
+  int S1 = Sign(Z);
+  int SY = Sign(Y);
 
   // distances from corners (0,0,0), (1,0,0) and (0,0,zMax)
-  D11 = sqrt(X * X + Y * Y + Z * Z);
+  double D11 = sqrt(X * X + Y * Y + Z * Z);
   if (D11 < MINDIST) D11 = 0.0;
-  D21 = sqrt((X - 1.0) * (X - 1.0) + Y * Y + Z * Z);
+  double D21 = sqrt((X - 1.0) * (X - 1.0) + Y * Y + Z * Z);
   if (D21 < MINDIST) D21 = 0.0;
-  D12 = sqrt(X * X + Y * Y + (Z - zMax) * (Z - zMax));
+  double D12 = sqrt(X * X + Y * Y + (Z - zMax) * (Z - zMax));
   if (D12 < MINDIST) D12 = 0.0;
 
-  G = zMax * (X - 1.0) + Z;
+  double G = zMax * (X - 1.0) + Z;
   if (fabs(G) < MINDIST) G = 0.0;
-  E1 = (X - zMax * (Z - zMax));
+  double E1 = (X - zMax * (Z - zMax));
   if (fabs(E1) < MINDIST) E1 = 0.0;
-  E2 = (X - 1.0 - zMax * Z);
+  double E2 = (X - 1.0 - zMax * Z);
   if (fabs(E2) < MINDIST) E2 = 0.0;
-  H1 = Y * Y + (Z - zMax) * G;
+  double H1 = Y * Y + (Z - zMax) * G;
   if (fabs(H1) < MINDIST2) H1 = 0.0;
-  H2 = Y * Y + Z * G;
+  double H2 = Y * Y + Z * G;
   if (fabs(H2) < MINDIST2) H2 = 0.0;
-  R1 = Y * Y + Z * Z;
+  double R1 = Y * Y + Z * Z;
   if (fabs(R1) < MINDIST2) R1 = 0.0;
-  I1 = modY * X;
+  double I1 = modY * X;
   if (fabs(I1) < MINDIST2) I1 = 0.0;
-  I2 = modY * (X - 1.0);
+  double I2 = modY * (X - 1.0);
   if (fabs(I2) < MINDIST2) I2 = 0.0;
-  Hypot = sqrt(1.0 + zMax * zMax);
-  if (Hypot < MINDIST)  // superfluous
-  {
+  double Hypot = sqrt(1.0 + zMax * zMax);
+  if (Hypot < MINDIST) { // superfluous
     fprintf(stdout, "Hypotenuse too small! ... returning ...\n");
     return -1;
   }
-  Zhyp = zMax * (1.0 - X);  // Z on hypotenuse (extended) for given X
+  double Zhyp = zMax * (1.0 - X);  // Z on hypotenuse (extended) for given X
 
   if (DebugISLES) {
     printf("\n\nzMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
@@ -867,7 +862,7 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     fflush(stdout);
   }
 
-  // Check for possible numerical difficuties and take care.
+  // Check for possible numerical difficulties and take care.
   // Presently the idea is to shift the field point slightly to a 'safe'
   // position. Note that a shift in Y does not work because the singularities
   // are associated with D11-s and dxlo-s and their combinations. A Y shift can
@@ -891,398 +886,213 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
   // Three corners
   if ((fabs(D11) <= MINDIST)) {
     if (DebugISLES) printf("D11 <= MINDIST\n");
-
-    if ((X >= 0.0) && (Z >= 0.0))  // point on the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    double X1 = X;
+    double Z1 = Z;
+    if ((X >= 0.0) && (Z >= 0.0)) {
+      // point on the element
       if (DebugISLES) printf("Case1=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 0.0) && (Z >= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 0.0) && (Z >= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case2=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X >= 0.0) && (Z <= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X >= 0.0) && (Z <= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case3=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 0.0) && (Z <= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 0.0) && (Z <= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case4=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
     }
+    double Pot1;
+    Vector3D Flux1;
+    ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
+    *Potential = Pot1;
+    Flux->X = Flux1.X;
+    Flux->Y = Flux1.Y;
+    Flux->Z = Flux1.Z;
+    return 0;
   }
   if ((fabs(D21) <= MINDIST)) {
     if (DebugISLES) printf("D21 <= MINDIST\n");
-
-    if ((X >= 1.0) && (Z >= 0.0))  // point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    double X1 = X;
+    double Z1 = Z;
+    if ((X >= 1.0) && (Z >= 0.0)) {
+      // point outside the element
       if (DebugISLES) printf("Case1=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 1.0) && (Z >= 0.0))  // field point on the element
-    {  // difficult to decide (chk figure) - chk whether Z is beyon Zhyp
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 1.0) && (Z >= 0.0)) {
+      // field point on the element
+      // difficult to decide (chk figure) - chk whether Z is beyond Zhyp
       if (DebugISLES) printf("Case2=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X >= 1.0) && (Z <= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X >= 1.0) && (Z <= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case3=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 1.0) && (Z <= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 1.0) && (Z <= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case4=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
     }
+    double Pot1;
+    Vector3D Flux1;
+    ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
+    *Potential = Pot1;
+    Flux->X = Flux1.X;
+    Flux->Y = Flux1.Y;
+    Flux->Z = Flux1.Z;
+    return 0;
   }
   if ((fabs(D12) <= MINDIST)) {
     if (DebugISLES) printf("D12 <= MINDIST\n");
-
-    if ((X >= 0.0) && (Z >= zMax))  // point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    double X1 = X;
+    double Z1 = Z;
+    if ((X >= 0.0) && (Z >= zMax)) {
+      // point outside the element
       if (DebugISLES) printf("Case1=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 0.0) && (Z >= zMax))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 0.0) && (Z >= zMax)) {
+      // field point outside the element
       if (DebugISLES) printf("Case2=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X >= 0.0) && (Z <= zMax))  // field point on the element
-    {  // can create problem for small element - chk whether Z is beyond Zhyp
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X >= 0.0) && (Z <= zMax)) {
+      // field point on the element
+      // can create problem for small element - chk whether Z is beyond Zhyp
       if (DebugISLES) printf("Case3=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 0.0) && (Z <= zMax))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 0.0) && (Z <= zMax)) {
+      // field point outside the element
       if (DebugISLES) printf("Case4=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
     }
+    double Pot1;
+    Vector3D Flux1;
+    ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
+    *Potential = Pot1;
+    Flux->X = Flux1.X;
+    Flux->Y = Flux1.Y;
+    Flux->Z = Flux1.Z;
+    return 0;
   }
   // Three Y lines at corners
-  if ((fabs(X) < MINDIST) && (fabs(Z) < MINDIST))  // Y line at (0,0,0) corner
-  {
+  if ((fabs(X) < MINDIST) && (fabs(Z) < MINDIST)) {
+    // Y line at (0,0,0) corner
     if (DebugISLES) printf("Y line at (0,0,0) corner\n");
-
-    if ((X >= 0.0) && (Z >= 0.0))  // point on the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    double X1 = X;
+    double Z1 = Z;
+    if ((X >= 0.0) && (Z >= 0.0)) {
+      // point on the element
       if (DebugISLES) printf("Case1=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 0.0) && (Z >= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 0.0) && (Z >= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case2=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X >= 0.0) && (Z <= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X >= 0.0) && (Z <= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case3=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 0.0) && (Z <= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 0.0) && (Z <= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case4=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
     }
+    double Pot1;
+    Vector3D Flux1;
+    ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
+    *Potential = Pot1;
+    Flux->X = Flux1.X;
+    Flux->Y = Flux1.Y;
+    Flux->Z = Flux1.Z;
+    return 0;
   }
-  if ((fabs(X - 1.0) < MINDIST) &&
-      (fabs(Z) < MINDIST))  // Y line at (1,0) corner
-  {
+  if ((fabs(X - 1.0) < MINDIST) && (fabs(Z) < MINDIST)) {
+    // Y line at (1,0) corner
     if (DebugISLES) printf("Y line at (1,0,0) corner\n");
-
-    if ((X >= 1.0) && (Z >= 0.0))  // point on the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    double X1 = X;
+    double Z1 = Z;
+    if ((X >= 1.0) && (Z >= 0.0)) {
+      // point on the element
       if (DebugISLES) printf("Case1=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 1.0) && (Z >= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 1.0) && (Z >= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case2=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X >= 1.0) && (Z <= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X >= 1.0) && (Z <= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case3=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 1.0) && (Z <= 0.0))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 1.0) && (Z <= 0.0)) {
+      // field point outside the element
       if (DebugISLES) printf("Case4=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
     }
+    double Pot1;
+    Vector3D Flux1;
+    ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
+    *Potential = Pot1;
+    Flux->X = Flux1.X;
+    Flux->Y = Flux1.Y;
+    Flux->Z = Flux1.Z;
+    return 0;
   }
-  if ((fabs(X) < MINDIST) && (fabs(Z - zMax) < MINDIST))  // Y line at (0,zMax)
-  {
+  if ((fabs(X) < MINDIST) && (fabs(Z - zMax) < MINDIST)) {
+    // Y line at (0,zMax)
     if (DebugISLES) printf("Y line at (0,0,zMax) corner\n");
-
-    if ((X >= 0.0) && (Z >= zMax))  // point on the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    double X1 = X;
+    double Z1 = Z;
+    if ((X >= 0.0) && (Z >= zMax)) {
+      // point on the element
       if (DebugISLES) printf("Case1=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 0.0) && (Z >= zMax))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 0.0) && (Z >= zMax)) {
+      // field point outside the element
       if (DebugISLES) printf("Case2=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X >= 0.0) && (Z <= zMax))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X >= 0.0) && (Z <= zMax)) {
+      // field point outside the element
       if (DebugISLES) printf("Case3=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if ((X <= 0.0) && (Z <= zMax))  // field point outside the element
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if ((X <= 0.0) && (Z <= zMax)) {
+      // field point outside the element
       if (DebugISLES) printf("Case4=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
     }
+    double Pot1;
+    Vector3D Flux1;
+    ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
+    *Potential = Pot1;
+    Flux->X = Flux1.X;
+    Flux->Y = Flux1.Y;
+    Flux->Z = Flux1.Z;
+    return 0;
   }
   // Three edges outside the extent of the real element.
   // Plus two edges delineating the virtual right-triangle that complements
@@ -1293,186 +1103,127 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
   // But this particular problem has a remedy - check note on complex tanh-1
   // below. There is the problem of dealing with gsl_complex_log_real(1.0)
   // though!
-  if (fabs(X) < MINDIST)  // edge along X - axis
-  {
+  if (fabs(X) < MINDIST) {
+    // edge along X - axis
     if (DebugISLES) printf("edge along X-axis\n");
-
-    if (X >= 0.0)  // field point on +ve side of YZ plane
-    {
-      double X1 = X, X2 = X;
-      double Pot1, Pot2;
-      Vector3D Flux1, Flux2;
-
+    double X1 = X, X2 = X;
+    if (X >= 0.0) {
+      // field point on +ve side of YZ plane
       if (DebugISLES) printf("Case1=>\n");
       X1 = X + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z, &Pot1, &Flux1);
       X2 = X - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X2, Y, Z, &Pot2, &Flux2);
-      *Potential = 0.5 * (Pot1 + Pot2);
-      Flux->X = 0.5 * (Flux1.X + Flux2.X);
-      Flux->Y = 0.5 * (Flux1.Y + Flux2.Y);
-      Flux->Z = 0.5 * (Flux1.Z + Flux2.Z);
-      return 0;
-    } else if (X <= 0.0)  // field point on -ve side of YZ plane
-    {
-      double X1 = X, X2 = X;
-      double Pot1, Pot2;
-      Vector3D Flux1, Flux2;
-
+    } else if (X <= 0.0) {
+      // field point on -ve side of YZ plane
       if (DebugISLES) printf("Case2=>\n");
       X1 = X - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z, &Pot1, &Flux1);
       X2 = X + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X2, Y, Z, &Pot2, &Flux2);
-      *Potential = 0.5 * (Pot1 + Pot2);
-      Flux->X = 0.5 * (Flux1.X + Flux2.X);
-      Flux->Y = 0.5 * (Flux1.Y + Flux2.Y);
-      Flux->Z = 0.5 * (Flux1.Z + Flux2.Z);
-      return 0;
+
     }
+    double Pot1, Pot2;
+    Vector3D Flux1, Flux2;
+    ExactTriSurf(zMax, X1, Y, Z, &Pot1, &Flux1);
+    ExactTriSurf(zMax, X2, Y, Z, &Pot2, &Flux2);
+    *Potential = 0.5 * (Pot1 + Pot2);
+    Flux->X = 0.5 * (Flux1.X + Flux2.X);
+    Flux->Y = 0.5 * (Flux1.Y + Flux2.Y);
+    Flux->Z = 0.5 * (Flux1.Z + Flux2.Z);
+    return 0;
   }
-  /*	do not erase these blocks as yet
-  if(fabs(Z) < MINDIST)					// edge along Z - axis
-          {
-          if(DebugISLES) printf("edge along Z-axis\n");
-
-          if(Z >= 0.0)						// field point on +ve
-  side of XY plane
-                  {
-          double Z1=Z; double Pot1; Vector3D Flux1;
-
-                  if(DebugISLES) printf("Case1=>\n");
-          Z1 = Z + SHIFT*MINDIST;
-          ExactTriSurf(zMax, X, Y, Z1, &Pot1, &Flux1);
-                  *Potential = Pot1;
-                  Flux->X = Flux1.X; Flux->Y = Flux1.Y; Flux->Z = Flux1.Z;
-          return 0;
-                  }
-          else if(Z <= 0.0)			// field point on -ve side of XY
-  plane
-                  {
-          double Z1=Z; double Pot1; Vector3D Flux1;
-
-                  if(DebugISLES) printf("Case2=>\n");
-          Z1 = Z - SHIFT*MINDIST;
-          ExactTriSurf(zMax, X, Y, Z1, &Pot1, &Flux1);
-                  *Potential = Pot1;
-                  Flux->X = Flux1.X; Flux->Y = Flux1.Y; Flux->Z = Flux1.Z;
-          return 0;
-                  }
-          }
+  /* do not erase these blocks as yet
+  if (fabs(Z) < MINDIST) {
+    // edge along Z - axis
+    if (DebugISLES) printf("edge along Z-axis\n");
+    double Z1 = Z;
+    if (Z >= 0.0) {
+      // field point on +ve side of XY plane
+      if (DebugISLES) printf("Case1=>\n");
+      Z1 = Z + SHIFT*MINDIST;
+    } else if (Z <= 0.0) {
+      // field point on -ve side of XY plane
+      if (DebugISLES) printf("Case2=>\n");
+      Z1 = Z - SHIFT*MINDIST;
+    }
+    ExactTriSurf(zMax, X, Y, Z1, &Pot1, &Flux1);
+    *Potential = Pot1;
+    Flux->X = Flux1.X; 
+    Flux->Y = Flux1.Y; 
+    Flux->Z = Flux1.Z;
+    return 0;
+  }
   */
-  if (fabs(X - 1.0) < MINDIST)  // edge along X=1.0
-  {
+  if (fabs(X - 1.0) < MINDIST) {
+    // edge along X=1.0
     if (DebugISLES) printf("edge along X = 1.\n");
-
-    if (X <= 1.0)  // field point on +ve side of YZ plane
-    {
-      double X1 = X, X2 = X;
-      double Pot1, Pot2;
-      Vector3D Flux1, Flux2;
-
+    double X1 = X, X2 = X;
+    if (X <= 1.0) {
+      // field point on +ve side of YZ plane
       if (DebugISLES) printf("Case1=>\n");
       X1 = X - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z, &Pot1, &Flux1);
       X2 = X + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X2, Y, Z, &Pot2, &Flux2);
-      *Potential = 0.5 * (Pot1 + Pot2);
-      Flux->X = 0.5 * (Flux1.X + Flux2.X);
-      Flux->Y = 0.5 * (Flux1.Y + Flux2.Y);
-      Flux->Z = 0.5 * (Flux1.Z + Flux2.Z);
-      return 0;
-    } else if (X >= 1.0)  // field point on -ve side of YZ plane
-    {
-      double X1 = X, X2 = X;
-      double Pot1, Pot2;
-      Vector3D Flux1, Flux2;
-
+    } else if (X >= 1.0) {
+      // field point on -ve side of YZ plane
       if (DebugISLES) printf("Case2=>\n");
       X1 = X + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z, &Pot1, &Flux1);
       X2 = X + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X2, Y, Z, &Pot2, &Flux2);
-      *Potential = 0.5 * (Pot1 + Pot2);
-      Flux->X = 0.5 * (Flux1.X + Flux2.X);
-      Flux->Y = 0.5 * (Flux1.Y + Flux2.Y);
-      Flux->Z = 0.5 * (Flux1.Z + Flux2.Z);
-      return 0;
     }
+    double Pot1, Pot2;
+    Vector3D Flux1, Flux2;
+    ExactTriSurf(zMax, X1, Y, Z, &Pot1, &Flux1);
+    ExactTriSurf(zMax, X2, Y, Z, &Pot2, &Flux2);
+    *Potential = 0.5 * (Pot1 + Pot2);
+    Flux->X = 0.5 * (Flux1.X + Flux2.X);
+    Flux->Y = 0.5 * (Flux1.Y + Flux2.Y);
+    Flux->Z = 0.5 * (Flux1.Z + Flux2.Z);
+    return 0;
   }
-  if (fabs(Z - zMax) < MINDIST)  // edge along Z=zMax
-  {
+  if (fabs(Z - zMax) < MINDIST) {
+    // edge along Z=zMax
     if (DebugISLES) printf("edge along Z = zMax\n");
-
-    if (Z >= zMax)  // field point on +ve side of XY plane
-    {
-      double Z1 = Z, Z2 = Z;
-      double Pot1, Pot2;
-      Vector3D Flux1, Flux2;
-
+    double Z1 = Z, Z2 = Z;
+    if (Z >= zMax) {
+      // field point on +ve side of XY plane
       if (DebugISLES) printf("Case1=>\n");
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X, Y, Z1, &Pot1, &Flux1);
       Z2 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X, Y, Z2, &Pot2, &Flux2);
-      *Potential = 0.5 * (Pot1 + Pot2);
-      Flux->X = 0.5 * (Flux1.X + Flux2.X);
-      Flux->Y = 0.5 * (Flux1.Y + Flux2.Y);
-      Flux->Z = 0.5 * (Flux1.Z + Flux2.Z);
-      return 0;
-    } else if (Z <= zMax)  // field point on -ve side of XY plane
-    {
-      double Z1 = Z, Z2 = Z;
-      double Pot1, Pot2;
-      Vector3D Flux1, Flux2;
-
+    } else if (Z <= zMax) {
+      // field point on -ve side of XY plane
       if (DebugISLES) printf("Case2=>\n");
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X, Y, Z1, &Pot1, &Flux1);
       Z2 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X, Y, Z2, &Pot2, &Flux2);
-      *Potential = 0.5 * (Pot1 + Pot2);
-      Flux->X = 0.5 * (Flux1.X + Flux2.X);
-      Flux->Y = 0.5 * (Flux1.Y + Flux2.Y);
-      Flux->Z = 0.5 * (Flux1.Z + Flux2.Z);
-      return 0;
     }
+    double Pot1, Pot2;
+    Vector3D Flux1, Flux2;
+    ExactTriSurf(zMax, X, Y, Z1, &Pot1, &Flux1);
+    ExactTriSurf(zMax, X, Y, Z2, &Pot2, &Flux2);
+    *Potential = 0.5 * (Pot1 + Pot2);
+    Flux->X = 0.5 * (Flux1.X + Flux2.X);
+    Flux->Y = 0.5 * (Flux1.Y + Flux2.Y);
+    Flux->Z = 0.5 * (Flux1.Z + Flux2.Z);
+    return 0;
   }
-  if (fabs(Z - Zhyp) < MINDIST)  // edge along the hypoteneuse
-  {
-    if (DebugISLES) printf("edge along Hypotenuese\n");
-
-    if (Z <= Zhyp)  // towards element origin
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+  if (fabs(Z - Zhyp) < MINDIST) {
+    // edge along the hypotenuse
+    if (DebugISLES) printf("edge along Hypotenuse\n");
+    double X1 = X, Z1 = Z;
+    if (Z <= Zhyp) {
+      // towards element origin
       if (DebugISLES) printf("Case1=>\n");
       X1 = X - SHIFT * MINDIST;
       Z1 = Z - SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
-    } else if (Z >= Zhyp)  // going further away from the element origin
-    {
-      double X1 = X, Z1 = Z;
-      double Pot1;
-      Vector3D Flux1;
-
+    } else if (Z >= Zhyp) {
+      // going further away from the element origin
       if (DebugISLES) printf("Case2=>\n");
       X1 = X + SHIFT * MINDIST;
       Z1 = Z + SHIFT * MINDIST;
-      ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
-      *Potential = Pot1;
-      Flux->X = Flux1.X;
-      Flux->Y = Flux1.Y;
-      Flux->Z = Flux1.Z;
-      return 0;
     }
+    double Pot1;
+    Vector3D Flux1;
+    ExactTriSurf(zMax, X1, Y, Z1, &Pot1, &Flux1);
+    *Potential = Pot1;
+    Flux->X = Flux1.X;
+    Flux->Y = Flux1.Y;
+    Flux->Z = Flux1.Z;
+    return 0;
   }
 
   // Related to complex logarithmic terms - LPs and LMs, LTerm1 and LTerm2
@@ -1541,44 +1292,42 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
 
   // Exact computations begin here, at last!
   // DTerm1 and DTerm2
-  {
-    double DblTmp1 = (Hypot * D12 - E1) / (Hypot * D21 - E2);
-    if (DebugISLES) {
-      printf("DblTmp1: %.16lg\n", DblTmp1);
-      fflush(stdout);
-    }
-    if (DblTmp1 < MINDIST2) DblTmp1 = MINDIST2;
-    DTerm1 = log(DblTmp1);
-    if (isnan(DTerm1) || isinf(DTerm1)) {
-      ApproxFlag = 18;
-      ++FailureCntr;
-      --ExactCntr;
-      fprintf(fIsles, "DTerm1 nan or inf ... approximating: %d.\n", ApproxFlag);
-      return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
-                            Flux));
-    }
+  double DblTmp1 = (Hypot * D12 - E1) / (Hypot * D21 - E2);
+  if (DebugISLES) {
+    printf("DblTmp1: %.16lg\n", DblTmp1);
+    fflush(stdout);
+  }
+  if (DblTmp1 < MINDIST2) DblTmp1 = MINDIST2;
+  double DTerm1 = log(DblTmp1);
+  if (isnan(DTerm1) || isinf(DTerm1)) {
+    ApproxFlag = 18;
+    ++FailureCntr;
+    --ExactCntr;
+    fprintf(fIsles, "DTerm1 nan or inf ... approximating: %d.\n", ApproxFlag);
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
+                          Flux));
+  }
 
-    double DblTmp2 = (D11 - X) / (D21 - X + 1.0);
-    if (DebugISLES) {
-      printf("DblTmp2: %.16lg\n", DblTmp2);
-      fflush(stdout);
-    }
-    if (DblTmp2 < MINDIST2) DblTmp2 = MINDIST2;
-    DTerm2 = log(DblTmp2);
-    if (isnan(DTerm2) || isinf(DTerm2)) {
-      ApproxFlag = 18;
-      ++FailureCntr;
-      --ExactCntr;
-      fprintf(fIsles, "DTerm2 nan or inf ... approximating: %d.\n", ApproxFlag);
-      return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
-                            Flux));
-    }
+  double DblTmp2 = (D11 - X) / (D21 - X + 1.0);
+  if (DebugISLES) {
+    printf("DblTmp2: %.16lg\n", DblTmp2);
+    fflush(stdout);
+  }
+  if (DblTmp2 < MINDIST2) DblTmp2 = MINDIST2;
+  double DTerm2 = log(DblTmp2);
+  if (isnan(DTerm2) || isinf(DTerm2)) {
+    ApproxFlag = 18;
+    ++FailureCntr;
+    --ExactCntr;
+    fprintf(fIsles, "DTerm2 nan or inf ... approximating: %d.\n", ApproxFlag);
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
+                          Flux));
+  }
 
-    if (DebugISLES) {
-      printf("DTerm1: %.16lg, DTerm2: %.16lg\n", DTerm1, DTerm2);
-      fflush(stdout);
-    }
-  }  // DTerm1 and DTerm2
+  if (DebugISLES) {
+    printf("DTerm1: %.16lg, DTerm2: %.16lg\n", DTerm1, DTerm2);
+    fflush(stdout);
+  }
 
   // Complex computations for estimating LTerm1, LTerm2, TanhTerm1, TanhTerm2
   {{// logarithmic terms
@@ -1730,27 +1479,24 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     }
     LTerm1 = CmTmp.dat[0];
   }  // LTerm1
-
   // LTerm2
-  {
-    LTerm2 = gsl_complex_sub(CmLP1, CmLM1);
-    LTerm2 = gsl_complex_sub(LTerm2, CmLP2);
-    LTerm2 = gsl_complex_add(LTerm2, CmLM2);
-    if (DebugISLES) {
-      printf("LTerm2 => LTerm2.R: %.16lg, LTerm2.I: %.16lg\n", LTerm2.dat[0],
-             LTerm2.dat[1]);
-      fflush(stdout);
-    }
-    if (fabs(LTerm2.dat[0]) > MINDIST) {
-      ApproxFlag = 20;
-      ++FailureCntr;
-      --ExactCntr;
-      fprintf(fIsles, "LTerm2 non-zero real component ... approximating: %d.\n",
-              ApproxFlag);
-      return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
-                            Flux));
-    }
-  }  // LTerm2
+  LTerm2 = gsl_complex_sub(CmLP1, CmLM1);
+  LTerm2 = gsl_complex_sub(LTerm2, CmLP2);
+  LTerm2 = gsl_complex_add(LTerm2, CmLM2);
+  if (DebugISLES) {
+    printf("LTerm2 => LTerm2.R: %.16lg, LTerm2.I: %.16lg\n", LTerm2.dat[0],
+           LTerm2.dat[1]);
+    fflush(stdout);
+  }
+  if (fabs(LTerm2.dat[0]) > MINDIST) {
+    ApproxFlag = 20;
+    ++FailureCntr;
+    --ExactCntr;
+    fprintf(fIsles, "LTerm2 non-zero real component ... approximating: %d.\n",
+            ApproxFlag);
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
+                          Flux));
+  }
 }  // logarithmic terms
 
 // TanhTerm1, TanhTerm2
@@ -1908,12 +1654,11 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
 // Properties
 {
   gsl_complex CmTmp1, CmTmp2;
-  double Tmp1, Tmp2;
 
   CmTmp1 = gsl_complex_mul_imag(LTerm2, modY);     // multiplied by i|Y|
   CmTmp2 = gsl_complex_mul_imag(TanhTerm2, modY);  // multiplied by i|Y|
-  Tmp1 = CmTmp1.dat[0];
-  Tmp2 = CmTmp2.dat[0];
+  double Tmp1 = CmTmp1.dat[0];
+  double Tmp2 = CmTmp2.dat[0];
   Pot = (zMax * Y * Y - X * G) * LTerm1 + (zMax * X + G) * Tmp1 +
         ((double)S1 * X * TanhTerm1) - ((double)S1 * Tmp2) +
         (2.0 * G * DTerm1 / Hypot) - (2.0 * Z * DTerm2);
