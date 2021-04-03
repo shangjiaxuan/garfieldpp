@@ -771,8 +771,8 @@ int ApproxRecSurf(double X, double Y, double Z, double xlo, double zlo,
 int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
                  Vector3D *Flux) {
 
-  double LTerm1, TanhTerm1;
-  gsl_complex LTerm2, TanhTerm2;
+  double TanhTerm1;
+  gsl_complex TanhTerm2;
   double Pot = 0.0;
   double Fx = 0.0, Fy = 0.0, Fz = 0.0;
 
@@ -1117,7 +1117,6 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
       if (DebugISLES) printf("Case2=>\n");
       X1 = X - SHIFT * MINDIST;
       X2 = X + SHIFT * MINDIST;
-
     }
     double Pot1, Pot2;
     Vector3D Flux1, Flux2;
@@ -1226,9 +1225,8 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     return 0;
   }
 
-  // Related to complex logarithmic terms - LPs and LMs, LTerm1 and LTerm2
-  if ((fabs(G) <= MINDIST) && (modY <= MINDIST))  // for all logarithms
-  {
+  // Related to logarithmic terms (LTerm1 and LTerm2)
+  if ((fabs(G) <= MINDIST) && (modY <= MINDIST)) {
     ApproxFlag = 10;
     ++FailureCntr;
     --ExactCntr;
@@ -1239,37 +1237,39 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
                           Flux));
   }
-  /*	do not erase these blocks as yet
-  if( (fabs(X) <= MINDIST) && (modY <= MINDIST) )	// for LP1 and LM1
-    {	// denominator zero
+  /* do not erase these blocks as yet
+  if ((fabs(X) <= MINDIST) && (modY <= MINDIST)) {
+    // denominator zero for LP1 and LM1
     ApproxFlag = 11; ++FailureCntr; --ExactCntr;
-          fprintf(fIsles,
-                                          "denominator zero for LP1 and LM1 ...
-  approximating: %d.\n", ApproxFlag); return(ApproxTriSurf(zMax, X, Y, Z,
-  XNSegApprox, ZNSegApprox, Potential, Flux));
-    }
-  if( (fabs(H1+D12*G) <= MINDIST2) && (modY <= MINDIST) )	// for LP1 and
-  LM1 {	// numerator zero ApproxFlag = 12; ++FailureCntr; --ExactCntr;
-          fprintf(fIsles,
-                                          "numerator zero for LP1 and LM1 ...
-  approximating: %d.\n", ApproxFlag); return(ApproxTriSurf(zMax, X, Y, Z,
-  XNSegApprox, ZNSegApprox, Potential, Flux));
-    }
-  if( (fabs(1.0-X) <= MINDIST) && (modY <= MINDIST) )	// for LP2 and LM2
-    {	// denominator zero
+    fprintf(fIsles, "denominator zero for LP1 and LM1 ... approximating: %d.\n",
+            ApproxFlag); 
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, 
+                          Flux));
+  }
+  if ((fabs(H1 + D12 * G) <= MINDIST2) && (modY <= MINDIST)) {
+    // numerator zero for LP1 and LM1 
+    ApproxFlag = 12; ++FailureCntr; --ExactCntr;
+    fprintf(fIsles, "numerator zero for LP1 and LM1 ... approximating: %d.\n", 
+            ApproxFlag); 
+    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, 
+                         Flux));
+  }
+  if ((fabs(1.0 - X) <= MINDIST) && (modY <= MINDIST) )	{
+    // denominator zero for LP2 and LM2
     ApproxFlag = 13; ++FailureCntr; --ExactCntr;
-          fprintf(fIsles,
-                                          "denominator zero for LP2 and LM2 ...
-  approximating: %d.\n", ApproxFlag); return(ApproxTriSurf(zMax, X, Y, Z,
-  XNSegApprox, ZNSegApprox, Potential, Flux));
-    }
-  if( (fabs(H2+D21*G) <= MINDIST2) && (modY <= MINDIST) )	// for LP2 and
-  LM2 {	// numerator zero ApproxFlag = 14; ++FailureCntr; --ExactCntr;
-          fprintf(fIsles,
-                                          "numerator zero for LP2 and LM2 ...
-  approximating: %d.\n", ApproxFlag); return(ApproxTriSurf(zMax, X, Y, Z,
-  XNSegApprox, ZNSegApprox, Potential, Flux));
-    }
+    fprintf(fIsles, "denominator zero for LP2 and LM2 ... approximating: %d.\n",
+            ApproxFlag); 
+    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, 
+                         Flux));
+  }
+  if ((fabs(H2 + D21 * G) <= MINDIST2) && (modY <= MINDIST)) {
+    // numerator zero for LP2 and LM2 
+    ApproxFlag = 14; ++FailureCntr; --ExactCntr;
+    fprintf(fIsles, "numerator zero for LP2 and LM2 ... approximating: %d.\n", 
+            ApproxFlag); 
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, 
+                          Flux));
+  }
   */
 
   // Related to complex inverse tan hyperbolic terms - TanhTerm1 and TanhTerm2
@@ -1329,176 +1329,41 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     fflush(stdout);
   }
 
-  // Complex computations for estimating LTerm1, LTerm2, TanhTerm1, TanhTerm2
-  {{// logarithmic terms
-    gsl_complex CmLP1, CmLM1, CmLP2, CmLM2;
-  // CmLP1
-  // Possible singularities for CmGmY = 0, CmXpY = 0, and ln(0+i0)
-  // CmGmY = 0 => G = zMax*(X-1.0)+Z = 0 and Y = 0.
-  // CmXpY = 0 => X = 0 and Y = 0.
-  GSL_SET_COMPLEX(&CmLP1, 0.0, 0.0);  // `may be used uninitialized' warning
+  // logarithmic terms
+  double Log1 = 0., Arg1 = 0.;
   if (modY > MINDIST) {
-    gsl_complex CmGmY, CmNumLP1, CmXpY;
-
-    GSL_SET_COMPLEX(&CmNumLP1, (H1 + G * D12), modY * (E1 - zMax * D12));
-    GSL_SET_COMPLEX(&CmGmY, G, -zMax * modY);
-    GSL_SET_COMPLEX(&CmXpY, -X, modY);
-
-    CmLP1 = gsl_complex_div(CmNumLP1, CmXpY);
-    CmLP1 = gsl_complex_log(CmLP1);  // Branch cut?
-    CmLP1 = gsl_complex_div(CmLP1, CmGmY);
-  }  // if modY > MINDIST
-  else {
-    CmLP1.dat[1] = 0.0;
-    if ((fabs(X) < MINDIST) && (fabs(H1 + G * D12) < MINDIST))  // limit 0 / 0
-      CmLP1.dat[0] = 1.0;  // limit 0 divided by 0
-    else
-      CmLP1.dat[0] = (H1 + G * D12) / (-X);
-    if (fabs(CmLP1.dat[0]) < MINDIST)  // Branch cut - CHECK!!!
-      CmLP1.dat[0] = log(MINDIST);
-    else
-      CmLP1.dat[0] = log(fabs(CmLP1.dat[0]));  // log terms can be sqrd!
-
-    CmLP1.dat[0] /= G;  // Since modY < MINDIST, G > MINDIST (ApproxFlag 10)
-  }                     // else modY > MINDIS
-
-  // CmLM1
-  // Possible singularities for CmGpY = 0, CmXmY = 0, and ln(0+i0)
-  // CmGpY = 0 => G = X+Z-1 = 0 and Y = 0.
-  // CmXmY = 0 => X = 0 and Y = 0.
-  GSL_SET_COMPLEX(&CmLM1, 0.0, 0.0);  // `may be used uninitialized' warning
+    const double d1 = X * X + modY * modY;
+    double Re1 = ((-X) * (H1 + G * D12) + modY * modY * (E1 - zMax * D12)) / d1;
+    double Im1 = ((-X) * modY * (E1 - zMax * D12) - (H1 + G * D12) * modY) / d1;
+    Log1 = 0.5 * log(Re1 * Re1 + Im1 * Im1);
+    Arg1 = atan2(Im1, Re1);
+  } else if (fabs(X) > MINDIST) {
+    double f1 = fabs((H1 + G * D12) / (-X));
+    if (f1 < MINDIST) f1 = MINDIST;
+    Log1 = log(f1);
+  } 
+  double Log2 = 0., Arg2 = 0.;
   if (modY > MINDIST) {
-    gsl_complex CmGpY, CmNumLM1, CmXmY;
-
-    GSL_SET_COMPLEX(&CmNumLM1, (H1 + G * D12), -modY * (E1 - zMax * D12));
-    GSL_SET_COMPLEX(&CmGpY, G, zMax * modY);
-    GSL_SET_COMPLEX(&CmXmY, -X, -modY);
-
-    CmLM1 = gsl_complex_div(CmNumLM1, CmXmY);
-    CmLM1 = gsl_complex_log(CmLM1);  // Branch cut?
-    CmLM1 = gsl_complex_div(CmLM1, CmGpY);
-  }  // if modY > MINDIST
-  else {
-    CmLM1.dat[1] = 0.0;
-    if ((fabs(X) < MINDIST) && (fabs(H1 + G * D12) < MINDIST))
-      CmLM1.dat[0] = 1.0;  // limit 0 divided by 0
-    else
-      CmLM1.dat[0] = (H1 + G * D12) / (-X);
-    if (fabs(CmLM1.dat[0]) < MINDIST)  // Branch cut - CHECK!!!
-      CmLM1.dat[0] = log(MINDIST);
-    else
-      CmLM1.dat[0] = log(fabs(CmLM1.dat[0]));
-
-    CmLM1.dat[0] /= G;  // Since modY < MINDIST, G > MINDIST (ApproxFlag 10)
-  }                     // else modY > MINDIST
-
-  // CmLP2
-  // Possible singularities for CmGmY = 0, CmXpY = 0, and ln(0+i0)
-  // CmGmY = 0 => G = X+Z-1 = 0 and Y = 0.
-  // CmXpY = 0 => 1-X = 0, i.e., X = 1 and Y = 0.
-  GSL_SET_COMPLEX(&CmLP2, 0.0, 0.0);  // `may be used uninitialized' warning
-  if (modY > MINDIST) {
-    gsl_complex CmGmY, CmNumLP2, CmXpY;
-
-    GSL_SET_COMPLEX(&CmNumLP2, (H2 + G * D21), modY * (E2 - zMax * D21));
-    GSL_SET_COMPLEX(&CmGmY, G, -zMax * modY);
-    GSL_SET_COMPLEX(&CmXpY, 1.0 - X, modY);
-
-    CmLP2 = gsl_complex_div(CmNumLP2, CmXpY);
-    CmLP2 = gsl_complex_log(CmLP2);  // Branch cut?
-    CmLP2 = gsl_complex_div(CmLP2, CmGmY);
-  }  // if modY > MINDIST
-  else {
-    CmLP2.dat[1] = 0.0;
-    if ((fabs(1.0 - X) < MINDIST) && (fabs(H2 + G * D21) < MINDIST))
-      CmLP2.dat[0] = 1.0;  // limit 0 divided by 0
-    else
-      CmLP2.dat[0] = (H2 + G * D21) / (1.0 - X);
-    if (fabs(CmLP2.dat[0]) < MINDIST)  // Branch cut - CHECK!!!
-      CmLP2.dat[0] = log(MINDIST);
-    else
-      CmLP2.dat[0] = log(fabs(CmLP2.dat[0]));
-
-    CmLP2.dat[0] /= G;  // Since modY < MINDIST, G > MINDIST (ApproxFlag 10)
-  }                     // else modY > MINDIST
-
-  // CmLM2
-  // Possible singularities for CmGpY = 0, CmXmY = 0, and ln(0+i0)
-  // CmGpY = 0 => G = X+Z-1 = 0 and Y = 0.
-  // CmXmY = 0 => 1-X = 0, i.e., X = 1 and Y = 0.
-  GSL_SET_COMPLEX(&CmLM2, 0.0, 0.0);  // `may be used uninitialized' warning
-  if (modY > MINDIST) {
-    gsl_complex CmGpY, CmNumLM2, CmXmY;
-
-    GSL_SET_COMPLEX(&CmNumLM2, (H2 + G * D21), -modY * (E2 - zMax * D21));
-    GSL_SET_COMPLEX(&CmGpY, G, zMax * modY);
-    GSL_SET_COMPLEX(&CmXmY, 1.0 - X, -modY);
-
-    CmLM2 = gsl_complex_div(CmNumLM2, CmXmY);
-    CmLM2 = gsl_complex_log(CmLM2);  // Branch cut?
-    CmLM2 = gsl_complex_div(CmLM2, CmGpY);
-  }  // if modY > MINDIST
-  else {
-    CmLM2.dat[1] = 0.0;
-    if ((fabs(1.0 - X) < MINDIST) && (fabs(H2 + G * D21) < MINDIST))
-      CmLM2.dat[0] = 1.0;  // limit 0 divided by 0
-    else
-      CmLM2.dat[0] = (H2 + G * D21) / (1.0 - X);
-    if (fabs(CmLM2.dat[0]) < MINDIST)  // Branch cut - CHECK!!!
-      CmLM2.dat[0] = log(MINDIST);
-    else
-      CmLM2.dat[0] = log(fabs(CmLM2.dat[0]));
-
-    CmLM2.dat[0] /= G;  // Since modY < MINDIST, G > MINDIST (ApproxFlag 10)
-  }                     // else modY > MINDIST
-
-  // Final L terms
-  // Check for zero imaginary should ideally be done at the last stage beyond
-  // which there is no possibility of getting the imaginary terms cancelled.
-  // LTerm1
-  {
-    gsl_complex CmTmp;
-
-    CmTmp = gsl_complex_add(CmLP1, CmLM1);
-    CmTmp = gsl_complex_sub(CmTmp, CmLP2);
-    CmTmp = gsl_complex_sub(CmTmp, CmLM2);
-    if (DebugISLES) {
-      printf("LTerm1 => CmTmp.R: %.16lg, CmTmp.I: %.16lg\n", CmTmp.dat[0],
-             CmTmp.dat[1]);
-      fflush(stdout);
-    }
-    if (fabs(CmTmp.dat[1]) > MINDIST) {
-      ApproxFlag = 19;
-      ++FailureCntr;
-      --ExactCntr;
-      fprintf(fIsles,
-              "LTerm1 non-zero imaginary component ... approximating: %d.\n",
-              ApproxFlag);
-      return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
-                            Flux));
-    }
-    LTerm1 = CmTmp.dat[0];
-  }  // LTerm1
-  // LTerm2
-  LTerm2 = gsl_complex_sub(CmLP1, CmLM1);
-  LTerm2 = gsl_complex_sub(LTerm2, CmLP2);
-  LTerm2 = gsl_complex_add(LTerm2, CmLM2);
+    const double d2 = (1. - X) * (1. - X) + modY * modY;
+    double Re2 = ((1. - X) * (H2 + G * D21) + modY * modY * (E2 - zMax * D21)) / d2;
+    double Im2 = ((1. - X) * modY * (E2 - zMax * D21) - (H2 + G * D21) * modY) / d2;
+    Log2 = 0.5 * log(Re2 * Re2 + Im2 * Im2);
+    Arg2 = atan2(Im2, Re2);
+  } else if (fabs(1. - X) > MINDIST) {
+    double f2 = fabs((H2 + G * D21) / (1. - X));
+    if (f2 < MINDIST) f2 = MINDIST;
+    Log2 = log(f2);
+  }
+  const double c1 = 2. / (G * G + zMax * zMax * modY * modY);
+  double LTerm1 = c1 * (G * (Log1 - Log2) - zMax * modY * (Arg1 - Arg2));
+  double LTerm2 = c1 * (G * (Arg1 - Arg2) + zMax * modY * (Log1 - Log2));
   if (DebugISLES) {
-    printf("LTerm2 => LTerm2.R: %.16lg, LTerm2.I: %.16lg\n", LTerm2.dat[0],
-           LTerm2.dat[1]);
+    printf("LTerm1: %.16lg, LTerm2: %.16lg\n", LTerm1, LTerm2);
     fflush(stdout);
   }
-  if (fabs(LTerm2.dat[0]) > MINDIST) {
-    ApproxFlag = 20;
-    ++FailureCntr;
-    --ExactCntr;
-    fprintf(fIsles, "LTerm2 non-zero real component ... approximating: %d.\n",
-            ApproxFlag);
-    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
-                          Flux));
-  }
-}  // logarithmic terms
 
+  // Complex computations for estimating TanhTerm1, TanhTerm2
+  {
 // TanhTerm1, TanhTerm2
 // Possible singularities - D11, D21 corners and Z=0 line / surface
 // Corners have been taken care of, as well as Z=0 (latter, through S1)
@@ -1649,31 +1514,26 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     TanhTerm2.dat[1] = 0.0;
   }  // else S1 TanhTerm1 and TanhTerm2
 }  // TanhTerms
-}  // Complex computations for estimating LTerm1, LTerm2, TanhTerm1, TanhTerm2
+}  // Complex computations for estimating TanhTerm1, TanhTerm2
 
 // Properties
 {
-  gsl_complex CmTmp1, CmTmp2;
+  gsl_complex CmTmp2;
 
-  CmTmp1 = gsl_complex_mul_imag(LTerm2, modY);     // multiplied by i|Y|
   CmTmp2 = gsl_complex_mul_imag(TanhTerm2, modY);  // multiplied by i|Y|
-  double Tmp1 = CmTmp1.dat[0];
   double Tmp2 = CmTmp2.dat[0];
-  Pot = (zMax * Y * Y - X * G) * LTerm1 + (zMax * X + G) * Tmp1 +
-        ((double)S1 * X * TanhTerm1) - ((double)S1 * Tmp2) +
-        (2.0 * G * DTerm1 / Hypot) - (2.0 * Z * DTerm2);
+  Pot = (zMax * Y * Y - X * G) * LTerm1 - 
+                (zMax * X + G) * modY * LTerm2 +
+        (S1 * X * TanhTerm1) - (S1 * Tmp2) +
+        (2. * G * DTerm1 / Hypot) - (2. * Z * DTerm2);
   Pot *= 0.5;
 
-  CmTmp1 = gsl_complex_mul_imag(LTerm2, modY);  // multiplied by i|Y|
-  Tmp1 = CmTmp1.dat[0];
-  Fx = G * LTerm1 - zMax * Tmp1 - S1 * TanhTerm1 - 2.0 * zMax * DTerm1 / Hypot;
+  Fx = G * LTerm1 + zMax * modY * LTerm2 - S1 * TanhTerm1 - 2.0 * zMax * DTerm1 / Hypot;
   Fx *= 0.5;
 
-  CmTmp1 = gsl_complex_mul_imag(LTerm2, (double)SY);  // multiplied by i Sign(Y)
   CmTmp2 = gsl_complex_mul_imag(TanhTerm2, (double)S1 * (double)SY);  // i S1 SY
-  Tmp1 = CmTmp1.dat[0];
   Tmp2 = CmTmp2.dat[0];
-  Fy = -zMax * Y * LTerm1 - G * Tmp1 + Tmp2;
+  Fy = -zMax * Y * LTerm1 + G * SY * LTerm2 + Tmp2;
   Fy *= 0.5;
 
   Fz = DTerm2 - (DTerm1 / Hypot);
