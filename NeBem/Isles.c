@@ -771,11 +771,6 @@ int ApproxRecSurf(double X, double Y, double Z, double xlo, double zlo,
 int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
                  Vector3D *Flux) {
 
-  double TanhTerm1;
-  gsl_complex TanhTerm2;
-  double Pot = 0.0;
-  double Fx = 0.0, Fy = 0.0, Fz = 0.0;
-
   if (DebugISLES) {
     printf("In ExactTriSurf ...\n");
   }
@@ -1273,21 +1268,19 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
   */
 
   // Related to complex inverse tan hyperbolic terms - TanhTerm1 and TanhTerm2
-  /*	do not erase these blocks as yet
-  if(D11*fabs(Z) <= MINDIST2)	// since D11 and D21 are always +ve
-    {
+  /* do not erase these blocks as yet
+  if (D11 * fabs(Z) <= MINDIST2) {
     ApproxFlag = 15; ++FailureCntr; --ExactCntr;
-          fprintf(fIsles, "D11*fabs(Z) zero for TanhTerms ... approximating:
-  %d.\n", ApproxFlag); return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox,
-  ZNSegApprox, Potential, Flux));
-    }
-  if(D21*fabs(Z) <= MINDIST2)
-    {
+    fprintf(fIsles, "D11*fabs(Z) zero for TanhTerms ... approximating: %d.\n",
+            ApproxFlag); 
+    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+  }
+  if (D21 * fabs(Z) <= MINDIST2) {
     ApproxFlag = 16; ++FailureCntr; --ExactCntr;
-          fprintf(fIsles, "D21*fabs(Z) zero for TanhTerms ... approximating:
-  %d.\n", ApproxFlag); return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox,
-  ZNSegApprox, Potential, Flux));
-    }
+    fprintf(fIsles, "D21*fabs(Z) zero for TanhTerms ... approximating: %d.\n", 
+            ApproxFlag); 
+    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+  }
   */
 
   // Exact computations begin here, at last!
@@ -1362,187 +1355,91 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     fflush(stdout);
   }
 
-  // Complex computations for estimating TanhTerm1, TanhTerm2
-  {
-// TanhTerm1, TanhTerm2
-// Possible singularities - D11, D21 corners and Z=0 line / surface
-// Corners have been taken care of, as well as Z=0 (latter, through S1)
-// Incorrectly implemented - CHECK!!! CORRECTED!
-// If the argument of atanh is real and greater than 1.0, it is
-// perfectly computable. The value returned is a complex number,
-// however. This computation has to be carried out by invoking
-// gsl_complex_arctanh_real(double z).
-// The branch cut needs to be enforced only if the
-// argument is real and is equal to 1.0. Then the returned value
-// is undefined. But this happens only if Y=0 besides X=1.0!
-// Similar implementation issues are also there for X=0.
-// Coincides with X=1 since I2 turns out to be zero in such
-// cases. CmTmp3.dat[0] can be >= 1.0 in a variety of situations
-// since in the denominator D21, sqrt( (X-1)^2 + Y^2 + Z^2 ) is
-// sqrt(Y^2+Z^2) for X=1. This is multiplied by |Z| while on the
-// numerator we have Y^2+Z^2.
-{  // TanhTerms
+  // Computations for estimating TanhTerm1, TanhTerm2
+  // Possible singularities - D11, D21 corners and Z=0 line / surface
+  // Corners have been taken care of, as well as Z=0 (latter, through S1)
+  // Incorrectly implemented - CHECK!!! CORRECTED!
+  // If the argument of atanh is real and greater than 1.0, it is
+  // perfectly computable. The value returned is a complex number,
+  // however. This computation has to be carried out by invoking
+  // gsl_complex_arctanh_real(double z).
+  // The branch cut needs to be enforced only if the
+  // argument is real and is equal to 1.0. Then the returned value
+  // is undefined. But this happens only if Y=0 besides X=1.0!
+  // Similar implementation issues are also there for X=0.
+  // Coincides with X=1 since I2 turns out to be zero in such
+  // cases. CmTmp3.dat[0] can be >= 1.0 in a variety of situations
+  // since in the denominator D21, sqrt( (X-1)^2 + Y^2 + Z^2 ) is
+  // sqrt(Y^2+Z^2) for X=1. This is multiplied by |Z| while on the
+  // numerator we have Y^2+Z^2.
+
+  double TanhTerm1 = 0.;
+  double TanhTerm2 = 0.;
   if (abs(S1) > 0) {
-    gsl_complex CmTmp1, CmTmp2, CmTmp3, CmTmp4;
+    if (modY < MINDIST) {
+      const double f1 = R1 / (D11 * fabs(Z));
+      const double f2 = R1 / (D21 * fabs(Z));
+      TanhTerm1 = log1p(f1) - log1p(-f1) - log1p(f2) + log1p(-f2);
+    } else {
+      TanhTerm1 = 1.;
+      if (fabs(R1 - D11 * fabs(Z)) > MINDIST2 || true) {
+        const double rp = D11 * fabs(Z) + R1;
+        const double rm = D11 * fabs(Z) - R1; 
+        TanhTerm1 *= (I1 * I1 + rp * rp) / (I1 * I1 + rm * rm); 
+      } 
+      if (fabs(R1 - D21 * fabs(Z)) > MINDIST2 || true) {
+        const double rp = D21 * fabs(Z) + R1;
+        const double rm = D21 * fabs(Z) - R1; 
+        TanhTerm1 *= (I2 * I2 + rm * rm) / (I2 * I2 + rp * rp); 
+      }
+      TanhTerm1 = 0.5 * log(TanhTerm1);
+    }
 
-    GSL_SET_COMPLEX(&CmTmp1, R1, I1);
-    CmTmp1 = gsl_complex_div_real(CmTmp1, D11 * fabs(Z));
-    if (fabs(CmTmp1.dat[0]) < MINDIST2 && fabs(CmTmp1.dat[1]) < MINDIST2) {
-      // case tanh-1 (0)
-      CmTmp1.dat[0] = 0.0;
-      CmTmp1.dat[1] = 0.0;
-    } else if (D11 * fabs(Z) < MINDIST2) {
-      // case tanh-1 (inf)
-      CmTmp1.dat[0] = 0.0;
-      CmTmp1.dat[1] = -0.5 * ST_PI;
-    } else if (fabs(CmTmp1.dat[0]) <= MINDIST2 &&
-               fabs(CmTmp1.dat[1] - 1.0) <= MINDIST2) {
-      // case tanh-1 (i)
-      CmTmp1.dat[0] = 0.0;
-      CmTmp1.dat[1] = 0.25 * ST_PI;
-    } else if (fabs(CmTmp1.dat[1]) < MINDIST2) {
-      // if only imaginary part is zero
-      CmTmp1 = gsl_complex_arctanh_real(CmTmp1.dat[0]);
-    } else {
-      CmTmp1 = gsl_complex_arctanh(CmTmp1);
+    if (fabs(I1) > MINDIST2) {
+      double tmp = atan(2 * I1 * D11 * fabs(Z) / (D11 * D11 * Z * Z - I1 * I1 - R1 * R1));
+      if (R1 * R1 + I1 * I1 > D11 * D11 * Z * Z) {
+        if (X > 0.) {
+          tmp += ST_PI;
+        } else {
+          tmp -= ST_PI;
+        }
+      }
+      TanhTerm2 += tmp;
     }
-    GSL_SET_COMPLEX(&CmTmp2, R1, -I1);
-    CmTmp2 = gsl_complex_div_real(CmTmp2, (D11 * fabs(Z)));
-    if (fabs(CmTmp2.dat[0]) < MINDIST2 && fabs(CmTmp2.dat[1]) < MINDIST2) {
-      // case tanh-1 (0)
-      CmTmp2.dat[0] = 0.0;
-      CmTmp2.dat[1] = 0.0;
-    } else if (D11 * fabs(Z) < MINDIST2) {
-      // case tanh-1 (inf)
-      CmTmp2.dat[0] = 0.0;
-      CmTmp2.dat[1] = -0.5 * ST_PI;
-    } else if (fabs(CmTmp2.dat[0]) <= MINDIST2 &&
-               fabs(CmTmp2.dat[1] - 1.0) <= MINDIST2) {
-      // case tanh-1 (i)
-      CmTmp2.dat[0] = 0.0;
-      CmTmp2.dat[1] = 0.25 * ST_PI;
-    } else if (fabs(CmTmp2.dat[1]) < MINDIST2) {
-      // if only imaginary part is zero
-      CmTmp2 = gsl_complex_arctanh_real(CmTmp2.dat[0]);
-    } else {
-      CmTmp2 = gsl_complex_arctanh(CmTmp2);
+    if (fabs(I2) > MINDIST2) {
+      double tmp = atan(2 * I2 * D21 * fabs(Z) / (D21 * D21 * Z * Z - I2 * I2 - R1 * R1));
+      if (R1 * R1 + I2 * I2 > D21 * D21 * Z * Z) {
+        if (X > 1.) {
+          tmp += ST_PI;
+        } else {
+          tmp -= ST_PI;
+        }
+      }
+      TanhTerm2 -= tmp;
     }
-    GSL_SET_COMPLEX(&CmTmp3, R1, I2);
-    CmTmp3 = gsl_complex_div_real(CmTmp3, (D21 * fabs(Z)));
-    if (fabs(CmTmp3.dat[0]) < MINDIST2 && fabs(CmTmp3.dat[1]) < MINDIST2) {
-      // case tanh-1 (0)
-      CmTmp3.dat[0] = 0.0;
-      CmTmp3.dat[1] = 0.0;
-    } else if (D21 * fabs(Z) < MINDIST2) { 
-      // case tanh-1 (inf)
-      CmTmp3.dat[0] = 0.0;
-      CmTmp3.dat[1] = -0.5 * ST_PI;
-    } else if (fabs(CmTmp3.dat[0]) <= MINDIST2 &&
-               fabs(CmTmp3.dat[1] - 1.0) <= MINDIST2) {  
-      // case tanh-1 (i)
-      CmTmp3.dat[0] = 0.0;
-      CmTmp3.dat[1] = 0.25 * ST_PI;
-    } else if (fabs(CmTmp3.dat[1]) < MINDIST2) {
-      // if only imaginary part is zero
-      CmTmp3 = gsl_complex_arctanh_real(CmTmp3.dat[0]);
-    } else {
-      CmTmp3 = gsl_complex_arctanh(CmTmp3);
-    }
-    GSL_SET_COMPLEX(&CmTmp4, R1, -I2);
-    CmTmp4 = gsl_complex_div_real(CmTmp4, (D21 * fabs(Z)));
-    if (fabs(CmTmp4.dat[0]) < MINDIST2 && fabs(CmTmp4.dat[1]) < MINDIST2) {
-      // case tanh-1 (0)
-      CmTmp4.dat[0] = 0.0;
-      CmTmp4.dat[1] = 0.0;
-    } else if (D21 * fabs(Z) < MINDIST2) {
-      // case tanh-1 (inf)
-      CmTmp4.dat[0] = 0.0;
-      CmTmp4.dat[1] = -0.5 * ST_PI;
-    } else if (fabs(CmTmp4.dat[0]) <= MINDIST2 &&
-               fabs(CmTmp4.dat[1] - 1.0) <= MINDIST2) {
-      // case tanh-1 (i)
-      CmTmp4.dat[0] = 0.0;
-      CmTmp4.dat[1] = 0.25 * ST_PI;
-    } else if (fabs(CmTmp4.dat[1]) < MINDIST2) {
-      // if only imaginary part is zero
-      CmTmp4 = gsl_complex_arctanh_real(CmTmp4.dat[0]);
-    } else {
-      CmTmp4 = gsl_complex_arctanh(CmTmp4);
-    }
-    gsl_complex TmpTanhTerm1;
-    TmpTanhTerm1 = gsl_complex_add(CmTmp1, CmTmp2);
-    TmpTanhTerm1 = gsl_complex_sub(TmpTanhTerm1, CmTmp3);
-    TmpTanhTerm1 = gsl_complex_sub(TmpTanhTerm1, CmTmp4);
-    if (TmpTanhTerm1.dat[1] > MINDIST) {
-      ApproxFlag = 21;
-      ++FailureCntr;
-      --ExactCntr;
-      fprintf(fIsles,
-              "non-zero TanhTerm1 imag component ... approximating: %d.\n",
-              ApproxFlag);
-      return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
-                            Flux));
-    }
-    TanhTerm1 = TmpTanhTerm1.dat[0];
-    if (DebugISLES) {
-      printf("TmpTanhTerm1.R: %.16lg, TmpTanhTerm1.I: %.16lg\n",
-             TmpTanhTerm1.dat[0], TmpTanhTerm1.dat[1]);
-      fflush(stdout);
-    }
-    TanhTerm2 = gsl_complex_sub(CmTmp1, CmTmp2);
-    TanhTerm2 = gsl_complex_sub(TanhTerm2, CmTmp3);
-    TanhTerm2 = gsl_complex_add(TanhTerm2, CmTmp4);
-    if (TanhTerm2.dat[0] > MINDIST) {
-      ApproxFlag = 22;
-      ++FailureCntr;
-      --ExactCntr;
-      fprintf(fIsles,
-              "non-zero TanhTerm2 real component ... approximating: %d.\n",
-              ApproxFlag);
-      return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
-                            Flux));
-    }
-    if (DebugISLES) {
-      printf("TanhTerm2.R: %.16lg, TanhTerm2.I: %.16lg\n", TanhTerm2.dat[0],
-             TanhTerm2.dat[1]);
-      fflush(stdout);
-    }
-  }  // if abs(S1) > 0 TanhTerm1 and TanhTerm2
-  else {
-    TanhTerm1 = 0.0;
-    TanhTerm2.dat[0] = 0.0;
-    TanhTerm2.dat[1] = 0.0;
-  }  // else S1 TanhTerm1 and TanhTerm2
-}  // TanhTerms
-}  // Complex computations for estimating TanhTerm1, TanhTerm2
+  }
 
-// Properties
-{
-  gsl_complex CmTmp2;
+  if (DebugISLES) {
+    printf("TanhTerm1: %.16lg, TanhTerm2: %.16lg\n", TanhTerm1, TanhTerm2);
+    fflush(stdout);
+  }
 
-  CmTmp2 = gsl_complex_mul_imag(TanhTerm2, modY);  // multiplied by i|Y|
-  double Tmp2 = CmTmp2.dat[0];
-  Pot = (zMax * Y * Y - X * G) * LTerm1 - 
-                (zMax * X + G) * modY * LTerm2 +
-        (S1 * X * TanhTerm1) - (S1 * Tmp2) +
+  double Pot = (zMax * Y * Y - X * G) * LTerm1 - 
+               (zMax * X + G) * modY * LTerm2 +
+        (S1 * X * TanhTerm1) + S1 * modY * TanhTerm2 +
         (2. * G * DTerm1 / Hypot) - (2. * Z * DTerm2);
   Pot *= 0.5;
-
-  Fx = G * LTerm1 + zMax * modY * LTerm2 - S1 * TanhTerm1 - 2.0 * zMax * DTerm1 / Hypot;
+  double Fx = G * LTerm1 + zMax * modY * LTerm2 - S1 * TanhTerm1 - 2.0 * zMax * DTerm1 / Hypot;
   Fx *= 0.5;
-
-  CmTmp2 = gsl_complex_mul_imag(TanhTerm2, (double)S1 * (double)SY);  // i S1 SY
-  Tmp2 = CmTmp2.dat[0];
-  Fy = -zMax * Y * LTerm1 + G * SY * LTerm2 + Tmp2;
+  double Fy = -zMax * Y * LTerm1 + G * SY * LTerm2 - S1 * SY * TanhTerm2;
   Fy *= 0.5;
 
-  Fz = DTerm2 - (DTerm1 / Hypot);
+  double Fz = DTerm2 - (DTerm1 / Hypot);
   if (DebugISLES) {
     printf("Pot: %.16lg, Fx: %.16lg, Fy: %.16lg, Fz: %.16lg\n", Pot, Fx, Fy,
            Fz);
     fflush(stdout);
   }
-}
 
 // Final adjustments
 // Constants (?) of integration - Carry out only one of the options
