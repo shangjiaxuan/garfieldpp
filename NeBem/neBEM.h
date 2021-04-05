@@ -542,12 +542,16 @@ neBEMGLOBAL void TriFlux(int src, Point3D *localPt, Vector3D *Flux);
 neBEMGLOBAL void WireFlux(int src, Point3D *localPt, Vector3D *Flux);
 
 // get both potential and flux
-neBEMGLOBAL void GetPFGCS(int src, Point3D *localPt, double *Pot,
-                          Vector3D *Flux, DirnCosn3D *DirCos);
-neBEMGLOBAL void GetPF(int src, Point3D *localPt, double *Pot, Vector3D *Flux);
-neBEMGLOBAL void RecPF(int src, Point3D *localPt, double *Pot, Vector3D *Flux);
-neBEMGLOBAL void TriPF(int src, Point3D *localPt, double *Pot, Vector3D *Flux);
-neBEMGLOBAL void WirePF(int src, Point3D *localPt, double *Pot, Vector3D *Flux);
+neBEMGLOBAL void GetPFGCS(int type, double a, double b, Point3D *localPt, 
+                          double *Pot, Vector3D *Flux, DirnCosn3D *DirCos);
+neBEMGLOBAL void GetPF(int type, double a, double b, Point3D *localPt, 
+                       double *Pot, Vector3D *Flux);
+neBEMGLOBAL void RecPF(double a, double b, Point3D *localPt, 
+                       double *Pot, Vector3D *Flux);
+neBEMGLOBAL void TriPF(double a, double b, Point3D *localPt, 
+                       double *Pot, Vector3D *Flux);
+neBEMGLOBAL void WirePF(double rW, double lW, Point3D *localPt, 
+                        double *Pot, Vector3D *Flux);
 neBEMGLOBAL void GetPrimPFGCS(int src, Point3D *localPt, double *Pot,
                               Vector3D *Flux, DirnCosn3D *DirCos);
 neBEMGLOBAL void GetPrimPF(int src, Point3D *localPt, double *Pot,
