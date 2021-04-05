@@ -1776,48 +1776,32 @@ int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
 // have been developed to save some computation and time.
 
 // Potential at the centroidal point of the wire
-double ExactCentroidalP_W(double rW, double lW)  // Self-Influence: wire5.m
-{
-  if (DebugISLES) {
-    printf("In ExactCentroidalP_W ...\n");
-  }
-
-  double dtmp1;
-  dtmp1 = rW * rW + (lW / 2.0) * (lW / 2.0);
-  dtmp1 = sqrt(dtmp1);
-  dtmp1 = log((dtmp1 + (lW / 2.0)) / (dtmp1 - (lW / 2.0)));
-  return (2.0 * ST_PI * dtmp1 * rW);
+double ExactCentroidalP_W(double rW, double lW) {
+  // Self-Influence: wire5.m
+  if (DebugISLES) printf("In ExactCentroidalP_W ...\n");
+  const double h = 0.5 * lW;
+  double dtmp1 = hypot(rW, h);
+  dtmp1 = log((dtmp1 + h) / (dtmp1 - h));
+  return 2.0 * ST_PI * dtmp1 * rW;
 }  // ExactCentroidalP ends
 
 // Potential along the axis of the wire
 double ExactAxialP_W(double rW, double lW, double Z) {
-  if (DebugISLES) {
-    printf("In ExactAxialP_W ...\n");
-  }
-
-  double h, Pot;  // Expressions from PF00Z.m
-  h = 0.5 * lW;
-  Pot = -2.0 * ST_PI * log(rW * rW) +
-        2.0 * ST_PI *
-            log(h + Z +
-                sqrt((h * h + 2.0 * Z * h + Z * Z + rW * rW) / (rW * rW)) *
-                    sqrt(rW * rW)) +
-        2.0 * ST_PI *
-            log(h - Z +
-                sqrt((h * h - 2.0 * Z * h + Z * Z + rW * rW) / (rW * rW)) *
-                    sqrt(rW * rW));
-  return (rW * Pot);
-}  // ExactAxialP wnds
+  if (DebugISLES) printf("In ExactAxialP_W ...\n");
+  // Expressions from PF00Z.m
+  const double h = 0.5 * lW;
+  const double r2 = rW * rW;
+  const double a = h + Z;
+  const double b = h - Z; 
+  double Pot = log((a + sqrt(a * a + r2)) * (b + sqrt(b * b + r2)) / r2);
+  return 2. * ST_PI * rW * Pot;
+}  // ExactAxialP ends
 
 // Axial field along the axis of the wire
 double ExactAxialFZ_W(double rW, double lW, double Z) {
-  if (DebugISLES) {
-    printf("In ExactAxialFZ_W ...\n");
-  }
-
-  double h, Fz;
-  h = 0.5 * lW;
-  Fz = 2.0 * ST_PI *
+  if (DebugISLES) printf("In ExactAxialFZ_W ...\n");
+  double h = 0.5 * lW;
+  double Fz = 2.0 * ST_PI *
        (sqrt(h * h + 2.0 * Z * h + Z * Z + rW * rW) -
         sqrt(h * h - 2.0 * Z * h + Z * Z + rW * rW)) /
        sqrt(h * h - 2.0 * Z * h + Z * Z + rW * rW) /
@@ -1825,29 +1809,22 @@ double ExactAxialFZ_W(double rW, double lW, double Z) {
   return (rW * Fz);
 }  // ExactAxialFZ ends
 
-double ApproxP_W(double rW, double lW, double X, double Y, double Z,
-                 int zseg) {  // Approximate potential due to a wire segment
-  if (DebugISLES) {
-    printf("In ApproxP_W ...\n");
-  }
-
-  int k;
-  double zk, dz, dist, area;
-  double Pot;
-
+double ApproxP_W(double rW, double lW, double X, double Y, double Z, int zseg) {  
+  // Approximate potential due to a wire segment
+  if (DebugISLES) printf("In ApproxP_W ...\n");
   ++ApproxCntr;
 
-  dz = lW / zseg;
-  area = 2.0 * ST_PI * rW * dz;
+  double dz = lW / zseg;
+  double area = 2.0 * ST_PI * rW * dz;
 
-  Pot = 0.0;
-  for (k = 1; k <= zseg; ++k) {
-    zk = -(lW / 2.0) + (dz / 2.0) + (k - 1) * dz;
-    dist = sqrt(X * X + Y * Y + (Z - zk) * (Z - zk));
-    if (fabs(dist) >= MINDIST)
+  double Pot = 0.0;
+  double z0 = -0.5 * lW + 0.5 * dz;
+  for (int k = 1; k <= zseg; ++k) {
+    double zk = z0 + (k - 1) * dz;
+    double dist = sqrt(X * X + Y * Y + (Z - zk) * (Z - zk));
+    if (fabs(dist) >= MINDIST) {
       Pot += area / dist;
-    else
-      Pot += 0.0;
+    }
   }  // zseg
 
   return (Pot);
@@ -1855,29 +1832,21 @@ double ApproxP_W(double rW, double lW, double X, double Y, double Z,
 
 double ApproxFX_W(double rW, double lW, double X, double Y, double Z,
                   int zseg) {
-  if (DebugISLES) {
-    printf("In ApproxFX_W ...\n");
-  }
-
-  int k;
-  double dz, zk;
-  double area, dist, dist3;
-  double Fx;
-
+  if (DebugISLES) printf("In ApproxFX_W ...\n");
   ++ApproxCntr;
 
-  dz = lW / zseg;
-  area = 2.0 * ST_PI * rW * dz;
+  double dz = lW / zseg;
+  double area = 2.0 * ST_PI * rW * dz;
 
-  Fx = 0.0;
-  for (k = 1; k <= zseg; ++k) {
-    zk = -(lW / 2.0) + (dz / 2.0) + (k - 1) * dz;
-    dist = sqrt(X * X + Y * Y + (Z - zk) * (Z - zk));
-    dist3 = pow(dist, 3.0);
-    if (fabs(dist) >= MINDIST)
+  double Fx = 0.0;
+  double z0 = -0.5 * lW + 0.5 * dz;
+  for (int k = 1; k <= zseg; ++k) {
+    double zk = z0 + (k - 1) * dz;
+    double dist = sqrt(X * X + Y * Y + (Z - zk) * (Z - zk));
+    double dist3 = pow(dist, 3.0);
+    if (fabs(dist) >= MINDIST) {
       Fx += (area * X / dist3);
-    else
-      Fx += 0.0;
+    }
   }  // zseg
 
   return (Fx);
@@ -1885,29 +1854,21 @@ double ApproxFX_W(double rW, double lW, double X, double Y, double Z,
 
 double ApproxFY_W(double rW, double lW, double X, double Y, double Z,
                   int zseg) {
-  if (DebugISLES) {
-    printf("In ApproxFY_W ...\n");
-  }
-
-  int k;
-  double dz, zk;
-  double area, dist, dist3;
-  double Fy;
-
+  if (DebugISLES) printf("In ApproxFY_W ...\n");
   ++ApproxCntr;
 
-  dz = lW / zseg;
-  area = 2.0 * ST_PI * rW * dz;
+  double dz = lW / zseg;
+  double area = 2.0 * ST_PI * rW * dz;
 
-  Fy = 0.0;
-  for (k = 1; k <= zseg; ++k) {
-    zk = -(lW / 2.0) + (dz / 2.0) + (k - 1) * dz;
-    dist = sqrt(X * X + Y * Y + (Z - zk) * (Z - zk));
-    dist3 = pow(dist, 3.0);
-    if (fabs(dist) >= MINDIST)
+  double Fy = 0.0;
+  double z0 = -0.5 * lW + 0.5 * dz;
+  for (int k = 1; k <= zseg; ++k) {
+    double zk = z0 + (k - 1) * dz;
+    double dist = sqrt(X * X + Y * Y + (Z - zk) * (Z - zk));
+    double dist3 = pow(dist, 3.0);
+    if (fabs(dist) >= MINDIST) {
       Fy += (area * X / dist3);
-    else
-      Fy += 0.0;
+    }
   }  // zseg
 
   return (Fy);
@@ -1915,29 +1876,21 @@ double ApproxFY_W(double rW, double lW, double X, double Y, double Z,
 
 double ApproxFZ_W(double rW, double lW, double X, double Y, double Z,
                   int zseg) {
-  if (DebugISLES) {
-    printf("In ApproxFZ_W ...\n");
-  }
-
-  int k;
-  double dz, zk;
-  double area, dist, dist3;
-  double Fz;
-
+  if (DebugISLES) printf("In ApproxFZ_W ...\n");
   ++ApproxCntr;
 
-  dz = lW / zseg;
-  area = 2.0 * ST_PI * rW * dz;
+  double dz = lW / zseg;
+  double area = 2.0 * ST_PI * rW * dz;
 
-  Fz = 0.0;
-  for (k = 1; k <= zseg; ++k) {
-    zk = -(lW / 2.0) + (dz / 2.0) + (k - 1) * dz;
-    dist = sqrt(X * X + Y * Y + (Z - zk) * (Z - zk));
-    dist3 = pow(dist, 3.0);
-    if (fabs(dist) >= MINDIST)
+  double Fz = 0.0;
+  double z0 = -0.5 * lW + 0.5 * dz;
+  for (int k = 1; k <= zseg; ++k) {
+    double zk = z0 + (k - 1) * dz;
+    double dist = sqrt(X * X + Y * Y + (Z - zk) * (Z - zk));
+    double dist3 = pow(dist, 3.0);
+    if (fabs(dist) >= MINDIST) {
       Fz += (area * X / dist3);
-    else
-      Fz += 0.0;
+    }
   }  // zseg
 
   return (Fz);
@@ -1945,35 +1898,24 @@ double ApproxFZ_W(double rW, double lW, double X, double Y, double Z,
 
 int ApproxWire(double rW, double lW, double X, double Y, double Z, int zseg,
                double *potential, Vector3D *Flux) {
-  if (DebugISLES) {
-    printf("In ApproxWire ...\n");
-  }
-
-  int k;
-  double dz, zk;
-  double area, dist, dist3;
-  double Pot, Fx, Fy, Fz;
+  if (DebugISLES) printf("In ApproxWire ...\n");
 
   ++ApproxCntr;
 
-  dz = lW / zseg;
-  area = 2.0 * ST_PI * rW * dz;
+  double dz = lW / zseg;
+  double area = 2.0 * ST_PI * rW * dz;
 
-  Pot = Fx = Fy = Fz = 0.0;
-  for (k = 1; k <= zseg; ++k) {
-    zk = -(lW / 2.0) + (dz / 2.0) + (k - 1) * dz;
-    dist = sqrt(X * X + Y * Y + (Z - zk) * (Z - zk));
-    dist3 = pow(dist, 3.0);
+  double Pot = 0., Fx = 0., Fy = 0., Fz = 0.;
+  double z0 = -0.5 * lW + 0.5 * dz;
+  for (int k = 1; k <= zseg; ++k) {
+    double zk = z0 + (k - 1) * dz;
+    double dist = sqrt(X * X + Y * Y + (Z - zk) * (Z - zk));
+    double dist3 = pow(dist, 3.0);
     if (fabs(dist) >= MINDIST) {
       Pot += area / dist;
       Fx += (area * X / dist3);
       Fy += (area * Y / dist3);
       Fz += (area * Z / dist3);
-    } else {
-      Pot += 0.0;
-      Fx += 0.0;
-      Fy += 0.0;
-      Fz += 0.0;
     }
   }  // zseg
 
@@ -1985,170 +1927,146 @@ int ApproxWire(double rW, double lW, double X, double Y, double Z, int zseg,
   return 0;
 }
 
-double ImprovedP_W(double rW, double lW, double X, double Y,
-                   double Z) {  // Improved potential at far away points:
-                                // wire2.m applicable for thin wires
-  if (DebugISLES) {
-    printf("In ImprovedP_W ...\n");
-  }
+double ImprovedP_W(double rW, double lW, double X, double Y, double Z) {  
+  // Improved potential at far away points:
+  // wire2.m applicable for thin wires
+  if (DebugISLES) printf("In ImprovedP_W ...\n");
 
-  double dz;  // half length of the wire segment
-  double dtmp1, dtmp2, dtmp3;
-
-  dz = 0.5 * lW;
-
-  dtmp1 = (X * X + Y * Y + (Z - dz) * (Z - dz));
+  double dz = 0.5 * lW; // half length of the wire segment
+  double dtmp1 = (X * X + Y * Y + (Z - dz) * (Z - dz));
   dtmp1 = sqrt(dtmp1);
   dtmp1 = dtmp1 - (Z - dz);
-  dtmp2 = (X * X + Y * Y + (Z + dz) * (Z + dz));
+  double dtmp2 = (X * X + Y * Y + (Z + dz) * (Z + dz));
   dtmp2 = sqrt(dtmp2);
   dtmp2 = dtmp2 - (Z + dz);
-  dtmp3 = log(dtmp1 / dtmp2);
+  double dtmp3 = log(dtmp1 / dtmp2);
   return (2.0 * ST_PI * rW * dtmp3);
 }  // ImprovedP_W ends
 
 double ImprovedFX_W(double rW, double lW, double X, double Y, double Z) {
-  if (DebugISLES) {
-    printf("In ImprovedFX_W ...\n");
-  }
+  if (DebugISLES) printf("In ImprovedFX_W ...\n");
 
   double dist = sqrt(X * X + Y * Y + Z * Z);
-  if (dist < MINDIST)  // distance less than MINDIST
-  {
+  if (dist < MINDIST) {
+    // distance less than MINDIST
     return (0.0);
-  } else if ((fabs(X) < MINDIST) &&
-             (fabs(Y) < MINDIST)) {  // point on the axis of the wire element
+  } else if ((fabs(X) < MINDIST) && (fabs(Y) < MINDIST)) {
+    // point on the axis of the wire element
     return (0.0);
-  } else {  // point far away from the wire element
-    double A, B, C, D, tmp1, tmp2, tmp3;
+  } else {  
+    // point far away from the wire element
+    double C = (Z) - (lW / 2.0);
+    double D = (Z) + (lW / 2.0);
+    double A = sqrt(X * X + Y * Y + C * C);
+    double B = sqrt(X * X + Y * Y + D * D);
 
-    C = (Z) - (lW / 2.0);
-    D = (Z) + (lW / 2.0);
-    A = sqrt(X * X + Y * Y + C * C);
-    B = sqrt(X * X + Y * Y + D * D);
-
-    tmp1 = 2.0 * ST_PI * rW;
-    tmp2 = (X / (A * (B - D))) - ((A - C) * X / (B * (B - D) * (B - D)));
-    tmp3 = (B - D) / (A - C);
+    double tmp1 = 2.0 * ST_PI * rW;
+    double tmp2 = (X / (A * (B - D))) - ((A - C) * X / (B * (B - D) * (B - D)));
+    double tmp3 = (B - D) / (A - C);
     return (-1.0 * tmp1 * tmp2 * tmp3);
   }  // dist ... if ... else if ... else
 }  // ImprovedFX_W ends
 
 double ImprovedFY_W(double rW, double lW, double X, double Y, double Z) {
-  if (DebugISLES) {
-    printf("In ImprovedFY_W ...\n");
-  }
+  if (DebugISLES) printf("In ImprovedFY_W ...\n");
 
   double dist = sqrt(X * X + Y * Y + Z * Z);
-  if (dist < MINDIST)  // distance less than MINDIST
-  {
+  if (dist < MINDIST) {
+    // distance less than MINDIST
     return (0.0);
-  } else if ((fabs(X) < MINDIST) &&
-             (fabs(Y) < MINDIST)) {  // point on the axis of the wire element
+  } else if ((fabs(X) < MINDIST) && (fabs(Y) < MINDIST)) {  
+    // point on the axis of the wire element
     return (0.0);
-  } else {  // point far away from the wire element
-    double A, B, C, D, tmp1, tmp2, tmp3;
+  } else {  
+    // point far away from the wire element
+    double C = (Z) - (lW / 2.0);
+    double D = (Z) + (lW / 2.0);
+    double A = sqrt(X * X + Y * Y + C * C);
+    double B = sqrt(X * X + Y * Y + D * D);
 
-    C = (Z) - (lW / 2.0);
-    D = (Z) + (lW / 2.0);
-    A = sqrt(X * X + Y * Y + C * C);
-    B = sqrt(X * X + Y * Y + D * D);
-
-    tmp1 = 2.0 * ST_PI * rW;
-    tmp2 = (Y / (A * (B - D))) - ((A - C) * Y / (B * (B - D) * (B - D)));
-    tmp3 = (B - D) / (A - C);
+    double tmp1 = 2.0 * ST_PI * rW;
+    double tmp2 = (Y / (A * (B - D))) - ((A - C) * Y / (B * (B - D) * (B - D)));
+    double tmp3 = (B - D) / (A - C);
     return (-1.0 * tmp1 * tmp2 * tmp3);
   }  // dist ... if ... else if ... else
 }  // ImprovedFY_W ends
 
 double ImprovedFZ_W(double rW, double lW, double X, double Y, double Z) {
-  if (DebugISLES) {
-    printf("In ImprovedFZ_W ...\n");
-  }
+  if (DebugISLES) printf("In ImprovedFZ_W ...\n");
 
   double dist = sqrt(X * X + Y * Y + Z * Z);
-  if (dist < MINDIST)  // distance less than MINDIST
-  {
+  if (dist < MINDIST)  {
+   // distance less than MINDIST
     return (0.0);
-  } else if ((fabs(X) < MINDIST) &&
-             (fabs(Y) < MINDIST)) {  // point on the axis of the wire element
-    double A, B, C, D, tmp1, tmp2;
+  } else if ((fabs(X) < MINDIST) && (fabs(Y) < MINDIST)) {
+    // point on the axis of the wire element
+    double C = Z - (lW / 2.0);
+    double D = Z + (lW / 2.0);
+    double A = sqrt(X * X + Y * Y + C * C);
+    double B = sqrt(X * X + Y * Y + D * D);
 
-    C = Z - (lW / 2.0);
-    D = Z + (lW / 2.0);
-    A = sqrt(X * X + Y * Y + C * C);
-    B = sqrt(X * X + Y * Y + D * D);
-
-    tmp1 = 2.0 * ST_PI * rW;
-    tmp2 = (1.0 / B) - (1.0 / A);
+    double tmp1 = 2.0 * ST_PI * rW;
+    double tmp2 = (1.0 / B) - (1.0 / A);
     return (-1.0 * tmp1 * tmp2);
-  } else {  // point far away from the wire element
-    double A, B, C, D, tmp1, tmp2;
+  } else {  
+    // point far away from the wire element
+    double C = Z - (lW / 2.0);
+    double D = Z + (lW / 2.0);
+    double A = sqrt(X * X + Y * Y + C * C);
+    double B = sqrt(X * X + Y * Y + D * D);
 
-    C = Z - (lW / 2.0);
-    D = Z + (lW / 2.0);
-    A = sqrt(X * X + Y * Y + C * C);
-    B = sqrt(X * X + Y * Y + D * D);
-
-    tmp1 = 2.0 * ST_PI * rW;
-    tmp2 = (1.0 / B) - (1.0 / A);
+    double tmp1 = 2.0 * ST_PI * rW;
+    double tmp2 = (1.0 / B) - (1.0 / A);
     return (-1.0 * tmp1 * tmp2);
   }  // dist ... if ... else if ... else
 }  // ImprovedFZ_W ends
 
 int ImprovedWire(double rW, double lW, double X, double Y, double Z,
                  double *potential, Vector3D *Flux) {
-  if (DebugISLES) {
-    printf("In ImprovedWire ...\n");
-  }
+  if (DebugISLES) printf("In ImprovedWire ...\n");
 
-  double dz;  // half length of the wire segment
-  double dtmp1, dtmp2, dtmp3;
-  dz = 0.5 * lW;
+  double dz = 0.5 * lW; // half length of the wire segment
 
-  dtmp1 = (X * X + Y * Y + (Z - dz) * (Z - dz));
+  double dtmp1 = (X * X + Y * Y + (Z - dz) * (Z - dz));
   dtmp1 = sqrt(dtmp1);
   dtmp1 = dtmp1 - (Z - dz);
-  dtmp2 = (X * X + Y * Y + (Z + dz) * (Z + dz));
+  double dtmp2 = (X * X + Y * Y + (Z + dz) * (Z + dz));
   dtmp2 = sqrt(dtmp2);
   dtmp2 = dtmp2 - (Z + dz);
-  dtmp3 = log(dtmp1 / dtmp2);
+  double dtmp3 = log(dtmp1 / dtmp2);
   *potential = 2.0 * ST_PI * rW * dtmp3;
 
   double dist = sqrt(X * X + Y * Y + Z * Z);
   double Fx = 0.0, Fy = 0.0, Fz = 0.0;
 
-  if (dist < MINDIST)  // distance less than MINDIST from centroid
-  {
+  if (dist < MINDIST) {
+    // distance less than MINDIST from centroid
     Fx = 0.0;
     Fy = 0.0;
     Fz = 0.0;
-  } else if ((fabs(X) < MINDIST) &&
-             (fabs(Y) < MINDIST)) {  // point on the axis of the wire element
+  } else if ((fabs(X) < MINDIST) && (fabs(Y) < MINDIST)) {  
+    // point on the axis of the wire element
     Fx = 0.0;
     Fy = 0.0;
 
-    double A, B, C, D, tmp1, tmp2;
+    double C = Z - (lW / 2.0);
+    double D = Z + (lW / 2.0);
+    double A = sqrt(X * X + Y * Y + C * C);
+    double B = sqrt(X * X + Y * Y + D * D);
 
-    C = Z - (lW / 2.0);
-    D = Z + (lW / 2.0);
-    A = sqrt(X * X + Y * Y + C * C);
-    B = sqrt(X * X + Y * Y + D * D);
-
-    tmp1 = 2.0 * ST_PI * rW;
-    tmp2 = (1.0 / B) - (1.0 / A);
+    double tmp1 = 2.0 * ST_PI * rW;
+    double tmp2 = (1.0 / B) - (1.0 / A);
     Fz = -1.0 * tmp1 * tmp2;
-  } else {  // point far away from the wire element
-    double A, B, C, D, tmp1, tmp2, tmp3;
+  } else {  
+    // point far away from the wire element
+    double C = (Z) - (lW / 2.0);
+    double D = (Z) + (lW / 2.0);
+    double A = sqrt(X * X + Y * Y + C * C);
+    double B = sqrt(X * X + Y * Y + D * D);
 
-    C = (Z) - (lW / 2.0);
-    D = (Z) + (lW / 2.0);
-    A = sqrt(X * X + Y * Y + C * C);
-    B = sqrt(X * X + Y * Y + D * D);
-
-    tmp1 = 2.0 * ST_PI * rW;
-    tmp2 = (X / (A * (B - D))) - ((A - C) * X / (B * (B - D) * (B - D)));
-    tmp3 = (B - D) / (A - C);
+    double tmp1 = 2.0 * ST_PI * rW;
+    double tmp2 = (X / (A * (B - D))) - ((A - C) * X / (B * (B - D) * (B - D)));
+    double tmp3 = (B - D) / (A - C);
     Fx = -1.0 * tmp1 * tmp2 * tmp3;
 
     tmp2 = (Y / (A * (B - D))) - ((A - C) * Y / (B * (B - D) * (B - D)));
@@ -2172,19 +2090,13 @@ double ExactThinP_W(double rW, double lW, double X, double Y, double Z) {
     printf("In ExactThinP_W ...\n");
     printf("rW: %lg, lW: %lg, X: %lg, Y: %lg, Z: %lg\n", rW, lW, X, Y, Z);
   }
-
-  double h, Pot;  // Expressions from PFXYZ_thin.m
-  h = 0.5 * lW;
-  Pot = 2.0 *
-            log(1 / (sqrt(X * X + Y * Y)) * (h - Z) +
-                sqrt(1.0 + 1 / (X * X + Y * Y) * pow(h - Z, 2.0))) *
-            ST_PI +
-        2.0 *
-            log((h + Z) / sqrt(X * X + Y * Y) +
-                sqrt(1.0 + pow(h + Z, 2.0) / (X * X + Y * Y))) *
-            ST_PI;
-
-  return (rW * Pot);
+  // Expressions from PFXYZ_thin.m
+  const double h = 0.5 * lW;
+  const double r2 = X * X + Y * Y;
+  const double a = h + Z;
+  const double b = h - Z;
+  double Pot = log((a + sqrt(r2 + a * a)) * (b + sqrt(r2 + b * b)) / r2);
+  return 2. * ST_PI * rW * Pot;
 }  // ExactThinP_W ends
 
 // Exact FX due to thin wire at an arbitrary location
@@ -2193,11 +2105,9 @@ double ExactThinFX_W(double rW, double lW, double X, double Y, double Z) {
     printf("In ExactThinFX_W ...\n");
     printf("rW: %lg, lW: %lg, X: %lg, Y: %lg, Z: %lg\n", rW, lW, X, Y, Z);
   }
-
-  double h, Fx;  // Expressions from PFXYZ_thin.m
-
-  h = 0.5 * lW;
-  Fx = 2.0 * X *
+  // Expressions from PFXYZ_thin.m
+  double h = 0.5 * lW;
+  double Fx = 2.0 * X *
        (sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * h -
         sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * Z +
         sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) * h +
@@ -2213,11 +2123,9 @@ double ExactThinFY_W(double rW, double lW, double X, double Y, double Z) {
     printf("In ExactThinFY_W ...\n");
     printf("rW: %lg, lW: %lg, X: %lg, Y: %lg, Z: %lg\n", rW, lW, X, Y, Z);
   }
-
-  double h, Fy;  // Expressions from PFXYZ_thin.m
-
-  h = 0.5 * lW;
-  Fy = 2.0 * Y *
+  // Expressions from PFXYZ_thin.m
+  double h = 0.5 * lW;
+  double Fy = 2.0 * Y *
        (sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * h -
         sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * Z +
         sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) * h +
@@ -2234,9 +2142,9 @@ double ExactThinFZ_W(double rW, double lW, double X, double Y, double Z) {
     printf("rW: %lg, lW: %lg, X: %lg, Y: %lg, Z: %lg\n", rW, lW, X, Y, Z);
   }
 
-  double h, Fz;  // Expressions from PFXYZ_thin.m
-  h = 0.5 * lW;
-  Fz = 2.0 *
+  // Expressions from PFXYZ_thin.m
+  double h = 0.5 * lW;
+  double Fz = 2.0 *
        (sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) -
         sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h)) /
        sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) /
@@ -2250,34 +2158,18 @@ int ExactThinWire(double rW, double lW, double X, double Y, double Z,
     printf("In ExactThinWire_W ...\n");
     printf("rW: %lg, lW: %lg, X: %lg, Y: %lg, Z: %lg\n", rW, lW, X, Y, Z);
   }
-
-  double h = 0.5 * lW;
-
-  double dtmp0 = X * X + Y * Y;
-
-  double Pot =
-      2.0 *
-          log(1 / (sqrt(dtmp0)) * (h - Z) +
-              sqrt(1.0 + 1 / (dtmp0)*pow(h - Z, 2.0))) *
-          ST_PI +
-      2.0 * log((h + Z) / sqrt(dtmp0) + sqrt(1.0 + pow(h + Z, 2.0) / (dtmp0))) *
-          ST_PI;
-  *potential = rW * Pot;
-
-  double dtmp1 = sqrt(dtmp0 + Z * Z + h * h + 2.0 * Z * h);
-  double dtmp2 = sqrt(dtmp0 + Z * Z - 2.0 * Z * h + h * h);
-
-  double Fx = 2.0 * X * (dtmp1 * h - dtmp1 * Z + dtmp2 * h + dtmp2 * Z) /
-              (dtmp0 * dtmp1 * dtmp2) * ST_PI;
-  Flux->X = rW * Fx;
-
-  double Fy = 2.0 * Y * (dtmp1 * h - dtmp1 * Z + dtmp2 * h + dtmp2 * Z) /
-              (dtmp0 * dtmp1 * dtmp2) * ST_PI;
-  Flux->Y = rW * Fy;
-
-  double Fz = 2.0 * (dtmp1 - dtmp2) / (dtmp1 * dtmp2) * ST_PI;
-  Flux->Z = rW * Fz;
-
+  const double h = 0.5 * lW;
+  const double r2 = X * X + Y * Y;
+  const double a = h + Z;
+  const double b = h - Z;
+  const double c = sqrt(r2 + a * a); 
+  const double d = sqrt(r2 + b * b);
+  const double s = 2. * ST_PI * rW;
+  *potential = s * log((a + c) * (b + d) / r2);
+  double f = s * (c * b + d * a) / (r2 * c * d); 
+  Flux->X = f * X;
+  Flux->Y = f * Y;
+  Flux->Z = s * (c - d) / (c * d);
   return 0;
 }
 
