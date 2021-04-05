@@ -12,6 +12,15 @@
 #include "Isles.h"
 
 #define SHIFT 2.0
+#define ARMAX 10000.0  // Maximum aspect ratio for an element
+#define ARMIN 0.0001   // Minimum aspect ratio for an element
+
+// #define XNSegApprox 10	// much less time but inaccurate results
+// #define ZNSegApprox 10	// much less time but inaccurate results
+#define XNSegApprox 100  // barely acceptable results
+#define ZNSegApprox 100  // barely acceptable result
+// #define XNSegApprox 1000	// much better results but lot more time
+// #define ZNSegApprox 1000	// much better results but lot more time
 
 #ifdef __cplusplus
 #include <cmath>
@@ -43,8 +52,8 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     return -1;
   }
 
-  if ((fabs((zhi - zlo) / (xhi - xlo)) > ARMAX) ||
-      (fabs((zhi - zlo) / (xhi - xlo)) < (1.0 / ARMAX))) {
+  double ar = fabs((zhi - zlo) / (xhi - xlo));
+  if (ar > ARMAX || ar < ARMIN) {
     fprintf(stdout, "Element too thin! ... returning ...\n");
     return -2;
   }
@@ -790,7 +799,7 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     return -1;
   }
 
-  if ((zMax > ARMAX) || (zMax < (1.0 / ARMAX))) {
+  if (zMax > ARMAX || zMax < ARMIN) {
     fprintf(stdout, "Element too thin! ... returning ...\n");
     return -1;
   }
