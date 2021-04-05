@@ -379,7 +379,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
   }
 
   // Logarithmic weak singularities are possible.
-  // Checks to be perfomed for 0 or -ve denominators and also
+  // Checks to be performed for 0 or -ve denominators and also
   // 0 and +ve numerators.
   // Interestingly, 0/0 does not cause a problem.
   double DZTerm1 = log((D11 - dzlo) / (D12 - dzhi));
@@ -498,8 +498,10 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
   // and the singularity is avoided.
   if (S1 != 0) {
     if (fabs(I1) > MINDIST2) {
-      double tmp = -S1 * atan(2 * I1 * D11 * fabs(dzlo) / (D11 * D11 * dzlo * dzlo - I1 * I1 - R1 * R1));
-      if (R1 * R1 + I1 * I1 > D11 * D11 * dzlo * dzlo) {
+      double a = D11 * D11 * dzlo * dzlo;
+      double b = R1 * R1 + I1 * I1;
+      double tmp = -S1 * atan(2 * I1 * D11 * fabs(dzlo) / (a - b));
+      if (b > a) {
         if ((X > xlo && Z > zlo) || (X < xlo && Z < zlo)) {
           tmp -= ST_PI;
         } else if ((X < xlo && Z > zlo) || (X > xlo && Z < zlo)) {
@@ -510,8 +512,10 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     }
 
     if (fabs(I2) > MINDIST2) {
-      double tmp = -S1 * atan(2 * I2 * D21 * fabs(dzlo) / (D21 * D21 * dzlo * dzlo - I2 * I2 - R1 * R1));
-      if (R1 * R1 + I2 * I2 > D21 * D21 * dzlo * dzlo) {
+      double a = D21 * D21 * dzlo * dzlo;
+      double b = R1 * R1 + I2 * I2;
+      double tmp = -S1 * atan(2 * I2 * D21 * fabs(dzlo) / (a - b));
+      if (b > a) {
         if ((X > xhi && Z > zlo) || (X < xhi && Z < zlo)) {
           tmp -= ST_PI;
         } else if ((X < xhi && Z > zlo) || (X > xhi && Z < zlo)) {
@@ -524,8 +528,10 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
 
   if (S2 != 0) {
     if (fabs(I1) > MINDIST2) {
-      double tmp = -S2 * atan(2 * I1 * D12 * fabs(dzhi) / (D12 * D12 * dzhi * dzhi - I1 * I1 - R2 * R2));
-      if (R2 * R2 + I1 * I1 > D12 * D12 * dzhi * dzhi) {
+      double a = D12 * D12 * dzhi * dzhi;
+      double b = R2 * R2 + I1 * I1; 
+      double tmp = -S2 * atan(2 * I1 * D12 * fabs(dzhi) / (a - b));
+      if (b > a) {
         if ((X > xlo && Z > zhi) || (X < xlo && Z < zhi)) {
           tmp -= ST_PI;
         } else if ((X < xlo && Z > zhi) || (X > xlo && Z < zhi)) {
@@ -536,8 +542,10 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     }
 
     if (fabs(I2) > MINDIST2) {
-      double tmp = -S2 * atan(2 * I2 * D22 * fabs(dzhi) / (D22 * D22 * dzhi * dzhi - I2 * I2 - R2 * R2));
-      if (R2 * R2 + I2 * I2 > D22 * D22 * dzhi * dzhi) {
+      double a = D22 * D22 * dzhi * dzhi;
+      double b = R2 * R2 + I2 * I2;
+      double tmp = -S2 * atan(2 * I2 * D22 * fabs(dzhi) / (a - b));
+      if (b > a) {
         if ((X > xhi && Z > zhi) || (X < xhi && Z < zhi)) {
           tmp -= ST_PI;
         } else if ((X < xhi && Z > zhi) || (X > xhi && Z < zhi)) {
@@ -774,8 +782,7 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
   // Reset the flag to indicate approximate evaluation of potential.
   ApproxFlag = 0; 
 
-  // We do not need any similar check for X, since element extent is always 0 -
-  // 1
+  // We do not need to check for X, since element extent is always 0 - 1.
   if (zMax < 3.0 * SHIFT * MINDIST) {
     // should allow enough space for Z corrections
     // One SHIFT should not lead to another criticality
@@ -1295,6 +1302,7 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
                           Flux));
   }
+  DTerm1 /= Hypot;
 
   double DblTmp2 = (D11 - X) / (D21 - X + 1.0);
   if (DebugISLES) {
@@ -1317,34 +1325,28 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     fflush(stdout);
   }
 
-  // logarithmic terms
-  double Log1 = 0., Arg1 = 0.;
+  // Logarithmic terms
+  double deltaLog = 0.;
+  double deltaArg = 0.;
   if (modY > MINDIST) {
-    const double d1 = X * X + modY * modY;
-    double Re1 = ((-X) * (H1 + G * D12) + modY * modY * (E1 - zMax * D12)) / d1;
-    double Im1 = ((-X) * modY * (E1 - zMax * D12) - (H1 + G * D12) * modY) / d1;
-    Log1 = 0.5 * log(Re1 * Re1 + Im1 * Im1);
-    Arg1 = atan2(Im1, Re1);
-  } else if (fabs(X) > MINDIST) {
+    const double s1 = 1. / (X * X + modY * modY);
+    double Re1 = ((-X) * (H1 + G * D12) + modY * modY * (E1 - zMax * D12)) * s1;
+    double Im1 = ((-X) * modY * (E1 - zMax * D12) - (H1 + G * D12) * modY) * s1;
+    const double s2 = 1. / ((1. - X) * (1. - X) + modY * modY);
+    double Re2 = ((1. - X) * (H2 + G * D21) + modY * modY * (E2 - zMax * D21)) * s2;
+    double Im2 = ((1. - X) * modY * (E2 - zMax * D21) - (H2 + G * D21) * modY) * s2;
+    deltaLog = 0.5 * log((Re1 * Re1 + Im1 * Im1) / (Re2 * Re2 + Im2 * Im2));
+    deltaArg = atan2(Im1, Re1) - atan2(Im2, Re2); 
+  } else {
     double f1 = fabs((H1 + G * D12) / (-X));
     if (f1 < MINDIST) f1 = MINDIST;
-    Log1 = log(f1);
-  } 
-  double Log2 = 0., Arg2 = 0.;
-  if (modY > MINDIST) {
-    const double d2 = (1. - X) * (1. - X) + modY * modY;
-    double Re2 = ((1. - X) * (H2 + G * D21) + modY * modY * (E2 - zMax * D21)) / d2;
-    double Im2 = ((1. - X) * modY * (E2 - zMax * D21) - (H2 + G * D21) * modY) / d2;
-    Log2 = 0.5 * log(Re2 * Re2 + Im2 * Im2);
-    Arg2 = atan2(Im2, Re2);
-  } else if (fabs(1. - X) > MINDIST) {
     double f2 = fabs((H2 + G * D21) / (1. - X));
     if (f2 < MINDIST) f2 = MINDIST;
-    Log2 = log(f2);
+    deltaLog = log(f1 / f2);
   }
   const double c1 = 2. / (G * G + zMax * zMax * modY * modY);
-  double LTerm1 = c1 * (G * (Log1 - Log2) - zMax * modY * (Arg1 - Arg2));
-  double LTerm2 = c1 * (G * (Arg1 - Arg2) + zMax * modY * (Log1 - Log2));
+  double LTerm1 = c1 * (G * deltaLog - zMax * modY * deltaArg);
+  double LTerm2 = c1 * (G * deltaArg + zMax * modY * deltaLog);
   if (DebugISLES) {
     printf("LTerm1: %.16lg, LTerm2: %.16lg\n", LTerm1, LTerm2);
     fflush(stdout);
@@ -1391,8 +1393,10 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     }
 
     if (fabs(I1) > MINDIST2) {
-      double tmp = atan(2 * I1 * D11 * fabs(Z) / (D11 * D11 * Z * Z - I1 * I1 - R1 * R1));
-      if (R1 * R1 + I1 * I1 > D11 * D11 * Z * Z) {
+      double a = D11 * D11 * Z * Z;
+      double b = R1 * R1 + I1 * I1;
+      double tmp = atan(2 * I1 * D11 * fabs(Z) / (a - b));
+      if (b > a) {
         if (X > 0.) {
           tmp += ST_PI;
         } else {
@@ -1402,8 +1406,10 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
       TanhTerm2 += tmp;
     }
     if (fabs(I2) > MINDIST2) {
-      double tmp = atan(2 * I2 * D21 * fabs(Z) / (D21 * D21 * Z * Z - I2 * I2 - R1 * R1));
-      if (R1 * R1 + I2 * I2 > D21 * D21 * Z * Z) {
+      double a = D21 * D21 * Z * Z;
+      double b = R1 * R1 + I2 * I2;
+      double tmp = atan(2 * I2 * D21 * fabs(Z) / (a - b));
+      if (b > a) {
         if (X > 1.) {
           tmp += ST_PI;
         } else {
@@ -1422,14 +1428,14 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
   double Pot = (zMax * Y * Y - X * G) * LTerm1 - 
                (zMax * X + G) * modY * LTerm2 +
         (S1 * X * TanhTerm1) + S1 * modY * TanhTerm2 +
-        (2. * G * DTerm1 / Hypot) - (2. * Z * DTerm2);
+        2. * (G * DTerm1 - Z * DTerm2);
   Pot *= 0.5;
-  double Fx = G * LTerm1 + zMax * modY * LTerm2 - S1 * TanhTerm1 - 2.0 * zMax * DTerm1 / Hypot;
+  double Fx = G * LTerm1 + zMax * modY * LTerm2 - S1 * TanhTerm1 - 2.0 * zMax * DTerm1;
   Fx *= 0.5;
   double Fy = -zMax * Y * LTerm1 + G * SY * LTerm2 - S1 * SY * TanhTerm2;
   Fy *= 0.5;
 
-  double Fz = DTerm2 - (DTerm1 / Hypot);
+  double Fz = DTerm2 - DTerm1;
   if (DebugISLES) {
     printf("Pot: %.16lg, Fx: %.16lg, Fy: %.16lg, Fz: %.16lg\n", Pot, Fx, Fy,
            Fz);
