@@ -19,6 +19,7 @@
 #define MINDIST3 1.0e-20
 
 #define FarField 10.0  // Beyond FarField*ElementSize, use nodal expressions
+#define FarField2 100.0
 
 #define ST_PI 3.14159265358979323846
 
