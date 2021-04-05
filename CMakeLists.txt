@@ -24,7 +24,11 @@ project(
 # --- Set default installation prefix TODO Possibly change the default install prefix
 # simply to GARFIELD_HOME
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  if(DEFINED ENV{GARFIELD_HOME})
+  if(DEFINED ENV{GARFIELD_INSTALL} )
+    set(CMAKE_INSTALL_PREFIX 
+        $ENV{GARFIELD_INSTALL}
+        CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
+  else()
     set(CMAKE_INSTALL_PREFIX
         $ENV{GARFIELD_HOME}/install
         CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
