@@ -378,7 +378,6 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   fldpt.X = xfld; fldpt.Y = yfld; fldpt.Z = zfld;
   double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
                                        {0.0, 0.0, 0.0},
-                                       {0.0, 0.0, 0.0},
                                        {0.0, 0.0, 0.0}};
 
   // Compute Potential and field at different locations
@@ -429,7 +428,7 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
         double InitialVector[3] = {xfld - xpsrc, yfld - ypsrc, zfld - zpsrc};
         double FinalVector[3] = {0., 0., 0.};
         for (int i = 0; i < 3; ++i) {
-          for (int j = 0 ; j < 4; ++j) {
+          for (int j = 0 ; j < 3; ++j) {
             FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
           }
         }
@@ -4362,19 +4361,19 @@ void GetPF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
 // Flux per unit charge density on a rectangular element
 // Are X and Z directions the same as obtained using the direction cosines?
 void RecPF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
-  double xpt = localP->X;
-  double ypt = localP->Y;
-  double zpt = localP->Z;
-  double dist = sqrt(xpt * xpt + ypt * ypt + zpt * zpt);
+  const double xpt = localP->X;
+  const double ypt = localP->Y;
+  const double zpt = localP->Z;
+  const double d2 = xpt * xpt + ypt * ypt + zpt * zpt;
 
-  double a = (EleArr + ele - 1)->G.LX;
-  double b = (EleArr + ele - 1)->G.LZ;
-  double diag = sqrt(a * a + b * b);  // diagonal of the element
+  const double a = (EleArr + ele - 1)->G.LX;
+  const double b = (EleArr + ele - 1)->G.LZ;
 
-  if (dist >= FarField * diag) {
-    double dA = a * b;  // area of the rectangular element
+  if (d2 >= FarField2 * (a * a + b * b)) {
+    const double dA = a * b;  // area of the rectangular element
+    const double dist = sqrt(d2);
     (*Potential) = dA / dist;
-    double f = dA / (dist * dist * dist);
+    const double f = dA / (dist * d2);
     localF->X = xpt * f;
     localF->Y = ypt * f;
     localF->Z = zpt * f;
@@ -4407,23 +4406,22 @@ void RecPF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
 // Flux per unit charge density on a triangluar element
 void TriPF(int ele, Point3D *localP, double *Potential, Vector3D *localF) {
   // printf("In TriPF\n");
-  double xpt = localP->X;
-  double ypt = localP->Y;
-  double zpt = localP->Z;
+  const double xpt = localP->X;
+  const double ypt = localP->Y;
+  const double zpt = localP->Z;
 
-  double a = (EleArr + ele - 1)->G.LX;
-  double b = (EleArr + ele - 1)->G.LZ;
-  // longest side (hypotenuse) of the element
-  double diag = sqrt(a * a + b * b);  
+  const double a = (EleArr + ele - 1)->G.LX;
+  const double b = (EleArr + ele - 1)->G.LZ;
 
   const double xm = xpt - a / 3.;
   const double zm = zpt - b / 3.;
-  double dist = sqrt(xm * xm + ypt * ypt + zm * zm);
+  const double d2 = xm * xm + ypt * ypt + zm * zm;
 
-  if (dist >= FarField * diag) {
-    double dA = 0.5 * a * b;  // area of the triangular element
+  if (d2 >= FarField2 * (a * a + b * b)) {
+    const double dA = 0.5 * a * b;  // area of the triangular element
+    const double dist = sqrt(d2);
     (*Potential) = dA / dist;
-    double f = dA / (dist * dist * dist);
+    const double f = dA / (dist * d2);
     localF->X = xpt * f;
     localF->Y = ypt * f;
     localF->Z = zpt * f;
