@@ -30,12 +30,8 @@ namespace neBEM {
 // Expressions from:
 int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
                  double xhi, double zhi, double *Potential, Vector3D *Flux) {
-  double Pot = 0.0;
-  double Fx = 0.0, Fy = 0.0, Fz = 0.0;
 
-  if (DebugISLES) {
-    printf("In ExactRecSurf ...\n");
-  }
+  if (DebugISLES) printf("In ExactRecSurf ...\n");
 
   ++IslesCntr;
   ++ExactCntr;
@@ -553,11 +549,11 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
   }
 
   sumTanTerms *= -0.5;
-  Pot = -dxlo * DZTerm1 + dxhi * DZTerm2 + modY * sumTanTerms -
-        dzlo * DXTerm1 + dzhi * DXTerm2;
-  Fx = DZTerm1 - DZTerm2;
-  Fy = -SY * sumTanTerms;
-  Fz = DXTerm1 - DXTerm2;
+  double Pot = -dxlo * DZTerm1 + dxhi * DZTerm2 + modY * sumTanTerms -
+                dzlo * DXTerm1 + dzhi * DXTerm2;
+  double Fx = DZTerm1 - DZTerm2;
+  double Fy = -SY * sumTanTerms;
+  double Fz = DXTerm1 - DXTerm2;
   if (DebugISLES) {
     printf("XTerms: %.16lg, YTerms: %.16lg, ZTerms: %.16lg\n",
            -dxlo * DZTerm1 + dxhi * DZTerm2, modY * sumTanTerms,
@@ -771,19 +767,18 @@ int ApproxRecSurf(double X, double Y, double Z, double xlo, double zlo,
 int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
                  Vector3D *Flux) {
 
-  if (DebugISLES) {
-    printf("In ExactTriSurf ...\n");
-  }
+  if (DebugISLES) printf("In ExactTriSurf ...\n");
 
   ++IslesCntr;
   ++ExactCntr;
-  ApproxFlag = 0;  // The flag to indicate approximate evaluation of potential
+  // Reset the flag to indicate approximate evaluation of potential.
+  ApproxFlag = 0; 
 
   // We do not need any similar check for X, since element extent is always 0 -
   // 1
-  if (zMax <
-      3.0 * SHIFT * MINDIST)  // should allow enough space for Z corrections
-  {  // One SHIFT should not lead to another criticality
+  if (zMax < 3.0 * SHIFT * MINDIST) {
+    // should allow enough space for Z corrections
+    // One SHIFT should not lead to another criticality
     fprintf(stdout, "Element size too small! ... returning ...\n");
     return -1;
   }
@@ -1441,213 +1436,201 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     fflush(stdout);
   }
 
-// Final adjustments
-// Constants (?) of integration - Carry out only one of the options
-// Depends criticially on > or >=; similarly < or <=
-// Needs further investigation
-// As far as Fy is concerned, conditions 1 & 3, and 2 & 4 can be combined.
-// So, instead of the triangular area, it seems, that the rectangular bound
-// is more important. In such an event, Zhyp will be redundant.
-if (((X >= 0.0) && (X <= 1.0)))  // Possibility of point within element bounds
-{
-  int ConstAdd = 0;
-  if ((Z >= 0.0) && (Z <= Zhyp))  // within the element
-  {
-    ConstAdd = 1;
-    Pot -= 1.0 * modY * ST_PI;
-    if (fabs(Y) < MINDIST)  // on the element surface
-      Fy = 1.0 * ST_PI;
-    else if (Y > 0.0)  // above or below the element surface
-      Fy += 1.0 * ST_PI;
-    else if (Y < 0.0)
-      Fy -= 1.0 * ST_PI;
-  } else if ((Z <= 0.0) && (Z >= -Zhyp))  // within -ve element
-  {
-    ConstAdd = 2;
-    Pot += 1.0 * modY * ST_PI;
-    if (fabs(Y) < MINDIST)
-      Fy = 0.0;
-    else if (Y > 0.0)
-      Fy -= 1.0 * ST_PI;
-    else if (Y < 0.0)
-      Fy += 1.0 * ST_PI;
-  } else if (((Z > Zhyp) && (Z <= zMax)))  // within +rect bounds
-  {  // merge with +ve shadow?
-    ConstAdd = 3;
-    Pot -= 1.0 * modY * ST_PI;
-    if (fabs(Y) < MINDIST)
-      Fy = 0.0;
-    else if (Y > 0.0)
-      Fy += 1.0 * ST_PI;
-    else if (Y < 0.0)
-      Fy -= 1.0 * ST_PI;
-  } else if ((Z < -Zhyp) && (Z >= -zMax))  // within -rect bounds
-  {  // merge with -ve shadow?
-    ConstAdd = 4;
-    Pot += 1.0 * modY * ST_PI;
-    if (fabs(Y) < MINDIST)
-      Fy = 0.0;
-    else if (Y > 0.0)
-      Fy -= 1.0 * ST_PI;
-    else if (Y < 0.0)
-      Fy += 1.0 * ST_PI;
-  } else if (Z > zMax)  // +ve shadow of the triangle - WHY?
-  {
-    ConstAdd = 5;
-    Pot -= 1.0 * modY * ST_PI;
-    if (fabs(Y) < MINDIST)
-      Fy = 0.0;
-    else if (Y > 0.0)
-      Fy += 1.0 * ST_PI;
-    else if (Y < 0.0)
-      Fy -= 1.0 * ST_PI;
-  } else if (Z < -zMax)  // -ve shadow of the triangle - WHY?
-  {
-    ConstAdd = 6;
-    Pot += 1.0 * modY * ST_PI;
-    if (fabs(Y) < MINDIST)
-      Fy = 0.0;
-    else if (Y > 0.0)
-      Fy -= 1.0 * ST_PI;
-    else if (Y < 0.0)
-      Fy += 1.0 * ST_PI;
-  }
+  // Final adjustments
+  // Constants (?) of integration - Carry out only one of the options
+  // Depends criticially on > or >=; similarly < or <=
+  // Needs further investigation
+  // As far as Fy is concerned, conditions 1 & 3, and 2 & 4 can be combined.
+  // So, instead of the triangular area, it seems, that the rectangular bound
+  // is more important. In such an event, Zhyp will be redundant.
+  if ((X >= 0.0) && (X <= 1.0)) {
+    // Possibility of point within element bounds
+    int ConstAdd = 0;
+    if ((Z >= 0.0) && (Z <= Zhyp)) {
+      // within the element
+      ConstAdd = 1;
+      Pot -= modY * ST_PI;
+      if (fabs(Y) < MINDIST)  // on the element surface
+        Fy = ST_PI;
+      else if (Y > 0.0)  // above or below the element surface
+        Fy += ST_PI;
+      else if (Y < 0.0)
+        Fy -= ST_PI;
+    } else if ((Z <= 0.0) && (Z >= -Zhyp)) {
+      // within -ve element
+      ConstAdd = 2;
+      Pot += modY * ST_PI;
+      if (fabs(Y) < MINDIST)
+        Fy = 0.0;
+      else if (Y > 0.0)
+        Fy -= ST_PI;
+      else if (Y < 0.0)
+        Fy += ST_PI;
+    } else if (((Z > Zhyp) && (Z <= zMax))) {
+      // within +rect bounds
+      // merge with +ve shadow?
+      ConstAdd = 3;
+      Pot -= modY * ST_PI;
+      if (fabs(Y) < MINDIST)
+        Fy = 0.0;
+      else if (Y > 0.0)
+        Fy += ST_PI;
+      else if (Y < 0.0)
+        Fy -= ST_PI;
+    } else if ((Z < -Zhyp) && (Z >= -zMax)) {
+      // within -rect bounds
+      // merge with -ve shadow?
+      ConstAdd = 4;
+      Pot += modY * ST_PI;
+      if (fabs(Y) < MINDIST)
+        Fy = 0.0;
+      else if (Y > 0.0)
+        Fy -= ST_PI;
+      else if (Y < 0.0)
+        Fy += ST_PI;
+    } else if (Z > zMax) {
+      // +ve shadow of the triangle - WHY?
+      ConstAdd = 5;
+      Pot -= modY * ST_PI;
+      if (fabs(Y) < MINDIST)
+        Fy = 0.0;
+      else if (Y > 0.0)
+        Fy += ST_PI;
+      else if (Y < 0.0)
+        Fy -= ST_PI;
+    } else if (Z < -zMax) {
+      // -ve shadow of the triangle - WHY?
+      ConstAdd = 6;
+      Pot += modY * ST_PI;
+      if (fabs(Y) < MINDIST)
+        Fy = 0.0;
+      else if (Y > 0.0)
+        Fy -= ST_PI;
+      else if (Y < 0.0)
+        Fy += ST_PI;
+    }
 
-  /*
-          if( (fabs(X-1.0) < MINDIST) && (fabs(Z-zMax) < MINDIST) )	//
-     (1,zMax) corner
-                  {
-                  if(Y > 0.0) Fy += 0.5*ST_PI;
-                  if(Y < 0.0) Fy -= 0.5*ST_PI;
-                  }
-          else if( (fabs(X-1.0) < MINDIST) && (fabs(Z+zMax) < MINDIST) )
-                  {
-     //(1,-zMax) corner if(Y > 0.0) Fy -= 0.5*ST_PI; if(Y < 0.0) Fy +=
-     0.5*ST_PI;
-                  }
-          else if( (fabs(X) < MINDIST) && (Z < 0.0) )	// X = 0, Z < 0 - off
-     ele; {
-     // along -ve Z axis if(Y > 0.0) Fy -= 0.5*ST_PI; if(Y < 0.0) Fy +=
-     0.5*ST_PI;
-                  }
-          else if( (fabs(X) < MINDIST) && (Z > 0.0) )	// X = 0, Z > 0 - on &
-     off ele
-                  {
-     // along +ve Z axis if(Y > 0.0) Fy += 0.5*ST_PI; if(Y < 0.0) Fy -=
-     0.5*ST_PI;
-                  }
-          // else if ( ((Z > 0.0) && (Z < zMax)) )		// within
-     rectangular bounds else if (Z > 0.0) 		// within rectangular
-     bounds - changed for INPC
-                  {
-                  if(Y > 0.0) Fy += ST_PI;
-                  if(Y < 0.0) Fy -= ST_PI;
-                  }
-          // else if ( (Z < 0.0) && (Z > -zMax) )			// within -ve
-     rectangular bounds else if (Z < 0.0) 		// within -ve
-     rectangular bounds - changed for INPC
-                  {
-                  if(Y > 0.0) Fy -= ST_PI;
-                  if(Y < 0.0) Fy += ST_PI;
-                  }
+    /*
+    if ((fabs(X - 1.0) < MINDIST) && (fabs(Z-zMax) < MINDIST)) {
+      // (1,zMax) corner
+      if (Y > 0.0) Fy += 0.5*ST_PI;
+      if (Y < 0.0) Fy -= 0.5*ST_PI;
+    } else if ((fabs(X - 1.0) < MINDIST) && (fabs(Z + zMax) < MINDIST)) {
+      // (1,-zMax) corner 
+      if (Y > 0.0) Fy -= 0.5*ST_PI; 
+      if (Y < 0.0) Fy += 0.5*ST_PI;
+    } else if ((fabs(X) < MINDIST) && (Z < 0.0)) {
+      // X = 0, Z < 0 - off ele
+      // along -ve Z axis 
+      if (Y > 0.0) Fy -= 0.5*ST_PI; 
+      if (Y < 0.0) Fy += 0.5*ST_PI;
+    } else if ((fabs(X) < MINDIST) && (Z > 0.0)) {
+      // X = 0, Z > 0 - on & off ele
+      // along +ve Z axis 
+      if (Y > 0.0) Fy += 0.5*ST_PI; 
+      if (Y < 0.0) Fy -= 0.5*ST_PI;
+    } else if (Z > 0.0) {
+      // within rectangular bounds - changed for INPC
+      if (Y > 0.0) Fy += ST_PI;
+      if (Y < 0.0) Fy -= ST_PI;
+    } else if (Z < 0.0) {
+      // within -ve rectangular bounds - changed for INPC
+      if (Y > 0.0) Fy -= ST_PI;
+      if (Y < 0.0) Fy += ST_PI;
+    }
   */
   // two other conditions, one for Z > zMax and another for Z < -zMax expected
 
-  if (DebugISLES) {
-    printf("After constant addition %d\n", ConstAdd);
-    printf("Pot: %.16lg, Fx: %.16lg, Fy: %.16lg, Fz: %.16lg\n", Pot, Fx, Fy,
-           Fz);
-    fflush(stdout);
+    if (DebugISLES) {
+      printf("After constant addition %d\n", ConstAdd);
+      printf("Pot: %.16lg, Fx: %.16lg, Fy: %.16lg, Fz: %.16lg\n", Pot, Fx, Fy,
+             Fz);
+      fflush(stdout);
+    }
+  } // point within element bounds
+
+  // Error situations handled before returning the potential value
+  if ((Pot < 0) || isnan(Pot) || isinf(Pot)) {
+    fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
+    fprintf(fIsles, "Problem with potential ... approximating!\n");
+    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
+            Z);
+    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
+            D21, D12, Hypot);
+    fprintf(fIsles, "modY: %.16lg, G: %.16lg\n", modY, G);
+    fprintf(fIsles, "E1: %.16lg, E2: %.16lg, H1: %.16lg, H2: %.16lg\n", E1, E2,
+            H1, H2);
+    fprintf(fIsles, "S1: %d, R1: %.16lg, I1: %.16lg, I2: %.16lg\n", S1, R1, I1,
+            I2);
+    fprintf(fIsles, "Pot: %.16lg\n", Pot);
+    ApproxFlag = 23;
+    ++FailureCntr;
+    --ExactCntr;
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
   }
-}  // point within element bounds
 
-// Error situations handled before returning the potential value
-if ((Pot < 0) || isnan(Pot) || isinf(Pot)) {
-  fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
-  fprintf(fIsles, "Problem with potential ... approximating!\n");
-  fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
-          Z);
-  fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
-          D21, D12, Hypot);
-  fprintf(fIsles, "modY: %.16lg, G: %.16lg\n", modY, G);
-  fprintf(fIsles, "E1: %.16lg, E2: %.16lg, H1: %.16lg, H2: %.16lg\n", E1, E2,
-          H1, H2);
-  fprintf(fIsles, "S1: %d, R1: %.16lg, I1: %.16lg, I2: %.16lg\n", S1, R1, I1,
-          I2);
-  fprintf(fIsles, "Pot: %.16lg\n", Pot);
-  ApproxFlag = 23;
-  ++FailureCntr;
-  --ExactCntr;
-  return (
-      ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
-}
+  if (isnan(Fx) || isinf(Fx)) {
+    fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
+    fprintf(fIsles, "Problem with Fx ... approximating!\n");
+    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
+            Z);
+    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
+            D21, D12, Hypot);
+    fprintf(fIsles, "modY: %.16lg, G: %.16lg\n", modY, G);
+    fprintf(fIsles, "E1: %.16lg, E2: %.16lg, H1: %.16lg, H2: %.16lg\n", E1, E2,
+            H1, H2);
+    fprintf(fIsles, "S1: %d, R1: %.16lg, I1: %.16lg, I2: %.16lg\n", S1, R1, I1,
+            I2);
+    fprintf(fIsles, "Fx: %.16lg\n", Fx);
+    ApproxFlag = 24;
+    ++FailureCntr;
+    --ExactCntr;
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+  }
 
-if (isnan(Fx) || isinf(Fx)) {
-  fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
-  fprintf(fIsles, "Problem with Fx ... approximating!\n");
-  fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
-          Z);
-  fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
-          D21, D12, Hypot);
-  fprintf(fIsles, "modY: %.16lg, G: %.16lg\n", modY, G);
-  fprintf(fIsles, "E1: %.16lg, E2: %.16lg, H1: %.16lg, H2: %.16lg\n", E1, E2,
-          H1, H2);
-  fprintf(fIsles, "S1: %d, R1: %.16lg, I1: %.16lg, I2: %.16lg\n", S1, R1, I1,
-          I2);
-  fprintf(fIsles, "Fx: %.16lg\n", Fx);
-  ApproxFlag = 24;
-  ++FailureCntr;
-  --ExactCntr;
-  return (
-      ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
-}
+  if (isnan(Fy) || isinf(Fy)) {
+    fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
+    fprintf(fIsles, "Problem with Fy ... approximating!\n");
+    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
+            Z);
+    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
+            D21, D12, Hypot);
+    fprintf(fIsles, "modY: %.16lg, G: %.16lg\n", modY, G);
+    fprintf(fIsles, "E1: %.16lg, E2: %.16lg, H1: %.16lg, H2: %.16lg\n", E1, E2,
+            H1, H2);
+    fprintf(fIsles, "S1: %d, R1: %.16lg, I1: %.16lg, I2: %.16lg\n", S1, R1, I1,
+            I2);
+    fprintf(fIsles, "Fy: %.16lg\n", Fy);
+    ApproxFlag = 25;
+    ++FailureCntr;
+    --ExactCntr;
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+  }
 
-if (isnan(Fy) || isinf(Fy)) {
-  fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
-  fprintf(fIsles, "Problem with Fy ... approximating!\n");
-  fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
-          Z);
-  fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
-          D21, D12, Hypot);
-  fprintf(fIsles, "modY: %.16lg, G: %.16lg\n", modY, G);
-  fprintf(fIsles, "E1: %.16lg, E2: %.16lg, H1: %.16lg, H2: %.16lg\n", E1, E2,
-          H1, H2);
-  fprintf(fIsles, "S1: %d, R1: %.16lg, I1: %.16lg, I2: %.16lg\n", S1, R1, I1,
-          I2);
-  fprintf(fIsles, "Fy: %.16lg\n", Fy);
-  ApproxFlag = 25;
-  ++FailureCntr;
-  --ExactCntr;
-  return (
-      ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
-}
+  if (isnan(Fz) || isinf(Fz)) {
+    fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
+    fprintf(fIsles, "Problem with Fz ... approximating!\n");
+    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
+            Z);
+    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
+            D21, D12, Hypot);
+    fprintf(fIsles, "modY: %.16lg\n", modY);
+    fprintf(fIsles, "E1: %.16lg, E2: %.16lg\n", E1, E2);
+    fprintf(fIsles, "Fz: %.16lg\n", Fz);
+    ApproxFlag = 26;
+    ++FailureCntr;
+    --ExactCntr;
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+  }
 
-if (isnan(Fz) || isinf(Fz)) {
-  fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
-  fprintf(fIsles, "Problem with Fz ... approximating!\n");
-  fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
-          Z);
-  fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
-          D21, D12, Hypot);
-  fprintf(fIsles, "modY: %.16lg\n", modY);
-  fprintf(fIsles, "E1: %.16lg, E2: %.16lg\n", E1, E2);
-  fprintf(fIsles, "Fz: %.16lg\n", Fz);
-  ApproxFlag = 26;
-  ++FailureCntr;
-  --ExactCntr;
-  return (
-      ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
-}
+  // Return the computed value of potential and flux
+  *Potential = Pot;
+  Flux->X = Fx;
+  Flux->Y = Fy;
+  Flux->Z = Fz;
 
-// Return the computed value of potential and flux
-*Potential = Pot;
-Flux->X = Fx;
-Flux->Y = Fy;
-Flux->Z = Fz;
-
-if (DebugISLES) printf("Going out of ExactTriSurf ...\n\n");
-
-return 0;
+  if (DebugISLES) printf("Going out of ExactTriSurf ...\n\n");
+  return 0;
 }  // ExactTriSurf ends
 
 // Following function assumes that the rt triangle is (0,0), (1,0) and (0,zMax)
@@ -1661,17 +1644,8 @@ return 0;
 // trapezoid) have been properly taken care of in this implementation.
 int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
                   int nbzseg, double *Potential, Vector3D *Flux) {
-  double xbgn, xend, zbgn, zend, xi, zk, area, dx, dz, grad, zlimit_xbgn,
-      zlimit_xend;
-  int type_subele;
-  double dist, dist3, diag;
-  double Pot, XFlux, YFlux, ZFlux;
-  double Area = 0.0;  // Total area of the element - useful for cross-check
 
-  if (DebugISLES) {
-    printf("In ApproxTriSurf ...\n");
-  }
-
+  if (DebugISLES) printf("In ApproxTriSurf ...\n");
   ++ApproxCntr;
 
   if (DebugISLES) {
@@ -1679,104 +1653,95 @@ int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
     printf("nbxseg: %d, nbzseg: %d\n", nbxseg, nbzseg);
   }
 
-  dx = (1.0 - 0.0) / nbxseg;
-  dz = (zMax - 0.0) / nbzseg;
-  diag = sqrt(dx * dx + dz * dz);
+  double dx = (1.0 - 0.0) / nbxseg;
+  double dz = (zMax - 0.0) / nbzseg;
+  double diag = sqrt(dx * dx + dz * dz);
   if (DebugISLES) printf("dx: %lg, dz: %lg, diag: %lg\n", dx, dz, diag);
   if ((dx < MINDIST) || (dz < MINDIST)) {
     printf("sub-element size too small in ApproxTriSurf.\n");
     return -1;
   }
 
-  grad = (zMax - 0.0) / (1.0 - 0.0);
+  double grad = (zMax - 0.0) / (1.0 - 0.0);
   if (DebugISLES) printf("grad: %lg\n", grad);
 
-  Pot = XFlux = YFlux = ZFlux = 0.0;
-
+  double Pot = 0., XFlux = 0., YFlux = 0., ZFlux = 0.;
+  double Area = 0.0;  // Total area of the element - useful for cross-check
   for (int i = 1; i <= nbxseg; ++i) {
-    xi = zk = 0.0;  // in order to avoid warnings related to initializations
-    xbgn = 0.0 + (double)(i - 1) * dx;
-    zlimit_xbgn = zMax - grad * (xbgn - 0.0);
-    xend = 0.0 + (double)(i)*dx;
-    zlimit_xend = zMax - grad * (xend - 0.0);
+    double xbgn = (i - 1) * dx;
+    double zlimit_xbgn = zMax - grad * xbgn;
+    double xend = i * dx;
+    double zlimit_xend = zMax - grad * xend;
     if (DebugISLES)
       printf("i: %d, xbgn: %lg, zlimit_xbgn: %lg, xend: %lg, zlimit_xend:%lg\n",
              i, xbgn, zlimit_xbgn, xend, zlimit_xend);
 
-    for (int k = 1; k <= nbzseg; ++k)  // Chk with the figure
-    {
-      zbgn = 0.0 + (double)(k - 1) * dz;
-      zend = 0.0 + (double)(k)*dz;
+    for (int k = 1; k <= nbzseg; ++k) {
+      double zbgn = (k - 1) * dz;
+      double zend = k * dz;
       if (DebugISLES) printf("k: %d, zbgn: %lg, zend: %lg\n", k, zbgn, zend);
-
-      if (zbgn >= zlimit_xbgn) {  // completely outside the element - no effect
-                                  // of sub-element
+      int type_subele = 0;
+      double area = 0.;
+      double xi = 0., zk = 0.;
+      if (zbgn >= zlimit_xbgn) {
+        // completely outside the element - no effect of sub-element
         type_subele = 0;
         area = 0.0;
-      } else if (zend <= zlimit_xend) {  // completely within the element -
-                                         // rectangular sub-element
+      } else if (zend <= zlimit_xend) {  
+        // completely within the element - rectangular sub-element
         type_subele = 1;
         xi = xbgn + 0.5 * dx;
         zk = zbgn + 0.5 * dz;
         area = dx * dz;
-      } else if ((zbgn <= zlimit_xend) &&
-                 (zend >= zlimit_xend)) {  // partially inside the triangle
+      } else if ((zbgn <= zlimit_xend) && (zend >= zlimit_xend)) {
+        // partially inside the triangle
         type_subele = 2;
-        double a, b, h;  // refer to the trapezoid figure
+        // refer to the trapezoid figure
+        double a = (zlimit_xend - zbgn);
+        double b = (zlimit_xbgn - zbgn);
+        double h = dx;
 
-        a = (zlimit_xend - zbgn);
-        b = (zlimit_xbgn - zbgn);
-        h = dx;
-
-        if (fabs(a) <= MINDIST) {  // centroid of a triangle
+        if (fabs(a) <= MINDIST) {  
+          // centroid of a triangle
           type_subele = 3;
           xi = xbgn + (h / 3.0);
           zk = zbgn + (b / 3.0);
           area = 0.5 * b * h;
         } else {
           // centroid of the trapezoid
-          xi = xbgn + (h * (2. * a + b)) / (3.0 * (a + b));
+          xi = xbgn + (h * (2. * a + b)) / (3. * (a + b));
           zk = zbgn + (a * a + a * b + b * b) / (3. * (a + b));
-          area = (h / 2.) * (a + b);
+          area = 0.5 * h * (a + b);
         }
-      } else  // takes care of round-off issues
-      {
+      } else {
+        // takes care of round-off issues
         type_subele = 4;
         area = 0.0;
       }
       if (DebugISLES) printf("type_subele: %d, area: %lg\n", type_subele, area);
 
       Area += area;
-      if (area > MINDIST2)  // else Pot += 0.0 etc are not necessary
-      {
-        dist = sqrt((X - xi) * (X - xi) + Y * Y + (Z - zk) * (Z - zk));
-        if (DebugISLES) printf("dist: %lg\n", dist);
-        if (dist >= diag) {
-          Pot += area / dist;
-        } else {
-          Pot += area / diag;  // replace by expression of self-influence
-          if (DebugISLES) printf("Special Pot: %lg\n", area / diag);
+      if (area <= MINDIST2) continue;
+      double dist = sqrt((X - xi) * (X - xi) + Y * Y + (Z - zk) * (Z - zk));
+      if (DebugISLES) printf("dist: %lg\n", dist);
+      if (dist >= diag) {
+        Pot += area / dist;
+        double f = area / (dist * dist * dist);
+        XFlux += f * (X - xi);
+        YFlux += f * Y;
+        ZFlux += f * (Z - zk);
+      } else {
+        Pot += area / diag;  // replace by expression of self-influence
+        if (DebugISLES) printf("Special Pot: %lg\n", area / diag);
+        double f = area / (diag * diag * diag);
+        XFlux += f * (X - xi);
+        YFlux += f * Y;
+        ZFlux += f * (Z - zk);
+        if (DebugISLES) {
+          printf("Special XFlux: %lg, YFlux: %lg, ZFlux: %lg\n",
+                 f * (X - xi), f * Y, f * (Z - zk));
         }
-
-        dist3 = dist * dist * dist;
-        if (DebugISLES) printf("dist3: %lg\n", dist3);
-        if (dist >= diag) {
-          XFlux += area * (X - xi) / dist3;
-          YFlux += area * (Y) / dist3;
-          ZFlux += area * (Z - zk) / dist3;
-        }  // if dist3 >= diag3
-        else {
-          XFlux += area * (X - xi) / (diag * diag * diag);
-          YFlux += area * (Y) / (diag * diag * diag);
-          ZFlux += area * (Z - zk) / (diag * diag * diag);
-          if (DebugISLES) {
-            printf("Special XFlux: %lg, YFlux: %lg, ZFlux: %lg\n",
-                   area * (X - xi) / (diag * diag * diag),
-                   area * (Y) / (diag * diag * diag),
-                   area * (Z - zk) / (diag * diag * diag));
-          }
-        }  // else dist3 >= diag3
-      }    // if area > MINDIST2
+      }
     }      // nbzseg
   }        // nbxseg
 
