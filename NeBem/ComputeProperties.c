@@ -470,7 +470,7 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
           double InitialVector[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
           double FinalVector[3] = {0., 0., 0.};
           for (int i = 0; i < 3; ++i) {
-            for (int j = 0 ; j < 3; ++j) {
+            for (int j = 0; j < 3; ++j) {
               FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
             }
           }
@@ -616,6 +616,11 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
     globalF->Y += tmpF.Y;
     globalF->Z += tmpF.Z;
   } // for all primitives: basic device, mirror reflections and repetitions
+
+  (*Potential) /= MyFACTOR;
+  globalF->X /= MyFACTOR;
+  globalF->Y /= MyFACTOR;
+  globalF->Z /= MyFACTOR;
 
   // ExactPointP and ExactPointF should also have an ExactPointPF
   // Similarly for area and volume element related functions
@@ -1319,10 +1324,10 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   }
 
   // This is done at the end of the function - before freeing memory
-  *Potential = totPot;
-  globalF->X = totF.X;
-  globalF->Y = totF.Y;
-  globalF->Z = totF.Z;
+  *Potential = totPot / MyFACTOR;
+  globalF->X = totF.X / MyFACTOR;
+  globalF->Y = totF.Y / MyFACTOR;
+  globalF->Z = totF.Z / MyFACTOR;
 
   (*Potential) += VSystemChargeZero;  // respect total system charge constraint
 
@@ -4404,21 +4409,9 @@ void RecPF(double a, double b, Point3D *localP,
     (*Potential) *= a;  // rescale - cannot be done outside because of the `if'
   }
 
-  // Potential, Ex, Ey, Ez
-#ifdef __cplusplus
-  (*Potential) *= InvFourPiEps0;
-  localF->X *= InvFourPiEps0;
-  localF->Y *= InvFourPiEps0;
-  localF->Z *= InvFourPiEps0;
-#else
-  (*Potential) /= MyFACTOR;
-  localF->X /= MyFACTOR;
-  localF->Y /= MyFACTOR;
-  localF->Z /= MyFACTOR;
-#endif
 }  // end of RecPF
 
-// Flux per unit charge density on a triangluar element
+// Flux per unit charge density on a triangular element
 void TriPF(double a, double b, Point3D *localP, 
            double *Potential, Vector3D *localF) {
   // printf("In TriPF\n");
@@ -4441,7 +4434,6 @@ void TriPF(double a, double b, Point3D *localP,
   } else {
     int fstatus =
         ExactTriSurf(b / a, xpt / a, ypt / a, zpt / a, Potential, localF);
-    // fstatus = ApproxTriSurf(b/a, X/a, Y/a, Z/a, 5000, 5000, &Pot, &Flux);
     if (fstatus) { // non-zero
       printf("problem in TriPF ... \n");
       // printf("returning ...\n");
@@ -4449,34 +4441,22 @@ void TriPF(double a, double b, Point3D *localP,
     }
     (*Potential) *= a;  // rescale - cannot be done outside because of the `if'
   }
-
-#ifdef __cplusplus
-  (*Potential) *= InvFourPiEps0;
-  localF->X *= InvFourPiEps0;
-  localF->Y *= InvFourPiEps0;
-  localF->Z *= InvFourPiEps0;
-#else
-  (*Potential) /= MyFACTOR;
-  localF->X /= MyFACTOR;
-  localF->Y /= MyFACTOR;
-  localF->Z /= MyFACTOR;
-#endif
   // printf("Out of TriPF\n");
 }  // end of TriPF
 
 // Flux per unit charge density on a wire element
 void WirePF(double rW, double lW, Point3D *localP, 
             double *Potential, Vector3D *localF) {
-  double xpt = localP->X;
-  double ypt = localP->Y;
-  double zpt = localP->Z;
-  // fld pt from ele cntrd
-  double dist = sqrt(xpt * xpt + ypt * ypt + zpt * zpt);  
+  const double xpt = localP->X;
+  const double ypt = localP->Y;
+  const double zpt = localP->Z;
+  const double d2 = xpt * xpt + ypt * ypt + zpt * zpt;
 
-  if (dist >= FarField * lW) {
+  if (d2 >= FarField2 * lW * lW) {
     double dA = 2.0 * ST_PI * rW * lW;
+    const double dist = sqrt(d2);
     (*Potential) = dA / dist;
-    double f = dA / (dist * dist * dist);
+    double f = dA / (dist * d2);
     localF->X = xpt * f;
     localF->Y = ypt * f;
     localF->Z = zpt * f;
@@ -4493,18 +4473,6 @@ void WirePF(double rW, double lW, Point3D *localP,
       ExactThinWire(rW, lW, xpt, ypt, zpt, Potential, localF);
     }
   }
-
-#ifdef __cplusplus
-  (*Potential) *= InvFourPiEps0;
-  localF->X *= InvFourPiEps0;
-  localF->Y *= InvFourPiEps0;
-  localF->Z *= InvFourPiEps0;
-#else
-  (*Potential) /= MyFACTOR;
-  localF->X /= MyFACTOR;
-  localF->Y /= MyFACTOR;
-  localF->Z /= MyFACTOR;
-#endif
 }  // end of WirePF
 
 // Potential and flux per unit charge density on an element returned as
@@ -4565,8 +4533,7 @@ void RecPrimPF(int prim, Point3D *localP, double *Potential, Vector3D *localF) {
   double b = PrimLZ[prim];
   double diag = sqrt(a * a + b * b);  // diagonal
 
-  if (dist >= FarField * diag)  // all are distances and, hence, +ve
-  {
+  if (dist >= FarField * diag) {
     double dA = a * b;  // area
     (*Potential) = dA / dist;
     const double f = dA / (dist * dist * dist);
@@ -4585,18 +4552,6 @@ void RecPrimPF(int prim, Point3D *localP, double *Potential, Vector3D *localF) {
     (*Potential) *= a;  // rescale - cannot be done outside because of the `if'
   }
 
-  // Potential, Ex, Ey, Ez
-#ifdef __cplusplus
-  (*Potential) *= InvFourPiEps0;
-  localF->X *= InvFourPiEps0;
-  localF->Y *= InvFourPiEps0;
-  localF->Z *= InvFourPiEps0;
-#else
-  (*Potential) /= MyFACTOR;
-  localF->X /= MyFACTOR;
-  localF->Y /= MyFACTOR;
-  localF->Z /= MyFACTOR;
-#endif
 }  // end of RecPrimPF
 
 // Flux per unit charge density on a triangluar primitive
@@ -4630,17 +4585,6 @@ void TriPrimPF(int prim, Point3D *localP, double *Potential, Vector3D *localF) {
     (*Potential) *= a;  // rescale - cannot be done outside because of the `if'
   }
 
-#ifdef __cplusplus
-  (*Potential) *= InvFourPiEps0;
-  localF->X *= InvFourPiEps0;
-  localF->Y *= InvFourPiEps0;
-  localF->Z *= InvFourPiEps0;
-#else
-  (*Potential) /= MyFACTOR;
-  localF->X /= MyFACTOR;
-  localF->Y /= MyFACTOR;
-  localF->Z /= MyFACTOR;
-#endif
   // printf("Out of TriPrimPF\n");
 }  // end of TriPrimPF
 
@@ -4676,18 +4620,6 @@ void WirePrimPF(int prim, Point3D *localP, double *Potential,
       ExactThinWire(rW, lW, xpt, ypt, zpt, Potential, localF);
     }
   }
-
-#ifdef __cplusplus
-  (*Potential) *= InvFourPiEps0;
-  localF->X *= InvFourPiEps0;
-  localF->Y *= InvFourPiEps0;
-  localF->Z *= InvFourPiEps0;
-#else
-  (*Potential) /= MyFACTOR;
-  localF->X /= MyFACTOR;
-  localF->Y /= MyFACTOR;
-  localF->Z /= MyFACTOR;
-#endif
 }  // end of WirePrimPF
 
 // Gives three components of weighting field in the global coordinate system
@@ -5074,7 +5006,7 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                         primsrc, pPot[primsrc], lFx, lFy, lFz);
                     fflush(stdout);
                   }
-                }  // repitition of basic primitive
+                }  // repetition of basic primitive
 
                 if (MirrorTypeX[primsrc] || MirrorTypeY[primsrc] ||
                     MirrorTypeZ[primsrc]) {  
@@ -5112,10 +5044,10 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
   }
 
   // This should be done at the end of the function - before freeing memory
-  *Potential = totPot;
-  globalF->X = totF.X;
-  globalF->Y = totF.Y;
-  globalF->Z = totF.Z;
+  *Potential = totPot / MyFACTOR;
+  globalF->X = totF.X / MyFACTOR;
+  globalF->Y = totF.Y / MyFACTOR;
+  globalF->Z = totF.Z / MyFACTOR;
 
   /* for weighting field, effect of KnCh is possibly zero.
   double tmpPot; Vector3D tmpF;
