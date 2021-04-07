@@ -424,7 +424,7 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
     { // basic device
       Point3D localPP; // point primitive
       // point translated to the ECS origin, but axes direction global
-      { // Rotate point3D from global to local system
+      { // Rotate point from global to local system
         double InitialVector[3] = {xfld - xpsrc, yfld - ypsrc, zfld - zpsrc};
         double FinalVector[3] = {0., 0., 0.};
         for (int i = 0; i < 3; ++i) {
@@ -465,24 +465,20 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
           double xsrc = (EleArr+ele-1)->G.Origin.X;
           double ysrc = (EleArr+ele-1)->G.Origin.Y; 
           double zsrc = (EleArr+ele-1)->G.Origin.Z;
-          // Rotate point3D from global to local system; 
+          // Rotate point from global to local system
           // matrix as for primitive 
-          double InitialVector[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
-          double FinalVector[3] = {0., 0., 0.};
+          double vG[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
+          double vL[3] = {0., 0., 0.};
           for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 3; ++j) {
-              FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
+              vL[i] += TransformationMatrix[i][j] * vG[j];
             }
           }
-          Point3D localPE; // point element
-          localPE.X = FinalVector[0];
-          localPE.Y = FinalVector[1];
-          localPE.Z = FinalVector[2];
           // Potential and flux (local system)
           const int type = (EleArr + ele - 1)->G.Type;
           const double a = (EleArr + ele - 1)->G.LX;
           const double b = (EleArr + ele - 1)->G.LZ;
-          GetPF(type, a, b, &localPE, &tmpPot, &tmpF);
+          GetPF(type, a, b, vL[0], vL[1], vL[2], &tmpPot, &tmpF);
           const double qel = (EleArr+ele-1)->Solution + (EleArr+ele-1)->Assigned;
           (*Potential) += qel * tmpPot;
           localF.X += qel * tmpF.X;
@@ -491,7 +487,7 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
           if (DebugLevel == 301) {
             printf("PFAtPoint base primitive =>\n");
             printf("ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n", 
-                   ele, localPE.X, localPE.Y, localPE.Z); 
+                   ele, vL[0], vL[1], vL[2]); 
             printf("ele: %d, Pot: %lg, Fx: %lg, Fx: %lg, Fz: %lg\n", 
                    ele, tmpPot, tmpF.X, tmpF.Y, tmpF.Z); 
             printf("ele: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n", 
@@ -574,21 +570,18 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                     double YOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
                     double ZOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
                                                                 
-                    Rotate from global to local system  
-                    double InitialVector[3] = {xfld - XOfRpt, yfld - YOfRpt, zfld - ZOfRpt}; 
-                    double FinalVector[3] = {0., 0., 0.};
+                    // Rotate from global to local system  
+                    double vG[3] = {xfld - XOfRpt, yfld - YOfRpt, zfld - ZOfRpt}; 
+                    double vL[3] = {0., 0., 0.};
                     for (int i = 0; i < 3; ++i) {
                       for (int j = 0; j < 3; ++j) {
-                        FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
+                        vL[i] += TransformationMatrix[i][j] * vG[j];
                       }
                     }
-                    localPER.X = FinalVector[0]; 
-                    localPER.Y = FinalVector[1]; 
-                    localPER.Z = FinalVector[2];
                     const int type = (EleArr + ele - 1)->G.Type;
                     const double a = (EleArr + ele - 1)->G.LX;
                     const double b = (EleArr + ele - 1)->G.LZ;
-                    GetPF(type, a, b, &localPER, &tmpPot, &tmpF);
+                    GetPF(type, a, b, vL[0], vL[1], vL[2], &tmpPot, &tmpF);
                     const double qel = (EleArr+ele-1)->Solution + (EleArr+ele-1)->Assigned;
                     *Potential += qel * tmpPot;
                     localF.X += qel * tmpF.X;
@@ -596,7 +589,7 @@ int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                     localF.Z += qel * tmpF.Z;
                     if (DebugLevel == 301) {
                       printf("primsrc: %d, ele: %d, xlocal: %lg, ylocal: %lg, zlocal: %lg\n", 
-                             primsrc, ele, localPER.X, localPER.Y, localPER.Z); 
+                             primsrc, ele, vL[0], vL[1], vL[2]);
                       printf("primsrc: %d, Pot: %lg, Fx: %lg, Fy: %lg, Fz: %lg\n", primsrc 
                              tmpPot * qel, tmpF.X * qel, tmpF.Y * qel, tmpF.Z * qel);
                       printf("primsrc: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n", 
@@ -850,23 +843,18 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
           const double ysrc = (EleArr + ele - 1)->G.Origin.Y;
           const double zsrc = (EleArr + ele - 1)->G.Origin.Z;
           // Rotate from global to local system; matrix as for primitive
-          double InitialVector[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
-          double FinalVector[3] = {0., 0., 0.};
+          double vG[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
+          double vL[3] = {0., 0., 0.};
           for (int i = 0; i < 3; ++i) {
             for (int j = 0; j < 3; ++j) {
-              FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
+              vL[i] += TransformationMatrix[i][j] * vG[j];
             }
           }
-          Point3D localPE;
-          localPE.X = FinalVector[0];
-          localPE.Y = FinalVector[1];
-          localPE.Z = FinalVector[2];
-
           // Potential and flux (local system) due to base primitive
           const int type = (EleArr + ele - 1)->G.Type;
           const double a = (EleArr + ele - 1)->G.LX;
           const double b = (EleArr + ele - 1)->G.LZ;
-          GetPF(type, a, b, &localPE, &tPot, &tF);
+          GetPF(type, a, b, vL[0], vL[1], vL[2], &tPot, &tF);
           const double qel = (EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned;
           ePot += qel * tPot;
           eF.X += qel * tF.X;
@@ -876,7 +864,7 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
           if (dbgFn) {
             printf("PFAtPoint base primitive:%d\n", primsrc);
             printf("ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n", ele,
-                   localPE.X, localPE.Y, localPE.Z);
+                   vL[0], vL[1], vL[2]);
             printf(
                 "ele: %d, tPot: %lg, tFx: %lg, tFy: %lg, tFz: %lg, Solution: "
                 "%g\n",
@@ -1005,26 +993,20 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                     const double YEOfRpt = yrsrc + yShift;
                     const double ZEOfRpt = zrsrc + zShift;
                     // Rotate from global to local system
-                    double InitialVector[3] = {xfld - XEOfRpt, yfld - YEOfRpt, zfld - ZEOfRpt};
-                    double FinalVector[3] = {0., 0., 0.};
+                    double vG[3] = {xfld - XEOfRpt, yfld - YEOfRpt, zfld - ZEOfRpt};
+                    double vL[3] = {0., 0., 0.};
                     for (int i = 0; i < 3; ++i) {
                       for (int j = 0; j < 3; ++j) {
-                        FinalVector[i] +=
-                            TransformationMatrix[i][j] * InitialVector[j];
+                        vL[i] += TransformationMatrix[i][j] * vG[j];
                       }
                     }
-                    Point3D localPER;
-                    localPER.X = FinalVector[0];
-                    localPER.Y = FinalVector[1];
-                    localPER.Z = FinalVector[2];
-
                     // Allowed, because all the local coordinates have the
                     // same orientations. Only the origins are mutually
                     // displaced along a line.
                     const int type = (EleArr + ele - 1)->G.Type;
                     const double a = (EleArr + ele - 1)->G.LX;
                     const double b = (EleArr + ele - 1)->G.LZ;
-                    GetPF(type, a, b, &localPER, &tPot, &tF);
+                    GetPF(type, a, b, vL[0], vL[1], vL[2], &tPot, &tF);
                     const double qel = (EleArr + ele - 1)->Solution + (EleArr + ele - 1)->Assigned;
                     erPot += qel * tPot;
                     erF.X += qel * tF.X;
@@ -1034,7 +1016,7 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                     if (dbgFn) {
                       printf("PFAtPoint base primitive:%d\n", primsrc);
                       printf("ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n",
-                             ele, localPER.X, localPER.Y, localPER.Z);
+                             ele, vL[0], vL[1], vL[2]);
                       printf(
                           "ele: %d, tPot: %lg, tFx: %lg, tFy: %lg, tFz: %lg, "
                           "Solution: %g\n",
@@ -4340,16 +4322,18 @@ int WtFldFastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
 void GetPFGCS(int type, double a, double b, Point3D *localP, 
               double *Potential, Vector3D *globalF, DirnCosn3D *DirCos) {
   Vector3D localF;
-
+  const double x = localP->X;
+  const double y = localP->Y;
+  const double z = localP->Z;
   switch (type) {
     case 4:  // rectangular element
-      RecPF(a, b, localP, Potential, &localF);
+      RecPF(a, b, x, y, z, Potential, &localF);
       break;
     case 3:  // triangular element
-      TriPF(a, b, localP, Potential, &localF);
+      TriPF(a, b, x, y, z, Potential, &localF);
       break;
     case 2:  // linear (wire) element
-      WirePF(a, b, localP, Potential, &localF);
+      WirePF(a, b, x, y, z, Potential, &localF);
       break;
     default:
       printf("Geometrical type out of range! ... exiting ...\n");
@@ -4362,17 +4346,17 @@ void GetPFGCS(int type, double a, double b, Point3D *localP,
 
 // Potential and flux per unit charge density on an element returned as
 // Pot, Fx, Fy, Fz components in the local coordinate system
-void GetPF(int type, double a, double b, Point3D *localP, 
+void GetPF(int type, double a, double b, double x, double y, double z,
            double *Potential, Vector3D *localF) {
   switch (type) {
     case 4:  // rectangular element
-      RecPF(a, b, localP, Potential, localF);
+      RecPF(a, b, x, y, z, Potential, localF);
       break;
     case 3:  // triangular element
-      TriPF(a, b, localP, Potential, localF);
+      TriPF(a, b, x, y, z, Potential, localF);
       break;
     case 2:  // linear (wire) element
-      WirePF(a, b, localP, Potential, localF);
+      WirePF(a, b, x, y, z, Potential, localF);
       break;
     default:
       printf("Geometrical type out of range! ... exiting ...\n");
@@ -4383,23 +4367,20 @@ void GetPF(int type, double a, double b, Point3D *localP,
 
 // Flux per unit charge density on a rectangular element
 // Are X and Z directions the same as obtained using the direction cosines?
-void RecPF(double a, double b, Point3D *localP, 
+void RecPF(double a, double b, double x, double y, double z,
            double *Potential, Vector3D *localF) {
-  const double xpt = localP->X;
-  const double ypt = localP->Y;
-  const double zpt = localP->Z;
-  const double d2 = xpt * xpt + ypt * ypt + zpt * zpt;
+  const double d2 = x * x + y * y + z * z;
   if (d2 >= FarField2 * (a * a + b * b)) {
     const double dA = a * b;  // area of the rectangular element
     const double dist = sqrt(d2);
     (*Potential) = dA / dist;
     const double f = dA / (dist * d2);
-    localF->X = xpt * f;
-    localF->Y = ypt * f;
-    localF->Z = zpt * f;
+    localF->X = x * f;
+    localF->Y = y * f;
+    localF->Z = z * f;
   } else {
     int fstatus =
-        ExactRecSurf(xpt / a, ypt / a, zpt / a, -0.5, -(b / a) / 2.0,
+        ExactRecSurf(x / a, y / a, z / a, -0.5, -(b / a) / 2.0,
                      0.5, (b / a) / 2.0, Potential, localF);
     if (fstatus) { // non-zero
       printf("problem in RecPF ... \n");
@@ -4412,28 +4393,23 @@ void RecPF(double a, double b, Point3D *localP,
 }  // end of RecPF
 
 // Flux per unit charge density on a triangular element
-void TriPF(double a, double b, Point3D *localP, 
+void TriPF(double a, double b, double x, double y, double z,
            double *Potential, Vector3D *localF) {
   // printf("In TriPF\n");
-  const double xpt = localP->X;
-  const double ypt = localP->Y;
-  const double zpt = localP->Z;
-
-  const double xm = xpt - a / 3.;
-  const double zm = zpt - b / 3.;
-  const double d2 = xm * xm + ypt * ypt + zm * zm;
+  const double xm = x - a / 3.;
+  const double zm = z - b / 3.;
+  const double d2 = xm * xm + y * y + zm * zm;
 
   if (d2 >= FarField2 * (a * a + b * b)) {
     const double dA = 0.5 * a * b;  // area of the triangular element
     const double dist = sqrt(d2);
     (*Potential) = dA / dist;
     const double f = dA / (dist * d2);
-    localF->X = xpt * f;
-    localF->Y = ypt * f;
-    localF->Z = zpt * f;
+    localF->X = x * f;
+    localF->Y = y * f;
+    localF->Z = z * f;
   } else {
-    int fstatus =
-        ExactTriSurf(b / a, xpt / a, ypt / a, zpt / a, Potential, localF);
+    int fstatus = ExactTriSurf(b / a, x / a, y / a, z / a, Potential, localF);
     if (fstatus) { // non-zero
       printf("problem in TriPF ... \n");
       // printf("returning ...\n");
@@ -4445,32 +4421,28 @@ void TriPF(double a, double b, Point3D *localP,
 }  // end of TriPF
 
 // Flux per unit charge density on a wire element
-void WirePF(double rW, double lW, Point3D *localP, 
+void WirePF(double rW, double lW, double x, double y, double z,
             double *Potential, Vector3D *localF) {
-  const double xpt = localP->X;
-  const double ypt = localP->Y;
-  const double zpt = localP->Z;
-  const double d2 = xpt * xpt + ypt * ypt + zpt * zpt;
-
+  const double d2 = x * x + y * y + z * z;
   if (d2 >= FarField2 * lW * lW) {
     double dA = 2.0 * ST_PI * rW * lW;
     const double dist = sqrt(d2);
     (*Potential) = dA / dist;
     double f = dA / (dist * d2);
-    localF->X = xpt * f;
-    localF->Y = ypt * f;
-    localF->Z = zpt * f;
+    localF->X = x * f;
+    localF->Y = y * f;
+    localF->Z = z * f;
   } else {
-    if ((fabs(xpt) < MINDIST) && (fabs(ypt) < MINDIST)) {
-      if (fabs(zpt) < MINDIST)
+    if ((fabs(x) < MINDIST) && (fabs(y) < MINDIST)) {
+      if (fabs(z) < MINDIST)
         (*Potential) = ExactCentroidalP_W(rW, lW);
       else
-        (*Potential) = ExactAxialP_W(rW, lW, zpt);
+        (*Potential) = ExactAxialP_W(rW, lW, z);
 
       localF->X = localF->Y = 0.0;
-      localF->Z = ExactThinFZ_W(rW, lW, xpt, ypt, zpt);
+      localF->Z = ExactThinFZ_W(rW, lW, x, y, z);
     } else {
-      ExactThinWire(rW, lW, xpt, ypt, zpt, Potential, localF);
+      ExactThinWire(rW, lW, x, y, z, Potential, localF);
     }
   }
 }  // end of WirePF
@@ -4729,7 +4701,7 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
       {  // basic primitive
         // point translated to the ECS origin, but axes direction global
         Point3D localPP;
-        {  // Rotate point3D from global to local system
+        { // Rotate point from global to local system
           double InitialVector[3] = {xfld - xpsrc, yfld - ypsrc, zfld - zpsrc};
           double FinalVector[3] = {0., 0., 0.};
           for (int i = 0; i < 3; ++i) {
@@ -4784,26 +4756,20 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
             const double xsrc = (EleArr + ele - 1)->G.Origin.X;
             const double ysrc = (EleArr + ele - 1)->G.Origin.Y;
             const double zsrc = (EleArr + ele - 1)->G.Origin.Z;
-            // Rotate point3D from global to local system; matrix as for
+            // Rotate vector from global to local system; matrix as for
             // primitive
-            double InitialVector[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
-            double FinalVector[3] = {0., 0., 0.};
+            double vG[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
+            double vL[3] = {0., 0., 0.};
             for (int i = 0; i < 3; ++i) {
               for (int j = 0; j < 3; ++j) {
-                FinalVector[i] +=
-                    TransformationMatrix[i][j] * InitialVector[j];
+                vL[i] += TransformationMatrix[i][j] * vG[j];
               }
             }
-            Point3D localPE;
-            localPE.X = FinalVector[0];
-            localPE.Y = FinalVector[1];
-            localPE.Z = FinalVector[2];
-
             // Potential and flux (local system) due to base primitive
             const int type = (EleArr + ele - 1)->G.Type;
             const double a = (EleArr + ele - 1)->G.LX;
             const double b = (EleArr + ele - 1)->G.LZ;
-            GetPF(type, a, b, &localPE, &tPot, &tF);
+            GetPF(type, a, b, vL[0], vL[1], vL[2], &tPot, &tF);
             const double qel = WtFieldChDen[IdWtField][ele];
             ePot += qel * tPot;
             eF.X += qel * tF.X;
@@ -4813,7 +4779,7 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
             if (dbgFn) {
               printf("PFAtPoint base primitive:%d\n", primsrc);
               printf("ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n", ele,
-                     localPE.X, localPE.Y, localPE.Z);
+                     vL[0], vL[1], vL[2]);
               printf(
                   "ele: %d, tPot: %lg, tFx: %lg, tFy: %lg, tFz: %lg, Solution: "
                   "%g\n",
@@ -4873,7 +4839,7 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                 if ((xrpt == 0) && (yrpt == 0) && (zrpt == 0)) continue;
                 {  // basic primitive repeated
                   Point3D localPPR;
-                  {  // Rotate point3D from global to local system
+                  {  // Rotate point from global to local system
                     double InitialVector[3] = {xfld - XPOfRpt, yfld - YPOfRpt, zfld - ZPOfRpt};
                     double FinalVector[3] = {0., 0., 0.};
                     for (int i = 0; i < 3; ++i) {
@@ -4946,26 +4912,20 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                       const double ZEOfRpt = zrsrc + zShift;
 
                       // Rotate point from global to local system.
-                      double InitialVector[3] = {xfld - XEOfRpt, yfld - YEOfRpt, zfld - ZEOfRpt};
-                      double FinalVector[3] = {0., 0., 0.};
+                      double vG[3] = {xfld - XEOfRpt, yfld - YEOfRpt, zfld - ZEOfRpt};
+                      double vL[3] = {0., 0., 0.};
                       for (int i = 0; i < 3; ++i) {
                         for (int j = 0; j < 3; ++j) {
-                          FinalVector[i] +=
-                              TransformationMatrix[i][j] * InitialVector[j];
+                          vL[i] += TransformationMatrix[i][j] * vG[j];
                         }
                       }
-                      Point3D localPER;
-                      localPER.X = FinalVector[0];
-                      localPER.Y = FinalVector[1];
-                      localPER.Z = FinalVector[2];
-
                       // Allowed, because all the local coordinates have the
                       // same orientations. Only the origins are mutually
                       // displaced along a line.
                       const int type = (EleArr + ele - 1)->G.Type;
                       const double a = (EleArr + ele - 1)->G.LX;
                       const double b = (EleArr + ele - 1)->G.LZ;
-                      GetPF(type, a, b, &localPER, &tPot, &tF);
+                      GetPF(type, a, b, vL[0], vL[1], vL[2], &tPot, &tF);
                       const double qel = WtFieldChDen[IdWtField][ele];
                       erPot += qel * tPot;
                       erF.X += qel * tF.X;
@@ -4976,7 +4936,7 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
                         printf("PFAtPoint base primitive:%d\n", primsrc);
                         printf(
                             "ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n",
-                            ele, localPER.X, localPER.Y, localPER.Z);
+                            ele, vL[0], vL[1], vL[2]);
                         printf(
                             "ele: %d, tPot: %lg, tFx: %lg, tFy: %lg, tFz: %lg, "
                             "Solution: %g\n",
