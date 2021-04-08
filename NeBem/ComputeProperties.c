@@ -1306,11 +1306,17 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   }
 
   // This is done at the end of the function - before freeing memory
+#ifdef __cplusplus
+  *Potential = totPot * InvFourPiEps0;
+  globalF->X = totF.X * InvFourPiEps0;
+  globalF->Y = totF.Y * InvFourPiEps0;
+  globalF->Z = totF.Z * InvFourPiEps0;
+#else
   *Potential = totPot / MyFACTOR;
   globalF->X = totF.X / MyFACTOR;
   globalF->Y = totF.Y / MyFACTOR;
   globalF->Z = totF.Z / MyFACTOR;
-
+#endif
   (*Potential) += VSystemChargeZero;  // respect total system charge constraint
 
   if (dbgFn) {
@@ -4371,10 +4377,8 @@ void RecPF(double a, double b, double x, double y, double z,
            double *Potential, Vector3D *localF) {
   const double d2 = x * x + y * y + z * z;
   if (d2 >= FarField2 * (a * a + b * b)) {
-    const double dA = a * b;  // area of the rectangular element
-    const double dist = sqrt(d2);
-    (*Potential) = dA / dist;
-    const double f = dA / (dist * d2);
+    (*Potential) = a * b / sqrt(d2);
+    const double f = (*Potential) / d2;
     localF->X = x * f;
     localF->Y = y * f;
     localF->Z = z * f;
@@ -4401,10 +4405,8 @@ void TriPF(double a, double b, double x, double y, double z,
   const double d2 = xm * xm + y * y + zm * zm;
 
   if (d2 >= FarField2 * (a * a + b * b)) {
-    const double dA = 0.5 * a * b;  // area of the triangular element
-    const double dist = sqrt(d2);
-    (*Potential) = dA / dist;
-    const double f = dA / (dist * d2);
+    (*Potential) = 0.5 * a * b / sqrt(d2);
+    const double f = (*Potential) / d2;
     localF->X = x * f;
     localF->Y = y * f;
     localF->Z = z * f;
@@ -4474,8 +4476,7 @@ void GetPrimPFGCS(int prim, Point3D *localP, double *Potential,
 }  // end of GetPrimPFGCS
 
 // Potential and flux per unit charge density on an element returned as
-// Pot, Fx, Fy, Fz components
-// in the local coordiante system
+// Pot, Fx, Fy, Fz components in the local coordinate system
 void GetPrimPF(int prim, Point3D *localP, double *Potential, Vector3D *localF) {
   switch (PrimType[prim]) {
     case 4:  // rectangular primitive
@@ -5004,11 +5005,17 @@ int WtPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
   }
 
   // This should be done at the end of the function - before freeing memory
+#ifdef __cplusplus
+  *Potential = totPot * InvFourPiEps0;
+  globalF->X = totF.X * InvFourPiEps0;
+  globalF->Y = totF.Y * InvFourPiEps0;
+  globalF->Z = totF.Z * InvFourPiEps0;
+#else
   *Potential = totPot / MyFACTOR;
   globalF->X = totF.X / MyFACTOR;
   globalF->Y = totF.Y / MyFACTOR;
   globalF->Z = totF.Z / MyFACTOR;
-
+#endif
   /* for weighting field, effect of KnCh is possibly zero.
   double tmpPot; Vector3D tmpF;
   // ExactPointP and ExactPointF should also have an ExactPointPF
