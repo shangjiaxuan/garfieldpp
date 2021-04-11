@@ -114,6 +114,7 @@ target_sources(
           Source/KDTree.cc
           Source/Medium.cc
           Source/MediumCdTe.cc
+          Source/MediumDiamond.cc
           Source/MediumGaAs.cc
           Source/MediumGaN.cc
           Source/MediumGas.cc
