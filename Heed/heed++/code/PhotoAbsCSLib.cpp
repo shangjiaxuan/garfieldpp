@@ -167,6 +167,8 @@ ExAtomPhotoAbsCS Carbon_for_CF4_PACS(6, shelllist_dir_name + "shelllist.dat",
 ExAtomPhotoAbsCS Carbon_for_CO2_PACS(6, shelllist_dir_name + "shelllist.dat",
                                      pacs_table_dir_name + "C.dat", "C_for_CO2",
                                      13.79e-06);
+ExAtomPhotoAbsCS Diamond_PACS(6, shelllist_dir_name + "shelllist_solid.dat",
+                              pacs_table_dir_name + "C.dat", "Diamond");
 ExAtomPhotoAbsCS Nitrogen_PACS(7, shelllist_dir_name + "shelllist.dat",
                                pacs_table_dir_name + "N.dat", "N_for_N2",
                                15.581e-6);
