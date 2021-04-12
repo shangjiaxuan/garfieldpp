@@ -1,6 +1,8 @@
 #ifndef G_MEDIUM_DIAMOND_H
 #define G_MEDIUM_DIAMOND_H
 
+#include <mutex>
+
 #include "Medium.hh"
 
 namespace Garfield {
