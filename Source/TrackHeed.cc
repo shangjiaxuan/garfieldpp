@@ -958,22 +958,26 @@ bool TrackHeed::SetupMaterial(Medium* medium) {
     std::string materialName;
     double frac;
     medium->GetComponent(i, materialName, frac);
-    if (materialName == "C")
-      atPacs[i] = &Heed::Carbon_PACS;
-    else if (materialName == "Si")
+    if (materialName == "C") {
+      if (medium->GetName() == "Diamond") {
+        atPacs[i] = &Heed::Diamond_PACS;
+      } else if (materialName == "Diamond") {
+        atPacs[i] = &Heed::Carbon_PACS;
+      }
+    } else if (materialName == "Si") {
       atPacs[i] = &Heed::Silicon_crystal_PACS;
-    // else if (materialName == "Si") atPacs[i] = &Heed::Silicon_G4_PACS;
-    else if (materialName == "Ga")
+      // atPacs[i] = &Heed::Silicon_G4_PACS;
+    } else if (materialName == "Ga") {
       atPacs[i] = &Heed::Gallium_for_GaAs_PACS;
-    else if (materialName == "Ge")
+    } else if (materialName == "Ge") {
       atPacs[i] = &Heed::Germanium_PACS;
-    else if (materialName == "As")
+    } else if (materialName == "As") {
       atPacs[i] = &Heed::Arsenic_for_GaAs_PACS;
-    else if (materialName == "Cd")
+    } else if (materialName == "Cd") {
       atPacs[i] = &Heed::Cadmium_for_CdTe_PACS;
-    else if (materialName == "Te")
+    } else if (materialName == "Te") {
       atPacs[i] = &Heed::Tellurium_for_CdTe_PACS;
-    else {
+    } else {
       std::cerr << m_className << "::SetupMaterial:\n";
       std::cerr << "    Photoabsorption cross-section data for " << materialName
                 << " are not implemented.\n";
