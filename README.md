@@ -7,6 +7,10 @@ Garfield++ shares functionality with [Garfield](http://cern.ch/garfield). The ma
 [More...](http://garfieldpp.web.cern.ch/garfieldpp/about)
 
 ## Building the project
+For simplicity, we define an environment variable `$GARFIELD_HOME` 
+pointing to the directory to which we cloned the repository. 
+Assuming that `$GARFIELD_HOME` is your current working directory,
+you can build and install Garfield++ as follows: 
 
     mkdir build
     cd build
@@ -37,12 +41,19 @@ You can run the examples from the build directory (if WITH_EXAMPLES has been tur
 
 In the following lines we use the `Gem` example:
 ```
-source setup.sh
+source setupGarfield.sh
 cd Examples/Gem
 ./gem
 ```
 ## Building and running examples using an installed version of Garfield
-The user can copy one example in his/her local disk, modify it, build it against an installed version of Garfield and run it.
+
+Make sure that all required environment variables are set by sourcing the script `setupGarfield.sh`:
+```
+source $GARFIELD_HOME/install/share/Garfield/setupGarfield.sh
+```
+
+To get started, it can be useful to copy one of the examples to 
+a local directory, modify it, build it against an installed version of Garfield and run it. 
 ```
 cp -r $GARFIELD_HOME/Examples/Gem .
 mkdir Gem/build; cd Gem/build
