@@ -4,8 +4,8 @@
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 # ########################################################################################
 
-# Setting a default build type to be release with debug information. Otherwise the default
-# mode is debug.
+# Setting a default build type to be release with debug information. 
+# Otherwise the default mode is debug.
 set(default_build_type "Release")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE
@@ -21,8 +21,7 @@ project(
   LANGUAGES CXX Fortran
   VERSION 0.3.0)
 
-# --- Set default installation prefix TODO Possibly change the default install prefix
-# simply to GARFIELD_HOME
+#--- Set default installation prefix ------------------------------------------
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   if(DEFINED ENV{GARFIELD_INSTALL} )
     set(CMAKE_INSTALL_PREFIX 
@@ -46,12 +45,12 @@ message(
 # Adding the CMake folder to the search path for modules
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake)
 
-# ---- Use GNU-style hierarchy for installing build products
+#--- Use GNU-style hierarchy for installing build products --------------------
 include(GNUInstallDirs)
 include(BuildUtils)
 # force_color_output()
 
-# --- Dependencies---------------------------------------------------------------
+#--- Dependencies -------------------------------------------------------------
 if(DEFINED ENV{ROOTSYS})
   list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 elseif(DEFINED ROOTSYS)
@@ -67,9 +66,10 @@ elseif(DEFINED ROOT_CMAKE_DIR)
 endif(DEFINED ENV{ROOTSYS})
 
 find_package(ROOT 6.0 REQUIRED COMPONENTS Geom Gdml)
+#--- Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY) --
 if(${ROOT_VERSION} VERSION_LESS "6.20.0")
-  # --- Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY) it only
-  # makes sense for ROOT < 6.20. Afterwards it is loaded automatically by the find_package
+  # It only makes sense for ROOT < 6.20. 
+  # Afterwards it is loaded automatically by the find_package
   get_filename_component(Root_Use_File_Dir ${ROOT_USE_FILE} DIRECTORY)
   include("${Root_Use_File_Dir}/modules/RootNewMacros.cmake")
 endif()
@@ -77,7 +77,7 @@ endif()
 find_package(GSL REQUIRED)
 find_package(OpenMP)
 
-# --- Add Magboltz
+#--- Add Magboltz -------------------------------------------------------------
 add_subdirectory(Magboltz)
 
 # Creating the main Garfield library
@@ -156,7 +156,7 @@ target_sources(
           Source/ViewMedium.cc
           Source/ViewSignal.cc)
 
-# --- create ROOT dictionary-----------------------------------------------------
+#--- Create ROOT dictionary ---------------------------------------------------
 if(ROOT_VERSION VERSION_LESS 6.17)
   file(
     GLOB garfield_header
@@ -181,7 +181,7 @@ else()
 endif()
 target_sources(Garfield PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/GarfieldDict.cxx)
 
-# --- Install pcm file in case of root 6
+#--- Install pcm file in case of ROOT 6 ---------------------------------------
 if(ROOT_VERSION VERSION_GREATER 6.06)
   install(
     FILES ${CMAKE_CURRENT_BINARY_DIR}/libGarfieldDict_rdict.pcm
@@ -191,7 +191,7 @@ endif()
 
 garfield_set_all_default_properties(Garfield)
 
-# --- Set the C++ standard (depending on the ROOT version)-----------------------
+#--- Set the C++ standard (depending on the ROOT version) ---------------------
 if(NOT DEFINED CMAKE_CXX_STANDARD)
   if(${ROOT_CXX_FLAGS} MATCHES ".*-std=c\\+\\+([0-9][0-9])")
     set_property(TARGET Garfield PROPERTY CXX_STANDARD ${CMAKE_MATCH_1})
@@ -203,7 +203,7 @@ endif()
 set_property(TARGET Garfield PROPERTY CMAKE_CXX_STANDARD_REQUIRED ON)
 set_property(TARGET Garfield PROPERTY CXX_EXTENSIONS OFF)
 
-# --- If you cannot create symbolic links turn FALSE the library version
+#--- If you cannot create symbolic links turn FALSE the library version -------
 option(BUILD_WITH_VERSION_NUMBER
        "If you cannot create symbolic links turn FALSE the library version" TRUE)
 if(BUILD_WITH_VERSION_NUMBER)
@@ -212,11 +212,11 @@ endif()
 mark_as_advanced(BUILD_WITH_VERSION_NUMBER)
 
 
-# --- Add neBEM------------------------------------------------------------------
+#--- Add neBEM ----------------------------------------------------------------
 # TODO Decouple Nebem interface from the Garfield components
-# The Nebem interface is somewhat coupled ith Garfield itself.
-# We should decouple them to keep them independt, but until then they have to be compiled
-# in the same library to make it work
+# The Nebem interface is somewhat coupled with Garfield itself.
+# We should decouple them to keep them independent, but until then 
+# they have to be compiled in the same library to make it work
 
 # Creating the target as a shared library
 message(STATUS "Creating a new library named ${libname} with API version ${lib_apiver}")
@@ -231,14 +231,14 @@ set(nebem_sources
   NeBem/svdcmp.c
   NeBem/Vector.c)
 
-# Until CMake 3.18 the source file properies are only visible to targets added in the same directory
-# therefore we cannot add Nebem through the add_subdirectory mechanism unless we change the 
-# cpp file extension so that CMake can recognize them automatically as CXX and not C
+# Until CMake 3.18 the source file properties are only visible to targets 
+# added in the same directory therefore we cannot add Nebem through the 
+# add_subdirectory mechanism unless we change the cpp file extension so that
+# CMake can recognize them automatically as CXX and not C
 set_source_files_properties(${nebem_sources} PROPERTIES LANGUAGE CXX)
 target_sources( Garfield PRIVATE ${nebem_sources})
 
-
-# --- Add Heed sources-------------------------------------------------------------------
+#--- Add Heed sources ---------------------------------------------------------
 add_subdirectory(Heed)
 
 target_link_libraries(Garfield PUBLIC ROOT::Geom ROOT::Gdml ROOT::Graf3d GSL::gsl
@@ -253,7 +253,7 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Heed>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/NeBem>)
 
-# Install the header files
+#--- Install the header files -------------------------------------------------
 install(
   DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Include/
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
@@ -266,13 +266,16 @@ install(
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-# --- target for Doxygen documentation ------------------------------------------
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Data
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/Garfield/)
+
+#--- Target for Doxygen documentation -----------------------------------------
 option(WITH_DOC "Whether or not to create doxygen doc target." OFF)
 if(WITH_DOC)
   add_subdirectory(Doc)
 endif()
 
-# --- Build the examples --------------------------------------------------------
+#--- Build the examples -------------------------------------------------------
 option(WITH_EXAMPLES "Build Garfield++ examples" ON)
 if(WITH_EXAMPLES)
   message(
