@@ -23,15 +23,11 @@
 // * acceptance of all terms of the Geant4 Software license.          *
 // ********************************************************************
 //
-// $Id: GarfieldPhysics.cc 999996 2015-12-11 14:47:43Z dpfeiffe $
-//
 /// \file GarfieldPhysics.cc
 /// \brief Implementation of the GarfieldPhysics class
 #include "GarfieldPhysics.hh"
 
 #include "GarfieldAnalysis.hh"
-#include "TGeoBBox.h"
-#include "TGeoManager.h"
 
 GarfieldPhysics* GarfieldPhysics::fGarfieldPhysics = 0;
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo....
@@ -58,10 +54,6 @@ GarfieldPhysics::GarfieldPhysics() {
   fDrift = 0;
   fComponentAnalyticField = 0;
   fTrackHeed = 0;
-  fGeoManager = 0;
-  fGeometryRoot = 0;
-  fGeometrySimple = 0;
-  fTube = 0;
   createSecondariesInGeant4 = false;
   fIonizationModel = "PAIPhot";
 }
@@ -77,8 +69,6 @@ GarfieldPhysics::~GarfieldPhysics() {
   delete fDrift;
   delete fComponentAnalyticField;
   delete fTrackHeed;
-  delete fGeometryRoot;
-  delete fGeometrySimple;
 
   std::cout << "Deconstructor GarfieldPhysics" << std::endl;
 }
@@ -241,14 +231,12 @@ double GarfieldPhysics::GetMaxEnergyMeVParticle(std::string name,
 }
 
 void GarfieldPhysics::InitializePhysics() {
+  // Define the gas mixture.
   fMediumMagboltz = new Garfield::MediumMagboltz();
-
   fMediumMagboltz->SetComposition("ar", 70., "co2", 30.);
   fMediumMagboltz->SetTemperature(293.15);
   fMediumMagboltz->SetPressure(760.);
-  fMediumMagboltz->EnableDebugging();
   fMediumMagboltz->Initialise(true);
-  fMediumMagboltz->DisableDebugging();
   // Set the Penning transfer efficiency.
   const double rPenning = 0.57;
   const double lambdaPenning = 0.;
@@ -266,27 +254,18 @@ void GarfieldPhysics::InitializePhysics() {
   fAvalanche->SetSensor(fSensor);
 
   fTrackHeed = new Garfield::TrackHeed();
-  fTrackHeed->EnableDebugging();
   fTrackHeed->SetSensor(fSensor);
-
   fTrackHeed->EnableDeltaElectronTransport();
 }
 
 void GarfieldPhysics::CreateGeometry() {
+
+  fComponentAnalyticField->SetMedium(fMediumMagboltz);
+
   // Wire radius [cm]
   const double rWire = 25.e-4;
-  // Outer radius of the tube [cm]
+  // Tube radius [cm]
   const double rTube = 1.451;
-  // Half-length of the tube [cm]
-  const double lTube = 10.;
-
-  fGeometrySimple = new Garfield::GeometrySimple();
-  // Make a tube (centered at the origin, inner radius: 0, outer radius: rTube).
-  fTube = new Garfield::SolidTube(0., 0., 0, rWire, rTube, lTube);
-  // Add the solid to the geometry, together with the medium inside.
-  fGeometrySimple->AddSolid(fTube, fMediumMagboltz);
-  fComponentAnalyticField->SetGeometry(fGeometrySimple);
-
   // Voltages
   const double vWire = 1000.;
   const double vTube = 0.;
