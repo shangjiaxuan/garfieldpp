@@ -13,7 +13,7 @@ else:
 # Set up the gas.
 gas = ROOT.Garfield.MediumMagboltz()
 gas.LoadGasFile('ar_80_co2_20_2T.gas')
-gas.LoadIonMobility(os.getenv('GARFIELD_HOME') + '/Data/IonMobility_Ar+_Ar.txt')
+gas.LoadIonMobility(path + '/share/Garfield/Data/IonMobility_Ar+_Ar.txt')
 gas.PrintGas()
 
 view = ROOT.Garfield.ViewMedium()

@@ -13,7 +13,7 @@ else:
 
 gas = ROOT.Garfield.MediumMagboltz()
 gas.LoadGasFile('ar_93_co2_7_3bar.gas')
-gas.LoadIonMobility(os.getenv('GARFIELD_HOME') + '/Data/IonMobility_Ar+_Ar.txt')
+gas.LoadIonMobility(path + '/share/Garfield/Data/IonMobility_Ar+_Ar.txt')
 
 cmp = ROOT.Garfield.ComponentAnalyticField()
 cmp.SetMedium(gas)

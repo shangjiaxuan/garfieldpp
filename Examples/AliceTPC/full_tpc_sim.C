@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <iostream>
 #include <TROOT.h>
 #include <TApplication.h>
@@ -57,8 +58,8 @@ int main(int argc, char * argv[]) {
   // Read the electron transport coefficients from a .gas file.
   gas.LoadGasFile("Ne_90_CO2_10_N2_5_with_mg.gas");
   // Read the ion mobility table from file.
-  const std::string garfpath = std::getenv("GARFIELD_HOME");
-  gas.LoadIonMobility(garfpath + "/Data/IonMobility_Ne+_Ne.txt");
+  const std::string path = std::getenv("GARFIELD_INSTALL");
+  gas.LoadIonMobility(path + "/share/Garfield/Data/IonMobility_Ne+_Ne.txt");
 
   // Setup the electric field, using separate components for the 
   // electrons (gating open) and the ions (gating switched on).

@@ -43,7 +43,7 @@ gas.Initialise(True)
 rPenning = 0.51
 gas.EnablePenningTransfer(rPenning, 0., "ar")
 # Load the ion mobilities.
-gas.LoadIonMobility(os.getenv('GARFIELD_HOME') + '/Data/IonMobility_Ar+_Ar.txt')
+gas.LoadIonMobility(path + '/share/Garfield/Data/IonMobility_Ar+_Ar.txt')
  
 nMaterials = fm.GetNumberOfMaterials()
 for i in range(nMaterials):
