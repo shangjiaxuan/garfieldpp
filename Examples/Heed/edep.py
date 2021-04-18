@@ -23,8 +23,6 @@ gas.SetPressure(760.)
 # Width of the gas gap [cm].
 width = 1.
 
-comsol = ROOT.Garfield.ComponentComsol()
-
 # Make a component.
 cmp = ROOT.Garfield.ComponentConstant()
 cmp.SetArea(0., -10., -10., width, 10., 10.)
