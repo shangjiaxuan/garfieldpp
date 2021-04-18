@@ -23,11 +23,10 @@
 // * acceptance of all terms of the Geant4 Software license.          *
 // ********************************************************************
 //
-// $Id: GarfieldPhysics.hh 9999996 2015-12-11 14:47:43Z dpfeiffe $
-//
 /// \file GarfieldPhysics.hh
 /// \brief Definition of the GarfieldPhysics class
-
+/// \author D. Pfeiffer
+//
 #ifndef GarfieldPhysics_h
 #define GarfieldPhysics_h 1
 
@@ -38,13 +37,9 @@
 #include "Garfield/AvalancheMC.hh"
 #include "Garfield/AvalancheMicroscopic.hh"
 #include "Garfield/ComponentAnalyticField.hh"
-#include "Garfield/GeometryRoot.hh"
-#include "Garfield/GeometrySimple.hh"
 #include "Garfield/MediumMagboltz.hh"
 #include "Garfield/Sensor.hh"
-#include "Garfield/SolidTube.hh"
 #include "Garfield/TrackHeed.hh"
-#include "Garfield/TrackSimple.hh"
 
 typedef std::pair<double, double> EnergyRange_MeV;
 typedef std::map<const std::string, EnergyRange_MeV> MapParticlesEnergy;
@@ -130,16 +125,12 @@ class GarfieldPhysics {
   static GarfieldPhysics* fGarfieldPhysics;
   MapParticlesEnergy* fMapParticlesEnergyGeant4;
   MapParticlesEnergy* fMapParticlesEnergyGarfield;
-  TGeoManager* fGeoManager;
   Garfield::MediumMagboltz* fMediumMagboltz;
   Garfield::Sensor* fSensor;
   Garfield::AvalancheMC* fDrift;
   Garfield::AvalancheMicroscopic* fAvalanche;
   Garfield::TrackHeed* fTrackHeed;
-  Garfield::GeometryRoot* fGeometryRoot;
-  Garfield::GeometrySimple* fGeometrySimple;
   Garfield::ComponentAnalyticField* fComponentAnalyticField;
-  Garfield::SolidTube* fTube;
 
   std::vector<GarfieldParticle*>* fSecondaryParticles;
 
