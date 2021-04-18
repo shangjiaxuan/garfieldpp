@@ -231,14 +231,12 @@ double GarfieldPhysics::GetMaxEnergyMeVParticle(std::string name,
 }
 
 void GarfieldPhysics::InitializePhysics() {
+  // Define the gas mixture.
   fMediumMagboltz = new Garfield::MediumMagboltz();
-
   fMediumMagboltz->SetComposition("ar", 70., "co2", 30.);
   fMediumMagboltz->SetTemperature(293.15);
   fMediumMagboltz->SetPressure(760.);
-  fMediumMagboltz->EnableDebugging();
   fMediumMagboltz->Initialise(true);
-  fMediumMagboltz->DisableDebugging();
   // Set the Penning transfer efficiency.
   const double rPenning = 0.57;
   const double lambdaPenning = 0.;
@@ -256,9 +254,7 @@ void GarfieldPhysics::InitializePhysics() {
   fAvalanche->SetSensor(fSensor);
 
   fTrackHeed = new Garfield::TrackHeed();
-  fTrackHeed->EnableDebugging();
   fTrackHeed->SetSensor(fSensor);
-
   fTrackHeed->EnableDeltaElectronTransport();
 }
 
