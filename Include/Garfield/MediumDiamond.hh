@@ -47,18 +47,20 @@ class MediumDiamond : public Medium {
   void SetLowFieldMobility(const double mue, const double muh);
   void UnsetLowFieldMobility();
 
+  void SetSaturationVelocity(const double vsate, const double vsath);
+  void UnsetSaturationVelocity();
  private:
   std::mutex m_mutex;
  
   // Low-field mobility
-  double m_eMobility = 2.4e-6;
-  double m_hMobility = 2.1e-6;
+  double m_eMobility = 4.551e-6;
+  double m_hMobility = 2.750e-6;
   // Hall factor
   double m_eHallFactor = 1.;
   double m_hHallFactor = 1.;
   // Saturation velocity
-  double m_eSatVel = 2.e-2;
-  double m_hSatVel = 2.e-2;
+  double m_eSatVel = 2.6e-2;
+  double m_hSatVel = 1.6e-2;
 
   bool m_userMobility = false;
 

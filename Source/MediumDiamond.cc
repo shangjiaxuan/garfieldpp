@@ -166,18 +166,36 @@ void MediumDiamond::UnsetLowFieldMobility() {
   m_isChanged = true;
 }
 
+void MediumDiamond::SetSaturationVelocity(const double vsate, 
+                                          const double vsath) {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  if (vsate <= 0. || vsath <= 0.) {
+    std::cerr << m_className << "::SetSaturationVelocity:\n"
+              << "    Velocity must be greater than zero.\n";
+    return;
+  }
+  m_eSatVel = vsate;
+  m_hSatVel = vsath;
+}
+
+void MediumDiamond::UnsetSaturationVelocity() {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  m_eSatVel = 2.6e-2;
+  m_hSatVel = 1.6e-2;
+}
+ 
 void MediumDiamond::UpdateTransportParameters() {
   std::lock_guard<std::mutex> guard(m_mutex);
 
-  // F. Nava et al, IEEE Trans. Nucl. Sci. 26 (1979), 10.1109/TNS.1979.4329650
-  // L. Reggiani et al, Phys. Rev. B 23 (1981), 10.1103/PhysRevB.23.3050
-  // J. Isberg et al, Science 297 (2002), 10.1126/science.1074374
-
+  // M. Pomorski, Electronic Properties of Single Crystal CVD Diamond and  
+  // Its Suitability for Particle Detection in Hadron Physics Experiments. 
+  // Wolfgang von Goethe University, Frankfurt am Main
+  // E. Bossini, N. Miafra, Front. Phys. 8 (2020), 
+  // https://doi.org/10.3389/fphy.2020.00248
   if (!m_userMobility) {
     const double t = m_temperature / 300.;
-    // TODO!
-    m_eMobility = 2.4e-6 * pow(t, -1.5);
-    m_hMobility = 2.1e-6 * pow(t, -1.5);
+    m_eMobility = 4.551e-6 * pow(t, -1.5);
+    m_hMobility = 2.750e-6 * pow(t, -1.5);
   }
 }
 

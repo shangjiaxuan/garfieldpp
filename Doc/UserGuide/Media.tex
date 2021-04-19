@@ -801,3 +801,29 @@ electric field $E$ is calculated using
   \alpha^{e} = a \exp\left(-\left(\frac{b}{E}\right)^{1.75}\right), \qquad
   \alpha^{h} = a \exp\left(-\left(\frac{b}{E}\right)^{1.82}\right).
 \end{equation*} 
+
+\subsection{Diamond}
+Unless the low-field mobility values are set explicitly by the user, 
+\texttt{MediumDiamond} calculates them using 
+\begin{equation*}
+\mu_{0}\left(T\right) = \left(\frac{T}{T_{0}}\right)^{-1.5}\mu_{0}\left(T_{0}\right),
+\end{equation*}
+where $T_{0} = 300$\,K and
+$\mu_{0}\left(T_{0}\right) = 4.551\times10^{-6}$\,cm$^{2}$\,V$^{-1}$\,ns$^{-1}$ 
+for electrons and
+$\mu_{0}\left(T_{0}\right) = 2.750\times10^{-6}$\,cm$^{2}$\,V$^{-1}$\,ns$^{-1}$ 
+for holes \cite{Pomorski2008}.
+The mobility as function of the electric field $E$ is calculated using
+\begin{equation*}
+  \mu\left(E\right) = \frac{\mu_{0}}{1 + \frac{\mu_{0}E}{v_{\text{sat}}}}
+\end{equation*}
+with default values of 
+$v_{\text{sat}} = 2.6\times10^{-2}$\,\text{cm}\,/\,\text{ns} for 
+electrons and 
+$v_{\text{sat}} = 1.6\times10^{-2}$\,\text{cm}\,/\,\text{ns} for 
+holes. 
+These default values can be overriden using
+\begin{lstlisting}
+void SetLowFieldMobility(const double mue, const double muh);
+void SetSaturationVelocity(const double vsate, const double vsath);
+\end{lstlisting}
