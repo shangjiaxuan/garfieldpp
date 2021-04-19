@@ -10,6 +10,8 @@ else:
   ROOT.gSystem.Load(path + '/install/lib/libmagboltz.so')
   ROOT.gSystem.Load(path + '/install/lib/libGarfield.so')
 
+ROOT.Garfield.SetDefaultStyle()
+
 # Histograms
 ROOT.TH1.StatOverflows(True)
 hElectrons = ROOT.TH1F("hElectrons", "Number of electrons", 200, 0, 200)

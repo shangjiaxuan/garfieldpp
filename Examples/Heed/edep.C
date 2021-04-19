@@ -18,7 +18,7 @@ int main(int argc, char * argv[]) {
 
   randomEngine.Seed(123456);
   TApplication app("app", &argc, argv);
-  plottingEngine.SetDefaultStyle();
+  SetDefaultStyle();
 
   // Histograms
   TH1::StatOverflows(true); 

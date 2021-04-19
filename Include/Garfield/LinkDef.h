@@ -69,5 +69,6 @@
 #pragma link C++ class Garfield::TrackBichsel;
 
 #pragma link C++ function Garfield::RndmUniform();
+#pragma link C++ function Garfield::SetDefaultStyle();
 
 #endif

@@ -16,7 +16,7 @@ using namespace Garfield;
 int main(int argc, char * argv[]) {
 
   TApplication app("app", &argc, argv);
-  plottingEngine.SetDefaultStyle();
+  SetDefaultStyle();
 
   // Setup the gas.
   MediumMagboltz gas;

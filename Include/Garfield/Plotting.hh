@@ -6,6 +6,11 @@
 namespace Garfield {
 
 extern PlottingEngineRoot plottingEngine;
+
+inline void SetDefaultStyle() { 
+  plottingEngine.SetDefaultStyle();
+}
+
 }
 
 #endif
