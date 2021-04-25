@@ -27,9 +27,13 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX 
         $ENV{GARFIELD_INSTALL}
         CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
-  else()
+  elseif(DEFINED ENV{GARFIELD_HOME} )
     set(CMAKE_INSTALL_PREFIX
         $ENV{GARFIELD_HOME}/install
+        CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
+  else()
+    set(CMAKE_INSTALL_PREFIX
+        ${PROJECT_SOURCE_DIR}/install
         CACHE PATH "Install path prefix, prepended onto install directories." FORCE)
   endif()
 else()
