@@ -26,8 +26,10 @@
 /// \file GarfieldPhysics.cc
 /// \brief Implementation of the GarfieldPhysics class
 #include "GarfieldPhysics.hh"
-
 #include "GarfieldAnalysis.hh"
+
+#include "Garfield/AvalancheMC.hh"
+#include "Garfield/AvalancheMicroscopic.hh"
 
 GarfieldPhysics* GarfieldPhysics::fGarfieldPhysics = 0;
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo....
@@ -45,13 +47,9 @@ void GarfieldPhysics::Dispose() {
 }
 
 GarfieldPhysics::GarfieldPhysics() {
-  fMapParticlesEnergyGeant4 = new MapParticlesEnergy();
-  fMapParticlesEnergyGarfield = new MapParticlesEnergy();
   fSecondaryParticles = new std::vector<GarfieldParticle*>();
   fMediumMagboltz = 0;
   fSensor = 0;
-  fAvalanche = 0;
-  fDrift = 0;
   fComponentAnalyticField = 0;
   fTrackHeed = 0;
   createSecondariesInGeant4 = false;
@@ -59,14 +57,10 @@ GarfieldPhysics::GarfieldPhysics() {
 }
 
 GarfieldPhysics::~GarfieldPhysics() {
-  delete fMapParticlesEnergyGeant4;
-  delete fMapParticlesEnergyGarfield;
   DeleteSecondaryParticles();
   delete fSecondaryParticles;
   delete fMediumMagboltz;
   delete fSensor;
-  delete fAvalanche;
-  delete fDrift;
   delete fComponentAnalyticField;
   delete fTrackHeed;
 
@@ -139,71 +133,61 @@ void GarfieldPhysics::AddParticleName(const std::string particleName,
               << particleName << " between " << ekin_min_MeV << " MeV and "
               << ekin_max_MeV << " MeV" << std::endl;
 
-    fMapParticlesEnergyGarfield->insert(std::make_pair(
+    fMapParticlesEnergyGarfield.insert(std::make_pair(
         particleName, std::make_pair(ekin_min_MeV, ekin_max_MeV)));
   } else {
     std::cout << fIonizationModel << " is applicable for G4Particle "
               << particleName << " between " << ekin_min_MeV << " MeV and "
               << ekin_max_MeV << " MeV" << std::endl;
-    fMapParticlesEnergyGeant4->insert(std::make_pair(
+    fMapParticlesEnergyGeant4.insert(std::make_pair(
         particleName, std::make_pair(ekin_min_MeV, ekin_max_MeV)));
   }
 }
 
 bool GarfieldPhysics::FindParticleName(std::string name, std::string program) {
-  MapParticlesEnergy::iterator it;
   if (program == "garfield") {
-    it = fMapParticlesEnergyGarfield->find(name);
-    if (it != fMapParticlesEnergyGarfield->end()) {
-      return true;
-    }
-    return false;
+    auto it = fMapParticlesEnergyGarfield.find(name);
+    if (it != fMapParticlesEnergyGarfield.end()) return true;
   } else {
-    it = fMapParticlesEnergyGeant4->find(name);
-    if (it != fMapParticlesEnergyGeant4->end()) {
-      return true;
-    }
-    return false;
+    auto it = fMapParticlesEnergyGeant4.find(name);
+    if (it != fMapParticlesEnergyGeant4.end()) return true;
   }
+  return false;
 }
 
 bool GarfieldPhysics::FindParticleNameEnergy(std::string name, double ekin_MeV,
                                              std::string program) {
-  MapParticlesEnergy::iterator it;
   if (program == "garfield") {
-    it = fMapParticlesEnergyGarfield->find(name);
-    if (it != fMapParticlesEnergyGarfield->end()) {
+    auto it = fMapParticlesEnergyGarfield.find(name);
+    if (it != fMapParticlesEnergyGarfield.end()) {
       EnergyRange_MeV range = it->second;
       if (range.first <= ekin_MeV && range.second >= ekin_MeV) {
         return true;
       }
     }
-    return false;
   } else {
-    it = fMapParticlesEnergyGeant4->find(name);
-    if (it != fMapParticlesEnergyGeant4->end()) {
+    auto it = fMapParticlesEnergyGeant4.find(name);
+    if (it != fMapParticlesEnergyGeant4.end()) {
       EnergyRange_MeV range = it->second;
       if (range.first <= ekin_MeV && range.second >= ekin_MeV) {
         return true;
       }
     }
-    return false;
   }
+  return false;
 }
 
 double GarfieldPhysics::GetMinEnergyMeVParticle(std::string name,
                                                 std::string program) {
-  MapParticlesEnergy::iterator it;
   if (program == "garfield") {
-    it = fMapParticlesEnergyGarfield->find(name);
-    if (it != fMapParticlesEnergyGarfield->end()) {
+    auto it = fMapParticlesEnergyGarfield.find(name);
+    if (it != fMapParticlesEnergyGarfield.end()) {
       EnergyRange_MeV range = it->second;
       return range.first;
     }
-    return false;
   } else {
-    it = fMapParticlesEnergyGeant4->find(name);
-    if (it != fMapParticlesEnergyGeant4->end()) {
+    auto it = fMapParticlesEnergyGeant4.find(name);
+    if (it != fMapParticlesEnergyGeant4.end()) {
       EnergyRange_MeV range = it->second;
       return range.first;
     }
@@ -213,16 +197,15 @@ double GarfieldPhysics::GetMinEnergyMeVParticle(std::string name,
 
 double GarfieldPhysics::GetMaxEnergyMeVParticle(std::string name,
                                                 std::string program) {
-  MapParticlesEnergy::iterator it;
   if (program == "garfield") {
-    it = fMapParticlesEnergyGarfield->find(name);
-    if (it != fMapParticlesEnergyGarfield->end()) {
+    auto it = fMapParticlesEnergyGarfield.find(name);
+    if (it != fMapParticlesEnergyGarfield.end()) {
       EnergyRange_MeV range = it->second;
       return range.second;
     }
   } else {
-    it = fMapParticlesEnergyGeant4->find(name);
-    if (it != fMapParticlesEnergyGeant4->end()) {
+    auto it = fMapParticlesEnergyGeant4.find(name);
+    if (it != fMapParticlesEnergyGeant4.end()) {
       EnergyRange_MeV range = it->second;
       return range.second;
     }
@@ -243,25 +226,8 @@ void GarfieldPhysics::InitializePhysics() {
   fMediumMagboltz->EnablePenningTransfer(rPenning, lambdaPenning, "ar");
   fMediumMagboltz->LoadGasFile("ar_70_co2_30_1000mbar.gas");
 
-  fSensor = new Garfield::Sensor();
-  fDrift = new Garfield::AvalancheMC();
-  fAvalanche = new Garfield::AvalancheMicroscopic();
   fComponentAnalyticField = new Garfield::ComponentAnalyticField();
-
-  CreateGeometry();
-
-  fDrift->SetSensor(fSensor);
-  fAvalanche->SetSensor(fSensor);
-
-  fTrackHeed = new Garfield::TrackHeed();
-  fTrackHeed->SetSensor(fSensor);
-  fTrackHeed->EnableDeltaElectronTransport();
-}
-
-void GarfieldPhysics::CreateGeometry() {
-
   fComponentAnalyticField->SetMedium(fMediumMagboltz);
-
   // Wire radius [cm]
   const double rWire = 25.e-4;
   // Tube radius [cm]
@@ -274,7 +240,12 @@ void GarfieldPhysics::CreateGeometry() {
   // Add the tube.
   fComponentAnalyticField->AddTube(rTube, vTube, 0, "t");
 
+  fSensor = new Garfield::Sensor();
   fSensor->AddComponent(fComponentAnalyticField);
+
+  fTrackHeed = new Garfield::TrackHeed();
+  fTrackHeed->SetSensor(fSensor);
+  fTrackHeed->EnableDeltaElectronTransport();
 }
 
 void GarfieldPhysics::DoIt(std::string particleName, double ekin_MeV,
@@ -283,6 +254,12 @@ void GarfieldPhysics::DoIt(std::string particleName, double ekin_MeV,
   G4AnalysisManager* analysisManager = G4AnalysisManager::Instance();
   fEnergyDeposit = 0;
   DeleteSecondaryParticles();
+
+  Garfield::AvalancheMC drift;
+  drift.SetSensor(fSensor);
+  drift.SetDistanceSteps(1.e-4);
+  Garfield::AvalancheMicroscopic avalanche;
+  avalanche.SetSensor(fSensor);
 
   // Wire radius [cm]
   const double rWire = 25.e-4;
@@ -330,33 +307,31 @@ void GarfieldPhysics::DoIt(std::string particleName, double ekin_MeV,
               "e-", ee, newTime, xe, ye, ze, dxe, dye, dze));
         }
 
-        fDrift->DriftElectron(xe, ye, ze, te);
+        drift.DriftElectron(xe, ye, ze, te);
 
         double xe1, ye1, ze1, te1;
         double xe2, ye2, ze2, te2;
 
         int status;
-        fDrift->GetElectronEndpoint(0, xe1, ye1, ze1, te1, xe2, ye2, ze2, te2,
-                                    status);
+        drift.GetElectronEndpoint(0, xe1, ye1, ze1, te1, xe2, ye2, ze2, te2,
+                                  status);
 
         if (0 < xe2 && xe2 < rWire) {
           xe2 += 2 * rWire;
-        }
-        if (0 > xe2 && xe2 > -rWire) {
+        } else if (0 > xe2 && xe2 > -rWire) {
           xe2 += -2 * rWire;
-        }
+        } 
         if (0 < ye2 && ye2 < rWire) {
           ye2 += 2 * rWire;
-        }
-        if (0 > ye2 && ye2 > -rWire) {
+        } else if (0 > ye2 && ye2 > -rWire) {
           ye2 += -2 * rWire;
         }
 
         double e2 = 0.1;
-        fAvalanche->AvalancheElectron(xe2, ye2, ze2, te2, e2, 0, 0, 0);
+        avalanche.AvalancheElectron(xe2, ye2, ze2, te2, e2, 0, 0, 0);
 
         int ne = 0, ni = 0;
-        fAvalanche->GetAvalancheSize(ne, ni);
+        avalanche.GetAvalancheSize(ne, ni);
         fAvalancheSize += ne;
       }
     }
@@ -384,33 +359,31 @@ void GarfieldPhysics::DoIt(std::string particleName, double ekin_MeV,
                   "e-", ee, newTime, xe, ye, ze, dxe, dye, dze));
             }
 
-            fDrift->DriftElectron(xe, ye, ze, te);
+            drift.DriftElectron(xe, ye, ze, te);
 
             double xe1, ye1, ze1, te1;
             double xe2, ye2, ze2, te2;
 
             int status;
-            fDrift->GetElectronEndpoint(0, xe1, ye1, ze1, te1, xe2, ye2, ze2,
-                                        te2, status);
+            drift.GetElectronEndpoint(0, xe1, ye1, ze1, te1, xe2, ye2, ze2,
+                                      te2, status);
 
             if (0 < xe2 && xe2 < rWire) {
               xe2 += 2 * rWire;
-            }
-            if (0 > xe2 && xe2 > -rWire) {
+            } else if (0 > xe2 && xe2 > -rWire) {
               xe2 += -2 * rWire;
             }
             if (0 < ye2 && ye2 < rWire) {
               ye2 += 2 * rWire;
-            }
-            if (0 > ye2 && ye2 > -rWire) {
+            } else if (0 > ye2 && ye2 > -rWire) {
               ye2 += -2 * rWire;
             }
 
             double e2 = 0.1;
-            fAvalanche->AvalancheElectron(xe2, ye2, ze2, te2, e2, 0, 0, 0);
+            avalanche.AvalancheElectron(xe2, ye2, ze2, te2, e2, 0, 0, 0);
 
             int ne = 0, ni = 0;
-            fAvalanche->GetAvalancheSize(ne, ni);
+            avalanche.GetAvalancheSize(ne, ni);
             fAvalancheSize += ne;
           }
         }

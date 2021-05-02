@@ -54,16 +54,7 @@
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 GarfieldDetectorConstruction::GarfieldDetectorConstruction()
-    : G4VUserDetectorConstruction(),
-      fAbsorberPV(0),
-      fTubePV(0),
-      fGasPV(0),
-      fWirePV(0),
-      fAbsorberMaterial(0),
-      fAbsorberLV(0),
-      fCheckOverlaps(true),
-      fGarfieldG4FastSimulationModel(0),
-      fGarfieldMessenger(0) {
+    : G4VUserDetectorConstruction() {
   fGarfieldMessenger = new GarfieldMessenger(this);
 }
 
@@ -116,14 +107,8 @@ void GarfieldDetectorConstruction::DefineMaterials() {
   G4Material* ArCO2_70_30 =
       new G4Material("ArCO2_70_30", density = 1.8223 * CLHEP::mg / CLHEP::cm3,
                      ncomponents = 2, kStateGas);
-
   ArCO2_70_30->AddElement(Ar, fractionmass = 0.70);
   ArCO2_70_30->AddMaterial(CO2, fractionmass = 0.30);
-
-  G4Material* ArCO2_93_7 = new G4Material(
-      "ArCO2_93_7", density = 1.8223 * CLHEP::mg / CLHEP::cm3, ncomponents = 2);
-  ArCO2_93_7->AddElement(Ar, fractionmass = 0.93);
-  ArCO2_93_7->AddMaterial(CO2, fractionmass = 0.07);
 
   density = 1.413 * CLHEP::g / CLHEP::cm3;
   G4Material* Kapton =

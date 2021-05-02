@@ -34,8 +34,6 @@
 #include <map>
 #include <vector>
 
-#include "Garfield/AvalancheMC.hh"
-#include "Garfield/AvalancheMicroscopic.hh"
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/MediumMagboltz.hh"
 #include "Garfield/Sensor.hh"
@@ -81,7 +79,6 @@ class GarfieldPhysics {
   static void Dispose();
 
   void InitializePhysics();
-  void CreateGeometry();
 
   void DoIt(std::string particleName, double ekin_MeV, double time, double x_cm,
             double y_cm, double z_cm, double dx, double dy, double dz);
@@ -123,12 +120,10 @@ class GarfieldPhysics {
   std::string fIonizationModel;
 
   static GarfieldPhysics* fGarfieldPhysics;
-  MapParticlesEnergy* fMapParticlesEnergyGeant4;
-  MapParticlesEnergy* fMapParticlesEnergyGarfield;
+  MapParticlesEnergy fMapParticlesEnergyGeant4;
+  MapParticlesEnergy fMapParticlesEnergyGarfield;
   Garfield::MediumMagboltz* fMediumMagboltz;
   Garfield::Sensor* fSensor;
-  Garfield::AvalancheMC* fDrift;
-  Garfield::AvalancheMicroscopic* fAvalanche;
   Garfield::TrackHeed* fTrackHeed;
   Garfield::ComponentAnalyticField* fComponentAnalyticField;
 
