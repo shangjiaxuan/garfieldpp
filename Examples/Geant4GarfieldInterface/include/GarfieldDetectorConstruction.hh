@@ -55,14 +55,13 @@ class GarfieldDetectorConstruction : public G4VUserDetectorConstruction {
   virtual ~GarfieldDetectorConstruction();
 
  public:
-  virtual G4VPhysicalVolume* Construct();
+  virtual G4VPhysicalVolume* Construct() override;
 
   // get methods
-  const G4VPhysicalVolume* GetAbsorberPV() const;
-  const G4VPhysicalVolume* GetDriftTubePV() const;
-  const G4VPhysicalVolume* GetGasPV() const;
-  const G4VPhysicalVolume* GetThinWindowPV() const;
-  const G4VPhysicalVolume* GetWirePV() const;
+  const G4VPhysicalVolume* GetAbsorberPV() const { return fAbsorberPV; }
+  const G4VPhysicalVolume* GetDriftTubePV() const { return fTubePV; }
+  const G4VPhysicalVolume* GetGasPV() const { return fGasPV; }
+  const G4VPhysicalVolume* GetWirePV() const { return fWirePV; }
   void SetAbsorberMaterial(G4String materialChoice);
   G4Material* AbsorberMaterialWithSingleIsotope(G4String name, G4String symbol,
                                                 G4double density, G4int Z,
@@ -72,40 +71,21 @@ class GarfieldDetectorConstruction : public G4VUserDetectorConstruction {
   void DefineMaterials();
   G4VPhysicalVolume* DefineVolumes();
 
-  G4VPhysicalVolume* fAbsorberPV;  // the absorber physical volume
-  G4VPhysicalVolume* fTubePV;  // the cathode of the single wire physical volume
-  G4VPhysicalVolume* fGasPV;   // the gas physical volume
-  G4VPhysicalVolume* fWirePV;  // the wire physical volume
+  G4VPhysicalVolume* fAbsorberPV = nullptr; // absorber physical volume
+  G4VPhysicalVolume* fTubePV = nullptr;     // cathode physical volume
+  G4VPhysicalVolume* fGasPV = nullptr;      // gas physical volume
+  G4VPhysicalVolume* fWirePV = nullptr;     // wire physical volume
 
-  G4Material* fAbsorberMaterial;
-  G4LogicalVolume* fAbsorberLV;
+  G4Material* fAbsorberMaterial = nullptr;
+  G4LogicalVolume* fAbsorberLV = nullptr;
 
-  G4bool fCheckOverlaps;  // option to activate checking of volumes overlaps
+  // option to activate checking of volumes overlaps
+  G4bool fCheckOverlaps = true; 
 
-  GarfieldG4FastSimulationModel* fGarfieldG4FastSimulationModel;
-  GarfieldMessenger* fGarfieldMessenger;
+  GarfieldG4FastSimulationModel* fGarfieldG4FastSimulationModel = nullptr;
+  GarfieldMessenger* fGarfieldMessenger = nullptr;
 };
 
-// inline functions
-
-inline const G4VPhysicalVolume* GarfieldDetectorConstruction::GetAbsorberPV()
-    const {
-  return fAbsorberPV;
-}
-
-inline const G4VPhysicalVolume* GarfieldDetectorConstruction::GetDriftTubePV()
-    const {
-  return fTubePV;
-}
-
-inline const G4VPhysicalVolume* GarfieldDetectorConstruction::GetGasPV() const {
-  return fGasPV;
-}
-
-inline const G4VPhysicalVolume* GarfieldDetectorConstruction::GetWirePV()
-    const {
-  return fWirePV;
-}
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 #endif
