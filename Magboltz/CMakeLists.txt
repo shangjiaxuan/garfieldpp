@@ -7,6 +7,7 @@ message(STATUS "Creating a new library named ${libname} with API version ${lib_a
 add_library(${libname} SHARED "")
 add_library(Garfield::${libname} ALIAS ${libname})
 target_sources(${libname} PRIVATE magboltz.f)
+target_compile_options(${libname} PRIVATE -std=legacy)
 # Sets the API version of the library
 set_property(TARGET ${libname} PROPERTY SOVERSION ${lib_apiver})
 
