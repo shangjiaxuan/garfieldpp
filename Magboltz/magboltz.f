@@ -46364,7 +46364,8 @@ C
       J=N3ATT                                                           
   270 A=(Y3ATT(J)-Y3ATT(J-1))/(X3ATT(J)-X3ATT(J-1))
       B=(X3ATT(J-1)*Y3ATT(J)-X3ATT(J)*Y3ATT(J-1))/(X3ATT(J-1)-X3ATT(J))
-      THREEB=FAC*(A*EN+B)*1.D-16*T3B  
+C      THREEB=FAC*(A*EN+B)*1.D-16*T3B  
+      THREEB=FAC*(A*EN+B)*1.D-16  
   300 Q(4,I)=SINGLE+THREEB   
       QATT(1,I)=Q(4,I)  
       Q(5,I)=0.0                                                        

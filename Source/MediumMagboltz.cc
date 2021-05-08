@@ -3370,7 +3370,7 @@ bool MediumMagboltz::ComputePhotonCollisionTable(const bool verbose) {
 }
 
 void MediumMagboltz::RunMagboltz(
-    const double e, const double bmag, const double btheta, const int ncoll,
+    const double emag, const double bmag, const double btheta, const int ncoll,
     bool verbose, double& vx, double& vy, double& vz, double& dl, double& dt,
     double& alpha, double& eta, double& lor, double& vxerr, double& vyerr,
     double& vzerr, double& dlerr, double& dterr, double& alphaerr,
@@ -3386,15 +3386,13 @@ void MediumMagboltz::RunMagboltz(
   alphaerr = etaerr = 0.;
   lorerr = 0.;
 
-  // Set input parameters in Magboltz common blocks.
+  // Set the input parameters in the Magboltz common blocks.
   Magboltz::inpt_.nGas = m_nComponents;
-  Magboltz::inpt_.nStep = 4000;
   Magboltz::inpt_.nAniso = 2;
   if (m_autoEnergyLimit) {
     Magboltz::inpt_.efinal = 0.;
   } else {
     Magboltz::inpt_.efinal = std::min(m_eMax, m_eHigh);
-    Magboltz::inpt_.estep = m_eStep;
   }
   Magboltz::inpt_.tempc = m_temperature - ZeroCelsius;
   Magboltz::inpt_.torr = m_pressure;
@@ -3403,7 +3401,7 @@ void MediumMagboltz::RunMagboltz(
 
   Magboltz::thrm_.ithrm = m_useGasMotion ? 1 : 0;
 
-  Magboltz::setp_.efield = e;
+  Magboltz::setp_.efield = emag;
   // Convert from Tesla to kGauss.
   Magboltz::bfld_.bmag = bmag * 10.;
   // Convert from radians to degree.
