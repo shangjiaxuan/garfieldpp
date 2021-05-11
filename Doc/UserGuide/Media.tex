@@ -259,7 +259,14 @@ void SetRangeE(const double emin, const double emax, const bool logscale);
 void SetRangeB(const double bmin, const double bmax, const bool logscale);
 void SetRangeA(const double amin, const double amax, const bool logscale);
 void SetRangeY(const double ymin, const double ymax, const bool logscale);
-\end{lstlisting} 
+\end{lstlisting}
+The (ROOT) colours with which to draw the graphs/curves and the labels
+to be used to identify them can be customized using
+\begin{lstlisting}
+void SetLabels(const std::vector<std::string>& labels);
+void SetColours(const std::vector<short>& cols);
+\end{lstlisting}
+ 
 \section{Electron scattering rates}
 
 For calculating electron drift lines using ``microscopic tracking'' 
