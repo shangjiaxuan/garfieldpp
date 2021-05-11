@@ -6,8 +6,6 @@
 #include <TApplication.h>
 
 #include "Garfield/MediumMagboltz.hh"
-#include "Garfield/MediumSilicon.hh"
-#include "Garfield/FundamentalConstants.hh"
 #include "Garfield/ViewMedium.hh"
 
 using namespace Garfield;
@@ -43,6 +41,6 @@ int main(int argc, char * argv[]) {
   view.SetCanvas(&cA);
   view.PlotElectronAttachment('e');
 
-  app.Run(kTRUE);
+  app.Run(true);
 
 }
