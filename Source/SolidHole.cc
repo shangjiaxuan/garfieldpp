@@ -77,32 +77,22 @@ SolidHole::SolidHole(const double cx, const double cy, const double cz,
   SetDirection(dx, dy, dz);
 }
 
-bool SolidHole::IsInside(const double x, const double y, const double z) const {
+bool SolidHole::IsInside(const double x, const double y, const double z,
+                         const bool exact) const {
   // Transform the point to local coordinates.
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);
 
   if (fabs(u) > m_lX || fabs(v) > m_lY || fabs(w) > m_lZ) {
-    if (m_debug) {
-      std::cout << "SolidHole::IsInside: (" << x << ", " << y << ", " << z
-                << ") is outside.\n";
-    }
     return false;
   }
-
+ 
+  // TODO!
   const double r = m_rLow + (w + m_lZ) * (m_rUp - m_rLow) / (2 * m_lZ);
   if (u * u + v * v < r * r) {
-    if (m_debug) {
-      std::cout << "SolidHole::IsInside: (" << x << ", " << y << ", " << z
-                << ") is outside.\n";
-    }
     return false;
   }
 
-  if (m_debug) {
-    std::cout << "SolidHole::IsInside: (" << x << ", " << y << ", " << z
-              << ") is inside.\n";
-  }
   return false;
 }
 

@@ -19,25 +19,16 @@ SolidBox::SolidBox(const double cx, const double cy, const double cz,
   SetDirection(dx, dy, dz);
 }
 
-bool SolidBox::IsInside(const double x, const double y, const double z) const {
+bool SolidBox::IsInside(const double x, const double y, const double z,
+                        const bool /*exact*/) const {
   // Transform the point to local coordinates.
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);
 
   // See whether the point is inside.
   if (fabs(u) > m_lX || fabs(v) > m_lY || fabs(w) > m_lZ) {
-    if (m_debug) {
-      std::cout << "SolidBox::IsInside: (" << x << ", " << y << ", " << z
-                << ") is outside.\n";
-    }
     return false;
   }
-
-  if (m_debug) {
-    std::cout << "SolidBox::IsInside: (" << x << ", " << y << ", " << z
-              << ") is inside.\n";
-  }
-
   return true;
 }
 

@@ -25,7 +25,8 @@ class SolidTube : public Solid {
   /// Destructor
   ~SolidTube() {}
 
-  bool IsInside(const double x, const double y, const double z) const override;
+  bool IsInside(const double x, const double y, const double z,
+                const bool exact = true) const override;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) const override;
   bool IsTube() const override { return true; }

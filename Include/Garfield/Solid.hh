@@ -41,7 +41,7 @@ class Solid {
 
   /// Check whether a given point is inside the solid.
   virtual bool IsInside(const double x, const double y,
-                        const double z) const = 0;
+                        const double z, const bool exact = true) const = 0;
   /// Return the bounding box of the solid.
   virtual bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                               double& xmax, double& ymax,

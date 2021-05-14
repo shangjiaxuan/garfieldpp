@@ -24,32 +24,25 @@ SolidRidge::SolidRidge(const double cx, const double cy, const double cz,
   SetDirection(dx, dy, dz);
 }
 
-bool SolidRidge::IsInside(const double x, const double y, const double z) const {
+bool SolidRidge::IsInside(const double x, const double y, const double z,
+                          const bool /*exact*/) const {
   // Transform the point to local coordinates.
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);
 
   bool inside = true;
   if (fabs(u) > m_lX || fabs(v) > m_lY || w < 0. || w > m_hz) {
-    return false;
+    inside = false;
   } else if (u >= m_hx &&  m_hz * u + (m_lX - m_hx) * v > m_hz * m_lX) {
     inside = false;
   } else if (u <= m_hx && -m_hz * u + (m_lX + m_hx) * v > m_hz * m_lX) {
     inside = false; 
   }
-  if (m_debug) {
-    std::cout << "SolidRidge::IsInside: (" << x << ", " << y << ", " << z;
-    if (inside) {
-      std::cout << ") is inside.\n";
-    } else {
-      std::cout << ") is outside.\n";
-    }
-  }
   return inside;
 }
 
 bool SolidRidge::GetBoundingBox(double& xmin, double& ymin, double& zmin,
-                               double& xmax, double& ymax, double& zmax) const {
+                                double& xmax, double& ymax, double& zmax) const {
   if (m_cTheta == 1. && m_cPhi == 1.) {
     xmin = m_cX - m_lX;
     xmax = m_cX + m_lX;

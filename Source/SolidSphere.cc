@@ -21,7 +21,7 @@ SolidSphere::SolidSphere(const double cx, const double cy, const double cz,
 }
 
 bool SolidSphere::IsInside(const double x, const double y,
-                           const double z) const {
+                           const double z, const bool exact) const {
   // Transform the point to local coordinates.
   const double dx = x - m_cX;
   const double dy = y - m_cY;
@@ -30,7 +30,7 @@ bool SolidSphere::IsInside(const double x, const double y,
   if (fabs(dx) > m_rMax || fabs(dy) > m_rMax || fabs(dz) > m_rMax) {
     return false;
   }
-
+  // TODO!
   const double r = sqrt(dx * dx + dy * dy + dz * dz);
   if (r < m_rMin || r > m_rMax) return false;
   return true;

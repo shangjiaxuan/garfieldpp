@@ -30,13 +30,15 @@ SolidTube::SolidTube(const double cx, const double cy, const double cz,
                      const double dy, const double dz)
     : SolidTube(cx, cy, cz, 0., r, lz, dx, dy, dz) {}
 
-bool SolidTube::IsInside(const double x, const double y, const double z) const {
+bool SolidTube::IsInside(const double x, const double y, const double z,
+                         const bool exact) const {
   // Transform the point to local coordinates.
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);
 
   if (fabs(w) > m_lZ) return false;
 
+  // TODO!
   const double r = sqrt(u * u + v * v);
   if (r < m_rMin || r > m_rMax) return false;
   return true;

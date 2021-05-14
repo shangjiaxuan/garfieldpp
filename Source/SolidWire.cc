@@ -19,7 +19,8 @@ SolidWire::SolidWire(const double cx, const double cy, const double cz,
   SetDirection(dx, dy, dz);
 }
 
-bool SolidWire::IsInside(const double x, const double y, const double z) const {
+bool SolidWire::IsInside(const double x, const double y, const double z,
+                         const bool /*exact*/) const {
   // Transform the point to local coordinates.
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);
