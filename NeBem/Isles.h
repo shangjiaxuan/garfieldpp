@@ -10,8 +10,6 @@
 #define ISLESGLOBAL extern
 #endif
 
-#include <gsl/gsl_complex.h>
-#include <gsl/gsl_complex_math.h>
 #include <math.h>
 
 #include "Vector.h"
@@ -20,16 +18,8 @@
 #define MINDIST2 1.0e-16
 #define MINDIST3 1.0e-20
 
-#define ARMAX 10000.0  // Maximum aspect ratio for an element
-
 #define FarField 10.0  // Beyond FarField*ElementSize, use nodal expressions
-
-// #define XNSegApprox 10	// much less time but inaccurate results
-// #define ZNSegApprox 10	// much less time but inaccurate results
-#define XNSegApprox 100  // barely acceptable results
-#define ZNSegApprox 100  // barely acceptable result
-// #define XNSegApprox 1000	// much better results but lot more time
-// #define ZNSegApprox 1000	// much better results but lot more time
+#define FarField2 100.0
 
 #define ST_PI 3.14159265358979323846
 
