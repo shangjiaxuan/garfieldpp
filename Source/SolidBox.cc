@@ -20,7 +20,7 @@ SolidBox::SolidBox(const double cx, const double cy, const double cz,
 }
 
 bool SolidBox::IsInside(const double x, const double y, const double z,
-                        const bool /*exact*/) const {
+                        const bool /*tesselated*/) const {
   // Transform the point to local coordinates.
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);

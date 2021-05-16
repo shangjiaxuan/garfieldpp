@@ -39,8 +39,8 @@ SolidSphere::SolidSphere(const double cx, const double cy, const double cz,
   UpdatePanels();
 }
 
-bool SolidSphere::IsInside(const double x, const double y,
-                           const double z, const bool exact) const {
+bool SolidSphere::IsInside(const double x, const double y, const double z,
+                           const bool tesselated) const {
   // Transform the point to local coordinates.
   const double dx = x - m_cX;
   const double dy = y - m_cY;
@@ -50,7 +50,7 @@ bool SolidSphere::IsInside(const double x, const double y,
     return false;
   }
   const double r = sqrt(dx * dx + dy * dy + dz * dz);
-  if (exact) return (r >= m_rMin && r <= m_rMax);
+  if (!tesselated) return (r >= m_rMin && r <= m_rMax);
   if (r > m_rMax || !InPolyhedron(m_panelsO, dx, dy, dz)) return false;
   if (m_rMin > 0.) {
     return (r >= m_rMin || !InPolyhedron(m_panelsI, dx, dy, dz, true));

@@ -29,7 +29,7 @@ SolidExtrusion::SolidExtrusion(const double lz,
 }
 
 bool SolidExtrusion::IsInside(const double x, const double y, const double z,
-                              const bool /*exact*/) const {
+                              const bool /*tesselated*/) const {
 
   if (m_xp.empty()) return false;
   // Transform the point to local coordinates.

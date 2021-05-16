@@ -48,7 +48,7 @@ void SolidTube::UpdatePolygon() {
 }
 
 bool SolidTube::IsInside(const double x, const double y, const double z,
-                         const bool exact) const {
+                         const bool tesselated) const {
   // Transform the point to local coordinates.
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);
@@ -56,7 +56,7 @@ bool SolidTube::IsInside(const double x, const double y, const double z,
   if (fabs(w) > m_lZ) return false;
 
   const double rho = sqrt(u * u + v * v);
-  if (exact) return (rho <= m_rMax);
+  if (!tesselated) return (rho <= m_rMax);
  
   if (rho > m_rp) return false;
   if (rho < m_ri) return true;

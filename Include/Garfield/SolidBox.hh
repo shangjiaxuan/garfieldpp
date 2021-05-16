@@ -20,7 +20,7 @@ class SolidBox : public Solid {
   ~SolidBox() {}
 
   bool IsInside(const double x, const double y, const double z,
-                const bool exact = true) const override;
+                const bool tesselated) const override;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) const override;
   bool IsBox() const override { return true; }

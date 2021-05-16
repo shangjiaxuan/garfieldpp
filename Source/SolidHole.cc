@@ -91,7 +91,7 @@ void SolidHole::Update() {
 }
 
 bool SolidHole::IsInside(const double x, const double y, const double z,
-                         const bool exact) const {
+                         const bool tesselated) const {
   // Transform the point to local coordinates.
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);
@@ -101,7 +101,7 @@ bool SolidHole::IsInside(const double x, const double y, const double z,
   }
  
   double r = m_rLow + (w + m_lZ) * (m_rUp - m_rLow) / (2 * m_lZ);
-  if (exact) return (u * u + v * v >= r * r);
+  if (!tesselated) return (u * u + v * v >= r * r);
   const double rho = sqrt(u * u + v * v);
   if (m_average) r *= m_fp;
   if (rho > r) return true;
