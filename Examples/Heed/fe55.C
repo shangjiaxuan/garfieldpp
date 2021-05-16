@@ -45,7 +45,7 @@ int main(int argc, char * argv[]) {
   constexpr double diameter = 7.8;
   // Half-length of the cylinder [cm].
   constexpr double length = 10.;
-  SolidTube tube(0, 0, 0, 0, 0.5 * diameter, length);
+  SolidTube tube(0, 0, 0, 0.5 * diameter, length);
 
   // Combine gas and box to a simple geometry.
   GeometrySimple geo;

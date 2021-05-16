@@ -64,7 +64,9 @@ At present, the available solids are
   \item
   \texttt{SolidHole}, 
   \item
-  \texttt{SolidRidge}, 
+  \texttt{SolidRidge},
+  \item
+  \texttt{SolidExtrusion}, 
   \item
   \texttt{SolidWire}, and
   \item
@@ -80,8 +82,8 @@ MediumMagboltz gas;
 // Create the geometry.
 GeometrySimple geo;
 // Dimensions of the tube
-double rMin = 0., rMax = 0.5, halfLength = 10.;
-SolidTube tube(0., 0., 0., rMin, rMax, halfLength);
+double rMax = 0.5, halfLength = 10.;
+SolidTube tube(0., 0., 0., rMax, halfLength);
 // Add the solid to the geometry, together with the gas inside.
 geo.AddSolid(&tube, &gas);
 \end{lstlisting}
