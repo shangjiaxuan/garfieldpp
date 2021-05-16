@@ -55,7 +55,10 @@ class SolidHole : public Solid {
   /// of the specified radius. If the "average-radius" flag is activated,
   /// then the radius will be interpreted as the mean radius of the polygon
   /// that approximates the cylinder.
-  void SetAverageRadius(const bool average) { m_average = average; }
+  void SetAverageRadius(const bool average) { 
+    m_average = average; 
+    Update();
+  }
 
   /// Return the order of the approximating polygon.
   unsigned int GetSectors() const { return m_n; }
@@ -73,21 +76,31 @@ class SolidHole : public Solid {
            std::vector<Panel>& panels) override;
 
  private:
-  // Upper and lower radius
+  /// Upper radius.
   double m_rUp;
+  /// Lower radius.
   double m_rLow;
-  // Half-lengths
+  /// Half-length in x.
   double m_lX;
+  /// Half-length in y.
   double m_lY;
+  /// Half-length in z.
   double m_lZ;
 
-  /// Number of sectors
+  /// Number of sectors.
   unsigned int m_n = 2;
   /// Average chord over the sectors.
   bool m_average = false;
 
+  /// Ratio between the approximating polygon's radius and the hole radius.
+  double m_fp = 1.;
+  /// Ratio between inradius and exradius of the approximating polygon.
+  double m_fi = 1.;
+
   /// Discretisation levels.
   std::array<double, 7> m_dis{{-1., -1., -1., -1., -1., -1., -1.}};
+
+  void Update();
 };
 }
 
