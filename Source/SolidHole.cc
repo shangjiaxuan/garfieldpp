@@ -80,7 +80,7 @@ SolidHole::SolidHole(const double cx, const double cy, const double cz,
 }
 
 void SolidHole::Update() {
-
+  std::lock_guard<std::mutex> guard(m_mutex);
   const double alpha = Pi / (4. * (m_n - 1.));
   if (m_average) {
     m_fp = 2. / (1. + asinh(tan(alpha)) * cos(alpha) / tan(alpha));

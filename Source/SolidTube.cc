@@ -12,7 +12,7 @@ SolidTube::SolidTube(const double cx, const double cy, const double cz,
     : Solid(cx, cy, cz, "SolidTube"),
       m_rMax(rt),
       m_lZ(lz) {
-  Update();
+  UpdatePolygon();
 }
 
 SolidTube::SolidTube(const double cx, const double cy, const double cz,
@@ -22,8 +22,7 @@ SolidTube::SolidTube(const double cx, const double cy, const double cz,
   SetDirection(dx, dy, dz);
 }
 
-void SolidTube::Update() {
-
+void SolidTube::UpdatePolygon() {
   std::lock_guard<std::mutex> guard(m_mutex);
   const unsigned int nP = 4. * (m_n - 1);
   const double alpha = Pi / nP;
@@ -95,7 +94,7 @@ void SolidTube::SetRadius(const double r) {
     return;
   }
   m_rMax = r;
-  Update();
+  UpdatePolygon();
 }
 
 void SolidTube::SetHalfLength(const double lz) {
@@ -104,7 +103,7 @@ void SolidTube::SetHalfLength(const double lz) {
     return;
   }
   m_lZ = lz;
-  Update();
+  UpdatePolygon();
 }
 
 void SolidTube::SetSectors(const unsigned int n) {
@@ -113,7 +112,7 @@ void SolidTube::SetSectors(const unsigned int n) {
     return;
   }
   m_n = n;
-  Update();
+  UpdatePolygon();
 }
 
 bool SolidTube::SolidPanels(std::vector<Panel>& panels) {

@@ -1,6 +1,8 @@
 #ifndef G_SOLID_HOLE_H
 #define G_SOLID_HOLE_H
 
+#include <mutex>
+
 #include "Solid.hh"
 
 namespace Garfield {
@@ -76,6 +78,9 @@ class SolidHole : public Solid {
            std::vector<Panel>& panels) override;
 
  private:
+  /// Mutex.
+  std::mutex m_mutex;
+
   /// Upper radius.
   double m_rUp;
   /// Lower radius.

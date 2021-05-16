@@ -99,7 +99,7 @@ class SolidTube : public Solid {
   /// Discretisation levels.
   std::array<double, 3> m_dis{{-1.,-1.,-1.}};
 
-  void Update();
+  void UpdatePolygon();
 };
 }
 
