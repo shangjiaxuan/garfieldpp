@@ -44,9 +44,9 @@ void GeometrySimple::AddSolid(Solid* solid, Medium* medium) {
 }
 
 Solid* GeometrySimple::GetSolid(const double x, const double y,
-                                const double z) const {
+                                const double z, const bool tesselated) const {
   for (const auto& solid : m_solids) {
-    if (solid.first->IsInside(x, y, z)) return solid.first;
+    if (solid.first->IsInside(x, y, z, tesselated)) return solid.first;
   }
   return nullptr;
 }
@@ -62,19 +62,17 @@ Medium* GeometrySimple::GetMedium(
   return m_medium;
 }
 
-Solid* GeometrySimple::GetSolid(const unsigned int i) const {
+Solid* GeometrySimple::GetSolid(const size_t i) const {
   if (i >= m_solids.size()) {
-    std::cerr << m_className << "::GetSolid:\n"
-              << "    Requested solid " << i << " does not exist.\n";
+    std::cerr << m_className << "::GetSolid: Index out of range.\n";
     return nullptr;
   }
   return m_solids[i].first;
 }
 
-Solid* GeometrySimple::GetSolid(const unsigned int i, Medium*& medium) const {
+Solid* GeometrySimple::GetSolid(const size_t i, Medium*& medium) const {
   if (i >= m_solids.size()) {
-    std::cerr << m_className << "::GetSolid:\n"
-              << "    Requested solid " << i << " does not exist.\n";
+    std::cerr << m_className << "::GetSolid: Index out of range.\n";
     return nullptr;
   }
   medium = m_solids[i].second;

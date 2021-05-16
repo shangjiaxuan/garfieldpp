@@ -24,11 +24,11 @@ class Geometry {
                             const bool tesselated = false) const = 0;
 
   /// Return the number of solids in the geometry.
-  virtual unsigned int GetNumberOfSolids() const { return 0; }
+  virtual size_t GetNumberOfSolids() const { return 0; }
   /// Get a solid from the list.
-  virtual Solid* GetSolid(const unsigned int /*i*/) const { return nullptr; }
+  virtual Solid* GetSolid(const size_t /*i*/) const { return nullptr; }
   /// Get a solid from the list, together with the associated medium.
-  virtual Solid* GetSolid(const unsigned int /*i*/, Medium*& medium) const {
+  virtual Solid* GetSolid(const size_t /*i*/, Medium*& medium) const {
     medium = nullptr;
     return nullptr;
   }

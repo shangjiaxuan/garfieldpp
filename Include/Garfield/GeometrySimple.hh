@@ -20,14 +20,15 @@ class GeometrySimple : public Geometry {
   Medium* GetMedium(const double x, const double y, const double z,
                     const bool tesselated = false) const override;
 
-  unsigned int GetNumberOfSolids() const override { return m_solids.size(); }
-  Solid* GetSolid(const unsigned int i) const override;
-  Solid* GetSolid(const unsigned int i, Medium*& medium) const override;
+  size_t GetNumberOfSolids() const override { return m_solids.size(); }
+  Solid* GetSolid(const size_t i) const override;
+  Solid* GetSolid(const size_t i, Medium*& medium) const override;
 
   /// Add a solid to the geometry, together with the medium inside.
   void AddSolid(Solid* s, Medium* m);
   /// Get the solid at a given location (x, y, z).
-  Solid* GetSolid(const double x, const double y, const double z) const;
+  Solid* GetSolid(const double x, const double y, const double z,
+                  const bool tesselated = false) const;
 
   /// Set a background medium.
   void SetMedium(Medium* medium) { m_medium = medium; }
