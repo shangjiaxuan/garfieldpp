@@ -28,13 +28,9 @@ Medium* GeometryRoot::GetMedium(const double x, const double y, const double z,
   TGeoNode* cnode = m_geoManager->GetCurrentNode();
   std::string name(cnode->GetMedium()->GetMaterial()->GetName());
 
-  const unsigned int nMaterials = m_materials.size();
-  for (unsigned int i = 0; i < nMaterials; ++i) {
-    if (m_materials[i].name == name) {
-      return m_materials[i].medium;
-    }
-  }
-  return nullptr;
+  const auto it = m_materials.find(name);
+  if (it == m_materials.end()) return nullptr;
+  return it->second;
 }
 
 unsigned int GeometryRoot::GetNumberOfMaterials() {
@@ -83,25 +79,14 @@ void GeometryRoot::SetMedium(const unsigned int imat, Medium* med) {
   }
 
   std::string name(mat->GetName());
-  bool isNew = true;
-  // Check if this material has already been associated with a medium
-  const unsigned int nMaterials = m_materials.size();
-  for (unsigned int i = 0; i < nMaterials; ++i) {
-    if (name != m_materials[i].name) continue;
-    std::cout << m_className << "::SetMedium:\n"
-              << "    Current association of material " << name
-              << " with medium " << med->GetName() << " is overwritten.\n";
-    m_materials[i].medium = med;
-    isNew = false;
-    break;
-  }
 
-  if (isNew) {
-    material newMaterial;
-    newMaterial.name = name;
-    newMaterial.medium = med;
-    m_materials.push_back(std::move(newMaterial));
+  // Check if this material has already been associated with a medium.
+  if (m_materials.count(name) > 0) {
+    std::cout << m_className << "::SetMedium:\n"
+              << "    Replacing existing association of material " << name
+              << " with medium " << med->GetName() << ".\n";
   }
+  m_materials[name] = med;
 
   // Check if material properties match
   const double rho1 = mat->GetDensity();
