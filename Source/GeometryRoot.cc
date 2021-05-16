@@ -16,13 +16,12 @@ void GeometryRoot::SetGeometry(TGeoManager* geoman) {
     std::cerr << m_className << "::SetGeometry: Null pointer.\n";
     return;
   }
-
   m_geoManager = geoman;
   m_materials.clear();
 }
 
-Medium* GeometryRoot::GetMedium(const double x, const double y,
-                                const double z) const {
+Medium* GeometryRoot::GetMedium(const double x, const double y, const double z,
+                                const bool /*tesselated*/) const {
   if (!m_geoManager) return nullptr;
   m_geoManager->SetCurrentPoint(x, y, z);
   if (m_geoManager->IsOutside()) return nullptr;
@@ -136,6 +135,15 @@ void GeometryRoot::SetMedium(const char* name, Medium* med) {
   }
 
   SetMedium(imat, med);
+}
+
+bool GeometryRoot::IsInside(const double x, const double y, const double z,
+                            const bool /*tesselated*/) const {
+  if (m_geoManager) {
+    m_geoManager->SetCurrentPoint(x, y, z);
+    return !m_geoManager->IsOutside();
+  }
+  return false;
 }
 
 bool GeometryRoot::GetBoundingBox(double& xmin, double& ymin, double& zmin,

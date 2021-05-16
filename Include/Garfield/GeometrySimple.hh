@@ -17,8 +17,8 @@ class GeometrySimple : public Geometry {
   /// Destructor
   virtual ~GeometrySimple() {}
 
-  Medium* GetMedium(const double x, const double y,
-                    const double z) const override;
+  Medium* GetMedium(const double x, const double y, const double z,
+                    const bool tesselated = false) const override;
 
   unsigned int GetNumberOfSolids() const override { return m_solids.size(); }
   Solid* GetSolid(const unsigned int i) const override;
@@ -37,7 +37,8 @@ class GeometrySimple : public Geometry {
   /// Print a summary of the solids present in the geometry.
   void PrintSolids();
 
-  bool IsInside(const double x, const double y, const double z) const override;
+  bool IsInside(const double x, const double y, const double z,
+                const bool tesselated = false) const override;
   /// Determine whether a point is inside the envelope of the geometry.
   bool IsInBoundingBox(const double x, const double y, const double z) const;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,

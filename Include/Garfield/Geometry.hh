@@ -20,8 +20,8 @@ class Geometry {
   virtual ~Geometry() {}
 
   /// Retrieve the medium at a given point.
-  virtual Medium* GetMedium(const double x, const double y,
-                            const double z) const = 0;
+  virtual Medium* GetMedium(const double x, const double y, const double z,
+                            const bool tesselated = false) const = 0;
 
   /// Return the number of solids in the geometry.
   virtual unsigned int GetNumberOfSolids() const { return 0; }
@@ -33,8 +33,8 @@ class Geometry {
     return nullptr;
   }
   /// Check if a point is inside the geometry.
-  virtual bool IsInside(const double x, const double y,
-                        const double z) const = 0;
+  virtual bool IsInside(const double x, const double y, const double z,
+                        const bool tesselated = false) const = 0;
 
   /// Get the bounding box (envelope of the geometry).
   virtual bool GetBoundingBox(double& xmin, double& ymin, double& zmin,

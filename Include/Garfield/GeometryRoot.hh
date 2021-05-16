@@ -22,7 +22,8 @@ class GeometryRoot : public Geometry {
   /// Set the geometry (pointer to ROOT TGeoManager).
   void SetGeometry(TGeoManager* geoman);
 
-  Medium* GetMedium(const double x, const double y, const double z) const override;
+  Medium* GetMedium(const double x, const double y, const double z,
+                    const bool tesselated = false) const override;
 
   /// Get the number of materials defined in the ROOT geometry.
   unsigned int GetNumberOfMaterials();
@@ -35,14 +36,8 @@ class GeometryRoot : public Geometry {
   /// Associate a ROOT material with Garfield medium.
   void SetMedium(const char* mat, Medium* med);
 
-  bool IsInside(const double x, const double y, const double z) const override {
-    if (m_geoManager) {
-      m_geoManager->SetCurrentPoint(x, y, z);
-      return !m_geoManager->IsOutside();
-    }
-    return false;
-  }
-
+  bool IsInside(const double x, const double y, const double z,
+                const bool tesselated = false) const override;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) override;
 
