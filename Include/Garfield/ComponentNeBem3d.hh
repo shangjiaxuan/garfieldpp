@@ -16,6 +16,7 @@ class ComponentNeBem3d : public Component {
   /// Destructor
   ~ComponentNeBem3d() {}
 
+  Medium* GetMedium(const double x, const double y, const double z) override;
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
   void ElectricField(const double x, const double y, const double z, double& ex,
