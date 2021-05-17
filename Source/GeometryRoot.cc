@@ -16,26 +16,21 @@ void GeometryRoot::SetGeometry(TGeoManager* geoman) {
     std::cerr << m_className << "::SetGeometry: Null pointer.\n";
     return;
   }
-
   m_geoManager = geoman;
   m_materials.clear();
 }
 
-Medium* GeometryRoot::GetMedium(const double x, const double y,
-                                const double z) const {
+Medium* GeometryRoot::GetMedium(const double x, const double y, const double z,
+                                const bool /*tesselated*/) const {
   if (!m_geoManager) return nullptr;
   m_geoManager->SetCurrentPoint(x, y, z);
   if (m_geoManager->IsOutside()) return nullptr;
   TGeoNode* cnode = m_geoManager->GetCurrentNode();
   std::string name(cnode->GetMedium()->GetMaterial()->GetName());
 
-  const unsigned int nMaterials = m_materials.size();
-  for (unsigned int i = 0; i < nMaterials; ++i) {
-    if (m_materials[i].name == name) {
-      return m_materials[i].medium;
-    }
-  }
-  return nullptr;
+  const auto it = m_materials.find(name);
+  if (it == m_materials.end()) return nullptr;
+  return it->second;
 }
 
 unsigned int GeometryRoot::GetNumberOfMaterials() {
@@ -84,25 +79,14 @@ void GeometryRoot::SetMedium(const unsigned int imat, Medium* med) {
   }
 
   std::string name(mat->GetName());
-  bool isNew = true;
-  // Check if this material has already been associated with a medium
-  const unsigned int nMaterials = m_materials.size();
-  for (unsigned int i = 0; i < nMaterials; ++i) {
-    if (name != m_materials[i].name) continue;
-    std::cout << m_className << "::SetMedium:\n"
-              << "    Current association of material " << name
-              << " with medium " << med->GetName() << " is overwritten.\n";
-    m_materials[i].medium = med;
-    isNew = false;
-    break;
-  }
 
-  if (isNew) {
-    material newMaterial;
-    newMaterial.name = name;
-    newMaterial.medium = med;
-    m_materials.push_back(std::move(newMaterial));
+  // Check if this material has already been associated with a medium.
+  if (m_materials.count(name) > 0) {
+    std::cout << m_className << "::SetMedium:\n"
+              << "    Replacing existing association of material " << name
+              << " with medium " << med->GetName() << ".\n";
   }
+  m_materials[name] = med;
 
   // Check if material properties match
   const double rho1 = mat->GetDensity();
@@ -136,6 +120,15 @@ void GeometryRoot::SetMedium(const char* name, Medium* med) {
   }
 
   SetMedium(imat, med);
+}
+
+bool GeometryRoot::IsInside(const double x, const double y, const double z,
+                            const bool /*tesselated*/) const {
+  if (m_geoManager) {
+    m_geoManager->SetCurrentPoint(x, y, z);
+    return !m_geoManager->IsOutside();
+  }
+  return false;
 }
 
 bool GeometryRoot::GetBoundingBox(double& xmin, double& ymin, double& zmin,

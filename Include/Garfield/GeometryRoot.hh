@@ -1,7 +1,7 @@
 #ifndef G_GEOMETRY_ROOT_H
 #define G_GEOMETRY_ROOT_H
 
-#include <vector>
+#include <map>
 
 #include <TGeoManager.h>
 #include <TGeoMaterial.h>
@@ -22,27 +22,22 @@ class GeometryRoot : public Geometry {
   /// Set the geometry (pointer to ROOT TGeoManager).
   void SetGeometry(TGeoManager* geoman);
 
-  Medium* GetMedium(const double x, const double y, const double z) const override;
+  Medium* GetMedium(const double x, const double y, const double z,
+                    const bool tesselated = false) const override;
 
   /// Get the number of materials defined in the ROOT geometry.
   unsigned int GetNumberOfMaterials();
-  /// Get pointer to ROOT material with given index.
+  /// Get a pointer to the ROOT material with a given index.
   TGeoMaterial* GetMaterial(const unsigned int i);
-  /// Get pointer to ROOT material with given name.
+  /// Get a pointer to the ROOT material with a given name.
   TGeoMaterial* GetMaterial(const char* name);
-  /// Associate a ROOT material with Garfield medium.
+  /// Associate a ROOT material with a Garfield medium.
   void SetMedium(const unsigned int imat, Medium* med);
-  /// Associate a ROOT material with Garfield medium.
+  /// Associate a ROOT material with a Garfield medium.
   void SetMedium(const char* mat, Medium* med);
 
-  bool IsInside(const double x, const double y, const double z) const override {
-    if (m_geoManager) {
-      m_geoManager->SetCurrentPoint(x, y, z);
-      return !m_geoManager->IsOutside();
-    }
-    return false;
-  }
-
+  bool IsInside(const double x, const double y, const double z,
+                const bool tesselated = false) const override;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) override;
 
@@ -54,13 +49,9 @@ class GeometryRoot : public Geometry {
   TGeoManager* m_geoManager = nullptr;
 
   // List of ROOT materials associated to Garfield media
-  struct material {
-    std::string name;
-    Medium* medium;
-  };
-  std::vector<material> m_materials;
+  std::map<std::string, Medium*> m_materials;
 
-  // Switch on/off debugging messages
+  // Switch on/off debugging messages.
   bool m_debug = false;
   void PrintGeoNotDefined(const std::string& fcn) const;
 };

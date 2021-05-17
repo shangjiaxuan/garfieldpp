@@ -1,6 +1,8 @@
 #ifndef G_SOLID_TUBE_H
 #define G_SOLID_TUBE_H
 
+#include <mutex>
+
 #include "Solid.hh"
 
 namespace Garfield {
@@ -9,35 +11,25 @@ namespace Garfield {
 
 class SolidTube : public Solid {
  public:
-  /// Constructor from centre, inner/outer radii, and half-length.
-  SolidTube(const double cx, const double cy, const double cz,
-            const double rmin, const double rmax, const double lz);
   /// Constructor from centre, outer radius, and half-length.
   SolidTube(const double cx, const double cy, const double cz, const double r,
             const double lz);
-  /// Constructor from centre, inner/outer radii, half-length and orientation.
-  SolidTube(const double cx, const double cy, const double cz,
-            const double rmin, const double rmax, const double lz,
-            const double dx, const double dy, const double dz);
   /// Constructor from centre, outer radius, half-length and orientation.
   SolidTube(const double cx, const double cy, const double cz, const double r,
             const double lz, const double dx, const double dy, const double dz);
   /// Destructor
   ~SolidTube() {}
 
-  bool IsInside(const double x, const double y, const double z) const override;
+  bool IsInside(const double x, const double y, const double z,
+                const bool tesselated) const override;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) const override;
   bool IsTube() const override { return true; }
 
   void SetHalfLength(const double lz);
-  void SetInnerRadius(const double rmin);
-  void SetOuterRadius(const double rmax);
   void SetRadius(const double r);
 
   double GetHalfLengthZ() const override { return m_lZ; }
-  double GetInnerRadius() const override { return m_rMin; }
-  double GetOuterRadius() const override { return m_rMax; }
   double GetRadius() const override { return m_rMax; }
 
   /// When calculating the surface panels, the cylinder is
@@ -76,8 +68,11 @@ class SolidTube : public Solid {
            std::vector<Panel>& panels) override;
 
  private:
-  /// Inner and outer radius.
-  double m_rMin, m_rMax;
+  /// Mutex.
+  std::mutex m_mutex;
+
+  /// Outer radius.
+  double m_rMax;
   /// Half-length
   double m_lZ;
 
@@ -87,6 +82,15 @@ class SolidTube : public Solid {
   unsigned int m_n = 2;
   /// Average chord over the sectors.
   bool m_average = false;
+  /// Radius of the approximating polygon.
+  double m_rp;
+  /// Inradius of the approximating polygon.
+  double m_ri;
+  /// X-coordinates of the approximating polygon.
+  std::vector<double> m_xp;
+  /// Y-coordinates of the approximating polygon.
+  std::vector<double> m_yp;
+
   /// Have a top lid?
   bool m_toplid = true;
   /// Have a bottom lid?
@@ -94,6 +98,8 @@ class SolidTube : public Solid {
 
   /// Discretisation levels.
   std::array<double, 3> m_dis{{-1.,-1.,-1.}};
+
+  void UpdatePolygon();
 };
 }
 

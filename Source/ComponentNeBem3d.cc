@@ -383,6 +383,12 @@ ComponentNeBem3d* gComponentNeBem3d = nullptr;
 
 ComponentNeBem3d::ComponentNeBem3d() : Component("NeBem3d") {}
 
+Medium* ComponentNeBem3d::GetMedium(const double x, const double y, 
+                                    const double z) {
+  if (!m_geometry) return nullptr;
+  return m_geometry->GetMedium(x, y, z, true);
+}
+
 void ComponentNeBem3d::ElectricField(const double x, const double y,
                                      const double z, double& ex, double& ey,
                                      double& ez, double& v, Medium*& m,

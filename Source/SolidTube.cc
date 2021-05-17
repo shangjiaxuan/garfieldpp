@@ -8,38 +8,62 @@
 namespace Garfield {
 
 SolidTube::SolidTube(const double cx, const double cy, const double cz,
-                     const double rmin, const double rmax, const double lz)
+                     const double rt, const double lz)
     : Solid(cx, cy, cz, "SolidTube"),
-      m_rMin(rmin),
-      m_rMax(rmax),
-      m_lZ(lz) {}
-
-SolidTube::SolidTube(const double cx, const double cy, const double cz,
-                     const double rmin, const double rmax, const double lz,
-                     const double dx, const double dy, const double dz)
-    : SolidTube(cx, cy, cz, rmin, rmax, lz) {
-  SetDirection(dx, dy, dz);
+      m_rMax(rt),
+      m_lZ(lz) {
+  UpdatePolygon();
 }
 
 SolidTube::SolidTube(const double cx, const double cy, const double cz,
-                     const double r, const double lz)
-    : SolidTube(cx, cy, cz, 0., r, lz) {}
+                     const double rt, const double lz,
+                     const double dx, const double dy, const double dz)
+    : SolidTube(cx, cy, cz, rt, lz) {
+  SetDirection(dx, dy, dz);
+}
 
-SolidTube::SolidTube(const double cx, const double cy, const double cz,
-                     const double r, const double lz, const double dx,
-                     const double dy, const double dz)
-    : SolidTube(cx, cy, cz, 0., r, lz, dx, dy, dz) {}
+void SolidTube::UpdatePolygon() {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  const unsigned int nP = 4. * (m_n - 1);
+  const double alpha = Pi / nP;
+  const double calpha = cos(alpha);
+  // Set the radius of the approximating polygon.
+  m_rp = m_rMax;
+  if (m_average) {
+    const double f = 2. / (1. + asinh(tan(alpha)) * calpha / tan(alpha));
+    m_rp *= f;
+  } 
+  // Set the inradius of the polygon.
+  m_ri = m_rp * calpha;
+  // Set the coordinates of the polygon corners.
+  m_xp.clear();
+  m_yp.clear(); 
+  for (unsigned int i = 0; i < nP; ++i) {
+    const double phi = m_rot + HalfPi * i / (m_n - 1.);
+    const double cphi = cos(phi);
+    const double sphi = sin(phi);
+    m_xp.push_back(m_rp * cphi);
+    m_yp.push_back(m_rp * sphi);
+  }
+}
 
-bool SolidTube::IsInside(const double x, const double y, const double z) const {
+bool SolidTube::IsInside(const double x, const double y, const double z,
+                         const bool tesselated) const {
   // Transform the point to local coordinates.
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);
 
   if (fabs(w) > m_lZ) return false;
 
-  const double r = sqrt(u * u + v * v);
-  if (r < m_rMin || r > m_rMax) return false;
-  return true;
+  const double rho = sqrt(u * u + v * v);
+  if (!tesselated) return (rho <= m_rMax);
+ 
+  if (rho > m_rp) return false;
+  if (rho < m_ri) return true;
+  bool inside = false;
+  bool edge = false;
+  Polygon::Inside(m_xp, m_yp, u, v, inside, edge);
+  return inside;
 }
 
 bool SolidTube::GetBoundingBox(double& xmin, double& ymin, double& zmin,
@@ -64,39 +88,13 @@ bool SolidTube::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   return true;
 }
 
-void SolidTube::SetInnerRadius(const double rmin) {
-  if (rmin <= 0.) {
-    std::cerr << "SolidTube::SetInnerRadius: Radius must be > 0.\n";
-    return;
-  }
-  if (rmin >= m_rMax) {
-    std::cerr << "SolidTube::SetInnerRadius:\n"
-              << "    Inner radius must be smaller than outer radius.\n";
-    return;
-  }
-  m_rMin = rmin;
-}
-
-void SolidTube::SetOuterRadius(const double rmax) {
-  if (rmax <= 0.) {
-    std::cerr << "SolidTube::SetOuterRadius: Radius must be > 0.\n";
-    return;
-  }
-  if (rmax <= m_rMin) {
-    std::cerr << "SolidTube::SetOuterRadius:\n"
-              << "    Outer radius must be greater than inner radius.\n";
-    return;
-  }
-  m_rMax = rmax;
-}
-
 void SolidTube::SetRadius(const double r) {
   if (r <= 0.) {
     std::cerr << "SolidTube::SetRadius: Radius must be > 0.\n";
     return;
   }
   m_rMax = r;
-  m_rMin = 0.;
+  UpdatePolygon();
 }
 
 void SolidTube::SetHalfLength(const double lz) {
@@ -105,6 +103,7 @@ void SolidTube::SetHalfLength(const double lz) {
     return;
   }
   m_lZ = lz;
+  UpdatePolygon();
 }
 
 void SolidTube::SetSectors(const unsigned int n) {
@@ -113,12 +112,13 @@ void SolidTube::SetSectors(const unsigned int n) {
     return;
   }
   m_n = n;
+  UpdatePolygon();
 }
 
 bool SolidTube::SolidPanels(std::vector<Panel>& panels) {
 
   const auto id = GetId();
-  const unsigned int nPanels = panels.size();
+  const auto nPanels = panels.size();
   // Direction vector.
   const double fnorm = sqrt(m_dX * m_dX + m_dY * m_dY + m_dZ * m_dZ);
   if (fnorm <= 0) {
@@ -127,13 +127,7 @@ bool SolidTube::SolidPanels(std::vector<Panel>& panels) {
     return false;
   }
 
-  // Set the mean or the outer radius.
-  double r = m_rMax;
-  if (m_average) {
-    const double alpha = Pi / (4. * (m_n - 1.));
-    r = 2 * m_rMax / (1. + asinh(tan(alpha)) * cos(alpha) / tan(alpha));
-  }
-
+  double r = m_rp;
   const unsigned int nPoints = 4 * (m_n - 1);
   // Create the top lid.
   if (m_toplid) {
@@ -255,12 +249,7 @@ void SolidTube::Cut(const double x0, const double y0, const double z0,
   std::vector<double> xv;
   std::vector<double> yv;
   std::vector<double> zv;
-  // Set the mean or the outer radius.
-  double r = m_rMax;
-  if (m_average) {
-    const double alpha = Pi / (4. * (m_n - 1.));
-    r = 2 * m_rMax / (1. + asinh(tan(alpha)) * cos(alpha) / tan(alpha));
-  }
+  double r = m_rp;
   const unsigned int nPoints = 4 * (m_n - 1);
   const double dphi = HalfPi / (m_n - 1.);
   // Go through the lines of the top and bottom lids.

@@ -1,6 +1,8 @@
 #ifndef G_SOLID_SPHERE_H
 #define G_SOLID_SPHERE_H
 
+#include <mutex>
+
 #include "Solid.hh"
 
 namespace Garfield {
@@ -18,7 +20,8 @@ class SolidSphere : public Solid {
   /// Destructor
   ~SolidSphere() {}
 
-  bool IsInside(const double x, const double y, const double z) const override;
+  bool IsInside(const double x, const double y, const double z,
+                const bool tesselated) const override;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
                       double& ymax, double& zmax) const override;
   bool IsSphere() const override { return true; }
@@ -33,8 +36,8 @@ class SolidSphere : public Solid {
   double GetOuterRadius() const override { return m_rMax; }
 
   /// When calculating surface panels, the sphere is approximated by a set of
-  /// parallelograms, much the same way maps are drawn. N specifies the number
-  /// of meridians and also the number of parallels.
+  /// parallelograms, much the same way maps are drawn ("UV sphere"). 
+  /// N specifies the number of meridians and also the number of parallels.
   void SetMeridians(const unsigned int n);
 
   bool SolidPanels(std::vector<Panel>& panels) override;
@@ -46,6 +49,9 @@ class SolidSphere : public Solid {
            std::vector<Panel>& panels) override;
 
  private:
+  /// Mutex. 
+  std::mutex m_mutex;
+
   /// Inner and outer radii.
   double m_rMin = 0., m_rMax = 1.;
 
@@ -55,6 +61,11 @@ class SolidSphere : public Solid {
   /// Discretisation level.
   double m_dis = -1.;
 
+  /// Surface panels.
+  std::vector<Panel> m_panelsO;
+  std::vector<Panel> m_panelsI;
+
+  void UpdatePanels();
   void MakePanels(const int vol, const double r, const bool out,
                   std::vector<Panel>& panels) const; 
 };

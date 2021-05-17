@@ -6,22 +6,41 @@
 #include "Garfield/Polygon.hh"
 #include "Garfield/SolidSphere.hh"
 
+namespace {
+
+bool InPolyhedron(const std::vector<Garfield::Panel>& panels,
+                  const double x, const double y, const double z,
+                  const bool inv = false) {
+
+  for (const auto& panel : panels) {
+    double d = panel.a * (panel.xv[0] - x) + panel.b * (panel.yv[0] - y) + 
+               panel.c * (panel.zv[0] - z);
+    if (inv) d *= -1;
+    if (d < 0.) return false;
+  }
+  return true;
+}
+
+}
+
 namespace Garfield {
 
 SolidSphere::SolidSphere(const double cx, const double cy, const double cz,
                          const double r)
     : Solid(cx, cy, cz, "SolidSphere") {
   SetRadius(r);
+  UpdatePanels();
 }
 
 SolidSphere::SolidSphere(const double cx, const double cy, const double cz,
                          const double rmin, const double rmax)
     : Solid(cx, cy, cz, "SolidSphere") {
   SetRadii(rmin, rmax);
+  UpdatePanels();
 }
 
-bool SolidSphere::IsInside(const double x, const double y,
-                           const double z) const {
+bool SolidSphere::IsInside(const double x, const double y, const double z,
+                           const bool tesselated) const {
   // Transform the point to local coordinates.
   const double dx = x - m_cX;
   const double dy = y - m_cY;
@@ -30,9 +49,12 @@ bool SolidSphere::IsInside(const double x, const double y,
   if (fabs(dx) > m_rMax || fabs(dy) > m_rMax || fabs(dz) > m_rMax) {
     return false;
   }
-
   const double r = sqrt(dx * dx + dy * dy + dz * dz);
-  if (r < m_rMin || r > m_rMax) return false;
+  if (!tesselated) return (r >= m_rMin && r <= m_rMax);
+  if (r > m_rMax || !InPolyhedron(m_panelsO, dx, dy, dz)) return false;
+  if (m_rMin > 0.) {
+    return (r >= m_rMin || !InPolyhedron(m_panelsI, dx, dy, dz, true));
+  }
   return true;
 }
 
@@ -55,6 +77,7 @@ void SolidSphere::SetRadius(const double r) {
   }
   m_rMax = r;
   m_rMin = 0.;
+  UpdatePanels();
 }
 
 void SolidSphere::SetRadii(const double rmin, const double rmax) {
@@ -69,6 +92,7 @@ void SolidSphere::SetRadii(const double rmin, const double rmax) {
   }
   m_rMin = rmin;
   m_rMax = rmax;
+  UpdatePanels();
 }
 
 void SolidSphere::SetMeridians(const unsigned int n) {
@@ -77,18 +101,28 @@ void SolidSphere::SetMeridians(const unsigned int n) {
     return;
   }
   m_n = n;
+  UpdatePanels();
 }
 
 bool SolidSphere::SolidPanels(std::vector<Panel>& panels) {
-  const auto id = GetId();
-  const unsigned int nPanels = panels.size();
-  MakePanels(id, m_rMax, true, panels);
-  if (m_rMin > 0.) {
-    MakePanels(id, m_rMin, false, panels);
-  } 
+
+  const auto nPanels = panels.size();
+  panels.insert(panels.begin(), m_panelsO.begin(), m_panelsO.end());
+  panels.insert(panels.begin(), m_panelsI.begin(), m_panelsI.end());
   std::cout << "SolidSphere::SolidPanels: " << panels.size() - nPanels
             << " panels.\n";
   return true;
+}
+
+void SolidSphere::UpdatePanels() {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  m_panelsO.clear();
+  m_panelsI.clear();
+  const auto id = GetId();
+  MakePanels(id, m_rMax, true, m_panelsO);
+  if (m_rMin > 0.) {
+    MakePanels(id, m_rMin, false, m_panelsI);
+  } 
 }
 
 void SolidSphere::MakePanels(const int vol, const double r, const bool out,

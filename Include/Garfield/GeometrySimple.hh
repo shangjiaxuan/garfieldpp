@@ -17,17 +17,18 @@ class GeometrySimple : public Geometry {
   /// Destructor
   virtual ~GeometrySimple() {}
 
-  Medium* GetMedium(const double x, const double y,
-                    const double z) const override;
+  Medium* GetMedium(const double x, const double y, const double z,
+                    const bool tesselated = false) const override;
 
-  unsigned int GetNumberOfSolids() const override { return m_solids.size(); }
-  Solid* GetSolid(const unsigned int i) const override;
-  Solid* GetSolid(const unsigned int i, Medium*& medium) const override;
+  size_t GetNumberOfSolids() const override { return m_solids.size(); }
+  Solid* GetSolid(const size_t i) const override;
+  Solid* GetSolid(const size_t i, Medium*& medium) const override;
 
   /// Add a solid to the geometry, together with the medium inside.
   void AddSolid(Solid* s, Medium* m);
   /// Get the solid at a given location (x, y, z).
-  Solid* GetSolid(const double x, const double y, const double z) const;
+  Solid* GetSolid(const double x, const double y, const double z,
+                  const bool tesselated = false) const;
 
   /// Set a background medium.
   void SetMedium(Medium* medium) { m_medium = medium; }
@@ -37,7 +38,8 @@ class GeometrySimple : public Geometry {
   /// Print a summary of the solids present in the geometry.
   void PrintSolids();
 
-  bool IsInside(const double x, const double y, const double z) const override;
+  bool IsInside(const double x, const double y, const double z,
+                const bool tesselated = false) const override;
   /// Determine whether a point is inside the envelope of the geometry.
   bool IsInBoundingBox(const double x, const double y, const double z) const;
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,

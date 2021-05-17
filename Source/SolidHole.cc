@@ -67,7 +67,9 @@ SolidHole::SolidHole(const double cx, const double cy, const double cz,
       m_rLow(rlow),
       m_lX(lx), 
       m_lY(ly),
-      m_lZ(lz) {}
+      m_lZ(lz) {
+  Update();
+}
 
 SolidHole::SolidHole(const double cx, const double cy, const double cz,
                      const double rup, const double rlow, 
@@ -77,33 +79,49 @@ SolidHole::SolidHole(const double cx, const double cy, const double cz,
   SetDirection(dx, dy, dz);
 }
 
-bool SolidHole::IsInside(const double x, const double y, const double z) const {
+void SolidHole::Update() {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  const double alpha = Pi / (4. * (m_n - 1.));
+  if (m_average) {
+    m_fp = 2. / (1. + asinh(tan(alpha)) * cos(alpha) / tan(alpha));
+  } else {
+    m_fp = 1.;
+  }
+  m_fi = cos(alpha); 
+}
+
+bool SolidHole::IsInside(const double x, const double y, const double z,
+                         const bool tesselated) const {
   // Transform the point to local coordinates.
   double u = x, v = y, w = z;
   ToLocal(x, y, z, u, v, w);
 
   if (fabs(u) > m_lX || fabs(v) > m_lY || fabs(w) > m_lZ) {
-    if (m_debug) {
-      std::cout << "SolidHole::IsInside: (" << x << ", " << y << ", " << z
-                << ") is outside.\n";
-    }
     return false;
   }
+ 
+  double r = m_rLow + (w + m_lZ) * (m_rUp - m_rLow) / (2 * m_lZ);
+  if (!tesselated) return (u * u + v * v >= r * r);
+  const double rho = sqrt(u * u + v * v);
+  if (m_average) r *= m_fp;
+  if (rho > r) return true;
+  if (rho < r * m_fi) return false;
 
-  const double r = m_rLow + (w + m_lZ) * (m_rUp - m_rLow) / (2 * m_lZ);
-  if (u * u + v * v < r * r) {
-    if (m_debug) {
-      std::cout << "SolidHole::IsInside: (" << x << ", " << y << ", " << z
-                << ") is outside.\n";
-    }
-    return false;
+  std::vector<double> xp;
+  std::vector<double> yp;
+  const double phi0 = -0.5 * HalfPi;
+  const double dphi = HalfPi / double(m_n - 1);
+  const unsigned int nP = 4 * (m_n - 1);
+  for (unsigned int i = 0; i < nP; ++i) {
+    // Bottom and top of the line along the axis of the cylinder.
+    const double phi = phi0 + dphi * i;
+    xp.push_back(r * cos(phi));
+    yp.push_back(r * sin(phi));
   }
-
-  if (m_debug) {
-    std::cout << "SolidHole::IsInside: (" << x << ", " << y << ", " << z
-              << ") is inside.\n";
-  }
-  return false;
+  bool inside = false;
+  bool edge = false;
+  Polygon::Inside(xp, yp, u, v, inside, edge);  
+  return !inside;
 }
 
 bool SolidHole::GetBoundingBox(double& xmin, double& ymin, double& zmin,
@@ -174,11 +192,12 @@ void SolidHole::SetSectors(const unsigned int n) {
     return;
   }
   m_n = n;
+  Update();
 }
 
 bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
   const auto id = GetId();
-  const unsigned int nPanels = panels.size();
+  const auto nPanels = panels.size();
   // Direction vector.
   const double fnorm = sqrt(m_dX * m_dX + m_dY * m_dY + m_dZ * m_dZ);
   if (fnorm <= 0) {
@@ -191,10 +210,8 @@ bool SolidHole::SolidPanels(std::vector<Panel>& panels) {
   double r1 = m_rLow;
   double r2 = m_rUp;
   if (m_average) {
-    const double alpha = Pi / (4. * (m_n - 1.));
-    const double f = 2. / (1. + asinh(tan(alpha)) * cos(alpha) / tan(alpha));
-    r1 *= f;
-    r2 *= f;
+    r1 *= m_fp;
+    r2 *= m_fp;
   }
 
   double xv0, yv0, zv0;
@@ -420,10 +437,8 @@ void SolidHole::Cut(const double x0, const double y0, const double z0,
   double r1 = m_rLow;
   double r2 = m_rUp;
   if (m_average) {
-    const double alpha = Pi / (4. * (m_n - 1.));
-    const double f = 2. / (1. + asinh(tan(alpha)) * cos(alpha) / tan(alpha));
-    r1 *= f;
-    r2 *= f;
+    r1 *= m_fp;
+    r2 *= m_fp;
   }
   std::array<double, 8> xbox;
   std::array<double, 8> ybox;

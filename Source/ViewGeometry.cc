@@ -105,10 +105,9 @@ void ViewGeometry::Plot3d() {
                         -stheta,       0,     ctheta};
     TGeoVolume* volume = nullptr;
     if (solid->IsTube()) {
-      const double rmin = solid->GetInnerRadius();
-      const double rmax = solid->GetOuterRadius();
+      const double rt = solid->GetRadius();
       const double lz = solid->GetHalfLengthZ();
-      volume = m_geoManager->MakeTube("Tube", medDefault, rmin, rmax, lz);
+      volume = m_geoManager->MakeTube("Tube", medDefault, 0., rt, lz);
     } else if (solid->IsWire()) {
       const double rw = solid->GetRadius();
       const double lz = solid->GetHalfLengthZ();

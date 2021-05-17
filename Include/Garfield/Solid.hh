@@ -39,9 +39,10 @@ class Solid {
   /// Destructor
   virtual ~Solid() {}
 
-  /// Check whether a given point is inside the solid.
-  virtual bool IsInside(const double x, const double y,
-                        const double z) const = 0;
+  /// Check whether a given point is inside the solid. If requested, 
+  /// use the tesselated approximation of the solid (if applicable).
+  virtual bool IsInside(const double x, const double y, const double z,
+                        const bool tesselated = false) const = 0;
   /// Return the bounding box of the solid.
   virtual bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                               double& xmax, double& ymax,

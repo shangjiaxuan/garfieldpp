@@ -81,7 +81,6 @@ SolidTube(const double cx, const double cy, const double cz, const double r,
           const double lz, const double dx, const double dy, const double dz);
 \end{lstlisting} 
 can be used. 
-Constructors for cylinders with non-zero inner radius are also available.
 
 \begin{figure}
 \centering
@@ -95,14 +94,14 @@ Constructors for cylinders with non-zero inner radius are also available.
   \coordinate (MLZ) at (\tdplotmainphi-60:\rmax);
   \draw[thin] (\tdplotmainphi:\rmax) arc (\tdplotmainphi:\tdplotmainphi-180:\rmax);
   \draw[thin,dashed] (\tdplotmainphi:\rmax) arc (\tdplotmainphi:\tdplotmainphi+180:\rmax);
-  \draw[thin,dashed] (0,0) circle (\rmin);
+  %\draw[thin,dashed] (0,0) circle (\rmin);
 \end{scope}
 \begin{scope}[canvas is xy plane at z=-\lz]
   \coordinate (BR) at (\tdplotmainphi:\rmax);
   \coordinate (BL) at (\tdplotmainphi-180:\rmax);
   \coordinate (BLZ) at (\tdplotmainphi-60:\rmax);
   \draw[dashed] (\tdplotmainphi:\rmax) arc (\tdplotmainphi:\tdplotmainphi+180:\rmax);
-  \draw[thin,dashed] (0,0) circle (\rmin);
+  %\draw[thin,dashed] (0,0) circle (\rmin);
   \draw[<->,thick,solid] (0,0,0) -- (0:\rmax) node[midway,above]{$r$};
 \end{scope}
 \begin{scope}[canvas is xy plane at z=\lz]
@@ -110,7 +109,7 @@ Constructors for cylinders with non-zero inner radius are also available.
   \coordinate (TLZ) at (\tdplotmainphi-60:\rmax);
   \filldraw[panel,thick] (BR) arc (\tdplotmainphi:\tdplotmainphi-180:\rmax) -- (\tdplotmainphi-180:\rmax) arc (\tdplotmainphi-180:\tdplotmainphi:\rmax) --cycle;
  \filldraw[panel,thick] (0,0) circle (\rmax); 
- \filldraw[thick,fill=white] (0,0) circle (\rmin);
+ %\filldraw[thick,fill=white] (0,0) circle (\rmin);
  \draw[<->,thick] (MLZ) -- (TLZ) node[midway,right]{$l_{z}$};
  \draw[<->,thick] (MLZ) -- (BLZ) node[midway,right]{$l_{z}$};
 \end{scope}

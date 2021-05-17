@@ -44,36 +44,35 @@ void GeometrySimple::AddSolid(Solid* solid, Medium* medium) {
 }
 
 Solid* GeometrySimple::GetSolid(const double x, const double y,
-                                const double z) const {
+                                const double z, const bool tesselated) const {
   for (const auto& solid : m_solids) {
-    if (solid.first->IsInside(x, y, z)) return solid.first;
+    if (solid.first->IsInside(x, y, z, tesselated)) return solid.first;
   }
   return nullptr;
 }
 
-Medium* GeometrySimple::GetMedium(const double x, const double y,
-                                  const double z) const {
+Medium* GeometrySimple::GetMedium(
+    const double x, const double y, const double z, 
+    const bool tesselated) const {
   for (const auto& solid : m_solids) {
-    if (solid.first->IsInside(x, y, z)) {
+    if (solid.first->IsInside(x, y, z, tesselated)) {
       return solid.second;
     }
   }
   return m_medium;
 }
 
-Solid* GeometrySimple::GetSolid(const unsigned int i) const {
+Solid* GeometrySimple::GetSolid(const size_t i) const {
   if (i >= m_solids.size()) {
-    std::cerr << m_className << "::GetSolid:\n"
-              << "    Requested solid " << i << " does not exist.\n";
+    std::cerr << m_className << "::GetSolid: Index out of range.\n";
     return nullptr;
   }
   return m_solids[i].first;
 }
 
-Solid* GeometrySimple::GetSolid(const unsigned int i, Medium*& medium) const {
+Solid* GeometrySimple::GetSolid(const size_t i, Medium*& medium) const {
   if (i >= m_solids.size()) {
-    std::cerr << m_className << "::GetSolid:\n"
-              << "    Requested solid " << i << " does not exist.\n";
+    std::cerr << m_className << "::GetSolid: Index out of range.\n";
     return nullptr;
   }
   medium = m_solids[i].second;
@@ -87,7 +86,7 @@ void GeometrySimple::Clear() {
 
 void GeometrySimple::PrintSolids() {
   std::cout << m_className << "::PrintSolids:\n";
-  const unsigned int nSolids = m_solids.size();
+  const auto nSolids = m_solids.size();
   if (nSolids == 1) {
     std::cout << "    1 solid\n";
   } else {
@@ -95,7 +94,7 @@ void GeometrySimple::PrintSolids() {
   }
   if (m_solids.empty()) return;
   std::cout << "      Index      Type    Medium\n";
-  for (unsigned int i = 0; i < nSolids; ++i) {
+  for (size_t i = 0; i < nSolids; ++i) {
     std::cout << "        " << i << "         ";
     if (m_solids[i].first->IsBox()) {
       std::cout << "box       ";
@@ -123,11 +122,11 @@ void GeometrySimple::PrintSolids() {
 }
 
 bool GeometrySimple::IsInside(const double x, const double y,
-                              const double z) const {
+                              const double z, const bool tesselated) const {
   if (!IsInBoundingBox(x, y, z)) return false;
 
   for (const auto& solid : m_solids) {
-    if (solid.first->IsInside(x, y, z)) return true;
+    if (solid.first->IsInside(x, y, z, tesselated)) return true;
   }
   return false;
 }
