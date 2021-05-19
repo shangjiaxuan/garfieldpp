@@ -226,6 +226,26 @@ double Component::IntegrateFluxParallelogram(
     const double x0, const double y0, const double z0, const double dx1,
     const double dy1, const double dz1, const double dx2, const double dy2,
     const double dz2, const unsigned int nU, const unsigned int nV) {
+
+  return IntegrateFluxParallelogram(
+      x0, y0, z0, dx1, dy1, dz1, dx2, dy2, dz2, nU, nV, false, "");
+}
+
+double Component::IntegrateWeightingFluxParallelogram(const std::string& id,
+    const double x0, const double y0, const double z0, const double dx1,
+    const double dy1, const double dz1, const double dx2, const double dy2,
+    const double dz2, const unsigned int nU, const unsigned int nV) {
+
+  return IntegrateFluxParallelogram(
+      x0, y0, z0, dx1, dy1, dz1, dx2, dy2, dz2, nU, nV, true, id);
+}
+
+double Component::IntegrateFluxParallelogram(
+    const double x0, const double y0, const double z0, const double dx1,
+    const double dy1, const double dz1, const double dx2, const double dy2,
+    const double dz2, const unsigned int nU, const unsigned int nV,
+    const bool wfield, const std::string& label) {
+
   // FLDIN4, FCHK4, FCHK5
   if (nU <= 1 || nV <= 1) {
     std::cerr << m_className << "::IntegrateFluxParallelogram:\n"
@@ -266,7 +286,7 @@ double Component::IntegrateFluxParallelogram(
   const double dv = 1. / nV;
   const double hv = 0.5 * dv;
   // Arguments of ElectricField.
-  double ex = 0., ey = 0., ez = 0.;
+  double fx = 0., fy = 0., fz = 0.;
   Medium* m = nullptr;
   int status = 0;
   // Perform the integration.
@@ -283,8 +303,12 @@ double Component::IntegrateFluxParallelogram(
           const double x = x0 + u * dx1 + v * dx2;
           const double y = y0 + u * dy1 + v * dy2;
           const double z = z0 + u * dz1 + v * dz2;
-          ElectricField(x, y, z, ex, ey, ez, m, status);
-          s1 += w[ii] * (ex * xn + ey * yn + ez * zn);
+          if (wfield) {
+            WeightingField(x, y, z, fx, fy, fz, label);
+          } else {
+            ElectricField(x, y, z, fx, fy, fz, m, status);
+          }
+          s1 += w[ii] * (fx * xn + fy * yn + fz * zn);
         }
       }
       s2 += w[i] * hu * s1;

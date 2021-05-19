@@ -145,6 +145,13 @@ class Component {
       const double dy1, const double dz1, const double dx2, const double dy2,
       const double dz2, const unsigned int nU = 20, const unsigned int nV = 20);
 
+  /// Integrate the normal component of the weighting field 
+  /// over a parallelogram.
+  double IntegrateWeightingFluxParallelogram(const std::string& label,
+      const double x0, const double y0, const double z0, const double dx1,
+      const double dy1, const double dz1, const double dx2, const double dy2,
+      const double dz2, const unsigned int nU = 20, const unsigned int nV = 20);
+
   /** Integrate the electric field flux through a line from
     * (x0,y0,z0) to (x1,y1,z1) along a direction (xp,yp,zp).
     * \param x0,y0,z0 coordinates of the starting point
@@ -346,6 +353,14 @@ class Component {
   virtual void Reset() = 0;
   /// Verify periodicities.
   virtual void UpdatePeriodicity() = 0;
+ private:
+
+  double IntegrateFluxParallelogram(
+      const double x0, const double y0, const double z0, const double dx1,
+      const double dy1, const double dz1, const double dx2, const double dy2,
+      const double dz2, const unsigned int nU, const unsigned int nV,
+      const bool wfield, const std::string& label);
+
 };
 }  // namespace Garfield
 
