@@ -731,7 +731,7 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
   double x = x0;
   double y = y0;
   double z = z0;
-
+  double t = t0;
   // Store the energy [MeV].
   double e = ekin0;
   // Total distance covered
@@ -870,7 +870,7 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
     cluster.x = x;
     cluster.y = y;
     cluster.z = z;
-    cluster.t = t0;
+    cluster.t = t;
     if (m_fano < Small) {
       // No fluctuations.
       cluster.electrons = int((eloss + epool) / (1.e-6 * m_work));
@@ -942,7 +942,7 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
       theta = atan2(ydir, sqrt(xdir * xdir + zdir * zdir));
     }
 
-    // Update position
+    // Update the position.
     const double cp = cos(phi);
     const double ct = cos(theta);
     const double sp = sin(phi);
@@ -950,7 +950,12 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
     x += step * xdir + cp * sigt1 - sp * st * sigt2 + sp * ct * sigl;
     y += step * ydir + ct * sigt2 + st * sigl;
     z += step * zdir - sp * sigt1 - cp * st * sigt2 + cp * ct * sigl;
-
+    // Update the time.
+    const double rk = 1.e6 * e / m_mion;
+    const double gamma = 1. + rk;
+    const double beta2 = rk > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rk;
+    const double vmag = sqrt(beta2) * SpeedOfLight; 
+    if (vmag > 0.) t += step / vmag;
     // (Do not) update direction
     if (false) {
       xdir = step * xdir + cp * sigt1 - sp * st * sigt2 + sp * ct * sigl;
