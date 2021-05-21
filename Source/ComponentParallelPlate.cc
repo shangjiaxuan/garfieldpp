@@ -15,7 +15,12 @@ ComponentParallelPlate::ComponentParallelPlate() : Component("ParallelPlate") {}
 
 void ComponentParallelPlate::Setup(double g, double b, double eps, double V,
                                    double sigma) {
-  // TODO: can g, b be negative?
+    
+  // Here I switch conventions with the z-axis the direction of drift.
+    if(g<=0||b<=0){
+        std::cerr << m_className << "::Setup: Parameters b and g must be larger than zero.\n";
+        return;
+    }
   m_g = g;
   m_b = b;
   if (eps < 1.) {
@@ -29,7 +34,10 @@ void ComponentParallelPlate::Setup(double g, double b, double eps, double V,
   if (sigma == 0) {
     m_ezg = -m_eps * m_V / (m_b + m_eps * m_g);
     m_ezb = -m_V / (m_b + m_eps * m_g);
-  } else {
+  } else if(sigma < 0){
+      std::cerr << m_className << "::Setup: Parameter sigma must be larger than zero.\n";
+      return;
+  }else {
     // For large times the resistive layer will act as a perfect conductor.
     m_ezg = -m_V / m_g;
     m_ezb = 0.;
@@ -41,16 +49,18 @@ bool ComponentParallelPlate::GetBoundingBox(double& x0, double& y0, double& z0,
                                             double& x1, double& y1,
                                             double& z1) {
   // If a geometry is present, try to get the bounding box from there.
+    
+    // Here I switch conventions back with the y-axis the direction of drift.
   if (m_geometry) {
     if (m_geometry->GetBoundingBox(x0, y0, z0, x1, y1, z1)) return true;
   }
+  z0 = -std::numeric_limits<double>::infinity();
   x0 = -std::numeric_limits<double>::infinity();
-  y0 = -std::numeric_limits<double>::infinity();
+  z1 = +std::numeric_limits<double>::infinity();
   x1 = +std::numeric_limits<double>::infinity();
-  y1 = +std::numeric_limits<double>::infinity();
   // TODO: check!
-  z0 = 0.;
-  z1 = m_g;
+  y0 = 0.;
+  y1 = m_g;
   return true;
 }
 
@@ -400,12 +410,14 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
                                            const double z, double& ex,
                                            double& ey, double& ez, Medium*& m,
                                            int& status) {
-  ex = ey = 0.;
+    // Here I switch conventions back with the y-axis the direction of drift.
+    
+  ex = ez = 0.;
 
-  if (z < 0) {
-    ez = m_ezb;
+  if (y < 0) {
+    ey = m_ezb;
   } else {
-    ez = m_ezb;
+    ey = m_ezb;
   }
 
   m = m_geometry ? m_geometry->GetMedium(x, y, z) : m_medium;
@@ -419,7 +431,7 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
     return;
   }
 
-  if (z > 0) {
+  if (y > 0) {
     status = 0;
   } else {
     status = -5;
@@ -430,12 +442,14 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
                                            const double z, double& ex,
                                            double& ey, double& ez, double& v,
                                            Medium*& m, int& status) {
-  ex = ey = 0.;
+    // Here I switch conventions back with the y-axis the direction of drift.
+    
+  ex = ez = 0.;
 
-  if (z > 0.) {
-    ez = m_ezg;
+  if (y > 0.) {
+    ey = m_ezg;
   } else {
-    ez = m_ezb;
+    ey = m_ezb;
   }
 
   if (m_sigma == 0) {
@@ -454,7 +468,7 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
     return;
   }
 
-  if (z > 0) {
+  if (y > 0) {
     status = 0;
   } else {
     status = -5;
@@ -478,6 +492,9 @@ void ComponentParallelPlate::WeightingField(const double x, const double y,
                                             const double z, double& wx,
                                             double& wy, double& wz,
                                             const std::string& label) {
+    
+    // Here I switch conventions back with the y-axis the direction of drift.
+    
   wx = 0;
   wy = 0;
   wz = 0;
@@ -485,11 +502,11 @@ void ComponentParallelPlate::WeightingField(const double x, const double y,
   for (const auto& electrode : m_readout_p) {
     if (electrode.label == label) {
       wx = electrode.flip *
-           IntegrateField(electrode, fieldcomponent::xcomp, x, y, z);
+           IntegrateField(electrode, fieldcomponent::ycomp, z, x, y);
       wy = electrode.flip *
-           IntegrateField(electrode, fieldcomponent::ycomp, x, y, z);
+           IntegrateField(electrode, fieldcomponent::zcomp, z, x, y);
       wz = electrode.flip *
-           IntegrateField(electrode, fieldcomponent::zcomp, x, y, z);
+           IntegrateField(electrode, fieldcomponent::xcomp, z, x, y);
     }
   }
 }
@@ -498,14 +515,17 @@ double ComponentParallelPlate::WeightingPotential(const double x,
                                                   const double y,
                                                   const double z,
                                                   const std::string& label) {
+    
+    // Here I switch conventions back with the y-axis the direction of drift.
+    
   double ret = 0.;
 
   for (const auto& electrode : m_readout_p) {
     if (electrode.label == label) {
       if (!electrode.m_usegrid) {
-        ret += electrode.flip * IntegratePromptPotential(electrode, x, y, z);
+        ret += electrode.flip * IntegratePromptPotential(electrode, z, x, y);
       } else {
-        ret += FindWeightingPotentialInGrid(electrode, x, y, z);
+        ret += FindWeightingPotentialInGrid(electrode, z, x, y);
       }
     }
   }
@@ -515,6 +535,9 @@ double ComponentParallelPlate::WeightingPotential(const double x,
 double ComponentParallelPlate::DelayedWeightingPotential(
     const double x, const double y, const double z, const double t,
     const std::string& label) {
+    
+    // Here I switch conventions back with the y-axis the direction of drift.
+    
   if (m_sigma == 0) {
     if (m_debug) {
       std::cout << m_className << "::DelayedWeightingPotential:\n"
@@ -529,9 +552,9 @@ double ComponentParallelPlate::DelayedWeightingPotential(
     if (electrode.label == label) {
       if (!electrode.m_usegrid) {
         ret +=
-            electrode.flip * IntegrateDelayedPotential(electrode, x, y, z, t);
+            electrode.flip * IntegrateDelayedPotential(electrode, z, x, y);
       } else {
-        ret += FindDelayedWeightingPotentialInGrid(electrode, x, y, z, t);
+        ret += FindDelayedWeightingPotentialInGrid(electrode, z, x, y);
       }
     }
   }
@@ -542,6 +565,9 @@ double ComponentParallelPlate::DelayedWeightingPotential(
 void ComponentParallelPlate::DelayedWeightingField(
     const double x, const double y, const double z, const double t, double& wx,
     double& wy, double& wz, const std::string& label) {
+    
+    // Here I switch conventions back with the y-axis the direction of drift.
+    
   wx = 0.;
   wy = 0.;
   wz = 0.;
@@ -557,11 +583,11 @@ void ComponentParallelPlate::DelayedWeightingField(
   for (const auto& electrode : m_readout_p) {
     if (electrode.label == label) {
       wx = electrode.flip *
-           IntegrateDelayedField(electrode, fieldcomponent::xcomp, x, y, z, t);
+           IntegrateDelayedField(electrode, fieldcomponent::ycomp, z, x, y, t);
       wy = electrode.flip *
-           IntegrateDelayedField(electrode, fieldcomponent::ycomp, x, y, z, t);
+           IntegrateDelayedField(electrode, fieldcomponent::zcomp, z, x, y, t);
       wz = electrode.flip *
-           IntegrateDelayedField(electrode, fieldcomponent::zcomp, x, y, z, t);
+           IntegrateDelayedField(electrode, fieldcomponent::xcomp, z, x, y, t);
     }
   }
 }
@@ -583,9 +609,12 @@ void ComponentParallelPlate::UpdatePeriodicity() {
   }
 }
 
-void ComponentParallelPlate::AddPixel(double x, double y, double lx_input,
-                                      double ly_input,
+void ComponentParallelPlate::AddPixel(double x, double z, double lx_input,
+                                      double lz_input,
                                       const std::string& label) {
+    
+    // Here I switch conventions back with the y-axis the direction of drift.
+    
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
   if (it == m_readout.end() && m_readout.size() > 0) {
     std::cerr << m_className << "::AddPixel:\n"
@@ -594,17 +623,17 @@ void ComponentParallelPlate::AddPixel(double x, double y, double lx_input,
   Electrode pixel;
   pixel.label = label;
   pixel.ind = structureelectrode::Pixel;
-  pixel.xpos = x;
-  pixel.ypos = y;
-  pixel.lx = lx_input;
-  pixel.ly = ly_input;
+  pixel.xpos = z;
+  pixel.ypos = x;
+  pixel.lx = lz_input;
+  pixel.ly = lx_input;
 
   m_readout.push_back(label);
   m_readout_p.push_back(std::move(pixel));
   std::cout << m_className << "::AddPixel: Added pixel electrode.\n";
 }
 
-void ComponentParallelPlate::AddStrip(double x, double lx_input,
+void ComponentParallelPlate::AddStrip(double z, double lz_input,
                                       const std::string& label) {
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
   if (it == m_readout.end() && m_readout.size() > 0) {
@@ -614,8 +643,8 @@ void ComponentParallelPlate::AddStrip(double x, double lx_input,
   Electrode strip;
   strip.label = label;
   strip.ind = structureelectrode::Strip;
-  strip.xpos = x;
-  strip.lx = lx_input;
+  strip.xpos = z;
+  strip.lx = lz_input;
 
   m_readout.push_back(label);
   m_readout_p.push_back(std::move(strip));
@@ -657,248 +686,31 @@ void ComponentParallelPlate::SetWeightingPotentialGrid(
     const double ysteps, const double zmin, const double zmax,
     const double zsteps, const double tmin, const double tmax,
     const double tsteps) {
-  for (auto& electrode : m_readout_p) {
-    if (electrode.label == label) {
-      electrode.gridXSteps = xsteps;
-      electrode.gridYSteps = ysteps;
-      electrode.gridZSteps = zsteps;
-      electrode.gridTSteps = tsteps;
-
-      if (xsteps == 0) electrode.gridXSteps = 1;
-      if (ysteps == 0) electrode.gridYSteps = 1;
-
-      electrode.gridX0 = xmin;
-      electrode.gridY0 = ymin;
-      electrode.gridZ0 = zmin;
-      electrode.gridT0 = tmin;
-
-      electrode.gridXStepSize = (xmax - xmin) / xsteps;
-      electrode.gridYStepSize = (ymax - ymin) / ysteps;
-      electrode.gridZStepSize = (zmax - zmin) / zsteps;
-      electrode.gridTStepSize = (tmax - tmin) / tsteps;
-
-      std::vector<double> nhz(zsteps, 0);
-      std::vector<std::vector<double>> nhy(ysteps, nhz);
-      std::vector<std::vector<std::vector<double>>> nhx(xsteps, nhy);
-      electrode.gridPromptV = nhx;
-
-      std::vector<double> nht(tsteps, 0);
-      std::vector<std::vector<double>> nhzd(zsteps, nht);
-      std::vector<std::vector<std::vector<double>>> nhyd(ysteps, nhzd);
-      std::vector<std::vector<std::vector<std::vector<double>>>> nhxd(xsteps,
-                                                                      nhyd);
-      electrode.gridDelayedV = nhxd;
-
-      for (int ix = 0; ix < xsteps; ix++) {
-        for (int iy = 0; iy < xsteps; iy++) {
-          for (int iz = 0; iz < xsteps; iz++) {
-            if (iz * zsteps + zmin >= 0)
-              electrode.gridPromptV[ix][iy][iz] =
-                  electrode.flip * IntegratePromptPotential(
-                                       electrode, ix * xsteps + xmin,
-                                       iy * ysteps + ymin, iz * zsteps + zmin);
-
-            for (int it = 0; it < tsteps; it++) {
-              if (iz * zsteps + zmin >= 0)
-                electrode.gridDelayedV[ix][iy][iz][it] =
-                    electrode.flip * IntegrateDelayedPotential(
-                                         electrode, ix * xsteps + xmin,
-                                         iy * ysteps + ymin, iz * zsteps + zmin,
-                                         it * tsteps + tmin);
-            }
-          }
-        }
-      }
-
-      electrode.m_usegrid = true;
-    }
-  }
+ 
 }
 
-void ComponentParallelPlate::SetWeightingPotentialGrids(
-    const double xmin, const double xmax, const double xsteps,
-    const double ymin, const double ymax, const double ysteps,
-    const double zmin, const double zmax, const double zsteps,
-    const double tmin, const double tmax, const double tsteps) {
-  for (const auto& electrode : m_readout_p) {
-    SetWeightingPotentialGrid(electrode.label, xmin, xmax, xsteps, ymin, ymax,
-                              ysteps, zmin, zmax, zsteps, tmin, tmax, tsteps);
-  }
+void ComponentParallelPlate::SetWeightingPotentialGrids(const double xmin, const double xmax,
+const double xsteps, const double ymin,
+const double ymax, const double ysteps,
+const double zmin, const double zmax,
+const double zsteps, const double tmin,
+const double tmax, const double tsteps){
+   
 }
 
 double ComponentParallelPlate::FindWeightingPotentialInGrid(const Electrode& el,
                                                             const double x,
                                                             const double y,
                                                             const double z) {
-  switch (el.ind) {
-    case structureelectrode::Plane: {
-      return el.flip * IntegratePromptPotential(el, x, y, z);
-      break;
-    }
-    case structureelectrode::Strip: {
-      int ix = floor((x - el.gridX0) / el.gridXStepSize);
-      int iz = floor((z - el.gridZ0) / el.gridZStepSize);
-
-      if (ix < 0 || ix >= el.gridXSteps || iz < 0 || iz >= el.gridZSteps)
-        return IntegratePromptPotential(el, x, y, z);
-
-      double ret = 0;
-
-      for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 2; j++) {
-          ret += FindWeightFactor(
-                     el, std::abs((ix + i) * el.gridXStepSize + el.gridX0 - x), 0,
-                     std::abs((iz + j) * el.gridZStepSize + el.gridZ0 - z)) *
-                 el.gridPromptV[ix + i][0][iz + j];
-        }
-      }
-
-      return ret;
-      break;
-    }
-    case structureelectrode::Pixel: {
-      int ix = floor((x - el.gridX0) / el.gridXStepSize);
-      int iy = floor((y - el.gridY0) / el.gridYStepSize);
-      int iz = floor((z - el.gridZ0) / el.gridZStepSize);
-
-      if (ix < 0 || ix >= el.gridXSteps || iz < 0 || iz >= el.gridYSteps ||
-          iz < 0 || iz >= el.gridZSteps)
-        return IntegratePromptPotential(el, x, y, z);
-
-      double ret = 0;
-
-      for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 2; j++) {
-          for (int k = 0; k < 2; k++) {
-            ret += FindWeightFactor(
-                       el, std::abs((ix + i) * el.gridXStepSize + el.gridX0 - x),
-                       std::abs((iy + k) * el.gridYStepSize + el.gridY0 - y),
-                       std::abs((iz + j) * el.gridZStepSize + el.gridZ0 - z)) *
-                   el.gridPromptV[ix + i][iy + k][iz + j];
-          }
-        }
-      }
-      return ret;
-      break;
-    }
-  }
-  return 0.;
+    
+    return 0.;
 }
 
 double ComponentParallelPlate::FindDelayedWeightingPotentialInGrid(
     const Electrode& el, const double x, const double y, const double z,
     const double t) {
-  switch (el.ind) {
-    case structureelectrode::Plane: {
-      return el.flip * IntegrateDelayedPotential(el, x, y, z, t);
-      break;
-    }
-    case structureelectrode::Strip: {
-      int ix = floor((x - el.gridX0) / el.gridXStepSize);
-      int iz = floor((z - el.gridZ0) / el.gridZStepSize);
-      int it = floor((t - el.gridT0) / el.gridTStepSize);
-
-      if (ix < 0 || ix >= el.gridXSteps || iz < 0 || iz >= el.gridZSteps ||
-          it < 0 || it >= el.gridTSteps)
-        return IntegrateDelayedPotential(el, x, y, z, t);
-
-      double ret = 0;
-
-      for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 2; j++) {
-          for (int l = 0; l < 2; l++) {
-            ret += FindWeightFactor(
-                       el, std::abs((ix + i) * el.gridXStepSize + el.gridX0 - x), 0,
-                       std::abs((iz + j) * el.gridZStepSize + el.gridZ0 - z),
-                       std::abs((it + l) * el.gridTStepSize + el.gridT0 - t)) *
-                   el.gridDelayedV[ix + i][0][iz + j][it + l];
-          }
-        }
-      }
-
-      return ret;
-      break;
-    }
-    case structureelectrode::Pixel: {
-      int ix = floor((x - el.gridX0) / el.gridXStepSize);
-      int iy = floor((y - el.gridY0) / el.gridYStepSize);
-      int iz = floor((z - el.gridZ0) / el.gridZStepSize);
-      int it = floor((t - el.gridT0) / el.gridTStepSize);
-
-      if (ix < 0 || ix >= el.gridXSteps || iz < 0 || iz >= el.gridYSteps ||
-          iz < 0 || iz >= el.gridZSteps || it < 0 || it >= el.gridTSteps)
-        return IntegrateDelayedPotential(el, x, y, z, t);
-
-      double ret = 0;
-
-      for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 2; j++) {
-          for (int k = 0; k < 2; k++) {
-            for (int l = 0; l < 2; l++) {
-              ret += FindWeightFactor(
-                         el, std::abs((ix + i) * el.gridXStepSize + el.gridX0 - x),
-                         std::abs((iy + k) * el.gridYStepSize + el.gridY0 - y),
-                         std::abs((iz + j) * el.gridZStepSize + el.gridZ0 - z),
-                         std::abs((it + l) * el.gridTStepSize + el.gridT0 - t)) *
-                     el.gridDelayedV[ix + i][iy + k][iz + j][it + l];
-            }
-          }
-        }
-      }
-      return ret;
-      break;
-    }
-  }
-  return 0.;
-}
-
-double ComponentParallelPlate::FindWeightFactor(const Electrode& el,
-                                                const double dx,
-                                                const double dy,
-                                                const double dz) {
-  double fact = 0;
-
-  switch (el.ind) {
-    case structureelectrode::Strip: {
-      fact = (el.gridXStepSize - dx) * (el.gridZStepSize - dz) /
-             (el.gridXStepSize * el.gridZStepSize);
-      break;
-    }
-    case structureelectrode::Pixel: {
-      fact = (el.gridXStepSize - dx) * (el.gridYStepSize - dy) *
-             (el.gridZStepSize - dz) /
-             (el.gridXStepSize * el.gridYStepSize * el.gridZStepSize);
-      break;
-    }
-  }
-
-  return fact;
-}
-
-double ComponentParallelPlate::FindWeightFactor(const Electrode& el,
-                                                const double dx,
-                                                const double dy,
-                                                const double dz,
-                                                const double dt) {
-  double fact = 0;
-
-  switch (el.ind) {
-    case structureelectrode::Strip: {
-      fact = (el.gridXStepSize - dx) * (el.gridZStepSize - dz) *
-             (el.gridXStepSize - dt) /
-             (el.gridXStepSize * el.gridZStepSize * el.gridTStepSize);
-      break;
-    }
-    case structureelectrode::Pixel: {
-      fact = (el.gridXStepSize - dx) * (el.gridYStepSize - dy) *
-             (el.gridZStepSize - dz) * (el.gridXStepSize - dt) /
-             (el.gridXStepSize * el.gridYStepSize * el.gridZStepSize *
-              el.gridTStepSize);
-      break;
-    }
-  }
-
-  return fact;
+    
+    return 0.;
 }
 
 }  // namespace Garfield

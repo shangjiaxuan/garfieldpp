@@ -18,8 +18,8 @@ class ComponentParallelPlate : public Component {
   ~ComponentParallelPlate() {}
 
   /** Define the geometry.
-   * \param g size of the gap along positive \f$z\f$.
-   * \param b thickness of the resistive layer along negative \f$z\f$.
+   * \param g size of the gap along positive \f$y\f$.
+   * \param b thickness of the resistive layer along negative \f$y\f$.
    * \param eps relative permittivity of the resistive layer.
    * \param sigma conductivity of the resistive layer (must be larger then zero,
    * otherwise do not pass it in the function).
@@ -51,15 +51,15 @@ class ComponentParallelPlate : public Component {
   bool GetVoltageRange(double& vmin, double& vmax) override;
 
   /** Add a pixel electrode.
-   * \param x,z position of the center of the electrode in the xy-plane.
+   * \param x,z position of the center of the electrode in the xz-plane.
    * \param lx width in the along \f$x\f$.
-   * \param ly width in the along \f$y\f$.
+   * \param lz width in the along \f$z\f$.
    * \param label give name using a string.
    */
-  void AddPixel(double x, double y, double lx, double ly,
+  void AddPixel(double x, double z, double lx, double lz,
                 const std::string& label);
   /// Add strip electrode.
-  void AddStrip(double x, double lx, const std::string& label);
+  void AddStrip(double z, double lz, const std::string& label);
 
   /// Add plane electrode, if you want to read the signal from the cathode set
   /// the second argument to false.
@@ -120,25 +120,6 @@ class ComponentParallelPlate : public Component {
     double xpos, ypos;                     ///< Coordinates in x/y.
     double lx, ly;                         ///< Dimensions in the x-y plane.
     double flip = 1;                       ///< Dimensions in the x-y plane.
-
-    bool m_usegrid = false;
-    std::vector<std::vector<std::vector<double>>> gridPromptV;
-    std::vector<std::vector<std::vector<std::vector<double>>>> gridDelayedV;
-
-    double gridXSteps = 0;
-    double gridYSteps = 0;
-    double gridZSteps = 0;
-    double gridTSteps = 0;
-
-    double gridX0 = 0;
-    double gridY0 = 0;
-    double gridZ0 = 0;
-    double gridT0 = 0;
-
-    double gridXStepSize = 0;
-    double gridYStepSize = 0;
-    double gridZStepSize = 0;
-    double gridTStepSize = 0;
   };
 
   enum fieldcomponent { xcomp = 0, ycomp, zcomp };
@@ -171,12 +152,6 @@ class ComponentParallelPlate : public Component {
   double FindDelayedWeightingPotentialInGrid(const Electrode& el,
                                              const double x, const double y,
                                              const double z, const double t);
-
-  double FindWeightFactor(const Electrode& el, const double dx, const double dy,
-                          const double dz);
-
-  double FindWeightFactor(const Electrode& el, const double dx, const double dy,
-                          const double dz, const double dt);
 
   void UpdatePeriodicity() override;
   void Reset() override;
