@@ -332,6 +332,9 @@ double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
                                                          const double y,
                                                          const double z,
                                                          const double t) {
+    
+    // TODO: Find better integration methode!
+    
   switch (el.ind) {
     case structureelectrode::Plane: {
       double tau =
@@ -552,9 +555,9 @@ double ComponentParallelPlate::DelayedWeightingPotential(
     if (electrode.label == label) {
       if (!electrode.m_usegrid) {
         ret +=
-            electrode.flip * IntegrateDelayedPotential(electrode, z, x, y);
+            electrode.flip * IntegrateDelayedPotential(electrode, z, x, y,t);
       } else {
-        ret += FindDelayedWeightingPotentialInGrid(electrode, z, x, y);
+        ret += FindDelayedWeightingPotentialInGrid(electrode, z, x, y,t);
       }
     }
   }
@@ -686,6 +689,8 @@ void ComponentParallelPlate::SetWeightingPotentialGrid(
     const double ysteps, const double zmin, const double zmax,
     const double zsteps, const double tmin, const double tmax,
     const double tsteps) {
+    
+    // TODO: Use existing classes for a grid based field map!
  
 }
 
@@ -695,6 +700,8 @@ const double ymax, const double ysteps,
 const double zmin, const double zmax,
 const double zsteps, const double tmin,
 const double tmax, const double tsteps){
+    
+    // TODO: Use existing classes for a grid based field map!
    
 }
 
@@ -703,12 +710,16 @@ double ComponentParallelPlate::FindWeightingPotentialInGrid(const Electrode& el,
                                                             const double y,
                                                             const double z) {
     
+    // TODO: Use existing classes for a grid based field map!
+    
     return 0.;
 }
 
 double ComponentParallelPlate::FindDelayedWeightingPotentialInGrid(
     const Electrode& el, const double x, const double y, const double z,
     const double t) {
+    
+    // TODO: Use existing classes for a grid based field map!
     
     return 0.;
 }

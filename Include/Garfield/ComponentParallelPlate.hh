@@ -120,6 +120,8 @@ class ComponentParallelPlate : public Component {
     double xpos, ypos;                     ///< Coordinates in x/y.
     double lx, ly;                         ///< Dimensions in the x-y plane.
     double flip = 1;                       ///< Dimensions in the x-y plane.
+      
+     bool m_usegrid =false;                ///< Enabeling grid based calculations.
   };
 
   enum fieldcomponent { xcomp = 0, ycomp, zcomp };
