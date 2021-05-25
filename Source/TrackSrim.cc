@@ -877,7 +877,7 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
       cluster.ec = m_work * cluster.electrons;
     } else {
       double ecl = 1.e6 * (eloss + epool);
-      cluster.electrons = 0.0;
+      cluster.electrons = 0;
       cluster.ec = 0.0;
       while (true) {
         // if (cluster.ec < 100) printf("ec = %g\n", cluster.ec);
@@ -887,11 +887,12 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
         cluster.ec += ernd1;
         ecl -= ernd1;
       }
-      if (m_debug)
+      if (m_debug) {
         std::cout << hdr << "EM + pool: " << 1.e6 * (eloss + epool)
                   << " eV, W: " << m_work
                   << " eV, E/w: " << (eloss + epool) / (1.0e-6 * m_work)
                   << ", n: " << cluster.electrons << ".\n";
+      }
     }
     cluster.kinetic = e;
     epool += eloss - 1.e-6 * cluster.ec;
