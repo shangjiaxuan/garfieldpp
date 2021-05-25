@@ -314,4 +314,43 @@ number of clusters, using
 void SetClustersMaximum(const int n);
 \end{lstlisting}
 the step size will be chosen such that on average there are 
-\texttt{n / 2} clusters on the track. 
+\texttt{n / 2} clusters on the track.
+
+\section{TRIM}
+TRIM\footnote{TRansport of Ions in Matter} is a Monte Carlo simulation program 
+from the same collection of software packages as SRIM. 
+It simulates individual ion trajectories in a target 
+(which can be made of several layers) and the processes following the ion's energy loss 
+(recoil cascades, displacement damage, \textit{etc.}). 
+TRIM typically produces a number of output files. 
+One of them is a file called \texttt{EXYZ.txt} which lists the 
+position and electronic stopping power for each simulated ion at 
+regular steps in the ion's kinetic energy.
+The energy interval is set by the user.
+
+The class \texttt{TrackTrim} allows one to import these data in Garfield 
+and use them for simulating tracks. The function for 
+reading ion trajectories from an \texttt{EXYZ.txt} file is 
+\begin{lstlisting}
+bool ReadFile(const std::string& file, const unsigned int nIons = 0,
+              const unsigned int nSkip = 0);
+\end{lstlisting}
+\begin{description}
+  \item[file] name/path of the \texttt{EXYZ.txt} file to be loaded,
+  \item[nIons] number of ion trajectories to be loaded from the file,
+  \item[nSkip] number of ion trajectories to be skipped at the beginning of the file.
+\end{description}
+If the value of \texttt{nIons} is zero, \texttt{TrackTrim} will 
+import all ion trajectories included in the file.
+
+When the function \texttt{NewTrack} is called, 
+\texttt{TrackTrim} will generate clusters according to one of the ion 
+trajectories imported from \texttt{EXYZ.txt} (starting with the first one). 
+Each cluster will correspond to one energy interval. 
+The number of clusters along a track and the deposited energy per cluster 
+is therefore controlled by the energy interval specified when running TRIM.
+The number of electrons in a cluster is sampled using an algorithm 
+that reproduces the requested work function ($W$ value) and Fano factor.
+At the next call to \texttt{NewTrack}, \texttt{TrackTrim} moves to the  
+next ion trajectory in the list (if it reaches the end of the list, 
+it rewinds to the first one). 

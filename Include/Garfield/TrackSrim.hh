@@ -59,11 +59,14 @@ class TrackSrim : public Track {
   /// Retrieve the target cluster size.
   int GetTargetClusterSize() const { return m_nsize; }
 
+  /// Set the max. number of clusters on a track.
   void SetClustersMaximum(const int n) { m_maxclusters = n; }
+  /// Retrieve the max. number of clusters on a track.
   int GetClustersMaximum() const { return m_maxclusters; }
 
   /// Load data from a SRIM file.
   bool ReadFile(const std::string& file);
+  /// Print the energy loss table. 
   void Print();
   /// Make a plot of the electromagnetic, hadronic, and total energy loss
   /// as function of the projectile energy.
@@ -98,8 +101,9 @@ class TrackSrim : public Track {
   double m_qion = 1.;
   /// Mass of ion [MeV]
   double m_mion = -1.;
-  /// A and Z of the gas
+  /// Effective A of the gas
   double m_a = -1.;
+  /// Effective Z of the gas
   double m_z = -1.;
 
   /// Maximum number of clusters allowed (infinite if 0)

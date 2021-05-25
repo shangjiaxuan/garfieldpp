@@ -1,8 +1,7 @@
-# ########################################################################################
-# build Garfield++ library and examples depend on: ROOT @author Klaus Zenker, Pere Mato,
-# Stefano Caiazza Version 3.9 is required by the ROOT Use file
+# Build Garfield++ library and examples 
+# Authors: Klaus Zenker, Pere Mato, Stefano Caiazza 
+# Version 3.9 is required by the ROOT Use file
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-# ########################################################################################
 
 # Setting a default build type to be release with debug information. 
 # Otherwise the default mode is debug.
@@ -150,6 +149,7 @@ target_sources(
           Source/TrackPAI.cc
           Source/TrackSimple.cc
           Source/TrackSrim.cc
+          Source/TrackTrim.cc
           Source/ViewBase.cc
           Source/ViewCell.cc
           Source/ViewDrift.cc
