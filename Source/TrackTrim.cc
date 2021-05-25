@@ -93,7 +93,7 @@ bool TrackTrim::ReadFile(const std::string& filename,
         ekin.clear();
         ++nRead;
         // Stop if we are done reading the requested number of ions.
-        if (nIons > 0 && nRead >= nIons) break;
+        if (nIons > 0 && m_ions.size() >= nIons) break;
       }
       ionNumber = std::stoi(words[0]);
     }
