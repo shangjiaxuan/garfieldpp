@@ -24,10 +24,10 @@ int main(int argc, char *argv[]) {
 
   // Define the geometry.
   ComponentConstant cmp;
-  cmp.SetElectricField(1000., 0., 0.);
+  cmp.SetElectricField(0., 1000., 0.);
   // Thickness of the silicon layer [cm]
   constexpr double d = 100.e-4;
-  cmp.SetArea(0., -d, -d, d, d, d);
+  cmp.SetArea(-d, 0., -d, d, d, d);
   cmp.SetMedium(&si); 
 
   // Make a sensor.
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   tr.SetWorkFunction(3.6);
-  tr.SetFanoFactor(0.1);
+  tr.SetFanoFactor(0.11);
   tr.Print();
 
   // Plot the tracks.
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
   
   // Generate tracks.
   for (unsigned int i = 0; i < nIons; ++i) {
-    if (!tr.NewTrack(0., 0., 0., 0., 1., 0., 0.)) {
+    if (!tr.NewTrack(0., 0., 0., 0., 0., 1., 0.)) {
       std::cerr << "Generating clusters failed; skipping this track.\n";
       continue;
     }
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
       netot += ne;
     }
   }
-  driftView.SetArea(0., -5.e-4, 50.e-4, 5.e-4);
+  driftView.SetArea(-10.e-4, 0., 10.e-4, 50.e-4);
   driftView.Plot(true);
 
   app.Run();
