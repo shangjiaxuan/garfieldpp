@@ -18,7 +18,10 @@ ComponentParallelPlate::ComponentParallelPlate() : Component("ParallelPlate") {}
 void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vector<double> d,const double V, std::vector<int> sigmaIndex) {
     
   // Here I switch conventions with the z-axis the direction of drift.
-    if(N!=eps.size()||N!=d.size()){
+    
+    const int Nholder1 = eps.size();
+    const int Nholder2 = d.size();
+    if(N!=Nholder1||N!=Nholder2){
         LOG("ComponentParallelPlate::Setup:: Inconsistency between the number of layers, permittivities and thicknesses given.");
         return;
     }else if(N<2){
@@ -40,7 +43,11 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     
     std::vector<double>  m_zHolder(N+1);
     m_zHolder[0] = 0;
-    for(int i = 1; i<=N; i++) m_zHolder[i]=m_zHolder[i-1]+m_d[i-1];
+    for(int i = 1; i<=N; i++){
+        m_zHolder[i]=m_zHolder[i-1]+m_d[i-1];
+        
+        if(m_debuggig) LOG("ComponentParallelPlate::Setup:: layer "<<i<<":: z = "<<m_zHolder[i]);
+    }
     m_z = m_zHolder;
     
     if(m_debuggig) LOG("ComponentParallelPlate::Setup:: Constructing matrices");
@@ -93,7 +100,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
         int im; double epsm;
         getLayer(z,im,epsm);
         double upLim = 10*std::abs(z-m_z[im]);
-        return m_wpPixelIntegral.Integral(0,upLim,0,upLim,1.e-20);
+        return m_wpPixelIntegral.Integral(0,upLim,0,upLim,1.e-12);
       break;
     }
     case structureelectrode::Strip: {
@@ -101,7 +108,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
         int im; double epsm;
         getLayer(z,im,epsm);
         double upLim = 10*std::abs(z-m_z[im]);
-        return m_wpStripIntegral.Integral(0,upLim,1.e-15);
+        return m_wpStripIntegral.Integral(0,upLim,1.e-12);
       break;
     }
     default: {
@@ -121,7 +128,10 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
     ex = ey = ez = 0;
     
     int im =-1; double epsM = -1;
-    if(!getLayer(y,im,epsM)) return;
+    if(!getLayer(y,im,epsM)){
+        status = -6;
+        return;
+    }
     
     ey = constEFieldLayer(im);
 
@@ -152,8 +162,10 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
     ex = ey = ez = v = 0;
     
     int im =-1; double epsM = -1;
-    if(!getLayer(y,im,epsM)) return;
-    
+    if(!getLayer(y,im,epsM)){
+        status = -6;
+        return;
+    }
     ey = constEFieldLayer(im);
     
     // TODO: check sign
@@ -271,7 +283,7 @@ void ComponentParallelPlate::AddPixel(double x, double z, double lx_input,
     // Here I switch conventions back with the y-axis the direction of drift.
     
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
-  if (it == m_readout.end() && m_readout.size() > 0) {
+  if (it != m_readout.end() && m_readout.size() > 0) {
     std::cerr << m_className << "::AddPixel:\n"
               << "Note that the label " << label << " is already in use.\n";
   }
@@ -291,7 +303,7 @@ void ComponentParallelPlate::AddPixel(double x, double z, double lx_input,
 void ComponentParallelPlate::AddStrip(double z, double lz_input,
                                       const std::string& label) {
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
-  if (it == m_readout.end() && m_readout.size() > 0) {
+  if (it != m_readout.end() && m_readout.size() > 0) {
     std::cerr << m_className << "::AddStrip:\n"
               << "Note that the label " << label << " is already in use.\n";
   }
@@ -309,7 +321,7 @@ void ComponentParallelPlate::AddStrip(double z, double lz_input,
 
 void ComponentParallelPlate::AddPlane(const std::string& label, bool anode) {
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
-  if (it == m_readout.end() && m_readout.size() > 0) {
+  if (it != m_readout.end() && m_readout.size() > 0) {
     std::cerr << m_className << "::AddPlane:\n"
               << "Note that the label " << label << " is already in use.\n";
   }
@@ -449,7 +461,7 @@ void ComponentParallelPlate::setHIntegrant(){
         
         int im =-1; double epsM = -1;
         if(!getLayer(z,im,epsM)) return 0.;
-        im--;
+      //  im-=2;
         if(pow(2,m_N-im-1)<1) return 0.;
         for(int i=0; i<pow(2,m_N-im-1);i++){
             h+=m_gMatrix[im][i]*sinh(kk*(m_wMatrix[im][i]+m_z[m_N]-z));
@@ -488,8 +500,8 @@ void ComponentParallelPlate::setwpPixelIntegrant(){
     };
     
     TF2* wpPixelIntegrant = new TF2("wpPixelIntegrant", intFunction, 0, 20*m_upperBoundIntigration,0, 20*m_upperBoundIntigration, 7);
-    wpPixelIntegrant->SetNpx(1000); // increasing number of points the function is evaluated on
-    wpPixelIntegrant->SetNpy(1000);
+    wpPixelIntegrant->SetNpx(10000); // increasing number of points the function is evaluated on
+    wpPixelIntegrant->SetNpy(10000);
     wpPixelIntegrant->Copy(m_wpPixelIntegral);
     
     delete wpPixelIntegrant;

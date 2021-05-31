@@ -9,6 +9,8 @@
 #include <TF1.h>
 #include <TF2.h>
 
+#define LOG(x) std::cout<<x<<std::endl
+
 namespace Garfield {
 
 /// Component for parallel-plate geometries.
@@ -31,9 +33,7 @@ class ComponentParallelPlate : public Component {
 
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, double& v, Medium*& m,
-                     int& status) override;
+  void ElectricField(const double x, const double y, const double z, double& ex,double& ey, double& ez, double& v, Medium*& m, int& status) override;
 
   void WeightingField(const double x, const double y, const double z,
                       double& wx, double& wy, double& wz,
@@ -82,6 +82,10 @@ class ComponentParallelPlate : public Component {
                                   const double tmax, const double tsteps);
 
   Medium* GetMedium(const double x, const double y, const double z) override;
+    
+    void  GetHFunction(const double k, const double z){
+        LOG("m_hIntegrant = "<<m_hIntegrant.Eval(k,z));
+    }
 
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                       double& xmax, double& ymax, double& zmax) override;
@@ -92,27 +96,27 @@ class ComponentParallelPlate : public Component {
   // Voltage difference between the parallel plates.
     double m_V = 0.;
     
-    bool m_debuggig = true;
+    bool m_debuggig = true; ///<debugging switch
     
-    int m_N = 0;
+    int m_N = 0; ///<amount of layers
 
     double m_upperBoundIntigration = 0;
 
-    std::vector<double> m_eps;
-    std::vector<double> m_d;
-    std::vector<double> m_z;
+    std::vector<double> m_eps; ///< list of irelative permitivities or layers
+    std::vector<double> m_d; ///< list of thickness of layers
+    std::vector<double> m_z; ///< list of indices of conducting layers
 
-    std::vector<int> m_sigmaIndex;
+    std::vector<int> m_sigmaIndex; ///< list of indices of conducting layers
 
     TF2 m_hIntegrant;
 
-    TF1 m_wpStripIntegral;
-    TF2 m_wpPixelIntegral;
+    TF1 m_wpStripIntegral; ///<Weighting potential integrant for strips
+    TF2 m_wpPixelIntegral; ///<Weighting potential integrant for pixels
 
-    std::vector<std::vector<double>> m_cMatrix;
-    std::vector<std::vector<double>> m_vMatrix;
-    std::vector<std::vector<double>> m_gMatrix;
-    std::vector<std::vector<double>> m_wMatrix;
+    std::vector<std::vector<double>> m_cMatrix; ///<c-matrixl.
+    std::vector<std::vector<double>> m_vMatrix; ///<v-matrixl.
+    std::vector<std::vector<double>> m_gMatrix; ///<g-matrixl.
+    std::vector<std::vector<double>> m_wMatrix; ///<w-matrixl.
     
   Medium* m_medium = nullptr;
 
@@ -169,7 +173,9 @@ class ComponentParallelPlate : public Component {
     bool getLayer(const double z,int& m,double& epsM){
         auto const it = std::upper_bound(m_z.begin(), m_z.end(), z);
         if (it == m_z.begin()||it == m_z.end()) return false;
-        m = *(it - 1);
+        double mholer = *(it - 1);
+        while(mholer>0&&mholer<1) mholer *=10;
+        m = mholer;
         epsM= m_eps[m];
         m++;
         return true;
@@ -197,7 +203,7 @@ class ComponentParallelPlate : public Component {
     double wpPlane(const double z){
         int im =-1; double epsM = -1;
         if(!getLayer(z,im,epsM)) return 0.;
-        double v = m_V - (z-m_z[im-1]) * constWEFieldLayer(im);
+        double v = 1 - (z-m_z[im-1]) * constWEFieldLayer(im);
         for(int i=1; i<=im-1;i++){
             v-=(m_z[i]-m_z[i-1])* constWEFieldLayer(i);
         }
