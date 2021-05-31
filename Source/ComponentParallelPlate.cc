@@ -9,40 +9,49 @@
 
 #include "Garfield/GarfieldConstants.hh"
 
+#define LOG(x) std::cout<<x<<std::endl
+
 namespace Garfield {
 
 ComponentParallelPlate::ComponentParallelPlate() : Component("ParallelPlate") {}
 
-void ComponentParallelPlate::Setup(double g, double b, double eps, double V,
-                                   double sigma) {
+void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vector<double> d,const double V, std::vector<int> sigmaIndex) {
     
   // Here I switch conventions with the z-axis the direction of drift.
-    if(g<=0||b<=0){
-        std::cerr << m_className << "::Setup: Parameters b and g must be larger than zero.\n";
+    if(N!=eps.size()||N!=d.size()){
+        LOG("ComponentParallelPlate::Setup:: Inconsistency between the number of layers, permittivities and thicknesses given.");
+        return;
+    }else if(N<2){
+        LOG("ComponentParallelPlate::Setup:: Number of layers must be larger then 1.");
         return;
     }
-  m_g = g;
-  m_b = b;
-  if (eps < 1.) {
-    std::cerr << m_className << "::Setup: Epsilon must be >= 1.\n";
-    return;
-  }
-  m_eps = eps;
-  m_V = V;
-  // TODO: can sigma be negative?
-  m_sigma = sigma;
-  if (sigma == 0) {
-    m_ezg = -m_eps * m_V / (m_b + m_eps * m_g);
-    m_ezb = -m_V / (m_b + m_eps * m_g);
-  } else if(sigma < 0){
-      std::cerr << m_className << "::Setup: Parameter sigma must be larger than zero.\n";
-      return;
-  }else {
-    // For large times the resistive layer will act as a perfect conductor.
-    m_ezg = -m_V / m_g;
-    m_ezb = 0.;
-  }
-  std::cout << m_className << "::Setup: Geometry set.\n";
+    
+    if(m_debuggig) LOG("ComponentParallelPlate::Setup:: Loading parameters.");
+    m_eps = eps;
+    //std::for_each(m_eps.begin(), m_eps.end(), [](double &n){ n*=m_eps0; });
+    
+    m_d = d;
+    m_N = N;
+    m_V = V;
+    
+    m_sigmaIndex = sigmaIndex;
+    
+    m_upperBoundIntigration = *max_element(std::begin(m_d), std::end(m_d));
+    
+    std::vector<double>  m_zHolder(N+1);
+    m_zHolder[0] = 0;
+    for(int i = 1; i<=N; i++) m_zHolder[i]=m_zHolder[i-1]+m_d[i-1];
+    m_z = m_zHolder;
+    
+    if(m_debuggig) LOG("ComponentParallelPlate::Setup:: Constructing matrices");
+    constructGeometryFunction(m_N);
+    
+    if(m_debuggig) LOG("ComponentParallelPlate::Setup:: Computing weighting potential functions.");
+    setHIntegrant();
+    setwpStripIntegrant();
+    setwpPixelIntegrant();
+    
+    LOG("ComponentParallelPlate::Setup:: Geometry with N = "<< N <<" layers set.");
 }
 
 bool ComponentParallelPlate::GetBoundingBox(double& x0, double& y0, double& z0,
@@ -60,209 +69,14 @@ bool ComponentParallelPlate::GetBoundingBox(double& x0, double& y0, double& z0,
   x1 = +std::numeric_limits<double>::infinity();
   // TODO: check!
   y0 = 0.;
-  y1 = m_g;
+  y1 = m_d[m_N-1];
   return true;
 }
 
-double ComponentParallelPlate::IntegrateField(const Electrode& el, int comp,
+double ComponentParallelPlate::IntegratePromptField(const Electrode& el, int comp,
                                               const double x, const double y,
                                               const double z) {
-  switch (el.ind) {
-    case structureelectrode::Plane: {
-      if (comp == fieldcomponent::zcomp)
-        return m_eps * m_Vw / (m_b + m_eps * m_g);
-      return 0.;
-      break;
-    }
-    case structureelectrode::Pixel: {
-      auto WFieldPixel = [=](double* k, double* /*p*/) {
-        double kx = k[0];
-        double ky = k[1];
-
-        double K = std::sqrt(kx * kx + ky * ky);
-
-        double intsol = 1.;
-
-        switch (comp) {
-          case fieldcomponent::xcomp: {
-            intsol *= 1. / (ky * cosh(m_g * K) * sinh(m_b * K) +
-                           m_eps * ky * cosh(m_b * K) * sinh(m_g * K));
-
-            intsol *= cos(ky * (y - el.ypos)) * sin((kx * el.lx) / 2) *
-                      sin((ky * el.ly) / 2) * sin(kx * (x - el.xpos)) *
-                      sinh(K * (m_g - z));
-            break;
-          }
-          case fieldcomponent::ycomp: {
-            intsol *= 1. / (kx * cosh(m_g * K) * sinh(m_b * K) +
-                           m_eps * kx * cosh(m_b * K) * sinh(m_g * K));
-            intsol *= sin(ky * (y - el.ypos)) * sin((kx * el.lx) / 2) *
-                      sin((ky * el.ly) / 2) * cos(kx * (x - el.xpos)) *
-                      sinh(K * (m_g - z));
-            break;
-          }
-          case fieldcomponent::zcomp: {
-            intsol *= 1. / (ky * kx * cosh(m_g * K) * sinh(m_b * K) +
-                           m_eps * ky * kx * cosh(m_b * K) * sinh(m_g * K));
-            intsol *= K * cos(ky * (y - el.ypos)) * sin((kx * el.lx) / 2) *
-                      sin((ky * el.ly) / 2) * cos(kx * (x - el.xpos)) *
-                      cosh(K * (m_g - z));
-            break;
-          }
-        }
-        return intsol;
-      };
-      TF2* fw =
-          new TF2("WFieldPixel", WFieldPixel, 0, 10 * m_g, 0, 10 * m_g, 0);
-      const double sol = fw->Integral(0, 10 * m_g, 0, 10 * m_g, 1.e-6);
-      delete fw;
-      return (4 * m_eps * m_Vw / Pi2) * sol;
-
-      break;
-    }
-    case structureelectrode::Strip: {
-      auto WFieldStrip = [=](double* k, double* /*p*/) {
-        double kk = k[0];
-
-        double intsol = 1. / ((cosh(m_g * kk) * sinh(m_b * kk) +
-                              m_eps * cosh(m_b * kk) * sinh(m_g * kk)));
-        switch (comp) {
-          case fieldcomponent::xcomp: {
-            intsol *= (sin(kk * el.lx / 2) * sin(kk * (x - el.xpos)) *
-                       sinh(kk * (m_g - z)));
-            break;
-          }
-          case fieldcomponent::zcomp: {
-            intsol *= (sin(kk * el.lx / 2) * cos(kk * (x - el.xpos)) *
-                       cosh(kk * (m_g - z)));
-            break;
-          }
-        }
-
-        return intsol;
-      };
-
-      if (comp == ycomp) {
-        return 0.;
-      }
-      TF1* fw = new TF1("WFieldStrip", WFieldStrip, 0, 10 * m_g, 0);
-      double sol = fw->Integral(0, 10 * m_g);
-      delete fw;
-      return (2 * m_eps * m_Vw / Pi) * sol;
-      break;
-    }
-    default: {
-      std::cerr << m_className << "::IntegrateField: Unknown electrode type.\n";
-      return 0.;
-    }
-  }
-}
-
-double ComponentParallelPlate::IntegrateDelayedField(const Electrode& el,
-                                                     int comp, const double x,
-                                                     const double y,
-                                                     const double z,
-                                                     const double t) {
-  switch (el.ind) {
-    case structureelectrode::Plane: {
-      if (comp == fieldcomponent::zcomp)
-        return m_eps * m_Vw *
-               (1 - exp(-t * m_g * m_sigma / (m_eps0 * (m_b + m_eps * m_g)))) /
-               (m_b + m_eps * m_g);
-      return 0.;
-      break;
-    }
-    case structureelectrode::Pixel: {
-      auto WFieldPixel = [=](double* k, double* /*p*/) {
-        double kx = k[0];
-        double ky = k[1];
-
-        double K = std::sqrt(kx * kx + ky * ky);
-
-        double tau = m_eps0 *
-                     (m_eps + cosh(m_g * K) * sinh(m_b * K) /
-                                  (cosh(m_b * K) * sinh(m_g * K))) *
-                     (1 / m_sigma);
-
-        double intsol = 1. / (cosh(m_g * K) * sinh(m_b * K) +
-                             m_eps * cosh(m_b * K) * sinh(m_g * K));
-
-        switch (comp) {
-          case fieldcomponent::xcomp: {
-            intsol *= (1 - exp(-t / tau)) * cos(ky * (y - el.ypos)) *
-                      cosh(m_g * K) * sin((kx * el.lx) / 2) *
-                      sin(kx * (x - el.xpos)) * sinh(K * (m_g - z)) *
-                      tanh(m_b * K) / (ky * sinh(m_g * K));
-            break;
-          }
-          case fieldcomponent::ycomp: {
-            intsol *= (1 - exp(-t / tau)) * sin(ky * (y - el.ypos)) *
-                      cosh(m_g * K) * sin((kx * el.lx) / 2) *
-                      cos(kx * (x - el.xpos)) * cosh(K * (m_g - z)) *
-                      tanh(m_b * K) / (kx * sinh(m_g * K));
-            break;
-          }
-          case fieldcomponent::zcomp: {
-            intsol *= (1 - exp(-t / tau)) * cos(ky * (y - el.ypos)) *
-                      cosh(m_g * K) * sin((K * el.lx) / 2) *
-                      cos(kx * (x - el.xpos)) * cosh(K * (m_g - z)) *
-                      tanh(m_b * K) / (kx * ky * sinh(m_g * K));
-            break;
-          }
-        }
-        return intsol;
-      };
-
-      TF2* fw =
-          new TF2("WFieldPixel", WFieldPixel, 0, 10 * m_g, 0, 10 * m_g, 0);
-      const double sol = fw->Integral(0, 10 * m_g, 0, 10 * m_g, 1.e-6);
-      delete fw;
-      return (4 * m_eps * m_Vw / Pi2) * sol;
-      break;
-    }
-    case structureelectrode::Strip: {
-      auto WFieldStrip = [=](double* k, double* /*p*/) {
-        double kk = k[0];
-        double tau = m_eps0 *
-                     (m_eps + cosh(m_g * kk) * sinh(m_b * kk) /
-                                  (cosh(m_b * kk) * sinh(m_g * kk))) *
-                     (1 / m_sigma);
-
-        double intsol = 1 / (cosh(m_g * kk) * sinh(m_b * kk) +
-                             m_eps * cosh(m_b * kk) * sinh(m_g * kk));
-        switch (comp) {
-          case fieldcomponent::xcomp: {
-            intsol *= (1 - exp(-t / tau)) * cosh(m_g * kk) *
-                      sin((kk * el.lx) / 2) * sin(kk * (x - el.xpos)) *
-                      sinh(kk * (m_g - z)) * tanh(m_b * kk) / sinh(m_g * kk);
-            break;
-          }
-          case fieldcomponent::zcomp: {
-            intsol *= (1 - exp(-t / tau)) * cosh(m_g * kk) *
-                      sin((kk * el.lx) / 2) * cos(kk * (x - el.xpos)) *
-                      cosh(kk * (m_g - z)) * tanh(m_b * kk) / sinh(m_g * kk);
-            break;
-          }
-        }
-
-        return intsol;
-      };
-
-      if (comp == ycomp) {
-        return 0.;
-      } 
-      TF1* fw = new TF1("WFieldStrip", WFieldStrip, 0, 10 * m_g, 0);
-      const double sol = fw->Integral(0, 10 * m_g);
-      delete fw;
-      return (2 * m_eps * m_Vw / Pi) * sol;
-      break;
-    }
-    default: {
-      std::cerr << m_className << "::IntegrateDelayedField:\n"
-                << "    Unknown electrode type.\n";
-      return 0.;
-    }
-  }
+    return 0;
 }
 
 double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
@@ -271,138 +85,27 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
                                                         const double z) {
   switch (el.ind) {
     case structureelectrode::Plane: {
-      double sol = m_eps * m_Vw * (m_g - z) / (m_b + m_eps * m_g);
-      return std::abs(sol) > m_precision ? sol : 0.;
+        return wpPlane(z);
       break;
     }
     case structureelectrode::Pixel: {
-      auto WPotentialPixel = [=](double* k, double* /*p*/) {
-        double kx = k[0];
-        double ky = k[1];
-
-        double K = std::sqrt(kx * kx + ky * ky);
-
-        double intsol = 1.;
-
-        intsol *= cos(kx * (x - el.xpos)) * sin(kx * el.lx / 2) *
-                  cos(ky * (y - el.ypos)) * sin(ky * el.ly / 2) *
-                  sinh(K * (m_g - z)) /
-                  (kx * ky *
-                   (sinh(m_b * K) * cosh(m_g * K) +
-                    m_eps * sinh(m_g * K) * cosh(m_b * K)));
-
-        return intsol;
-      };
-
-      TF2* pw = new TF2("WPotentialPixel", WPotentialPixel, 0, 10 * m_g, 0,
-                        10 * m_g, 0);
-      const double sol = pw->Integral(0, 2 * m_g, 0, 2 * m_g, 1.e-6);
-      delete pw;
-      return (4 * m_eps * m_Vw / Pi2) * sol;
+        m_wpPixelIntegral.SetParameters(x,y,el.xpos,el.ypos,el.lx,el.ly,z); //(x,y,x0,y0,lx,ly,z)
+        int im; double epsm;
+        getLayer(z,im,epsm);
+        double upLim = 10*std::abs(z-m_z[im]);
+        return m_wpPixelIntegral.Integral(0,upLim,0,upLim,1.e-20);
       break;
     }
     case structureelectrode::Strip: {
-      auto WPotentialStrip = [=](double* k, double* /*p*/) {
-        double kk = k[0];
-
-        double intsol = 1. / (kk * (cosh(m_g * kk) * sinh(m_b * kk) +
-                                   m_eps * cosh(m_b * kk) * sinh(m_g * kk)));
-        intsol *= (sin(kk * el.lx / 2) * cos(kk * (x - el.xpos)) *
-                   sinh(kk * (m_g - z)));
-
-        return intsol;
-      };
-
-      TF1* pw = new TF1("WPotentialStrip", WPotentialStrip, 0, 10 * m_g, 0);
-      const double sol = pw->Integral(0, 10 * m_g);
-      delete pw;
-      return (2 * m_eps * m_Vw / Pi) * sol;
+        m_wpStripIntegral.SetParameters(x,el.xpos,el.lx,z); //(x,x0,lx,z)
+        int im; double epsm;
+        getLayer(z,im,epsm);
+        double upLim = 10*std::abs(z-m_z[im]);
+        return m_wpStripIntegral.Integral(0,upLim,1.e-15);
       break;
     }
     default: {
       std::cerr << m_className << "::IntegratePromptPotential:\n"
-                << "    Unknown electrode type.\n";
-      return 0.;
-    }
-  }
-}
-
-double ComponentParallelPlate::IntegrateDelayedPotential(const Electrode& el,
-                                                         const double x,
-                                                         const double y,
-                                                         const double z,
-                                                         const double t) {
-    
-    // TODO: Find better integration methode!
-    
-  switch (el.ind) {
-    case structureelectrode::Plane: {
-      double tau =
-          m_eps0 * (m_eps + m_b / m_g) /
-          (m_sigma);  // Note to self: You dropt the eps) here for convenience.
-
-      double sol = m_Vw * (1 - exp(-t / tau)) * (m_b * (m_g - z)) /
-                   (m_g * (m_b + m_eps * m_g));
-      return std::abs(sol) > m_precision ? sol : 0.;
-      break;
-    }
-    case structureelectrode::Pixel: {
-      auto WPotentialPixel = [=](double* k, double* /*p*/) {
-        double kx = k[0];
-        double ky = k[1];
-
-        double K = std::sqrt(kx * kx + ky * ky);
-        double tau = m_eps0 *
-                     (m_eps + cosh(m_g * K) * sinh(m_b * K) /
-                                  (cosh(m_b * K) * sinh(m_g * K))) *
-                     (1 / m_sigma);  // Note to self: You dropt the eps) here
-                                     // for convenience.
-
-        double intsol = 1. / (kx * ky *
-                             (sinh(m_b * K) * cosh(m_g * K) +
-                              m_eps * sinh(m_g * K) * cosh(m_b * K)));
-
-        intsol *= cos(kx * (x - el.xpos)) * sin(kx * el.lx / 2) *
-                  cos(ky * (y - el.ypos)) * sin(ky * el.ly / 2) *
-                  sinh(K * (m_g - z)) * tanh(m_b * K) * cosh(m_g * K) *
-                  (1 - exp(-t / tau)) / sinh(m_g * K);
-
-        return intsol;
-      };
-
-      TF2* pw = new TF2("WPotentialPixel", WPotentialPixel, 0, 10 * m_g, 0,
-                        10 * m_g, 0);
-      const double sol = pw->Integral(0, 2 * m_g, 0, 2 * m_g, 1.e-20);
-      delete pw;
-      return (4 * m_Vw / Pi2) * sol;
-      break;
-    }
-    case structureelectrode::Strip: {
-      auto WPotentialStrip = [=](double* k, double* /*p*/) {
-        double kk = k[0];
-
-        double tau = m_eps0 *
-                     (m_eps + cosh(m_g * kk) * sinh(m_b * kk) /
-                                  (cosh(m_b * kk) * sinh(m_g * kk))) *
-                     (1 / m_sigma);
-
-        double intsol = 1. / (kk * (cosh(m_g * kk) * sinh(m_b * kk) +
-                                   m_eps * cosh(m_b * kk) * sinh(m_g * kk)));
-        intsol *= (sin(kk * el.lx / 2) * cos(kk * (x - el.xpos)) *
-                   sinh(kk * (m_g - z)) * cosh(m_g * kk) * tanh(m_b * kk)) *
-                  (1 - exp(-t / tau)) / sinh(m_g * kk);
-
-        return intsol;
-      };
-
-      TF1* pw = new TF1("WPotentialStrip", WPotentialStrip, 0, 10 * m_g, 0);
-      const double sol = pw->Integral(0, 8 * m_g);
-      delete pw;
-      return (2 * m_Vw / Pi) * sol;
-      break;
-    }
-    default: {
-      std::cerr << m_className << "::IntegrateDelayedPotential:\n"
                 << "    Unknown electrode type.\n";
       return 0.;
     }
@@ -415,13 +118,12 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
                                            int& status) {
     // Here I switch conventions back with the y-axis the direction of drift.
     
-  ex = ez = 0.;
-
-  if (y < 0) {
-    ey = m_ezb;
-  } else {
-    ey = m_ezb;
-  }
+    ex = ey = ez = 0;
+    
+    int im =-1; double epsM = -1;
+    if(!getLayer(y,im,epsM)) return;
+    
+    ey = constEFieldLayer(im);
 
   m = m_geometry ? m_geometry->GetMedium(x, y, z) : m_medium;
 
@@ -434,7 +136,7 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
     return;
   }
 
-  if (y > 0) {
+  if (epsM==1) {
     status = 0;
   } else {
     status = -5;
@@ -447,21 +149,21 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
                                            Medium*& m, int& status) {
     // Here I switch conventions back with the y-axis the direction of drift.
     
-  ex = ez = 0.;
-
-  if (y > 0.) {
-    ey = m_ezg;
-  } else {
-    ey = m_ezb;
-  }
-
-  if (m_sigma == 0) {
-    v = -m_eps * m_V * (m_g - z) / (m_b + m_eps * m_g);
-  } else {
-    v = -m_eps * m_V * (m_g - z) / (m_eps * m_g);
-  }
+    ex = ey = ez = v = 0;
+    
+    int im =-1; double epsM = -1;
+    if(!getLayer(y,im,epsM)) return;
+    
+    ey = constEFieldLayer(im);
+    
+    // TODO: check sign
+    v = -m_V - (z-m_z[im-1]) * constEFieldLayer(im);
+    for(int i=1; i<=im-1;i++){
+        v-=(m_z[i]-m_z[i-1])* constEFieldLayer(i);
+    }
 
   m = m_geometry ? m_geometry->GetMedium(x, y, z) : m_medium;
+
   if (!m) {
     if (m_debug) {
       std::cout << m_className << "::ElectricField: No medium at (" << x << ", "
@@ -471,7 +173,7 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
     return;
   }
 
-  if (y > 0) {
+  if (epsM==1) {
     status = 0;
   } else {
     status = -5;
@@ -501,15 +203,15 @@ void ComponentParallelPlate::WeightingField(const double x, const double y,
   wx = 0;
   wy = 0;
   wz = 0;
-
+    // TODO: implement weighting field
   for (const auto& electrode : m_readout_p) {
     if (electrode.label == label) {
       wx = electrode.flip *
-           IntegrateField(electrode, fieldcomponent::ycomp, z, x, y);
+        IntegratePromptField(electrode, fieldcomponent::ycomp, z, x, y);
       wy = electrode.flip *
-           IntegrateField(electrode, fieldcomponent::zcomp, z, x, y);
+        IntegratePromptField(electrode, fieldcomponent::zcomp, z, x, y);
       wz = electrode.flip *
-           IntegrateField(electrode, fieldcomponent::xcomp, z, x, y);
+        IntegratePromptField(electrode, fieldcomponent::xcomp, z, x, y);
     }
   }
 }
@@ -535,74 +237,24 @@ double ComponentParallelPlate::WeightingPotential(const double x,
   return ret;
 }
 
-double ComponentParallelPlate::DelayedWeightingPotential(
-    const double x, const double y, const double z, const double t,
-    const std::string& label) {
-    
-    // Here I switch conventions back with the y-axis the direction of drift.
-    
-  if (m_sigma == 0) {
-    if (m_debug) {
-      std::cout << m_className << "::DelayedWeightingPotential:\n"
-                << "    Conductivity is set to zero.\n";
-    }
-    return 0.;
-  }
-
-  double ret = 0.;
-
-  for (const auto& electrode : m_readout_p) {
-    if (electrode.label == label) {
-      if (!electrode.m_usegrid) {
-        ret +=
-            electrode.flip * IntegrateDelayedPotential(electrode, z, x, y,t);
-      } else {
-        ret += FindDelayedWeightingPotentialInGrid(electrode, z, x, y,t);
-      }
-    }
-  }
-
-  return ret;
-}
-
-void ComponentParallelPlate::DelayedWeightingField(
-    const double x, const double y, const double z, const double t, double& wx,
-    double& wy, double& wz, const std::string& label) {
-    
-    // Here I switch conventions back with the y-axis the direction of drift.
-    
-  wx = 0.;
-  wy = 0.;
-  wz = 0.;
-
-  if (m_sigma == 0) {
-    if (m_debug) {
-      std::cout << m_className << "::DelayedWeightingField:\n"
-                << "    Conductivity is set to zero.\n";
-    }
-    return;
-  }
-
-  for (const auto& electrode : m_readout_p) {
-    if (electrode.label == label) {
-      wx = electrode.flip *
-           IntegrateDelayedField(electrode, fieldcomponent::ycomp, z, x, y, t);
-      wy = electrode.flip *
-           IntegrateDelayedField(electrode, fieldcomponent::zcomp, z, x, y, t);
-      wz = electrode.flip *
-           IntegrateDelayedField(electrode, fieldcomponent::xcomp, z, x, y, t);
-    }
-  }
-}
-
 void ComponentParallelPlate::Reset() {
   m_readout.clear();
   m_readout_p.clear();
-
-  m_g = 0.;
-  m_b = 0.;
-  m_eps = 1.;
-  m_V = 0.;
+    
+    m_cMatrix.clear();
+    m_vMatrix.clear();
+    m_gMatrix.clear();
+    m_wMatrix.clear();
+    
+    m_sigmaIndex.clear();
+    m_eps.clear();
+    m_d.clear();
+    m_z.clear();
+    
+    m_N = 0;
+    m_V = 0;
+    
+    m_medium = nullptr;
 }
 
 void ComponentParallelPlate::UpdatePeriodicity() {
@@ -683,6 +335,201 @@ Medium* ComponentParallelPlate::GetMedium(const double x, const double y,
   return nullptr;
 }
 
+bool ComponentParallelPlate::Nsigma(int N, std::vector<std::vector<int>>& sigmaMatrix){
+    int nColomb = N-1;
+    int nRow = pow(2,N-1);
+    // array to store binary number
+    std::vector<int> binaryNum(nColomb,0);
+    
+    for(int i=0; i<nRow;i++){
+        if(decToBinary(i,binaryNum)){
+            sigmaMatrix.push_back(binaryNum);
+            std::reverse(sigmaMatrix[i].begin(),sigmaMatrix[i].end());
+            std::for_each(sigmaMatrix[i].begin(), sigmaMatrix[i].end(), [](int &n){ n=1-2*n; });
+            
+        }
+        
+    }
+    return true;
+}
+
+bool ComponentParallelPlate::Ntheta(int N,std::vector<std::vector<int>>& thetaMatrix, std::vector<std::vector<int>>& sigmaMatrix){
+    int nColomb = N-1;
+    int nRow = pow(2,N-1);
+    
+    std::vector<int> thetaRow(nColomb,1);
+    std::vector<int> thetaRowReset(nColomb,1);
+    
+    for(int i=0; i<nRow;i++){
+        for(int j =0; j<nColomb; j++){
+            for(int l =j; l<nColomb;l++) thetaRow[j]*=sigmaMatrix[i][l];
+        }
+        thetaMatrix.push_back(thetaRow);
+        thetaRow=thetaRowReset;
+    }
+    return true;
+}
+
+void ComponentParallelPlate::constructGeometryFunction(const int N){
+    
+    int nRow = N;int nColomb = pow(2,N-1);
+    
+    std::vector<std::vector<int>> sigmaMatrix; // sigma_{i,j}^n, where n is defined bellow
+    std::vector<std::vector<int>> thetaMatrix; // theta_{i,j}^n
+    
+    std::vector<std::vector<int>> sigmaMatrix2; // sigma_{i,j}^(N+1-n)
+    std::vector<std::vector<int>> thetaMatrix2; // theta_{i,j}^(N+1-n)
+    
+    std::vector<double> cHold(nColomb,1);
+    std::vector<double> vHold(nColomb,0);
+    std::vector<double> gHold(nColomb,1);
+    std::vector<double> wHold(nColomb,0);
+    
+    for(int n=1; n<=nRow;n++){
+        // building sigma and theta matrices
+        Nsigma(n,sigmaMatrix);
+        Ntheta(n,thetaMatrix,sigmaMatrix);
+        
+        Nsigma(N-n+1,sigmaMatrix2);
+        Ntheta(N-n+1,thetaMatrix2,sigmaMatrix2);
+        
+        int ix1 =0; int ix2 =0;
+        
+        for(int i=0; i<nColomb;i++){
+            // cyclic permutation over the rows of sigma
+            if(ix1==pow(2,n-1)) ix1 = 0;
+            if(ix2==pow(2,N-n)) ix2 = 0;
+            // normalization
+            cHold[i]*=1/pow(2,n-1);
+            gHold[i]*=1/pow(2,N-n);
+            // summation for c and v
+            if(n>1){
+                for(int j = 0;j<n-1;j++){
+                    cHold[i]*=(m_eps[j]+sigmaMatrix[ix1][j]*m_eps[j+1])/m_eps[j+1];
+                    vHold[i]+=(thetaMatrix[ix1][j]-1)*m_d[j];
+                }
+            }
+            // summation for g and w
+            for(int j = 0;j<N-n;j++){
+                gHold[i]*=(m_eps[j]+sigmaMatrix2[ix2][j]*m_eps[j+1]/m_eps[j+1]);
+                wHold[i]+=(thetaMatrix2[ix2][j]-1)*m_d[j];
+            }
+            ix1++;
+            ix2++;
+        }
+        
+        // store solution for row n
+        m_cMatrix.push_back(cHold);
+        m_vMatrix.push_back(vHold);
+        m_gMatrix.push_back(gHold);
+        m_wMatrix.push_back(wHold);
+        
+        // reset
+        std::for_each(cHold.begin(), cHold.end(), [](double &n){ n=1; });
+        std::for_each(vHold.begin(), vHold.end(), [](double &n){ n=0; });
+        std::for_each(gHold.begin(), gHold.end(), [](double &n){ n=1; });
+        std::for_each(wHold.begin(), wHold.end(), [](double &n){ n=0; });
+        
+        sigmaMatrix.clear();
+        sigmaMatrix2.clear();
+        thetaMatrix.clear();
+        thetaMatrix2.clear();
+        
+    }
+    
+}
+
+void ComponentParallelPlate::setHIntegrant(){
+    auto hFunction = [=](double* k, double* /*p*/) {
+        double kk = k[0];
+        double z = k[1];
+        
+        double hNorm=0;
+        double h =0;
+        
+        int im =-1; double epsM = -1;
+        if(!getLayer(z,im,epsM)) return 0.;
+        im--;
+        if(pow(2,m_N-im-1)<1) return 0.;
+        for(int i=0; i<pow(2,m_N-im-1);i++){
+            h+=m_gMatrix[im][i]*sinh(kk*(m_wMatrix[im][i]+m_z[m_N]-z));
+        }
+        for(int i=0; i<pow(2,m_N-1);i++){
+            hNorm+=m_cMatrix[m_N-1][i]*sinh(kk*(m_vMatrix[m_N-1][i]+m_z[m_N]));
+        }
+        return h*m_eps[0]/(m_eps[m_N-1]*hNorm);
+    };
+    TF2* hF = new TF2("hFunction", hFunction, 0, 10*m_upperBoundIntigration,0, m_z[m_N], 0);
+    
+    hF->Copy(m_hIntegrant);
+    
+    delete hF;
+    
+}
+
+void ComponentParallelPlate::setwpPixelIntegrant(){
+    auto intFunction = [=](double* k, double* p) {
+        double kx = k[0];
+        double ky = k[1];
+        
+        double K = sqrt(kx*kx+ky*ky);
+        
+        double x = p[0];
+        double y = p[1];
+        double x0 = p[2];
+        double y0 = p[3];
+        double wx = p[4];
+        double wy = p[5];
+        double z = p[6];
+        
+        double sol = cos(kx*(x-x0))*sin(kx*wx/2)*cos(ky*(y-y0))*sin(ky*wy/2)*m_hIntegrant.Eval(K,z)/(kx*ky);
+        
+        return 4*sol/(Pi*Pi);
+    };
+    
+    TF2* wpPixelIntegrant = new TF2("wpPixelIntegrant", intFunction, 0, 20*m_upperBoundIntigration,0, 20*m_upperBoundIntigration, 7);
+    wpPixelIntegrant->SetNpx(1000); // increasing number of points the function is evaluated on
+    wpPixelIntegrant->SetNpy(1000);
+    wpPixelIntegrant->Copy(m_wpPixelIntegral);
+    
+    delete wpPixelIntegrant;
+}
+
+void ComponentParallelPlate::setwpStripIntegrant(){
+    auto intFunction = [=](double* k, double* p) {
+        double kk = k[0];
+        double x = p[0];
+        double x0 = p[1];
+        double wx = p[2];
+        double z = p[3];
+        double sol = cos(kk*(x-x0))*sin(kk*wx/2)*m_hIntegrant.Eval(kk,z)/kk;
+        return 2*sol/Pi;
+    };
+    TF1* wpStripIntegrant = new TF1("wpStripIntegrant", intFunction, 0, 20*m_upperBoundIntigration, 4);
+    wpStripIntegrant->SetNpx(1000); // increasing number of points the function is evaluated on
+    wpStripIntegrant->Copy(m_wpStripIntegral);
+    
+    delete wpStripIntegrant;
+}
+
+bool ComponentParallelPlate::decToBinary(int n,std::vector<int>& binaryNum)
+{
+    int L = binaryNum.size();
+    // counter for binary array
+    int i = 0;
+    while (n > 0) {
+        if(i+1>L){
+            LOG("Size of binary exceeds amount of colomb.");
+            return false; // Triggered if binary expression is larger then n.
+        }
+        // storing remainder in binary array
+        binaryNum[i] =n % 2;
+        n = n / 2;
+        i++;
+    }
+    return true; // Succesfully
+}
+
 void ComponentParallelPlate::SetWeightingPotentialGrid(
     const std::string& label, const double xmin, const double xmax,
     const double xsteps, const double ymin, const double ymax,
@@ -709,15 +556,6 @@ double ComponentParallelPlate::FindWeightingPotentialInGrid(const Electrode& el,
                                                             const double x,
                                                             const double y,
                                                             const double z) {
-    
-    // TODO: Use existing classes for a grid based field map!
-    
-    return 0.;
-}
-
-double ComponentParallelPlate::FindDelayedWeightingPotentialInGrid(
-    const Electrode& el, const double x, const double y, const double z,
-    const double t) {
     
     // TODO: Use existing classes for a grid based field map!
     

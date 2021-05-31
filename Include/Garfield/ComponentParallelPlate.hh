@@ -6,6 +6,9 @@
 #include "Component.hh"
 #include "Medium.hh"
 
+#include <TF1.h>
+#include <TF2.h>
+
 namespace Garfield {
 
 /// Component for parallel-plate geometries.
@@ -18,14 +21,13 @@ class ComponentParallelPlate : public Component {
   ~ComponentParallelPlate() {}
 
   /** Define the geometry.
-   * \param g size of the gap along positive \f$y\f$.
-   * \param b thickness of the resistive layer along negative \f$y\f$.
-   * \param eps relative permittivity of the resistive layer.
-   * \param sigma conductivity of the resistive layer (must be larger then zero,
-   * otherwise do not pass it in the function).
+   * \param N amount of layers in the geometry, this includes the gas gaps \f$y\f$.
+   * \param d thickness of the layers starting from the bottom to the top lauer along \f$y\f$.
+   * \param eps relative permittivities of the layers starting from the bottom to the top lauer along \f$y\f$ . Here, the  gas gaps having a value of 1.
+   * \param sigmaIndex Indices of the resistive layers.
    * \param V applied potential difference between the parallel plates.
    */
-  void Setup(double g, double b, double eps, double v, double sigma = 0.);
+    void Setup(const int N, std::vector<double> eps,std::vector<double> d,const double V, std::vector<int> sigmaIndex={});
 
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
@@ -39,14 +41,6 @@ class ComponentParallelPlate : public Component {
 
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
-
-  double DelayedWeightingPotential(const double x, const double y,
-                                   const double z, const double t,
-                                   const std::string& label) override;
-
-  void DelayedWeightingField(const double x, const double y, const double z,
-                             const double t, double& wx, double& wy, double& wz,
-                             const std::string& label) override;
 
   bool GetVoltageRange(double& vmin, double& vmax) override;
 
@@ -93,24 +87,33 @@ class ComponentParallelPlate : public Component {
                       double& xmax, double& ymax, double& zmax) override;
  private:
   static constexpr double m_precision = 1.e-30;
-  // Size of the gap.
-  double m_g = 0.;
-  // Thickness of the resistive element.
-  double m_b = 0.;
-  // Applied voltage on the electrode to
-  // calculate the weighting potential.
   static constexpr double m_Vw = 1.;
-  double m_eps = 1.;
   double m_eps0 = 8.85418782e-3;
   // Voltage difference between the parallel plates.
-  double m_V = 0.;
-  // Electric field in the gap.
-  double m_ezg = 0.;
-  // Electric field in the resistive layer.
-  double m_ezb = 0.;
-  // Conductivity of the resistive layer.
-  double m_sigma = 0.;
+    double m_V = 0.;
+    
+    bool m_debuggig = true;
+    
+    int m_N = 0;
 
+    double m_upperBoundIntigration = 0;
+
+    std::vector<double> m_eps;
+    std::vector<double> m_d;
+    std::vector<double> m_z;
+
+    std::vector<int> m_sigmaIndex;
+
+    TF2 m_hIntegrant;
+
+    TF1 m_wpStripIntegral;
+    TF2 m_wpPixelIntegral;
+
+    std::vector<std::vector<double>> m_cMatrix;
+    std::vector<std::vector<double>> m_vMatrix;
+    std::vector<std::vector<double>> m_gMatrix;
+    std::vector<std::vector<double>> m_wMatrix;
+    
   Medium* m_medium = nullptr;
 
   /// Structure that captures the information of the electrodes under study
@@ -134,27 +137,87 @@ class ComponentParallelPlate : public Component {
   std::vector<Electrode> m_readout_p;
 
   // Functions that calculate the electric field and potential
-  double IntegrateField(const Electrode& el, int comp, const double x,
+  double IntegratePromptField(const Electrode& el, int comp, const double x,
                         const double y, const double z);
-
-  double IntegrateDelayedField(const Electrode& el, int comp, const double x,
-                               const double y, const double z, const double t);
 
   double IntegratePromptPotential(const Electrode& el, const double x,
                                   const double y, const double z);
-  double IntegrateDelayedPotential(const Electrode& el, const double x,
-                                   const double y, const double z,
-                                   const double t);
 
   void CalculateDynamicalWeightingPotential(const Electrode& el);
 
   double FindWeightingPotentialInGrid(const Electrode& el, const double x,
                                       const double y, const double z);
+    
+    // function returning 0 if layer with specific index is conductive.
+    double kroneckerDelta(const int index){
+        if ( std::find(m_sigmaIndex.begin(), m_sigmaIndex.end(), index) != m_sigmaIndex.end() )
+            return 0;
+        else
+            return 1;
+    }
+    
+    // function connstruct the sigma matrix needed to calculate the w, v, c and g matrices
+    bool Nsigma(int N, std::vector<std::vector<int>>& sigmaMatrix);
+    
+    // function connstruct the theta matrix needed to calculate the w, v, c and g matrices
+    bool Ntheta(int N,std::vector<std::vector<int>>& thetaMatrix, std::vector<std::vector<int>>& sigmaMatrix);
+    
+    // function connstructing the w, v, c and g matrices needed for constructing the weighting potentials equations.
+    void constructGeometryFunction(const int N);
+    
+    // obtain the index and permitivity of of the layer at hight z.
+    bool getLayer(const double z,int& m,double& epsM){
+        auto const it = std::upper_bound(m_z.begin(), m_z.end(), z);
+        if (it == m_z.begin()||it == m_z.end()) return false;
+        m = *(it - 1);
+        epsM= m_eps[m];
+        m++;
+        return true;
+    }
+    
+    // build function h needed for the integrant of the weighting potential of a stip and pixel
+    void setHIntegrant();
+    
+    // build integrant of weighting potential of a strip
+    void setwpPixelIntegrant();
+    
+    // build integrant of weighting potential of a pixel
+    void setwpStripIntegrant();
+    
+    // weighting field of a plane in layer with index "indexLayer"
+    double constWEFieldLayer(const int indexLayer){
+        double invEz = 0;
+        for(int i=1; i<=m_N;i++){
+            invEz+=(m_z[i]-m_z[i-1])/m_eps[i-1];
+        }
+        return 1/(m_eps[indexLayer-1]*invEz);
+    }
+    
+    // weighting potential of a plane
+    double wpPlane(const double z){
+        int im =-1; double epsM = -1;
+        if(!getLayer(z,im,epsM)) return 0.;
+        double v = m_V - (z-m_z[im-1]) * constWEFieldLayer(im);
+        for(int i=1; i<=im-1;i++){
+            v-=(m_z[i]-m_z[i-1])* constWEFieldLayer(i);
+        }
+        
+        return v;
+    }
 
-  double FindDelayedWeightingPotentialInGrid(const Electrode& el,
-                                             const double x, const double y,
-                                             const double z, const double t);
-
+    // electric field in layer with index "indexLayer"
+    double constEFieldLayer(const int indexLayer){
+        if(kroneckerDelta(indexLayer)==0) return 0.;
+        double invEz = 0;
+        for(int i=1; i<=m_N;i++){
+            invEz+=-(m_z[i]-m_z[i-1])*kroneckerDelta(i)/m_eps[i-1];
+        }
+        return m_V /(m_eps[indexLayer-1]*invEz);
+    }
+    
+    // function to convert decimal to binary expressed in n digits.
+    bool decToBinary(int n,std::vector<int>& binaryNum);
+    
   void UpdatePeriodicity() override;
   void Reset() override;
 };
