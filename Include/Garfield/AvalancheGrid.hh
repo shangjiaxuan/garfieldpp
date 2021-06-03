@@ -100,6 +100,8 @@ class AvalancheGrid {
   double m_DiffSigma = 0.;  // Transverse diffusion coefficients (in √cm).
 
   int m_nestart = 0.;
+    
+    double m_dt = -1;
 
   bool m_driftAvalanche = false;
   bool m_importAvalanche = false;

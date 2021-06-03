@@ -401,6 +401,18 @@ void AvalancheGrid::StartGridAvalanche() {
   GetParametersFromSensor();
 
   SortPositionVector();
+    
+    if (m_velNormal[2] != 0) {
+        m_dt = std::abs(m_avgrid.zStepSize / m_Velocity);
+    } else if (m_velNormal[1] != 0) {
+        m_dt = std::abs(m_avgrid.yStepSize / m_Velocity);
+    } else {
+        m_dt = std::abs(m_avgrid.xStepSize / m_Velocity);
+    }
+    
+    std::cerr << m_className
+              << "::StartGridAvalanche::Time steps per loop "
+              << m_dt << " ns.\n";
 
   if (m_debug) {
     std::cerr << m_className
