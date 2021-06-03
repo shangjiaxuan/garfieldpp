@@ -86,7 +86,7 @@ class AvalancheGrid {
 
   double m_Velocity = 0.;  // [cm/ns]
 
-  std::vector<int> m_velNormal = {0, 0, -1};
+  std::vector<int> m_velNormal = {0, 0, 0};
 
   double m_MaxSize = 1.6e7;  // Saturations size
 
@@ -100,12 +100,9 @@ class AvalancheGrid {
   double m_DiffSigma = 0.;  // Transverse diffusion coefficients (in √cm).
 
   int m_nestart = 0.;
-    
-    double m_dt = -1;
 
   bool m_driftAvalanche = false;
   bool m_importAvalanche = false;
-  bool m_SensorParameters = false;
 
   std::string m_className = "AvalancheGrid";
 
@@ -127,25 +124,36 @@ class AvalancheGrid {
     double xStepSize = 0.;      ///< Amount of grid points.
     int xsteps = 0.;  ///< Distance between the grid points of x-coordinate.
 
-    std::vector<std::vector<int>> gridPosition = {
-        {}, {}, {}};  ///< Tracking of active z-coordinate grid points.
-
     bool gridset = false;  ///< Keeps track if the grid has been defined.
-
-    std::vector<std::vector<std::vector<int>>>
-        n;      ///< Grid based representation of space-charge. [z,y,x];
     int N = 0;  ///< Total amount of charge.
-
-    std::vector<double>
-        transverseDiffusion;  ///< Factors of the charge that go to horizontally
-                              ///< neighboring grid points.
-
-    double velocity = 0;  ///< Velocity of electrons.
+      
     double time = 0;      ///< Clock.
 
     bool run = true;  ///< Tracking if the charges are still in the drift gap.
   };
-
+    
+    struct AvalancheNode{
+        double ix = 0;
+        double iy = 0;
+        double iz = 0;
+        
+        int n = 1;
+        
+        double townsend = 0;
+        double attachment = 0;
+        double velocity = 0;
+        
+        double stepSize = 0;
+        std::vector<int> velNormal = {0,0,0};
+        
+        double time=0.; ///< Clock.
+        double dt = -1.; ///< time step.
+        
+        bool active = true;
+    };
+    
+    std::vector<AvalancheNode> m_activeNodes= {};
+    
   Grid m_avgrid;
   // Setting z-coordinate grid.
   void SetZGrid(Grid& av, const double top, const double bottom,
@@ -164,14 +172,11 @@ class AvalancheGrid {
                   const double v, const int n = 1);
   // Go to next time step.
   void NextAvalancheGridPoint(Grid& av);
-  // Compute the factor of the charge that go to neighboring points through
-  // transverse diffusion.
-  void DiffusionFactors(Grid& av);
   // Obtain the Townsend coef., Attachment coef. and velocity vector from
   // sensor class.
-  void GetParametersFromSensor();
-
-  void SortPositionVector();
+  bool GetParameters(AvalancheNode& newNode);
+    
+    void DeactivateNode(AvalancheNode& node);
 };
 }  // namespace Garfield
 
