@@ -29,7 +29,7 @@ class ComponentParallelPlate : public Component {
    * \param sigmaIndex Indices of the resistive layers.
    * \param V applied potential difference between the parallel plates.
    */
-    void Setup(const int N, std::vector<double> eps,std::vector<double> d,const double V, std::vector<int> sigmaIndex={});
+  void Setup(const int N, std::vector<double> eps,std::vector<double> d,const double V, std::vector<int> sigmaIndex={});
 
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
@@ -103,7 +103,9 @@ class ComponentParallelPlate : public Component {
     double m_upperBoundIntigration = 0;
 
     std::vector<double> m_eps; ///< list of irelative permitivities or layers
+    std::vector<double> m_epsHolder;
     std::vector<double> m_d; ///< list of thickness of layers
+    std::vector<double> m_dHolder;
     std::vector<double> m_z; ///< list of indices of conducting layers
 
     std::vector<int> m_sigmaIndex; ///< list of indices of conducting layers
@@ -112,11 +114,16 @@ class ComponentParallelPlate : public Component {
 
     TF1 m_wpStripIntegral; ///<Weighting potential integrant for strips
     TF2 m_wpPixelIntegral; ///<Weighting potential integrant for pixels
+    
+    std::vector<std::vector<std::vector<int>>> m_sigmaMatrix; // sigma_{i,j}^n, where n goes from 1 to N;
+    std::vector<std::vector<std::vector<int>>> m_thetaMatrix; // theta_{i,j}^n, where n goes from 1 to N;
 
     std::vector<std::vector<double>> m_cMatrix; ///<c-matrixl.
     std::vector<std::vector<double>> m_vMatrix; ///<v-matrixl.
     std::vector<std::vector<double>> m_gMatrix; ///<g-matrixl.
     std::vector<std::vector<double>> m_wMatrix; ///<w-matrixl.
+    
+    int m_currentLayer = 0; ///<Index of the current layer.
     
   Medium* m_medium = nullptr;
 
@@ -160,11 +167,14 @@ class ComponentParallelPlate : public Component {
             return 1;
     }
     
-    // function connstruct the sigma matrix needed to calculate the w, v, c and g matrices
+    // function construct the sigma matrix needed to calculate the w, v, c and g matrices
     bool Nsigma(int N, std::vector<std::vector<int>>& sigmaMatrix);
     
-    // function connstruct the theta matrix needed to calculate the w, v, c and g matrices
+    // function construct the theta matrix needed to calculate the w, v, c and g matrices
     bool Ntheta(int N,std::vector<std::vector<int>>& thetaMatrix, std::vector<std::vector<int>>& sigmaMatrix);
+    
+    // function constructing the sigma an theta matrices.
+    void constructGeometryMatrices(const int N);
     
     // function connstructing the w, v, c and g matrices needed for constructing the weighting potentials equations.
     void constructGeometryFunction(const int N);
@@ -176,7 +186,7 @@ class ComponentParallelPlate : public Component {
         double mholer = *(it - 1);
         while(mholer>0&&mholer<1) mholer *=10;
         m = mholer;
-        epsM= m_eps[m];
+        epsM= m_epsHolder[m];
         m++;
         return true;
     }
@@ -193,10 +203,10 @@ class ComponentParallelPlate : public Component {
     // weighting field of a plane in layer with index "indexLayer"
     double constWEFieldLayer(const int indexLayer){
         double invEz = 0;
-        for(int i=1; i<=m_N;i++){
-            invEz+=(m_z[i]-m_z[i-1])/m_eps[i-1];
+        for(int i=1; i<=m_N-1;i++){
+            invEz+=(m_z[i]-m_z[i-1])/m_epsHolder[i-1];
         }
-        return 1/(m_eps[indexLayer-1]*invEz);
+        return 1/(m_epsHolder[indexLayer-1]*invEz);
     }
     
     // weighting potential of a plane
@@ -215,14 +225,35 @@ class ComponentParallelPlate : public Component {
     double constEFieldLayer(const int indexLayer){
         if(kroneckerDelta(indexLayer)==0) return 0.;
         double invEz = 0;
-        for(int i=1; i<=m_N;i++){
-            invEz+=-(m_z[i]-m_z[i-1])*kroneckerDelta(i)/m_eps[i-1];
+        for(int i=1; i<=m_N-1;i++){
+            invEz+=-(m_z[i]-m_z[i-1])*kroneckerDelta(i)/m_epsHolder[i-1];
         }
-        return m_V /(m_eps[indexLayer-1]*invEz);
+        return m_V /(m_epsHolder[indexLayer-1]*invEz);
     }
     
     // function to convert decimal to binary expressed in n digits.
     bool decToBinary(int n,std::vector<int>& binaryNum);
+    
+    // Rebuilds c, v, g and w matrix.
+    void LayerUpdate(const double z, const int im, const double epsM){
+        
+        if(im != m_currentLayer){
+            m_currentLayer = im;
+            for(int i = 0; i<im-1; i++) m_eps[i] = m_epsHolder[i];
+            m_eps[im-1] =epsM; m_eps[im] =epsM;
+            for(int i = im+1; i<m_N; i++) m_eps[i] = m_epsHolder[i-1];
+        }
+        
+        double diff1 = m_z[im]-z;
+        double diff2 = z-m_z[im-1];
+        
+        for(int i = 0; i<im-1; i++) m_d[i] = m_dHolder[i];
+        m_d[im-1] =diff2; m_d[im] =diff1;
+        for(int i = im+1; i<m_N; i++) m_d[i] = m_dHolder[i-1];
+        
+        constructGeometryFunction(m_N);
+        
+    };
     
   void UpdatePeriodicity() override;
   void Reset() override;

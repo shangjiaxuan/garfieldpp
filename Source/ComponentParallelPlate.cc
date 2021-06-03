@@ -18,6 +18,7 @@ ComponentParallelPlate::ComponentParallelPlate() : Component("ParallelPlate") {}
 void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vector<double> d,const double V, std::vector<int> sigmaIndex) {
     
   // Here I switch conventions with the z-axis the direction of drift.
+    std::vector<double> placeHolder(N+1,0);
     
     const int Nholder1 = eps.size();
     const int Nholder2 = d.size();
@@ -30,11 +31,13 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     }
     
     if(m_debuggig) LOG("ComponentParallelPlate::Setup:: Loading parameters.");
-    m_eps = eps;
-    //std::for_each(m_eps.begin(), m_eps.end(), [](double &n){ n*=m_eps0; });
+    m_epsHolder = eps;
+    m_eps = placeHolder;
+    //std::for_each(m_epsHolder.begin(), m_epsHolder.end(), [](double &n){ n*=m_eps0; });
     
-    m_d = d;
-    m_N = N;
+    m_dHolder = d;
+    m_d = placeHolder;
+    m_N = N+1;
     m_V = V;
     
     m_sigmaIndex = sigmaIndex;
@@ -44,14 +47,14 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     std::vector<double>  m_zHolder(N+1);
     m_zHolder[0] = 0;
     for(int i = 1; i<=N; i++){
-        m_zHolder[i]=m_zHolder[i-1]+m_d[i-1];
+        m_zHolder[i]=m_zHolder[i-1]+m_dHolder[i-1];
         
         if(m_debuggig) LOG("ComponentParallelPlate::Setup:: layer "<<i<<":: z = "<<m_zHolder[i]);
     }
     m_z = m_zHolder;
     
     if(m_debuggig) LOG("ComponentParallelPlate::Setup:: Constructing matrices");
-    constructGeometryFunction(m_N);
+    constructGeometryMatrices(m_N);
     
     if(m_debuggig) LOG("ComponentParallelPlate::Setup:: Computing weighting potential functions.");
     setHIntegrant();
@@ -76,7 +79,7 @@ bool ComponentParallelPlate::GetBoundingBox(double& x0, double& y0, double& z0,
   x1 = +std::numeric_limits<double>::infinity();
   // TODO: check!
   y0 = 0.;
-  y1 = m_d[m_N-1];
+  y1 = m_z.back();
   return true;
 }
 
@@ -99,7 +102,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
         m_wpPixelIntegral.SetParameters(x,y,el.xpos,el.ypos,el.lx,el.ly,z); //(x,y,x0,y0,lx,ly,z)
         int im; double epsm;
         getLayer(z,im,epsm);
-        double upLim = 10*std::abs(z-m_z[im]);
+        double upLim = 20*std::abs(z-m_z[im]);
         return m_wpPixelIntegral.Integral(0,upLim,0,upLim,1.e-12);
       break;
     }
@@ -107,7 +110,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
         m_wpStripIntegral.SetParameters(x,el.xpos,el.lx,z); //(x,x0,lx,z)
         int im; double epsm;
         getLayer(z,im,epsm);
-        double upLim = 10*std::abs(z-m_z[im]);
+        double upLim = 20*std::abs(z-m_z[im]);
         return m_wpStripIntegral.Integral(0,upLim,1.e-12);
       break;
     }
@@ -382,15 +385,34 @@ bool ComponentParallelPlate::Ntheta(int N,std::vector<std::vector<int>>& thetaMa
     return true;
 }
 
-void ComponentParallelPlate::constructGeometryFunction(const int N){
+void ComponentParallelPlate::constructGeometryMatrices(const int N){
     
     int nRow = N;int nColomb = pow(2,N-1);
     
-    std::vector<std::vector<int>> sigmaMatrix; // sigma_{i,j}^n, where n is defined bellow
-    std::vector<std::vector<int>> thetaMatrix; // theta_{i,j}^n
+    std::vector<std::vector<int>> sigmaMatrix;
+    std::vector<std::vector<int>> thetaMatrix;
     
-    std::vector<std::vector<int>> sigmaMatrix2; // sigma_{i,j}^(N+1-n)
-    std::vector<std::vector<int>> thetaMatrix2; // theta_{i,j}^(N+1-n)
+    for(int n=1; n<=nRow;n++){
+        // building sigma and theta matrices
+        Nsigma(n,sigmaMatrix);
+        Ntheta(n,thetaMatrix,sigmaMatrix);
+        // store solution for row n-1
+        m_sigmaMatrix.push_back(sigmaMatrix);
+        m_thetaMatrix.push_back(thetaMatrix);
+        // reset
+        sigmaMatrix.clear();
+        thetaMatrix.clear();
+    }
+}
+
+void ComponentParallelPlate::constructGeometryFunction(const int N){
+    
+    int nRow = N;int nColomb = pow(2,N-1);
+    // reset
+    m_cMatrix.clear();
+    m_vMatrix.clear();
+    m_gMatrix.clear();
+    m_wMatrix.clear();
     
     std::vector<double> cHold(nColomb,1);
     std::vector<double> vHold(nColomb,0);
@@ -398,13 +420,6 @@ void ComponentParallelPlate::constructGeometryFunction(const int N){
     std::vector<double> wHold(nColomb,0);
     
     for(int n=1; n<=nRow;n++){
-        // building sigma and theta matrices
-        Nsigma(n,sigmaMatrix);
-        Ntheta(n,thetaMatrix,sigmaMatrix);
-        
-        Nsigma(N-n+1,sigmaMatrix2);
-        Ntheta(N-n+1,thetaMatrix2,sigmaMatrix2);
-        
         int ix1 =0; int ix2 =0;
         
         for(int i=0; i<nColomb;i++){
@@ -417,14 +432,14 @@ void ComponentParallelPlate::constructGeometryFunction(const int N){
             // summation for c and v
             if(n>1){
                 for(int j = 0;j<n-1;j++){
-                    cHold[i]*=(m_eps[j]+sigmaMatrix[ix1][j]*m_eps[j+1])/m_eps[j+1];
-                    vHold[i]+=(thetaMatrix[ix1][j]-1)*m_d[j];
+                    cHold[i]*=(m_eps[j]+m_sigmaMatrix[n-1][ix1][j]*m_eps[j+1])/m_eps[j+1];
+                    vHold[i]+=(m_thetaMatrix[n-1][ix1][j]-1)*m_d[j];
                 }
             }
             // summation for g and w
             for(int j = 0;j<N-n;j++){
-                gHold[i]*=(m_eps[j]+sigmaMatrix2[ix2][j]*m_eps[j+1]/m_eps[j+1]);
-                wHold[i]+=(thetaMatrix2[ix2][j]-1)*m_d[j];
+                gHold[i]*=(m_eps[N-j-1]+m_sigmaMatrix[N-n][ix2][j]*m_eps[N-j-2])/m_eps[N-j-2];
+                wHold[i]+=(m_thetaMatrix[N-n][ix2][j]-1)*m_d[N-1-j];
             }
             ix1++;
             ix2++;
@@ -441,14 +456,7 @@ void ComponentParallelPlate::constructGeometryFunction(const int N){
         std::for_each(vHold.begin(), vHold.end(), [](double &n){ n=0; });
         std::for_each(gHold.begin(), gHold.end(), [](double &n){ n=1; });
         std::for_each(wHold.begin(), wHold.end(), [](double &n){ n=0; });
-        
-        sigmaMatrix.clear();
-        sigmaMatrix2.clear();
-        thetaMatrix.clear();
-        thetaMatrix2.clear();
-        
     }
-    
 }
 
 void ComponentParallelPlate::setHIntegrant(){
@@ -461,17 +469,18 @@ void ComponentParallelPlate::setHIntegrant(){
         
         int im =-1; double epsM = -1;
         if(!getLayer(z,im,epsM)) return 0.;
-      //  im-=2;
-        if(pow(2,m_N-im-1)<1) return 0.;
+        LayerUpdate(z,im,epsM);
+        
+        //if(pow(2,m_N-im-1)<1) return 0.;
         for(int i=0; i<pow(2,m_N-im-1);i++){
-            h+=m_gMatrix[im][i]*sinh(kk*(m_wMatrix[im][i]+m_z[m_N]-z));
+            h+=m_gMatrix[im][i]*sinh(kk*(m_wMatrix[im][i]+m_z.back()-z));
         }
         for(int i=0; i<pow(2,m_N-1);i++){
-            hNorm+=m_cMatrix[m_N-1][i]*sinh(kk*(m_vMatrix[m_N-1][i]+m_z[m_N]));
+            hNorm+=m_cMatrix[m_N-1][i]*sinh(kk*(m_vMatrix[m_N-1][i]+m_z.back()));
         }
         return h*m_eps[0]/(m_eps[m_N-1]*hNorm);
     };
-    TF2* hF = new TF2("hFunction", hFunction, 0, 10*m_upperBoundIntigration,0, m_z[m_N], 0);
+    TF2* hF = new TF2("hFunction", hFunction, 0, 20*m_upperBoundIntigration,0, m_z.back(), 0);
     
     hF->Copy(m_hIntegrant);
     
