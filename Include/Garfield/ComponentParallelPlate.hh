@@ -96,7 +96,7 @@ class ComponentParallelPlate : public Component {
   // Voltage difference between the parallel plates.
     double m_V = 0.;
     
-    bool m_debuggig = true; ///<debugging switch
+    double m_dt = 0. ;
     
     int m_N = 0; ///<amount of layers
 
@@ -181,13 +181,21 @@ class ComponentParallelPlate : public Component {
     
     // obtain the index and permitivity of of the layer at hight z.
     bool getLayer(const double z,int& m,double& epsM){
-        auto const it = std::upper_bound(m_z.begin(), m_z.end(), z);
-        if (it == m_z.begin()||it == m_z.end()) return false;
-        double mholer = *(it - 1);
-        while(mholer>0&&mholer<1) mholer *=10;
+        
+        int mholer = -1;
+        
+        for(int i = 1; i<m_N; i++){
+            if(z<=m_z[i]){
+                mholer = i;
+                break;
+            }
+        }
+        if(mholer==-1) return false;
+        
         m = mholer;
-        epsM= m_epsHolder[m];
-        m++;
+        epsM= m_epsHolder[m-1];
+        
+        LOG("getLayer:: z = "<< z<<", im = "<< m <<", epsM = "<< epsM);
         return true;
     }
     

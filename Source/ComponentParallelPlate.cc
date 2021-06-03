@@ -30,7 +30,7 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
         return;
     }
     
-    if(m_debuggig) LOG("ComponentParallelPlate::Setup:: Loading parameters.");
+    if(m_debug) LOG("ComponentParallelPlate::Setup:: Loading parameters.");
     m_epsHolder = eps;
     m_eps = placeHolder;
     //std::for_each(m_epsHolder.begin(), m_epsHolder.end(), [](double &n){ n*=m_eps0; });
@@ -49,14 +49,14 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     for(int i = 1; i<=N; i++){
         m_zHolder[i]=m_zHolder[i-1]+m_dHolder[i-1];
         
-        if(m_debuggig) LOG("ComponentParallelPlate::Setup:: layer "<<i<<":: z = "<<m_zHolder[i]);
+        if(m_debug) LOG("ComponentParallelPlate::Setup:: layer "<<i<<":: z = "<<m_zHolder[i]);
     }
     m_z = m_zHolder;
     
-    if(m_debuggig) LOG("ComponentParallelPlate::Setup:: Constructing matrices");
+    if(m_debug) LOG("ComponentParallelPlate::Setup:: Constructing matrices");
     constructGeometryMatrices(m_N);
     
-    if(m_debuggig) LOG("ComponentParallelPlate::Setup:: Computing weighting potential functions.");
+    if(m_debug) LOG("ComponentParallelPlate::Setup:: Computing weighting potential functions.");
     setHIntegrant();
     setwpStripIntegrant();
     setwpPixelIntegrant();
@@ -132,13 +132,14 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
     
     int im =-1; double epsM = -1;
     if(!getLayer(y,im,epsM)){
+        if (m_debug) std::cout << m_className << "::ElectricField: Not inside geometry.\n";
         status = -6;
         return;
     }
     
     ey = constEFieldLayer(im);
 
-  m = m_geometry ? m_geometry->GetMedium(x, y, z) : m_medium;
+    m = m_geometry ? m_geometry->GetMedium(x, y, z) : m_medium;
 
   if (!m) {
     if (m_debug) {
@@ -166,9 +167,11 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
     
     int im =-1; double epsM = -1;
     if(!getLayer(y,im,epsM)){
+        if (m_debug) std::cout << m_className << "::ElectricField: Not inside geometry.\n";
         status = -6;
         return;
     }
+    
     ey = constEFieldLayer(im);
     
     // TODO: check sign
