@@ -248,7 +248,7 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
             m_Saturated = true;
 
             if (m_SaturationTime == -1)
-              m_SaturationTime = av.time + std::abs(av.zStepSize / av.velocity);
+              m_SaturationTime = av.time + m_dt;
           }
 
           int chargeRemaining =
@@ -288,13 +288,13 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
               av.n[iz - 1][iy][ix + j] += nxd;
 
               m_sensor->AddSignal(-(nxd + Nholder) / 2, av.time,
-                                  av.time + av.zStepSize / av.velocity,
+                                  av.time + m_dt,
                                   av.xgrid[ix], av.ygrid[iy], av.zgrid[iz],
                                   av.xgrid[ix - j], av.ygrid[iy],
                                   av.zgrid[iz - 1], false, true);
 
               m_sensor->AddSignal(-(nxd + Nholder) / 2, av.time,
-                                  av.time + av.zStepSize / av.velocity,
+                                  av.time + m_dt,
                                   av.xgrid[ix], av.ygrid[iy], av.zgrid[iz],
                                   av.xgrid[ix + j], av.ygrid[iy],
                                   av.zgrid[iz - 1], false, true);
@@ -304,7 +304,7 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
               av.n[iz - 1][iy][ix] += chargeRemaining;
 
               m_sensor->AddSignal(-(chargeRemaining + Nholder) / 2, av.time,
-                                  av.time + av.zStepSize / av.velocity,
+                                  av.time + m_dt,
                                   av.xgrid[ix], av.ygrid[iy], av.zgrid[iz],
                                   av.xgrid[ix], av.ygrid[iy], av.zgrid[iz - 1],
                                   false, true);
@@ -333,7 +333,7 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
             m_Saturated = true;
 
             if (m_SaturationTime == -1)
-              m_SaturationTime = av.time + std::abs(av.zStepSize / av.velocity);
+              m_SaturationTime = av.time + m_dt;
           }
           // Produce induced signal on readout electrodes.
 
@@ -342,7 +342,7 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
                 av.n[iz + m_velNormal[2]][iy + m_velNormal[1]]
                     [ix + m_velNormal[0]]) /
                   2,
-              av.time, av.time + av.zStepSize / av.velocity, av.xgrid[ix],
+              av.time, av.time + m_dt, av.xgrid[ix],
               av.ygrid[iy], av.zgrid[iz], av.xgrid[ix + m_velNormal[0]],
               av.ygrid[iy + m_velNormal[1]], av.zgrid[iz - 1], false, true);
 
@@ -375,7 +375,7 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
   }
   // After all active grid points have propagated, update the time.
 
-  av.time += std::abs(av.zStepSize / av.velocity);
+  av.time += m_dt;
 }
 
 void AvalancheGrid::StartGridAvalanche() {
