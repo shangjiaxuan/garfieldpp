@@ -33,7 +33,8 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     if(m_debug) LOG("ComponentParallelPlate::Setup:: Loading parameters.");
     m_epsHolder = eps;
     m_eps = placeHolder;
-    //std::for_each(m_epsHolder.begin(), m_epsHolder.end(), [](double &n){ n*=m_eps0; });
+    // TODO: Check equations if relative permitivity is ok.
+    //std::for_each(m_epsHolder.begin(), m_epsHolder.end(), [=](double &n){ n*=m_eps0; });
     
     m_dHolder = d;
     m_d = placeHolder;
@@ -42,7 +43,7 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     
     m_sigmaIndex = sigmaIndex;
     
-    m_upperBoundIntigration = *max_element(std::begin(m_dHolder), std::end(m_dHolder));
+    m_upperBoundIntigration *= *max_element(std::begin(m_dHolder), std::end(m_dHolder));
     // TODO:Remove LOG
     LOG("ComponentParallelPlate::Setup:: Integration range = (0,"<<m_upperBoundIntigration<<").");
     std::vector<double>  m_zHolder(N+1);
@@ -103,7 +104,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
         m_wpPixelIntegral.SetParameters(x,y,el.xpos,el.ypos,el.lx,el.ly,z); //(x,y,x0,y0,lx,ly,z)
         int im; double epsm;
         getLayer(z,im,epsm);
-        double upLim = 20*m_upperBoundIntigration;
+        double upLim = m_upperBoundIntigration;
         return m_wpPixelIntegral.Integral(0,upLim,0,upLim,1.e-12);
       break;
     }
@@ -111,7 +112,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
         m_wpStripIntegral.SetParameters(x,el.xpos,el.lx,z); //(x,x0,lx,z)
         int im; double epsm;
         getLayer(z,im,epsm);
-        double upLim = 20*m_upperBoundIntigration;
+        double upLim = m_upperBoundIntigration;
         return m_wpStripIntegral.Integral(0,upLim,1.e-12);
       break;
     }
@@ -244,7 +245,7 @@ double ComponentParallelPlate::WeightingPotential(const double x,
     
   double ret = 0.;
 
-  for (const auto& electrode : m_readout_p) {
+  for (auto& electrode : m_readout_p) {
     if (electrode.label == label) {
       if (!electrode.m_usegrid) {
         ret += electrode.flip * IntegratePromptPotential(electrode, z, x, y);
@@ -484,7 +485,7 @@ void ComponentParallelPlate::setHIntegrant(){
         }
         return h*m_eps[0]/(m_eps[m_N-1]*hNorm);
     };
-    TF2* hF = new TF2("hFunction", hFunction, 0, 20*m_upperBoundIntigration,0, m_z.back(), 0);
+    TF2* hF = new TF2("hFunction", hFunction, 0, m_upperBoundIntigration,0, m_z.back(), 0);
     
     hF->Copy(m_hIntegrant);
     
@@ -512,7 +513,7 @@ void ComponentParallelPlate::setwpPixelIntegrant(){
         return 4*sol/(Pi*Pi);
     };
     
-    TF2* wpPixelIntegrant = new TF2("wpPixelIntegrant", intFunction, 0, 20*m_upperBoundIntigration,0, 20*m_upperBoundIntigration, 7);
+    TF2* wpPixelIntegrant = new TF2("wpPixelIntegrant", intFunction, 0, m_upperBoundIntigration,0, m_upperBoundIntigration, 7);
     wpPixelIntegrant->SetNpx(10000); // increasing number of points the function is evaluated on
     wpPixelIntegrant->SetNpy(10000);
     wpPixelIntegrant->Copy(m_wpPixelIntegral);
@@ -530,7 +531,7 @@ void ComponentParallelPlate::setwpStripIntegrant(){
         double sol = cos(kk*(x-x0))*sin(kk*wx/2)*m_hIntegrant.Eval(kk,z)/kk;
         return 2*sol/Pi;
     };
-    TF1* wpStripIntegrant = new TF1("wpStripIntegrant", intFunction, 0, 20*m_upperBoundIntigration, 4);
+    TF1* wpStripIntegrant = new TF1("wpStripIntegrant", intFunction, 0, m_upperBoundIntigration, 4);
     wpStripIntegrant->SetNpx(1000); // increasing number of points the function is evaluated on
     wpStripIntegrant->Copy(m_wpStripIntegral);
     
@@ -555,13 +556,30 @@ bool ComponentParallelPlate::decToBinary(int n,std::vector<int>& binaryNum)
     return true; // Succesfully
 }
 
-void ComponentParallelPlate::SetWeightingPotentialGrid(
-    const std::string& label, const double xmin, const double xmax,
+void ComponentParallelPlate::SetWeightingPotentialGrid(const double xmin, const double xmax,
     const double xsteps, const double ymin, const double ymax,
     const double ysteps, const double zmin, const double zmax,
-    const double zsteps, const double tmin, const double tmax,
-    const double tsteps) {
+    const double zsteps, const std::string& label) {
     
+    
+    for (auto& electrode : m_readout_p) {
+      if (electrode.label == label) {
+        if (electrode.m_usegrid) {
+            std::cerr << m_className << "::SetWeightingPotentialGrid: Overwriting grid.\n";
+        }
+          
+          if(electrode.grid.SetMesh(xsteps,ysteps,zsteps,xmin,xmax,ymin,ymax,zmin,zmax)){
+              std::cerr << m_className << "::SetWeightingPotentialGrid: Mesh set for "<< label<<".\n";
+          }
+          
+          electrode.grid.SaveWeightingField(this, label,label +"map","xyz");
+          
+          if(electrode.grid.LoadWeightingField(label +"map","xyz",true)){
+              std::cerr << m_className << "::SetWeightingPotentialGrid: Weighting potential set for "<< label<<".\n";
+          }
+          electrode.m_usegrid = true;
+      }
+    }
     // TODO: Use existing classes for a grid based field map!
  
 }
@@ -570,21 +588,20 @@ void ComponentParallelPlate::SetWeightingPotentialGrids(const double xmin, const
 const double xsteps, const double ymin,
 const double ymax, const double ysteps,
 const double zmin, const double zmax,
-const double zsteps, const double tmin,
-const double tmax, const double tsteps){
+const double zsteps){
     
-    // TODO: Use existing classes for a grid based field map!
+    for (auto& electrode : m_readout_p) {
+        SetWeightingPotentialGrid(xmin,xmax,xsteps, ymin, ymax,ysteps, zmin, zmax,zsteps, electrode.label);
+    }
    
 }
 
-double ComponentParallelPlate::FindWeightingPotentialInGrid(const Electrode& el,
+double ComponentParallelPlate::FindWeightingPotentialInGrid(Electrode& el,
                                                             const double x,
                                                             const double y,
                                                             const double z) {
     
-    // TODO: Use existing classes for a grid based field map!
-    
-    return 0.;
+    return el.grid.WeightingPotential(x,y,z, el.label);
 }
 
 }  // namespace Garfield

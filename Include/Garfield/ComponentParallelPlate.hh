@@ -4,6 +4,7 @@
 #include <string>
 
 #include "Component.hh"
+#include "ComponentGrid.hh"
 #include "Medium.hh"
 
 #include <TF1.h>
@@ -64,13 +65,10 @@ class ComponentParallelPlate : public Component {
 
   // This will calculate the electrode's time-dependent weighting potential on
   // the specified grid.
-  void SetWeightingPotentialGrid(const std::string& label, const double xmin,
-                                 const double xmax, const double xsteps,
-                                 const double ymin, const double ymax,
-                                 const double ysteps, const double zmin,
-                                 const double zmax, const double zsteps,
-                                 const double tmin, const double tmax,
-                                 const double tsteps);
+  void SetWeightingPotentialGrid(const double xmin, const double xmax,
+                                 const double xsteps, const double ymin, const double ymax,
+                                 const double ysteps, const double zmin, const double zmax,
+                                 const double zsteps, const std::string& label);
 
   // This will calculate all electrodes time-dependent weighting potential on
   // the specified grid.
@@ -78,14 +76,11 @@ class ComponentParallelPlate : public Component {
                                   const double xsteps, const double ymin,
                                   const double ymax, const double ysteps,
                                   const double zmin, const double zmax,
-                                  const double zsteps, const double tmin,
-                                  const double tmax, const double tsteps);
+                                  const double zsteps);
 
   Medium* GetMedium(const double x, const double y, const double z) override;
     
-    void  GetHFunction(const double k, const double z){
-        LOG("m_hIntegrant = "<<m_hIntegrant.Eval(k,z));
-    }
+    void SetGrid(const double xmin, const double ymin, const double zmin,const double xmax, const double ymax, const double zmax);
 
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                       double& xmax, double& ymax, double& zmax) override;
@@ -95,12 +90,12 @@ class ComponentParallelPlate : public Component {
   double m_eps0 = 8.85418782e-3;
   // Voltage difference between the parallel plates.
     double m_V = 0.;
-    
+
     double m_dt = 0. ;
     
     int m_N = 0; ///<amount of layers
 
-    double m_upperBoundIntigration = 0;
+    double m_upperBoundIntigration = 2000;
 
     std::vector<double> m_eps; ///< list of irelative permitivities or layers
     std::vector<double> m_epsHolder;
@@ -136,6 +131,7 @@ class ComponentParallelPlate : public Component {
     double flip = 1;                       ///< Dimensions in the x-y plane.
       
      bool m_usegrid =false;                ///< Enabeling grid based calculations.
+    ComponentGrid grid; ///< grid object.
   };
 
   enum fieldcomponent { xcomp = 0, ycomp, zcomp };
@@ -156,7 +152,7 @@ class ComponentParallelPlate : public Component {
 
   void CalculateDynamicalWeightingPotential(const Electrode& el);
 
-  double FindWeightingPotentialInGrid(const Electrode& el, const double x,
+  double FindWeightingPotentialInGrid(Electrode& el, const double x,
                                       const double y, const double z);
     
     // function returning 0 if layer with specific index is conductive.
@@ -256,7 +252,7 @@ class ComponentParallelPlate : public Component {
         for(int i = 0; i<im-1; i++) m_d[i] = m_dHolder[i];
         m_d[im-1] =diff2; m_d[im] =diff1;
         for(int i = im+1; i<m_N; i++) m_d[i] = m_dHolder[i-1];
-        
+        //TODO::Construct c and g matrices only for im != m_currentLayer.
         constructGeometryFunction(m_N);
         
     };
