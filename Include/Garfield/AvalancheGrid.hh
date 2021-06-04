@@ -72,9 +72,9 @@ class AvalancheGrid {
                const double ymin, const double ymax, const int ysteps,
                const double zmin, const double zmax, const int zsteps);
     
-    /// Returns the number of electrons in the avalanche.
+    /// Returns the initial number of electrons in the avalanche.
   int GetAmountOfStartingElectrons() { return m_nestart; }
-    
+    /// Returns the final number of electrons in the avalanche.
     int GetAvalancheSize(){return m_avgrid.N;}
 
   void EnableDebugging() { m_debug = true; }
