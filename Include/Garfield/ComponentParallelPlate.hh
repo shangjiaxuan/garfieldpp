@@ -194,8 +194,6 @@ class ComponentParallelPlate : public Component {
         
         m = mholer;
         epsM= m_epsHolder[m-1];
-        
-        LOG("getLayer:: z = "<< z<<", im = "<< m <<", epsM = "<< epsM);
         return true;
     }
     

@@ -42,8 +42,9 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     
     m_sigmaIndex = sigmaIndex;
     
-    m_upperBoundIntigration = *max_element(std::begin(m_d), std::end(m_d));
-    
+    m_upperBoundIntigration = *max_element(std::begin(m_dHolder), std::end(m_dHolder));
+    // TODO:Remove LOG
+    LOG("ComponentParallelPlate::Setup:: Integration range = (0,"<<m_upperBoundIntigration<<").");
     std::vector<double>  m_zHolder(N+1);
     m_zHolder[0] = 0;
     for(int i = 1; i<=N; i++){
@@ -102,7 +103,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
         m_wpPixelIntegral.SetParameters(x,y,el.xpos,el.ypos,el.lx,el.ly,z); //(x,y,x0,y0,lx,ly,z)
         int im; double epsm;
         getLayer(z,im,epsm);
-        double upLim = 20*std::abs(z-m_z[im]);
+        double upLim = 20*m_upperBoundIntigration;
         return m_wpPixelIntegral.Integral(0,upLim,0,upLim,1.e-12);
       break;
     }
@@ -110,7 +111,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
         m_wpStripIntegral.SetParameters(x,el.xpos,el.lx,z); //(x,x0,lx,z)
         int im; double epsm;
         getLayer(z,im,epsm);
-        double upLim = 20*std::abs(z-m_z[im]);
+        double upLim = 20*m_upperBoundIntigration;
         return m_wpStripIntegral.Integral(0,upLim,1.e-12);
       break;
     }
