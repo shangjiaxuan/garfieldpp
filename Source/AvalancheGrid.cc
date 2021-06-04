@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <numeric>
 
 #include "Garfield/Medium.hh"
 #include "Garfield/Random.hh"
@@ -192,10 +193,14 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
     // statistics.
     int Nholder = 0;  // Holds the avalanche size before propagating it to the
     // next point in the grid.
-    
+    av.run = false;
     for (AvalancheNode& node : m_activeNodes) {  // For every avalanche node
         
-        if(!node.active) continue;
+        if(!node.active){
+            continue;
+        }else{
+            av.run = true;
+        }
         
         if (m_debug)  std::cerr << m_className
             << "::NextAvalancheGridPoint:(ix,iy,iz) = ("<<node.ix<<","<<node.iy<<","<<node.iz<<").\n";
@@ -289,8 +294,6 @@ void AvalancheGrid::DeactivateNode(AvalancheNode& node){
         node.active = false; // If not inside a gas gap return false to terminate
     }
     
-    if(!m_avgrid.run) m_avgrid.run = node.active;
-    
     if (m_debug && !node.active)
         std::cerr << m_className << "::DeactivateNode: Node deactivated.\n";
 }
@@ -313,6 +316,8 @@ void AvalancheGrid::StartGridAvalanche() {
 
     // Main loop.
     while (m_avgrid.run == true) {
+        if (m_debug)
+            std::cerr <<"============ \n"<< m_className << "::StartGridAvalanche: Looping over nodes.\n ============ \n";
         NextAvalancheGridPoint(m_avgrid);
     }
     
