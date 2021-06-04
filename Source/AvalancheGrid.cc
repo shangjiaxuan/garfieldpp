@@ -264,6 +264,9 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
 }
 
 void AvalancheGrid::DeactivateNode(AvalancheNode& node){
+    
+    if(node.n ==0) node.active = false;
+    
     if (node.velNormal[2] != 0) {
         if ((node.velNormal[2] < 0 && node.iz == 0) ||
             (node.velNormal[2] > 0 && node.iz == m_avgrid.zsteps - 1)) node.active = false;
@@ -284,12 +287,9 @@ void AvalancheGrid::DeactivateNode(AvalancheNode& node){
     
     if(status == -5||status ==-6){
         node.active = false; // If not inside a gas gap return false to terminate
-        
-        //TODO:Remove
-        std::cerr << m_className << "::DeactivateNode: status = "<< status<<".\n";
     }
     
-    m_avgrid.run = node.active;
+    if(!m_avgrid.run) m_avgrid.run = node.active;
     
     if (m_debug && !node.active)
         std::cerr << m_className << "::DeactivateNode: Node deactivated.\n";
