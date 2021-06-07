@@ -157,8 +157,8 @@ bool AvalancheGrid::SnapToGrid(Grid& av, const double x, const double y,
     }
     
     // TODO:: Turn back on
-    //const int nholder = GetAvalancheSize(step, n, m_Townsend, m_Attachment);
-    const int nholder = n;
+    const int nholder = GetAvalancheSize(step, n, newNode.townsend, newNode.attachment);
+    //const int nholder = n;
     
     av.N += nholder;
     newNode.n = nholder;
@@ -327,8 +327,7 @@ void AvalancheGrid::StartGridAvalanche() {
         << " electrons reached at " << m_SaturationTime << " ns.\n";
     
     std::cerr << m_className
-    << "::StartGridAvalanche::Final avalanche size = " << m_avgrid.N
-    << " at t = " << m_avgrid.time << " ns.\n";
+    << "::StartGridAvalanche::Final avalanche size = " << m_avgrid.N<<".\n";
     
     return;
 }
