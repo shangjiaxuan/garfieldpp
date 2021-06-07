@@ -31,6 +31,17 @@ class ComponentComsol : public ComponentFieldMap {
   double DelayedWeightingPotential(const double x, const double y,
                                    const double z, const double t,
                                    const std::string& label) override;
+    
+    void SetRange(const double xmin,const double xmax,const double ymin,const double ymax,const double zmin,const double zmax){
+        m_range.set = true;
+        m_range.xmin = xmin;
+        m_range.ymin = ymin;
+        m_range.zmin = zmin;
+        
+        m_range.xmax = xmax;
+        m_range.ymax = ymax;
+        m_range.zmax = zmax;
+    }
 
   Medium* GetMedium(const double x, const double y, const double z) override;
 
@@ -65,5 +76,28 @@ class ComponentComsol : public ComponentFieldMap {
   bool m_timeset = false;
 
   bool GetTimeInterval(const std::string& file);
+    
+    struct Range {
+        bool set  = false;
+        
+        double xmin = 0;
+        double xmax = 0;
+        
+        double ymin = 0;
+        double ymax = 0;
+        
+        double zmin = 0;
+        double zmax = 0;
+    };
+    
+    Range m_range;
+    
+    bool CheckInRange(const double x, const double y, const double z){
+        if(!m_range.set) return true;
+        
+        if(x<m_range.xmin||x>m_range.xmax||y<m_range.ymin||y>m_range.ymax||z<m_range.zmin||z>m_range.zmax) return false;
+            
+        return true;
+    }
 };
 }  // namespace Garfield

@@ -131,7 +131,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   } while (!ends_with(line, "# number of mesh points") &&
            !ends_with(line, "# number of mesh vertices"));
   const int nNodes = readInt(line);
-
+    int notInRange = 0;
   std::cout << m_className << "::Initialise: " << nNodes << " nodes.\n";
   do {
     if (!std::getline(fmesh, line)) {
@@ -148,6 +148,10 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     newNode.x *= m_unit;
     newNode.y *= m_unit;
     newNode.z *= m_unit;
+    if(!CheckInRange(newNode.x,newNode.y,newNode.z)){
+        notInRange++;
+        continue;
+    }
     m_nodes.push_back(std::move(newNode));
   }
 
@@ -253,12 +257,14 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   }
   KDTree kdtree(points);
   std::vector<bool> used(nNodes, false);
+   // int notInRange = 0;
   for (int i = 0; i < nNodes; ++i) {
     double x, y, z, v;
     ffield >> x >> y >> z >> v;
     x *= m_unit;
     y *= m_unit;
     z *= m_unit;
+      if(!CheckInRange(x,y,z)) continue;
     std::vector<double> w;
     for (size_t j = 0; j < nWeightingFields; ++j) {
       double p;
@@ -285,7 +291,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   PrintProgress(1.);
   ffield.close();
   auto nMissing = std::count(used.begin(), used.end(), false);
-  if (nMissing > 0) {
+  if (nMissing > notInRange) {
     std::cerr << std::endl
               << m_className << "::Initialise:\n"
               << "    Missing potentials for " << nMissing << " nodes.\n";
@@ -350,6 +356,7 @@ bool ComponentComsol::SetWeightingField(const std::string& field,
     x *= m_unit;
     y *= m_unit;
     z *= m_unit;
+      if(!CheckInRange(x,y,z))continue;
     // Find the closest mesh node.
     const std::vector<double> pt = {x, y, z};
     std::vector<KDTreeResult> res;
@@ -569,29 +576,26 @@ double ComponentComsol::WeightingPotential(const double xin, const double yin,
                                            const std::string& label) {
   // Do not proceed if not properly initialised.
   if (!m_ready) return 0.;
-
+    
   // Look for the label.
   const size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
   if (iw == m_wfields.size()) return 0.;
   // Check if the weighting field is properly initialised.
   // if (!m_wfieldsOk[iw]) return 0.;
-
   // Copy the coordinates.
   double x = xin, y = yin, z = zin;
 
   // Map the coordinates onto field map coordinates.
   bool xmirr, ymirr, zmirr;
   double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
+    MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
   if (m_warning) PrintWarning("WeightingPotential");
 
   // Find the element that contains this point.
   double t1, t2, t3, t4, jac[4][4], det;
   const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
   if (imap < 0) return 0.;
-
   const Element& element = m_elements[imap];
   if (m_debug) {
     PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
@@ -607,6 +611,8 @@ double ComponentComsol::WeightingPotential(const double xin, const double yin,
   const Node& n7 = m_nodes[element.emap[7]];
   const Node& n8 = m_nodes[element.emap[8]];
   const Node& n9 = m_nodes[element.emap[9]];
+    
+    // TODO: Fix this bug when setting range: it gives nan! Print all variables used here to find the flaw.
   // Tetrahedral field
   return n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
          n2.w[iw] * t3 * (2 * t3 - 1) + n3.w[iw] * t4 * (2 * t4 - 1) +
@@ -780,6 +786,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
     x *= m_unit;
     y *= m_unit;
     z *= m_unit;
+    if(!CheckInRange(x,y,z))continue;
     const std::vector<double> pt = {x, y, z};
     std::vector<KDTreeResult> res;
     kdtree.n_nearest(pt, 1, res);
