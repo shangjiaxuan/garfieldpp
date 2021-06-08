@@ -8,6 +8,7 @@
 #include <iostream>
 #include <sstream>
 #include <numeric>
+#include <utility>
 
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -79,8 +80,8 @@ bool Similar(const double v1, const double v2, const double eps) {
 int Equal(const std::vector<double>& fields1, 
           const std::vector<double>& fields2, const double eps) {
   if (fields1.size() != fields2.size()) return 0;
-  const unsigned int n = fields1.size();
-  for (unsigned int i = 0; i < n; ++i) {
+  const size_t n = fields1.size();
+  for (size_t i = 0; i < n; ++i) {
     if (!Similar(fields1[i], fields2[i], eps)) return 0;
   }
   return 1;
@@ -2222,91 +2223,68 @@ bool MediumGas::LoadIonMobility(const std::string& filename) {
     return false;
   }
 
-  double field = -1., mu = -1.;
-  double lastField = field;
-  std::vector<double> efields;
-  std::vector<double> mobilities;
-
+  std::vector<std::pair<double, double> > data;
   // Read the file line by line.
   int i = 0;
-  while (!infile.eof()) {
+  constexpr size_t size = 100;
+  char line[size];
+  while (infile.getline(line, size)) {
     ++i;
-    // Read the next line.
-    char line[100];
-    infile.getline(line, 100);
     char* token = strtok(line, " ,\t");
-    if (!token) {
-      break;
-    } else if (strcmp(token, "#") == 0 || strcmp(token, "*") == 0 ||
+    if (!token) break;
+    if (strcmp(token, "#") == 0 || strcmp(token, "*") == 0 ||
                strcmp(token, "//") == 0) {
       continue;
-    } else {
-      field = atof(token);
-      token = strtok(NULL, " ,\t");
-      if (!token) {
-        std::cerr << m_className << "::LoadIonMobility:\n"
-                  << "    Found E/N but no mobility before the end-of-line.\n"
-                  << "    Skipping line " << i << ".\n";
-        continue;
-      }
-      mu = atof(token);
     }
+    double field = atof(token);
     token = strtok(NULL, " ,\t");
-    if (token && strcmp(token, "//") != 0) {
+    if (!token) {
       std::cerr << m_className << "::LoadIonMobility:\n"
-                << "    Unexpected non-comment characters after the mobility.\n"
+                << "    Found E/N but no mobility before the end-of-line.\n"
                 << "    Skipping line " << i << ".\n";
       continue;
     }
+    double mu = atof(token);
     if (m_debug) {
       std::cout << "    E/N = " << field << " Td: mu = " << mu << " cm2/(Vs)\n";
-    }
-    // Check if the data has been read correctly.
-    if (infile.fail() && !infile.eof()) {
-      std::cerr << m_className << "::LoadIonMobility:\n";
-      std::cerr << "    Error reading file\n";
-      std::cerr << "    " << filename << " (line " << i << ").\n";
-      return false;
     }
     // Make sure the values make sense.
     // Negative field values are not allowed.
     if (field < 0.) {
-      std::cerr << m_className << "::LoadIonMobility:\n";
-      std::cerr << "    Negative electric field (line " << i << ").\n";
-      return false;
-    }
-    // The table has to be in ascending order.
-    if (field <= lastField) {
-      std::cerr << m_className << "::LoadIonMobility:\n";
-      std::cerr << "    Table is not in ascending order (line " << i << ").\n";
+      std::cerr << m_className << "::LoadIonMobility:\n"
+                << "    Negative electric field (line " << i << ").\n";
       return false;
     }
     // Add the values to the list.
-    efields.push_back(field);
-    mobilities.push_back(mu);
-    lastField = field;
+    data.push_back(std::make_pair(field, mu));
   }
+  infile.close();
 
-  const int ne = efields.size();
-  if (ne <= 0) {
-    std::cerr << m_className << "::LoadIonMobilities:\n";
-    std::cerr << "    No valid data found.\n";
+  if (data.empty()) {
+    std::cerr << m_className << "::LoadIonMobilities:\n"
+              << "    No valid data found.\n";
     return false;
   }
+  // Sort by electric field.
+  std::sort(data.begin(), data.end());
 
   // The E/N values in the file are supposed to be in Td (10^-17 V cm2).
   const double scaleField = 1.e-17 * GetNumberDensity();
   // The reduced mobilities in the file are supposed to be in cm2/(V s).
   const double scaleMobility = 1.e-9 * (AtmosphericPressure / m_pressure) *
                                (m_temperature / ZeroCelsius);
-  for (int j = ne; j--;) {
+
+  const size_t ne = data.size();
+  std::vector<double> efields(ne, 0.);
+  std::vector<double> mobilities(ne, 0.);
+  for (size_t j = 0; j < ne; ++j) {
     // Scale the fields and mobilities.
-    efields[j] *= scaleField;
-    mobilities[j] *= scaleMobility;
+    efields[j] = data[j].first * scaleField;
+    mobilities[j] = data[j].first * scaleMobility;
   }
 
-  std::cout << m_className << "::LoadIonMobility:\n";
-  std::cout << "    Read " << ne << " values from file " << filename << "\n";
+  std::cout << m_className << "::LoadIonMobility:\n"
+            << "    Read " << ne << " values from file " << filename << "\n";
 
   return SetIonMobility(efields, mobilities);
 }
@@ -2649,7 +2627,7 @@ bool MediumGas::GetGasInfo(const std::string& gasname, double& a,
   } else if (gasname == "DME") {
     a = 4 * 12.0107 + 10 * 1.00794 + 2 * 15.9994;
     z = 4 * 6 + 10 + 2 * 8;
-  } else if (gasname == "Reid-Step" || gasname == "Mawell-Model" ||
+  } else if (gasname == "Reid-Step" || gasname == "Maxwell-Model" ||
              gasname == "Reid-Ramp") {
     a = 1.;
     z = 1.;
