@@ -6,6 +6,13 @@ namespace Garfield {
 
 ComponentUser::ComponentUser() : Component("User") {}
 
+Medium* ComponentUser::GetMedium(const double x, const double y, 
+                                 const double z) {
+
+  if (!m_hasArea) return Component::GetMedium(x, y, z);
+  return InArea(x, y, z) ? m_medium : nullptr; 
+}
+
 void ComponentUser::ElectricField(const double x, const double y,
                                   const double z, double& ex, double& ey,
                                   double& ez, Medium*& m, int& status) {
@@ -102,6 +109,22 @@ void ComponentUser::DelayedWeightingField(const double x, const double y,
   if (m_dwfield) m_dwfield(x, y, z, t, wx, wy, wz, label);
 }
 
+bool ComponentUser::GetBoundingBox(
+    double& xmin, double& ymin, double& zmin,
+    double& xmax, double& ymax, double& zmax) {
+
+  if (!m_hasArea) {
+    return Component::GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax);
+  }
+  xmin = m_xmin[0];
+  ymin = m_xmin[1];
+  zmin = m_xmin[2];
+  xmax = m_xmax[0];
+  ymax = m_xmax[1];
+  zmax = m_xmax[2];
+  return true;
+}
+
 void ComponentUser::SetElectricField(
     std::function<void(const double, const double, const double, 
                        double&, double&, double&)> f) {
@@ -164,6 +187,25 @@ void ComponentUser::SetMagneticField(
   m_bfield = f;
 }
 
+void ComponentUser::SetArea(
+    const double xmin, const double ymin, const double zmin,
+    const double xmax, const double ymax, const double zmax) {
+
+  m_xmin[0] = std::min(xmin, xmax);
+  m_xmin[1] = std::min(ymin, ymax);
+  m_xmin[2] = std::min(zmin, zmax);
+  m_xmax[0] = std::max(xmin, xmax);
+  m_xmax[1] = std::max(ymin, ymax);
+  m_xmax[2] = std::max(zmin, zmax);
+  m_hasArea = true; 
+}
+
+void ComponentUser::UnsetArea() {
+  m_xmin.fill(0.);
+  m_xmax.fill(0.);
+  m_hasArea = false;
+}
+
 void ComponentUser::Reset() {
   m_efield = nullptr;
   m_potential = nullptr;
@@ -172,6 +214,8 @@ void ComponentUser::Reset() {
   m_dwfield = nullptr;
   m_bfield = nullptr;
   m_ready = false;
+  UnsetArea();
+  m_medium = nullptr;
 }
 
 void ComponentUser::UpdatePeriodicity() {
