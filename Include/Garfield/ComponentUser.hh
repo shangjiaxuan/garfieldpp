@@ -16,6 +16,7 @@ class ComponentUser : public Component {
   /// Destructor
   ~ComponentUser() {}
 
+  Medium* GetMedium(const double x, const double y, const double z) override;
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
   void ElectricField(const double x, const double y, const double z, double& ex,
@@ -32,6 +33,8 @@ class ComponentUser : public Component {
   void DelayedWeightingField(const double x, const double y, const double z,
                              const double t, double& wx, double& wy, double& wz,
                              const std::string& label) override;
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
+                      double& xmax, double& ymax, double& zmax) override;
 
   /// Set the function to be called for calculating the electric field.
   void SetElectricField(
@@ -57,6 +60,14 @@ class ComponentUser : public Component {
     std::function<void(const double, const double, const double,
                        double&, double&, double&)>);
 
+  /// Set the limits of the active area explicitly 
+  /// (instead of using a Geometry object).
+  void SetArea(const double xmin, const double ymin, const double zmin,
+               const double xmax, const double ymax, const double zmax);
+  /// Remove the explicit limits of the active area. 
+  void UnsetArea();
+  /// Set the medium in the active area.
+  void SetMedium(Medium* medium) { m_medium = medium; }
  private:
   /// Electric field function
   std::function<void(const double, const double, const double,
@@ -81,10 +92,28 @@ class ComponentUser : public Component {
   std::function<void(const double, const double, const double, 
                      double&, double&, double&)> m_bfield;
 
+  // Active area.
+  std::array<double, 3> m_xmin = {{0., 0., 0.}};
+  std::array<double, 3> m_xmax = {{0., 0., 0.}};
+  // Did we specify the active area explicitly?
+  bool m_hasArea = false;
+  // Medium in the active area.
+  Medium* m_medium = nullptr;
+
   /// Reset the component
   void Reset() override;
   // Verify periodicities
   void UpdatePeriodicity() override;
+
+  bool InArea(const double x, const double y, const double z) {
+    if (x < m_xmin[0] || x > m_xmax[0] ||
+        y < m_xmin[1] || y > m_xmax[1] ||
+        z < m_xmin[2] || z > m_xmax[2]) {
+      return false;
+    }
+    return true; 
+  }
+
 };
 }
 #endif
