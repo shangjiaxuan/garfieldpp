@@ -18,9 +18,7 @@
 
 namespace Garfield {
 
-ViewGeometry::ViewGeometry() : ViewBase("ViewGeometry") { 
-  plottingEngine.SetDefaultStyle(); 
-}
+ViewGeometry::ViewGeometry() : ViewBase("ViewGeometry") {} 
 
 ViewGeometry::~ViewGeometry() {
   Reset();

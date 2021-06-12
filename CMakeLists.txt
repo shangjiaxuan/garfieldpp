@@ -126,7 +126,7 @@ target_sources(
           Source/NeBemInterface.cpp
           Source/Numerics.cc
           Source/OpticalData.cc
-          Source/PlottingEngineRoot.cc
+          Source/PlottingEngine.cc
           Source/Polygon.cc
           Source/QuadTree.cc
           Source/Random.cc
