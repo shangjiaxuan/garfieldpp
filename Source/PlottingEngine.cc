@@ -4,20 +4,18 @@
 #include <TF1.h>
 #include <TAxis.h>
 #include <TCanvas.h>
+#include <TStyle.h>
 
-#include "Garfield/PlottingEngineRoot.hh"
+#include "Garfield/PlottingEngine.hh"
 
 namespace Garfield {
 
-PlottingEngineRoot plottingEngine;
+PlottingEngine plottingEngine;
 
-PlottingEngineRoot::PlottingEngineRoot()
-    : PlottingEngine("PlottingEngineRoot"), 
-      m_garfieldStyle("Garfield", "Garfield Style") {}
+PlottingEngine::PlottingEngine()
+    : m_garfieldStyle("Garfield", "Garfield Style") {}
 
-PlottingEngineRoot::~PlottingEngineRoot() {}
-
-void PlottingEngineRoot::SetDefaultStyle() {
+void PlottingEngine::SetDefaultStyle() {
   m_garfieldStyle.Reset();
   m_garfieldStyle.SetFillColor(1);
   m_garfieldStyle.SetFillStyle(1001);
@@ -79,7 +77,7 @@ void PlottingEngineRoot::SetDefaultStyle() {
   m_garfieldStyle.SetPaperSize(TStyle::kA4);
   m_garfieldStyle.SetFuncWidth(2);
   m_garfieldStyle.SetHistLineColor(kOrange - 3);
-  // m_garfieldStyle.SetPalette(1);
+  if (m_palette > 0) m_garfieldStyle.SetPalette(m_palette);
   m_garfieldStyle.SetAxisColor(kBlack, "X");
   m_garfieldStyle.SetAxisColor(kBlack, "Y");
   m_garfieldStyle.SetAxisColor(kBlack, "Z");
