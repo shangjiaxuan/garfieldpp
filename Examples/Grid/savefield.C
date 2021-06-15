@@ -8,8 +8,6 @@
 #include <TH1D.h>
 
 #include "Garfield/MediumSilicon.hh"
-#include "Garfield/SolidBox.hh"
-#include "Garfield/GeometrySimple.hh"
 #include "Garfield/ComponentAnalyticField.hh"
 #include "Garfield/ComponentGrid.hh"
 
@@ -27,15 +25,10 @@ int main(int argc, char * argv[]) {
   // Length in the x and z direction [cm].
   constexpr double width = 3 * gap;
 
-  // Build the geometry.
-  SolidBox box(0., 0.5 * gap, 0., 0.5 * width, 0.5 * gap, 0.5 * width);
-  GeometrySimple geo;
-  geo.AddSolid(&box, &si);
-
   // Make a component with analytic weighting field for a pixel.
   constexpr double pitch = 50.e-4;
   ComponentAnalyticField wField;
-  wField.SetGeometry(&geo);
+  wField.SetMedium(&si);
   wField.AddPlaneY(0., -1., "back");
   wField.AddPlaneY(gap, 0., "front");
   wField.AddPixelOnPlaneY(gap, -0.5 * pitch, 0.5 * pitch, 
