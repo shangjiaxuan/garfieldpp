@@ -2280,7 +2280,7 @@ bool MediumGas::LoadIonMobility(const std::string& filename) {
   for (size_t j = 0; j < ne; ++j) {
     // Scale the fields and mobilities.
     efields[j] = data[j].first * scaleField;
-    mobilities[j] = data[j].first * scaleMobility;
+    mobilities[j] = data[j].second * scaleMobility;
   }
 
   std::cout << m_className << "::LoadIonMobility:\n"
