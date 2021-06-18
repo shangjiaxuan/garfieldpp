@@ -6829,6 +6829,24 @@ bool ComponentAnalyticField::Wfield(const double xin, const double yin,
     std::cerr << m_className << "::Wfield: No weighting fields available.\n";
     return false;
   }
+  
+  // In case (xpos, ypos) is located behind a plane there is no field.
+  if (m_tube) {
+    if (!InTube(xpos, ypos, m_cotube, m_ntube)) return false;
+  } else {
+    if (!m_perx) {
+      if ((m_ynplan[0] && xpos < m_coplan[0]) ||
+          (m_ynplan[1] && xpos > m_coplan[1])) {
+        return false;
+      }
+    }
+    if (!m_pery) {
+      if ((m_ynplan[2] && ypos < m_coplan[2]) ||
+          (m_ynplan[3] && ypos > m_coplan[3])) {
+        return false;
+      }
+    }
+  }
 
   if (label.empty()) return false;
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
@@ -6984,6 +7002,23 @@ double ComponentAnalyticField::Wpot(const double xin, const double yin,
     return 0.;
   }
 
+  // In case (xpos, ypos) is located behind a plane there is no field.
+  if (m_tube) {
+    if (!InTube(xpos, ypos, m_cotube, m_ntube)) return 0.;
+  } else {
+    if (!m_perx) {
+      if ((m_ynplan[0] && xpos < m_coplan[0]) ||
+          (m_ynplan[1] && xpos > m_coplan[1])) {
+        return 0.;
+      }
+    }
+    if (!m_pery) {
+      if ((m_ynplan[2] && ypos < m_coplan[2]) ||
+          (m_ynplan[3] && ypos > m_coplan[3])) {
+        return 0.;
+      }
+    }
+  }
   if (label.empty()) return 0.;
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
   if (it == m_readout.end()) return 0.;
