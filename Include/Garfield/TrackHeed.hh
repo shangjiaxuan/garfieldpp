@@ -179,10 +179,13 @@ class TrackHeed : public Track {
   /// For standard particles Track::SetParticle should be used.
   void SetParticleUser(const double m, const double z);
 
+  void EnableOneStepFly(const bool on) { m_useOneStepFly=on; }
  private:
   // Prevent usage of copy constructor and assignment operator
   TrackHeed(const TrackHeed& heed);
   TrackHeed& operator=(const TrackHeed& heed);
+
+  bool m_useOneStepFly = false;
 
   bool m_ready = false;
   bool m_hasActiveTrack = false;

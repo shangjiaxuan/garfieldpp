@@ -159,6 +159,17 @@ class gparticle {
       physics(secondaries);
     }
   }
+  
+  virtual void fly(std::vector<gparticle*>& secondaries, const bool one_step) {
+    mfunname("virtual void gparticle::fly()");
+    int nstep = 0;
+    while (m_alive) {
+      step(secondaries);
+      physics(secondaries);
+      ++nstep;
+      if (one_step && nstep >= 2) break;
+    }
+  }
 
   /// Set limits/parameters for trajectory steps.
   void set_step_limits(const vfloat fmax_range, 
