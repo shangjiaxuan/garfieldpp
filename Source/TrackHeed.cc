@@ -182,7 +182,12 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
                            m_stepAngleStraight * Heed::CLHEP::rad,
                            m_stepAngleCurved * Heed::CLHEP::rad);
   // Transport the particle.
-  particle.fly(m_particleBank);
+  if (m_useOneStepFly) {
+    particle.fly(m_particleBank, true);
+  } else {
+    particle.fly(m_particleBank);
+  }
+
   m_bankIterator = m_particleBank.begin();
   m_hasActiveTrack = true;
   m_ready = true;
