@@ -233,14 +233,20 @@ class Sensor {
                         const double z0, const double x1, const double y1,
                         const double z1);
 
-  /// Determine whether a line between two points has crossed a wire,
-  /// calls Component::IsWireCrossed.
-  bool IsWireCrossed(const double x0, const double y0, const double z0,
-                     const double x1, const double y1, const double z1,
-                     double& xc, double& yc, double& zc, const bool centre,
-                     double& rc);
-  bool IsInTrapRadius(const double q0, const double x0, const double y0,
-                      const double z0, double& xw, double& yw, double& rw);
+  /// Determine whether a line between two points crosses a wire,
+  /// calls Component::CrossedWire.
+  bool CrossedWire(const double x0, const double y0, const double z0,
+                   const double x1, const double y1, const double z1,
+                   double& xc, double& yc, double& zc, const bool centre,
+                   double& rc);
+  /// Determine whether a point is in the trap radius of a wire.
+  bool InTrapRadius(const double q0, const double x0, const double y0,
+                    const double z0, double& xw, double& yw, double& rw);
+  /// Determine whether a line between two points crosses a plane,
+  /// calls Component::CrossedPlane.
+  bool CrossedPlane(const double x0, const double y0, const double z0,
+                    const double x1, const double y1, const double z1,
+                    double& xc, double& yc, double& zc);
 
   /// Integrate the electric field flux through a line from
   /// (x0,y0,z0) to (x1,y1,z1) along a direction (xp,yp,zp).
