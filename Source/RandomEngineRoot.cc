@@ -18,7 +18,7 @@ void RandomEngineRoot::Seed(const unsigned int s) {
 void RandomEngineRoot::Print() {
   std::cout << "RandomEngineRoot::Print:\n"
             << "    Generator type: TRandom3\n"
-            << "    Seed: " << m_rng.GetSeed() << "\n";
+            << "    Seed: " << m_rng.TRandom::GetSeed() << "\n";
 }
 
 }
