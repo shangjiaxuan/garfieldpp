@@ -382,12 +382,12 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     }
     // Check if we crossed a wire.
     double xw = 0., yw = 0., zw = 0., rw = 0.;
-    if (m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
-                                x1[0], x1[1], x1[2], xw, yw, zw, true, rw) ||
-        m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
-                                x2[0], x2[1], x2[2], xw, yw, zw, true, rw) ||
-        m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
-                                x3[0], x3[1], x3[2], xw, yw, zw, true, rw)) {
+    if (m_sensor->CrossedWire(x0[0], x0[1], x0[2], 
+                              x1[0], x1[1], x1[2], xw, yw, zw, true, rw) ||
+        m_sensor->CrossedWire(x0[0], x0[1], x0[2], 
+                              x2[0], x2[1], x2[2], xw, yw, zw, true, rw) ||
+        m_sensor->CrossedWire(x0[0], x0[1], x0[2], 
+                              x3[0], x3[1], x3[2], xw, yw, zw, true, rw)) {
       if (m_debug) {
         std::cout << m_className << "::DriftLine: Crossed wire.\n";
       }
@@ -404,25 +404,39 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     }
     // Check if we are inside the trap radius of a wire.
     if (particle != Particle::Ion) {
-      if (m_sensor->IsInTrapRadius(charge, x1[0], x1[1], x1[2], xw, yw, rw)) {
+      if (m_sensor->InTrapRadius(charge, x1[0], x1[1], x1[2], xw, yw, rw)) {
         if (!DriftToWire(xw, yw, rw, particle, ts, xs, flag)) {
           flag = StatusCalculationAbandoned;
         }
         break;
       }
-      if (m_sensor->IsInTrapRadius(charge, x2[0], x2[1], x2[2], xw, yw, rw)) {
+      if (m_sensor->InTrapRadius(charge, x2[0], x2[1], x2[2], xw, yw, rw)) {
         if (!DriftToWire(xw, yw, rw, particle, ts, xs, flag)) {
           flag = StatusCalculationAbandoned;
         }
         break;
       }
-      if (m_sensor->IsInTrapRadius(charge, x3[0], x3[1], x3[2], xw, yw, rw)) {
+      if (m_sensor->InTrapRadius(charge, x3[0], x3[1], x3[2], xw, yw, rw)) {
         if (!DriftToWire(xw, yw, rw, particle, ts, xs, flag)) {
           flag = StatusCalculationAbandoned;
         }
         break;
       }
     } 
+    // Check if we crossed a plane.
+    double xp = 0., yp = 0., zp = 0.;
+    if (m_sensor->CrossedPlane(x0[0], x0[1], x0[2], 
+                               x1[0], x1[1], x1[2], xp, yp, zp) ||
+        m_sensor->CrossedPlane(x0[0], x0[1], x0[2], 
+                               x2[0], x2[1], x2[2], xp, yp, zp) ||
+        m_sensor->CrossedPlane(x0[0], x0[1], x0[2], 
+                               x3[0], x3[1], x3[2], xp, yp, zp)) {
+      // DLCPLA
+      ts.push_back(t0 + Mag(xp - x0[0], yp - x0[1], zp - x0[2]) / Mag(v0));
+      xs.push_back({xp, yp, zp});
+      flag = StatusHitPlane;
+      break; 
+    }
     // Calculate the correction terms.
     Vec phi1 = {0., 0., 0.};
     Vec phi2 = {0., 0., 0.};
@@ -1711,12 +1725,12 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
     if (electron) for (auto& f : f3) f *= -1;
     // Check if we crossed a wire.
     double xw = 0., yw = 0., zw = 0., rw = 0.;
-    if (m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
-                                x1[0], x1[1], x1[2], xw, yw, zw, false, rw) ||
-        m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
-                                x2[0], x2[1], x2[2], xw, yw, zw, false, rw) ||
-        m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], 
-                                x3[0], x3[1], x3[2], xw, yw, zw, false, rw)) {
+    if (m_sensor->CrossedWire(x0[0], x0[1], x0[2], 
+                              x1[0], x1[1], x1[2], xw, yw, zw, false, rw) ||
+        m_sensor->CrossedWire(x0[0], x0[1], x0[2], 
+                              x2[0], x2[1], x2[2], xw, yw, zw, false, rw) ||
+        m_sensor->CrossedWire(x0[0], x0[1], x0[2], 
+                              x3[0], x3[1], x3[2], xw, yw, zw, false, rw)) {
       // TODO!
       xl.push_back({float(xw), float(yw), float(zw)});
       return true;
