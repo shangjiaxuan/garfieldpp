@@ -125,6 +125,15 @@ int main(int argc, char * argv[]){
       track.GetElectron(j, xe, ye, ze, te, ee, dxe, dye, dze);
       // Simulate the drift/avalanche of this electron.
       aval.AvalancheElectron(xe, ye, ze, te, 0.1, dxe, dye, dze);
+      // Move electrons that hit the mesh plane into the amplification gap.
+      double x0, y0, z0, t0, e0;
+      double x1, y1, z1, t1, e1;
+      int status;
+      aval.GetElectronEndpoint(0, x0, y0, z0, t0, e0, 
+                                  x1, y1, z1, t1, e1, status);
+      if (fabs(y1 - yMesh) < 1.e-6) {
+        aval.AvalancheElectron(x1, yMesh - 1.e-6, z1, t1, e1, 0, -1., 0.);
+      }
     }
   }
   
