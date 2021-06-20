@@ -28,13 +28,13 @@ class ComponentNeBem2d : public Component {
   bool GetElementaryCell(double& xmin, double& ymin, double& zmin,
                          double& xmax, double& ymax, double& zmax) override;
 
-  bool IsWireCrossed(const double x0, const double y0, const double z0,
-                     const double x1, const double y1, const double z1,
-                     double& xc, double& yc, double& zc, const bool centre,
-                     double& rc) override;
-  bool IsInTrapRadius(const double q0, const double x0, const double y0,
-                      const double z0, double& xw, double& yx,
-                      double& rw) override;
+  bool CrossedWire(const double x0, const double y0, const double z0,
+                   const double x1, const double y1, const double z1,
+                   double& xc, double& yc, double& zc, const bool centre,
+                   double& rc) override;
+  bool InTrapRadius(const double q0, const double x0, const double y0,
+                    const double z0, double& xw, double& yx,
+                    double& rw) override;
 
   /// Set the "background" medium.
   void SetMedium(Medium* medium) { m_medium = medium; }

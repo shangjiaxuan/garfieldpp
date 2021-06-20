@@ -107,22 +107,29 @@ bool Component::GetElementaryCell(double& xmin, double& ymin, double& zmin,
   return GetBoundingBox(xmin, ymin, zmin, xmax, ymax, zmax);
 }
 
-bool Component::IsWireCrossed(const double /*x0*/, const double /*y0*/,
-                              const double /*z0*/, const double /*x1*/,
-                              const double /*y1*/, const double /*z1*/,
-                              double& /*xc*/, double& /*yc*/, double& /*zc*/,
-                              const bool /*centre*/, double& /*rc*/) {
+bool Component::CrossedWire(
+    const double /*x0*/, const double /*y0*/, const double /*z0*/, 
+    const double /*x1*/, const double /*y1*/, const double /*z1*/,
+    double& /*xc*/, double& /*yc*/, double& /*zc*/, 
+    const bool /*centre*/, double& /*rc*/) {
   return false;
 }
 
-bool Component::IsInTrapRadius(const double /*q0*/, const double x0,
-                               const double y0, const double /*z0*/, double& xw,
-                               double& yw, double& rw) {
+bool Component::InTrapRadius(const double /*q0*/, const double x0,
+                             const double y0, const double /*z0*/, double& xw,
+                             double& yw, double& rw) {
   xw = x0;
   yw = y0;
   rw = 0.;
   return false;
 }
+
+bool Component::CrossedPlane(
+    const double /*x0*/, const double /*y0*/, const double /*z0*/, 
+    const double /*x1*/, const double /*y1*/, const double /*z1*/,
+    double& /*xc*/, double& /*yc*/, double& /*zc*/) {
+  return false;
+} 
 
 double Component::IntegrateFluxCircle(const double xc, const double yc,
                                       const double r, const unsigned int nI) {

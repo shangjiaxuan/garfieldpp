@@ -424,13 +424,28 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
     // Check if the particle has crossed a wire.
     std::array<double, 3> xc = x0;
     double rc = 0.;
-    if (m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], x1[0], x1[1], x1[2], xc[0],
-                                xc[1], xc[2], false, rc)) {
+    if (m_sensor->CrossedWire(x0[0], x0[1], x0[2], x1[0], x1[1], x1[2], 
+                              xc[0], xc[1], xc[2], false, rc)) {
       if (m_debug) {
         std::cout << m_className + "::DriftLine: Hit a wire at "
                   << PrintVec(xc) + ".\n";
       }
       status = StatusLeftDriftMedium;
+      // Adjust the time step.
+      std::array<double, 3> dc = {xc[0] - x0[0], xc[1] - x0[1], xc[2] - x0[2]};
+      std::array<double, 3> d1 = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
+      const double tc = t0 + (t1 - t0) * Mag(dc) / Mag(d1);
+      // Add the point to the drift line.
+      AddPoint(xc, tc, particle, 1, m_drift);
+      break;
+    }
+    if (m_sensor->CrossedPlane(x0[0], x0[1], x0[2], x1[0], x1[1], x1[2], 
+                               xc[0], xc[1], xc[2])) {
+      if (m_debug) {
+        std::cout << m_className + "::DriftLine: Hit a plane at "
+                  << PrintVec(xc) + ".\n";
+      }
+      status = StatusHitPlane;
       // Adjust the time step.
       std::array<double, 3> dc = {xc[0] - x0[0], xc[1] - x0[1], xc[2] - x0[2]};
       std::array<double, 3> d1 = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};

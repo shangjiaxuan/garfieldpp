@@ -422,11 +422,10 @@ bool ComponentNeBem2d::GetElementaryCell(
   return gotValue; 
 }
 
-bool ComponentNeBem2d::IsWireCrossed(const double x0, const double y0,
-                                     const double z0, const double x1,
-                                     const double y1, const double z1,
-                                     double& xc, double& yc, double& zc,
-                                     const bool centre, double& rc) {
+bool ComponentNeBem2d::CrossedWire(
+    const double x0, const double y0, const double z0, 
+    const double x1, const double y1, const double z1,
+    double& xc, double& yc, double& zc, const bool centre, double& rc) {
   xc = x0;
   yc = y0;
   zc = z0;
@@ -490,9 +489,9 @@ bool ComponentNeBem2d::IsWireCrossed(const double x0, const double y0,
   return false;
 }
 
-bool ComponentNeBem2d::IsInTrapRadius(const double q, const double x,
-                                      const double y, const double /*z*/,
-                                      double& xw, double& yw, double& rw) {
+bool ComponentNeBem2d::InTrapRadius(const double q, const double x,
+                                    const double y, const double /*z*/,
+                                    double& xw, double& yw, double& rw) {
 
   for (const auto& wire : m_wires) {
     // Skip wires with the wrong charge.

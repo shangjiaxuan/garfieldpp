@@ -75,15 +75,18 @@ class ComponentAnalyticField : public Component {
   bool GetElementaryCell(double& x0, double& y0, double& z0, double& x1,
                          double& y1, double& z1) override;
 
-  bool IsWireCrossed(const double x0, const double y0, const double z0,
-                     const double x1, const double y1, const double z1,
-                     double& xc, double& yc, double& zc, const bool centre,
-                     double& rc) override;
+  bool CrossedWire(const double x0, const double y0, const double z0,
+                   const double x1, const double y1, const double z1,
+                   double& xc, double& yc, double& zc, const bool centre,
+                   double& rc) override;
 
-  bool IsInTrapRadius(const double q0, const double x0, const double y0,
-                      const double z0, double& xw, double& yx,
-                      double& rw) override;
+  bool InTrapRadius(const double q0, const double x0, const double y0,
+                    const double z0, double& xw, double& yx,
+                    double& rw) override;
 
+  bool CrossedPlane(const double x0, const double y0, const double z0,
+                    const double x1, const double y1, const double z1,
+                    double& xc, double& yc, double& zc) override;
 
   /// Set the medium inside the cell.
   void SetMedium(Medium* medium) { m_medium = medium; }

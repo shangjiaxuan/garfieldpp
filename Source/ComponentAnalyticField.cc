@@ -242,6 +242,11 @@ double MirrorCoordinate(const double x, const double xp, const double xw,
   return 2 * cx - x - xw;
 }
 
+bool SameSide(const double x0, const double x1, const double xp) {
+
+  return ((x0 <= xp && x1 <= xp) || (x0 >= xp && x1 >= xp));
+}
+
 }  // namespace
 
 namespace Garfield {
@@ -647,11 +652,10 @@ void ComponentAnalyticField::PrintCell() {
   }
 }
 
-bool ComponentAnalyticField::IsWireCrossed(const double xx0, const double yy0,
-                                           const double z0, const double xx1,
-                                           const double yy1, const double z1,
-                                           double& xc, double& yc, double& zc,
-                                           const bool centre, double& rc) {
+bool ComponentAnalyticField::CrossedWire(
+    const double xx0, const double yy0, const double z0, 
+    const double xx1, const double yy1, const double z1,
+    double& xc, double& yc, double& zc, const bool centre, double& rc) {
   xc = xx0;
   yc = yy0;
   zc = z0;
@@ -675,7 +679,7 @@ bool ComponentAnalyticField::IsWireCrossed(const double xx0, const double yy0,
 
   // Check if a whole period has been crossed.
   if ((m_perx && fabs(dx) >= m_sx) || (m_pery && fabs(dy) >= m_sy)) {
-    std::cerr << m_className << "::IsWireCrossed:\n"
+    std::cerr << m_className << "::CrossedWire:\n"
               << "    Particle crossed more than one period.\n";
     return false;
   }
@@ -748,7 +752,7 @@ bool ComponentAnalyticField::IsWireCrossed(const double xx0, const double yy0,
   return false;
 }
 
-bool ComponentAnalyticField::IsInTrapRadius(const double qin, const double xin,
+bool ComponentAnalyticField::InTrapRadius(const double qin, const double xin,
                                             const double yin, const double zin,
                                             double& xw, double& yw,
                                             double& rw) {
@@ -821,7 +825,7 @@ bool ComponentAnalyticField::IsInTrapRadius(const double qin, const double xin,
         rw *= exp(wire.x);
       }
       if (m_debug) {
-        std::cout << m_className << "::IsInTrapRadius: (" << xin << ", "
+        std::cout << m_className << "::InTrapRadius: (" << xin << ", "
                   << yin << ", " << zin << ")" << " within trap radius.\n";
       }
       return true;
@@ -830,6 +834,45 @@ bool ComponentAnalyticField::IsInTrapRadius(const double qin, const double xin,
 
   return false;
 }
+
+bool ComponentAnalyticField::CrossedPlane(
+    const double xx0, const double yy0, const double z0, 
+    const double xx1, const double yy1, const double z1,
+    double& xc, double& yc, double& zc) {
+
+  double x0 = xx0;
+  double y0 = yy0;
+  double x1 = xx1;
+  double y1 = yy1;
+  if (m_polar) {
+    Cartesian2Internal(xx0, yy0, x0, y0);
+    Cartesian2Internal(xx1, yy1, x1, y1);
+  }
+
+  double smin = -1.;
+  for (size_t i = 0; i < 2; ++i) {
+    if (!m_ynplan[i]) continue;
+    if (SameSide(x0, x1, m_coplan[i])) continue;
+    const double s = (m_coplan[i] - x0) / (x1 - x0);
+    if (smin < 0. || s < smin) {
+      smin = s;
+    }
+  }
+  for (size_t i = 2; i < 4; ++i) {
+    if (!m_ynplan[i]) continue;
+    if (SameSide(y0, y1, m_coplan[i])) continue;
+    const double s = (m_coplan[i] - y0) / (y1 - y0);
+    if (smin < 0. || s < smin) {
+      smin = s;
+    }
+  }
+  if (smin < 0.) return false;
+  xc = x0 + smin * (x1 - x0);
+  yc = y0 + smin * (y1 - y0);
+  zc = z0 + smin * (z1 - z0);
+  if (m_polar) Internal2Cartesian(xc, yc, xc, yc);
+  return true;
+} 
 
 void ComponentAnalyticField::AddWire(const double x, const double y,
                                      const double diameter,

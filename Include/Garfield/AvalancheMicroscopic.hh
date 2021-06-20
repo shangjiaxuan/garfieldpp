@@ -336,7 +336,9 @@ class AvalancheMicroscopic {
     return item.status == StatusLeftDriftMedium ||
            item.status == StatusBelowTransportCut ||
            item.status == StatusOutsideTimeWindow ||
-           item.status == StatusLeftDriftArea || item.status == StatusAttached;
+           item.status == StatusLeftDriftArea || 
+           item.status == StatusAttached ||
+           item.status == StatusHitPlane;
   }
   void Update(std::vector<Electron>::iterator it, const double x,
               const double y, const double z, const double t,

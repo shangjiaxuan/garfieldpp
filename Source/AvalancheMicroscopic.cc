@@ -898,8 +898,8 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
         // Check if the electron/hole has crossed a wire.
         double xc = x, yc = y, zc = z;
         double rc = 0.;
-        if (m_sensor->IsWireCrossed(x, y, z, x1, y1, z1, xc, yc, zc, false,
-                                    rc)) {
+        if (m_sensor->CrossedWire(x, y, z, x1, y1, z1, xc, yc, zc, false,
+                                  rc)) {
           const double dc = Mag(xc - x, yc - y, zc - z);
           const double tc = t + dt * dc / Mag(dx, dy, dz);
           // If switched on, calculated the induced signal over this step.
@@ -914,6 +914,24 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
           AddToEndPoints(*it, hole);
           ok = false;
           if (m_debug) PrintStatus(hdr, "hit a wire", x, y, z, hole);
+          break;
+        }
+        // Check if the electron/hole has crossed a plane.
+        if (m_sensor->CrossedPlane(x, y, z, x1, y1, z1, xc, yc, zc)) {
+          const double dc = Mag(xc - x, yc - y, zc - z);
+          const double tc = t + dt * dc / Mag(dx, dy, dz);
+          // If switched on, calculated the induced signal over this step.
+          if (m_doSignal) {
+            const int q = hole ? 1 : -1;
+            m_sensor->AddSignal(q, t, tc, x, y, z, xc, yc, zc,
+                                m_integrateWeightingField,
+                                m_useWeightingPotential);
+          }
+          Update(it, xc, yc, zc, tc, en, kx1, ky1, kz1, band);
+          (*it).status = StatusHitPlane;
+          AddToEndPoints(*it, hole);
+          ok = false;
+          if (m_debug) PrintStatus(hdr, "hit a plane", x, y, z, hole);
           break;
         }
 
@@ -1111,8 +1129,8 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
                 // Check if this location is inside a drift medium/area.
                 if (status != 0 || !m_sensor->IsInArea(xp, yp, zp)) continue;
                 // Make sure we haven't jumped across a wire.
-                if (m_sensor->IsWireCrossed(x, y, z, xp, yp, zp, xc, yc, zc,
-                                            false, rc)) {
+                if (m_sensor->CrossedWire(x, y, z, xp, yp, zp, xc, yc, zc,
+                                          false, rc)) {
                   continue;
                 }
                 // Increment the electron and ion counters.
