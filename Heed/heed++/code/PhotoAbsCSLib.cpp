@@ -30,16 +30,22 @@ std::string getDataBasePath() {
   std::string path;
   // First try if the environment variable HEED_DATABASE is defined.
   char* heed_database = std::getenv("HEED_DATABASE");
-  if (heed_database == NULL) {
-    // If HEED_DATABASE is not defined, try GARFIELD_HOME.
-    char* garfield_home = std::getenv("GARFIELD_HOME");
-    if (garfield_home == NULL) {
-      std::cerr << "Heed:\n    Could not retrieve database path.\n";
-    } else {
-      path = std::string(garfield_home) + "/Heed/heed++/database";
-    }
-  } else {
+  if (heed_database) {
     path = std::string(heed_database);
+  } else {
+    // If HEED_DATABASE is not defined, try GARFIELD_INSTALL.
+    char* garfield_install = std::getenv("GARFIELD_INSTALL");
+    if (garfield_install) {
+      path = std::string(garfield_install) + "/share/Heed/database";
+    } else {
+      // Try GARFIELD_HOME.
+      char* garfield_home = std::getenv("GARFIELD_HOME");
+      if (garfield_home) {
+        path = std::string(garfield_home) + "/Heed/heed++/database";
+      } else {
+        std::cerr << "Heed: Could not retrieve database path.\n";
+      } 
+    }
   }
   if (!path.empty()) {
     std::cout << "Heed:\n    Database path: " << path << "\n";
