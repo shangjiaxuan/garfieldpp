@@ -36,6 +36,11 @@ class DriftLineRKF {
   /// The averaging is done with a \f$2\times navg + 1\f$ point 
   /// Newton-Raphson integration. Default: 2. 
   void SetSignalAveragingOrder(const unsigned int navg) { m_navg = navg; }
+  /// Use the weighting potential (as opposed to the weighting field)
+  /// for calculating the induced signal.
+  void UseWeightingPotential(const bool on = true) {
+    m_useWeightingPotential = on;
+  }
 
   /// Set the accuracy of the Runge Kutta Fehlberg drift line integration.
   void SetIntegrationAccuracy(const double eps);
@@ -148,6 +153,8 @@ class DriftLineRKF {
   bool m_doSignal = true;
   // Averaging order used when projecting the signal on the time bins.
   unsigned int m_navg = 2;
+  // Use weighting potential or weighting field for calculating the signal.
+  bool m_useWeightingPotential = false;
 
   // Scaling factor for electron signals.
   double m_scaleE = 1.;
