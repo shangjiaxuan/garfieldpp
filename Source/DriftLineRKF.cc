@@ -471,9 +471,9 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     } else if (m_rejectKinks && xs.size() > 1) {
       const unsigned int np = xs.size();
       const auto& x = xs[np - 1];
-      const auto& xp = xs[np - 2];
-      if (phi1[0] * (x[0] - xp[0]) + phi1[1] * (x[1] - xp[1]) +
-          phi1[2] * (x[2] - xp[2]) < 0.) {
+      const auto& xprev = xs[np - 2];
+      if (phi1[0] * (x[0] - xprev[0]) + phi1[1] * (x[1] - xprev[1]) +
+          phi1[2] * (x[2] - xprev[2]) < 0.) {
         std::cerr << m_className << "::DriftLine: Bending angle > 90 degree.\n";
         flag = StatusSharpKink;
         break;
@@ -1599,7 +1599,17 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
   const unsigned int nPoints = ts.size();
   if (nPoints < 2) return;
   const double q = particle == Particle::Electron ? -1 * scale : scale;
-
+  
+  if (m_useWeightingPotential) {
+    for (size_t i = 0; i < nPoints - 1; ++i) {
+      const auto& x0 = xs[i];
+      const auto& x1 = xs[i + 1];
+      m_sensor->AddSignal(q, ts[i], ts[i + 1], 
+                          x0[0], x0[1], x0[2], x1[0], x1[1], x1[2], 
+                          false, true);
+    }
+    return;
+  }
   // Get the drift velocity at each point.
   std::vector<std::array<double, 3> > vs;
   for (const auto& x : xs) {

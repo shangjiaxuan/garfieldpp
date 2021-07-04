@@ -150,7 +150,7 @@ double Sensor::WeightingPotential(const double x, const double y,
   // Add up contributions from all components.
   for (const auto& electrode : m_electrodes) {
     if (electrode.label == label) {
-      v += electrode.comp->WeightingPotential(x, y, z, label);
+      v += std::max(electrode.comp->WeightingPotential(x, y, z, label), 0.);
     }
   }
   return v;
@@ -514,10 +514,10 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
     if (useWeightingPotential) {
       const double w0 = electrode.comp->WeightingPotential(x0, y0, z0, lbl);
       const double w1 = electrode.comp->WeightingPotential(x1, y1, z1, lbl);
-      current = q * (w1 - w0) * invdt;
       if (m_debug) {
         std::cout << "    Weighting potentials: " << w0 << ", " << w1 << "\n";
       }
+      if (w0 > -0.5 && w1 > -0.5) current = q * (w1 - w0) * invdt;
     } else {
       double wx = 0., wy = 0., wz = 0.;
       // Calculate the weighting field for this electrode.
@@ -700,11 +700,10 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
 
         const double w0 = electrode.comp->WeightingPotential(x0, y0, z0, label);
         const double w1 = electrode.comp->WeightingPotential(x1, y1, z1, label);
-        const double charge = q * (w1 - w0);
-        const double current = charge / dt;
-
-        signal[i] = -current;
-        if (aval) signal[i] *= ns[i];
+        if (w0 > -0.5 && w1 > -0.5) {
+          signal[i] = -q * (w1 - w0) / dt;
+          if (aval) signal[i] *= ns[i];
+        }
       } else {
         // Calculate the weighting field at this point.
         double wx = 0., wy = 0., wz = 0.;
@@ -817,7 +816,9 @@ void Sensor::AddInducedCharge(const double q, const double x0, const double y0,
     const double w0 = cmp->WeightingPotential(x0, y0, z0, electrode.label);
     // Calculate the weighting potential at the end point.
     const double w1 = cmp->WeightingPotential(x1, y1, z1, electrode.label);
-    electrode.charge += q * (w1 - w0);
+    if (w0 > -0.5 && w1 > -0.5) {
+      electrode.charge += q * (w1 - w0);
+    }
     if (m_debug) {
       std::cout << "  Electrode " << electrode.label << ":\n"
                 << "    Weighting potential at (" << x0 << ", " << y0 << ", "

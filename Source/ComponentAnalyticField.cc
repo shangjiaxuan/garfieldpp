@@ -7039,32 +7039,32 @@ double ComponentAnalyticField::Wpot(const double xin, const double yin,
   double xpos = xin, ypos = yin;
   if (m_polar) Cartesian2Internal(xin, yin, xpos, ypos);
   // Stop here if there are no weighting fields defined.
-  if (m_readout.empty()) return 0.;
+  if (m_readout.empty()) return -1.;
   if (!m_sigset) {
     std::cerr << m_className << "::Wpot: No weighting potentials available.\n";
-    return 0.;
+    return -1.;
   }
 
   // In case (xpos, ypos) is located behind a plane there is no field.
   if (m_tube) {
-    if (!InTube(xpos, ypos, m_cotube, m_ntube)) return 0.;
+    if (!InTube(xpos, ypos, m_cotube, m_ntube)) return -1.;
   } else {
     if (!m_perx) {
       if ((m_ynplan[0] && xpos < m_coplan[0]) ||
           (m_ynplan[1] && xpos > m_coplan[1])) {
-        return 0.;
+        return -1.;
       }
     }
     if (!m_pery) {
       if ((m_ynplan[2] && ypos < m_coplan[2]) ||
           (m_ynplan[3] && ypos > m_coplan[3])) {
-        return 0.;
+        return -1.;
       }
     }
   }
-  if (label.empty()) return 0.;
+  if (label.empty()) return -1.;
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
-  if (it == m_readout.end()) return 0.;
+  if (it == m_readout.end()) return -1.;
   const auto isw = it - m_readout.begin();
 
   // Loop over the signal layers.
@@ -7096,7 +7096,7 @@ double ComponentAnalyticField::Wpot(const double xin, const double yin,
                     << " received. Program error!\n";
           std::cerr << "    Encountered for wire " << iw
                     << ", readout group = " << m_w[iw].ind << "\n";
-          return 0.;
+          return -1.;
         }
       }
       // Loop over all planes.
@@ -7125,7 +7125,7 @@ double ComponentAnalyticField::Wpot(const double xin, const double yin,
                     << " received. Program error!\n";
           std::cerr << "    Encountered for plane " << ip
                     << ", readout group = " << m_planes[ip].ind << "\n";
-          return 0.;
+          return -1.;
         }
       }
       // Next signal layer.
