@@ -540,11 +540,13 @@ double ViewField::Wfield(const double x, const double y, const double z,
                          const std::string& electrode) const {
 
   if (par == Parameter::Potential) {
+    double v = 0.;
     if (m_sensor) {
-      return m_sensor->WeightingPotential(x, y, z, electrode);
+      v = m_sensor->WeightingPotential(x, y, z, electrode);
     } else {
-      return m_component->WeightingPotential(x, y, z, electrode);
+      v = m_component->WeightingPotential(x, y, z, electrode);
     }
+    return std::max(0., v);
   }
 
   double ex = 0., ey = 0., ez = 0.;
