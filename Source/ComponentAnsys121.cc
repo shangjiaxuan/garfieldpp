@@ -704,83 +704,21 @@ void ComponentAnsys121::ElectricField(const double xin, const double yin,
     PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 8);
   }
 
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
   // Calculate quadrilateral field, which can degenerate to a triangular field
-  const double invdet = 1. / det;
   if (element.degenerate) {
-    volt = n0.v * t1 * (2 * t1 - 1) + n1.v * t2 * (2 * t2 - 1) +
-           n2.v * t3 * (2 * t3 - 1) + 4 * n3.v * t1 * t2 + 4 * n4.v * t1 * t3 +
-           4 * n5.v * t2 * t3;
-    ex = -(n0.v * (4 * t1 - 1) * jac[0][1] + n1.v * (4 * t2 - 1) * jac[1][1] +
-           n2.v * (4 * t3 - 1) * jac[2][1] +
-           n3.v * (4 * t2 * jac[0][1] + 4 * t1 * jac[1][1]) +
-           n4.v * (4 * t3 * jac[0][1] + 4 * t1 * jac[2][1]) +
-           n5.v * (4 * t3 * jac[1][1] + 4 * t2 * jac[2][1])) *
-         invdet;
-    ey = -(n0.v * (4 * t1 - 1) * jac[0][2] + n1.v * (4 * t2 - 1) * jac[1][2] +
-           n2.v * (4 * t3 - 1) * jac[2][2] +
-           n3.v * (4 * t2 * jac[0][2] + 4 * t1 * jac[1][2]) +
-           n4.v * (4 * t3 * jac[0][2] + 4 * t1 * jac[2][2]) +
-           n5.v * (4 * t3 * jac[1][2] + 4 * t2 * jac[2][2])) *
-         invdet;
+    std::array<double, 6> v;
+    for (size_t i = 0; i < 6; ++i) {
+      v[i] = m_nodes[element.emap[i]].v;
+    }
+    volt = Potential3(v, {t1, t2, t3});
+    Field3(v, {t1, t2, t3}, jac, det, ex, ey);
   } else {
-    const Node& n6 = m_nodes[element.emap[6]];
-    const Node& n7 = m_nodes[element.emap[7]];
-    volt = -n0.v * (1 - t1) * (1 - t2) * (1 + t1 + t2) * 0.25 -
-           n1.v * (1 + t1) * (1 - t2) * (1 - t1 + t2) * 0.25 -
-           n2.v * (1 + t1) * (1 + t2) * (1 - t1 - t2) * 0.25 -
-           n3.v * (1 - t1) * (1 + t2) * (1 + t1 - t2) * 0.25 +
-           n4.v * (1 - t1) * (1 + t1) * (1 - t2) * 0.5 +
-           n5.v * (1 + t1) * (1 + t2) * (1 - t2) * 0.5 +
-           n6.v * (1 - t1) * (1 + t1) * (1 + t2) * 0.5 +
-           n7.v * (1 - t1) * (1 + t2) * (1 - t2) * 0.5;
-    ex = -(n0.v * ((1 - t2) * (2 * t1 + t2) * jac[0][0] +
-                   (1 - t1) * (t1 + 2 * t2) * jac[1][0]) *
-               0.25 +
-           n1.v * ((1 - t2) * (2 * t1 - t2) * jac[0][0] -
-                   (1 + t1) * (t1 - 2 * t2) * jac[1][0]) *
-               0.25 +
-           n2.v * ((1 + t2) * (2 * t1 + t2) * jac[0][0] +
-                   (1 + t1) * (t1 + 2 * t2) * jac[1][0]) *
-               0.25 +
-           n3.v * ((1 + t2) * (2 * t1 - t2) * jac[0][0] -
-                   (1 - t1) * (t1 - 2 * t2) * jac[1][0]) *
-               0.25 +
-           n4.v * (t1 * (t2 - 1) * jac[0][0] +
-                   (t1 - 1) * (t1 + 1) * jac[1][0] * 0.5) +
-           n5.v * ((1 - t2) * (1 + t2) * jac[0][0] * 0.5 -
-                   (1 + t1) * t2 * jac[1][0]) +
-           n6.v * (-t1 * (1 + t2) * jac[0][0] +
-                   (1 - t1) * (1 + t1) * jac[1][0] * 0.5) +
-           n7.v * ((t2 - 1) * (t2 + 1) * jac[0][0] * 0.5 +
-                   (t1 - 1) * t2 * jac[1][0])) *
-         invdet;
-    ey = -(n0.v * ((1 - t2) * (2 * t1 + t2) * jac[0][1] +
-                   (1 - t1) * (t1 + 2 * t2) * jac[1][1]) *
-               0.25 +
-           n1.v * ((1 - t2) * (2 * t1 - t2) * jac[0][1] -
-                   (1 + t1) * (t1 - 2 * t2) * jac[1][1]) *
-               0.25 +
-           n2.v * ((1 + t2) * (2 * t1 + t2) * jac[0][1] +
-                   (1 + t1) * (t1 + 2 * t2) * jac[1][1]) *
-               0.25 +
-           n3.v * ((1 + t2) * (2 * t1 - t2) * jac[0][1] -
-                   (1 - t1) * (t1 - 2 * t2) * jac[1][1]) *
-               0.25 +
-           n4.v * (t1 * (t2 - 1) * jac[0][1] +
-                   (t1 - 1) * (t1 + 1) * jac[1][1] * 0.5) +
-           n5.v * ((1 - t2) * (1 + t2) * jac[0][1] * 0.5 -
-                   (1 + t1) * t2 * jac[1][1]) +
-           n6.v * (-t1 * (1 + t2) * jac[0][1] +
-                   (1 - t1) * (1 + t1) * jac[1][1] * 0.5) +
-           n7.v * ((t2 - 1) * (t2 + 1) * jac[0][1] * 0.5 +
-                   (t1 - 1) * t2 * jac[1][1])) *
-         invdet;
+    std::array<double, 8> v;
+    for (size_t i = 0; i < 8; ++i) {
+      v[i] = m_nodes[element.emap[i]].v;
+    }
+    volt = Potential5(v, {t1, t2});
+    Field5(v, {t1, t2}, jac, det, ex, ey);
   }
 
   // Transform field to global coordinates
@@ -835,76 +773,20 @@ void ComponentAnsys121::WeightingField(const double xin, const double yin,
   if (m_debug) {
     PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 8, iw);
   }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
   // Calculate quadrilateral field, which can degenerate to a triangular field
-  const double invdet = 1. / det;
-  if (m_elements[imap].degenerate) {
-    wx = -(n0.w[iw] * (4 * t1 - 1) * jac[0][1] +
-           n1.w[iw] * (4 * t2 - 1) * jac[1][1] +
-           n2.w[iw] * (4 * t3 - 1) * jac[2][1] +
-           n3.w[iw] * (4 * t2 * jac[0][1] + 4 * t1 * jac[1][1]) +
-           n4.w[iw] * (4 * t3 * jac[0][1] + 4 * t1 * jac[2][1]) +
-           n5.w[iw] * (4 * t3 * jac[1][1] + 4 * t2 * jac[2][1])) *
-         invdet;
-    wy = -(n0.w[iw] * (4 * t1 - 1) * jac[0][2] +
-           n1.w[iw] * (4 * t2 - 1) * jac[1][2] +
-           n2.w[iw] * (4 * t3 - 1) * jac[2][2] +
-           n3.w[iw] * (4 * t2 * jac[0][2] + 4 * t1 * jac[1][2]) +
-           n4.w[iw] * (4 * t3 * jac[0][2] + 4 * t1 * jac[2][2]) +
-           n5.w[iw] * (4 * t3 * jac[1][2] + 4 * t2 * jac[2][2])) *
-         invdet;
+  if (element.degenerate) {
+    std::array<double, 6> v;
+    for (size_t i = 0; i < 6; ++i) {
+      v[i] = m_nodes[element.emap[i]].w[iw];
+    }
+    Field3(v, {t1, t2, t3}, jac, det, wx, wy);
   } else {
-    const Node& n6 = m_nodes[element.emap[6]];
-    const Node& n7 = m_nodes[element.emap[7]];
-    wx = -(n0.w[iw] * ((1 - t2) * (2 * t1 + t2) * jac[0][0] +
-                       (1 - t1) * (t1 + 2 * t2) * jac[1][0]) *
-               0.25 +
-           n1.w[iw] * ((1 - t2) * (2 * t1 - t2) * jac[0][0] -
-                       (1 + t1) * (t1 - 2 * t2) * jac[1][0]) *
-               0.25 +
-           n2.w[iw] * ((1 + t2) * (2 * t1 + t2) * jac[0][0] +
-                       (1 + t1) * (t1 + 2 * t2) * jac[1][0]) *
-               0.25 +
-           n3.w[iw] * ((1 + t2) * (2 * t1 - t2) * jac[0][0] -
-                       (1 - t1) * (t1 - 2 * t2) * jac[1][0]) *
-               0.25 +
-           n4.w[iw] * (t1 * (t2 - 1) * jac[0][0] +
-                       (t1 - 1) * (t1 + 1) * jac[1][0] * 0.5) +
-           n5.w[iw] * ((1 - t2) * (1 + t2) * jac[0][0] * 0.5 -
-                       (1 + t1) * t2 * jac[1][0]) +
-           n6.w[iw] * (-t1 * (1 + t2) * jac[0][0] +
-                       (1 - t1) * (1 + t1) * jac[1][0] * 0.5) +
-           n7.w[iw] * ((t2 - 1) * (1 + t2) * jac[0][0] * 0.5 +
-                       (t1 - 1) * t2 * jac[1][0])) *
-         invdet;
-    wy = -(n0.w[iw] * ((1 - t2) * (2 * t1 + t2) * jac[0][1] +
-                       (1 - t1) * (t1 + 2 * t2) * jac[1][1]) *
-               0.25 +
-           n1.w[iw] * ((1 - t2) * (2 * t1 - t2) * jac[0][1] -
-                       (1 + t1) * (t1 - 2 * t2) * jac[1][1]) *
-               0.25 +
-           n2.w[iw] * ((1 + t2) * (2 * t1 + t2) * jac[0][1] +
-                       (1 + t1) * (t1 + 2 * t2) * jac[1][1]) *
-               0.25 +
-           n3.w[iw] * ((1 + t2) * (2 * t1 - t2) * jac[0][1] -
-                       (1 - t1) * (t1 - 2 * t2) * jac[1][1]) *
-               0.25 +
-           n4.w[iw] * (t1 * (t2 - 1) * jac[0][1] +
-                       (t1 - 1) * (t1 + 1) * jac[1][1] * 0.5) +
-           n5.w[iw] * ((1 - t2) * (1 + t2) * jac[0][1] * 0.5 -
-                       (1 + t1) * t2 * jac[1][1]) +
-           n6.w[iw] * (-t1 * (1 + t2) * jac[0][1] +
-                       (1 - t1) * (1 + t1) * jac[1][1] * 0.5) +
-           n7.w[iw] * ((t2 - 1) * (t2 + 1) * jac[0][1] * 0.5 +
-                       (t1 - 1) * t2 * jac[1][1])) *
-         invdet;
+    std::array<double, 8> v;
+    for (size_t i = 0; i < 8; ++i) {
+      v[i] = m_nodes[element.emap[i]].w[iw];
+    }
+    Field5(v, {t1, t2}, jac, det, wx, wy);
   }
-
   // Transform field to global coordinates
   UnmapFields(wx, wy, wz, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
 }
@@ -942,29 +824,19 @@ double ComponentAnsys121::WeightingPotential(const double xin, const double yin,
   if (m_debug) {
     PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 8, iw);
   }
-  // Calculate quadrilateral field, which can degenerate to a triangular field
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  if (element.degenerate) {
-    return n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
-           n2.w[iw] * t3 * (2 * t3 - 1) + 4 * n3.w[iw] * t1 * t2 +
-           4 * n4.w[iw] * t1 * t3 + 4 * n5.w[iw] * t2 * t3;
-  }
 
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  return -n0.w[iw] * (1 - t1) * (1 - t2) * (1 + t1 + t2) * 0.25 -
-         n1.w[iw] * (1 + t1) * (1 - t2) * (1 - t1 + t2) * 0.25 -
-         n2.w[iw] * (1 + t1) * (1 + t2) * (1 - t1 - t2) * 0.25 -
-         n3.w[iw] * (1 - t1) * (1 + t2) * (1 + t1 - t2) * 0.25 +
-         n4.w[iw] * (1 - t1) * (1 + t1) * (1 - t2) * 0.5 +
-         n5.w[iw] * (1 + t1) * (1 + t2) * (1 - t2) * 0.5 +
-         n6.w[iw] * (1 - t1) * (1 + t1) * (1 + t2) * 0.5 +
-         n7.w[iw] * (1 - t1) * (1 + t2) * (1 - t2) * 0.5;
+  if (element.degenerate) {
+    std::array<double, 6> v;
+    for (size_t i = 0; i < 6; ++i) {
+      v[i] = m_nodes[element.emap[i]].w[iw];
+    }
+    return Potential3(v, {t1, t2, t3});
+  }
+  std::array<double, 8> v;
+  for (size_t i = 0; i < 8; ++i) {
+    v[i] = m_nodes[element.emap[i]].w[iw];
+  }
+  return Potential5(v, {t1, t2});
 }
 
 Medium* ComponentAnsys121::GetMedium(const double xin, const double yin,

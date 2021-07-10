@@ -527,69 +527,14 @@ void ComponentElmer2D::ElectricField(const double xin, const double yin,
   if (m_debug) {
     PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 10);
   }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
+  std::array<double, 8> v;
+  for (size_t i = 0; i < 8; ++i) {
+    v[i] = m_nodes[element.emap[i]].v;
+  }
+  volt = Potential5(v, {t1, t2});
+  Field5(v, {t1, t2}, jac, det, ex, ey);
 
-  // Shorthands.
-  const double invdet = 1. / det;
-  volt = -n0.v * (1 - t1) * (1 - t2) * (1 + t1 + t2) * 0.25 -
-         n1.v * (1 + t1) * (1 - t2) * (1 - t1 + t2) * 0.25 -
-         n2.v * (1 + t1) * (1 + t2) * (1 - t1 - t2) * 0.25 -
-         n3.v * (1 - t1) * (1 + t2) * (1 + t1 - t2) * 0.25 +
-         n4.v * (1 - t1) * (1 + t1) * (1 - t2) * 0.5 +
-         n5.v * (1 + t1) * (1 + t2) * (1 - t2) * 0.5 +
-         n6.v * (1 - t1) * (1 + t1) * (1 + t2) * 0.5 +
-         n7.v * (1 - t1) * (1 + t2) * (1 - t2) * 0.5;
-  ex = -(n0.v * ((1 - t2) * (2 * t1 + t2) * jac[0][0] +
-                 (1 - t1) * (t1 + 2 * t2) * jac[1][0]) *
-             0.25 +
-         n1.v * ((1 - t2) * (2 * t1 - t2) * jac[0][0] -
-                 (1 + t1) * (t1 - 2 * t2) * jac[1][0]) *
-             0.25 +
-         n2.v * ((1 + t2) * (2 * t1 + t2) * jac[0][0] +
-                 (1 + t1) * (t1 + 2 * t2) * jac[1][0]) *
-             0.25 +
-         n3.v * ((1 + t2) * (2 * t1 - t2) * jac[0][0] -
-                 (1 - t1) * (t1 - 2 * t2) * jac[1][0]) *
-             0.25 +
-         n4.v * (t1 * (t2 - 1) * jac[0][0] +
-                 (t1 - 1) * (t1 + 1) * jac[1][0] * 0.5) +
-         n5.v * ((1 - t2) * (1 + t2) * jac[0][0] * 0.5 -
-                 (1 + t1) * t2 * jac[1][0]) +
-         n6.v * (-t1 * (1 + t2) * jac[0][0] +
-                 (1 - t1) * (1 + t1) * jac[1][0] * 0.5) +
-         n7.v * ((t2 - 1) * (t2 + 1) * jac[0][0] * 0.5 +
-                 (t1 - 1) * t2 * jac[1][0])) *
-       invdet;
-  ey = -(n0.v * ((1 - t2) * (2 * t1 + t2) * jac[0][1] +
-                 (1 - t1) * (t1 + 2 * t2) * jac[1][1]) *
-             0.25 +
-         n1.v * ((1 - t2) * (2 * t1 - t2) * jac[0][1] -
-                 (1 + t1) * (t1 - 2 * t2) * jac[1][1]) *
-             0.25 +
-         n2.v * ((1 + t2) * (2 * t1 + t2) * jac[0][1] +
-                 (1 + t1) * (t1 + 2 * t2) * jac[1][1]) *
-             0.25 +
-         n3.v * ((1 + t2) * (2 * t1 - t2) * jac[0][1] -
-                 (1 - t1) * (t1 - 2 * t2) * jac[1][1]) *
-             0.25 +
-         n4.v * (t1 * (t2 - 1) * jac[0][1] +
-                 (t1 - 1) * (t1 + 1) * jac[1][1] * 0.5) +
-         n5.v * ((1 - t2) * (1 + t2) * jac[0][1] * 0.5 -
-                 (1 + t1) * t2 * jac[1][1]) +
-         n6.v * (-t1 * (1 + t2) * jac[0][1] +
-                 (1 - t1) * (1 + t1) * jac[1][1] * 0.5) +
-         n7.v * ((t2 - 1) * (t2 + 1) * jac[0][1] * 0.5 +
-                 (t1 - 1) * t2 * jac[1][1])) *
-       invdet;
-
-  // Transform field to global coordinates
+  // Transform field to global coordinates.
   UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
 
   // Drift medium?
@@ -644,58 +589,11 @@ void ComponentElmer2D::WeightingField(const double xin, const double yin,
   if (m_debug) {
     PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 10, iw);
   }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  // Shorthands.
-  const double invdet = 1. / det;
-  wx = -(n0.w[iw] * ((1 - t2) * (2 * t1 + t2) * jac[0][0] +
-                     (1 - t1) * (t1 + 2 * t2) * jac[1][0]) *
-             0.25 +
-         n1.w[iw] * ((1 - t2) * (2 * t1 - t2) * jac[0][0] -
-                     (1 + t1) * (t1 - 2 * t2) * jac[1][0]) *
-             0.25 +
-         n2.w[iw] * ((1 + t2) * (2 * t1 + t2) * jac[0][0] +
-                     (1 + t1) * (t1 + 2 * t2) * jac[1][0]) *
-             0.25 +
-         n3.w[iw] * ((1 + t2) * (2 * t1 - t2) * jac[0][0] -
-                     (1 - t1) * (t1 - 2 * t2) * jac[1][0]) *
-             0.25 +
-         n4.w[iw] * (t1 * (t2 - 1) * jac[0][0] +
-                     (t1 - 1) * (t1 + 1) * jac[1][0] * 0.5) +
-         n5.w[iw] * ((1 - t2) * (1 + t2) * jac[0][0] * 0.5 -
-                     (1 + t1) * t2 * jac[1][0]) +
-         n6.w[iw] * (-t1 * (1 + t2) * jac[0][0] +
-                     (1 - t1) * (1 + t1) * jac[1][0] * 0.5) +
-         n7.w[iw] * ((t2 - 1) * (1 + t2) * jac[0][0] * 0.5 +
-                     (t1 - 1) * t2 * jac[1][0])) *
-       invdet;
-  wy = -(n0.w[iw] * ((1 - t2) * (2 * t1 + t2) * jac[0][1] +
-                     (1 - t1) * (t1 + 2 * t2) * jac[1][1]) *
-             0.25 +
-         n1.w[iw] * ((1 - t2) * (2 * t1 - t2) * jac[0][1] -
-                     (1 + t1) * (t1 - 2 * t2) * jac[1][1]) *
-             0.25 +
-         n2.w[iw] * ((1 + t2) * (2 * t1 + t2) * jac[0][1] +
-                     (1 + t1) * (t1 + 2 * t2) * jac[1][1]) *
-             0.25 +
-         n3.w[iw] * ((1 + t2) * (2 * t1 - t2) * jac[0][1] -
-                     (1 - t1) * (t1 - 2 * t2) * jac[1][1]) *
-             0.25 +
-         n4.w[iw] * (t1 * (t2 - 1) * jac[0][1] +
-                     (t1 - 1) * (t1 + 1) * jac[1][1] * 0.5) +
-         n5.w[iw] * ((1 - t2) * (1 + t2) * jac[0][1] * 0.5 -
-                     (1 + t1) * t2 * jac[1][1]) +
-         n6.w[iw] * (-t1 * (1 + t2) * jac[0][1] +
-                     (1 - t1) * (1 + t1) * jac[1][1] * 0.5) +
-         n7.w[iw] * ((t2 - 1) * (t2 + 1) * jac[0][1] * 0.5 +
-                     (t1 - 1) * t2 * jac[1][1])) *
-       invdet;
+  std::array<double, 8> v;
+  for (size_t i = 0; i < 8; ++i) {
+    v[i] = m_nodes[element.emap[i]].w[iw];
+  }
+  Field5(v, {t1, t2}, jac, det, wx, wy);
 
   // Transform field to global coordinates
   UnmapFields(wx, wy, wz, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
@@ -739,22 +637,11 @@ double ComponentElmer2D::WeightingPotential(const double xin, const double yin,
     PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
                  iw);
   }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  return -n0.w[iw] * (1 - t1) * (1 - t2) * (1 + t1 + t2) * 0.25 -
-         n1.w[iw] * (1 + t1) * (1 - t2) * (1 - t1 + t2) * 0.25 -
-         n2.w[iw] * (1 + t1) * (1 + t2) * (1 - t1 - t2) * 0.25 -
-         n3.w[iw] * (1 - t1) * (1 + t2) * (1 + t1 - t2) * 0.25 +
-         n4.w[iw] * (1 - t1) * (1 + t1) * (1 - t2) * 0.5 +
-         n5.w[iw] * (1 + t1) * (1 + t2) * (1 - t2) * 0.5 +
-         n6.w[iw] * (1 - t1) * (1 + t1) * (1 + t2) * 0.5 +
-         n7.w[iw] * (1 - t1) * (1 + t2) * (1 - t2) * 0.5;
+  std::array<double, 8> v;
+  for (size_t i = 0; i < 8; ++i) {
+    v[i] = m_nodes[element.emap[i]].w[iw];
+  }
+  return Potential5(v, {t1, t2});
 }
 
 Medium* ComponentElmer2D::GetMedium(const double xin, const double yin,
