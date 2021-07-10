@@ -772,56 +772,13 @@ void ComponentAnsys123::ElectricField(const double xin, const double yin,
   if (m_debug) {
     PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 10);
   }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  const Node& n8 = m_nodes[element.emap[8]];
-  const Node& n9 = m_nodes[element.emap[9]];
-  // Shorthands.
-  const double fourt1 = 4 * t1;
-  const double fourt2 = 4 * t2;
-  const double fourt3 = 4 * t3;
-  const double fourt4 = 4 * t4;
-  const double invdet = 1. / det;
-  // Tetrahedral field
-  volt = n0.v * t1 * (2 * t1 - 1) + n1.v * t2 * (2 * t2 - 1) +
-         n2.v * t3 * (2 * t3 - 1) + n3.v * t4 * (2 * t4 - 1) +
-         n4.v * fourt1 * t2 + n5.v * fourt1 * t3 + n6.v * fourt1 * t4 +
-         n7.v * fourt2 * t3 + n8.v * fourt2 * t4 + n9.v * fourt3 * t4;
-  ex = -(n0.v * (fourt1 - 1) * jac[0][1] + n1.v * (fourt2 - 1) * jac[1][1] +
-         n2.v * (fourt3 - 1) * jac[2][1] + n3.v * (fourt4 - 1) * jac[3][1] +
-         n4.v * (fourt2 * jac[0][1] + fourt1 * jac[1][1]) +
-         n5.v * (fourt3 * jac[0][1] + fourt1 * jac[2][1]) +
-         n6.v * (fourt4 * jac[0][1] + fourt1 * jac[3][1]) +
-         n7.v * (fourt3 * jac[1][1] + fourt2 * jac[2][1]) +
-         n8.v * (fourt4 * jac[1][1] + fourt2 * jac[3][1]) +
-         n9.v * (fourt4 * jac[2][1] + fourt3 * jac[3][1])) *
-       invdet;
+  std::array<double, 10> v;
+  for (size_t i = 0; i < 10; ++i) {
+    v[i] = m_nodes[element.emap[i]].v;
+  }
 
-  ey = -(n0.v * (fourt1 - 1) * jac[0][2] + n1.v * (fourt2 - 1) * jac[1][2] +
-         n2.v * (fourt3 - 1) * jac[2][2] + n3.v * (fourt4 - 1) * jac[3][2] +
-         n4.v * (fourt2 * jac[0][2] + fourt1 * jac[1][2]) +
-         n5.v * (fourt3 * jac[0][2] + fourt1 * jac[2][2]) +
-         n6.v * (fourt4 * jac[0][2] + fourt1 * jac[3][2]) +
-         n7.v * (fourt3 * jac[1][2] + fourt2 * jac[2][2]) +
-         n8.v * (fourt4 * jac[1][2] + fourt2 * jac[3][2]) +
-         n9.v * (fourt4 * jac[2][2] + fourt3 * jac[3][2])) *
-       invdet;
-
-  ez = -(n0.v * (fourt1 - 1) * jac[0][3] + n1.v * (fourt2 - 1) * jac[1][3] +
-         n2.v * (fourt3 - 1) * jac[2][3] + n3.v * (fourt4 - 1) * jac[3][3] +
-         n4.v * (fourt2 * jac[0][3] + fourt1 * jac[1][3]) +
-         n5.v * (fourt3 * jac[0][3] + fourt1 * jac[2][3]) +
-         n6.v * (fourt4 * jac[0][3] + fourt1 * jac[3][3]) +
-         n7.v * (fourt3 * jac[1][3] + fourt2 * jac[2][3]) +
-         n8.v * (fourt4 * jac[1][3] + fourt2 * jac[3][3]) +
-         n9.v * (fourt4 * jac[2][3] + fourt3 * jac[3][3])) *
-       invdet;
+  volt = Potential13(v, {t1, t2, t3, t4});
+  Field13(v, {t1, t2, t3, t4}, jac, det, ex, ey, ez);
 
   // Transform field to global coordinates
   UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);

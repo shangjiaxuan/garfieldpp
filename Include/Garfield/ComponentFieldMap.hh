@@ -186,7 +186,15 @@ class ComponentFieldMap : public Component {
 
   /// Find lowest epsilon, check for eps = 0, set default drift media flags.
   bool SetDefaultDriftMedium();
- 
+
+  /// Interpolate the potential in a curved quadratic tetrahedron.
+  static double Potential13(const std::array<double, 10>& v,
+                            const std::array<double, 4>& t);
+  /// Interpolate the field in a curved quadratic tetrahedron.
+  static void Field13(const std::array<double, 10>& v,
+                      const std::array<double, 4>& t,
+                      double jac[4][4], const double det,
+                      double& ex, double& ey, double& ez);
   /// Find the element for a point in curved quadratic quadrilaterals.
   int FindElement5(const double x, const double y, const double z, double& t1,
                    double& t2, double& t3, double& t4, double jac[4][4],

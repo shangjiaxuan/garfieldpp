@@ -187,6 +187,41 @@ bool ComponentFieldMap::SetDefaultDriftMedium() {
   return true;
 }
 
+double ComponentFieldMap::Potential13(const std::array<double, 10>& v,
+                                      const std::array<double, 4>& t) { 
+
+  double sum = 0.;
+  for (size_t i = 0; i < 4; ++i) {
+    sum += v[i] * t[i] * (t[i] - 0.5);
+  }
+  sum *= 2;
+  sum += 4 * (v[4] * t[0] * t[1] + v[5] * t[0] * t[2] + v[6] * t[0] * t[3] +
+              v[7] * t[1] * t[2] + v[8] * t[1] * t[3] + v[9] * t[2] * t[3]);
+  return sum;
+}
+
+void ComponentFieldMap::Field13(const std::array<double, 10>& v, 
+                                const std::array<double, 4>& t, 
+                                double jac[4][4], const double det, 
+                                double& ex, double& ey, double& ez) {
+
+  std::array<double, 4> g;
+  g[0] = v[0] * (t[0] - 0.25) + v[4] * t[1] + v[5] * t[2] + v[6] * t[3];
+  g[1] = v[1] * (t[1] - 0.25) + v[4] * t[0] + v[7] * t[2] + v[8] * t[3];
+  g[2] = v[2] * (t[2] - 0.25) + v[5] * t[0] + v[7] * t[1] + v[9] * t[3];
+  g[3] = v[3] * (t[3] - 0.25) + v[6] * t[0] + v[8] * t[1] + v[9] * t[2]; 
+  std::array<double, 3> f = {0., 0., 0.};
+  for (size_t j = 0; j < 4; ++j) {
+    for (size_t i = 0; i < 3; ++i) {
+      f[i] += g[j] * jac[j][i + 1];
+    }
+  }
+  const double invdet = -4. / det;
+  ex = f[0] * invdet; 
+  ey = f[1] * invdet; 
+  ez = f[2] * invdet; 
+}
+
 int ComponentFieldMap::FindElement5(const double x, const double y,
                                     double const z, double& t1, double& t2,
                                     double& t3, double& t4, double jac[4][4],
