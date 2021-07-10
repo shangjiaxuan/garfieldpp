@@ -776,7 +776,6 @@ void ComponentAnsys123::ElectricField(const double xin, const double yin,
   for (size_t i = 0; i < 10; ++i) {
     v[i] = m_nodes[element.emap[i]].v;
   }
-
   volt = Potential13(v, {t1, t2, t3, t4});
   Field13(v, {t1, t2, t3, t4}, jac, det, ex, ey, ez);
 
@@ -832,7 +831,6 @@ void ComponentAnsys123::WeightingField(const double xin, const double yin,
   if (m_debug) {
     PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 10, iw);
   }
-
   std::array<double, 10> v;
   for (size_t i = 0; i < 10; ++i) {
     v[i] = m_nodes[element.emap[i]].w[iw];
@@ -876,7 +874,6 @@ double ComponentAnsys123::WeightingPotential(const double xin, const double yin,
     PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
                  iw);
   }
-
   std::array<double, 10> v;
   for (size_t i = 0; i < 10; ++i) {
     v[i] = m_nodes[element.emap[i]].w[iw];
