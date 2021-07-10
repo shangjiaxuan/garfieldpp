@@ -187,6 +187,70 @@ bool ComponentFieldMap::SetDefaultDriftMedium() {
   return true;
 }
 
+double ComponentFieldMap::Potential3(const std::array<double, 6>& v,
+                                     const std::array<double, 3>& t) {
+
+  double sum = 0.;
+  for (size_t i = 0; i < 3; ++i) {
+    sum += v[i] * t[i] * (2 * t[i] - 1);
+  }
+  sum += 4 * (v[3] * t[0] * t[1] + v[4] * t[0] * t[2] + v[5] * t[1] * t[2]);
+  return sum;
+}
+
+void ComponentFieldMap::Field3(const std::array<double, 6>& v, 
+                               const std::array<double, 3>& t, 
+                               double jac[4][4], const double det, 
+                               double& ex, double& ey) {
+  std::array<double, 3> g;
+  g[0] = v[0] * (4 * t[0] - 1) + v[3] * 4 * t[1] + v[4] * 4 * t[2];
+  g[1] = v[1] * (4 * t[1] - 1) + v[3] * 4 * t[0] + v[5] * 4 * t[2];
+  g[2] = v[2] * (4 * t[2] - 1) + v[4] * 4 * t[0] + v[5] * 4 * t[1];
+  const double invdet = 1. / det;
+  ex = -(jac[0][1] * g[0] + jac[1][1] * g[1] + jac[2][1] * g[2]) * invdet;
+  ey = -(jac[0][2] * g[0] + jac[1][2] * g[1] + jac[2][2] * g[2]) * invdet;
+}
+
+double ComponentFieldMap::Potential5(const std::array<double, 8>& v,
+                                     const std::array<double, 2>& t) {
+
+  return -v[0] * (1 - t[0]) * (1 - t[1]) * (1 + t[0] + t[1]) * 0.25 -
+         v[1] * (1 + t[0]) * (1 - t[1]) * (1 - t[0] + t[1]) * 0.25 -
+         v[2] * (1 + t[0]) * (1 + t[1]) * (1 - t[0] - t[1]) * 0.25 -
+         v[3] * (1 - t[0]) * (1 + t[1]) * (1 + t[0] - t[1]) * 0.25 +
+         v[4] * (1 - t[0]) * (1 + t[0]) * (1 - t[1]) * 0.5 +
+         v[5] * (1 + t[0]) * (1 + t[1]) * (1 - t[1]) * 0.5 +
+         v[6] * (1 - t[0]) * (1 + t[0]) * (1 + t[1]) * 0.5 +
+         v[7] * (1 - t[0]) * (1 + t[1]) * (1 - t[1]) * 0.5;
+} 
+
+void ComponentFieldMap::Field5(const std::array<double, 8>& v, 
+                               const std::array<double, 2>& t, 
+                               double jac[4][4], const double det, 
+                               double& ex, double& ey) {
+
+  std::array<double, 2> g;
+  g[0] = (v[0] * (1 - t[1]) * (2 * t[0] + t[1]) + 
+          v[1] * (1 - t[1]) * (2 * t[0] - t[1]) +
+          v[2] * (1 + t[1]) * (2 * t[0] + t[1]) + 
+          v[3] * (1 + t[1]) * (2 * t[0] - t[1])) * 0.25 + 
+         v[4] * t[0] * (t[1] - 1) + 
+         v[5] * (1 - t[1]) * (1 + t[1]) * 0.5 - 
+         v[6] * t[0] * (1 + t[1]) + 
+         v[7] * (t[1] - 1) * (t[1] + 1) * 0.5;
+  g[1] = (v[0] * (1 - t[0]) * (t[0] + 2 * t[1]) -
+          v[1] * (1 + t[0]) * (t[0] - 2 * t[1]) +
+          v[2] * (1 + t[0]) * (t[0] + 2 * t[1]) -
+          v[3] * (1 - t[0]) * (t[0] - 2 * t[1])) * 0.25 + 
+         v[4] * (t[0] - 1) * (t[0] + 1) * 0.5 -
+         v[5] * (1 + t[0]) * t[1] +  
+         v[6] * (1 - t[0]) * (1 + t[0]) * 0.5 + 
+         v[7] * (t[0] - 1) * t[1];
+  const double invdet = 1. / det;
+  ex = -(g[0] * jac[0][0] + g[1] * jac[1][0]) * invdet;
+  ey = -(g[0] * jac[0][1] + g[1] * jac[1][1]) * invdet;
+}
+
 double ComponentFieldMap::Potential13(const std::array<double, 10>& v,
                                       const std::array<double, 4>& t) { 
 
