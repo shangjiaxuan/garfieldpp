@@ -665,14 +665,6 @@ void ComponentFieldMap::Jacobian5(const Element& element, const double u,
   const double v2 = v * v;
   const double twou = 2 * u;
   const double twov = 2 * v;
-  const double two0x = 2 * n0.x;
-  const double two0y = 2 * n0.y;
-  const double two1x = 2 * n1.x;
-  const double two1y = 2 * n1.y;
-  const double two2x = 2 * n2.x;
-  const double two2y = 2 * n2.y;
-  const double two3x = 2 * n3.x;
-  const double two3y = 2 * n3.y;
   const double two4x = 2 * n4.x;
   const double two4y = 2 * n4.y;
   const double two5x = 2 * n5.x;
@@ -681,112 +673,6 @@ void ComponentFieldMap::Jacobian5(const Element& element, const double u,
   const double two6y = 2 * n6.y;
   const double two7x = 2 * n7.x;
   const double two7y = 2 * n7.y;
-  // Determinant of the quadrilateral serendipity Jacobian
-  det =
-      (-twou * u2 *
-           ((n2.x + n3.x - two6x) * (n0.y + n1.y - two4y) -
-            (n0.x + n1.x - two4x) * (n2.y + n3.y - two6y)) +
-       twov * v2 *
-           (-((n0.x + n3.x - two7x) * (n1.y + n2.y - two5y)) +
-            (n1.x + n2.x - two5x) * (n0.y + n3.y - two7y)) +
-       2 * (-((n5.x - n7.x) * (n4.y - n6.y)) + (n4.x - n6.x) * (n5.y - n7.y)) +
-       v * (-(n6.x * n0.y) - two7x * n0.y + n6.x * n1.y - two7x * n1.y -
-            n6.x * n2.y - two7x * n2.y + n4.x * (n0.y - n1.y + n2.y - n3.y) +
-            n6.x * n3.y - two7x * n3.y - n0.x * n4.y + n1.x * n4.y -
-            n2.x * n4.y + n3.x * n4.y - two0x * n5.y - two1x * n5.y -
-            two2x * n5.y - two3x * n5.y + 8 * n7.x * n5.y + n0.x * n6.y -
-            n1.x * n6.y + n2.x * n6.y - n3.x * n6.y +
-            two5x * (n0.y + n1.y + n2.y + n3.y - 4 * n7.y) +
-            2 * (n0.x + n1.x + n2.x + n3.x) * n7.y) +
-       v2 * (-(n4.x * n0.y) + two5x * n0.y + n6.x * n0.y + two7x * n0.y +
-             n4.x * n1.y - two5x * n1.y - n6.x * n1.y - two7x * n1.y +
-             n4.x * n2.y + two5x * n2.y - n6.x * n2.y + two7x * n2.y -
-             n4.x * n3.y - two5x * n3.y + n6.x * n3.y - two7x * n3.y +
-             two2x * (n1.y + n3.y) - n2.x * n4.y + two5x * n4.y - two7x * n4.y -
-             two2x * n5.y - two4x * n5.y + two6x * n5.y + n2.x * n6.y -
-             two5x * n6.y + two7x * n6.y +
-             n0.x * (two1y + two3y + n4.y - two5y - n6.y - two7y) -
-             2 * (n2.x - n4.x + n6.x) * n7.y +
-             n3.x * (-two0y - two2y + n4.y + two5y - n6.y + two7y) +
-             n1.x * (-two0y - two2y - n4.y + two5y + n6.y + two7y)) +
-       u * (n5.x * n0.y - two6x * n0.y - n7.x * n0.y - n5.x * n1.y -
-            two6x * n1.y + n7.x * n1.y + n5.x * n2.y - two6x * n2.y -
-            n7.x * n2.y - n5.x * n3.y - two6x * n3.y + n7.x * n3.y -
-            two1x * n4.y - two2x * n4.y - two3x * n4.y + 8 * n6.x * n4.y +
-            n1.x * n5.y - n2.x * n5.y + n3.x * n5.y +
-            two4x * (n0.y + n1.y + n2.y + n3.y - 4 * n6.y) + two1x * n6.y +
-            two2x * n6.y + two3x * n6.y - (n1.x - n2.x + n3.x) * n7.y +
-            n0.x * (-two4y - n5.y + two6y + n7.y) +
-            v2 * (4 * n4.x * n0.y - 3 * n5.x * n0.y - 4 * n6.x * n0.y -
-                  5 * n7.x * n0.y + 4 * n4.x * n1.y - 5 * n5.x * n1.y -
-                  4 * n6.x * n1.y - 3 * n7.x * n1.y + 4 * n4.x * n2.y +
-                  5 * n5.x * n2.y - 4 * n6.x * n2.y + 3 * n7.x * n2.y +
-                  4 * n4.x * n3.y + 3 * n5.x * n3.y - 4 * n6.x * n3.y +
-                  5 * n7.x * n3.y + 8 * n5.x * n4.y + 8 * n7.x * n4.y -
-                  8 * n4.x * n5.y + 8 * n6.x * n5.y - 8 * n5.x * n6.y -
-                  8 * n7.x * n6.y +
-                  n3.x * (5 * n0.y + 3 * n1.y - 4 * n4.y - 3 * n5.y + 4 * n6.y -
-                          5 * n7.y) +
-                  n2.x * (3 * n0.y + 5 * n1.y - 4 * n4.y - 5 * n5.y + 4 * n6.y -
-                          3 * n7.y) -
-                  8 * n4.x * n7.y + 8 * n6.x * n7.y +
-                  n1.x * (-5 * n2.y - 3 * n3.y - 4 * n4.y + 5 * n5.y +
-                          4 * n6.y + 3 * n7.y) +
-                  n0.x * (-3 * n2.y - 5 * n3.y - 4 * n4.y + 3 * n5.y +
-                          4 * n6.y + 5 * n7.y)) -
-            twov * (n6.x * n0.y - 3 * n7.x * n0.y + n6.x * n1.y - n7.x * n1.y +
-                    3 * n6.x * n2.y - n7.x * n2.y + 3 * n6.x * n3.y -
-                    3 * n7.x * n3.y - 3 * n0.x * n4.y - 3 * n1.x * n4.y -
-                    n2.x * n4.y - n3.x * n4.y + 4 * n7.x * n4.y + n0.x * n5.y +
-                    3 * n1.x * n5.y + 3 * n2.x * n5.y + n3.x * n5.y -
-                    4 * n6.x * n5.y - n0.x * n6.y - n1.x * n6.y -
-                    3 * n2.x * n6.y - 3 * n3.x * n6.y + 4 * n7.x * n6.y -
-                    n5.x * (n0.y + 3 * n1.y + 3 * n2.y + n3.y -
-                            4 * (n4.y + n6.y)) +
-                    (3 * n0.x + n1.x + n2.x + 3 * n3.x - 4 * n6.x) * n7.y +
-                    n4.x * (3 * n0.y + 3 * n1.y + n2.y + n3.y -
-                            4 * (n5.y + n7.y)))) +
-       u2 *
-           (two3x * n0.y - two4x * n0.y - n5.x * n0.y - two6x * n0.y +
-            n7.x * n0.y - two0x * n1.y + two4x * n1.y - n5.x * n1.y +
-            two6x * n1.y + n7.x * n1.y + two3x * n2.y - two4x * n2.y +
-            n5.x * n2.y - two6x * n2.y - n7.x * n2.y + two4x * n3.y +
-            n5.x * n3.y + two6x * n3.y - n7.x * n3.y - two3x * n4.y +
-            two5x * n4.y - two7x * n4.y - n3.x * n5.y - two4x * n5.y +
-            two6x * n5.y - two3x * n6.y - two5x * n6.y + two7x * n6.y +
-            n0.x * (-two3y + two4y + n5.y + two6y - n7.y) +
-            (n3.x + two4x - two6x) * n7.y +
-            n2.x * (-two1y - two3y + two4y - n5.y + two6y + n7.y) -
-            3 * v2 *
-                (n5.x * n0.y - n6.x * n0.y - n7.x * n0.y + n5.x * n1.y +
-                 n6.x * n1.y - n7.x * n1.y - n5.x * n2.y + n6.x * n2.y +
-                 n7.x * n2.y - n5.x * n3.y - n6.x * n3.y + n7.x * n3.y -
-                 two5x * n4.y + two7x * n4.y - two6x * n5.y + two5x * n6.y -
-                 two7x * n6.y +
-                 n4.x * (n0.y - n1.y - n2.y + n3.y + two5y - two7y) +
-                 n3.x * (n0.y - n2.y - n4.y + n5.y + n6.y - n7.y) +
-                 two6x * n7.y +
-                 (n0.x - n2.x) * (n1.y - n3.y - n4.y - n5.y + n6.y + n7.y)) +
-            v * (4 * n5.x * n0.y + 3 * n6.x * n0.y - 4 * n7.x * n0.y +
-                 4 * n5.x * n1.y - 3 * n6.x * n1.y - 4 * n7.x * n1.y +
-                 4 * n5.x * n2.y - 5 * n6.x * n2.y - 4 * n7.x * n2.y +
-                 4 * n5.x * n3.y + 5 * n6.x * n3.y - 4 * n7.x * n3.y -
-                 8 * n5.x * n4.y + 8 * n7.x * n4.y + 8 * n6.x * n5.y -
-                 8 * n5.x * n6.y + 8 * n7.x * n6.y +
-                 n4.x * (5 * n0.y - 5 * n1.y - 3 * n2.y + 3 * n3.y + 8 * n5.y -
-                         8 * n7.y) -
-                 8 * n6.x * n7.y +
-                 n3.x * (3 * n1.y + 5 * n2.y - 3 * n4.y - 4 * n5.y - 5 * n6.y +
-                         4 * n7.y) +
-                 n0.x * (5 * n1.y + 3 * n2.y - 5 * n4.y - 4 * n5.y - 3 * n6.y +
-                         4 * n7.y) +
-                 n2.x * (-3 * n0.y - 5 * n3.y + 3 * n4.y - 4 * n5.y + 5 * n6.y +
-                         4 * n7.y)) +
-            n1.x * ((-1 + v) * (-2 + 3 * v) * n0.y + two2y - two4y + n5.y -
-                    two6y - n7.y +
-                    v * (-3 * n3.y + 5 * n4.y - 4 * n5.y + 3 * n6.y + 4 * n7.y -
-                         3 * v * (n2.y + n4.y - n5.y - n6.y + n7.y))))) /
-      8;
   // Jacobian terms
   jac[0][0] =
       (u2 * (-n0.y - n1.y + n2.y + n3.y + two4y - two6y) +
@@ -812,6 +698,8 @@ void ComponentFieldMap::Jacobian5(const Element& element, const double u,
                v * n3.x - two4x + twov * n4.x - two6x - twov * n6.x) +
        two5x - two7x + v2 * (-n0.x + n1.x + n2.x - n3.x - two5x + two7x)) /
       4;
+  // Determinant.
+  det = jac[0][0] * jac[1][1] - jac[0][1] * jac[1][0];
 }
 
 void ComponentFieldMap::Jacobian13(const Element& element, const double t,
