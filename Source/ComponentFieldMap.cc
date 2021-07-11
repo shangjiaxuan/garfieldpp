@@ -829,73 +829,39 @@ void ComponentFieldMap::Jacobian13(const Element& element, const double t,
   const Node& n8 = m_nodes[element.emap[8]];
   const Node& n9 = m_nodes[element.emap[9]];
 
-  // Shorthands.
-  const double fourt = 4 * t;
-  const double fouru = 4 * u;
-  const double fourv = 4 * v;
-  const double fourw = 4 * w;
+  const double tx = 4 * ((-0.25 + t) * n0.x + u * n4.x + v * n5.x + w * n6.x);
+  const double ty = 4 * ((-0.25 + t) * n0.y + u * n4.y + v * n5.y + w * n6.y);
+  const double tz = 4 * ((-0.25 + t) * n0.z + u * n4.z + v * n5.z + w * n6.z);
 
-  const double x0 = (-1 + fourt) * n0.x;
-  const double y0 = (-1 + fourt) * n0.y;
-  const double z0 = (-1 + fourt) * n0.z;
-  const double xp = fouru * n4.x + fourv * n5.x + fourw * n6.x;
-  const double yp = fouru * n4.y + fourv * n5.y + fourw * n6.y;
-  const double zp = fouru * n4.z + fourv * n5.z + fourw * n6.z;
+  const double ux = 4 * ((-0.25 + u) * n1.x + t * n4.x + v * n7.x + w * n8.x);
+  const double uy = 4 * ((-0.25 + u) * n1.y + t * n4.y + v * n7.y + w * n8.y);
+  const double uz = 4 * ((-0.25 + u) * n1.z + t * n4.z + v * n7.z + w * n8.z);
 
-  const double tx = x0 + xp;
-  const double ty = y0 + yp;
-  const double tz = z0 + zp;
+  const double vx = 4 * ((-0.25 + v) * n2.x + t * n5.x + u * n7.x + w * n9.x);
+  const double vy = 4 * ((-0.25 + v) * n2.y + t * n5.y + u * n7.y + w * n9.y);
+  const double vz = 4 * ((-0.25 + v) * n2.z + t * n5.z + u * n7.z + w * n9.z);
 
-  const double x1 = (-1 + fouru) * n1.x;
-  const double y1 = (-1 + fouru) * n1.y;
-  const double z1 = (-1 + fouru) * n1.z;
-  const double xq = fourt * n4.x + fourv * n7.x + fourw * n8.x;
-  const double yq = fourt * n4.y + fourv * n7.y + fourw * n8.y;
-  const double zq = fourt * n4.z + fourv * n7.z + fourw * n8.z;
+  const double wx = 4 * ((-0.25 + w) * n3.x + t * n6.x + u * n8.x + v * n9.x);
+  const double wy = 4 * ((-0.25 + w) * n3.y + t * n6.y + u * n8.y + v * n9.y);
+  const double wz = 4 * ((-0.25 + w) * n3.z + t * n6.z + u * n8.z + v * n9.z);
 
-  const double ux = x1 + xq;
-  const double uy = y1 + yq;
-  const double uz = z1 + zq;
+  const double ax = ux - wx;
+  const double ay = uy - wy;
 
-  const double x2 = (-1 + fourv) * n2.x;
-  const double y2 = (-1 + fourv) * n2.y;
-  const double z2 = (-1 + fourv) * n2.z;
-  const double xr = fourt * n5.x + fouru * n7.x + fourw * n9.x;
-  const double yr = fourt * n5.y + fouru * n7.y + fourw * n9.y;
-  const double zr = fourt * n5.z + fouru * n7.z + fourw * n9.z;
+  const double bx = ux - vx;
+  const double by = uy - vy;
 
-  const double vx = x2 + xr;
-  const double vy = y2 + yr;
-  const double vz = z2 + zr;
+  const double cx = vx - wx;
+  const double cy = vy - wy;
 
-  const double x3 = (-1 + fourw) * n3.x;
-  const double y3 = (-1 + fourw) * n3.y;
-  const double z3 = (-1 + fourw) * n3.z;
-  const double xs = fourt * n6.x + fouru * n8.x + fourv * n9.x;
-  const double ys = fourt * n6.y + fouru * n8.y + fourv * n9.y;
-  const double zs = fourt * n6.z + fouru * n8.z + fourv * n9.z;
+  const double dx = tx - wx;
+  const double dy = ty - wy;
 
-  const double wx = x3 + xs;
-  const double wy = y3 + ys;
-  const double wz = z3 + zs;
+  const double ex = tx - vx;
+  const double ey = ty - vy;
 
-  const double ax = x1 - x3 + xq - xs;
-  const double ay = y1 - y3 + yq - ys;
-
-  const double bx = x1 - x2 + xq - xr;
-  const double by = y1 - y2 + yq - yr;
-
-  const double cx = x2 - x3 + xr - xs;
-  const double cy = y2 - y3 + yr - ys;
-
-  const double dx = x0 - x3 + xp - xs;
-  const double dy = y0 - y3 + yp - ys;
-
-  const double ex = x0 - x2 + xp - xr;
-  const double ey = y0 - y2 + yp - yr;
-
-  const double fx = x0 - x1 + xp - xq;
-  const double fy = y0 - y1 + yp - yq;
+  const double fx = tx - ux;
+  const double fy = ty - uy;
 
   // Determinant of the quadrilateral serendipity Jacobian
   det = (-ax * vy + bx * wy + cx * uy) * tz -
