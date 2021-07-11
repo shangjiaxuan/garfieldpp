@@ -661,43 +661,29 @@ void ComponentFieldMap::Jacobian5(const Element& element, const double u,
   const Node& n5 = m_nodes[element.emap[5]];
   const Node& n6 = m_nodes[element.emap[6]];
   const Node& n7 = m_nodes[element.emap[7]];
-  const double u2 = u * u;
-  const double v2 = v * v;
-  const double twou = 2 * u;
-  const double twov = 2 * v;
-  const double two4x = 2 * n4.x;
-  const double two4y = 2 * n4.y;
-  const double two5x = 2 * n5.x;
-  const double two5y = 2 * n5.y;
-  const double two6x = 2 * n6.x;
-  const double two6y = 2 * n6.y;
-  const double two7x = 2 * n7.x;
-  const double two7y = 2 * n7.y;
+
   // Jacobian terms
-  jac[0][0] =
-      (u2 * (-n0.y - n1.y + n2.y + n3.y + two4y - two6y) +
-       2 * (-n4.y + n6.y + v * (n0.y + n1.y + n2.y + n3.y - two5y - two7y)) +
-       u * (n0.y - twov * n0.y - n1.y + twov * n1.y + n2.y + twov * n2.y -
-            n3.y - twov * n3.y - twov * two5y + twov * two7y)) /
-      4;
-  jac[0][1] =
-      (u2 * (n0.x + n1.x - n2.x - n3.x - two4x + two6x) -
-       2 * (-n4.x + n6.x + v * (n0.x + n1.x + n2.x + n3.x - two5x - two7x)) +
-       u * ((-1 + twov) * n0.x + n1.x - twov * n1.x - n2.x - twov * n2.x +
-            n3.x + twov * n3.x + twov * two5x - twov * two7x)) /
-      4;
-  jac[1][0] =
-      (v * (-n0.y + n1.y - n2.y + n3.y) - two5y +
-       twou * ((-1 + v) * n0.y + (-1 + v) * n1.y - n2.y - v * n2.y - n3.y -
-               v * n3.y + two4y - twov * n4.y + two6y + twov * n6.y) +
-       v2 * (n0.y - n1.y - n2.y + n3.y + two5y - two7y) + two7y) /
-      4;
-  jac[1][1] =
-      (v * (n0.x - n1.x + n2.x - n3.x) +
-       twou * (n0.x - v * n0.x + n1.x - v * n1.x + n2.x + v * n2.x + n3.x +
-               v * n3.x - two4x + twov * n4.x - two6x - twov * n6.x) +
-       two5x - two7x + v2 * (-n0.x + n1.x + n2.x - n3.x - two5x + two7x)) /
-      4;
+  jac[0][0] = 0.25 * ( 
+      (1 - u) * (2 * v + u) * n0.y + (1 + u) * (2 * v - u) * n1.y +
+      (1 + u) * (2 * v + u) * n2.y + (1 - u) * (2 * v - u) * n3.y) -
+    0.5 * (1 - u) * (1 + u) * n4.y - (1 + u) * v * n5.y +
+    0.5 * (1 - u) * (1 + u) * n6.y - (1 - u) * v * n7.y;
+  jac[0][1] = -0.25 * ( 
+      (1 - u) * (2 * v + u) * n0.x + (1 + u) * (2 * v - u) * n1.x + 
+      (1 + u) * (2 * v + u) * n2.x + (1 - u) * (2 * v - u) * n3.x) +
+    0.5 * (1 - u) * (1 + u) * n4.x + (1 + u) * v * n5.x -
+    0.5 * (1 - u) * (1 + u) * n6.x + (1 - u) * v * n7.x;
+  jac[1][0] = -0.25 * ( 
+      (1 - v) * (2 * u + v) * n0.y + (1 - v) * (2 * u - v) * n1.y + 
+      (1 + v) * (2 * u + v) * n2.y + (1 + v) * (2 * u - v) * n3.y) +
+    (1 - v) * u * n4.y - 0.5 * (1 - v) * (1 + v) * n5.y +
+    (1 + v) * u * n6.y + 0.5 * (1 - v) * (1 + v) * n7.y;
+  jac[1][1] = 0.25 * ( 
+      (1 - v) * (2 * u + v) * n0.x + (1 - v) * (2 * u - v) * n1.x +
+      (1 + v) * (2 * u + v) * n2.x + (1 + v) * (2 * u - v) * n3.x) -
+    (1 - v) * u * n4.x + 0.5 * (1 - v) * (1 + v) * n5.x -
+    (1 + v) * u * n6.x - 0.5 * (1 - v) * (1 + v) * n7.x;
+
   // Determinant.
   det = jac[0][0] * jac[1][1] - jac[0][1] * jac[1][0];
 }
