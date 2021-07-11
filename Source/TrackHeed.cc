@@ -661,7 +661,9 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
         ClearBank(newSecondaries);
         return;
       }
-      fluorescencePhoton->fly(newSecondaries);
+      if (m_usePhotonReabsorption) {
+        fluorescencePhoton->fly(newSecondaries);
+      }
     }
     secondaries.swap(newSecondaries);
     ClearBank(newSecondaries);
