@@ -5,7 +5,7 @@
 
 namespace Heed {
 
-//#define EXCLUDE_A_VALUES   // exclude absorption values
+#define EXCLUDE_A_VALUES   // exclude absorption values
 
 /// The PAI cross section of energy transfers from charged particle to media.
 /// The particle has fixed parameters (energy, speed, etc.), which
@@ -20,10 +20,14 @@ class EnTransfCS {
   EnTransfCS() = default;
   /// Constructor
   EnTransfCS(double fparticle_mass, double fgamma_1, bool fs_primary_electron,
-             HeedMatterDef* fhmd, long fparticle_charge = 1);
+             HeedMatterDef* fhmd, long fparticle_charge = 1,
+             const bool debug = false);
 
   void print(std::ostream& file, int l) const;
   EnTransfCS* copy() const { return new EnTransfCS(*this); }
+
+  /// Flag indicating whether the calculation was successful.
+  bool m_ok = true;
 
   /// Particle mass [MeV]
   double particle_mass = 0.;

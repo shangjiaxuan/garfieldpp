@@ -761,7 +761,12 @@ bool TrackHeed::Initialise(Medium* medium) {
   m_transferCs.reset(new Heed::EnTransfCS(1.e-6 * m_mass, GetGamma() - 1.,
                                           m_isElectron, m_matter.get(),
                                           long(m_q)));
-
+  if (!m_transferCs->m_ok) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Problems occured when calculating the differential"
+              << " cross-section table.\n"
+              << "    Results will be inaccurate.\n";
+  }
   if (!SetupDelta(databasePath)) return false;
 
   if (m_debug) {
