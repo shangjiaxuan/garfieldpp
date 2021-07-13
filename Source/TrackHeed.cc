@@ -723,19 +723,27 @@ bool TrackHeed::Initialise(Medium* medium) {
   // Make sure the path to the Heed database is known.
   std::string databasePath;
   char* dbPath = std::getenv("HEED_DATABASE");
-  if (dbPath == NULL) {
-    // Try GARFIELD_HOME.
-    dbPath = std::getenv("GARFIELD_HOME");
-    if (dbPath == NULL) {
-      std::cerr << m_className << "::Initialise:\n"
-                << "    Cannot retrieve database path "
-                << "(environment variables HEED_DATABASE and GARFIELD_HOME "
-                << "are not defined).\n    Cannot proceed.\n";
-      return false;
-    }
-    databasePath = std::string(dbPath) + "/Heed/heed++/database";
-  } else {
+  if (dbPath) {
     databasePath = dbPath;
+  } else {
+    // Try GARFIELD_INSTALL.
+    dbPath = std::getenv("GARFIELD_INSTALL");
+    if (dbPath) {
+      databasePath = std::string(dbPath) + "/share/Heed/database";
+    } else {
+      // Try GARFIELD_HOME.
+      dbPath = std::getenv("GARFIELD_HOME");
+      if (dbPath) {
+        databasePath = std::string(dbPath) + "/Heed/heed++/database";
+      } else {
+        std::cerr << m_className << "::Initialise:\n"
+                  << "    Cannot retrieve database path "
+                  << "(environment variables HEED_DATABASE, GARFIELD_INSTALL "
+                  << "and GARFIELD_HOME are not defined).\n"
+                  << "    Cannot proceed.\n";
+        return false;
+      }
+    }
   }
   if (databasePath[databasePath.size() - 1] != '/') {
     databasePath.append("/");
@@ -761,7 +769,12 @@ bool TrackHeed::Initialise(Medium* medium) {
   m_transferCs.reset(new Heed::EnTransfCS(1.e-6 * m_mass, GetGamma() - 1.,
                                           m_isElectron, m_matter.get(),
                                           long(m_q)));
-
+  if (!m_transferCs->m_ok) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Problems occured when calculating the differential"
+              << " cross-section table.\n"
+              << "    Results will be inaccurate.\n";
+  }
   if (!SetupDelta(databasePath)) return false;
 
   if (m_debug) {
