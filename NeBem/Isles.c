@@ -4,12 +4,14 @@
 
 #define DEFINE_ISLESGLOBAL
 
+#include "Isles.h"
+
 #include <complex.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "Isles.h"
+#include <gsl/gsl_sf.h>
 
 #define SHIFT 2.0
 #define ARMAX 10000.0  // Maximum aspect ratio for an element
@@ -25,8 +27,8 @@
 #ifdef __cplusplus
 #include <cmath>
 #ifdef _GLIBCXX_HAVE_OBSOLETE_ISINF_ISNAN
-using std::isnan;
 using std::isinf;
+using std::isnan;
 #endif
 namespace neBEM {
 #endif
@@ -39,7 +41,6 @@ namespace neBEM {
 // Expressions from:
 int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
                  double xhi, double zhi, double *Potential, Vector3D *Flux) {
-
   if (DebugISLES) printf("In ExactRecSurf ...\n");
 
   ++IslesCntr;
@@ -96,7 +97,6 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
   if (fabs(I2) < MINDIST2) I2 = 0.0;
   if (fabs(R1) < MINDIST2) R1 = 0.0;
   if (fabs(R2) < MINDIST2) R2 = 0.0;
-
 
   if (DebugISLES) {
     fprintf(stdout, "X: %.16lg, Y: %.16lg, Z: %.16lg\n", X, Y, Z);
@@ -207,7 +207,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
     return 0;
   }
   if ((fabs(D12) <= MINDIST)) {
-     // close to xlo, 0, zhi
+    // close to xlo, 0, zhi
     if (DebugISLES) printf("fabs(D12) <= MINDIST ... ");
     double X1 = X;
     double Z1 = Z;
@@ -538,14 +538,14 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
   if (S2 != 0) {
     if (fabs(I1) > MINDIST2) {
       double a = D12 * D12 * dzhi * dzhi;
-      double b = R2 * R2 + I1 * I1; 
+      double b = R2 * R2 + I1 * I1;
       double tmp = -S2 * atan(2 * I1 * D12 * fabs(dzhi) / (a - b));
       if (b > a) {
         if ((X > xlo && Z > zhi) || (X < xlo && Z < zhi)) {
           tmp -= ST_PI;
         } else if ((X < xlo && Z > zhi) || (X > xlo && Z < zhi)) {
           tmp += ST_PI;
-        } 
+        }
       }
       sumTanTerms -= tmp;
     }
@@ -567,7 +567,7 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
 
   sumTanTerms *= -0.5;
   double Pot = -dxlo * DZTerm1 + dxhi * DZTerm2 + modY * sumTanTerms -
-                dzlo * DXTerm1 + dzhi * DXTerm2;
+               dzlo * DXTerm1 + dzhi * DXTerm2;
   double Fx = DZTerm1 - DZTerm2;
   double Fy = -SY * sumTanTerms;
   double Fz = DXTerm1 - DXTerm2;
@@ -706,7 +706,6 @@ int ExactRecSurf(double X, double Y, double Z, double xlo, double zlo,
 int ApproxRecSurf(double X, double Y, double Z, double xlo, double zlo,
                   double xhi, double zhi, int xseg, int zseg, double *Potential,
                   Vector3D *Flux) {
-
   if (DebugISLES) {
     printf("In ApproxRecSurf ...\n");
   }
@@ -722,7 +721,7 @@ int ApproxRecSurf(double X, double Y, double Z, double xlo, double zlo,
 
   double Pot = 0., XFlux = 0., YFlux = 0., ZFlux = 0.;
 
-  if (area > MINDIST2) { // else not necessary
+  if (area > MINDIST2) {  // else not necessary
     for (int i = 1; i <= xseg; ++i) {
       double xi = xlo + (dx / 2.0) + (i - 1) * dx;
       for (int k = 1; k <= zseg; ++k) {
@@ -753,8 +752,8 @@ int ApproxRecSurf(double X, double Y, double Z, double xlo, double zlo,
           YFlux += f * Y;
           ZFlux += f * (Z - zk);
           if (DebugISLES) {
-            printf("Special XFlux: %lg, YFlux: %lg, ZFlux: %lg\n",
-                   f * (X - xi), f * Y, f * (Z - zk));
+            printf("Special XFlux: %lg, YFlux: %lg, ZFlux: %lg\n", f * (X - xi),
+                   f * Y, f * (Z - zk));
           }
         }  // else dist >= diag
       }    // zseg
@@ -783,13 +782,12 @@ int ApproxRecSurf(double X, double Y, double Z, double xlo, double zlo,
 // Expressions from:
 int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
                  Vector3D *Flux) {
-
   if (DebugISLES) printf("In ExactTriSurf ...\n");
 
   ++IslesCntr;
   ++ExactCntr;
   // Reset the flag to indicate approximate evaluation of potential.
-  ApproxFlag = 0; 
+  ApproxFlag = 0;
 
   // We do not need to check for X, since element extent is always 0 - 1.
   if (zMax < 3.0 * SHIFT * MINDIST) {
@@ -840,7 +838,7 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
   double I2 = modY * (X - 1.0);
   if (fabs(I2) < MINDIST2) I2 = 0.0;
   double Hypot = sqrt(1.0 + zMax * zMax);
-  if (Hypot < MINDIST) { // superfluous
+  if (Hypot < MINDIST) {  // superfluous
     fprintf(stdout, "Hypotenuse too small! ... returning ...\n");
     return -1;
   }
@@ -1150,8 +1148,8 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     }
     ExactTriSurf(zMax, X, Y, Z1, &Pot1, &Flux1);
     *Potential = Pot1;
-    Flux->X = Flux1.X; 
-    Flux->Y = Flux1.Y; 
+    Flux->X = Flux1.X;
+    Flux->Y = Flux1.Y;
     Flux->Z = Flux1.Z;
     return 0;
   }
@@ -1248,32 +1246,32 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     // denominator zero for LP1 and LM1
     ApproxFlag = 11; ++FailureCntr; --ExactCntr;
     fprintf(fIsles, "denominator zero for LP1 and LM1 ... approximating: %d.\n",
-            ApproxFlag); 
-    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, 
+            ApproxFlag);
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
                           Flux));
   }
   if ((fabs(H1 + D12 * G) <= MINDIST2) && (modY <= MINDIST)) {
-    // numerator zero for LP1 and LM1 
+    // numerator zero for LP1 and LM1
     ApproxFlag = 12; ++FailureCntr; --ExactCntr;
-    fprintf(fIsles, "numerator zero for LP1 and LM1 ... approximating: %d.\n", 
-            ApproxFlag); 
-    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, 
+    fprintf(fIsles, "numerator zero for LP1 and LM1 ... approximating: %d.\n",
+            ApproxFlag);
+    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
                          Flux));
   }
   if ((fabs(1.0 - X) <= MINDIST) && (modY <= MINDIST) )	{
     // denominator zero for LP2 and LM2
     ApproxFlag = 13; ++FailureCntr; --ExactCntr;
     fprintf(fIsles, "denominator zero for LP2 and LM2 ... approximating: %d.\n",
-            ApproxFlag); 
-    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, 
+            ApproxFlag);
+    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
                          Flux));
   }
   if ((fabs(H2 + D21 * G) <= MINDIST2) && (modY <= MINDIST)) {
-    // numerator zero for LP2 and LM2 
+    // numerator zero for LP2 and LM2
     ApproxFlag = 14; ++FailureCntr; --ExactCntr;
-    fprintf(fIsles, "numerator zero for LP2 and LM2 ... approximating: %d.\n", 
-            ApproxFlag); 
-    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, 
+    fprintf(fIsles, "numerator zero for LP2 and LM2 ... approximating: %d.\n",
+            ApproxFlag);
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
                           Flux));
   }
   */
@@ -1283,14 +1281,16 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
   if (D11 * fabs(Z) <= MINDIST2) {
     ApproxFlag = 15; ++FailureCntr; --ExactCntr;
     fprintf(fIsles, "D11*fabs(Z) zero for TanhTerms ... approximating: %d.\n",
-            ApproxFlag); 
-    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+            ApproxFlag);
+    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
+  Flux));
   }
   if (D21 * fabs(Z) <= MINDIST2) {
     ApproxFlag = 16; ++FailureCntr; --ExactCntr;
-    fprintf(fIsles, "D21*fabs(Z) zero for TanhTerms ... approximating: %d.\n", 
-            ApproxFlag); 
-    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+    fprintf(fIsles, "D21*fabs(Z) zero for TanhTerms ... approximating: %d.\n",
+            ApproxFlag);
+    return(ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
+  Flux));
   }
   */
 
@@ -1342,10 +1342,12 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     double Re1 = ((-X) * (H1 + G * D12) + modY * modY * (E1 - zMax * D12)) * s1;
     double Im1 = ((-X) * modY * (E1 - zMax * D12) - (H1 + G * D12) * modY) * s1;
     const double s2 = 1. / ((1. - X) * (1. - X) + modY * modY);
-    double Re2 = ((1. - X) * (H2 + G * D21) + modY * modY * (E2 - zMax * D21)) * s2;
-    double Im2 = ((1. - X) * modY * (E2 - zMax * D21) - (H2 + G * D21) * modY) * s2;
+    double Re2 =
+        ((1. - X) * (H2 + G * D21) + modY * modY * (E2 - zMax * D21)) * s2;
+    double Im2 =
+        ((1. - X) * modY * (E2 - zMax * D21) - (H2 + G * D21) * modY) * s2;
     deltaLog = 0.5 * log((Re1 * Re1 + Im1 * Im1) / (Re2 * Re2 + Im2 * Im2));
-    deltaArg = atan2(Im1, Re1) - atan2(Im2, Re2); 
+    deltaArg = atan2(Im1, Re1) - atan2(Im2, Re2);
   } else {
     double f1 = fabs((H1 + G * D12) / (-X));
     if (f1 < MINDIST) f1 = MINDIST;
@@ -1390,13 +1392,13 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
       TanhTerm1 = 1.;
       if (fabs(R1 - D11 * fabs(Z)) > MINDIST2 || true) {
         const double rp = D11 * fabs(Z) + R1;
-        const double rm = D11 * fabs(Z) - R1; 
-        TanhTerm1 *= (I1 * I1 + rp * rp) / (I1 * I1 + rm * rm); 
-      } 
+        const double rm = D11 * fabs(Z) - R1;
+        TanhTerm1 *= (I1 * I1 + rp * rp) / (I1 * I1 + rm * rm);
+      }
       if (fabs(R1 - D21 * fabs(Z)) > MINDIST2 || true) {
         const double rp = D21 * fabs(Z) + R1;
-        const double rm = D21 * fabs(Z) - R1; 
-        TanhTerm1 *= (I2 * I2 + rm * rm) / (I2 * I2 + rp * rp); 
+        const double rm = D21 * fabs(Z) - R1;
+        TanhTerm1 *= (I2 * I2 + rm * rm) / (I2 * I2 + rp * rp);
       }
       TanhTerm1 = 0.5 * log(TanhTerm1);
     }
@@ -1434,12 +1436,12 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     fflush(stdout);
   }
 
-  double Pot = (zMax * Y * Y - X * G) * LTerm1 - 
-               (zMax * X + G) * modY * LTerm2 +
-        (S1 * X * TanhTerm1) + S1 * modY * TanhTerm2 +
-        2. * (G * DTerm1 - Z * DTerm2);
+  double Pot = (zMax * Y * Y - X * G) * LTerm1 -
+               (zMax * X + G) * modY * LTerm2 + (S1 * X * TanhTerm1) +
+               S1 * modY * TanhTerm2 + 2. * (G * DTerm1 - Z * DTerm2);
   Pot *= 0.5;
-  double Fx = G * LTerm1 + zMax * modY * LTerm2 - S1 * TanhTerm1 - 2.0 * zMax * DTerm1;
+  double Fx =
+      G * LTerm1 + zMax * modY * LTerm2 - S1 * TanhTerm1 - 2.0 * zMax * DTerm1;
   Fx *= 0.5;
   double Fy = -zMax * Y * LTerm1 + G * SY * LTerm2 - S1 * SY * TanhTerm2;
   Fy *= 0.5;
@@ -1531,18 +1533,18 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
       if (Y > 0.0) Fy += 0.5*ST_PI;
       if (Y < 0.0) Fy -= 0.5*ST_PI;
     } else if ((fabs(X - 1.0) < MINDIST) && (fabs(Z + zMax) < MINDIST)) {
-      // (1,-zMax) corner 
-      if (Y > 0.0) Fy -= 0.5*ST_PI; 
+      // (1,-zMax) corner
+      if (Y > 0.0) Fy -= 0.5*ST_PI;
       if (Y < 0.0) Fy += 0.5*ST_PI;
     } else if ((fabs(X) < MINDIST) && (Z < 0.0)) {
       // X = 0, Z < 0 - off ele
-      // along -ve Z axis 
-      if (Y > 0.0) Fy -= 0.5*ST_PI; 
+      // along -ve Z axis
+      if (Y > 0.0) Fy -= 0.5*ST_PI;
       if (Y < 0.0) Fy += 0.5*ST_PI;
     } else if ((fabs(X) < MINDIST) && (Z > 0.0)) {
       // X = 0, Z > 0 - on & off ele
-      // along +ve Z axis 
-      if (Y > 0.0) Fy += 0.5*ST_PI; 
+      // along +ve Z axis
+      if (Y > 0.0) Fy += 0.5*ST_PI;
       if (Y < 0.0) Fy -= 0.5*ST_PI;
     } else if (Z > 0.0) {
       // within rectangular bounds - changed for INPC
@@ -1554,7 +1556,7 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
       if (Y < 0.0) Fy += ST_PI;
     }
   */
-  // two other conditions, one for Z > zMax and another for Z < -zMax expected
+    // two other conditions, one for Z > zMax and another for Z < -zMax expected
 
     if (DebugISLES) {
       printf("After constant addition %d\n", ConstAdd);
@@ -1562,16 +1564,16 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
              Fz);
       fflush(stdout);
     }
-  } // point within element bounds
+  }  // point within element bounds
 
   // Error situations handled before returning the potential value
   if ((Pot < 0) || isnan(Pot) || isinf(Pot)) {
     fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
     fprintf(fIsles, "Problem with potential ... approximating!\n");
-    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
-            Z);
-    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
-            D21, D12, Hypot);
+    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X,
+            Y, Z);
+    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n",
+            D11, D21, D12, Hypot);
     fprintf(fIsles, "modY: %.16lg, G: %.16lg\n", modY, G);
     fprintf(fIsles, "E1: %.16lg, E2: %.16lg, H1: %.16lg, H2: %.16lg\n", E1, E2,
             H1, H2);
@@ -1581,16 +1583,17 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     ApproxFlag = 23;
     ++FailureCntr;
     --ExactCntr;
-    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
+                          Flux));
   }
 
   if (isnan(Fx) || isinf(Fx)) {
     fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
     fprintf(fIsles, "Problem with Fx ... approximating!\n");
-    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
-            Z);
-    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
-            D21, D12, Hypot);
+    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X,
+            Y, Z);
+    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n",
+            D11, D21, D12, Hypot);
     fprintf(fIsles, "modY: %.16lg, G: %.16lg\n", modY, G);
     fprintf(fIsles, "E1: %.16lg, E2: %.16lg, H1: %.16lg, H2: %.16lg\n", E1, E2,
             H1, H2);
@@ -1600,16 +1603,17 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     ApproxFlag = 24;
     ++FailureCntr;
     --ExactCntr;
-    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
+                          Flux));
   }
 
   if (isnan(Fy) || isinf(Fy)) {
     fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
     fprintf(fIsles, "Problem with Fy ... approximating!\n");
-    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
-            Z);
-    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
-            D21, D12, Hypot);
+    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X,
+            Y, Z);
+    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n",
+            D11, D21, D12, Hypot);
     fprintf(fIsles, "modY: %.16lg, G: %.16lg\n", modY, G);
     fprintf(fIsles, "E1: %.16lg, E2: %.16lg, H1: %.16lg, H2: %.16lg\n", E1, E2,
             H1, H2);
@@ -1619,23 +1623,25 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
     ApproxFlag = 25;
     ++FailureCntr;
     --ExactCntr;
-    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
+                          Flux));
   }
 
   if (isnan(Fz) || isinf(Fz)) {
     fprintf(fIsles, "\n---Approximation in ExactTriSurf---\n");
     fprintf(fIsles, "Problem with Fz ... approximating!\n");
-    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X, Y,
-            Z);
-    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n", D11,
-            D21, D12, Hypot);
+    fprintf(fIsles, "zMax: %.16lg, X: %.16lg, Y: %.16lg, Z: %.16lg\n", zMax, X,
+            Y, Z);
+    fprintf(fIsles, "D11: %.16lg, D21: %.16lg, D12: %.16lg, Hypot: %.16lg\n",
+            D11, D21, D12, Hypot);
     fprintf(fIsles, "modY: %.16lg\n", modY);
     fprintf(fIsles, "E1: %.16lg, E2: %.16lg\n", E1, E2);
     fprintf(fIsles, "Fz: %.16lg\n", Fz);
     ApproxFlag = 26;
     ++FailureCntr;
     --ExactCntr;
-    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential, Flux));
+    return (ApproxTriSurf(zMax, X, Y, Z, XNSegApprox, ZNSegApprox, Potential,
+                          Flux));
   }
 
   // Return the computed value of potential and flux
@@ -1659,7 +1665,6 @@ int ExactTriSurf(double zMax, double X, double Y, double Z, double *Potential,
 // trapezoid) have been properly taken care of in this implementation.
 int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
                   int nbzseg, double *Potential, Vector3D *Flux) {
-
   if (DebugISLES) printf("In ApproxTriSurf ...\n");
   ++ApproxCntr;
 
@@ -1702,7 +1707,7 @@ int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
         // completely outside the element - no effect of sub-element
         type_subele = 0;
         area = 0.0;
-      } else if (zend <= zlimit_xend) {  
+      } else if (zend <= zlimit_xend) {
         // completely within the element - rectangular sub-element
         type_subele = 1;
         xi = xbgn + 0.5 * dx;
@@ -1716,7 +1721,7 @@ int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
         double b = (zlimit_xbgn - zbgn);
         double h = dx;
 
-        if (fabs(a) <= MINDIST) {  
+        if (fabs(a) <= MINDIST) {
           // centroid of a triangle
           type_subele = 3;
           xi = xbgn + (h / 3.0);
@@ -1753,12 +1758,12 @@ int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
         YFlux += f * Y;
         ZFlux += f * (Z - zk);
         if (DebugISLES) {
-          printf("Special XFlux: %lg, YFlux: %lg, ZFlux: %lg\n",
-                 f * (X - xi), f * Y, f * (Z - zk));
+          printf("Special XFlux: %lg, YFlux: %lg, ZFlux: %lg\n", f * (X - xi),
+                 f * Y, f * (Z - zk));
         }
       }
-    }      // nbzseg
-  }        // nbxseg
+    }  // nbzseg
+  }    // nbxseg
 
   *Potential = Pot;
   Flux->X = XFlux;
@@ -1792,7 +1797,7 @@ double ExactAxialP_W(double rW, double lW, double Z) {
   const double h = 0.5 * lW;
   const double r2 = rW * rW;
   const double a = h + Z;
-  const double b = h - Z; 
+  const double b = h - Z;
   double Pot = log((a + sqrt(a * a + r2)) * (b + sqrt(b * b + r2)) / r2);
   return 2. * ST_PI * rW * Pot;
 }  // ExactAxialP ends
@@ -1802,14 +1807,14 @@ double ExactAxialFZ_W(double rW, double lW, double Z) {
   if (DebugISLES) printf("In ExactAxialFZ_W ...\n");
   double h = 0.5 * lW;
   double Fz = 2.0 * ST_PI *
-       (sqrt(h * h + 2.0 * Z * h + Z * Z + rW * rW) -
-        sqrt(h * h - 2.0 * Z * h + Z * Z + rW * rW)) /
-       sqrt(h * h - 2.0 * Z * h + Z * Z + rW * rW) /
-       sqrt(h * h + 2.0 * Z * h + Z * Z + rW * rW);
+              (sqrt(h * h + 2.0 * Z * h + Z * Z + rW * rW) -
+               sqrt(h * h - 2.0 * Z * h + Z * Z + rW * rW)) /
+              sqrt(h * h - 2.0 * Z * h + Z * Z + rW * rW) /
+              sqrt(h * h + 2.0 * Z * h + Z * Z + rW * rW);
   return (rW * Fz);
 }  // ExactAxialFZ ends
 
-double ApproxP_W(double rW, double lW, double X, double Y, double Z, int zseg) {  
+double ApproxP_W(double rW, double lW, double X, double Y, double Z, int zseg) {
   // Approximate potential due to a wire segment
   if (DebugISLES) printf("In ApproxP_W ...\n");
   ++ApproxCntr;
@@ -1927,12 +1932,12 @@ int ApproxWire(double rW, double lW, double X, double Y, double Z, int zseg,
   return 0;
 }
 
-double ImprovedP_W(double rW, double lW, double X, double Y, double Z) {  
+double ImprovedP_W(double rW, double lW, double X, double Y, double Z) {
   // Improved potential at far away points:
   // wire2.m applicable for thin wires
   if (DebugISLES) printf("In ImprovedP_W ...\n");
 
-  double dz = 0.5 * lW; // half length of the wire segment
+  double dz = 0.5 * lW;  // half length of the wire segment
   double dtmp1 = (X * X + Y * Y + (Z - dz) * (Z - dz));
   dtmp1 = sqrt(dtmp1);
   dtmp1 = dtmp1 - (Z - dz);
@@ -1953,7 +1958,7 @@ double ImprovedFX_W(double rW, double lW, double X, double Y, double Z) {
   } else if ((fabs(X) < MINDIST) && (fabs(Y) < MINDIST)) {
     // point on the axis of the wire element
     return (0.0);
-  } else {  
+  } else {
     // point far away from the wire element
     double C = (Z) - (lW / 2.0);
     double D = (Z) + (lW / 2.0);
@@ -1974,10 +1979,10 @@ double ImprovedFY_W(double rW, double lW, double X, double Y, double Z) {
   if (dist < MINDIST) {
     // distance less than MINDIST
     return (0.0);
-  } else if ((fabs(X) < MINDIST) && (fabs(Y) < MINDIST)) {  
+  } else if ((fabs(X) < MINDIST) && (fabs(Y) < MINDIST)) {
     // point on the axis of the wire element
     return (0.0);
-  } else {  
+  } else {
     // point far away from the wire element
     double C = (Z) - (lW / 2.0);
     double D = (Z) + (lW / 2.0);
@@ -1995,8 +2000,8 @@ double ImprovedFZ_W(double rW, double lW, double X, double Y, double Z) {
   if (DebugISLES) printf("In ImprovedFZ_W ...\n");
 
   double dist = sqrt(X * X + Y * Y + Z * Z);
-  if (dist < MINDIST)  {
-   // distance less than MINDIST
+  if (dist < MINDIST) {
+    // distance less than MINDIST
     return (0.0);
   } else if ((fabs(X) < MINDIST) && (fabs(Y) < MINDIST)) {
     // point on the axis of the wire element
@@ -2008,7 +2013,7 @@ double ImprovedFZ_W(double rW, double lW, double X, double Y, double Z) {
     double tmp1 = 2.0 * ST_PI * rW;
     double tmp2 = (1.0 / B) - (1.0 / A);
     return (-1.0 * tmp1 * tmp2);
-  } else {  
+  } else {
     // point far away from the wire element
     double C = Z - (lW / 2.0);
     double D = Z + (lW / 2.0);
@@ -2025,7 +2030,7 @@ int ImprovedWire(double rW, double lW, double X, double Y, double Z,
                  double *potential, Vector3D *Flux) {
   if (DebugISLES) printf("In ImprovedWire ...\n");
 
-  double dz = 0.5 * lW; // half length of the wire segment
+  double dz = 0.5 * lW;  // half length of the wire segment
 
   double dtmp1 = (X * X + Y * Y + (Z - dz) * (Z - dz));
   dtmp1 = sqrt(dtmp1);
@@ -2044,7 +2049,7 @@ int ImprovedWire(double rW, double lW, double X, double Y, double Z,
     Fx = 0.0;
     Fy = 0.0;
     Fz = 0.0;
-  } else if ((fabs(X) < MINDIST) && (fabs(Y) < MINDIST)) {  
+  } else if ((fabs(X) < MINDIST) && (fabs(Y) < MINDIST)) {
     // point on the axis of the wire element
     Fx = 0.0;
     Fy = 0.0;
@@ -2057,7 +2062,7 @@ int ImprovedWire(double rW, double lW, double X, double Y, double Z,
     double tmp1 = 2.0 * ST_PI * rW;
     double tmp2 = (1.0 / B) - (1.0 / A);
     Fz = -1.0 * tmp1 * tmp2;
-  } else {  
+  } else {
     // point far away from the wire element
     double C = (Z) - (lW / 2.0);
     double D = (Z) + (lW / 2.0);
@@ -2108,12 +2113,13 @@ double ExactThinFX_W(double rW, double lW, double X, double Y, double Z) {
   // Expressions from PFXYZ_thin.m
   double h = 0.5 * lW;
   double Fx = 2.0 * X *
-       (sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * h -
-        sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * Z +
-        sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) * h +
-        sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) * Z) /
-       (X * X + Y * Y) / sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) /
-       sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * ST_PI;
+              (sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * h -
+               sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * Z +
+               sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) * h +
+               sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) * Z) /
+              (X * X + Y * Y) /
+              sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) /
+              sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * ST_PI;
   return (rW * Fx);
 }  // ExactThinFX_W ends
 
@@ -2126,12 +2132,13 @@ double ExactThinFY_W(double rW, double lW, double X, double Y, double Z) {
   // Expressions from PFXYZ_thin.m
   double h = 0.5 * lW;
   double Fy = 2.0 * Y *
-       (sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * h -
-        sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * Z +
-        sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) * h +
-        sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) * Z) /
-       (X * X + Y * Y) / sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) /
-       sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * ST_PI;
+              (sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * h -
+               sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * Z +
+               sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) * h +
+               sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) * Z) /
+              (X * X + Y * Y) /
+              sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) /
+              sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * ST_PI;
   return (rW * Fy);
 }  // ExactThinFY_W ends
 
@@ -2145,10 +2152,10 @@ double ExactThinFZ_W(double rW, double lW, double X, double Y, double Z) {
   // Expressions from PFXYZ_thin.m
   double h = 0.5 * lW;
   double Fz = 2.0 *
-       (sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) -
-        sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h)) /
-       sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) /
-       sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * ST_PI;
+              (sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) -
+               sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h)) /
+              sqrt(X * X + Y * Y + Z * Z - 2.0 * Z * h + h * h) /
+              sqrt(X * X + Y * Y + Z * Z + h * h + 2.0 * Z * h) * ST_PI;
   return (rW * Fz);
 }  // ExactThinFZ_W ends
 
@@ -2162,16 +2169,84 @@ int ExactThinWire(double rW, double lW, double X, double Y, double Z,
   const double r2 = X * X + Y * Y;
   const double a = h + Z;
   const double b = h - Z;
-  const double c = sqrt(r2 + a * a); 
+  const double c = sqrt(r2 + a * a);
   const double d = sqrt(r2 + b * b);
   const double s = 2. * ST_PI * rW;
   *potential = s * log((a + c) * (b + d) / r2);
-  double f = s * (c * b + d * a) / (r2 * c * d); 
+  double f = s * (c * b + d * a) / (r2 * c * d);
   Flux->X = f * X;
   Flux->Y = f * Y;
   Flux->Z = s * (c - d) / (c * d);
   return 0;
 }
+
+// Radius of ring is 'a'
+// The point is passed in the local coordinate system, in the ECS of the ring
+// In the ECS, plane of the ring is r,theta (XY) and z is the ordinate
+// up and down of this plane.
+// The charge density is assumed to be one.
+// Reference: Fonte 2013 - Survey of physical modelling in Resistive Plate
+// Chambers.pdf, equation (4.52)
+
+ISLESGLOBAL int ExactRingPF(double a, Point3D localPt, double *potential,
+                            Vector3D *Flux) {
+  int dbgFn = 0;
+
+  // Coordinate transformation as performed for lines is necessary
+  // Origin of the system is the center of the ring
+  // The plane of the ring will need to be identified
+  // An axis vertical to the plane will be the Y-axis
+  // An axis orthogonal to the Y-axis will be X-axis (as done for lines)
+  // Cross between the X and Y units will yield unit Z
+  // Input parameter will need to be added - we now have only the radius
+  // A way of identifying the plane of the ring is needed. It is quite likel
+  // that the normal to the ring plane will be provided as an input. That
+  // will immediately give us unit Y. The rest can be easily deduced.
+
+  double roe = localPt.X * localPt.X + localPt.Y * localPt.Y;
+  roe = pow(roe, 0.5);
+  double z = localPt.Z;
+  double r1dot = ((a + roe) * (a + roe)) + z * z;
+  r1dot = pow(r1dot, 0.5);
+  double u = 2.0 * pow((a * roe), 0.5) / r1dot;
+
+  // K1 and K2 are complete elliptic integrals
+  // K implies first kind, according to GSL (and Wikipedia) convention
+  gsl_mode_t mode = GSL_PREC_DOUBLE;
+  double K1, K2;
+  double err1 = 0.0;
+  double err2 = 0.0;
+
+  // Following are the routines with debugging information
+  if (dbgFn) {
+    gsl_sf_result rK1, rK2;
+    int status = gsl_sf_ellint_Kcomp_e(u, mode, &rK1);
+    status = gsl_sf_ellint_Ecomp_e(u, mode, &rK2);
+    K1 = rK1.val;
+    K2 = rK2.val;
+    err1 = rK1.err;
+    err2 = rK2.err;
+  } else {  // If debugging information is not necessary
+    K1 = gsl_sf_ellint_Kcomp(u, mode);
+    K2 = gsl_sf_ellint_Ecomp(u, mode);
+  }
+
+  double Vring = (a / ST_PI) * K1 / r1dot;
+  // field in the radial direction
+  double Eringroe = (a / ST_PI) * ((1.0 / (2.0 * r1dot * roe)) *
+                (K1 - (((a * a - roe * roe + z * z) * K2) /
+                       (r1dot * r1dot * (1.0 - u * u)))));
+  // field in the z direction
+  double Eringz = (a / ST_PI) * 
+                  ((z * K2) / ((r1dot * r1dot * r1dot) * (1.0 - u * u)));
+
+  *potential = Vring;
+  Flux->X = Eringroe * localPt.X / roe;
+  Flux->Y = Eringroe * localPt.Y / roe;
+  Flux->Z = Eringz;
+
+  return 0;
+}  // ExactRingPF ends
 
 // Exact potential and GCS flux due to a point source
 double PointKnChPF(Point3D SourcePt, Point3D FieldPt, Vector3D *globalF) {
@@ -2196,8 +2271,17 @@ double PointKnChPF(Point3D SourcePt, Point3D FieldPt, Vector3D *globalF) {
 
 // Pass start and stop points of the line and get back potential and GCS flux
 // at field point assuming unit linear charge density.
-double LineKnChPF(Point3D LineStart, Point3D LineStop, double radius,
-                  Point3D FieldPt, Vector3D *globalF) {
+double LineKnChPF(Point3D LineStart, Point3D LineStop, Point3D FieldPt,
+                  Vector3D *globalF) {
+  int debugFn = 0;
+
+  if (debugFn) {
+    printf("In LineKnChPF:\n");
+    printf("LineStart: %lg %lg %lg\n", LineStart.X, LineStart.Y, LineStart.Z);
+    printf("LineStop: %lg %lg %lg\n", LineStop.X, LineStop.Y, LineStop.Z);
+    printf("FieldPt: %lg %lg %lg\n", FieldPt.X, FieldPt.Y, FieldPt.Z);
+  }
+
   double xvert[2], yvert[2], zvert[2];
   xvert[0] = LineStart.X;
   xvert[1] = LineStop.X;
@@ -2214,6 +2298,266 @@ double LineKnChPF(Point3D LineStart, Point3D LineStop, double radius,
   double yorigin = 0.5 * (yvert[1] + yvert[0]);
   double zorigin = 0.5 * (zvert[1] + zvert[0]);
   double LZ = GetDistancePoint3D(&LineStop, &LineStart);
+  if (debugFn) {
+    printf("xorigin: %lg, yorigin: %lg, zorigin: %lg\n", xorigin, yorigin,
+           zorigin);
+    printf("LZ: %lg\n", LZ);
+  }
+
+  // Create a local coordinate system for which the z axis is along the length
+  // of the line
+  // FieldPt needs to be transformed to localPt
+
+  // Find direction cosines of the line charge to initiate the transformation.
+  DirnCosn3D DirCos;
+
+  // Copied from the DiscretizeWire function of neBEM/src/PreProcess/ReTrim.c
+  // Direction cosines along the wire - note difference from surface primitives!
+  // The direction along the wire is considered to be the z axis of the LCS.
+  // So, let us fix that axial vector first
+  DirCos.ZUnit.X = (xvert[1] - xvert[0]) / LZ;  // useful
+  DirCos.ZUnit.Y = (yvert[1] - yvert[0]) / LZ;
+  DirCos.ZUnit.Z = (zvert[1] - zvert[0]) / LZ;  // useful
+  // Now direction cosines for the X and Y axes.
+  {
+    Vector3D XUnit, YUnit, ZUnit;
+    ZUnit.X = DirCos.ZUnit.X;
+    ZUnit.Y = DirCos.ZUnit.Y;
+    ZUnit.Z = DirCos.ZUnit.Z;
+
+    // Find any vector that is orthogonal to the Z unit vector, and make that
+    // the X-axis
+    int caseComp = 1;
+    double maxComp = fabs(ZUnit.X);
+    if (fabs(ZUnit.Y) > maxComp) {
+      caseComp = 2;
+      maxComp = fabs(ZUnit.Y);
+    }
+    if (fabs(ZUnit.Z) > maxComp) {
+      caseComp = 3;
+      maxComp = fabs(ZUnit.Z);
+    }
+
+    switch (caseComp) {
+      case 1:  // ZUnit.X is larger than the other direction cosines
+        XUnit.Y = 1.0;
+        XUnit.Z = 1.0;
+        XUnit.X = (ZUnit.Y + ZUnit.Z) / ZUnit.X;
+        break;
+      case 2:  // ZUnit.Y is larger than the other direction cosines
+        XUnit.X = 1.0;
+        XUnit.Z = 1.0;
+        XUnit.Y = (ZUnit.X + ZUnit.Z) / ZUnit.Y;
+        break;
+      case 3:  // ZUnit.Z is larger than the other direction cosines
+        XUnit.X = 1.0;
+        XUnit.Y = 1.0;
+        XUnit.Z = (ZUnit.X + ZUnit.Y) / ZUnit.Z;
+        break;
+      default:;
+    }                              // switch ends
+    XUnit = UnitVector3D(&XUnit);  // direction cosines for X is created
+
+    // y-Axis: vectorial product of axes 1 and 2.
+    YUnit = Vector3DCrossProduct(&ZUnit, &XUnit);
+    YUnit = UnitVector3D(&YUnit);
+    // end of replacement
+
+    DirCos.XUnit.X = XUnit.X;
+    DirCos.XUnit.Y = XUnit.Y;
+    DirCos.XUnit.Z = XUnit.Z;
+    DirCos.YUnit.X = YUnit.X;
+    DirCos.YUnit.Y = YUnit.Y;
+    DirCos.YUnit.Z = YUnit.Z;
+  }  // X and Y direction cosines computed
+
+  Point3D localPt;
+  // Through InitialVector[], field point gets translated to ECS origin.
+  // Axes direction are, however, still global which when rotated to ECS
+  // system, yields FinalVector[].
+  {  // Rotate point3D from global to local system to get localPt.
+    double InitialVector[4];
+    double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
+                                         {0.0, 0.0, 0.0, 0.0},
+                                         {0.0, 0.0, 0.0, 0.0},
+                                         {0.0, 0.0, 0.0, 1.0}};
+    double FinalVector[4];
+
+    InitialVector[0] = xfld - xorigin;
+    InitialVector[1] = yfld - yorigin;
+    InitialVector[2] = zfld - zorigin;
+    InitialVector[3] = 1.0;
+
+    TransformationMatrix[0][0] = DirCos.XUnit.X;
+    TransformationMatrix[0][1] = DirCos.XUnit.Y;
+    TransformationMatrix[0][2] = DirCos.XUnit.Z;
+    TransformationMatrix[1][0] = DirCos.YUnit.X;
+    TransformationMatrix[1][1] = DirCos.YUnit.Y;
+    TransformationMatrix[1][2] = DirCos.YUnit.Z;
+    TransformationMatrix[2][0] = DirCos.ZUnit.X;
+    TransformationMatrix[2][1] = DirCos.ZUnit.Y;
+    TransformationMatrix[2][2] = DirCos.ZUnit.Z;
+
+    for (int i = 0; i < 4; ++i) {
+      FinalVector[i] = 0.0;
+      for (int j = 0; j < 4; ++j) {
+        FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
+      }
+    }
+
+    localPt.X = FinalVector[0];
+    localPt.Y = FinalVector[1];
+    localPt.Z = FinalVector[2];
+  }  // Point3D rotated
+
+  double Pot;
+  Vector3D localF;
+  double xpt = localPt.X;
+  double ypt = localPt.Y;
+  double zpt = localPt.Z;
+
+  if (debugFn) {
+    // printf("LineStart: %lg %lg %lg\n", LineStart.X, LineStart.Y,
+    // LineStart.Z); printf("LineStop: %lg %lg %lg\n", LineStop.X, LineStop.Y,
+    // LineStop.Z);
+    printf("localPt: %lg %lg %lg\n", localPt.X, localPt.Y, localPt.Z);
+    printf("LZ: %lg\n", LZ);
+  }
+
+  // field point from element centroid
+  double zptplus = zpt + 0.5 * LZ;
+  double zptminus = zpt - 0.5 * LZ;
+
+  // NOTE: MatLab15, Maple Tanay's expressions are the same, only rearranged in
+  // different ways. In MatLab, there are several possibilities indicated, but
+  // Maple produces only the reasonable ones.
+
+  /*
+  // Maple expressions: DefLineElementTry1.mw
+  gsl_complex tmpcmp;
+  tmpcmp.dat[0] = zptplus / sqrt(xpt*xpt + ypt*ypt); tmpcmp.dat[1] = 0.0;
+  gsl_complex Pot1 = gsl_complex_arcsinh(tmpcmp);
+  tmpcmp.dat[0] = zptminus / sqrt(xpt*xpt + ypt*ypt); tmpcmp.dat[1] = 0.0;
+  gsl_complex Pot2 = gsl_complex_arcsinh(tmpcmp);
+  Pot = Pot1.dat[0] - Pot2.dat[0];
+  // The following expressions need to be rewritten after consulting the Maple
+  // print-out.
+  localF.X = xpt *((zptplus*sqrt(xpt*xpt + ypt*ypt + zptminus*zptminus) -
+                    zptminus*sqrt(xpt*xpt + ypt*ypt + zptplus*zptplus)) / 
+                   (sqrt(xpt*xpt + ypt*ypt + zptminus*zptminus) * 
+                    sqrt(xpt*xpt + ypt*ypt + zptplus*zptplus)) * 
+                   (1.0/sqrt(xpt*xpt + ypt*ypt));
+  localF.Y = ypt *((zptplus*sqrt(xpt*xpt + ypt*ypt + zptminus*zptminus) -
+                    zptminus*sqrt(xpt*xpt + ypt*ypt + zptplus*zptplus)) / 
+                   (sqrt(xpt*xpt + ypt*ypt + zptminus*zptminus) * 
+                    sqrt(xpt*xpt + ypt*ypt + zptplus*zptplus) * 
+                    sqrt(xpt*xpt + ypt*ypt));
+  localF.Z = (sqrt(xpt*xpt + ypt*ypt + zptplus*zptplus) - 
+              sqrt(xpt*xpt + ypt*ypt + zptminus*zptminus)) / 
+             (sqrt(xpt*xpt + ypt*ypt + zptplus*zptplus) * 
+              sqrt(xpt*xpt + ypt*ypt + zptminus*zptminus));
+
+  if (debugFn) {
+    printf("Using Maple expressions =>\n");
+    printf("Pot1: %lg + i %lg\n", Pot1.dat[0], Pot1.dat[1]);
+    printf("Pot2: %lg + i %lg\n", Pot2.dat[0], Pot2.dat[1]);
+    printf("Pot: %lg\n", Pot);
+    printf("localF: %lg %lg %lg\n", localF.X, localF.Y, localF.Z);
+  }
+  */
+
+  // MatLab expressions: PFXYZ_MatLab15_4.out
+  Pot =
+      log(zptplus + sqrt(zptplus * zptplus + xpt * xpt + ypt * ypt))  
+      - log(zptminus + sqrt(xpt * xpt + ypt * ypt + zptminus * zptminus));
+  localF.X = xpt * ((zptplus / (xpt * xpt + ypt * ypt)  // MatLab
+                     / sqrt(zptplus * zptplus + xpt * xpt + ypt * ypt)) -
+                    (zptminus / (xpt * xpt + ypt * ypt) /
+                     sqrt(zptminus * zptminus + xpt * xpt + ypt * ypt)));
+  localF.Y = ypt * ((zptplus / (xpt * xpt + ypt * ypt)  // MatLab
+                     / sqrt(zptplus * zptplus + xpt * xpt + ypt * ypt)) -
+                    (zptminus / (xpt * xpt + ypt * ypt) /
+                     sqrt(zptminus * zptminus + xpt * xpt + ypt * ypt)));
+  localF.Z =
+      (1.0 / sqrt(zptminus * zptminus + xpt * xpt + ypt * ypt))  // MatLab
+      - (1.0 / sqrt(zptplus * zptplus + xpt * xpt + ypt * ypt));
+  if (debugFn) {
+    printf("Using MatLab expressions =>\n");
+    printf("Pot: %lg\n", Pot);
+    printf("localF: %lg %lg %lg\n", localF.X, localF.Y, localF.Z);
+  }
+
+  /*
+  // Tanay expressions - here the line is parallel to Z-axis, rather than Y.
+  // According to Tanay's paper, the lines are parallel to Y.
+  Pot = 0.0;	// Tanay does not have an expression for the potential.
+  // borrow from Matlab
+  // Pot =  log(zptplus + sqrt(zptplus*zptplus+xpt*xpt+ypt*ypt)) -
+  //        log(zptminus + sqrt(xpt*xpt+ypt*ypt+zptminus*zptminus)); 
+  localF.X = (xpt / (xpt*xpt + ypt*ypt)) * 
+             ((zptplus / sqrt(zptplus*zptplus + xpt*xpt + ypt*ypt)) - 
+              (zptminus / sqrt(zptminus*zptminus + xpt*xpt + ypt*ypt))); 
+  localF.Y = (ypt / (xpt*xpt + ypt*ypt)) * 
+             ((zptplus / sqrt(zptplus*zptplus + xpt*xpt + ypt*ypt)) -
+              (zptminus / sqrt(zptminus*zptminus + xpt*xpt + ypt*ypt))); 
+  localF.Z = - ((1.0 / sqrt(zptplus*zptplus + xpt*xpt + ypt*ypt))	-
+                (1.0 / sqrt(zptminus*zptminus + xpt*xpt + ypt*ypt))); 
+  if (debugFn) {
+    printf("Using Tanay expressions =>\n");
+    printf("Pot: %lg\n", Pot);
+    printf("localF: %lg %lg %lg\n", localF.X, localF.Y, localF.Z);
+  }
+  */
+
+  if (debugFn) {
+    printf("Pot: %lg\n", Pot);
+    printf("localF: %lg %lg %lg\n", localF.X, localF.Y, localF.Z);
+  }
+
+  (*globalF) = RotateVector3D(&localF, &DirCos, local2global);
+  if (debugFn) {
+    printf("globalF: %lg %lg %lg\n", globalF->X, globalF->Y, globalF->Z);
+    exit(-1);
+  }
+
+  return (Pot);
+}  // LineKnChPF ends
+
+// Pass start and stop points of the wire and get back potential and GCS flux
+// at field point assuming unit surface charge density.
+double WireKnChPF(Point3D WireStart, Point3D WireStop, double radius,
+                  Point3D FieldPt, Vector3D *globalF) {
+  int debugFn = 1;
+
+  if (debugFn) {
+    printf("In WireKnChPF:\n");
+    printf("WireStart: %lg %lg %lg\n", WireStart.X, WireStart.Y, WireStart.Z);
+    printf("WireStop: %lg %lg %lg\n", WireStop.X, WireStop.Y, WireStop.Z);
+    printf("radius: %lg\n", radius);
+    printf("FieldPt: %lg %lg %lg\n", FieldPt.X, FieldPt.Y, FieldPt.Z);
+  }
+
+  double xvert[2], yvert[2], zvert[2];
+  xvert[0] = WireStart.X;
+  xvert[1] = WireStop.X;
+  yvert[0] = WireStart.Y;
+  yvert[1] = WireStop.Y;
+  zvert[0] = WireStart.Z;
+  zvert[1] = WireStop.Z;
+
+  double xfld = FieldPt.X;
+  double yfld = FieldPt.Y;
+  double zfld = FieldPt.Z;
+
+  double xorigin = 0.5 * (xvert[1] + xvert[0]);
+  double yorigin = 0.5 * (yvert[1] + yvert[0]);
+  double zorigin = 0.5 * (zvert[1] + zvert[0]);
+  double LZ = GetDistancePoint3D(&WireStop, &WireStart);
+  if (debugFn) {
+    printf("xorigin: %lg, yorigin: %lg, zorigin: %lg\n", xorigin, yorigin,
+           zorigin);
+    printf("LZ: %lg\n", LZ);
+  }
 
   // Create a local coordinate system for which the z axis is along the length
   // of the wire
@@ -2225,7 +2569,10 @@ double LineKnChPF(Point3D LineStart, Point3D LineStop, double radius,
   // Copied from the DiscretizeWire function of neBEM/src/PreProcess/ReTrim.c
   // Direction cosines along the wire - note difference from surface primitives!
   // The direction along the wire is considered to be the z axis of the LCS.
-  // So, let us fix that axial vector first
+  // So, let us first fix that as the axial vector.
+  // Check whether this method is appropriate. If found not ok, we may need
+  // to change ReTrim.c as well.
+  // Finding the unit X and unit Y could work as in line elements.
   DirCos.ZUnit.X = (xvert[1] - xvert[0]) / LZ;  // useful
   DirCos.ZUnit.Y = (yvert[1] - yvert[0]) / LZ;
   DirCos.ZUnit.Z = (zvert[1] - zvert[0]) / LZ;  // useful
@@ -2310,14 +2657,22 @@ double LineKnChPF(Point3D LineStart, Point3D LineStop, double radius,
   double ypt = localPt.Y;
   double zpt = localPt.Z;
 
+  if (radius < MINDIST) radius = MINDIST;
   double rW = radius;
   double lW = LZ;
+
+  if (debugFn) {
+    // printf("WireStart: %lg %lg %lg\n", WireStart.X, WireStart.Y,
+    // WireStart.Z); printf("WireStop: %lg %lg %lg\n", WireStop.X, WireStop.Y,
+    // WireStop.Z);
+    printf("localPt: %lg %lg %lg\n", localPt.X, localPt.Y, localPt.Z);
+    printf("rW: %lg, lW: %lg\n", rW, lW);
+  }
 
   // field point from element centroid
   double dist = sqrt(xpt * xpt + ypt * ypt + zpt * zpt);
 
-  if (dist >= FarField * lW)  // all are distances and, hence, +ve
-  {
+  if (dist >= FarField * lW) {
     double dA = 2.0 * ST_PI * rW * lW;
     Pot = dA / dist;
     double dist3 = dist * dist * dist;
@@ -2331,7 +2686,7 @@ double LineKnChPF(Point3D LineStart, Point3D LineStop, double radius,
     localF.Y = 0.0;
     localF.Z = 0.0;
   } else if ((fabs(xpt) < MINDIST) && (fabs(ypt) < MINDIST)) {
-    Pot = ExactAxialP_W(rW, lW, localPt.Z);
+    Pot = ExactAxialP_W(rW, lW, zpt);
     localF.X = localF.Y = 0.0;
     localF.Z = ExactThinFZ_W(rW, lW, xpt, ypt, zpt);
   } else {
@@ -2341,9 +2696,19 @@ double LineKnChPF(Point3D LineStart, Point3D LineStop, double radius,
     localF.Z = ExactThinFZ_W(rW, lW, xpt, ypt, zpt);
   }
 
+  if (debugFn) {
+    printf("Pot: %lg\n", Pot);
+    printf("localF: %lg %lg %lg\n", localF.X, localF.Y, localF.Z);
+  }
+
   (*globalF) = RotateVector3D(&localF, &DirCos, local2global);
+  if (debugFn) {
+    printf("globalF: %lg %lg %lg\n", globalF->X, globalF->Y, globalF->Z);
+    exit(-1);
+  }
+
   return (Pot);
-}  // LineKnChPF ends
+}  // WireKnChPF ends
 
 // Pass four vertices of the area and get back potential and GCS flux
 // at field point assuming unit charge density.
@@ -2472,8 +2837,7 @@ double AreaKnChPF(int NbVertices, Point3D *Vertex, Point3D FieldPt,
     int fstatus =
         ExactRecSurf(xpt / a, ypt / a, zpt / a, -1.0 / 2.0, -(b / a) / 2.0,
                      1.0 / 2.0, (b / a) / 2.0, &Pot, &localF);
-    if (fstatus)  // non-zero
-    {
+    if (fstatus) {  // non-zero
       printf("problem in computing Potential of rectangular element ... \n");
       printf("a: %lg, b: %lg, X: %lg, Y: %lg, Z: %lg\n", a, b, xpt, ypt, zpt);
       // printf("returning ...\n");
@@ -2486,19 +2850,31 @@ double AreaKnChPF(int NbVertices, Point3D *Vertex, Point3D FieldPt,
   return (Pot);
 }  // AreaKnChPF ends
 
+// Pass vertices of the volume and get back approx potential and GCS flux
+// at field point assuming unit charge density.
+double ApproxVolumeKnChPF(int /*NbPts*/, Point3D* /*SourcePt*/, 
+                          Point3D /*FieldPt*/,
+                          Vector3D *globalF) {
+  printf("ApproxVolumeKnChPF not implemented yet ... returning zero flux\n");
+  globalF->X = 0.0;
+  globalF->Y = 0.0;
+  globalF->Z = 0.0;
+
+  printf("ApproxVolumeKnChPF not implemented yet ... returning 0.0\n");
+  return 0.0;
+}  // ApproxVolumeKnChPF ends
+
 // Pass vertices of the volume and get back potential and GCS flux
 // at field point assuming unit charge density.
 double VolumeKnChPF(int /*NbPts*/, Point3D* /*SourcePt*/, Point3D /*FieldPt*/,
                     Vector3D *globalF) {
   printf("VolumeKnChPF not implemented yet ... returning zero flux\n");
-  {
-    globalF->X = 0.0;
-    globalF->Y = 0.0;
-    globalF->Z = 0.0;
-  }
+  globalF->X = 0.0;
+  globalF->Y = 0.0;
+  globalF->Z = 0.0;
 
   printf("VolumeKnChPF not implemented yet ... returning 0.0\n");
-  return (0.0);
+  return 0.0;
 }  // VolumeKnChPF ends
 
 // Return the sign of the argument or zero if the argument is smaller than
@@ -2511,5 +2887,5 @@ int Sign(double x) {
 }  // Sign ends
 
 #ifdef __cplusplus
-} // namespace
+}  // namespace
 #endif

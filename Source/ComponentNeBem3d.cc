@@ -1,4 +1,7 @@
+#include "Garfield/ComponentNeBem3d.hh"
+
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <fstream>
 #include <iomanip>
@@ -6,16 +9,13 @@
 #include <numeric>
 #include <set>
 #include <vector>
-#include <cfloat>
 
-#include "neBEMInterface.h"
-#include "neBEM.h"
-#include "NR.h"
-
-#include "Garfield/ComponentNeBem3d.hh"
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Polygon.hh"
+#include "NR.h"
+#include "neBEM.h"
+#include "neBEMInterface.h"
 
 namespace {
 
@@ -33,7 +33,6 @@ double Mag(const std::array<double, 3>& a) {
 }
 
 std::array<double, 3> UnitVector(const std::array<double, 3>& a) {
-
   const double mag = Mag(a);
   if (mag < 1.e-12) return a;
   const std::array<double, 3> b = {a[0] / mag, a[1] / mag, a[2] / mag};
@@ -41,18 +40,16 @@ std::array<double, 3> UnitVector(const std::array<double, 3>& a) {
 }
 std::array<double, 3> CrossProduct(const std::array<double, 3>& u,
                                    const std::array<double, 3>& v) {
-
   const std::array<double, 3> w = {u[1] * v[2] - u[2] * v[1],
                                    u[2] * v[0] - u[0] * v[2],
                                    u[0] * v[1] - u[1] * v[0]};
   return w;
 }
 
-std::array<double, 3> LocalToGlobal(const double x, const double y,
-                                    const double z,
-                                    const std::array<std::array<double, 3>, 3>& dcos,
-                                    const std::array<double, 3>& t) {
-
+std::array<double, 3> LocalToGlobal(
+    const double x, const double y, const double z,
+    const std::array<std::array<double, 3>, 3>& dcos,
+    const std::array<double, 3>& t) {
   // Initial vector.
   std::array<double, 4> u = {x, y, z, 1.};
 
@@ -68,7 +65,7 @@ std::array<double, 3> LocalToGlobal(const double x, const double y,
       v[i] += rot[i][j] * u[j];
     }
   }
-  const std::array<double, 3> a = {v[0] + t[0], v[1] + t[1], v[2] + t[2]}; 
+  const std::array<double, 3> a = {v[0] + t[0], v[1] + t[1], v[2] + t[2]};
   return a;
 }
 
@@ -375,7 +372,7 @@ bool Equal(const Garfield::Panel& panel1, const Garfield::Panel& panel2,
   return true;
 }
 
-}
+}  // namespace
 
 namespace Garfield {
 
@@ -383,7 +380,7 @@ ComponentNeBem3d* gComponentNeBem3d = nullptr;
 
 ComponentNeBem3d::ComponentNeBem3d() : Component("NeBem3d") {}
 
-Medium* ComponentNeBem3d::GetMedium(const double x, const double y, 
+Medium* ComponentNeBem3d::GetMedium(const double x, const double y,
                                     const double z) {
   if (!m_geometry) return nullptr;
   return m_geometry->GetMedium(x, y, z, true);
@@ -411,7 +408,7 @@ void ComponentNeBem3d::ElectricField(const double x, const double y,
     }
     m_ready = true;
   }
-  
+
   // Construct a point.
   neBEM::Point3D point;
   point.X = 0.01 * x;
@@ -420,7 +417,7 @@ void ComponentNeBem3d::ElectricField(const double x, const double y,
 
   // Compute the field.
   neBEM::Vector3D field;
-  if (neBEM::neBEMField(&point, &v, &field) != 0) {
+  if (neBEM::neBEMPF(&point, &v, &field) != 0) {
     status = -10;
     return;
   }
@@ -443,9 +440,8 @@ bool ComponentNeBem3d::GetVoltageRange(double& vmin, double& vmax) {
 }
 
 void ComponentNeBem3d::WeightingField(const double x, const double y,
-                                      const double z, 
-                                      double& wx, double& wy, double& wz, 
-                                      const std::string& label) {
+                                      const double z, double& wx, double& wy,
+                                      double& wz, const std::string& label) {
   wx = wy = wz = 0.;
   if (m_wfields.count(label) == 0) return;
   const int id = m_wfields[label];
@@ -464,7 +460,7 @@ void ComponentNeBem3d::WeightingField(const double x, const double y,
 }
 
 double ComponentNeBem3d::WeightingPotential(const double x, const double y,
-                                            const double z, 
+                                            const double z,
                                             const std::string& label) {
   if (m_wfields.count(label) == 0) return 0.;
   const int id = m_wfields[label];
@@ -516,7 +512,7 @@ void ComponentNeBem3d::AddPlaneY(const double y, const double v) {
       m_coplan[3] = m_coplan[2];
       m_vtplan[3] = m_vtplan[2];
       m_coplan[2] = y;
-      m_vtplan[2] = v; 
+      m_vtplan[2] = v;
     } else {
       m_coplan[3] = y;
       m_vtplan[3] = v;
@@ -616,28 +612,202 @@ bool ComponentNeBem3d::GetPlaneZ(const unsigned int i, double& z,
 }
 
 void ComponentNeBem3d::SetTargetElementSize(const double length) {
-
   if (length < MinDist) {
     std::cerr << m_className << "::SetTargetElementSize: Value must be > "
               << MinDist << ".\n";
-    return; 
+    return;
   }
   m_targetElementSize = length;
 }
 
 void ComponentNeBem3d::SetMinMaxNumberOfElements(const unsigned int nmin,
                                                  const unsigned int nmax) {
-
   if (nmin == 0 || nmax == 0) {
     std::cerr << m_className << "::SetMinMaxNumberOfElements:\n"
               << "    Values must be non-zero.\n";
     return;
   }
- m_minNbElementsOnLength = std::min(nmin, nmax);
- m_maxNbElementsOnLength = std::max(nmin, nmax);
+  m_minNbElementsOnLength = std::min(nmin, nmax);
+  m_maxNbElementsOnLength = std::max(nmin, nmax);
 }
 
-void ComponentNeBem3d::SetPeriodicCopies(const unsigned int nx, 
+void ComponentNeBem3d::SetNewModel(const unsigned int NewModel) {
+  m_newModel = NewModel;
+}
+
+void ComponentNeBem3d::SetNewMesh(const unsigned int NewMesh) {
+  m_newMesh = NewMesh;
+}
+
+void ComponentNeBem3d::SetNewBC(const unsigned int NewBC) { m_newBC = NewBC; }
+
+void ComponentNeBem3d::SetNewPP(const unsigned int NewPP) { m_newPP = NewPP; }
+
+void ComponentNeBem3d::SetModelOptions(const unsigned int NewModel,
+                                       const unsigned int NewMesh,
+                                       const unsigned int NewBC,
+                                       const unsigned int NewPP) {
+  m_newModel = NewModel;
+  m_newMesh = NewMesh;
+  m_newBC = NewBC;
+  m_newPP = NewPP;
+}
+
+void ComponentNeBem3d::SetStoreInflMatrix(
+    const unsigned int OptStoreInflMatrix) {
+  m_optStoreInflMatrix = OptStoreInflMatrix;
+}
+
+void ComponentNeBem3d::SetReadInflMatrix(const unsigned int OptReadInflMatrix) {
+  m_optReadInflMatrix = OptReadInflMatrix;
+}
+
+void ComponentNeBem3d::SetStoreInvMatrix(const unsigned int OptStoreInvMatrix) {
+  m_optStoreInvMatrix = OptStoreInvMatrix;
+}
+
+void ComponentNeBem3d::SetReadInvMatrix(const unsigned int OptReadInvMatrix) {
+  m_optReadInvMatrix = OptReadInvMatrix;
+}
+
+void ComponentNeBem3d::SetStorePrimitives(
+    const unsigned int OptStorePrimitives) {
+  m_optStorePrimitives = OptStorePrimitives;
+}
+
+void ComponentNeBem3d::SetReadPrimitives(const unsigned int OptReadPrimitives) {
+  m_optReadPrimitives = OptReadPrimitives;
+}
+
+void ComponentNeBem3d::SetStoreElements(const unsigned int OptStoreElements) {
+  m_optStoreElements = OptStoreElements;
+}
+
+void ComponentNeBem3d::SetReadElements(const unsigned int OptReadElements) {
+  m_optReadElements = OptReadElements;
+}
+
+void ComponentNeBem3d::SetFormattedFile(const unsigned int OptFormattedFile) {
+  m_optStoreFormatted = OptFormattedFile;
+}
+
+void ComponentNeBem3d::SetUnformattedFile(
+    const unsigned int OptUnformattedFile) {
+  m_optStoreUnformatted = OptUnformattedFile;
+}
+
+void ComponentNeBem3d::SetStoreReadOptions(
+    const unsigned int OptStoreInflMatrix, const unsigned int OptReadInflMatrix,
+    const unsigned int OptStoreInvMatrix, const unsigned int OptReadInvMatrix,
+    const unsigned int OptStorePrimitives, const unsigned int OptReadPrimitives,
+    const unsigned int OptStoreElements, const unsigned int OptReadElements,
+    const unsigned int OptFormattedFile,
+    const unsigned int OptUnformattedFile) {
+  m_optStoreInflMatrix = OptStoreInflMatrix;
+  m_optReadInflMatrix = OptReadInflMatrix;
+  m_optStoreInvMatrix = OptStoreInvMatrix;
+  m_optReadInvMatrix = OptReadInvMatrix;
+  m_optStorePrimitives = OptStorePrimitives;
+  m_optReadPrimitives = OptReadPrimitives;
+  m_optStoreElements = OptStoreElements;
+  m_optReadElements = OptReadElements;
+  m_optStoreFormatted = OptFormattedFile;
+  m_optStoreUnformatted = OptUnformattedFile;
+}
+
+void ComponentNeBem3d::SetReuseModel() {
+  m_newModel = 0;
+  m_newMesh = 0;
+  m_newBC = 1;
+  m_optReadInvMatrix = 1;
+}
+
+void ComponentNeBem3d::SetSystemChargeZero(
+    const unsigned int OptSystemChargeZero) {
+  m_optSystemChargeZero = OptSystemChargeZero;
+}
+
+void ComponentNeBem3d::SetValidateSolution(
+    const unsigned int OptValidateSolution) {
+  m_optValidateSolution = OptValidateSolution;
+}
+
+void ComponentNeBem3d::SetForceValidation(
+    const unsigned int OptForceValidation) {
+  m_optForceValidation = OptForceValidation;
+}
+
+void ComponentNeBem3d::SetRepeatLHMatrix(const unsigned int OptRepeatLHMatrix) {
+  m_optRepeatLHMatrix = OptRepeatLHMatrix;
+}
+
+void ComponentNeBem3d::SetComputeOptions(const unsigned int OptSystemChargeZero,
+                                         const unsigned int OptValidateSolution,
+                                         const unsigned int OptForceVaildation,
+                                         const unsigned int OptRepeatLHMatrix) {
+  m_optSystemChargeZero = OptSystemChargeZero;
+  m_optValidateSolution = OptValidateSolution;
+  m_optForceValidation = OptForceVaildation;
+  m_optRepeatLHMatrix = OptRepeatLHMatrix;
+}
+
+// Fast volume options (Physical potential and field)
+void ComponentNeBem3d::SetFastVolOptions(const unsigned int OptFastVol,
+                                         const unsigned int OptCreateFastPF,
+                                         const unsigned int OptReadFastPF) {
+  m_optFastVol = OptFastVol;
+  m_optCreateFastPF = OptCreateFastPF;
+  m_optReadFastPF = OptReadFastPF;
+}
+
+// Fast volume version
+void ComponentNeBem3d::SetFastVolVersion(const unsigned int VersionFV) {
+  m_versionFV = VersionFV;
+}
+
+// Fast volume blocks
+void ComponentNeBem3d::SetFastVolBlocks(const unsigned int NbBlocksFV) {
+  m_nbBlocksFV = NbBlocksFV;
+}
+
+// Needs to include IdWtField information for each of these WtFld functions
+// Weighting potential and field related Fast volume options
+void ComponentNeBem3d::SetWtFldFastVolOptions(
+    const unsigned int IdWtField, const unsigned int OptWtFldFastVol,
+    const unsigned int OptCreateWtFldFastPF,
+    const unsigned int OptReadWtFldFastPF) {
+  m_idWtField = IdWtField;
+  m_optWtFldFastVol[IdWtField] = OptWtFldFastVol;
+  m_optCreateWtFldFastPF[IdWtField] = OptCreateWtFldFastPF;
+  m_optReadWtFldFastPF[IdWtField] = OptReadWtFldFastPF;
+}
+
+// Weighting field Fast volume version
+void ComponentNeBem3d::SetWtFldFastVolVersion(
+    const unsigned int IdWtField, const unsigned int VersionWtFldFV) {
+  m_idWtField = IdWtField;
+  m_versionWtFldFV[IdWtField] = VersionWtFldFV;
+}
+
+// Weighting field Fast volume blocks
+void ComponentNeBem3d::SetWtFldFastVolBlocks(
+    const unsigned int IdWtField, const unsigned int NbBlocksWtFldFV) {
+  m_idWtField = IdWtField;
+  m_nbBlocksWtFldFV[IdWtField] = NbBlocksWtFldFV;
+}
+
+// Known charge options
+void ComponentNeBem3d::SetKnownChargeOptions(
+    const unsigned int OptKnownCharge) {
+  m_optKnownCharge = OptKnownCharge;
+}
+
+// Charging up options
+void ComponentNeBem3d::SetChargingUpOptions(const unsigned int OptChargingUp) {
+  m_optChargingUp = OptChargingUp;
+}
+
+void ComponentNeBem3d::SetPeriodicCopies(const unsigned int nx,
                                          const unsigned int ny,
                                          const unsigned int nz) {
   m_nCopiesX = nx;
@@ -780,12 +950,12 @@ bool ComponentNeBem3d::Initialise() {
       if (medium && medium->IsConductor()) {
         std::cout << "    Assuming the panels to be grounded.\n";
         bc[id] = Solid::Voltage;
-        volt[id] = 0.; 
+        volt[id] = 0.;
       } else {
         std::cout << "    Assuming dielectric-dielectric interfaces.\n";
         bc[id] = Solid::Dielectric;
       }
-    } 
+    }
     charge[id] = solid->GetBoundaryChargeDensity();
     if (!medium) {
       eps[id] = 1.;
@@ -812,8 +982,8 @@ bool ComponentNeBem3d::Initialise() {
 
   const unsigned int nIn = panelsIn.size();
   if (m_debug) {
-    std::cout << m_className << "::Initialise: Retrieved " 
-              << nIn << " panels from the solids.\n";
+    std::cout << m_className << "::Initialise: Retrieved " << nIn
+              << " panels from the solids.\n";
   }
   // Keep track of which panels have been processed.
   std::vector<bool> mark(nIn, false);
@@ -836,8 +1006,8 @@ bool ComponentNeBem3d::Initialise() {
     // Establish its norm and offset.
     const double d1 = a1 * xp1[0] + b1 * yp1[0] + c1 * zp1[0];
     if (m_debug) {
-      std::cout << "  Panel " << i << "\n    Norm vector: "
-                << a1 << ", " << b1 << ", " << c1 << ", " << d1 << ".\n";
+      std::cout << "  Panel " << i << "\n    Norm vector: " << a1 << ", " << b1
+                << ", " << c1 << ", " << d1 << ".\n";
     }
     // Rotation matrix.
     std::array<std::array<double, 3>, 3> rot;
@@ -1006,8 +1176,8 @@ bool ComponentNeBem3d::Initialise() {
       double lambda = 0.;
       double chargeDensity = 0.;
       if (m_debug) {
-        std::cout << "    Volume 1: " << vol1[j] 
-                  << ". Volume 2: " << vol2[j] << ".\n";
+        std::cout << "    Volume 1: " << vol1[j] << ". Volume 2: " << vol2[j]
+                  << ".\n";
       }
       if (vol1[j] < 0 && vol2[j] < 0) {
         // Shouldn't happen.
@@ -1016,7 +1186,7 @@ bool ComponentNeBem3d::Initialise() {
         // Interface between a solid and vacuum/background.
         const auto vol = vol1[j] < 0 ? vol2[j] : vol1[j];
         interfaceType = InterfaceType(bc[vol]);
-        if (bc[vol] == Solid::Dielectric || 
+        if (bc[vol] == Solid::Dielectric ||
             bc[vol] == Solid::DielectricCharge) {
           if (fabs(eps[vol] - 1.) < 1.e-6) {
             // Same epsilon on both sides. Skip.
@@ -1053,15 +1223,14 @@ bool ComponentNeBem3d::Initialise() {
               interfaceType = 0;
             }
           }
-        } else if (bc1 == Solid::Dielectric || 
-                   bc1 == Solid::DielectricCharge) {
+        } else if (bc1 == Solid::Dielectric || bc1 == Solid::DielectricCharge) {
           interfaceType = InterfaceType(bc2);
           // First volume is a dielectric.
           if (bc2 == Solid::Voltage) {
             potential = volt[vol2[j]];
           } else if (bc2 == Solid::Charge) {
             chargeDensity = charge[vol2[j]];
-          } else if (bc2 == Solid::Dielectric || 
+          } else if (bc2 == Solid::Dielectric ||
                      bc2 == Solid::DielectricCharge) {
             const double eps1 = eps[vol1[j]];
             const double eps2 = eps[vol2[j]];
@@ -1080,7 +1249,7 @@ bool ComponentNeBem3d::Initialise() {
         } else if (interfaceType < 1) {
           std::cout << "    Trivial interface. Skip.\n";
         } else if (interfaceType > 5) {
-          std::cout << "    Interface type " << interfaceType 
+          std::cout << "    Interface type " << interfaceType
                     << " is not implemented. Skip.\n";
         }
       }
@@ -1090,7 +1259,7 @@ bool ComponentNeBem3d::Initialise() {
         ++nTrivial;
       } else if (interfaceType > 5) {
         ++nNotImplemented;
-      } 
+      }
       if (interfaceType < 1 || interfaceType > 5) continue;
 
       std::vector<Panel> panelsOut;
@@ -1179,17 +1348,17 @@ bool ComponentNeBem3d::Initialise() {
   if (nTrivial > 0 || nConflicting > 0 || nNotImplemented > 0) {
     std::cerr << m_className << "::Initialise:\n";
     if (nConflicting > 0) {
-      std::cerr << "    Skipped " << nConflicting 
+      std::cerr << "    Skipped " << nConflicting
                 << " panels with conflicting boundary conditions.\n";
-    } 
+    }
     if (nNotImplemented > 0) {
-      std::cerr << "    Skipped " << nNotImplemented 
+      std::cerr << "    Skipped " << nNotImplemented
                 << " panels with not yet available boundary conditions.\n";
     }
     if (nTrivial > 0) {
-       std::cerr << "    Skipped " << nTrivial 
-                 << " panels with trivial boundary conditions.\n";
-    } 
+      std::cerr << "    Skipped " << nTrivial
+                << " panels with trivial boundary conditions.\n";
+    }
   }
   if (m_debug) {
     std::cout << m_className << "::Initialise:\n"
@@ -1211,7 +1380,7 @@ bool ComponentNeBem3d::Initialise() {
     } else if (nVertices == 4) {
       DiscretizeRectangle(primitive, targetSize, elements);
     }
-    for (auto& element: elements) {
+    for (auto& element : elements) {
       element.interface = primitive.interface;
       element.lambda = primitive.lambda;
       element.bc = primitive.v;
@@ -1222,30 +1391,89 @@ bool ComponentNeBem3d::Initialise() {
                       std::make_move_iterator(elements.begin()),
                       std::make_move_iterator(elements.end()));
   }
+
+  /*
+    // Set initial values of Weighting field Fast volume related parameters
+    for(int id = 1; id < MAXWtFld; ++id) {
+      neBEM::OptFixedWtField[id] = 0;
+      neBEM::OptWtFldFastVol[id] = 0;
+      m_optWtFldFastVol[id] = 0;
+      m_optCreateWtFldFastPF[id] = 0;
+      m_optReadWtFldFastPF[id] = 0;
+    }
+  */
+
+  // Set the user options.
+  // Number of threads and use of primary average properties
   neBEM::NbThreads = m_nThreads;
+  neBEM::PrimAfter = m_primAfter;
+  neBEM::WtFldPrimAfter = m_wtFldPrimAfter;
+  neBEM::OptRmPrim = m_optRmPrim;
+
+  // Fast volume details (physical potential and field related)
+  neBEM::OptFastVol = m_optFastVol;
+  neBEM::OptCreateFastPF = m_optCreateFastPF;
+  neBEM::OptReadFastPF = m_optReadFastPF;
+  neBEM::VersionFV = m_versionFV;
+  neBEM::NbBlocksFV = m_nbBlocksFV;
+  // Weighting potential and field related Fast volume details
+  for (int id = 1; id < MAXWtFld; ++id) {
+    // neBEM::IdPkupElektrd = m_idWtField;
+    neBEM::OptWtFldFastVol[id] = m_optWtFldFastVol[id];
+    neBEM::OptCreateWtFldFastPF[id] = m_optCreateWtFldFastPF[id];
+    neBEM::OptReadWtFldFastPF[id] = m_optReadWtFldFastPF[id];
+    neBEM::VersionWtFldFV[id] = m_versionWtFldFV[id];
+    neBEM::NbBlocksWtFldFV[id] = m_nbBlocksWtFldFV[id];
+  }
+  // Known charge options
+  neBEM::OptKnCh = m_optKnownCharge;
+  // Charging up options
+  neBEM::OptChargingUp = m_optChargingUp;
+
+  // Initialize neBEM
   if (neBEM::neBEMInitialize() != 0) {
     std::cerr << m_className << "::Initialise:\n"
               << "    Initialising neBEM failed.\n";
     return false;
   }
   gComponentNeBem3d = this;
-  // Set the user options.
+
+  // Discretization related
   neBEM::MinNbElementsOnLength = m_minNbElementsOnLength;
   neBEM::MaxNbElementsOnLength = m_maxNbElementsOnLength;
   neBEM::ElementLengthRqstd = m_targetElementSize * 0.01;
 
   // New model / reuse existing model flag.
-  // TODO!
-  neBEM::NewModel = 1;
-  neBEM::NewMesh = 1;
-  neBEM::NewBC = 1;
-  neBEM::NewPP = 1;
+  neBEM::NewModel = m_newModel;
+  neBEM::NewMesh = m_newMesh;
+  neBEM::NewBC = m_newBC;
+  neBEM::NewPP = m_newPP;
+
+  // Store and read options.
+  neBEM::OptStoreInflMatrix = m_optStoreInflMatrix;
+  neBEM::OptReadInflMatrix = m_optReadInflMatrix;
+  neBEM::OptStoreInvMatrix = m_optStoreInvMatrix;
+  neBEM::OptReadInvMatrix = m_optReadInvMatrix;
+  neBEM::OptStorePrimitives = m_optStorePrimitives;
+  neBEM::OptReadPrimitives = m_optReadPrimitives;
+  neBEM::OptStoreElements = m_optStoreElements;
+  neBEM::OptReadElements = m_optReadElements;
+  neBEM::OptFormattedFile = m_optStoreFormatted;
+  neBEM::OptUnformattedFile = m_optStoreUnformatted;
+  neBEM::OptSystemChargeZero = m_optSystemChargeZero;
+  neBEM::OptValidateSolution = m_optValidateSolution;
+  neBEM::OptForceValidation = m_optForceValidation;
+  neBEM::OptRepeatLHMatrix = m_optRepeatLHMatrix;
+
+  // Compute options
+  neBEM::OptSystemChargeZero = m_optSystemChargeZero;
+  neBEM::OptValidateSolution = m_optValidateSolution;
+  neBEM::OptForceValidation = m_optForceValidation;
+  neBEM::OptRepeatLHMatrix = m_optRepeatLHMatrix;
+
   // Pass debug level.
   neBEM::DebugLevel = m_debug ? 101 : 0;
-  // Store inverted matrix or not.
-  // TODO!
-  neBEM::OptStoreInvMatrix = 0;
-  neBEM::OptFormattedFile = 0;
+
   // Matrix inversion method (LU or SVD).
   if (m_inversion == Inversion::LU) {
     neBEM::OptInvMatProc = 0;
@@ -1350,13 +1578,13 @@ bool ComponentNeBem3d::Initialise() {
 
   if (neBEM::neBEMDiscretize(elementNbs) != 0) {
     std::cerr << m_className << "::Initialise: Discretization failed.\n";
-    neBEM::free_imatrix(elementNbs, 1, neBEM::NbPrimitives, 1, 2); 
+    neBEM::free_imatrix(elementNbs, 1, neBEM::NbPrimitives, 1, 2);
     return false;
   }
   neBEM::free_imatrix(elementNbs, 1, neBEM::NbPrimitives, 1, 2);
-  if (neBEM::neBEMBoundaryConditions() != 0) {
+  if (neBEM::neBEMBoundaryInitialConditions() != 0) {
     std::cerr << m_className << "::Initialise:\n"
-              << "    Setting the boundary conditions failed.\n";
+              << "    Setting the boundary and initial conditions failed.\n";
     return false;
   }
   if (neBEM::neBEMSolve() != 0) {
@@ -1395,8 +1623,8 @@ bool ComponentNeBem3d::Initialise() {
       continue;
     } else {
       std::cout << m_className << "::Initialise:\n"
-                << "    Prepared weighting field for readout group \""
-                << label << "\".\n";
+                << "    Prepared weighting field for readout group \"" << label
+                << "\".\n";
       m_wfields[label] = id;
     }
   }
@@ -1407,7 +1635,6 @@ bool ComponentNeBem3d::Initialise() {
 }
 
 void ComponentNeBem3d::ShiftPanels(std::vector<Panel>& panels) const {
-
   // *---------------------------------------------------------------------
   // *   BEMBAS - Reduces panels to the basic period.
   // *---------------------------------------------------------------------
@@ -1472,19 +1699,18 @@ void ComponentNeBem3d::ShiftPanels(std::vector<Panel>& panels) const {
 }
 
 int ComponentNeBem3d::InterfaceType(const Solid::BoundaryCondition bc) const {
-
   // 0: To be skipped
   // 1: Conductor-dielectric
   // 2: Conductor with known charge
   // 3: Conductor at floating potential
   // 4: Dielectric-dielectric
   // 5: Dielectric with given surface charge
-  // 
+  //
   // Check dielectric-dielectric formulation in
   // Jaydeep P. Bardhan,
   // Numerical solution of boundary-integral equations for molecular
   // electrostatics, J. Chem. Phys. 130, 094102 (2009)
-  // https://doi.org/10.1063/1.3080769 
+  // https://doi.org/10.1063/1.3080769
 
   switch (bc) {
     case Solid::Voltage:
@@ -1516,9 +1742,9 @@ int ComponentNeBem3d::InterfaceType(const Solid::BoundaryCondition bc) const {
   return 0;
 }
 
-bool ComponentNeBem3d::DiscretizeWire(const Primitive& primitive, 
-  const double targetSize, std::vector<Element>& elements) const {
-
+bool ComponentNeBem3d::DiscretizeWire(const Primitive& primitive,
+                                      const double targetSize,
+                                      std::vector<Element>& elements) const {
   const double dx = primitive.xv[1] - primitive.xv[0];
   const double dy = primitive.yv[1] - primitive.yv[0];
   const double dz = primitive.zv[1] - primitive.zv[0];
@@ -1542,7 +1768,7 @@ bool ComponentNeBem3d::DiscretizeWire(const Primitive& primitive,
   xu = UnitVector(xu);
   // The y axis is given by the vectorial product of z and x.
   const std::array<double, 3> yu = UnitVector(CrossProduct(zu, xu));
-  const std::array<std::array<double, 3>, 3> dcos = {xu, yu, zu};  
+  const std::array<std::array<double, 3>, 3> dcos = {xu, yu, zu};
 
   const double xincr = dx / nSegments;
   const double yincr = dy / nSegments;
@@ -1567,15 +1793,15 @@ bool ComponentNeBem3d::DiscretizeWire(const Primitive& primitive,
     // Modify to be on surface?
     element.collocationPoint = element.origin;
     elements.push_back(std::move(element));
-  } 
+  }
   return true;
 }
 
-bool ComponentNeBem3d::DiscretizeTriangle(const Primitive& primitive, 
-    const double targetSize, std::vector<Element>& elements) const {
-
-  // Origin of the local coordinate system is at the right angle corner. 
-  std::array<double, 3> corner = {primitive.xv[1], primitive.yv[1], 
+bool ComponentNeBem3d::DiscretizeTriangle(
+    const Primitive& primitive, const double targetSize,
+    std::vector<Element>& elements) const {
+  // Origin of the local coordinate system is at the right angle corner.
+  std::array<double, 3> corner = {primitive.xv[1], primitive.yv[1],
                                   primitive.zv[1]};
   // Determine the direction cosines.
   const double dx1 = primitive.xv[0] - primitive.xv[1];
@@ -1595,7 +1821,7 @@ bool ComponentNeBem3d::DiscretizeTriangle(const Primitive& primitive,
   std::array<double, 3> zu = {dx2 / lz, dy2 / lz, dz2 / lz};
   std::array<double, 3> yu = CrossProduct(zu, xu);
   constexpr double tol = 1.e-3;
-  if ((fabs(yu[0] - nu[0]) > tol) || (fabs(yu[1] - nu[1]) > tol) || 
+  if ((fabs(yu[0] - nu[0]) > tol) || (fabs(yu[1] - nu[1]) > tol) ||
       (fabs(yu[2] - nu[2]) > tol)) {
     // flagDC = 2;
     // Try the other orientation.
@@ -1603,7 +1829,7 @@ bool ComponentNeBem3d::DiscretizeTriangle(const Primitive& primitive,
     xu = {dx2 / lx, dy2 / lx, dz2 / lx};
     zu = {dx1 / lz, dy1 / lz, dz1 / lz};
     yu = CrossProduct(zu, xu);
-    if ((fabs(yu[0] - nu[0]) > tol) || (fabs(yu[1] - nu[1]) > tol) || 
+    if ((fabs(yu[0] - nu[0]) > tol) || (fabs(yu[1] - nu[1]) > tol) ||
         (fabs(yu[2] - nu[2]) > tol)) {
       // No other possibility, search failed.
       std::cerr << m_className << "::DiscretizeTriangle:\n"
@@ -1611,8 +1837,8 @@ bool ComponentNeBem3d::DiscretizeTriangle(const Primitive& primitive,
       return false;
     }
   }
-  std::array<std::array<double, 3>, 3> dcos = {xu, yu, zu};  
- 
+  std::array<std::array<double, 3>, 3> dcos = {xu, yu, zu};
+
   // TODO!
   /*
   double eps1 = primitive.eps1;
@@ -1676,7 +1902,8 @@ bool ComponentNeBem3d::DiscretizeTriangle(const Primitive& primitive,
     const double xb = triangleSizeX / 3.;
     const double yb = 0.;
     const double zb = elementSizeZ / 3.;
-    triangle.collocationPoint = LocalToGlobal(xb, yb, zb, dcos, triangle.origin);
+    triangle.collocationPoint =
+        LocalToGlobal(xb, yb, zb, dcos, triangle.origin);
     elements.push_back(std::move(triangle));
     // No rectangular element on the last row.
     if (k == nz - 1) continue;
@@ -1704,9 +1931,9 @@ bool ComponentNeBem3d::DiscretizeTriangle(const Primitive& primitive,
       const double hx = 0.5 * rectSizeX;
       const double hz = 0.5 * elementSizeZ;
       std::array<double, 3> p0 = LocalToGlobal(-hx, 0., -hz, dcos, centre);
-      std::array<double, 3> p1 = LocalToGlobal( hx, 0., -hz, dcos, centre);
-      std::array<double, 3> p2 = LocalToGlobal( hx, 0.,  hz, dcos, centre);
-      std::array<double, 3> p3 = LocalToGlobal(-hx, 0.,  hz, dcos, centre);
+      std::array<double, 3> p1 = LocalToGlobal(hx, 0., -hz, dcos, centre);
+      std::array<double, 3> p2 = LocalToGlobal(hx, 0., hz, dcos, centre);
+      std::array<double, 3> p3 = LocalToGlobal(-hx, 0., hz, dcos, centre);
       // Assign the vertices of the element.
       rect.xv = {p0[0], p1[0], p2[0], p3[0]};
       rect.yv = {p0[1], p1[1], p2[1], p3[1]};
@@ -1717,13 +1944,13 @@ bool ComponentNeBem3d::DiscretizeTriangle(const Primitive& primitive,
   return true;
 }
 
-bool ComponentNeBem3d::DiscretizeRectangle(const Primitive& primitive,
-  const double targetSize, std::vector<Element>& elements) const {
-
+bool ComponentNeBem3d::DiscretizeRectangle(
+    const Primitive& primitive, const double targetSize,
+    std::vector<Element>& elements) const {
   std::array<double, 3> origin = {
-    0.25 * std::accumulate(primitive.xv.begin(), primitive.xv.end(), 0.),
-    0.25 * std::accumulate(primitive.yv.begin(), primitive.yv.end(), 0.),
-    0.25 * std::accumulate(primitive.zv.begin(), primitive.zv.end(), 0.)};
+      0.25 * std::accumulate(primitive.xv.begin(), primitive.xv.end(), 0.),
+      0.25 * std::accumulate(primitive.yv.begin(), primitive.yv.end(), 0.),
+      0.25 * std::accumulate(primitive.zv.begin(), primitive.zv.end(), 0.)};
 
   // Determine the direction cosines.
   const double dx1 = primitive.xv[1] - primitive.xv[0];
@@ -1747,7 +1974,7 @@ bool ComponentNeBem3d::DiscretizeRectangle(const Primitive& primitive,
   double elementSizeZ = lz / nz;
 
   // Analyze the element aspect ratio.
-  double ar = elementSizeX / elementSizeZ;  
+  double ar = elementSizeX / elementSizeZ;
   if (ar > 10.) {
     // Reduce nz.
     elementSizeZ = 0.1 * elementSizeX;
@@ -1780,9 +2007,9 @@ bool ComponentNeBem3d::DiscretizeRectangle(const Primitive& primitive,
       const double hx = 0.5 * elementSizeX;
       const double hz = 0.5 * elementSizeZ;
       std::array<double, 3> p0 = LocalToGlobal(-hx, 0., -hz, dcos, centre);
-      std::array<double, 3> p1 = LocalToGlobal( hx, 0., -hz, dcos, centre);
-      std::array<double, 3> p2 = LocalToGlobal( hx, 0.,  hz, dcos, centre);
-      std::array<double, 3> p3 = LocalToGlobal(-hx, 0.,  hz, dcos, centre);
+      std::array<double, 3> p1 = LocalToGlobal(hx, 0., -hz, dcos, centre);
+      std::array<double, 3> p2 = LocalToGlobal(hx, 0., hz, dcos, centre);
+      std::array<double, 3> p3 = LocalToGlobal(-hx, 0., hz, dcos, centre);
       // Assign the vertices of the element.
       element.xv = {p0[0], p1[0], p2[0], p3[0]};
       element.yv = {p0[1], p1[1], p2[1], p3[1]};
@@ -1793,9 +2020,8 @@ bool ComponentNeBem3d::DiscretizeRectangle(const Primitive& primitive,
   return true;
 }
 
-unsigned int ComponentNeBem3d::NbOfSegments(const double length, 
+unsigned int ComponentNeBem3d::NbOfSegments(const double length,
                                             const double target) const {
-
   // Check whether the length of the primitive is long enough.
   if (length < MinDist) return 1;
   unsigned int n = static_cast<unsigned int>(length / target);
@@ -1805,7 +2031,7 @@ unsigned int ComponentNeBem3d::NbOfSegments(const double length,
     if (length < n * MinDist) {
       // ...which may not be possible if the length is small.
       n = static_cast<unsigned int>(length / MinDist);
-      if (n < 1)  {
+      if (n < 1) {
         // However, it is necessary to have at least one element!
         n = 1;
       }
@@ -1883,14 +2109,14 @@ bool ComponentNeBem3d::EliminateOverlaps(const Panel& panel1,
       }
       if (nFound == 0 && (flags[ic][i] == 2 || flags[ic][i] == 3)) {
         std::cerr << m_className << "::EliminateOverlaps: "
-                  << "Warning. Expected match not found (" << ic << "-"
-                  << jc << ").\n";
+                  << "Warning. Expected match not found (" << ic << "-" << jc
+                  << ").\n";
         links[ic][i] = -1;
         ok = false;
       } else if (nFound > 1) {
         std::cerr << m_className << "::EliminateOverlaps: "
-                  << "Warning. More than 1 match found (" << ic << "-"
-                  << jc << ").\n";
+                  << "Warning. More than 1 match found (" << ic << "-" << jc
+                  << ").\n";
         links[ic][i] = -1;
         ok = false;
       }
@@ -1904,7 +2130,7 @@ bool ComponentNeBem3d::EliminateOverlaps(const Panel& panel1,
                 << " No Type            x            y        Q   links\n";
       const unsigned int n = xl[j].size();
       for (unsigned int i = 0; i < n; ++i) {
-        printf("        %3d %5d %13.6f %13.6f %5.3f %3d\n", i, flags[j][i], 
+        printf("        %3d %5d %13.6f %13.6f %5.3f %3d\n", i, flags[j][i],
                xl[j][i], yl[j][i], qs[j][i], links[j][i]);
       }
     }
@@ -2016,7 +2242,7 @@ bool ComponentNeBem3d::EliminateOverlaps(const Panel& panel1,
     }
     panelsOut.insert(panelsOut.end(), newPanels.begin(), newPanels.end());
     if (m_debug) {
-      std::cout << "      No further non-overlapped areas of " << ic << ".\n"; 
+      std::cout << "      No further non-overlapped areas of " << ic << ".\n";
     }
   }
 
@@ -2438,8 +2664,8 @@ void ComponentNeBem3d::TraceOverlap(
       if (inside || edge) {
         ip1 = ii;
         if (m_debug) {
-          std::cout << "      Continued to point " << ip1 << " on " 
-                    << il << "\n";
+          std::cout << "      Continued to point " << ip1 << " on " << il
+                    << "\n";
         }
         xpl.push_back(xl1[ip1]);
         ypl.push_back(yl1[ip1]);
@@ -2495,8 +2721,8 @@ void ComponentNeBem3d::TraceOverlap(
             mark1[ip1] = true;
             il = 1;
             if (m_debug) {
-              std::cout << "      This point is also on curve 1: " 
-                        << ip1 << "\n";
+              std::cout << "      This point is also on curve 1: " << ip1
+                        << "\n";
             }
           } else {
             il = 2;
@@ -2929,8 +3155,8 @@ bool ComponentNeBem3d::SplitTrapezium(const Panel panelIn,
       const double sij = sqrt(si2 * sj2);
       if (fabs(dxi * dxj + dyi * dyj + sij) > epsang * sij) continue;
       if (m_debug) {
-        std::cout << "      Found parallel sections: " 
-                  << ip << ", " << jp << "\n";
+        std::cout << "      Found parallel sections: " << ip << ", " << jp
+                  << "\n";
       }
       // Avoid division by zero.
       if (sj2 <= 0 || si2 <= 0) {
@@ -3060,7 +3286,7 @@ bool ComponentNeBem3d::SplitTrapezium(const Panel panelIn,
       }
       if (xpl.size() < 3) {
         if (m_debug) {
-          std::cout << "      Not stored, only " << xpl.size() 
+          std::cout << "      Not stored, only " << xpl.size()
                     << " vertices.\n";
         }
       } else {
@@ -3097,7 +3323,7 @@ bool ComponentNeBem3d::SplitTrapezium(const Panel panelIn,
       }
       if (xpl.size() < 3) {
         if (m_debug) {
-          std::cout << "      Not stored, only " << xpl.size() 
+          std::cout << "      Not stored, only " << xpl.size()
                     << " vertices.\n";
         }
       } else {
@@ -3120,7 +3346,7 @@ bool ComponentNeBem3d::GetPrimitive(const unsigned int i, double& a, double& b,
                                     double& c, std::vector<double>& xv,
                                     std::vector<double>& yv,
                                     std::vector<double>& zv, int& interface,
-                                    double& v, double& q, 
+                                    double& v, double& q,
                                     double& lambda) const {
   if (i >= m_primitives.size()) {
     std::cerr << m_className << "::GetPrimitive: Index out of range.\n";
@@ -3143,7 +3369,8 @@ bool ComponentNeBem3d::GetPrimitive(const unsigned int i, double& a, double& b,
 bool ComponentNeBem3d::GetPrimitive(const unsigned int i, double& a, double& b,
                                     double& c, std::vector<double>& xv,
                                     std::vector<double>& yv,
-                                    std::vector<double>& zv, int& vol1, int& vol2) const {
+                                    std::vector<double>& zv, int& vol1,
+                                    int& vol2) const {
   if (i >= m_primitives.size()) {
     std::cerr << m_className << "::GetPrimitive: Index out of range.\n";
     return false;
@@ -3161,10 +3388,8 @@ bool ComponentNeBem3d::GetPrimitive(const unsigned int i, double& a, double& b,
 }
 
 bool ComponentNeBem3d::GetVolume(const unsigned int vol, int& shape,
-                                 int& material, double& epsilon, 
-                                 double& potential, double& charge,
-                                 int& bc) {
-
+                                 int& material, double& epsilon,
+                                 double& potential, double& charge, int& bc) {
   if (!m_geometry) return false;
   const unsigned int nSolids = m_geometry->GetNumberOfSolids();
   for (unsigned int i = 0; i < nSolids; ++i) {
@@ -3198,7 +3423,7 @@ bool ComponentNeBem3d::GetVolume(const unsigned int vol, int& shape,
   return false;
 }
 
-int ComponentNeBem3d::GetVolume(const double x, const double y, 
+int ComponentNeBem3d::GetVolume(const double x, const double y,
                                 const double z) {
   if (!m_geometry) return -1;
   const unsigned int nSolids = m_geometry->GetNumberOfSolids();
@@ -3211,12 +3436,10 @@ int ComponentNeBem3d::GetVolume(const double x, const double y,
   return -1;
 }
 
-bool ComponentNeBem3d::GetElement(const unsigned int i, 
-                                  std::vector<double>& xv, 
+bool ComponentNeBem3d::GetElement(const unsigned int i, std::vector<double>& xv,
                                   std::vector<double>& yv,
-                                  std::vector<double>& zv, int& interface, 
+                                  std::vector<double>& zv, int& interface,
                                   double& bc, double& lambda) const {
- 
   if (i >= m_elements.size()) {
     std::cerr << m_className << "::GetElement: Index out of range.\n";
     return false;
@@ -3241,7 +3464,6 @@ void ComponentNeBem3d::Reset() {
 }
 
 void ComponentNeBem3d::UpdatePeriodicity() {
-
   for (unsigned int i = 0; i < 3; ++i) {
     // Cannot have regular and mirror periodicity at the same time.
     if (m_periodic[i] && m_mirrorPeriodic[i]) {
@@ -3254,7 +3476,7 @@ void ComponentNeBem3d::UpdatePeriodicity() {
     if ((m_periodic[i] || m_mirrorPeriodic[i]) && m_periodicLength[i] < Small) {
       std::cerr << m_className << "::UpdatePeriodicity:\n"
                 << "    Periodic length is not set. Reset.\n";
-      m_periodic[i] = m_mirrorPeriodic[i] = false; 
+      m_periodic[i] = m_mirrorPeriodic[i] = false;
     }
   }
 
@@ -3270,6 +3492,5 @@ void ComponentNeBem3d::UpdatePeriodicity() {
               << "    Rotation symmetry is not available.\n";
     m_rotationSymmetric.fill(false);
   }
-
 }
-}
+}  // namespace Garfield

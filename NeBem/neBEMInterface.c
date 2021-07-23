@@ -13,10 +13,10 @@
 #define DEFINE_neBEMGLOBAL
 #define DEFINE_NRGLOBAL
 
+#include <float.h>
 #include <stdio.h>
 #include <sys/stat.h>  // use of stat function
 #include <unistd.h>
-#include <float.h>
 
 #ifdef __cplusplus
 #include <vector>
@@ -26,10 +26,10 @@
 #include <omp.h>
 #endif
 
-#include "neBEMInterface.h"
 #include "Isles.h"
 #include "NR.h"
 #include "neBEM.h"
+#include "neBEMInterface.h"
 
 #ifdef __cplusplus
 namespace neBEM {
@@ -37,10 +37,9 @@ namespace neBEM {
 
 // Called from a code requesting neBEM services
 int neBEMInitialize(void) {
-
   // Version information
-  strcpy(neBEMVersion, "1.9.08");
-  strcpy(ISLESVersion, "1.4.8");
+  strcpy(neBEMVersion, "1.9.09");
+  strcpy(ISLESVersion, "1.4.9");
   printf("Using neBEM version %s and ISLES version %s\n", neBEMVersion,
          ISLESVersion);
 
@@ -96,8 +95,11 @@ int neBEMInitialize(void) {
   IslesCntr = ExactCntr = FailureCntr = ApproxCntr = 0;
 
   // Set up parameters related to neBEM computations
+  // The file will be removed soon
   int RqstdThreads = 1;
-  FILE *processFile = fopen("neBEMProcess.inp", "r");
+  if (NbThreads > 0) RqstdThreads = NbThreads;
+  /*
+  FILE *processFile = fopen("neBEMInp/neBEMProcess.inp", "r");
   if (processFile == NULL) {
     printf("neBEMProcess.inp absent ... assuming defaults ...\n");
     PrimAfter = 0;
@@ -107,6 +109,10 @@ int neBEMInitialize(void) {
     fscanf(processFile, "RqstdThreads: %d\n", &RqstdThreads);
     fclose(processFile);
   }
+  */
+  // PrimAfter is assigned a value through "SetPrimAfter" member function of
+  // ComponentNeBem3d class.
+  // Default value of PrimAfter is zero.
 
 #ifdef _OPENMP
   int MaxProcessors = omp_get_num_procs();
@@ -131,11 +137,14 @@ int neBEMInitialize(void) {
   printf("PrimAfter: %d\n", PrimAfter);
   printf("RqstdThreads: %d, MaxProcessors: %d\n", RqstdThreads, MaxProcessors);
   printf("Maximum number of threads to be used for parallelization: %d\n",
-         omp_get_max_threads()); 
-  printf("Number of threads used for neBEMInitialize: %d\n", omp_get_num_threads());
+         omp_get_max_threads());
+  printf("Number of threads used for neBEMInitialize: %d\n",
+         omp_get_num_threads());
 #endif
+
   // Set up parameters related to voxelized data export for Garfield++
-  FILE *voxelInpFile = fopen("neBEMVoxel.inp", "r");
+  // To be removed soon
+  FILE *voxelInpFile = fopen("neBEMInp/neBEMVoxel.inp", "r");
   if (voxelInpFile == NULL) {
     printf("neBEMVoxel.inp absent ... assuming OptVoxel = 0 ...\n");
     OptVoxel = 0;
@@ -159,7 +168,8 @@ int neBEMInitialize(void) {
   }  // inputs for Voxel
 
   // Set up parameters related to 3dMap data export for Garfield++
-  FILE *mapInpFile = fopen("neBEMMap.inp", "r");
+  // To be removed soon
+  FILE *mapInpFile = fopen("neBEMInp/neBEMMap.inp", "r");
   if (mapInpFile == NULL) {
     printf("neBEMMap.inp absent ... assuming OptMap = 0 ...\n");
     OptMap = 0;
@@ -186,205 +196,94 @@ int neBEMInitialize(void) {
   }  // inputs for 3dMap
 
   // Set up parameters related to fast volume
-  FILE *fastInpFile = fopen("neBEMFastVol.inp", "r");
-  if (fastInpFile == NULL) {
-    printf("neBEMFastVol.inp absent ... assuming OptFastVol = 0 ...\n");
-    OptFastVol = 0;
-    OptStaggerFastVol = 0;
-    OptCreateFastPF = 0;
-    OptReadFastPF = 0;
-    FastVol.NbBlocks = 0;
-    FastVol.NbOmitVols = 0;
-    FastVol.NbIgnoreVols = 0;
-  } else {
-    fscanf(fastInpFile, "OptFastVol: %d\n", &OptFastVol);
-    fscanf(fastInpFile, "OptStaggerFastVol: %d\n", &OptStaggerFastVol);
-    fscanf(fastInpFile, "OptCreateFastPF: %d\n", &OptCreateFastPF);
-    fscanf(fastInpFile, "OptReadFastPF: %d\n", &OptReadFastPF);
-    fscanf(fastInpFile, "NbPtSkip: %d\n", &NbPtSkip);
-    fscanf(fastInpFile, "NbStgPtSkip: %d\n", &NbStgPtSkip);
-    fscanf(fastInpFile, "LX: %le\n", &FastVol.LX);
-    fscanf(fastInpFile, "LY: %le\n", &FastVol.LY);
-    fscanf(fastInpFile, "LZ: %le\n", &FastVol.LZ);
-    fscanf(fastInpFile, "CornerX: %le\n", &FastVol.CrnrX);
-    fscanf(fastInpFile, "CornerY: %le\n", &FastVol.CrnrY);
-    fscanf(fastInpFile, "CornerZ: %le\n", &FastVol.CrnrZ);
-    fscanf(fastInpFile, "YStagger: %le\n", &FastVol.YStagger);
-    if (!OptStaggerFastVol)
-      FastVol.YStagger = 0.0;  // ignore any non-zero value
-    fscanf(fastInpFile, "NbOfBlocks: %d\n", &FastVol.NbBlocks);
-    BlkNbXCells = ivector(1, FastVol.NbBlocks);
-    BlkNbYCells = ivector(1, FastVol.NbBlocks);
-    BlkNbZCells = ivector(1, FastVol.NbBlocks);
-    BlkLZ = dvector(1, FastVol.NbBlocks);
-    BlkCrnrZ = dvector(1, FastVol.NbBlocks);
-    for (int block = 1; block <= FastVol.NbBlocks; ++block) {
-      fscanf(fastInpFile, "NbOfXCells: %d\n", &BlkNbXCells[block]);
-      fscanf(fastInpFile, "NbOfYCells: %d\n", &BlkNbYCells[block]);
-      fscanf(fastInpFile, "NbOfZCells: %d\n", &BlkNbZCells[block]);
-      fscanf(fastInpFile, "LZ: %le\n", &BlkLZ[block]);
-      fscanf(fastInpFile, "CornerZ: %le\n", &BlkCrnrZ[block]);
-    }  // inputs for blocks
-    fscanf(fastInpFile, "NbOfOmitVols: %d\n", &FastVol.NbOmitVols);
-    if (FastVol.NbOmitVols) {
-      OmitVolLX = dvector(1, FastVol.NbOmitVols);
-      OmitVolLY = dvector(1, FastVol.NbOmitVols);
-      OmitVolLZ = dvector(1, FastVol.NbOmitVols);
-      OmitVolCrnrX = dvector(1, FastVol.NbOmitVols);
-      OmitVolCrnrY = dvector(1, FastVol.NbOmitVols);
-      OmitVolCrnrZ = dvector(1, FastVol.NbOmitVols);
-      for (int omit = 1; omit <= FastVol.NbOmitVols; ++omit) {
-        fscanf(fastInpFile, "OmitVolLX: %le\n", &OmitVolLX[omit]);
-        fscanf(fastInpFile, "OmitVolLY: %le\n", &OmitVolLY[omit]);
-        fscanf(fastInpFile, "OmitVolLZ: %le\n", &OmitVolLZ[omit]);
-        fscanf(fastInpFile, "OmitVolCornerX: %le\n", &OmitVolCrnrX[omit]);
-        fscanf(fastInpFile, "OmitVolCornerY: %le\n", &OmitVolCrnrY[omit]);
-        fscanf(fastInpFile, "OmitVolCornerZ: %le\n", &OmitVolCrnrZ[omit]);
-      }  // inputs for OmitVols
-    }    // inputs for OmitVols
-    fscanf(fastInpFile, "NbOfIgnoreVols: %d\n", &FastVol.NbIgnoreVols);
-    if (FastVol.NbIgnoreVols) {
-      IgnoreVolLX = dvector(1, FastVol.NbIgnoreVols);
-      IgnoreVolLY = dvector(1, FastVol.NbIgnoreVols);
-      IgnoreVolLZ = dvector(1, FastVol.NbIgnoreVols);
-      IgnoreVolCrnrX = dvector(1, FastVol.NbIgnoreVols);
-      IgnoreVolCrnrY = dvector(1, FastVol.NbIgnoreVols);
-      IgnoreVolCrnrZ = dvector(1, FastVol.NbIgnoreVols);
+  if (OptFastVol) {
+    FILE *fastInpFile = fopen("neBEMInp/neBEMFastVol.inp", "r");
+    if (fastInpFile == NULL) {
+      printf("neBEMFastVol.inp absent ... assuming OptFastVol = 0 ...\n");
+      OptFastVol = 0;
+      OptStaggerFastVol = 0;
+      OptCreateFastPF = 0;
+      OptReadFastPF = 0;
+      FastVol.NbBlocks = 0;
+      FastVol.NbOmitVols = 0;
+      FastVol.NbIgnoreVols = 0;
+    } else {
+      fscanf(fastInpFile, "OptFastVol: %d\n", &OptFastVol);
+      fscanf(fastInpFile, "OptStaggerFastVol: %d\n", &OptStaggerFastVol);
+      fscanf(fastInpFile, "OptCreateFastPF: %d\n", &OptCreateFastPF);
+      fscanf(fastInpFile, "OptReadFastPF: %d\n", &OptReadFastPF);
+      fscanf(fastInpFile, "NbPtSkip: %d\n", &NbPtSkip);
+      fscanf(fastInpFile, "NbStgPtSkip: %d\n", &NbStgPtSkip);
+      fscanf(fastInpFile, "LX: %le\n", &FastVol.LX);
+      fscanf(fastInpFile, "LY: %le\n", &FastVol.LY);
+      fscanf(fastInpFile, "LZ: %le\n", &FastVol.LZ);
+      fscanf(fastInpFile, "CornerX: %le\n", &FastVol.CrnrX);
+      fscanf(fastInpFile, "CornerY: %le\n", &FastVol.CrnrY);
+      fscanf(fastInpFile, "CornerZ: %le\n", &FastVol.CrnrZ);
+      fscanf(fastInpFile, "YStagger: %le\n", &FastVol.YStagger);
+      if (!OptStaggerFastVol)
+        FastVol.YStagger = 0.0;  // ignore any non-zero value
+      fscanf(fastInpFile, "NbOfBlocks: %d\n", &FastVol.NbBlocks);
+      BlkNbXCells = ivector(1, FastVol.NbBlocks);
+      BlkNbYCells = ivector(1, FastVol.NbBlocks);
+      BlkNbZCells = ivector(1, FastVol.NbBlocks);
+      BlkLZ = dvector(1, FastVol.NbBlocks);
+      BlkCrnrZ = dvector(1, FastVol.NbBlocks);
+      for (int block = 1; block <= FastVol.NbBlocks; ++block) {
+        fscanf(fastInpFile, "NbOfXCells: %d\n", &BlkNbXCells[block]);
+        fscanf(fastInpFile, "NbOfYCells: %d\n", &BlkNbYCells[block]);
+        fscanf(fastInpFile, "NbOfZCells: %d\n", &BlkNbZCells[block]);
+        fscanf(fastInpFile, "LZ: %le\n", &BlkLZ[block]);
+        fscanf(fastInpFile, "CornerZ: %le\n", &BlkCrnrZ[block]);
+      }  // inputs for blocks
+      fscanf(fastInpFile, "NbOfOmitVols: %d\n", &FastVol.NbOmitVols);
+      if (FastVol.NbOmitVols) {
+        OmitVolLX = dvector(1, FastVol.NbOmitVols);
+        OmitVolLY = dvector(1, FastVol.NbOmitVols);
+        OmitVolLZ = dvector(1, FastVol.NbOmitVols);
+        OmitVolCrnrX = dvector(1, FastVol.NbOmitVols);
+        OmitVolCrnrY = dvector(1, FastVol.NbOmitVols);
+        OmitVolCrnrZ = dvector(1, FastVol.NbOmitVols);
+        for (int omit = 1; omit <= FastVol.NbOmitVols; ++omit) {
+          fscanf(fastInpFile, "OmitVolLX: %le\n", &OmitVolLX[omit]);
+          fscanf(fastInpFile, "OmitVolLY: %le\n", &OmitVolLY[omit]);
+          fscanf(fastInpFile, "OmitVolLZ: %le\n", &OmitVolLZ[omit]);
+          fscanf(fastInpFile, "OmitVolCornerX: %le\n", &OmitVolCrnrX[omit]);
+          fscanf(fastInpFile, "OmitVolCornerY: %le\n", &OmitVolCrnrY[omit]);
+          fscanf(fastInpFile, "OmitVolCornerZ: %le\n", &OmitVolCrnrZ[omit]);
+        }  // inputs for OmitVols
+      }    // inputs for OmitVols
+      fscanf(fastInpFile, "NbOfIgnoreVols: %d\n", &FastVol.NbIgnoreVols);
+      if (FastVol.NbIgnoreVols) {
+        IgnoreVolLX = dvector(1, FastVol.NbIgnoreVols);
+        IgnoreVolLY = dvector(1, FastVol.NbIgnoreVols);
+        IgnoreVolLZ = dvector(1, FastVol.NbIgnoreVols);
+        IgnoreVolCrnrX = dvector(1, FastVol.NbIgnoreVols);
+        IgnoreVolCrnrY = dvector(1, FastVol.NbIgnoreVols);
+        IgnoreVolCrnrZ = dvector(1, FastVol.NbIgnoreVols);
+        for (int ignore = 1; ignore <= FastVol.NbIgnoreVols; ++ignore) {
+          fscanf(fastInpFile, "IgnoreVolLX: %le\n", &IgnoreVolLX[ignore]);
+          fscanf(fastInpFile, "IgnoreVolLY: %le\n", &IgnoreVolLY[ignore]);
+          fscanf(fastInpFile, "IgnoreVolLZ: %le\n", &IgnoreVolLZ[ignore]);
+          fscanf(fastInpFile, "IgnoreVolCornerX: %le\n",
+                 &IgnoreVolCrnrX[ignore]);
+          fscanf(fastInpFile, "IgnoreVolCornerY: %le\n",
+                 &IgnoreVolCrnrY[ignore]);
+          fscanf(fastInpFile, "IgnoreVolCornerZ: %le\n",
+                 &IgnoreVolCrnrZ[ignore]);
+        }  // inputs for IgnoreVols
+      }    // inputs for IgnoreVols
       for (int ignore = 1; ignore <= FastVol.NbIgnoreVols; ++ignore) {
-        fscanf(fastInpFile, "IgnoreVolLX: %le\n", &IgnoreVolLX[ignore]);
-        fscanf(fastInpFile, "IgnoreVolLY: %le\n", &IgnoreVolLY[ignore]);
-        fscanf(fastInpFile, "IgnoreVolLZ: %le\n", &IgnoreVolLZ[ignore]);
-        fscanf(fastInpFile, "IgnoreVolCornerX: %le\n", &IgnoreVolCrnrX[ignore]);
-        fscanf(fastInpFile, "IgnoreVolCornerY: %le\n", &IgnoreVolCrnrY[ignore]);
-        fscanf(fastInpFile, "IgnoreVolCornerZ: %le\n", &IgnoreVolCrnrZ[ignore]);
+        printf("IgnoreVolLX: %le\n", IgnoreVolLX[ignore]);
+        printf("IgnoreVolLY: %le\n", IgnoreVolLY[ignore]);
+        printf("IgnoreVolLZ: %le\n", IgnoreVolLZ[ignore]);
+        printf("IgnoreVolCornerX: %le\n", IgnoreVolCrnrX[ignore]);
+        printf("IgnoreVolCornerY: %le\n", IgnoreVolCrnrY[ignore]);
+        printf("IgnoreVolCornerZ: %le\n", IgnoreVolCrnrZ[ignore]);
       }  // inputs for IgnoreVols
-    }    // inputs for IgnoreVols
-    for (int ignore = 1; ignore <= FastVol.NbIgnoreVols; ++ignore) {
-      printf("IgnoreVolLX: %le\n", IgnoreVolLX[ignore]);
-      printf("IgnoreVolLY: %le\n", IgnoreVolLY[ignore]);
-      printf("IgnoreVolLZ: %le\n", IgnoreVolLZ[ignore]);
-      printf("IgnoreVolCornerX: %le\n", IgnoreVolCrnrX[ignore]);
-      printf("IgnoreVolCornerY: %le\n", IgnoreVolCrnrY[ignore]);
-      printf("IgnoreVolCornerZ: %le\n", IgnoreVolCrnrZ[ignore]);
-    }  // inputs for IgnoreVols
-    fclose(fastInpFile);
-  }  // else fastInpFile
-
-  // Set up parameters related to fixed specification of weighting field
-  FILE *fixedWtInpFile = fopen("neBEMFixedWtField.inp", "r");
-  if (fixedWtInpFile == NULL) {
-    printf(
-        "neBEMFixedWtField.inp absent ... assuming OptFixedWtField = 0 ...\n");
-    OptFixedWtField = 0;
-    FixedWtPotential = 0.0;
-    FixedWtFieldX = 0.0;
-    FixedWtFieldY = 0.0;
-    FixedWtFieldZ = 0.0;
-  } else {
-    fscanf(fixedWtInpFile, "OptFixedWtField: %d\n", &OptFixedWtField);
-    fscanf(fixedWtInpFile, "FixedWtPotential: %lg\n", &FixedWtPotential);
-    fscanf(fixedWtInpFile, "FixedWtFieldX: %lg\n", &FixedWtFieldX);
-    fscanf(fixedWtInpFile, "FixedWtFieldY: %lg\n", &FixedWtFieldY);
-    fscanf(fixedWtInpFile, "FixedWtFieldZ: %lg\n", &FixedWtFieldZ);
-    fclose(fixedWtInpFile);
-  }  // else fixedWtInpFile
-
-  // Set up parameters related to weighting field fast volume
-  FILE *fastWtFldInpFile = fopen("neBEMWtFldFastVol.inp", "r");
-  if (fastWtFldInpFile == NULL) {
-    printf(
-        "neBEMWtFldFastVol.inp absent ... assuming OptWtFldFastVol = 0 ...\n");
-    OptWtFldFastVol = 0;
-    OptWtFldStaggerFastVol = 0;
-    OptWtFldCreateFastPF = 0;
-    OptWtFldReadFastPF = 0;
-    WtFldFastVol.NbBlocks = 0;
-    WtFldFastVol.NbOmitVols = 0;
-    WtFldFastVol.NbIgnoreVols = 0;
-  } else {
-    fscanf(fastWtFldInpFile, "OptFastVol: %d\n", &OptWtFldFastVol);
-    fscanf(fastWtFldInpFile, "OptStaggerFastVol: %d\n",
-           &OptWtFldStaggerFastVol);
-    fscanf(fastWtFldInpFile, "OptCreateFastPF: %d\n", &OptWtFldCreateFastPF);
-    fscanf(fastWtFldInpFile, "OptReadFastPF: %d\n", &OptWtFldReadFastPF);
-    fscanf(fastWtFldInpFile, "NbPtSkip: %d\n", &WtFldNbPtSkip);
-    fscanf(fastWtFldInpFile, "NbStgPtSkip: %d\n", &WtFldNbStgPtSkip);
-    fscanf(fastWtFldInpFile, "LX: %le\n", &WtFldFastVol.LX);
-    fscanf(fastWtFldInpFile, "LY: %le\n", &WtFldFastVol.LY);
-    fscanf(fastWtFldInpFile, "LZ: %le\n", &WtFldFastVol.LZ);
-    fscanf(fastWtFldInpFile, "CornerX: %le\n", &WtFldFastVol.CrnrX);
-    fscanf(fastWtFldInpFile, "CornerY: %le\n", &WtFldFastVol.CrnrY);
-    fscanf(fastWtFldInpFile, "CornerZ: %le\n", &WtFldFastVol.CrnrZ);
-    fscanf(fastWtFldInpFile, "YStagger: %le\n", &WtFldFastVol.YStagger);
-    if (!OptWtFldStaggerFastVol)
-      WtFldFastVol.YStagger = 0.0;  // ignore any non-zero value
-    fscanf(fastWtFldInpFile, "NbOfBlocks: %d\n", &WtFldFastVol.NbBlocks);
-    WtFldBlkNbXCells = ivector(1, WtFldFastVol.NbBlocks);
-    WtFldBlkNbYCells = ivector(1, WtFldFastVol.NbBlocks);
-    WtFldBlkNbZCells = ivector(1, WtFldFastVol.NbBlocks);
-    WtFldBlkLZ = dvector(1, WtFldFastVol.NbBlocks);
-    WtFldBlkCrnrZ = dvector(1, WtFldFastVol.NbBlocks);
-    for (int block = 1; block <= WtFldFastVol.NbBlocks; ++block) {
-      fscanf(fastWtFldInpFile, "NbOfXCells: %d\n", &WtFldBlkNbXCells[block]);
-      fscanf(fastWtFldInpFile, "NbOfYCells: %d\n", &WtFldBlkNbYCells[block]);
-      fscanf(fastWtFldInpFile, "NbOfZCells: %d\n", &WtFldBlkNbZCells[block]);
-      fscanf(fastWtFldInpFile, "LZ: %le\n", &WtFldBlkLZ[block]);
-      fscanf(fastWtFldInpFile, "CornerZ: %le\n", &WtFldBlkCrnrZ[block]);
-    }  // inputs for blocks
-    fscanf(fastWtFldInpFile, "NbOfOmitVols: %d\n", &WtFldFastVol.NbOmitVols);
-    if (WtFldFastVol.NbOmitVols) {
-      WtFldOmitVolLX = dvector(1, WtFldFastVol.NbOmitVols);
-      WtFldOmitVolLY = dvector(1, WtFldFastVol.NbOmitVols);
-      WtFldOmitVolLZ = dvector(1, WtFldFastVol.NbOmitVols);
-      WtFldOmitVolCrnrX = dvector(1, WtFldFastVol.NbOmitVols);
-      WtFldOmitVolCrnrY = dvector(1, WtFldFastVol.NbOmitVols);
-      WtFldOmitVolCrnrZ = dvector(1, WtFldFastVol.NbOmitVols);
-      for (int omit = 1; omit <= WtFldFastVol.NbOmitVols; ++omit) {
-        fscanf(fastWtFldInpFile, "OmitVolLX: %le\n", &WtFldOmitVolLX[omit]);
-        fscanf(fastWtFldInpFile, "OmitVolLY: %le\n", &WtFldOmitVolLY[omit]);
-        fscanf(fastWtFldInpFile, "OmitVolLZ: %le\n", &WtFldOmitVolLZ[omit]);
-        fscanf(fastWtFldInpFile, "OmitVolCornerX: %le\n",
-               &WtFldOmitVolCrnrX[omit]);
-        fscanf(fastWtFldInpFile, "OmitVolCornerY: %le\n",
-               &WtFldOmitVolCrnrY[omit]);
-        fscanf(fastWtFldInpFile, "OmitVolCornerZ: %le\n",
-               &WtFldOmitVolCrnrZ[omit]);
-      }  // inputs for OmitVols
-    }    // inputs for OmitVols
-    fscanf(fastWtFldInpFile, "NbOfIgnoreVols: %d\n",
-           &WtFldFastVol.NbIgnoreVols);
-    if (WtFldFastVol.NbIgnoreVols) {
-      WtFldIgnoreVolLX = dvector(1, WtFldFastVol.NbIgnoreVols);
-      WtFldIgnoreVolLY = dvector(1, WtFldFastVol.NbIgnoreVols);
-      WtFldIgnoreVolLZ = dvector(1, WtFldFastVol.NbIgnoreVols);
-      WtFldIgnoreVolCrnrX = dvector(1, WtFldFastVol.NbIgnoreVols);
-      WtFldIgnoreVolCrnrY = dvector(1, WtFldFastVol.NbIgnoreVols);
-      WtFldIgnoreVolCrnrZ = dvector(1, WtFldFastVol.NbIgnoreVols);
-      for (int ignore = 1; ignore <= WtFldFastVol.NbIgnoreVols; ++ignore) {
-        fscanf(fastWtFldInpFile, "IgnoreVolLX: %le\n",
-               &WtFldIgnoreVolLX[ignore]);
-        fscanf(fastWtFldInpFile, "IgnoreVolLY: %le\n",
-               &WtFldIgnoreVolLY[ignore]);
-        fscanf(fastWtFldInpFile, "IgnoreVolLZ: %le\n",
-               &WtFldIgnoreVolLZ[ignore]);
-        fscanf(fastWtFldInpFile, "IgnoreVolCornerX: %le\n",
-               &WtFldIgnoreVolCrnrX[ignore]);
-        fscanf(fastWtFldInpFile, "IgnoreVolCornerY: %le\n",
-               &WtFldIgnoreVolCrnrY[ignore]);
-        fscanf(fastWtFldInpFile, "IgnoreVolCornerZ: %le\n",
-               &WtFldIgnoreVolCrnrZ[ignore]);
-      }  // inputs for IgnoreVols
-    }    // inputs for IgnoreVols
-    for (int ignore = 1; ignore <= WtFldFastVol.NbIgnoreVols; ++ignore) {
-      printf("WtFldIgnoreVolLX: %le\n", WtFldIgnoreVolLX[ignore]);
-      printf("WtFldIgnoreVolLY: %le\n", WtFldIgnoreVolLY[ignore]);
-      printf("WtFldIgnoreVolLZ: %le\n", WtFldIgnoreVolLZ[ignore]);
-      printf("WtFldIgnoreVolCornerX: %le\n", WtFldIgnoreVolCrnrX[ignore]);
-      printf("WtFldIgnoreVolCornerY: %le\n", WtFldIgnoreVolCrnrY[ignore]);
-      printf("WtFldIgnoreVolCornerZ: %le\n", WtFldIgnoreVolCrnrZ[ignore]);
-    }  // inputs for IgnoreVols
-    fclose(fastWtFldInpFile);
-  }  // else fastWtFldInpFile
+      fclose(fastInpFile);
+    }  // else fastInpFile
+  }    // if OptFastVol
 
   printf("neBEM initialized ...\n");
   fflush(stdout);
@@ -524,9 +423,9 @@ int neBEMReadGeometry(void) {
   double xnorm, ynorm, znorm;  // in case of wire , radius is read as xnorm
   for (int prim = 1; prim <= NbPrimitives; ++prim) {
 #ifdef __cplusplus
-    fstatus = neBEMGetPrimitive(prim, &nvertex, 
-                                xvert.data(), yvert.data(), zvert.data(),
-                                &xnorm, &ynorm, &znorm, &volref1, &volref2);
+    fstatus = neBEMGetPrimitive(prim, &nvertex, xvert.data(), yvert.data(),
+                                zvert.data(), &xnorm, &ynorm, &znorm, &volref1,
+                                &volref2);
 #else
     fstatus = neBEMGetPrimitive(prim, &nvertex, xvert, yvert, zvert,  // arrays
                                 &xnorm, &ynorm, &znorm, &volref1, &volref2);
@@ -589,8 +488,8 @@ int neBEMReadGeometry(void) {
     // volref1 refers to the volume itself
     // volref2 describes the volume in the direction of the +ve normal
     // Note that materials from 1 to 10 are conductors and
-    // 										 from 11 to 20 are
-    // dielectrics
+    // 										 from 11 to 20
+    // are dielectrics
     int shape1, material1, boundarytype1;
     double epsilon1, potential1, charge1;
     if (volref1 == -1) {
@@ -721,7 +620,7 @@ int neBEMReadGeometry(void) {
           // dielectric-vacuum
           // epsilon1 is self dielectric-constant
           // epsilon2 is towards positive normal
-          InterfaceType[prim] = 4;  
+          InterfaceType[prim] = 4;
           Lambda[prim] = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
           // consistent with Bardhan's eqn 16 where (1 / (2*Lambda)) is used
         } else if (boundarytype2 == 1) {
@@ -737,7 +636,8 @@ int neBEMReadGeometry(void) {
           InterfaceType[prim] = 3;  // conductor at floating potential
         } else if (boundarytype2 == 4) {
           // dielectric-dielectric
-          if (fabs(epsilon1 - epsilon2) < 1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
+          if (fabs(epsilon1 - epsilon2) <
+              1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
             // identical dielectrica
             printf(
                 "neBEMReadGeometry: between identical dielectrica; skipd.\n");
@@ -747,10 +647,10 @@ int neBEMReadGeometry(void) {
             // distinctly different dielectrica
             // epsilon1 is self dielectric-constant
             // epsilon2 towards positive normal
-            InterfaceType[prim] = 4;  
+            InterfaceType[prim] = 4;
             Lambda[prim] = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
             // consistent with Bardhan's paper (1 / Lambda)
-          }  
+          }
         } else if (boundarytype2 == 5) {
           // dielectric-dielectric with charge
           if (fabs(epsilon1 - epsilon2)  // identical dielectrica
@@ -773,13 +673,14 @@ int neBEMReadGeometry(void) {
         break;
 
       case 5:  // dielectric with surface charge (plastic-gas, typically)
-        if (boundarytype2 == 0) { // dielectric-vacuum
+        if (boundarytype2 == 0) {   // dielectric-vacuum
           InterfaceType[prim] = 5;  // epsilon2 is towards +ve normal
           ApplCh[prim] = charge1;
           Lambda[prim] = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
           // consistent with Bardhan's paper (1 / Lambda)
-        } else if (boundarytype2 == 4) { // dielectric-dielectric
-          if (fabs(epsilon1 - epsilon2) < 1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
+        } else if (boundarytype2 == 4) {  // dielectric-dielectric
+          if (fabs(epsilon1 - epsilon2) <
+              1e-6 * (1 + fabs(epsilon1) + fabs(epsilon2))) {
             // identical dielectrica
             printf(
                 "neBEMReadGeometry: between identical dielectrica; skipd.\n");
@@ -791,8 +692,8 @@ int neBEMReadGeometry(void) {
             ApplCh[prim] = charge1;
             Lambda[prim] = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
             // consistent with Bardhan's paper (1 / Lambda)
-          }  
-        }    // if-else if boundarytypes 0 and 4
+          }
+        }  // if-else if boundarytypes 0 and 4
         else {
           printf(
               "neBEMReadGeometry: charged dielectric adjacent to a conductor; "
@@ -841,7 +742,7 @@ int neBEMReadGeometry(void) {
     // sx: XPeriod
     // NOTE: A change in this part of the algorithm is likely to affect
     // src/Solve/neBEM.c (LHMatrix) and
-    // src/Solve/ComputeProperties.c (PFAtPoint and WtPFAtPoint)
+    // src/Solve/ComputeProperties.c (PFAtPoint and WtFldPFAtPoint)
     {
       int ix, iy, iz;
       int jx, jy, jz;
@@ -871,7 +772,7 @@ int neBEMReadGeometry(void) {
         // These checks need to be done separately. Otherwise, there is
         // a possibility that non-zero values of PeriodicIn* and *Period
         // are used throughout the code despite PeriodicType* is 0
-        PeriodicInX[prim] = jx;  
+        PeriodicInX[prim] = jx;
         XPeriod[prim] = sx;
       } else {
         PeriodicInX[prim] = 0;
@@ -1170,8 +1071,8 @@ int neBEMReadGeometry(void) {
     // Complications are likely to arise due to corner and edge overlaps which
     will
     // happen to all neighbouring primitives on the same plane.
-    int Overlap[NbPrimitives+1][NbPrimitives+1];	// this C++ syntax seems to
-    work!
+    int Overlap[NbPrimitives+1][NbPrimitives+1];	// this C++ syntax seems
+    to work!
     // int **Overlap;
     // Overlap = imatrix(1, NbPrimitives, 1, NbPrimitives);
     for(unsigned int prim = 1; prim <= NbPrimitives; ++prim)
@@ -1184,8 +1085,8 @@ int neBEMReadGeometry(void) {
             if(dbgFn)
                     printf("\nNew XNorm[%d]: %lg: ", prim, XNorm[prim]);
 
-            if(fabs(fabs(XNorm[prim]) - 1.0) >= 1.0e-12)	// primitive || to
-    YZ plane continue;
+            if(fabs(fabs(XNorm[prim]) - 1.0) >= 1.0e-12)	// primitive ||
+    to YZ plane continue;
 
             for(unsigned int chkprim = prim+1;
                                                                                                                     chkprim <= NbPrimitives; ++chkprim)
@@ -1517,9 +1418,9 @@ int neBEMReadGeometry(void) {
     }	// look for overlapped primitives
     */
 
-    {  // remove primitives, as specified in a user supplied input file
+    if (OptRmPrim) {
       int NbRmPrims;
-      FILE *rmprimFile = fopen("neBEMRmPrim.inp", "r");
+      FILE *rmprimFile = fopen("neBEMInp/neBEMRmPrim.inp", "r");
       if (rmprimFile == NULL) {
         printf("neBEMRmPrim.inp absent ... assuming defaults ...\n");
         NbRmPrims = 0;
@@ -1623,7 +1524,10 @@ int neBEMReadGeometry(void) {
           }  // for prim loop over all primitives
 
           int NbRemoved = 0;
-          FILE *fprrm = fopen("RmPrims.info", "w");
+          char RmPrimFile[256];
+          strcpy(RmPrimFile, NativePrimDir);
+          strcat(RmPrimFile, "/RmPrims.info");
+          FILE *fprrm = fopen(RmPrimFile, "w");
           if (fprrm == NULL) {
             printf(
                 "error opening RmPrims.info file in write mode ... "
@@ -1737,12 +1641,16 @@ int neBEMReadGeometry(void) {
               "Number of primitives removed: %d, Effective NbPrimitives: %d\n",
               NbRemoved, NbPrimitives);
           fflush(stdout);
-        }  // if NbRmPrimes true, implying primitives need to be removed
+        }  // if NbRmPrims true, implying primitives need to be removed
         fclose(rmprimFile);
       }  // if the rmprimFile is not NULL, prepare to remove primitives
-    }    // remove primitives as desired by the user
+    }    // if OptRmPrim: remove primitives as desired by the user
 
-    FILE *fignore = fopen("IgnorePrims.info", "w");
+    // Information about primitives which are being ignored
+    char IgnorePrimFile[256];
+    strcpy(IgnorePrimFile, NativePrimDir);
+    strcat(IgnorePrimFile, "/IgnorePrims.info");
+    FILE *fignore = fopen(IgnorePrimFile, "w");
     if (fignore == NULL) {
       printf(
           "error opening IgnorePrims.info file in write mode ... returning\n");
@@ -1969,7 +1877,8 @@ int neBEMDiscretize(int **NbElemsOnPrimitives) {
     if (NbVertices[prim] == 4) {
       NbSurfSegX[prim] = NbElemsOnPrimitives[prim][1];
       NbSurfSegZ[prim] = NbElemsOnPrimitives[prim][2];
-      int fstatus = AnalyzePrimitive(prim, &NbSurfSegX[prim], &NbSurfSegZ[prim]);
+      int fstatus =
+          AnalyzePrimitive(prim, &NbSurfSegX[prim], &NbSurfSegZ[prim]);
       if (fstatus == 0) {
         neBEMMessage("neBEMDiscretize - AnalyzePrimitve");
         return -1;
@@ -1979,7 +1888,8 @@ int neBEMDiscretize(int **NbElemsOnPrimitives) {
     if (NbVertices[prim] == 3) {
       NbSurfSegX[prim] = NbElemsOnPrimitives[prim][1];
       NbSurfSegZ[prim] = NbElemsOnPrimitives[prim][2];
-      int fstatus = AnalyzePrimitive(prim, &NbSurfSegX[prim], &NbSurfSegZ[prim]);
+      int fstatus =
+          AnalyzePrimitive(prim, &NbSurfSegX[prim], &NbSurfSegZ[prim]);
       if (fstatus == 0) {
         neBEMMessage("neBEMDiscretize - AnalyzePrimitive");
         return -1;
@@ -2211,7 +2121,7 @@ int neBEMDiscretize(int **NbElemsOnPrimitives) {
   return (0);
 }  // neBEMDiscretize ends
 
-int neBEMBoundaryConditions(void) {
+int neBEMBoundaryInitialConditions(void) {
   startClock = clock();
 
   // The boundary conditions can be set only with neBEMState == 4 or 7
@@ -2222,1876 +2132,28 @@ int neBEMBoundaryConditions(void) {
   if ((neBEMState == 4) || (neBEMState == 7)) {
     int fstatus = BoundaryConditions();
     if (fstatus != 0) {
-      neBEMMessage("neBEMBondaryConditions - BoundaryConditions");
+      neBEMMessage("neBEMBondaryInitialConditions - BoundaryConditions");
+      return -1;
+    }
+    fstatus = InitialConditions();
+    if (fstatus != 0) {
+      neBEMMessage("neBEMBondaryInitialConditions - InitialConditions");
       return -1;
     }
     if (neBEMState == 4) neBEMState = 5;  // create LHMatrix, invert etc
     if (neBEMState == 7) neBEMState = 8;  // assume LHS and inversion to be over
   } else {
-    printf("Boundary conditions can be set only in state 4 / 7 ...\n");
+    printf("Boundary & initial conditions can be set in states 4 / 7 ...\n");
     printf("returning ...\n");
     return (-1);
   }
 
   stopClock = clock();
   neBEMTimeElapsed(startClock, stopClock);
-  printf("to setup boundary conditions.\n");
+  printf("to setup boundary and initial conditions.\n");
 
   return (0);
-}  // neBEMBoundaryConditions ends
-
-// int neBEMKnownCharges(int (*Pt2UserFunction)(void))
-int neBEMKnownCharges(void) {
-  int debugFn = 0;
-
-  /*
-  // How to check that the pointer points to a valid function?
-  if(Pt2UserFunction == NULL)
-          {
-          printf("Not a valid function ... returning ...\n");
-          return(-1);
-          }
-  else
-          {
-          // printf("Pt2UserFunction points to %p\n", Pt2UserFunction);
-          }
-
-  // Status of the known charges conditions is meaningful only after the
-  // element discretization has been completed, i.e., beyond the 5th state.
-  if(neBEMState >= 5)
-          {	// the following function is declared in the Interface.h.
-          int fstatus = (*Pt2UserFunction)();	// user to supply function
-          if(fstatus != 0)
-                  {
-                  neBEMMessage("neBEMKnownCharges - Pt2UserFunction");
-                  return -1;
-                  }
-          if(neBEMState > 5)	// assume LHS and inversion to be over?
-                  neBEMState = 8;
-          }
-  else
-          {
-          printf("Known charges are meaningful only beyond state 4 ...\n");
-          printf("returning ...\n");
-          return(-1);
-          }
-  */
-
-  // Set up parameters related to known charge calculations
-  // Electrons and ions can be distributed as points, lines, areas or volumes.
-  {
-    FILE *KnChInpFile = fopen("neBEMKnCh.inp", "r");
-    if (KnChInpFile == NULL) {
-      OptKnCh = 0;
-      printf(
-          "neBEMKnCh.inp absent ... assuming absence of known charges ...\n");
-    } else {
-      fscanf(KnChInpFile, "OptKnCh: %d\n", &OptKnCh);
-      if (1) printf("OptKnCh: %d\n", OptKnCh);
-
-      if (!OptKnCh) printf("OptKnCh = 0 ... assuming no known charges ...\n");
-
-      if (OptKnCh) {
-        char PointKnChFile[256];
-        char LineKnChFile[256];
-        char AreaKnChFile[256];
-        char VolumeKnChFile[256];
-        double KnChFactor;
-
-        fscanf(KnChInpFile, "NbPointsKnCh: %d\n", &NbPointsKnCh);
-        fscanf(KnChInpFile, "PointKnChFile: %255s\n", PointKnChFile);
-        fscanf(KnChInpFile, "NbLinesKnCh: %d\n", &NbLinesKnCh);
-        fscanf(KnChInpFile, "LineKnChFile: %255s\n", LineKnChFile);
-        fscanf(KnChInpFile, "NbAreasKnCh: %d\n", &NbAreasKnCh);
-        fscanf(KnChInpFile, "AreaKnChFile: %255s\n", AreaKnChFile);
-        fscanf(KnChInpFile, "NbVolumesKnCh: %d\n", &NbVolumesKnCh);
-        fscanf(KnChInpFile, "VolumeKnChFile: %255s\n", VolumeKnChFile);
-        fscanf(KnChInpFile, "KnChFactor: %lg\n", &KnChFactor);
-        if (1) {
-          printf("NbPointsKnCh: %d\n", NbPointsKnCh);
-          printf("PointKnChFile: %s\n", PointKnChFile);
-          printf("NbLinesKnCh: %d\n", NbLinesKnCh);
-          printf("LineKnChFile: %s\n", LineKnChFile);
-          printf("NbAreasKnCh: %d\n", NbAreasKnCh);
-          printf("AreaKnChFile: %s\n", AreaKnChFile);
-          printf("NbVolumesKnCh: %d\n", NbVolumesKnCh);
-          printf("VolumeKnChFile: %s\n", VolumeKnChFile);
-          printf("KnChFactor: %lg\n", KnChFactor);
-        }
-
-        if (NbPointsKnCh) {  // Points
-          if (debugFn)
-            printf("No. of points with known charges: %d\n", NbPointsKnCh);
-
-          FILE *fptrPointKnChFile = fopen(PointKnChFile, "r");
-          if (fptrPointKnChFile == NULL) {
-            neBEMMessage("PointKnCh file absent ... returning\n");
-            return -10;
-          }
-
-          PointKnChArr =
-              (PointKnCh *)malloc((NbPointsKnCh + 1) * sizeof(PointKnCh));
-          if (PointKnChArr == NULL) {
-            neBEMMessage("Memory allocation failed ... returning\n");
-            fclose(fptrPointKnChFile);
-            return -10;
-          }
-          for (int point = 0; point <= NbPointsKnCh; ++point) {
-            // CHECK!!! ele limits start from 0, but all else from 1 to ...
-            PointKnChArr[point].Nb = 0;
-            PointKnChArr[point].P.X = 0.0;
-            PointKnChArr[point].P.Y = 0.0;
-            PointKnChArr[point].P.Z = 0.0;
-            PointKnChArr[point].Assigned = 0.0;
-          }
-
-          char header[256];
-          fgets(header, 256, fptrPointKnChFile);  // header
-
-          for (int point = 1; point <= NbPointsKnCh; ++point) {
-            fscanf(fptrPointKnChFile, "%d %lg %lg %lg %lg\n",
-                   &PointKnChArr[point].Nb, &PointKnChArr[point].P.X,
-                   &PointKnChArr[point].P.Y, &PointKnChArr[point].P.Z,
-                   &PointKnChArr[point].Assigned);
-
-            PointKnChArr[point].Assigned *= KnChFactor;
-          }
-
-          fclose(fptrPointKnChFile);
-          if (debugFn) printf("done for all points\n");
-        }  // if NbPointsKnCh: Inputs and calculations for points ends
-
-        if (NbLinesKnCh) {  // Lines
-          if (debugFn)
-            printf("No. of lines with known charges: %d\n", NbLinesKnCh);
-
-          FILE *fptrLineKnChFile = fopen(LineKnChFile, "r");
-          if (fptrLineKnChFile == NULL) {
-            neBEMMessage("LineKnCh file absent ... returning\n");
-            return -10;
-          }
-
-          LineKnChArr =
-              (LineKnCh *)malloc((NbLinesKnCh + 1) * sizeof(LineKnCh));
-          if (LineKnChArr == NULL) {
-            neBEMMessage("Memory allocation failed ... returning\n");
-            fclose(fptrLineKnChFile);
-            return -10;
-          }
-          for (int line = 0; line <= NbLinesKnCh; ++line) {  
-            // CHECK!!! ele limits start from 0, but all else from 1 to ...
-            LineKnChArr[line].Nb = 0;
-            LineKnChArr[line].Start.X = 0.0;
-            LineKnChArr[line].Start.Y = 0.0;
-            LineKnChArr[line].Start.Z = 0.0;
-            LineKnChArr[line].Stop.X = 0.0;
-            LineKnChArr[line].Stop.Y = 0.0;
-            LineKnChArr[line].Stop.Z = 0.0;
-            LineKnChArr[line].Radius = 0.0;
-            LineKnChArr[line].Assigned = 0.0;
-          }
-
-          char header[256];
-          fgets(header, 256, fptrLineKnChFile);  // header
-
-          for (int line = 1; line <= NbLinesKnCh; ++line) {
-            fscanf(fptrLineKnChFile, "%d %lg %lg %lg %lg %lg %lg %lg %lg\n",
-                   &LineKnChArr[line].Nb, &LineKnChArr[line].Start.X,
-                   &LineKnChArr[line].Start.Y, &LineKnChArr[line].Start.Z,
-                   &LineKnChArr[line].Stop.X, &LineKnChArr[line].Stop.Y,
-                   &LineKnChArr[line].Stop.Z, &LineKnChArr[line].Radius,
-                   &LineKnChArr[line].Assigned);
-            LineKnChArr[line].Assigned *= KnChFactor;
-          }
-
-          fclose(fptrLineKnChFile);
-          if (debugFn) printf("done for all lines\n");
-        }  // if NbLinesKnCh: Inputs and calculations for lines ends
-
-        if (NbAreasKnCh) {  // Areas
-          if (debugFn)
-            printf("No. of areas with known charges: %d\n", NbAreasKnCh);
-
-          FILE *fptrAreaKnChFile = fopen(AreaKnChFile, "r");
-          if (fptrAreaKnChFile == NULL) {
-            neBEMMessage("AreaKnCh file absent ... returning\n");
-            return -10;
-          }
-
-          AreaKnChArr =
-              (AreaKnCh *)malloc((NbAreasKnCh + 1) * sizeof(AreaKnCh));
-          if (AreaKnChArr == NULL) {
-            neBEMMessage("Memory allocation failed ... returning\n");
-            fclose(fptrAreaKnChFile);
-            return -10;
-          }
-          for (int area = 0; area <= NbAreasKnCh; ++area) {  
-            // CHECK!!! ele limits start from 0, but all else from 1 to ...
-            AreaKnChArr[area].Nb = 0;
-            AreaKnChArr[area].NbVertices = 0;
-            for (int vert = 1; vert <= (AreaKnChArr + area - 1)->NbVertices;
-                 ++vert) {
-              (AreaKnChArr + area - 1)->Vertex[vert].X = 0.0;
-              (AreaKnChArr + area - 1)->Vertex[vert].Y = 0.0;
-              (AreaKnChArr + area - 1)->Vertex[vert].Z = 0.0;
-            }
-            AreaKnChArr[area].Assigned = 0.0;
-          }
-
-          char header[256];
-          fgets(header, 256, fptrAreaKnChFile);  // header
-
-          for (int area = 1; area <= NbAreasKnCh; ++area) {
-            fscanf(fptrAreaKnChFile, "%d %d %le\n",
-                   &(AreaKnChArr + area - 1)->Nb,
-                   &(AreaKnChArr + area - 1)->NbVertices,
-                   &(AreaKnChArr + area - 1)->Assigned);
-            for (int vert = 1; vert <= (AreaKnChArr + area - 1)->NbVertices;
-                 ++vert) {
-              fscanf(fptrAreaKnChFile, "%le %le %le\n",
-                     &(AreaKnChArr + area - 1)->Vertex[vert].X,
-                     &(AreaKnChArr + area - 1)->Vertex[vert].Y,
-                     &(AreaKnChArr + area - 1)->Vertex[vert].Z);
-            }
-            AreaKnChArr[area].Assigned *= KnChFactor;
-          }
-
-          fclose(fptrAreaKnChFile);
-          if (debugFn) printf("done for all areas\n");
-        }  // if AreasKnCh: Inputs and calculations for areas ends
-
-        if (NbVolumesKnCh) {  // Volumes
-          if (debugFn)
-            printf("No. of volumes with known charges: %d\n", NbVolumesKnCh);
-
-          FILE *fptrVolumeKnChFile = fopen(VolumeKnChFile, "r");
-          if (fptrVolumeKnChFile == NULL) {
-            neBEMMessage("VolumeKnCh file absent ... returning\n");
-            return -10;
-          }
-
-          VolumeKnChArr =
-              (VolumeKnCh *)malloc((NbVolumesKnCh + 1) * sizeof(VolumeKnCh));
-          if (VolumeKnChArr == NULL) {
-            neBEMMessage("Memory allocation failed ... returning\n");
-            fclose(fptrVolumeKnChFile);
-            return -10;
-          }
-          for (int volume = 0; volume <= NbVolumesKnCh; ++volume) { 
-            // CHECK!!! ele limits start from 0, but all else from 1 to ...
-            VolumeKnChArr[volume].Nb = 0;
-            VolumeKnChArr[volume].NbVertices = 0;
-            for (int vert = 1; vert <= (VolumeKnChArr + volume - 1)->NbVertices;
-                 ++vert) {
-              (VolumeKnChArr + volume - 1)->Vertex[vert].X = 0.0;
-              (VolumeKnChArr + volume - 1)->Vertex[vert].Y = 0.0;
-              (VolumeKnChArr + volume - 1)->Vertex[vert].Z = 0.0;
-            }
-            VolumeKnChArr[volume].Assigned = 0.0;
-          }
-
-          char header[256];
-          fgets(header, 256, fptrVolumeKnChFile);  // header
-
-          for (int volume = 1; volume <= NbVolumesKnCh; ++volume) {
-            fscanf(fptrVolumeKnChFile, "%d %d %le\n",
-                   &(VolumeKnChArr + volume - 1)->Nb,
-                   &(VolumeKnChArr + volume - 1)->NbVertices,
-                   &(VolumeKnChArr + volume - 1)->Assigned);
-            for (int vert = 1; vert <= (VolumeKnChArr + volume - 1)->NbVertices;
-                 ++vert) {
-              fscanf(fptrVolumeKnChFile, "%le %le %le\n",
-                     &(VolumeKnChArr + volume - 1)->Vertex[vert].X,
-                     &(VolumeKnChArr + volume - 1)->Vertex[vert].Y,
-                     &(VolumeKnChArr + volume - 1)->Vertex[vert].Z);
-            }
-            VolumeKnChArr[volume].Assigned *= KnChFactor;
-          }
-
-          fclose(fptrVolumeKnChFile);
-          if (debugFn) printf("done for all volumes\n");
-        }  // if NbVolumesKnCh: Inputs and calculations for volumes ends
-
-      }  // if OptKnCh
-
-      fclose(KnChInpFile);
-    }  // else KnChInpFile
-  }    // parameters related to known charge calculations
-
-  return (0);
-}  // neBEMKnownCharges ends
-
-// It is quite possible that the elements had a charge assgined to them
-// even before they are being considered for getting charged up.
-// Moreover, following the sequence in which the algorithm has been developed,
-// the same element accumulates the available electrons and then the ions.
-// The resultant of all three (prior charge, electrons and ions) turns out
-// to be the assigned charge on the elements, after the execution of this
-// function.
-int neBEMChargingUp(int /*InfluenceMatrixFlag*/) {
-  int debugFn = 0;
-
-  // status of elements before being charged up
-  if (debugFn) {
-    for (int ele = 1; ele <= NbElements; ++ele) {
-      printf("ele, Assigned charge: %d, %lg\n", ele,
-             (EleArr + ele - 1)->Assigned);
-    }
-  }
-
-  // Set up parameters related to charging-up calculations
-  // The plan is to distribute the electrons and ions ending in dielectric
-  // volumes to the elements on the volumes
-  // Only the electrons, to begin with
-  {
-    FILE *ChargingUpInpFile = fopen("neBEMChargingUp.inp", "r");
-    if (ChargingUpInpFile == NULL) {
-      printf(
-          "neBEMChargingUp.inp absent ... assuming no charging up effect "
-          "...\n");
-      // assign NbChUpEEle and NbChUpIEle and Prims to be zeros?
-    } else {
-      fscanf(ChargingUpInpFile, "OptChargingUp: %d\n", &OptChargingUp);
-      if (!OptChargingUp)
-        printf("OptChargingUp = 0 ... assuming no charging up effect ...\n");
-      if (1) printf("OptChargingUp: %d\n", OptChargingUp);
-
-      if (OptChargingUp) {
-        char ChargingUpEFile[256];
-        char ChargingUpIFile[256];
-        double ChUpFactor;
-        int *NbChUpEonEle, *NbChUpIonEle;
-
-        fscanf(ChargingUpInpFile, "ChargingUpEFile: %255s\n", ChargingUpEFile);
-        fscanf(ChargingUpInpFile, "ChargingUpIFile: %255s\n", ChargingUpIFile);
-        fscanf(ChargingUpInpFile, "ChUpFactor: %lg\n", &ChUpFactor);
-        if (1) {
-          printf("ChargingUpEFile: %s\n", ChargingUpEFile);
-          printf("ChargingUpIFile: %s\n", ChargingUpIFile);
-          printf("ChUpFactor: %lg\n", ChUpFactor);
-        }
-
-        {  // Calculation for electrons
-          FILE *fptrChargingUpEFile = fopen(ChargingUpEFile, "r");
-          if (fptrChargingUpEFile == NULL) {
-            neBEMMessage("ChargingUpE file absent ... returning\n");
-            return -10;
-          }
-          int NbOfE = neBEMGetNbOfLines(ChargingUpEFile);
-          if (NbOfE <= 1) {
-            neBEMMessage("Too few lines in ChargingUpE ... returning\n");
-            fclose(fptrChargingUpEFile);
-            return -11;
-          }
-          NbChUpEonEle = (int *)malloc((NbElements + 1) * sizeof(int));
-          if (NbChUpEonEle == NULL) {
-            neBEMMessage("Memory allocation failed ... returning\n");
-            fclose(fptrChargingUpEFile);
-            return -11;
-          }            
-          for (int ele = 0; ele <= NbElements; ++ele) {
-            // CHECK!!! ele limits start from 0, but all else from 1 to ...
-            NbChUpEonEle[ele] = 0;
-          }
-
-          // read the header line
-          char header[256];
-          fgets(header, 256, fptrChargingUpEFile);
-
-          --NbOfE;  // one line was for the header
-          if (debugFn) printf("No. of electrons: %d\n", NbOfE);
-          const char *tmpEFile = "/tmp/ElectronTempFile.out";
-          FILE *ftmpEF = fopen(tmpEFile, "w");
-          if (ftmpEF == NULL) {
-            printf("cannot open temporary output file ... returning ...\n");
-            free(NbChUpEonEle);
-            return -100;
-          }
-          FILE *fPtEChUpMap = fopen("PtEChUpMap.out", "w");
-          if (fPtEChUpMap == NULL) {
-            printf("cannot open PtEChUpMap.out file for writing ...\n");
-            free(NbChUpEonEle);
-            fclose(ftmpEF);
-            return 110;
-          }
-
-          char label;
-          int vol, enb;  // label, volume and electron number
-          double xlbend, ylbend, zlbend; // lbend == Last But END
-          double xend, yend, zend;
-          Point3D
-              ptintsct;  // each electron likely to have an intersection point
-          for (int electron = 1; electron <= NbOfE; ++electron) {
-            fscanf(fptrChargingUpEFile, "%c %d %d %lg %lg %lg %lg %lg %lg\n",
-                   &label, &vol, &enb, &xlbend, &xend, &ylbend, &yend, &zlbend,
-                   &zend);
-            xlbend *= 0.01;
-            xend *= 0.01;
-            ylbend *= 0.01;
-            yend *= 0.01;
-            zlbend *= 0.01;
-            zend *= 0.01;
-            ptintsct.X = 0.0;
-            ptintsct.Y = 0.0;
-            ptintsct.Z = 0.0;  // initialize
-
-            // find the parametric equation of this last segment
-            // if xend < xlbend, swap the directions
-            // This has not been mentioned as mandatory in Vince's book
-            // "Geometry for Computer Graphics", but implied in the book "A
-            // Programmer's Geometry"
-            if (xend < xlbend)  // not implemented now
-            {
-            }
-            double lseg = (xend - xlbend) * (xend - xlbend) +
-                          (yend - ylbend) * (yend - ylbend) +
-                          (zend - zlbend) * (zend - zlbend);
-            lseg = sqrt(lseg);
-            double xgrd =
-                (xend - xlbend) / lseg;  // normalized direction vector
-            double ygrd = (yend - ylbend) / lseg;
-            double zgrd = (zend - zlbend) / lseg;
-            if (debugFn) {
-              printf("\nelectron: %d\n", electron);
-              printf("xlbend: %lg, ylbend: %lg, zlbend: %lg\n", xlbend, ylbend,
-                     zlbend);
-              printf("xend: %lg, yend: %lg, zend: %lg\n", xend, yend, zend);
-              printf("xgrd: %lg, ygrd: %lg, zgrd: %lg\n", xgrd, ygrd, zgrd);
-              fprintf(ftmpEF, "#e: %d, label: %c, vol: %d\n", electron, label,
-                      vol);
-              fprintf(ftmpEF, "%lg %lg %lg\n", xlbend, ylbend, zlbend);
-              fprintf(ftmpEF, "%lg %lg %lg\n", xend, yend, zend);
-              fprintf(ftmpEF, "#xgrd: %lg, ygrd: %lg, zgrd: %lg\n", xgrd, ygrd,
-                      zgrd);
-              fprintf(ftmpEF, "\n");
-            }
-
-            // determine which element gets this electron
-            // At present, the logic is as follow:
-            // Using the information on the last segment, find out which
-            // primitive is pierced by it and at which point From the
-            // intersection point, find out the element number on the primitive
-            // in a local sense Using the information (start and end elements of
-            // a given primitive) identify the element in a global sense. This
-            // approach should be lot more efficient than checking intersection
-            // element by element.
-            // The intersection point is computed following algorithm
-            // implemented in a matlab code (plane_imp_line_par_int_3d.m) Also
-            // check which primitive in the list is the closet to the end point
-
-            double SumOfAngles;
-            int PrimIntsctd = -1,
-                EleIntsctd = -1;   // intersected primitive & element
-            int nearestprim = -1;  // absurd value
-            double dist = 1.0e6, mindist = 1.0e6;  // absurdly high numbers
-            // check all primitives
-            for (int prim = 1; prim <= NbPrimitives; ++prim) {
-              if (InterfaceType[prim] != 4)
-                continue;  // primitive not a dielectric
-
-              int intersect = 0, extrasect = 1;  // worst of conditions
-              int InPrim = 0, InEle = 0;
-              if (debugFn)
-                printf("prim: %d, mindist: %lg, nearestprim: %d\n", prim,
-                       mindist, nearestprim);
-
-              // Use two nodes at a time to get two independent vectors on
-              // primitive Get cross-product of these two vector - normal to the
-              // plane Note that the normal is already associated with the
-              // primitive of type 3 and 4; 2 is wire and does not have any
-              // associated normal
-              if ((PrimType[prim] == 3) || (PrimType[prim] == 4)) {
-                if (debugFn) {
-                  printf("prim: %d\n", prim);
-                  printf("vertex0: %lg, %lg, %lg\n", XVertex[prim][0],
-                         YVertex[prim][0], ZVertex[prim][0]);
-                  printf("vertex1: %lg, %lg, %lg\n", XVertex[prim][1],
-                         YVertex[prim][1], ZVertex[prim][1]);
-                  printf("vertex2: %lg, %lg, %lg\n", XVertex[prim][2],
-                         YVertex[prim][2], ZVertex[prim][2]);
-                  if (PrimType[prim] == 4) {
-                    printf("vertex3: %lg, %lg, %lg\n", XVertex[prim][3],
-                           YVertex[prim][3], ZVertex[prim][3]);
-                  }
-                  fprintf(ftmpEF, "#prim: %d\n", prim);
-                  fprintf(ftmpEF, "%lg %lg %lg\n", XVertex[prim][0],
-                          YVertex[prim][0], ZVertex[prim][0]);
-                  fprintf(ftmpEF, "%lg %lg %lg\n", XVertex[prim][1],
-                          YVertex[prim][1], ZVertex[prim][1]);
-                  fprintf(ftmpEF, "%lg %lg %lg\n", XVertex[prim][2],
-                          YVertex[prim][2], ZVertex[prim][2]);
-                  if (PrimType[prim] == 4) {
-                    fprintf(ftmpEF, "%lg %lg %lg\n", XVertex[prim][3],
-                            YVertex[prim][3], ZVertex[prim][3]);
-                  }
-                  fprintf(ftmpEF, "%lg %lg %lg\n", XVertex[prim][0],
-                          YVertex[prim][0], ZVertex[prim][0]);
-                  fprintf(ftmpEF, "\n");
-                  fflush(stdout);
-                }  // debugFn
-
-                // use a, b, c (normal is ai + bj + ck) at one of the nodes to
-                // get d, ax + by + cz + d = 0 is the equation of the plane
-                double a = XNorm[prim];
-                double b = YNorm[prim];
-                double c = ZNorm[prim];
-                double d = -a * XVertex[prim][0] - b * YVertex[prim][0] -
-                           c * ZVertex[prim][0];
-
-                // distance of the end point to this primitve is
-                dist = (xend * a + yend * b + zend * c + d) /
-                       sqrt(a * a + b * b + c * c);
-                dist = fabs(dist);  // if only magnitude is required
-                if (prim == 1) {
-                  mindist = dist;
-                  nearestprim = prim;
-                }
-                if ((prim == 1) && debugFn)
-                  printf(
-                      "after prim == 1 check mindist: %lg, nearestprim: %d\n",
-                      mindist, nearestprim);
-
-                // Point of intersection
-                // Algo as on p62 (pdf 81) of Vince - Geometry for Computer
-                // Graphics 1.5.13 Intersection of a line and a plane Algorithm
-                // as implemented in plne_imp_line_par_int_3d.m a (nx), b (ny),
-                // c (nz), d are a, b, c, d vx, vy, vz are xgrd, ygrd and zgrd
-                // tx, ty, tz are xlbend, ylbend, zlbend
-                // In the present case, n and v are unit vectors
-                double norm1 = sqrt(a * a + b * b + c * c);
-                double norm2 = sqrt(xgrd * xgrd + ygrd * ygrd + zgrd * zgrd);
-                double denom =
-                    a * xgrd + b * ygrd + c * zgrd;  // (vec)n.(vec)v; if 0, ||
-                double tol =
-                    1.0e-16;  // CHECK: -8 in original code; sizes small here
-                intersect = extrasect = 0;
-
-                if (debugFn) {
-                  printf("a, b, c, d, dist: %lg, %lg, %lg, %lg, %lg\n", a, b, c,
-                         d, dist);
-                  printf("vector n: ai + bj + ck\n");
-                  printf("vector v: xgrd, ygrd, zgrd: %lg, %lg, %lg\n", xgrd,
-                         ygrd, zgrd);
-                  printf("norm1, norm2, (vec n . vec v) denom: %lg, %lg, %lg\n",
-                         norm1, norm2, denom);
-                  printf("if vec n . vec v == 0, line and plane parallel\n");
-                  fflush(stdout);
-                }
-
-                if (fabs(denom) < tol * norm1 * norm2) {
-                  // line parallel to the plane
-                  if (fabs(a * xlbend + b * ylbend + c * zlbend + d) <=
-                      1.0e-16) {  // CHECK: was == 0.0 in original code
-                    intersect = 1;
-                    extrasect = 0;  // line ends on the plane
-                    ptintsct.X = xlbend;
-                    ptintsct.Y = ylbend;
-                    ptintsct.Z = zlbend;
-                  } else {
-                    intersect = 0;
-                    extrasect = 1;     // both wrong
-                    ptintsct.X = 0.0;  // Wrong to assign 0 values
-                    ptintsct.Y =
-                        0.0;  // However, they are never going to be used
-                    ptintsct.Z = 0.0;  // since intersect is 0
-                  }
-                  if (debugFn) {
-                    printf("line and plane parallel ...\n");
-                    printf("intersect: %d, extrasect: %d\n", intersect,
-                           extrasect);
-                    printf("intersection point: %lg, %lg, %lg\n", ptintsct.X,
-                           ptintsct.Y, ptintsct.Z);
-                  }       // if line and plane are parallel
-                } else {  // if they are not parallel, they must intersect
-                  intersect = 1;
-                  double t =
-                      -(a * xlbend + b * ylbend + c * zlbend + d) / denom;
-
-                  // check whether t is less than the length of the segment
-                  // and in the correct direction
-                  // If not, then an extrapolated intersection is not of
-                  // interest
-                  if ((t < 0.0) ||
-                      (fabs(t) > fabs(lseg)))  // wrong dirn or beyond end
-                  {
-                    extrasect = 1;
-                    ptintsct.X = xlbend + t * xgrd;
-                    ptintsct.Y = ylbend + t * ygrd;
-                    ptintsct.Z = zlbend + t * zgrd;
-                  } else {
-                    extrasect = 0;
-                    ptintsct.X = xlbend + t * xgrd;
-                    ptintsct.Y = ylbend + t * ygrd;
-                    ptintsct.Z = zlbend + t * zgrd;
-                  }
-                  if (debugFn) {
-                    printf("line and plane NOT parallel ...\n");
-                    printf("intersect: %d, extrasect: %d\n", intersect,
-                           extrasect);
-                    printf("intersection point: %lg, %lg, %lg\n", ptintsct.X,
-                           ptintsct.Y, ptintsct.Z);
-                    printf("t, lseg: %lg, %lg\n", t, lseg);
-                    printf(
-                        "for an interesting intersection, lseg > t > 0.0 "
-                        "...\n\n");
-                    fflush(stdout);
-                  }   // must intersect
-                }     // if not parallel
-              }       // if PrimType is 3 or 4
-              else {  // this is a wire primitive - assume no charging up issues
-                dist = -1.0;  // an absurd negative distance
-                intersect = 0;
-                extrasect = 0;
-                continue;
-              }  // else PrimType 3 or 4
-
-              if (dist < mindist) {
-                mindist = dist;
-                nearestprim = prim;
-              }
-              if (debugFn)
-                printf("nearestprim: %d, mindist: %lg\n\n", nearestprim,
-                       mindist);
-
-              // implicit assumption: the first primitive that gets pierced by
-              // the ray is the one that we want. There can be other primitives
-              // that are pierced by the same ray. So, this logic should be
-              // refined further
-              if ((intersect == 1) && (extrasect == 0)) {
-                // check whether the intersection point is within primitive
-                // polygon
-                int nvert = PrimType[prim];
-                Point3D polynode[4];
-                polynode[0].X = XVertex[prim][0];
-                polynode[0].Y = YVertex[prim][0];
-                polynode[0].Z = ZVertex[prim][0];
-                polynode[1].X = XVertex[prim][1];
-                polynode[1].Y = YVertex[prim][1];
-                polynode[1].Z = ZVertex[prim][1];
-                polynode[2].X = XVertex[prim][2];
-                polynode[2].Y = YVertex[prim][2];
-                polynode[2].Z = ZVertex[prim][2];
-                if (PrimType[prim] == 4) {
-                  polynode[3].X = XVertex[prim][3];
-                  polynode[3].Y = YVertex[prim][3];
-                  polynode[3].Z = ZVertex[prim][3];
-                }
-                // printf("neBEMChkInPoly for primitive %d\n", prim);
-                SumOfAngles = neBEMChkInPoly(nvert, polynode, ptintsct);
-                if (fabs(fabs(SumOfAngles) - neBEMtwopi) <= 1.0e-8) {
-                  InPrim = 1;
-                  PrimIntsctd = prim;
-                }
-                if (debugFn) {
-                  // print polynode and InPrim
-                  printf("Prim: %d\n", prim);
-                  printf("ptintsct: %lg, %lg, %lg\n", ptintsct.X, ptintsct.Y,
-                         ptintsct.Z);
-                  printf("nvert: %d\n", nvert);
-                  printf("polynode0: %lg, %lg, %lg\n", polynode[0].X,
-                         polynode[0].Y, polynode[0].Z);
-                  printf("polynode1: %lg, %lg, %lg\n", polynode[1].X,
-                         polynode[1].Y, polynode[1].Z);
-                  printf("polynode2: %lg, %lg, %lg\n", polynode[2].X,
-                         polynode[2].Y, polynode[2].Z);
-                  if (nvert == 4) {
-                    printf("polynode3: %lg, %lg, %lg\n", polynode[3].X,
-                           polynode[3].Y, polynode[3].Z);
-                  }
-                  printf("SumOfAngles: %lg, InPrim: %d\n", SumOfAngles, InPrim);
-                  fflush(stdout);
-                }
-
-                if (!InPrim && (prim != NbPrimitives)) {
-                  continue;  // check next primitive
-                }
-
-                // Once identified, check in which element belonging to this
-                // primitive contains the point of intersection
-                if (InPrim) {
-                  InEle = 0;
-                  for (int ele = ElementBgn[prim]; ele <= ElementEnd[prim];
-                       ++ele) {
-                    nvert = 0;
-                    if ((EleArr + ele - 1)->G.Type == 3) nvert = 3;
-                    if ((EleArr + ele - 1)->G.Type == 4) nvert = 4;
-                    if (!nvert) {
-                      neBEMMessage(
-                          "no vertex in element! ... neBEMKnownCharges ...\n");
-                      fclose(fPtEChUpMap);
-                      return -20;
-                    }
-
-                    polynode[0].X = (EleArr + ele - 1)->G.Vertex[0].X;
-                    polynode[0].Y = (EleArr + ele - 1)->G.Vertex[0].Y;
-                    polynode[0].Z = (EleArr + ele - 1)->G.Vertex[0].Z;
-                    polynode[1].X = (EleArr + ele - 1)->G.Vertex[1].X;
-                    polynode[1].Y = (EleArr + ele - 1)->G.Vertex[1].Y;
-                    polynode[1].Z = (EleArr + ele - 1)->G.Vertex[1].Z;
-                    polynode[2].X = (EleArr + ele - 1)->G.Vertex[2].X;
-                    polynode[2].Y = (EleArr + ele - 1)->G.Vertex[2].Y;
-                    polynode[2].Z = (EleArr + ele - 1)->G.Vertex[2].Z;
-                    if (nvert == 4) {
-                      polynode[3].X = (EleArr + ele - 1)->G.Vertex[3].X;
-                      polynode[3].Y = (EleArr + ele - 1)->G.Vertex[3].Y;
-                      polynode[3].Z = (EleArr + ele - 1)->G.Vertex[3].Z;
-                    }
-
-                    // printf("neBEMChkInPoly for element %d\n", ele);
-                    SumOfAngles = neBEMChkInPoly(nvert, polynode, ptintsct);
-                    if (fabs(fabs(SumOfAngles) - neBEMtwopi) <= 1.0e-8)
-                      InEle = 1;
-                    if (debugFn) {
-                      // print polynode and InEle
-                      printf("Ele: %d\n", ele);
-                      printf("ptintsct: %lg, %lg, %lg\n", ptintsct.X,
-                             ptintsct.Y, ptintsct.Z);
-                      printf("nvert: %d\n", nvert);
-                      printf("polynode0: %lg, %lg, %lg\n", polynode[0].X,
-                             polynode[0].Y, polynode[0].Z);
-                      printf("polynode1: %lg, %lg, %lg\n", polynode[1].X,
-                             polynode[1].Y, polynode[1].Z);
-                      printf("polynode2: %lg, %lg, %lg\n", polynode[2].X,
-                             polynode[2].Y, polynode[2].Z);
-                      if (nvert == 4) {
-                        printf("polynode3: %lg, %lg, %lg\n", polynode[3].X,
-                               polynode[3].Y, polynode[3].Z);
-                      }
-                      printf("SumOfAngles: %lg, InEle: %d\n", SumOfAngles,
-                             InEle);
-                      fflush(stdout);
-                    }
-                    if (InEle) {
-                      ptintsct.X = (EleArr + ele - 1)->G.Origin.X;
-                      ptintsct.Y = (EleArr + ele - 1)->G.Origin.Y;
-                      ptintsct.Z = (EleArr + ele - 1)->G.Origin.Z;
-                      // Associate this electron to the identified element
-                      EleIntsctd = ele;
-                      NbChUpEonEle[ele]++;
-                      fprintf(fPtEChUpMap, "%d %lg %lg %lg %d %d %d %d\n",
-                              electron, ptintsct.X, ptintsct.Y, ptintsct.Z,
-                              prim, InPrim, ele, InEle);
-
-                      if (debugFn) {
-                        printf("# electron: %d\n", electron);
-                        printf("%lg %lg %lg\n", xlbend, ylbend, zlbend);
-                        printf("%lg %lg %lg\n", xend, yend, zend);
-                        printf("%lg, %lg, %lg\n", ptintsct.X, ptintsct.Y,
-                               ptintsct.Z);
-                        printf("# Associated primitive: %d\n", prim);
-                        printf(
-                            "# Associated element and origin: %d, %lg, %lg, "
-                            "%lg\n",
-                            ele, (EleArr + ele - 1)->G.Origin.X,
-                            (EleArr + ele - 1)->G.Origin.Y,
-                            (EleArr + ele - 1)->G.Origin.Z);
-                        printf("#NbChUpEonEle on element: %d\n",
-                               NbChUpEonEle[ele]);
-                        fprintf(ftmpEF, "#Element: %d\n", ele);
-                        fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X,
-                                polynode[0].Y, polynode[0].Z);
-                        fprintf(ftmpEF, "%lg %lg %lg\n", polynode[1].X,
-                                polynode[1].Y, polynode[1].Z);
-                        fprintf(ftmpEF, "%lg %lg %lg\n", polynode[2].X,
-                                polynode[2].Y, polynode[2].Z);
-                        if (nvert == 4) {
-                          fprintf(ftmpEF, "%lg %lg %lg\n", polynode[3].X,
-                                  polynode[3].Y, polynode[3].Z);
-                        }
-                        fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X,
-                                polynode[0].Y, polynode[0].Z);
-                        fprintf(ftmpEF, "\n");
-                        fflush(stdout);
-                      }
-                      break;  // desired element has been found!
-                    }
-                  }  // for all elements on this primitive
-
-                  if (InEle)
-                    break;
-                  else {
-                    neBEMMessage(
-                        "Element not identified ... neBEMKnownCharges\n");
-                    return -2;
-                  }
-                }  // if InPrim
-              }    // if intersection and no extrasection
-
-              if ((InPrim) && (intersect) && (!extrasect) && (InEle)) {
-                // all satisfied
-                // do not check any further primitive for this electron
-                break;  
-              }
-
-              // If, after checking all the primitives, no interstion is found
-              // valid
-              if (prim ==
-                  (NbPrimitives))  // end of the list and no intersection
-              {
-                int nvert;
-                Point3D polynode[4];
-                int nearestele = ElementBgn[nearestprim];
-                double distele = 1.0e6;
-                double mindistele = 1.0e6;  // absurdly high value
-
-                if (debugFn) {
-                  printf("prim == (NbPrimitives) ... checking nearest ...\n");
-                  printf("nearestprim: %d, mindist: %lg\n", nearestprim,
-                         mindist);
-                }
-
-                if (mindist <= 10.0e-6) {
-                  PrimIntsctd = nearestprim;
-                  InPrim = 1;
-                } else {
-                  InPrim = 0;
-                  InEle = 0;
-                  break;
-                }
-                // check all elements
-                for (int ele = ElementBgn[nearestprim];  
-                     ele <= ElementEnd[nearestprim]; ++ele) {
-                  nvert = 0;
-                  if ((EleArr + ele - 1)->G.Type == 3) nvert = 3;
-                  if ((EleArr + ele - 1)->G.Type == 4) nvert = 4;
-                  if (!nvert) {
-                    neBEMMessage(
-                        "no vertex element! ... neBEMKnownCharges ...\n");
-                    return -20;
-                  }
-
-                  /*
-                  polynode[0].X = (EleArr+ele-1)->G.Vertex[0].X;
-                  polynode[0].Y = (EleArr+ele-1)->G.Vertex[0].Y;
-                  polynode[0].Z = (EleArr+ele-1)->G.Vertex[0].Z;
-                  polynode[1].X = (EleArr+ele-1)->G.Vertex[1].X;
-                  polynode[1].Y = (EleArr+ele-1)->G.Vertex[1].Y;
-                  polynode[1].Z = (EleArr+ele-1)->G.Vertex[1].Z;
-                  polynode[2].X = (EleArr+ele-1)->G.Vertex[2].X;
-                  polynode[2].Y = (EleArr+ele-1)->G.Vertex[2].Y;
-                  polynode[2].Z = (EleArr+ele-1)->G.Vertex[2].Z;
-                  if (nvert == 4) {
-                    polynode[3].X = (EleArr+ele-1)->G.Vertex[3].X;
-                    polynode[3].Y = (EleArr+ele-1)->G.Vertex[3].Y;
-                    polynode[3].Z = (EleArr+ele-1)->G.Vertex[3].Z;
-                  }
-                  Vector3D v01, v12, elenorm, unitelenorm;
-                  v01.X = polynode[1].X - polynode[0].X;
-                  v01.Y = polynode[1].Y - polynode[0].Y;
-                  v01.Z = polynode[1].Z - polynode[0].Z;
-                  v12.X = polynode[2].X - polynode[1].X;
-                  v12.Y = polynode[2].Y - polynode[1].Y;
-                  v12.Z = polynode[2].Z - polynode[1].Z;
-                  elenorm = Vector3DCrossProduct(&v01, &v12);
-                  unitelenorm = UnitVector3D(&elenorm);
-
-                  if ((nvert == 3) || (nvert == 4)) {
-                    if (debugFn) { 
-                      printf("nearestprim: %d, element: %d\n",
-                             nearestprim, ele); 
-                      printf("vertex0: %lg, %lg, %lg\n", polynode[0].X,
-                             polynode[0].Y, polynode[0].Z); 
-                      printf("vertex1: %lg, %lg, %lg\n", polynode[1].X, 
-                             polynode[1].Y, polynode[1].Z); 
-                      printf("vertex2: %lg, %lg, %lg\n", polynode[2].X,
-                             polynode[2].Y, polynode[2].Z); 
-                      if (PrimType[prim] == 4) { 
-                        printf("vertex3: %lg, %lg, %lg\n", polynode[3].X, 
-                               polynode[3].Y, polynode[3].Z);
-                      }
-                      fprintf(ftmpEF, "#nearestprim: %d, element: %d\n", 
-                              nearestprim, ele); 
-                      fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X,
-                              polynode[0].Y, polynode[0].Z); 
-                      fprintf(ftmpEF, "%lg %lg %lg\n", polynode[1].X,
-                              polynode[1].Y, polynode[1].Z); 
-                      fprintf(ftmpEF, "%lg %lg %lg\n", polynode[2].X,
-                              polynode[2].Y, polynode[2].Z); 
-                      if (PrimType[prim] == 4) { 
-                        fprintf(ftmpEF, "%lg %lg %lg\n", polynode[3].X, 
-                                polynode[3].Y, polynode[3].Z);
-                      }
-                      fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X, 
-                              polynode[0].Y, polynode[0].Z); 
-                      fprintf(ftmpEF, "\n"); 
-                      fflush(stdout); 
-                    } // debugFn
-                    // use a, b, c (normal is ai + bj + ck) 
-                    // at one of the nodes to get d
-                    // ax + by + cz + d = 0 is the equation of the plane
-                    double a = unitelenorm.X;
-                    double b = unitelenorm.Y;
-                    double c = unitelenorm.Z;
-                    double d = - a * polynode[0].X - b * polynode[0].Y - c * polynode[0].Z;
-                    // distance of the end point to this primitve is
-                    distele = (xend * a + yend * b + zend * c + d) /
-                              sqrt(a * a + b * b + c * c);
-                    distele = fabs(distele); // if only magnitude is required
-                    */
-
-                  Vector3D eleOrigin;
-                  eleOrigin.X = (EleArr + ele - 1)->G.Origin.X;
-                  eleOrigin.Y = (EleArr + ele - 1)->G.Origin.Y;
-                  eleOrigin.Z = (EleArr + ele - 1)->G.Origin.Z;
-                  distele = (eleOrigin.X - xend) * (eleOrigin.X - xend) +
-                            (eleOrigin.Y - yend) * (eleOrigin.Y - yend) +
-                            (eleOrigin.Z - zend) * (eleOrigin.Z - zend);
-                  distele = pow(distele, 0.5);
-
-                  if (ele == ElementBgn[nearestprim]) {
-                    mindistele = distele;
-                    nearestele = ele;
-                  }
-                  if (distele < mindistele) {
-                    mindistele = distele;
-                    nearestele = ele;
-                  }
-
-                  if (debugFn) {
-                    // printf("a, b, c, d, dist: %lg, %lg, %lg, %lg, %lg\n",
-                    // a, b, c, d,  dist);
-                    // printf("vector n: ai + bj + ck\n");
-                    // printf("vector v: xgrd, ygrd, zgrd: %lg, %lg, %lg\n",
-                    // xgrd, ygrd, zgrd);
-                    printf(
-                        "distele: %lg, mindistele: %lg,from nearest ele "
-                        "origin: %d\n",
-                        distele, mindistele, nearestele);
-                    fflush(stdout);
-                  }
-
-                  // }	// if PrimType is 3 or 4
-                }  // for elements in nearestprim
-
-                // if(mindistele <= 10.0e-6)
-                // {
-                EleIntsctd = nearestele;
-                InEle = 1;
-                ptintsct.X = (EleArr + EleIntsctd - 1)->G.Origin.X;
-                ptintsct.Y = (EleArr + EleIntsctd - 1)->G.Origin.Y;
-                ptintsct.Z = (EleArr + EleIntsctd - 1)->G.Origin.Z;
-                NbChUpEonEle[EleIntsctd]++;
-
-                fprintf(fPtEChUpMap, "%d %lg %lg %lg %d %d %d %d\n", electron,
-                        ptintsct.X, ptintsct.Y, ptintsct.Z, PrimIntsctd, InPrim,
-                        EleIntsctd, InEle);
-                // }	// if mindistele
-
-                if (debugFn) {
-                  printf("# electron: %d\n", electron);
-                  printf("%lg %lg %lg\n", xlbend, ylbend, zlbend);
-                  printf("%lg %lg %lg\n", xend, yend, zend);
-                  printf("%lg, %lg, %lg\n", ptintsct.X, ptintsct.Y, ptintsct.Z);
-                  printf("# Associated primitive: %d\n", PrimIntsctd);
-                  printf("# Associated element and origin: %d, %lg, %lg, %lg\n",
-                         EleIntsctd, (EleArr + EleIntsctd - 1)->G.Origin.X,
-                         (EleArr + EleIntsctd - 1)->G.Origin.Y,
-                         (EleArr + EleIntsctd - 1)->G.Origin.Z);
-                  printf("#NbChUpEonEle on element: %d\n",
-                         NbChUpEonEle[EleIntsctd]);
-                  fflush(stdout);
-
-                  fprintf(ftmpEF, "#Element: %d\n", EleIntsctd);
-                  polynode[0].X = (EleArr + EleIntsctd - 1)->G.Vertex[0].X;
-                  polynode[0].Y = (EleArr + EleIntsctd - 1)->G.Vertex[0].Y;
-                  polynode[0].Z = (EleArr + EleIntsctd - 1)->G.Vertex[0].Z;
-                  polynode[1].X = (EleArr + EleIntsctd - 1)->G.Vertex[1].X;
-                  polynode[1].Y = (EleArr + EleIntsctd - 1)->G.Vertex[1].Y;
-                  polynode[1].Z = (EleArr + EleIntsctd - 1)->G.Vertex[1].Z;
-                  polynode[2].X = (EleArr + EleIntsctd - 1)->G.Vertex[2].X;
-                  polynode[2].Y = (EleArr + EleIntsctd - 1)->G.Vertex[2].Y;
-                  polynode[2].Z = (EleArr + EleIntsctd - 1)->G.Vertex[2].Z;
-                  if (nvert == 4) {
-                    polynode[3].X = (EleArr + EleIntsctd - 1)->G.Vertex[3].X;
-                    polynode[3].Y = (EleArr + EleIntsctd - 1)->G.Vertex[3].Y;
-                    polynode[3].Z = (EleArr + EleIntsctd - 1)->G.Vertex[3].Z;
-                  }
-                  fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X, polynode[0].Y,
-                          polynode[0].Z);
-                  fprintf(ftmpEF, "%lg %lg %lg\n", polynode[1].X, polynode[1].Y,
-                          polynode[1].Z);
-                  fprintf(ftmpEF, "%lg %lg %lg\n", polynode[2].X, polynode[2].Y,
-                          polynode[2].Z);
-                  if (nvert == 4) {
-                    fprintf(ftmpEF, "%lg %lg %lg\n", polynode[3].X,
-                            polynode[3].Y, polynode[3].Z);
-                  }
-                  fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X, polynode[0].Y,
-                          polynode[0].Z);
-                  fprintf(ftmpEF, "\n");
-                }  // debug
-              }    // if prim == NbPrimitives
-
-            }  // for all primitives // just not those on the volume
-
-            if (debugFn)
-              printf("writing file for checking electron positions\n");
-
-            if (debugFn)  // check electron positions, volume primitives and
-                          // elements
-            {
-              char elecposdbg[256], enbstr[10];
-              sprintf(enbstr, "%d", electron);
-              strcpy(elecposdbg, "/tmp/Electron");
-              strcat(elecposdbg, enbstr);
-              strcat(elecposdbg, ".out");
-              FILE *fepd = fopen(elecposdbg, "w");
-              if (fepd == NULL) {
-                printf(
-                    "cannot open writable file to debug electron positions "
-                    "...\n");
-                printf("returning ...\n");
-                return -111;
-              }
-              // write electron number, end, lbend, volume, primitive, elements,
-              // intxn
-              fprintf(fepd, "#electron: %d %d\n", enb,
-                      electron);  // should print same
-              fprintf(fepd, "#last but end position:\n");
-              fprintf(fepd, "%lg %lg %lg\n", xlbend, ylbend, zlbend);
-              fprintf(fepd, "#end position:\n");
-              fprintf(fepd, "%lg %lg %lg\n\n", xend, yend, zend);
-              fprintf(fepd, "#intersected primitive number: %d\n", PrimIntsctd);
-              if (PrimIntsctd >= 1) {
-                fprintf(fepd, "#PrimType: %d\n", PrimType[PrimIntsctd]);
-                fprintf(fepd, "#prim vertices:\n");
-                fprintf(fepd, "%lg %lg %lg\n", XVertex[PrimIntsctd][0],
-                        YVertex[PrimIntsctd][0], ZVertex[PrimIntsctd][0]);
-                fprintf(fepd, "%lg %lg %lg\n", XVertex[PrimIntsctd][1],
-                        YVertex[PrimIntsctd][1], ZVertex[PrimIntsctd][1]);
-                fprintf(fepd, "%lg %lg %lg\n", XVertex[PrimIntsctd][2],
-                        YVertex[PrimIntsctd][2], ZVertex[PrimIntsctd][2]);
-                if (PrimType[PrimIntsctd] == 4) {
-                  fprintf(fepd, "%lg %lg %lg\n", XVertex[PrimIntsctd][3],
-                          YVertex[PrimIntsctd][3], ZVertex[PrimIntsctd][3]);
-                }
-                fprintf(fepd, "%lg %lg %lg\n", XVertex[PrimIntsctd][0],
-                        YVertex[PrimIntsctd][0], ZVertex[PrimIntsctd][0]);
-                fprintf(fepd, "\n");
-
-                fprintf(fepd, "#ptintsct:\n");
-                fprintf(fepd, "%lg %lg %lg\n", ptintsct.X, ptintsct.Y,
-                        ptintsct.Z);
-                fprintf(fepd, "\n");
-              }
-              fprintf(fepd, "#intersected element number: %d\n", EleIntsctd);
-              if (EleIntsctd >= 1) {
-                int gtype = (EleArr + EleIntsctd - 1)->G.Type;
-                fprintf(fepd, "#EleType: %d\n", gtype);
-                fprintf(fepd, "#element vertices:\n");
-                double x0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].X;
-                double y0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].Y;
-                double z0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].Z;
-                double x1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].X;
-                double y1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].Y;
-                double z1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].Z;
-                double x2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].X;
-                double y2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].Y;
-                double z2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].Z;
-                fprintf(fepd, "%lg %lg %lg\n", x0, y0, z0);
-                fprintf(fepd, "%lg %lg %lg\n", x1, y1, z1);
-                fprintf(fepd, "%lg %lg %lg\n", x2, y2, z2);
-                if (gtype == 4) {
-                  double x3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].X;
-                  double y3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].Y;
-                  double z3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].Z;
-                  fprintf(fepd, "%lg %lg %lg\n", x3, y3, z3);
-                }
-                fprintf(fepd, "%lg %lg %lg\n", x0, y0, z0);
-                fprintf(fepd, "\n");
-
-                fprintf(fepd, "#ptintsct:\n");
-                fprintf(fepd, "%lg %lg %lg\n", ptintsct.X, ptintsct.Y,
-                        ptintsct.Z);
-                fprintf(fepd, "\n");
-              }
-
-              fclose(fepd);
-            }  // if 1
-            if (debugFn)
-              printf("done writing file for checking electron positions\n");
-          }  // for all the electrons
-          fclose(fPtEChUpMap);
-          if (debugFn) printf("done for all electrons\n");
-
-          FILE *fEleEChUpMap = fopen("EleEChUpMap.out", "w");
-          if (fEleEChUpMap == NULL) {
-            printf("cannot open EleEChUpMap.out file for writing ...\n");
-            return 111;
-          }
-          for (int ele = 1; ele <= NbElements; ++ele) {
-            (EleArr + ele - 1)->Assigned +=
-                ChUpFactor * Q_E * NbChUpEonEle[ele] / (EleArr + ele - 1)->G.dA;
-            fprintf(fEleEChUpMap, "%d %lg %lg %lg %d %lg\n", ele,
-                    (EleArr + ele - 1)->G.Origin.X,
-                    (EleArr + ele - 1)->G.Origin.Y,
-                    (EleArr + ele - 1)->G.Origin.Z, NbChUpEonEle[ele],
-                    (EleArr + ele - 1)->Assigned);
-          }
-          fclose(fEleEChUpMap);
-
-          fclose(ftmpEF);
-          free(NbChUpEonEle);
-        }  // Calculation for electrons ends
-
-        {  // Calculation for ions
-          FILE *fptrChargingUpIFile = fopen(ChargingUpIFile, "r");
-          if (fptrChargingUpIFile == NULL) {
-            neBEMMessage("ChargingUpI file absent ... returning\n");
-            return -10;
-          }
-          int NbOfI = neBEMGetNbOfLines(ChargingUpIFile);
-          if (NbOfI <= 1) {
-            neBEMMessage("Too few lines in ChargingUpI ... returning\n");
-            fclose(fptrChargingUpIFile);
-            return -11;
-          } 
-          // initialize
-          NbChUpIonEle = (int *)malloc((NbElements + 1) * sizeof(int));
-          if (NbChUpIonEle == NULL) {
-            neBEMMessage("Memory allocation failed ... returning\n");
-            fclose(fptrChargingUpIFile);
-            return -11;
-          }
-          for (int ele = 0; ele <= NbElements; ++ele) {  
-            // CHECK!!! ele limit starts from 0 but all other from 1 to ...
-            NbChUpIonEle[ele] = 0;
-          }
-
-          // read the header line
-          char header[256];
-          fgets(header, 256, fptrChargingUpIFile);
-
-          --NbOfI;  // one line was for the header
-          if (debugFn) printf("No. of ions: %d\n", NbOfI);
-          const char *tmpIFile = "/tmp/IonTempFile.out";
-          FILE *ftmpIF = fopen(tmpIFile, "w");
-          if (ftmpIF == NULL) {
-            printf("cannot open temporary ion output file ... returning ...\n");
-            free(NbChUpEonEle);
-            return -100;
-          }
-          FILE *fPtIChUpMap = fopen("PtIChUpMap.out", "w");
-          if (fPtIChUpMap == NULL) {
-            printf("cannot open PtIChUpMap.out file for writing ...\n");
-            fclose(ftmpIF);
-            free(NbChUpEonEle);
-            return 110;
-          }
-
-          char label;
-          int inb, vol;  // label, volume and ion number
-          double xlbend, ylbend, zlbend; // lbend == Last But END
-          double xend, yend, zend;
-          Point3D ptintsct;  // each ion likely to have an intersection point
-          for (int ion = 1; ion <= NbOfI; ++ion) {
-            fscanf(fptrChargingUpIFile, "%c %d %d %lg %lg %lg %lg %lg %lg\n",
-                   &label, &vol, &inb, &xlbend, &xend, &ylbend, &yend, &zlbend,
-                   &zend);
-            xlbend *= 0.01;
-            xend *= 0.01;
-            ylbend *= 0.01;
-            yend *= 0.01;
-            zlbend *= 0.01;
-            zend *= 0.01;
-            ptintsct.X = 0.0;
-            ptintsct.Y = 0.0;
-            ptintsct.Z = 0.0;  // initialize
-
-            // find the parametric equation of this last segment
-            // if xend < xlbend, swap the directions
-            // This has not been mentioned as mandatory in Vince's book
-            // "Geometry for Computer Graphics", but implied in the book "A
-            // Programmer's Geometry"
-            if (xend < xlbend)  // not implemented now
-            {
-            }
-            double lseg = (xend - xlbend) * (xend - xlbend) +
-                          (yend - ylbend) * (yend - ylbend) +
-                          (zend - zlbend) * (zend - zlbend);
-            lseg = sqrt(lseg);
-            double xgrd =
-                (xend - xlbend) / lseg;  // normalized direction vector
-            double ygrd = (yend - ylbend) / lseg;
-            double zgrd = (zend - zlbend) / lseg;
-            if (debugFn) {
-              printf("\nion: %d\n", ion);
-              printf("xlbend: %lg, ylbend: %lg, zlbend: %lg\n", xlbend, ylbend,
-                     zlbend);
-              printf("xend: %lg, yend: %lg, zend: %lg\n", xend, yend, zend);
-              printf("xgrd: %lg, ygrd: %lg, zgrd: %lg\n", xgrd, ygrd, zgrd);
-              fprintf(ftmpIF, "#e: %d, label: %c, vol: %d\n", ion, label, vol);
-              fprintf(ftmpIF, "%lg %lg %lg\n", xlbend, ylbend, zlbend);
-              fprintf(ftmpIF, "%lg %lg %lg\n", xend, yend, zend);
-              fprintf(ftmpIF, "#xgrd: %lg, ygrd: %lg, zgrd: %lg\n", xgrd, ygrd,
-                      zgrd);
-              fprintf(ftmpIF, "\n");
-            }
-
-            // determine which element gets this electron
-            // At present, the logic is as follow:
-            // Using the information on the last segment, find out which
-            // primitive is pierced by it and at which point From the
-            // intersection point, find out the element number on the primitive
-            // in a local sense Using the information (start and end elements of
-            // a given primitive) identify the element in a global sense. This
-            // approach should be lot more efficient than checking intersection
-            // element by element.
-            // The intersection point is computed following algorithm
-            // implemented in a matlab code (plane_imp_line_par_int_3d.m) Also
-            // check which primitive in the list is the closet to the end point
-
-            int PrimIntsctd = -1,
-                EleIntsctd = -1;   // intersected primitive & element
-            int nearestprim = -1;  // absurd value
-            double dist = 1.0e6, mindist = 1.0e6;  // absurdly high numbers
-            double SumOfAngles;
-            // check all primitives
-            for (int prim = 1; prim <= NbPrimitives; ++prim) {
-              if (InterfaceType[prim] != 4)
-                continue;  // primitive not a dielectric
-
-              int intersect = 0, extrasect = 1;  // worst of conditions
-              int InPrim = 0, InEle = 0;
-              if (debugFn)
-                printf("prim: %d, mindist: %lg, nearestprim: %d\n", prim,
-                       mindist, nearestprim);
-
-              // get the primitive nodes
-
-              // Use two nodes at a time to get two independent vectors on
-              // primitive Get cross-product of these two vector - normal to the
-              // plane Note that the normal is already associated with the
-              // primitive of type 3 and 4; 2 is wire and does not have any
-              // associated normal
-              if ((PrimType[prim] == 3) || (PrimType[prim] == 4)) {
-                if (debugFn) {
-                  printf("prim: %d\n", prim);
-                  printf("vertex0: %lg, %lg, %lg\n", XVertex[prim][0],
-                         YVertex[prim][0], ZVertex[prim][0]);
-                  printf("vertex1: %lg, %lg, %lg\n", XVertex[prim][1],
-                         YVertex[prim][1], ZVertex[prim][1]);
-                  printf("vertex2: %lg, %lg, %lg\n", XVertex[prim][2],
-                         YVertex[prim][2], ZVertex[prim][2]);
-                  if (PrimType[prim] == 4) {
-                    printf("vertex3: %lg, %lg, %lg\n", XVertex[prim][3],
-                           YVertex[prim][3], ZVertex[prim][3]);
-                  }
-                  fprintf(ftmpIF, "#prim: %d\n", prim);
-                  fprintf(ftmpIF, "%lg %lg %lg\n", XVertex[prim][0],
-                          YVertex[prim][0], ZVertex[prim][0]);
-                  fprintf(ftmpIF, "%lg %lg %lg\n", XVertex[prim][1],
-                          YVertex[prim][1], ZVertex[prim][1]);
-                  fprintf(ftmpIF, "%lg %lg %lg\n", XVertex[prim][2],
-                          YVertex[prim][2], ZVertex[prim][2]);
-                  if (PrimType[prim] == 4) {
-                    fprintf(ftmpIF, "%lg %lg %lg\n", XVertex[prim][3],
-                            YVertex[prim][3], ZVertex[prim][3]);
-                  }
-                  fprintf(ftmpIF, "%lg %lg %lg\n", XVertex[prim][0],
-                          YVertex[prim][0], ZVertex[prim][0]);
-                  fprintf(ftmpIF, "\n");
-                  fflush(stdout);
-                }  // debugFn
-
-                // use a, b, c (normal is ai + bj + ck) at one of the nodes to
-                // get d ax + by + cz + d = 0 is the equation of the plane
-                double d = -XNorm[prim] * XVertex[prim][0] -
-                           YNorm[prim] * YVertex[prim][0] -
-                           ZNorm[prim] * ZVertex[prim][0];
-
-                // distance of the end point to this primitve is
-                dist =
-                    (xend * XNorm[prim] + yend * YNorm[prim] +
-                     zend * ZNorm[prim] + d) /
-                    sqrt(XNorm[prim] * XNorm[prim] + YNorm[prim] * YNorm[prim] +
-                         ZNorm[prim] * ZNorm[prim]);
-                dist = fabs(dist);  // if only magnitude is required
-                if (prim == 1) {
-                  mindist = dist;
-                  nearestprim = prim;
-                }
-                if ((prim == 1) && debugFn)
-                  printf(
-                      "after prim == 1 check mindist: %lg, nearestprim: %d\n",
-                      mindist, nearestprim);
-
-                // Point of intersection
-                // Algo as on p62 (pdf 81) of Vince - Geometry for Computer
-                // Graphics 1.5.13 Intersection of a line and a plane Algorithm
-                // as implemented in plne_imp_line_par_int_3d.m a (nx), b (ny),
-                // c (nz), d are a, b, c, d vx, vy, vz are xgrd, ygrd and zgrd
-                // tx, ty, tz are xlbend, ylbend, zlbend
-                // In the present case, n and v are unit vectors
-                double a = XNorm[prim];
-                double b = YNorm[prim];
-                double c = ZNorm[prim];
-                double norm1 = sqrt(a * a + b * b + c * c);
-                double norm2 = sqrt(xgrd * xgrd + ygrd * ygrd + zgrd * zgrd);
-                double denom =
-                    a * xgrd + b * ygrd + c * zgrd;  // (vec)n.(vec)v; if 0, ||
-                double tol =
-                    1.0e-12;  // CHECK: -8 in original code; sizes small here
-                intersect = extrasect = 0;
-
-                if (debugFn) {
-                  printf("a, b, c, d, dist: %lg, %lg, %lg, %lg, %lg\n", a, b, c,
-                         d, dist);
-                  printf("vector n: ai + bj + ck\n");
-                  printf("vector v: xgrd, ygrd, zgrd: %lg, %lg, %lg\n", xgrd,
-                         ygrd, zgrd);
-                  printf("norm1, norm2, (vec n . vec v) denom: %lg, %lg, %lg\n",
-                         norm1, norm2, denom);
-                  printf("if vec n . vec v == 0, line and plane parallel\n");
-                  fflush(stdout);
-                }
-
-                if (fabs(denom) < tol * norm1 * norm2) {
-                  // line parallel to the plane
-                  if (a * xlbend + b * ylbend + c * zlbend + d ==
-                      0.0)  // CHECK == for float
-                  {
-                    intersect = 1;
-                    extrasect = 0;
-                    ptintsct.X = xlbend;
-                    ptintsct.Y = ylbend;
-                    ptintsct.Z = zlbend;
-                  } else {
-                    intersect = 0;
-                    extrasect = 0;
-                    ptintsct.X = 0.0;  // Wrong to assign 0 values
-                    ptintsct.Y =
-                        0.0;  // However, they are never going to be used
-                    ptintsct.Z = 0.0;  // since intersect is 0
-                  }
-                  if (debugFn) {
-                    printf("line and plane parallel ...\n");
-                    printf("intersect: %d, extrasect: %d\n", intersect,
-                           extrasect);
-                    printf("intersection point: %lg, %lg, %lg\n", ptintsct.X,
-                           ptintsct.Y, ptintsct.Z);
-                  }       // if line and plane are parallel
-                } else {  // if they are not parallel, they must intersect
-                  intersect = 1;
-                  double t =
-                      -(a * xlbend + b * ylbend + c * zlbend + d) / denom;
-
-                  // check whether t is less than the length of the segment
-                  // and in the correct direction
-                  // If not, then an extrapolated intersection is not of
-                  // interest
-                  if ((t < 0.0) || (fabs(t) > fabs(lseg))) {
-                    extrasect = 1;
-                    ptintsct.X = xlbend + t * xgrd;
-                    ptintsct.Y = ylbend + t * ygrd;
-                    ptintsct.Z = zlbend + t * zgrd;
-                  } else {
-                    extrasect = 0;
-                    ptintsct.X = xlbend + t * xgrd;
-                    ptintsct.Y = ylbend + t * ygrd;
-                    ptintsct.Z = zlbend + t * zgrd;
-                  }
-                  if (debugFn) {
-                    printf("line and plane NOT parallel ...\n");
-                    printf("intersect: %d, extrasect: %d\n", intersect,
-                           extrasect);
-                    printf("intersection point: %lg, %lg, %lg\n", ptintsct.X,
-                           ptintsct.Y, ptintsct.Z);
-                    printf("t, lseg: %lg, %lg\n", t, lseg);
-                    printf(
-                        "for an interesting intersection, lseg > t > 0.0 "
-                        "...\n\n");
-                    fflush(stdout);
-                  }   // must intersect
-                }     // if not parallel
-              }       // if PrimType is 3 or 4
-              else {  // this is a wire primitive - assume no charging up issues
-                dist = -1.0;  // an absurd negative distance
-                intersect = 0;
-                extrasect = 0;
-              }  // else PrimType 3 or 4
-
-              if (dist < mindist) {
-                mindist = dist;
-                nearestprim = prim;
-              }
-
-              // implicit assumption: the first primitive that gets pierced by
-              // the ray is the one that we want. There can be other primitives
-              // that are pierced by the same ray. So, this logic should be
-              // refined further
-              if ((intersect == 1) && (extrasect == 0)) {
-                // check whether the intersection point is within primitive
-                // polygon
-                int nvert = PrimType[prim];
-                Point3D polynode[4];
-                polynode[0].X = XVertex[prim][0];
-                polynode[0].Y = YVertex[prim][0];
-                polynode[0].Z = ZVertex[prim][0];
-                polynode[1].X = XVertex[prim][1];
-                polynode[1].Y = YVertex[prim][1];
-                polynode[1].Z = ZVertex[prim][1];
-                polynode[2].X = XVertex[prim][2];
-                polynode[2].Y = YVertex[prim][2];
-                polynode[2].Z = ZVertex[prim][2];
-                if (PrimType[prim] == 4) {
-                  polynode[3].X = XVertex[prim][3];
-                  polynode[3].Y = YVertex[prim][3];
-                  polynode[3].Z = ZVertex[prim][3];
-                }
-                // printf("neBEMChkInPoly for primitive %d\n", prim);
-                SumOfAngles = neBEMChkInPoly(nvert, polynode, ptintsct);
-                if (fabs(fabs(SumOfAngles) - neBEMtwopi) <= 1.0e-8) {
-                  InPrim = 1;
-                  PrimIntsctd = prim;
-                }
-                if (debugFn) {
-                  // print polynode and InPrim
-                  printf("Prim: %d\n", prim);
-                  printf("ptintsct: %lg, %lg, %lg\n", ptintsct.X, ptintsct.Y,
-                         ptintsct.Z);
-                  printf("nvert: %d\n", nvert);
-                  printf("polynode0: %lg, %lg, %lg\n", polynode[0].X,
-                         polynode[0].Y, polynode[0].Z);
-                  printf("polynode1: %lg, %lg, %lg\n", polynode[1].X,
-                         polynode[1].Y, polynode[1].Z);
-                  printf("polynode2: %lg, %lg, %lg\n", polynode[2].X,
-                         polynode[2].Y, polynode[2].Z);
-                  if (nvert == 4) {
-                    printf("polynode3: %lg, %lg, %lg\n", polynode[3].X,
-                           polynode[3].Y, polynode[3].Z);
-                  }
-                  printf("SumOfAngles: %lg, InPrim: %d\n", SumOfAngles, InPrim);
-                  fflush(stdout);
-                }
-                if (!InPrim) continue;  // check next primitive
-
-                // Once identified, check in which element belonging to this
-                // primitive contains the point of intersection
-                InEle = 0;
-                for (int ele = ElementBgn[prim]; ele <= ElementEnd[prim];
-                     ++ele) {
-                  nvert = 0;
-                  if ((EleArr + ele - 1)->G.Type == 3) nvert = 3;
-                  if ((EleArr + ele - 1)->G.Type == 4) nvert = 4;
-                  if (!nvert) {
-                    neBEMMessage(
-                        "no vertex in element! ... neBEMKnownCharges ...\n");
-                    if (fPtIChUpMap) fclose(fPtIChUpMap);
-                    return -20;
-                  }
-
-                  polynode[0].X = (EleArr + ele - 1)->G.Vertex[0].X;
-                  polynode[0].Y = (EleArr + ele - 1)->G.Vertex[0].Y;
-                  polynode[0].Z = (EleArr + ele - 1)->G.Vertex[0].Z;
-                  polynode[1].X = (EleArr + ele - 1)->G.Vertex[1].X;
-                  polynode[1].Y = (EleArr + ele - 1)->G.Vertex[1].Y;
-                  polynode[1].Z = (EleArr + ele - 1)->G.Vertex[1].Z;
-                  polynode[2].X = (EleArr + ele - 1)->G.Vertex[2].X;
-                  polynode[2].Y = (EleArr + ele - 1)->G.Vertex[2].Y;
-                  polynode[2].Z = (EleArr + ele - 1)->G.Vertex[2].Z;
-                  if (nvert == 4) {
-                    polynode[3].X = (EleArr + ele - 1)->G.Vertex[3].X;
-                    polynode[3].Y = (EleArr + ele - 1)->G.Vertex[3].Y;
-                    polynode[3].Z = (EleArr + ele - 1)->G.Vertex[3].Z;
-                  }
-
-                  // printf("neBEMChkInPoly for element %d\n", ele);
-                  SumOfAngles = neBEMChkInPoly(nvert, polynode, ptintsct);
-                  if (fabs(fabs(SumOfAngles) - neBEMtwopi) <= 1.0e-8) InEle = 1;
-                  if (debugFn) {
-                    // print polynode and InEle
-                    printf("Ele: %d\n", ele);
-                    printf("ptintsct: %lg, %lg, %lg\n", ptintsct.X, ptintsct.Y,
-                           ptintsct.Z);
-                    printf("nvert: %d\n", nvert);
-                    printf("polynode0: %lg, %lg, %lg\n", polynode[0].X,
-                           polynode[0].Y, polynode[0].Z);
-                    printf("polynode1: %lg, %lg, %lg\n", polynode[1].X,
-                           polynode[1].Y, polynode[1].Z);
-                    printf("polynode2: %lg, %lg, %lg\n", polynode[2].X,
-                           polynode[2].Y, polynode[2].Z);
-                    if (nvert == 4) {
-                      printf("polynode3: %lg, %lg, %lg\n", polynode[3].X,
-                             polynode[3].Y, polynode[3].Z);
-                    }
-                    printf("SumOfAngles: %lg, InEle: %d\n", SumOfAngles, InEle);
-                    fflush(stdout);
-                  }
-                  if (InEle) {
-                    ptintsct.X = (EleArr + ele - 1)->G.Origin.X;
-                    ptintsct.Y = (EleArr + ele - 1)->G.Origin.Y;
-                    ptintsct.Z = (EleArr + ele - 1)->G.Origin.Z;
-                    EleIntsctd = ele;
-                    // Associate this electron to the identified element
-                    NbChUpIonEle[ele]++;
-                    fprintf(fPtIChUpMap, "%d %lg %lg %lg %d %d %d %d\n", ion,
-                            ptintsct.X, ptintsct.Y, ptintsct.Z, prim, InPrim,
-                            ele, InEle);
-
-                    if (debugFn) {
-                      printf("# ion: %d\n", ion);
-                      printf("%lg %lg %lg\n", xlbend, ylbend, zlbend);
-                      printf("%lg %lg %lg\n", xend, yend, zend);
-                      printf("%lg, %lg, %lg\n", ptintsct.X, ptintsct.Y,
-                             ptintsct.Z);
-                      printf("# Associated primitive: %d\n", prim);
-                      printf(
-                          "# Associated element and origin: %d, %lg, %lg, "
-                          "%lg\n",
-                          ele, (EleArr + ele - 1)->G.Origin.X,
-                          (EleArr + ele - 1)->G.Origin.Y,
-                          (EleArr + ele - 1)->G.Origin.Z);
-                      printf("#NbChUpIonEle on element: %d\n",
-                             NbChUpIonEle[ele]);
-                      fprintf(ftmpIF, "#Element: %d\n", ele);
-                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X,
-                              polynode[0].Y, polynode[0].Z);
-                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[1].X,
-                              polynode[1].Y, polynode[1].Z);
-                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[2].X,
-                              polynode[2].Y, polynode[2].Z);
-                      if (nvert == 4) {
-                        fprintf(ftmpIF, "%lg %lg %lg\n", polynode[3].X,
-                                polynode[3].Y, polynode[3].Z);
-                      }
-                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X,
-                              polynode[0].Y, polynode[0].Z);
-                      fprintf(ftmpIF, "\n");
-                      fflush(stdout);
-                    }
-                    break;  // desired element has been found!
-                  }         // if InEle
-                }           // for all elements on this primitive
-
-                if (InEle) break;
-                neBEMMessage(
-                    "Element cannot be identified ... neBEMKnownCharges\n");
-                return -2;
-              }  // if proper intersection and no extrasection
-
-              if ((InPrim) && (intersect) && (!extrasect) && (InEle)) {
-                // all satisfied
-                // do not check any further primitive for this electron
-                break;  
-              }
-
-              // If, after checking all the primitives, no interstion is found
-              // valid
-              if (prim == (NbPrimitives)) {
-                // end of the list and no intersection
-                int nvert;
-                Point3D polynode[4];
-                int nearestele = ElementBgn[nearestprim];
-                double distele = 1.0e6;
-                double mindistele = 1.0e6;  // absurdly high value
-
-                if (debugFn) {
-                  printf("prim == (NbPrimitives) ... checking nearest ...\n");
-                  printf("nearestprim: %d, mindist: %lg\n", nearestprim,
-                         mindist);
-                }
-
-                if (mindist <= 10.0e-6) {
-                  PrimIntsctd = nearestprim;
-                  InPrim = 1;
-                } else {
-                  InPrim = 0;
-                  InEle = 0;
-                  break;
-                }
-
-                for (int ele = ElementBgn[nearestprim];  // check all elements
-                     ele <= ElementEnd[nearestprim]; ++ele) {
-                  nvert = 0;
-                  if ((EleArr + ele - 1)->G.Type == 3) nvert = 3;
-                  if ((EleArr + ele - 1)->G.Type == 4) nvert = 4;
-                  if (!nvert) {
-                    neBEMMessage(
-                        "no vertex element! ... neBEMKnownCharges ...\n");
-                    return -20;
-                  }
-
-                  /*
-                  polynode[0].X = (EleArr+ele-1)->G.Vertex[0].X;
-                  polynode[0].Y = (EleArr+ele-1)->G.Vertex[0].Y;
-                  polynode[0].Z = (EleArr+ele-1)->G.Vertex[0].Z;
-                  polynode[1].X = (EleArr+ele-1)->G.Vertex[1].X;
-                  polynode[1].Y = (EleArr+ele-1)->G.Vertex[1].Y;
-                  polynode[1].Z = (EleArr+ele-1)->G.Vertex[1].Z;
-                  polynode[2].X = (EleArr+ele-1)->G.Vertex[2].X;
-                  polynode[2].Y = (EleArr+ele-1)->G.Vertex[2].Y;
-                  polynode[2].Z = (EleArr+ele-1)->G.Vertex[2].Z;
-                  if (nvert == 4) {
-                    polynode[3].X = (EleArr+ele-1)->G.Vertex[3].X;
-                    polynode[3].Y = (EleArr+ele-1)->G.Vertex[3].Y;
-                    polynode[3].Z = (EleArr+ele-1)->G.Vertex[3].Z;
-                  } 
-
-                  Vector3D v01, v12, elenorm, unitelenorm;
-                  v01.X = polynode[1].X - polynode[0].X;
-                  v01.Y = polynode[1].Y - polynode[0].Y;
-                  v01.Z = polynode[1].Z - polynode[0].Z;
-                  v12.X = polynode[2].X - polynode[1].X;
-                  v12.Y = polynode[2].Y - polynode[1].Y;
-                  v12.Z = polynode[2].Z - polynode[1].Z;
-                  elenorm = Vector3DCrossProduct(&v01, &v12);
-                  unitelenorm = UnitVector3D(&elenorm);
-
-                  if ((nvert == 3) || (nvert == 4)) {
-                    if (debugFn) {
-                      printf("nearestprim: %d, element: %d\n",
-                             nearestprim, ele); 
-                      printf("vertex0: %lg, %lg, %lg\n", polynode[0].X,
-                             polynode[0].Y, polynode[0].Z); 
-                      printf("vertex1: %lg, %lg, %lg\n", polynode[1].X,
-                             polynode[1].Y, polynode[1].Z); 
-                      printf("vertex2: %lg, %lg, %lg\n", polynode[2].X, 
-                             polynode[2].Y, polynode[2].Z); 
-                      if (PrimType[prim] == 4) {
-                        printf("vertex3: %lg, %lg, %lg\n", polynode[3].X,
-                               polynode[3].Y, polynode[3].Z);
-                      }
-                      fprintf(ftmpIF, "#nearestprim: %d, element: %d\n", 
-                              nearestprim, ele); 
-                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X,
-                              polynode[0].Y, polynode[0].Z); 
-                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[1].X,
-                              polynode[1].Y, polynode[1].Z); 
-                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[2].X,
-                              polynode[2].Y, polynode[2].Z); 
-                      if (PrimType[prim] == 4) {
-                        fprintf(ftmpIF, "%lg %lg %lg\n", polynode[3].X, 
-                                polynode[3].Y, polynode[3].Z);
-                      }
-                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X,
-                              polynode[0].Y, polynode[0].Z); 
-                      fprintf(ftmpIF, "\n"); 
-                      fflush(stdout);
-                    } // debugFn
-
-                    // use a, b, c (normal is ai + bj + ck) 
-                    // at one of the nodes to get d
-                    // ax + by + cz + d = 0 is the equation of the plane
-                    double a = unitelenorm.X;
-                    double b = unitelenorm.Y;
-                    double c = unitelenorm.Z;
-                    double d = - a * polynode[0].X - b * polynode[0].Y - c * polynode[0].Z;
-                    // distance of the end point to this primitve is
-                    distele = (xend * a + yend * b + zend * c + d) /
-                              sqrt(a * a + b * b + c * c);
-                    distele = fabs(distele); // if only magnitude is required
-                  */
-
-                  Vector3D eleOrigin;
-                  eleOrigin.X = (EleArr + ele - 1)->G.Origin.X;
-                  eleOrigin.Y = (EleArr + ele - 1)->G.Origin.Y;
-                  eleOrigin.Z = (EleArr + ele - 1)->G.Origin.Z;
-                  distele = (eleOrigin.X - xend) * (eleOrigin.X - xend) +
-                            (eleOrigin.Y - yend) * (eleOrigin.Y - yend) +
-                            (eleOrigin.Z - zend) * (eleOrigin.Z - zend);
-                  distele = pow(distele, 0.5);
-
-                  if (ele == ElementBgn[nearestprim]) {
-                    mindistele = distele;
-                    nearestele = ele;
-                  }
-                  if (distele < mindistele) {
-                    mindistele = distele;
-                    nearestele = ele;
-                  }
-
-                  if (debugFn) {
-                    // printf("a, b, c, d, dist: %lg, %lg, %lg, %lg, %lg\n",
-                    // a, b, c, d,  dist);
-                    // printf("vector n: ai + bj + ck\n");
-                    // printf("vector v: xgrd, ygrd, zgrd: %lg, %lg, %lg\n",
-                    // xgrd, ygrd, zgrd);
-                    printf(
-                        "distele: %lg, mindist: %lg,  from nearest ele: %d\n",
-                        distele, mindistele, nearestele);
-                    fflush(stdout);
-                  }
-
-                  // }	// if PrimType is 3 or 4
-                }  // for elements in nearestprim
-
-                // if(mindistele <= 10.0e-6)
-                // {
-                EleIntsctd = nearestele;
-                InEle = 1;
-                ptintsct.X = (EleArr + EleIntsctd - 1)->G.Origin.X;
-                ptintsct.Y = (EleArr + EleIntsctd - 1)->G.Origin.Y;
-                ptintsct.Z = (EleArr + EleIntsctd - 1)->G.Origin.Z;
-                NbChUpIonEle[EleIntsctd]++;
-
-                fprintf(fPtIChUpMap, "%d %lg %lg %lg %d %d %d %d\n", ion,
-                        ptintsct.X, ptintsct.Y, ptintsct.Z, PrimIntsctd, InPrim,
-                        EleIntsctd, InEle);
-                // }
-
-                if (debugFn) {
-                  printf("# ion: %d\n", ion);
-                  printf("%lg %lg %lg\n", xlbend, ylbend, zlbend);
-                  printf("%lg %lg %lg\n", xend, yend, zend);
-                  printf("%lg, %lg, %lg\n", ptintsct.X, ptintsct.Y, ptintsct.Z);
-                  printf("# Associated primitive: %d\n", PrimIntsctd);
-                  printf("# Associated element and origin: %d, %lg, %lg, %lg\n",
-                         EleIntsctd, (EleArr + EleIntsctd - 1)->G.Origin.X,
-                         (EleArr + EleIntsctd - 1)->G.Origin.Y,
-                         (EleArr + EleIntsctd - 1)->G.Origin.Z);
-                  printf("#NbChUpIonEle on element: %d\n",
-                         NbChUpIonEle[EleIntsctd]);
-                  fprintf(ftmpIF, "#Element: %d\n", EleIntsctd);
-                  polynode[0].X = (EleArr + EleIntsctd - 1)->G.Vertex[0].X;
-                  polynode[0].Y = (EleArr + EleIntsctd - 1)->G.Vertex[0].Y;
-                  polynode[0].Z = (EleArr + EleIntsctd - 1)->G.Vertex[0].Z;
-                  polynode[1].X = (EleArr + EleIntsctd - 1)->G.Vertex[1].X;
-                  polynode[1].Y = (EleArr + EleIntsctd - 1)->G.Vertex[1].Y;
-                  polynode[1].Z = (EleArr + EleIntsctd - 1)->G.Vertex[1].Z;
-                  polynode[2].X = (EleArr + EleIntsctd - 1)->G.Vertex[2].X;
-                  polynode[2].Y = (EleArr + EleIntsctd - 1)->G.Vertex[2].Y;
-                  polynode[2].Z = (EleArr + EleIntsctd - 1)->G.Vertex[2].Z;
-                  if (nvert == 4) {
-                    polynode[3].X = (EleArr + EleIntsctd - 1)->G.Vertex[3].X;
-                    polynode[3].Y = (EleArr + EleIntsctd - 1)->G.Vertex[3].Y;
-                    polynode[3].Z = (EleArr + EleIntsctd - 1)->G.Vertex[3].Z;
-                  }
-                  fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X, polynode[0].Y,
-                          polynode[0].Z);
-                  fprintf(ftmpIF, "%lg %lg %lg\n", polynode[1].X, polynode[1].Y,
-                          polynode[1].Z);
-                  fprintf(ftmpIF, "%lg %lg %lg\n", polynode[2].X, polynode[2].Y,
-                          polynode[2].Z);
-                  if (nvert == 4) {
-                    fprintf(ftmpIF, "%lg %lg %lg\n", polynode[3].X,
-                            polynode[3].Y, polynode[3].Z);
-                  }
-                  fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X, polynode[0].Y,
-                          polynode[0].Z);
-                  fprintf(ftmpIF, "\n");
-                  fflush(stdout);
-                }  // debug
-              }    // if prim == NbPrimitives
-
-            }  // for all primitives // just not those on the volume
-
-            if (debugFn)  // check ion positions, volume primitives and elements
-            {
-              char ionposdbg[256], inbstr[10];
-              sprintf(inbstr, "%d", ion);
-              strcpy(ionposdbg, "/tmp/Ion");
-              strcat(ionposdbg, inbstr);
-              strcat(ionposdbg, ".out");
-              FILE *fipd = fopen(ionposdbg, "w");
-              if (fipd == NULL) {
-                printf(
-                    "cannot open writable file to debug ion positions ...\n");
-                printf("returning ...\n");
-                return -111;
-              }
-              // write electron number, end, lbend, volume, primitive, elements,
-              // intxn
-              fprintf(fipd, "#ion: %d %d\n", inb, ion);  // should print same
-              fprintf(fipd, "#last but end position:\n");
-              fprintf(fipd, "%lg %lg %lg\n", xlbend, ylbend, zlbend);
-              fprintf(fipd, "#end position:\n");
-              fprintf(fipd, "%lg %lg %lg\n\n", xend, yend, zend);
-
-              fprintf(fipd, "#intersected primitive number: %d\n", PrimIntsctd);
-              if (PrimIntsctd >= 1) {
-                fprintf(fipd, "#PrimType: %d\n", PrimType[PrimIntsctd]);
-                fprintf(fipd, "#prim vertices:\n");
-                fprintf(fipd, "%lg %lg %lg\n", XVertex[PrimIntsctd][0],
-                        YVertex[PrimIntsctd][0], ZVertex[PrimIntsctd][0]);
-                fprintf(fipd, "%lg %lg %lg\n", XVertex[PrimIntsctd][1],
-                        YVertex[PrimIntsctd][1], ZVertex[PrimIntsctd][1]);
-                fprintf(fipd, "%lg %lg %lg\n", XVertex[PrimIntsctd][2],
-                        YVertex[PrimIntsctd][2], ZVertex[PrimIntsctd][2]);
-                if (PrimType[PrimIntsctd] == 4) {
-                  fprintf(fipd, "%lg %lg %lg\n", XVertex[PrimIntsctd][3],
-                          YVertex[PrimIntsctd][3], ZVertex[PrimIntsctd][3]);
-                }
-                fprintf(fipd, "%lg %lg %lg\n", XVertex[PrimIntsctd][0],
-                        YVertex[PrimIntsctd][0], ZVertex[PrimIntsctd][0]);
-                fprintf(fipd, "\n");
-
-                fprintf(fipd, "#ptintsct:\n");
-                fprintf(fipd, "%lg %lg %lg\n", ptintsct.X, ptintsct.Y,
-                        ptintsct.Z);
-                fprintf(fipd, "\n");
-              }
-
-              fprintf(fipd, "#intersected element number: %d\n", EleIntsctd);
-              if (EleIntsctd >= 1) {
-                int gtype = (EleArr + EleIntsctd - 1)->G.Type;
-                fprintf(fipd, "#EleType: %d\n", gtype);
-                fprintf(fipd, "#element vertices:\n");
-                double x0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].X;
-                double y0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].Y;
-                double z0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].Z;
-                double x1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].X;
-                double y1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].Y;
-                double z1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].Z;
-                double x2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].X;
-                double y2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].Y;
-                double z2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].Z;
-                fprintf(fipd, "%lg %lg %lg\n", x0, y0, z0);
-                fprintf(fipd, "%lg %lg %lg\n", x1, y1, z1);
-                fprintf(fipd, "%lg %lg %lg\n", x2, y2, z2);
-                if (gtype == 4) {
-                  double x3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].X;
-                  double y3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].Y;
-                  double z3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].Z;
-                  fprintf(fipd, "%lg %lg %lg\n", x3, y3, z3);
-                }
-                fprintf(fipd, "%lg %lg %lg\n", x0, y0, z0);
-                fprintf(fipd, "\n");
-
-                fprintf(fipd, "#ptintsct:\n");
-                fprintf(fipd, "%lg %lg %lg\n", ptintsct.X, ptintsct.Y,
-                        ptintsct.Z);
-                fprintf(fipd, "\n");
-              }
-              fclose(fipd);
-            }  // if 1
-          }    // for all the ions
-          fclose(fPtIChUpMap);
-
-          // This file contains information about number of ions (I)
-          // and total (E+I) charge deposition on each element
-          FILE *fEleEIChUpMap = fopen("EleE+IChUpMap.out", "w");
-          if (fEleEIChUpMap == NULL) {
-            printf("cannot open EleE+IChUpMap.out file for writing ...\n");
-            return 111;
-          }
-          for (int ele = 1; ele <= NbElements; ++ele) {
-            (EleArr + ele - 1)->Assigned +=
-                ChUpFactor * Q_I * NbChUpIonEle[ele] / (EleArr + ele - 1)->G.dA;
-            fprintf(fEleEIChUpMap, "%d %lg %lg %lg %d %lg\n", ele,
-                    (EleArr + ele - 1)->G.Origin.X,
-                    (EleArr + ele - 1)->G.Origin.Y,
-                    (EleArr + ele - 1)->G.Origin.Z, NbChUpIonEle[ele],
-                    (EleArr + ele - 1)->Assigned);
-          }
-          fclose(fEleEIChUpMap);
-
-          fclose(ftmpIF);
-          free(NbChUpIonEle);
-        }  // Calculation for ions ends
-
-      }  // OptChargingUp
-
-      fclose(ChargingUpInpFile);
-    }  // else ChargingUpInpFile
-
-    if (debugFn) {
-      // print all the elements and their number of charging up e-s and i-s
-    }
-  }  // charging up parameters set up
-
-  return (0);
-}  // neBEMChargingUp ends
+}  // neBEMBoundaryInitialConditions ends
 
 // There are several flags associated with this crucial step.
 // These flags have a hieracrchy, the first mentioned having the highest
@@ -4140,7 +2202,7 @@ int neBEMSolve(void) {
         neBEMMessage("neBEMSolve - NewModel");
         return -1;
       }
-    } else { // NewModel == 0
+    } else {  // NewModel == 0
       if (NewMesh) {
         // effectively, NewBC = NewPP = 1;
         int fstatus = ComputeSolution();
@@ -4148,21 +2210,21 @@ int neBEMSolve(void) {
           neBEMMessage("neBEMSolve - NewMesh");
           return -1;
         }
-      } else { // NewModel == NewMesh == 0
+      } else {        // NewModel == NewMesh == 0
         if (NewBC) {  // effectively, NewPP = 1;
           int fstatus = ComputeSolution();
           if (fstatus != 0) {
             neBEMMessage("neBEMSolve - Failure computing new solution");
             return -1;
           }
-        } else { // NewBC == 0
+        } else {  // NewBC == 0
           if (NewPP) {
             int fstatus = ReadSolution();
             if (fstatus != 0) {
               neBEMMessage("neBEMSolve - Failure reading solution");
               return (-1);
             }
-          } else { // NewPP == 0
+          } else {  // NewPP == 0
             printf("neBEMSolve: Nothing to do ... returning ...\n");
             return (-1);
           }  // NewPP == 0
@@ -4285,6 +2347,11 @@ int neBEMSolve(void) {
              MaxYCells, MaxZCells);
     }  // dbgFn
 
+    // Following memory allocations are necessary even for creating
+    // the fast volumes.
+    // In fact, since these tensors are already in place, the fast volumes
+    // can be used to evaluate potential and fields immediately after they are
+    // created.
     /* Memory wastage!!! Improve as soon as possible. */
     FastPot = d4tensor(1, FastVol.NbBlocks, 1, MaxXCells + 1, 1, MaxYCells + 1,
                        1, MaxZCells + 1);
@@ -4297,26 +2364,29 @@ int neBEMSolve(void) {
 
     if (OptStaggerFastVol) {
       /* Memory wastage!!! Improve as soon as possible. */
-      FastStgPot = d4tensor(1, FastVol.NbBlocks, 1, MaxXCells + 1, 1,
+      StgFastPot = d4tensor(1, FastVol.NbBlocks, 1, MaxXCells + 1, 1,
                             MaxYCells + 1, 1, MaxZCells + 1);
-      FastStgFX = d4tensor(1, FastVol.NbBlocks, 1, MaxXCells + 1, 1,
+      StgFastFX = d4tensor(1, FastVol.NbBlocks, 1, MaxXCells + 1, 1,
                            MaxYCells + 1, 1, MaxZCells + 1);
-      FastStgFY = d4tensor(1, FastVol.NbBlocks, 1, MaxXCells + 1, 1,
+      StgFastFY = d4tensor(1, FastVol.NbBlocks, 1, MaxXCells + 1, 1,
                            MaxYCells + 1, 1, MaxZCells + 1);
-      FastStgFZ = d4tensor(1, FastVol.NbBlocks, 1, MaxXCells + 1, 1,
+      StgFastFZ = d4tensor(1, FastVol.NbBlocks, 1, MaxXCells + 1, 1,
                            MaxYCells + 1, 1, MaxZCells + 1);
     }  // if OptStaggerFastVol
 
-    if ((OptCreateFastPF) && (!OptReadFastPF))  // reading overrides creation
-    {
-      int fstatus = FastVolPF();
+    if (OptCreateFastPF) {
+      int fstatus = CreateFastVolPF();
       if (fstatus != 0) {
         neBEMMessage("neBEMSolve - Failure computing FastVolPF");
         return -1;
       }
+
+      clock_t stopFastClock = clock();
+      neBEMTimeElapsed(startFastClock, stopFastClock);
+      printf("to compute FastVolPF\n");
     }  // if OptCreateFastPF
 
-    if (OptReadFastPF) {
+    if (OptReadFastPF) {  // reading from file
       int nbXCells, nbYCells, nbZCells;
       int tmpblk;
       double xpt, ypt, zpt;
@@ -4324,7 +2394,7 @@ int neBEMSolve(void) {
       char FastVolPFFile[256];
       strcpy(FastVolPFFile, BCOutDir);
       strcat(FastVolPFFile, "/FastVolPF.out");
-      FILE* fFastVolPF = fopen(FastVolPFFile, "r");
+      FILE *fFastVolPF = fopen(FastVolPFFile, "r");
       if (fFastVolPF == NULL) {
         neBEMMessage("in neBEMSolve - FastVolPFFile");
         return -1;
@@ -4351,16 +2421,16 @@ int neBEMSolve(void) {
       fclose(fFastVolPF);
 
       if (OptStaggerFastVol) {
-        char FastStgVolPFFile[256];
-        strcpy(FastStgVolPFFile, BCOutDir);
-        strcat(FastStgVolPFFile, "/FastStgVolPF.out");
-        FILE *fFastStgVolPF = fopen(FastStgVolPFFile, "r");
-        if (fFastStgVolPF == NULL) {
-          neBEMMessage("in neBEMSolve - FastStgVolPFFile");
+        char StgFastVolPFFile[256];
+        strcpy(StgFastVolPFFile, BCOutDir);
+        strcat(StgFastVolPFFile, "/StgFastVolPF.out");
+        FILE *fStgFastVolPF = fopen(StgFastVolPFFile, "r");
+        if (fStgFastVolPF == NULL) {
+          neBEMMessage("in neBEMSolve - StgFastVolPFFile");
           return -1;
         }
 
-        fscanf(fFastStgVolPF, "#block\tX\tY\tZ\tPot\tFX\tFY\tFZ\n");
+        fscanf(fStgFastVolPF, "#block\tX\tY\tZ\tPot\tFX\tFY\tFZ\n");
 
         for (int block = 1; block <= FastVol.NbBlocks; ++block) {
           nbXCells = BlkNbXCells[block];
@@ -4370,201 +2440,34 @@ int neBEMSolve(void) {
           for (int i = 1; i <= nbXCells + 1; ++i) {
             for (int j = 1; j <= nbYCells + 1; ++j) {
               for (int k = 1; k <= nbZCells + 1; ++k) {
-                fscanf(fFastStgVolPF, "%d\t%le\t%le\t%le\t%le\t%le\t%le\t%le\n",
-                       &tmpblk, &xpt, &ypt, &zpt, &FastStgPot[block][i][j][k],
-                       &FastStgFX[block][i][j][k], &FastStgFY[block][i][j][k],
-                       &FastStgFZ[block][i][j][k]);
+                fscanf(fStgFastVolPF, "%d\t%le\t%le\t%le\t%le\t%le\t%le\t%le\n",
+                       &tmpblk, &xpt, &ypt, &zpt, &StgFastPot[block][i][j][k],
+                       &StgFastFX[block][i][j][k], &StgFastFY[block][i][j][k],
+                       &StgFastFZ[block][i][j][k]);
               }  // loop k
             }    // loop j
           }      // loop i
         }        // loop block
-        fclose(fFastStgVolPF);
+        fclose(fStgFastVolPF);
       }  // if OptStaggerFastVol
-    }    // if OptReadFastPF
 
-    clock_t stopFastClock = clock();
-    neBEMTimeElapsed(startFastClock, stopFastClock);
-    printf("to compute / read FastVolPF\n");
-  }  // if OptFastVol
-
-  if (OptWtFldFastVol)  // allocate memory for weighting field fast volume
-                        // variables
-  {
-    int MaxXCells = WtFldBlkNbXCells[1];
-    int MaxYCells = WtFldBlkNbYCells[1];
-    int MaxZCells = WtFldBlkNbZCells[1];
-    clock_t startFastClock = clock();
-
-    // find maximum number of Xcells etc in all the blocks
-    // simplifies memory allocation using nrutils but hogs memory!
-    for (int block = 1; block <= WtFldFastVol.NbBlocks; ++block) {
-      if (block == 1) {
-        MaxXCells = WtFldBlkNbXCells[1];
-        MaxYCells = WtFldBlkNbYCells[1];
-        MaxZCells = WtFldBlkNbZCells[1];
-      } else {
-        if (MaxXCells < WtFldBlkNbXCells[block])
-          MaxXCells = WtFldBlkNbXCells[block];
-        if (MaxYCells < WtFldBlkNbYCells[block])
-          MaxYCells = WtFldBlkNbYCells[block];
-        if (MaxZCells < WtFldBlkNbZCells[block])
-          MaxZCells = WtFldBlkNbZCells[block];
-      }
-    }  // loop block for finding maxm cells among all the blocks
-
-    if (dbgFn) {
-      printf("OptWtFldFastVol: %d\n", OptWtFldFastVol);
-      printf("WtFldNbPtSkip: %d\n", WtFldNbPtSkip);
-      printf("OptWtFldStaggerFastVol: %d\n", OptWtFldStaggerFastVol);
-      printf("WtFldNbStgPtSkip: %d\n", WtFldNbStgPtSkip);
-      printf("OptWtFldReadFastPF: %d\n", OptWtFldReadFastPF);
-      printf("LX: %le\n", WtFldFastVol.LX);
-      printf("LY: %le\n", WtFldFastVol.LY);
-      printf("LZ: %le\n", WtFldFastVol.LZ);
-      printf("CornerX: %le\n", WtFldFastVol.CrnrX);
-      printf("CornerY: %le\n", WtFldFastVol.CrnrY);
-      printf("CornerZ: %le\n", WtFldFastVol.CrnrZ);
-      printf("YStagger: %le\n", WtFldFastVol.YStagger);
-      printf("NbOfBlocks: %d\n", WtFldFastVol.NbBlocks);
-      for (int block = 1; block <= WtFldFastVol.NbBlocks; ++block) {
-        printf("NbOfXCells[%d]: %d\n", block, WtFldBlkNbXCells[block]);
-        printf("NbOfYCells[%d]: %d\n", block, WtFldBlkNbYCells[block]);
-        printf("NbOfZCells[%d]: %d\n", block, WtFldBlkNbZCells[block]);
-        printf("LZ[%d]: %le\n", block, WtFldBlkLZ[block]);
-        printf("CornerZ[%d]: %le\n", block, WtFldBlkCrnrZ[block]);
-      }
-      printf("NbOfOmitVols: %d\n", WtFldFastVol.NbOmitVols);
-      if (WtFldFastVol.NbOmitVols) {
-        for (int omit = 1; omit <= WtFldFastVol.NbOmitVols; ++omit) {
-          printf("OmitVolLX[%d]: %le\n", omit, WtFldOmitVolLX[omit]);
-          printf("OmitVolLY[%d]: %le\n", omit, WtFldOmitVolLY[omit]);
-          printf("OmitVolLZ[%d]: %le\n", omit, WtFldOmitVolLZ[omit]);
-          printf("OmitCrnrX[%d]: %le\n", omit, WtFldOmitVolCrnrX[omit]);
-          printf("OmitCrnrY[%d]: %le\n", omit, WtFldOmitVolCrnrY[omit]);
-          printf("OmitCrnrZ[%d]: %le\n", omit, WtFldOmitVolCrnrZ[omit]);
-        }
-      }
-      printf("MaxXCells, MaxYCells, MaxZCells: %d, %d, %d\n", MaxXCells,
-             MaxYCells, MaxZCells);
-    }  // dbgFn
-
-    /* Memory wastage!!! Improve as soon as possible. */
-    WtFldFastPot = d4tensor(1, WtFldFastVol.NbBlocks, 1, MaxXCells + 1, 1,
-                            MaxYCells + 1, 1, MaxZCells + 1);
-    WtFldFastFX = d4tensor(1, WtFldFastVol.NbBlocks, 1, MaxXCells + 1, 1,
-                           MaxYCells + 1, 1, MaxZCells + 1);
-    WtFldFastFY = d4tensor(1, WtFldFastVol.NbBlocks, 1, MaxXCells + 1, 1,
-                           MaxYCells + 1, 1, MaxZCells + 1);
-    WtFldFastFZ = d4tensor(1, WtFldFastVol.NbBlocks, 1, MaxXCells + 1, 1,
-                           MaxYCells + 1, 1, MaxZCells + 1);
-
-    if (OptWtFldStaggerFastVol) {
-      /* Memory wastage!!! Improve as soon as possible. */
-      WtFldFastStgPot = d4tensor(1, WtFldFastVol.NbBlocks, 1, MaxXCells + 1, 1,
-                                 MaxYCells + 1, 1, MaxZCells + 1);
-      WtFldFastStgFX = d4tensor(1, WtFldFastVol.NbBlocks, 1, MaxXCells + 1, 1,
-                                MaxYCells + 1, 1, MaxZCells + 1);
-      WtFldFastStgFY = d4tensor(1, WtFldFastVol.NbBlocks, 1, MaxXCells + 1, 1,
-                                MaxYCells + 1, 1, MaxZCells + 1);
-      WtFldFastStgFZ = d4tensor(1, WtFldFastVol.NbBlocks, 1, MaxXCells + 1, 1,
-                                MaxYCells + 1, 1, MaxZCells + 1);
-    }  // if OptWtFldStaggerFastVol
-
-    if ((OptWtFldCreateFastPF) && (!OptWtFldReadFastPF))  // reading overrides
-    {
-      // Computing weighting field fast volume has not been implemented
-      neBEMMessage(
-          "neBEMSolve - Failure computing WtFldFastVolPF: not implemented");
-      return -1;
-    }  // if OptWtFldCreateFastPF
-
-    if (OptWtFldReadFastPF)  // reading option overrides creation
-    {
-      int nbXCells, nbYCells, nbZCells;
-      int tmpblk;
-      double xpt, ypt, zpt;
-
-      char FastVolPFFile[256];
-      strcpy(FastVolPFFile, BCOutDir);
-      strcat(FastVolPFFile, "/WtFldFastVolPF.out");
-      FILE *fFastVolPF = fopen(FastVolPFFile, "r");
-      if (fFastVolPF == NULL) {
-        neBEMMessage("in neBEMSolve - WtFldFastVolPFFile");
-        return -1;
-      }
-
-      fscanf(fFastVolPF, "#block\tX\tY\tZ\tPot\tFX\tFY\tFZ\n");
-
-      for (int block = 1; block <= WtFldFastVol.NbBlocks; ++block) {
-        nbXCells = WtFldBlkNbXCells[block];
-        nbYCells = WtFldBlkNbYCells[block];
-        nbZCells = WtFldBlkNbZCells[block];
-
-        for (int i = 1; i <= nbXCells + 1; ++i) {
-          for (int j = 1; j <= nbYCells + 1; ++j) {
-            for (int k = 1; k <= nbZCells + 1; ++k) {
-              fscanf(fFastVolPF, "%d\t%le\t%le\t%le\t%le\t%le\t%le\t%le\n",
-                     &tmpblk, &xpt, &ypt, &zpt, &WtFldFastPot[block][i][j][k],
-                     &WtFldFastFX[block][i][j][k], &WtFldFastFY[block][i][j][k],
-                     &WtFldFastFZ[block][i][j][k]);
-            }  // loop k
-          }    // loop j
-        }      // loop i
-      }        // loop block
-      fclose(fFastVolPF);
-
-      if (OptWtFldStaggerFastVol) {
-        char FastStgVolPFFile[256];
-        FILE *fFastStgVolPF;
-        strcpy(FastStgVolPFFile, BCOutDir);
-        strcat(FastStgVolPFFile, "/WtFldFastStgVolPF.out");
-        fFastStgVolPF = fopen(FastStgVolPFFile, "r");
-
-        if (fFastStgVolPF == NULL) {
-          neBEMMessage("in neBEMSolve - WtFldFastStgVolPFFile");
-          return -1;
-        }
-
-        fscanf(fFastStgVolPF, "#block\tX\tY\tZ\tPot\tFX\tFY\tFZ\n");
-
-        for (int block = 1; block <= WtFldFastVol.NbBlocks; ++block) {
-          nbXCells = WtFldBlkNbXCells[block];
-          nbYCells = WtFldBlkNbYCells[block];
-          nbZCells = WtFldBlkNbZCells[block];
-
-          for (int i = 1; i <= nbXCells + 1; ++i) {
-            for (int j = 1; j <= nbYCells + 1; ++j) {
-              for (int k = 1; k <= nbZCells + 1; ++k) {
-                fscanf(fFastStgVolPF, "%d\t%le\t%le\t%le\t%le\t%le\t%le\t%le\n",
-                       &tmpblk, &xpt, &ypt, &zpt,
-                       &WtFldFastStgPot[block][i][j][k],
-                       &WtFldFastStgFX[block][i][j][k],
-                       &WtFldFastStgFY[block][i][j][k],
-                       &WtFldFastStgFZ[block][i][j][k]);
-              }  // loop k
-            }    // loop j
-          }      // loop i
-        }        // loop block
-        fclose(fFastStgVolPF);
-      }  // if OptWtFldStaggerFastVol
-    }    // if OptWtFldReadFastPF
-
-    clock_t stopFastClock = clock();
-    neBEMTimeElapsed(startFastClock, stopFastClock);
-    printf("to compute / read FastVolPF\n");
-  }  // if OptWtFldFastVol
+      clock_t stopFastClock = clock();
+      neBEMTimeElapsed(startFastClock, stopFastClock);
+      printf("to read FastVolPF\n");
+    }  // if OptReadFastPF
+  }    // if OptFastVol
 
   return (0);
 }  // neBEMSolve ends
 
 // Get potential and field at a given point
-int neBEMField(Point3D *point, double *potential, Vector3D *field) {
+int neBEMPF(Point3D *point, double *potential, Vector3D *field) {
   if (neBEMState < 9) {
-    printf("neBEMField cannot be called before reaching state 9.\n");
+    printf("neBEMPF cannot be called before reaching state 9.\n");
     return (-1);
   }
 
-  // printf("neBEMField called %8d times", ++neBEMFieldCallCntr);
+  // printf("neBEMPF called %8d times", ++neBEMPFCallCntr);
 
   double Pot;
   int fstatus;
@@ -4572,13 +2475,13 @@ int neBEMField(Point3D *point, double *potential, Vector3D *field) {
   {
     fstatus = FastPFAtPoint(point, &Pot, field);
     if (fstatus != 0) {
-      neBEMMessage("neBEMField - FastPFAtPoint");
+      neBEMMessage("neBEMPF - FastPFAtPoint");
       return -1;
     }
   } else {
     fstatus = PFAtPoint(point, &Pot, field);
     if (fstatus != 0) {
-      neBEMMessage("neBEMField - PFAtPoint");
+      neBEMMessage("neBEMPF - PFAtPoint");
       return -1;
     }
   }
@@ -4588,9 +2491,10 @@ int neBEMField(Point3D *point, double *potential, Vector3D *field) {
   // printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
 
   return (0);
-}  // neBEMField ends
+}  // neBEMPF ends
 
-// Actual preparation of the weighting field.
+// Actual preparation of the weighting field, including those related to
+// corresponding weighting field fast volumes.
 // The return value identifies the weighting field. Error: id < 0.
 // The list contains all primitives that are part of this particular
 // read-out group. These can come from several volumes, but it is
@@ -4605,6 +2509,9 @@ int neBEMField(Point3D *point, double *potential, Vector3D *field) {
 int neBEMPrepareWeightingField(int nprim, int primlist[]) {
   static int IdWtField = 0;
 
+  int dbgFn = 0;
+  int fstatus = 0;
+
   if (neBEMState < 7) {
     printf(
         "neBEMPrepareWeightingField: Weighting computations only meaningful "
@@ -4613,7 +2520,8 @@ int neBEMPrepareWeightingField(int nprim, int primlist[]) {
   }
 
   // Find first free slot
-  const int MaxWtField = 100; // used again while deallocating these memories
+  const int MaxWtField =
+      MAXWtFld;  // used also while deallocating these memories
   if (WtFieldChDen == NULL)
     WtFieldChDen = (double **)malloc(MaxWtField * sizeof(double *));
   if (AvWtChDen == NULL)
@@ -4622,18 +2530,27 @@ int neBEMPrepareWeightingField(int nprim, int primlist[]) {
   ++IdWtField;
   if (IdWtField >= MaxWtField) {
     printf(
-        "neBEMPrepareWeightingField: reached MaxWtField weighting fields.\n");
+        "neBEMPrepareWeightingField: reached MaxWtField (%d) weighting "
+        "fields.\n",
+        MAXWtFld);
     return -1;
-  }
+  } else {
+    printf("\nPreparing weighting field for %d-th set.\n", IdWtField);
+  }  // else within MaxWtField
 
   // Allocate a new column to store this solution set
   WtFieldChDen[IdWtField] = (double *)malloc((NbElements + 2) * sizeof(double));
   AvWtChDen[IdWtField] = (double *)malloc((NbPrimitives + 2) * sizeof(double));
 
-  int fstatus =
-      WeightingFieldSolution(nprim, primlist, WtFieldChDen[IdWtField]);
-  if (!fstatus)  // estimate primitive related average wt field charge densities
-  {
+  fstatus = WeightingFieldSolution(nprim, primlist, WtFieldChDen[IdWtField]);
+  if (fstatus) {
+    neBEMMessage("neBEMPrepareWeightingField - WeightingFieldSolution");
+    return -1;
+  } else {
+    printf("Computed weighting field solution\n");
+  }
+
+  if (!fstatus) {  // estimate primitive related avrg wt field charge densities
     // OMPCheck - may be parallelized
     for (int prim = 1; prim <= NbPrimitives; ++prim) {
       double area = 0.0;  // need area of the primitive as well!
@@ -4647,29 +2564,410 @@ int neBEMPrepareWeightingField(int nprim, int primlist[]) {
 
       AvWtChDen[IdWtField][prim] /= area;
     }
-  }
-  if (fstatus != 0) {
-    neBEMMessage("neBEMPrepareWeightingField - WeightingFieldSolution");
-    return -1;
-  }
+    printf("Computed primitive-averaged weighting field solutions\n");
+  }  // if status flag not raised
+
+  // stringify the integer
+  char strIdWtField[5];
+  sprintf(strIdWtField, "%d", IdWtField);
+  // printf("strIdWtField: %s\n", strIdWtField);
+
+  // Set up parameters related to fixed specification of weighting field
+  // printf("OptFixedWtField: %d\n", OptFixedWtField[IdWtField]);fflush(stdout);
+  if (OptFixedWtField[IdWtField]) {
+    char fileWtField[256];
+    strcpy(fileWtField, "neBEMInp/neBEMFixedWtField_");
+    strcat(fileWtField, strIdWtField);
+    strcat(fileWtField, ".inp");
+    FILE *fixedWtInpFile = fopen(fileWtField, "r");
+    if (fixedWtInpFile == NULL) {
+      printf(
+          "neBEMFixedWtField.inp absent ... assuming OptFixedWtField = 0 "
+          "...\n");
+      OptFixedWtField[IdWtField] = 0;
+      FixedWtPotential[IdWtField] = 0.0;
+      FixedWtFieldX[IdWtField] = 0.0;
+      FixedWtFieldY[IdWtField] = 0.0;
+      FixedWtFieldZ[IdWtField] = 0.0;
+    } else {
+      fscanf(fixedWtInpFile, "OptFixedWtField: %d\n",
+             &OptFixedWtField[IdWtField]);
+      fscanf(fixedWtInpFile, "FixedWtPotential: %lg\n",
+             &FixedWtPotential[IdWtField]);
+      fscanf(fixedWtInpFile, "FixedWtFieldX: %lg\n", &FixedWtFieldX[IdWtField]);
+      fscanf(fixedWtInpFile, "FixedWtFieldY: %lg\n", &FixedWtFieldY[IdWtField]);
+      fscanf(fixedWtInpFile, "FixedWtFieldZ: %lg\n", &FixedWtFieldZ[IdWtField]);
+      fclose(fixedWtInpFile);
+    }  // else fixedWtInpFile
+  }    // if OptFixedWtField
+
+  // Weighting field fast volume related computations
+  // Set up parameters related to weighting field fast volumes.
+  // There can be multiple weighting fields depending on readout electrodes.
+  // As a result, there can be multiple versions of this input file, each
+  // reflecting the requirement of one set of electrodes.
+  // printf("OptWtFldFastVol: %d\n", OptWtFldFastVol[IdWtField]);fflush(stdout);
+  if (OptWtFldFastVol[IdWtField]) {
+    char fileWtField[256];
+    strcpy(fileWtField, "neBEMInp/neBEMWtFldFastVol_");
+    strcat(fileWtField, strIdWtField);
+    strcat(fileWtField, ".inp");
+    FILE *fastWtFldInpFile = fopen(fileWtField, "r");
+    // FILE *fastWtFldInpFile = fopen("neBEMInp/neBEMWtFldFastVol.inp", "r");
+    if (fastWtFldInpFile == NULL) {
+      printf(
+          "neBEMWtFldFastVol.inp absent ... assuming OptWtFldFastVol = 0 "
+          "...\n");
+      OptWtFldFastVol[IdWtField] = 0;
+      OptStaggerWtFldFastVol[IdWtField] = 0;
+      OptCreateWtFldFastPF[IdWtField] = 0;
+      OptReadWtFldFastPF[IdWtField] = 0;
+      WtFldFastVol[IdWtField].NbBlocks = 0;
+      WtFldFastVol[IdWtField].NbOmitVols = 0;
+      WtFldFastVol[IdWtField].NbIgnoreVols = 0;
+    } else {
+      fscanf(fastWtFldInpFile, "OptFastVol: %d\n", &OptWtFldFastVol[IdWtField]);
+      fscanf(fastWtFldInpFile, "OptStaggerFastVol: %d\n",
+             &OptStaggerWtFldFastVol[IdWtField]);
+      fscanf(fastWtFldInpFile, "OptCreateFastPF: %d\n",
+             &OptCreateWtFldFastPF[IdWtField]);
+      fscanf(fastWtFldInpFile, "OptReadFastPF: %d\n",
+             &OptReadWtFldFastPF[IdWtField]);
+      fscanf(fastWtFldInpFile, "NbPtSkip: %d\n", &WtFldNbPtSkip[IdWtField]);
+      fscanf(fastWtFldInpFile, "NbStgPtSkip: %d\n",
+             &StgWtFldNbPtSkip[IdWtField]);
+      fscanf(fastWtFldInpFile, "LX: %le\n", &WtFldFastVol[IdWtField].LX);
+      fscanf(fastWtFldInpFile, "LY: %le\n", &WtFldFastVol[IdWtField].LY);
+      fscanf(fastWtFldInpFile, "LZ: %le\n", &WtFldFastVol[IdWtField].LZ);
+      fscanf(fastWtFldInpFile, "CornerX: %le\n",
+             &WtFldFastVol[IdWtField].CrnrX);
+      fscanf(fastWtFldInpFile, "CornerY: %le\n",
+             &WtFldFastVol[IdWtField].CrnrY);
+      fscanf(fastWtFldInpFile, "CornerZ: %le\n",
+             &WtFldFastVol[IdWtField].CrnrZ);
+      fscanf(fastWtFldInpFile, "YStagger: %le\n",
+             &WtFldFastVol[IdWtField].YStagger);
+      if (!OptStaggerWtFldFastVol[IdWtField])
+        WtFldFastVol[IdWtField].YStagger = 0.0;  // ignore any non-zero value
+      fscanf(fastWtFldInpFile, "NbOfBlocks: %d\n",
+             &WtFldFastVol[IdWtField].NbBlocks);
+      WtFldBlkNbXCells[IdWtField] =
+          ivector(1, WtFldFastVol[IdWtField].NbBlocks);
+      WtFldBlkNbYCells[IdWtField] =
+          ivector(1, WtFldFastVol[IdWtField].NbBlocks);
+      WtFldBlkNbZCells[IdWtField] =
+          ivector(1, WtFldFastVol[IdWtField].NbBlocks);
+      WtFldBlkLZ[IdWtField] = dvector(1, WtFldFastVol[IdWtField].NbBlocks);
+      WtFldBlkCrnrZ[IdWtField] = dvector(1, WtFldFastVol[IdWtField].NbBlocks);
+      for (int block = 1; block <= WtFldFastVol[IdWtField].NbBlocks; ++block) {
+        fscanf(fastWtFldInpFile, "NbOfXCells: %d\n",
+               &WtFldBlkNbXCells[IdWtField][block]);
+        fscanf(fastWtFldInpFile, "NbOfYCells: %d\n",
+               &WtFldBlkNbYCells[IdWtField][block]);
+        fscanf(fastWtFldInpFile, "NbOfZCells: %d\n",
+               &WtFldBlkNbZCells[IdWtField][block]);
+        fscanf(fastWtFldInpFile, "LZ: %le\n", &WtFldBlkLZ[IdWtField][block]);
+        fscanf(fastWtFldInpFile, "CornerZ: %le\n",
+               &WtFldBlkCrnrZ[IdWtField][block]);
+      }  // inputs for blocks
+      fscanf(fastWtFldInpFile, "NbOfOmitVols: %d\n",
+             &WtFldFastVol[IdWtField].NbOmitVols);
+      if (WtFldFastVol[IdWtField].NbOmitVols) {
+        WtFldOmitVolLX[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbOmitVols);
+        WtFldOmitVolLY[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbOmitVols);
+        WtFldOmitVolLZ[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbOmitVols);
+        WtFldOmitVolCrnrX[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbOmitVols);
+        WtFldOmitVolCrnrY[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbOmitVols);
+        WtFldOmitVolCrnrZ[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbOmitVols);
+        for (int omit = 1; omit <= WtFldFastVol[IdWtField].NbOmitVols; ++omit) {
+          fscanf(fastWtFldInpFile, "OmitVolLX: %le\n",
+                 &WtFldOmitVolLX[IdWtField][omit]);
+          fscanf(fastWtFldInpFile, "OmitVolLY: %le\n",
+                 &WtFldOmitVolLY[IdWtField][omit]);
+          fscanf(fastWtFldInpFile, "OmitVolLZ: %le\n",
+                 &WtFldOmitVolLZ[IdWtField][omit]);
+          fscanf(fastWtFldInpFile, "OmitVolCornerX: %le\n",
+                 &WtFldOmitVolCrnrX[IdWtField][omit]);
+          fscanf(fastWtFldInpFile, "OmitVolCornerY: %le\n",
+                 &WtFldOmitVolCrnrY[IdWtField][omit]);
+          fscanf(fastWtFldInpFile, "OmitVolCornerZ: %le\n",
+                 &WtFldOmitVolCrnrZ[IdWtField][omit]);
+        }  // for loop inputs for OmitVols
+      }    // inputs for OmitVols
+      fscanf(fastWtFldInpFile, "NbOfIgnoreVols: %d\n",
+             &WtFldFastVol[IdWtField].NbIgnoreVols);
+      if (WtFldFastVol[IdWtField].NbIgnoreVols) {
+        WtFldIgnoreVolLX[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbIgnoreVols);
+        WtFldIgnoreVolLY[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbIgnoreVols);
+        WtFldIgnoreVolLZ[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbIgnoreVols);
+        WtFldIgnoreVolCrnrX[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbIgnoreVols);
+        WtFldIgnoreVolCrnrY[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbIgnoreVols);
+        WtFldIgnoreVolCrnrZ[IdWtField] =
+            dvector(1, WtFldFastVol[IdWtField].NbIgnoreVols);
+        for (int ignore = 1; ignore <= WtFldFastVol[IdWtField].NbIgnoreVols;
+             ++ignore) {
+          fscanf(fastWtFldInpFile, "IgnoreVolLX: %le\n",
+                 &WtFldIgnoreVolLX[IdWtField][ignore]);
+          fscanf(fastWtFldInpFile, "IgnoreVolLY: %le\n",
+                 &WtFldIgnoreVolLY[IdWtField][ignore]);
+          fscanf(fastWtFldInpFile, "IgnoreVolLZ: %le\n",
+                 &WtFldIgnoreVolLZ[IdWtField][ignore]);
+          fscanf(fastWtFldInpFile, "IgnoreVolCornerX: %le\n",
+                 &WtFldIgnoreVolCrnrX[IdWtField][ignore]);
+          fscanf(fastWtFldInpFile, "IgnoreVolCornerY: %le\n",
+                 &WtFldIgnoreVolCrnrY[IdWtField][ignore]);
+          fscanf(fastWtFldInpFile, "IgnoreVolCornerZ: %le\n",
+                 &WtFldIgnoreVolCrnrZ[IdWtField][ignore]);
+        }  // for loop inputs for IgnoreVols
+      }    // inputs for IgnoreVols
+      if (dbgFn) {
+        for (int ignore = 1; ignore <= WtFldFastVol[IdWtField].NbIgnoreVols;
+             ++ignore) {
+          printf("WtFldIgnoreVolLX: %le\n",
+                 WtFldIgnoreVolLX[IdWtField][ignore]);
+          printf("WtFldIgnoreVolLY: %le\n",
+                 WtFldIgnoreVolLY[IdWtField][ignore]);
+          printf("WtFldIgnoreVolLZ: %le\n",
+                 WtFldIgnoreVolLZ[IdWtField][ignore]);
+          printf("WtFldIgnoreVolCornerX: %le\n",
+                 WtFldIgnoreVolCrnrX[IdWtField][ignore]);
+          printf("WtFldIgnoreVolCornerY: %le\n",
+                 WtFldIgnoreVolCrnrY[IdWtField][ignore]);
+          printf("WtFldIgnoreVolCornerZ: %le\n",
+                 WtFldIgnoreVolCrnrZ[IdWtField][ignore]);
+        }  // inputs for IgnoreVols
+      }
+      fclose(fastWtFldInpFile);
+    }  // else fastWtFldInpFile
+
+    int MaxXCells = WtFldBlkNbXCells[IdWtField][1];
+    int MaxYCells = WtFldBlkNbYCells[IdWtField][1];
+    int MaxZCells = WtFldBlkNbZCells[IdWtField][1];
+    clock_t startFastClock = clock();
+
+    // find maximum number of Xcells etc in all the blocks
+    // simplifies memory allocation using nrutils but hogs memory!
+    for (int block = 1; block <= WtFldFastVol[IdWtField].NbBlocks; ++block) {
+      if (block == 1) {
+        MaxXCells = WtFldBlkNbXCells[IdWtField][1];
+        MaxYCells = WtFldBlkNbYCells[IdWtField][1];
+        MaxZCells = WtFldBlkNbZCells[IdWtField][1];
+      } else {
+        if (MaxXCells < WtFldBlkNbXCells[IdWtField][block])
+          MaxXCells = WtFldBlkNbXCells[IdWtField][block];
+        if (MaxYCells < WtFldBlkNbYCells[IdWtField][block])
+          MaxYCells = WtFldBlkNbYCells[IdWtField][block];
+        if (MaxZCells < WtFldBlkNbZCells[IdWtField][block])
+          MaxZCells = WtFldBlkNbZCells[IdWtField][block];
+      }
+    }  // loop block for finding maxm cells among all the blocks
+
+    if (dbgFn) {
+      printf("OptWtFldFastVol: %d\n", OptWtFldFastVol[IdWtField]);
+      printf("OptStaggerWtFldFastVol: %d\n", OptStaggerWtFldFastVol[IdWtField]);
+      printf("OptCreateWtFldFastPF: %d\n", OptCreateWtFldFastPF[IdWtField]);
+      printf("OptReadWtFldFastPF: %d\n", OptReadWtFldFastPF[IdWtField]);
+      printf("WtFldNbPtSkip: %d\n", WtFldNbPtSkip[IdWtField]);
+      printf("StgWtFldNbPtSkip: %d\n", StgWtFldNbPtSkip[IdWtField]);
+      printf("LX: %le\n", WtFldFastVol[IdWtField].LX);
+      printf("LY: %le\n", WtFldFastVol[IdWtField].LY);
+      printf("LZ: %le\n", WtFldFastVol[IdWtField].LZ);
+      printf("CornerX: %le\n", WtFldFastVol[IdWtField].CrnrX);
+      printf("CornerY: %le\n", WtFldFastVol[IdWtField].CrnrY);
+      printf("CornerZ: %le\n", WtFldFastVol[IdWtField].CrnrZ);
+      printf("YStagger: %le\n", WtFldFastVol[IdWtField].YStagger);
+      printf("NbOfBlocks: %d\n", WtFldFastVol[IdWtField].NbBlocks);
+      for (int block = 1; block <= WtFldFastVol[IdWtField].NbBlocks; ++block) {
+        printf("NbOfXCells[%d]: %d\n", block,
+               WtFldBlkNbXCells[IdWtField][block]);
+        printf("NbOfYCells[%d]: %d\n", block,
+               WtFldBlkNbYCells[IdWtField][block]);
+        printf("NbOfZCells[%d]: %d\n", block,
+               WtFldBlkNbZCells[IdWtField][block]);
+        printf("LZ[%d]: %le\n", block, WtFldBlkLZ[IdWtField][block]);
+        printf("CornerZ[%d]: %le\n", block, WtFldBlkCrnrZ[IdWtField][block]);
+      }
+      printf("NbOfOmitVols: %d\n", WtFldFastVol[IdWtField].NbOmitVols);
+      if (WtFldFastVol[IdWtField].NbOmitVols) {
+        for (int omit = 1; omit <= WtFldFastVol[IdWtField].NbOmitVols; ++omit) {
+          printf("OmitVolLX[%d]: %le\n", omit, WtFldOmitVolLX[IdWtField][omit]);
+          printf("OmitVolLY[%d]: %le\n", omit, WtFldOmitVolLY[IdWtField][omit]);
+          printf("OmitVolLZ[%d]: %le\n", omit, WtFldOmitVolLZ[IdWtField][omit]);
+          printf("OmitCrnrX[%d]: %le\n", omit,
+                 WtFldOmitVolCrnrX[IdWtField][omit]);
+          printf("OmitCrnrY[%d]: %le\n", omit,
+                 WtFldOmitVolCrnrY[IdWtField][omit]);
+          printf("OmitCrnrZ[%d]: %le\n", omit,
+                 WtFldOmitVolCrnrZ[IdWtField][omit]);
+        }
+      }
+      printf("MaxXCells, MaxYCells, MaxZCells: %d, %d, %d\n", MaxXCells,
+             MaxYCells, MaxZCells);
+      printf("NbOfIgnoreVols: %d\n", WtFldFastVol[IdWtField].NbIgnoreVols);
+    }  // dbgFn
+
+    // Following memory allocations are necessary even for creating
+    // the fast volumes.
+    // In fact, since these tensors are already in place, the fast volumes
+    // can be used to evaluate potential and fields immediately after they are
+    // created.
+    /* Memory wastage!!! Improve as soon as possible. */
+    WtFldFastPot[IdWtField] =
+        d4tensor(1, WtFldFastVol[IdWtField].NbBlocks, 1, MaxXCells + 1, 1,
+                 MaxYCells + 1, 1, MaxZCells + 1);
+    WtFldFastFX[IdWtField] =
+        d4tensor(1, WtFldFastVol[IdWtField].NbBlocks, 1, MaxXCells + 1, 1,
+                 MaxYCells + 1, 1, MaxZCells + 1);
+    WtFldFastFY[IdWtField] =
+        d4tensor(1, WtFldFastVol[IdWtField].NbBlocks, 1, MaxXCells + 1, 1,
+                 MaxYCells + 1, 1, MaxZCells + 1);
+    WtFldFastFZ[IdWtField] =
+        d4tensor(1, WtFldFastVol[IdWtField].NbBlocks, 1, MaxXCells + 1, 1,
+                 MaxYCells + 1, 1, MaxZCells + 1);
+
+    if (OptStaggerWtFldFastVol[IdWtField]) {
+      /* Memory wastage!!! Improve as soon as possible. */
+      StgWtFldFastPot[IdWtField] =
+          d4tensor(1, WtFldFastVol[IdWtField].NbBlocks, 1, MaxXCells + 1, 1,
+                   MaxYCells + 1, 1, MaxZCells + 1);
+      StgWtFldFastFX[IdWtField] =
+          d4tensor(1, WtFldFastVol[IdWtField].NbBlocks, 1, MaxXCells + 1, 1,
+                   MaxYCells + 1, 1, MaxZCells + 1);
+      StgWtFldFastFY[IdWtField] =
+          d4tensor(1, WtFldFastVol[IdWtField].NbBlocks, 1, MaxXCells + 1, 1,
+                   MaxYCells + 1, 1, MaxZCells + 1);
+      StgWtFldFastFZ[IdWtField] =
+          d4tensor(1, WtFldFastVol[IdWtField].NbBlocks, 1, MaxXCells + 1, 1,
+                   MaxYCells + 1, 1, MaxZCells + 1);
+    }  // if OptStaggerWtFldFastVol
+
+    if (OptCreateWtFldFastPF[IdWtField]) {
+      fstatus = CreateWtFldFastVolPF(IdWtField);
+
+      clock_t stopFastClock = clock();
+      neBEMTimeElapsed(startFastClock, stopFastClock);
+      printf("to compute WtFldFastVolPF\n");
+      // neBEMMessage(
+      // "neBEMSolve - Failure computing WtFldFastVolPF: not implemented");
+      // return -1;
+    }  // if OptCreateWtFldFastPF
+
+    if (OptReadWtFldFastPF[IdWtField]) {  // reading from file
+      int nbXCells, nbYCells, nbZCells;
+      int tmpblk;
+      double xpt, ypt, zpt;
+
+      // stringify the integer
+      char stringIdWtField[5];
+      sprintf(stringIdWtField, "%d", IdWtField);
+      char FastVolPFFile[256];
+      strcpy(FastVolPFFile, BCOutDir);
+      strcat(FastVolPFFile, "/WtFldFastVolPF_");
+      strcat(FastVolPFFile, stringIdWtField);
+      strcat(FastVolPFFile, ".out");
+      FILE *fFastVolPF = fopen(FastVolPFFile, "r");
+      if (fFastVolPF == NULL) {
+        neBEMMessage("in neBEMSolve - WtFldFastVolPFFile");
+        return -1;
+      }
+
+      fscanf(fFastVolPF, "#block\tX\tY\tZ\tPot\tFX\tFY\tFZ\n");
+
+      for (int block = 1; block <= WtFldFastVol[IdWtField].NbBlocks; ++block) {
+        nbXCells = WtFldBlkNbXCells[IdWtField][block];
+        nbYCells = WtFldBlkNbYCells[IdWtField][block];
+        nbZCells = WtFldBlkNbZCells[IdWtField][block];
+
+        for (int i = 1; i <= nbXCells + 1; ++i) {
+          for (int j = 1; j <= nbYCells + 1; ++j) {
+            for (int k = 1; k <= nbZCells + 1; ++k) {
+              fscanf(fFastVolPF, "%d\t%le\t%le\t%le\t%le\t%le\t%le\t%le\n",
+                     &tmpblk, &xpt, &ypt, &zpt,
+                     &WtFldFastPot[IdWtField][block][i][j][k],
+                     &WtFldFastFX[IdWtField][block][i][j][k],
+                     &WtFldFastFY[IdWtField][block][i][j][k],
+                     &WtFldFastFZ[IdWtField][block][i][j][k]);
+            }  // loop k
+          }    // loop j
+        }      // loop i
+      }        // loop block
+      fclose(fFastVolPF);
+
+      if (OptStaggerWtFldFastVol[IdWtField]) {
+        // stringify the integer
+        sprintf(stringIdWtField, "%d", IdWtField);
+        char StgFastVolPFFile[256];
+        FILE *fStgFastVolPF;
+        strcpy(StgFastVolPFFile, BCOutDir);
+        // strcat(StgFastVolPFFile, "/WtFldStgFastVolPF.out");
+        strcat(StgFastVolPFFile, "/StgWtFldFastVolPF_");
+        strcat(StgFastVolPFFile, stringIdWtField);
+        strcat(StgFastVolPFFile, ".out");
+        fStgFastVolPF = fopen(StgFastVolPFFile, "r");
+
+        if (fStgFastVolPF == NULL) {
+          neBEMMessage("in neBEMSolve - StgWtFldFastVolPFFile");
+          return -1;
+        }
+
+        fscanf(fStgFastVolPF, "#block\tX\tY\tZ\tPot\tFX\tFY\tFZ\n");
+
+        for (int block = 1; block <= WtFldFastVol[IdWtField].NbBlocks;
+             ++block) {
+          nbXCells = WtFldBlkNbXCells[IdWtField][block];
+          nbYCells = WtFldBlkNbYCells[IdWtField][block];
+          nbZCells = WtFldBlkNbZCells[IdWtField][block];
+
+          for (int i = 1; i <= nbXCells + 1; ++i) {
+            for (int j = 1; j <= nbYCells + 1; ++j) {
+              for (int k = 1; k <= nbZCells + 1; ++k) {
+                fscanf(fStgFastVolPF, "%d\t%le\t%le\t%le\t%le\t%le\t%le\t%le\n",
+                       &tmpblk, &xpt, &ypt, &zpt,
+                       &StgWtFldFastPot[IdWtField][block][i][j][k],
+                       &StgWtFldFastFX[IdWtField][block][i][j][k],
+                       &StgWtFldFastFY[IdWtField][block][i][j][k],
+                       &StgWtFldFastFZ[IdWtField][block][i][j][k]);
+              }  // loop k
+            }    // loop j
+          }      // loop i
+        }        // loop block
+        fclose(fStgFastVolPF);
+      }  // if OptStaggerWtFldFastVol
+
+      clock_t stopFastClock = clock();
+      neBEMTimeElapsed(startFastClock, stopFastClock);
+      printf("to read WtFldFastVolPF\n");
+    }  // if OptReadWtFldFastPF
+  }    // if OptWtFldFastVol
 
   return IdWtField;
 }  // neBEMPrepareWeightingField ends
 
 // Deallocates memory reserved for a weighting field
-void neBEMDeleteWeightingField(int IdWtField) { 
-  free(WtFieldChDen[IdWtField]); 
+void neBEMDeleteWeightingField(int IdWtField) {
+  free(WtFieldChDen[IdWtField]);
   free(AvWtChDen[IdWtField]);
 }
 
 // Deallocates all memory reserved for all weighting fields
 void neBEMDeleteAllWeightingFields(void) {
-  const int MaxWtField = 100;	// being used while allocating memory
-  for (int id = 1; id < MaxWtField; ++id)	{ // count from 1
+  const int MaxWtField = MAXWtFld;  // being used while allocating memory
+  for (int id = 1; id < MaxWtField; ++id) {  // count from 1
     free(WtFieldChDen[id]);
     free(AvWtChDen[id]);
   }
-  free(WtFieldChDen); 
+  free(WtFieldChDen);
   free(AvWtChDen);
 }
 
@@ -4683,24 +2981,25 @@ double neBEMWeightingField(Point3D *point, Vector3D *field, int IdWtField) {
     return (-1);
   }
 
-  if (OptFixedWtField) { 
-    // minimum computation, too restricted!
-    potential = FixedWtPotential;
-    field->X = FixedWtFieldX;
-    field->Y = FixedWtFieldY;
-    field->Z = FixedWtFieldZ;
-  } else if (OptWtFldFastVol) {
+  if (OptFixedWtField[IdWtField]) {
+    // minimum computation, too restricted! Does not even consider variation
+    // through IdWtField
+    potential = FixedWtPotential[IdWtField];
+    field->X = FixedWtFieldX[IdWtField];
+    field->Y = FixedWtFieldY[IdWtField];
+    field->Z = FixedWtFieldZ[IdWtField];
+  } else if (OptWtFldFastVol[IdWtField]) {
     // bit more computation, lot more flexibility
-    // Note: this is not the Creat or Read option
-    int fstatus = WtFldFastPFAtPoint(point, &potential, field);
+    // Note: this is not the Create or Read option
+    int fstatus = WtFldFastPFAtPoint(point, &potential, field, IdWtField);
     if (fstatus != 0) {
       neBEMMessage("neBEMWeightingField - WtFldFastPFAtPoint");
       return DBL_MAX;
     }
   } else {
-    int fstatus = WtPFAtPoint(point, &potential, field, IdWtField);
+    int fstatus = WtFldPFAtPoint(point, &potential, field, IdWtField);
     if (fstatus != 0) {
-      neBEMMessage("neBEMWeightingField - WtPFAtPoint");
+      neBEMMessage("neBEMWeightingField - WtFldPFAtPoint");
       return DBL_MAX;
     }
   }
@@ -5081,8 +3380,7 @@ int ReadPrimitives(void) {
   strcpy(PrimitiveFile, ModelOutDir);
   strcat(PrimitiveFile, "/Primitives/StorePrims.out");
 
-  FILE *fStrPrm;
-  fStrPrm = fopen(PrimitiveFile, "r");
+  FILE *fStrPrm = fopen(PrimitiveFile, "r");
   if (fStrPrm == NULL) {
     neBEMMessage("ReadPrimitives - Could not open file to read primitives");
     return -1;
@@ -5368,17 +3666,18 @@ double neBEMChkInPoly(int n, Point3D *p, Point3D q) {
     theta = acos(costheta);
     // printf("n: %d, i: %d, theta: %lg\n", n, i, neBEMrtod*theta);
     if (Sign(theta) != Sign(oldtheta)) {
-      // polygon either non-covex, or the point is outside the polygon 
+      // polygon either non-covex, or the point is outside the polygon
       return(0.0);  // absurd value implying outside polygon
     }
     */
     anglesum += acos(costheta);
-    // printf("n: %d, i: %d, anglesum: %lg %lg\n", n, i, anglesum, neBEMrtod*anglesum);
+    // printf("n: %d, i: %d, anglesum: %lg %lg\n", n, i, anglesum,
+    // neBEMrtod*anglesum);
   }
 
   return (anglesum);
 }  // neBEMChkInPoly
 
 #ifdef __cplusplus
-} // namespace
+}  // namespace
 #endif

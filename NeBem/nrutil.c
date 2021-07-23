@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "NR.h"
 
 #define NR_END 1
@@ -490,19 +491,19 @@ void free_imatrix(int **m, long nrl, long /*nrh*/, long ncl, long /*nch*/) {
 }
 
 /* free a submatrix allocated by submatrix() */
-void free_submatrix(float **b, long nrl, long /*nrh*/, long /*ncl*/, 
+void free_submatrix(float **b, long nrl, long /*nrh*/, long /*ncl*/,
                     long /*nch*/) {
   free((FREE_ARG)(b + nrl - NR_END));
 }
 
 /* free a matrix allocated by convert_matrix() */
-void free_convert_matrix(float **b, long nrl, long /*nrh*/, long /*ncl*/, 
+void free_convert_matrix(float **b, long nrl, long /*nrh*/, long /*ncl*/,
                          long /*nch*/) {
   free((FREE_ARG)(b + nrl - NR_END));
 }
 
 /* free a f3tensor allocated by f3tensor() */
-void free_f3tensor(float ***t, long nrl, long /*nrh*/, long ncl, long /*nch*/, 
+void free_f3tensor(float ***t, long nrl, long /*nrh*/, long ncl, long /*nch*/,
                    long ndl, long /*ndh*/) {
   free((FREE_ARG)(t[nrl][ncl] + ndl - NR_END));
   free((FREE_ARG)(t[nrl] + ncl - NR_END));

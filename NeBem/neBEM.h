@@ -19,13 +19,15 @@
 
 #define EPS0 8.854187817e-12       // in C2/Nm2 (SI) equivalent to pF/m
 #define MyFACTOR 111.26500547e-12  // 4 pi eps_0 is ofn reqrd for normalization
-// #define EPS0 1.0						// relevant for other physics
-// problems
+// #define EPS0 1.0						// relevant for other
+// physics problems
 // #define MyFACTOR 1.0				// relevant for other physics
 // problems
 
 #define Q_E -1.60217646e-19  // charge of electron in SI units (Coulomb)
 #define Q_I 1.60217646e-19   // charge of ion in SI units (Coulomb)
+
+#define MAXWtFld 11
 
 #ifdef __cplusplus
 namespace neBEM {
@@ -42,10 +44,15 @@ neBEMGLOBAL int OptInvMatProc;
 neBEMGLOBAL int OptValidateSolution;
 neBEMGLOBAL int OptForceValidation;
 neBEMGLOBAL int OptEstimateError;
-neBEMGLOBAL int OptStorePrimitives;
-neBEMGLOBAL int OptStoreElements;
 neBEMGLOBAL int OptStoreInflMatrix;
+neBEMGLOBAL int OptReadInflMatrix;
 neBEMGLOBAL int OptStoreInvMatrix;
+neBEMGLOBAL int OptReadInvMatrix;
+neBEMGLOBAL int OptStorePrimitives;
+neBEMGLOBAL int OptReadPrimitives;
+neBEMGLOBAL int OptRmPrim;
+neBEMGLOBAL int OptStoreElements;
+neBEMGLOBAL int OptReadElements;
 neBEMGLOBAL int OptFormattedFile;
 neBEMGLOBAL int OptUnformattedFile;
 neBEMGLOBAL int OptRepeatLHMatrix;
@@ -100,11 +107,11 @@ neBEMGLOBAL int *NbWireSeg;
 
 // Related to elements
 // minimum number of elements allowed along Length
-neBEMGLOBAL int MinNbElementsOnLength;  
+neBEMGLOBAL int MinNbElementsOnLength;
 // maximum number of elements allowed along Length
-neBEMGLOBAL int MaxNbElementsOnLength;  
+neBEMGLOBAL int MaxNbElementsOnLength;
 // user requested length of along Length
-neBEMGLOBAL double ElementLengthRqstd;  
+neBEMGLOBAL double ElementLengthRqstd;
 
 // int MinNbElementsOnSurface;	// minimum number of elements allowed on a
 // surface int MaxNbElementsOnSurface;	// maximum number of elements allowed on
@@ -115,17 +122,17 @@ neBEMGLOBAL FILE *fMeshLog;
 
 // Related to solution constraints
 // Whether total charge in the system is zero
-neBEMGLOBAL int OptSystemChargeZero;  
+neBEMGLOBAL int OptSystemChargeZero;
 // which eqn / unknown is related to this constraint
-neBEMGLOBAL int NbSystemChargeZero;  
+neBEMGLOBAL int NbSystemChargeZero;
 // voltage shift necessary to enforce zero charge
-neBEMGLOBAL double VSystemChargeZero;  
+neBEMGLOBAL double VSystemChargeZero;
 
 neBEMGLOBAL int NbFloatingConductors;  // Number of floating conductors
 // which eqn / unknown is related to this constraint
-neBEMGLOBAL int NbFloatCon;  
+neBEMGLOBAL int NbFloatCon;
 // value of floating potential on the conductor
-neBEMGLOBAL double VFloatCon;  
+neBEMGLOBAL double VFloatCon;
 
 typedef struct {
   short int Type;     // 4: rectangular, 3: triangular, 2: linear (wire)
@@ -167,53 +174,6 @@ typedef struct {
 } Element;
 
 neBEMGLOBAL Element *EleArr;  // represents an array of elements
-
-// Number of points, lines, areas, volumes with known property (density) values
-neBEMGLOBAL int NbPointsKnCh, NbLinesKnCh, NbAreasKnCh, NbVolumesKnCh;
-// Details of each of the above entities with known property
-// Point with known charge
-typedef struct {
-  int Nb;
-  Point3D P;  // available from Vector.h
-  double Assigned;
-} PointKnCh;
-
-neBEMGLOBAL PointKnCh *PointKnChArr;
-
-// Line with known linear charge density
-typedef struct {
-  int Nb;
-  Point3D Start;  // the line extends from Start to Stop
-  Point3D Stop;
-  double Radius;
-  double Assigned;
-} LineKnCh;
-
-neBEMGLOBAL LineKnCh *LineKnChArr;
-
-// Surface with known charge density
-// Surfaces can be right-triangular or rectangular
-// Needs to be extended to arbitrary polygons
-typedef struct {
-  int Nb;
-  int NbVertices;  // number of vertices defining the surface (restricted to 4)
-  Point3D Vertex[5];  // the surface is defined by Vertex[1-4]
-  double Assigned;
-} AreaKnCh;
-
-neBEMGLOBAL AreaKnCh *AreaKnChArr;
-
-// Volumes with known charge density
-// Volumes can be tetrahedral or rectangular
-// Needs to be extended to arbitrarly-shaped volumes
-typedef struct {
-  int Nb;
-  int NbVertices;  // number of vertices defining the volume (restricted to 8)
-  Point3D Vertex[9];
-  double Assigned;
-} VolumeKnCh;
-
-neBEMGLOBAL VolumeKnCh *VolumeKnChArr;
 
 // Various flags that need to be passed on to the solver to decide from what
 // level the solution should proceed
@@ -275,6 +235,58 @@ neBEMGLOBAL int WireElements(int prim, int nvertex, double xvert[],
                              double potential, double charge, double lambda,
                              int NbWireSeg);
 neBEMGLOBAL int BoundaryConditions(void);
+neBEMGLOBAL int InitialConditions(void);
+// Initiate known charge(s) / charge density (ies) within the device.
+neBEMGLOBAL int InitKnownCharges(void);
+neBEMGLOBAL int InitChargingUp(void);
+
+// Number of points, lines, areas, volumes with known property (density) values
+neBEMGLOBAL int NbPointsKnCh, NbLinesKnCh, NbAreasKnCh, NbVolumesKnCh;
+// Details of each of the above entities with known property
+// Point with known charge
+typedef struct {
+  int Nb;
+  Point3D P;  // available from Vector.h
+  double Assigned;
+} PointKnCh;
+
+neBEMGLOBAL PointKnCh *PointKnChArr;
+
+// Line with known linear charge density
+typedef struct {
+  int Nb;
+  Point3D Start;  // the line extends from Start to Stop
+  Point3D Stop;
+  double Radius;
+  double Assigned;
+} LineKnCh;
+
+neBEMGLOBAL LineKnCh *LineKnChArr;
+
+// Surface with known charge density
+// Surfaces can be right-triangular or rectangular
+// Needs to be extended to arbitrary polygons
+typedef struct {
+  int Nb;
+  int NbVertices;  // number of vertices defining the surface (restricted to 4)
+  Point3D Vertex[5];  // the surface is defined by Vertex[1-4]
+  double Assigned;
+} AreaKnCh;
+
+neBEMGLOBAL AreaKnCh *AreaKnChArr;
+
+// Volumes with known charge density
+// Volumes can be tetrahedral or rectangular
+// Needs to be extended to arbitrarly-shaped volumes
+typedef struct {
+  int Nb;
+  int NbVertices;  // number of vertices defining the volume (restricted to 8)
+  Point3D Vertex[9];
+  double Assigned;
+} VolumeKnCh;
+
+neBEMGLOBAL VolumeKnCh *VolumeKnChArr;
+
 neBEMGLOBAL int AnalyzePrimitive(int, int *, int *);
 neBEMGLOBAL int AnalyzeWire(int, int *);
 neBEMGLOBAL int AnalyzeSurface(int, int *, int *);
@@ -301,11 +313,12 @@ neBEMGLOBAL int DiscretizePolygon(int prim, int nvertex, double xvert[],
                                   int volref2, int inttype, double potential,
                                   double charge, double lambda, int NbSegX,
                                   int NbSegZ);
-neBEMGLOBAL int BoundaryConditions(void);
 
 // Source code: Solve/neBEM.c
 neBEMGLOBAL int ComputeSolution(void);
 neBEMGLOBAL int ReadSolution(void);
+neBEMGLOBAL int UpdateKnownCharges(void);
+neBEMGLOBAL int UpdateChargingUp(void);
 
 // Apparently, localPt need not be passed to ComputeInfluence. This is true if
 // there are no repetitions / reflections. With these and similar possibilities,
@@ -348,7 +361,8 @@ neBEMGLOBAL int ElePFAtPoint(Point3D *globalPt, double *Pot, Vector3D *Flux);
 neBEMGLOBAL int KnChPFAtPoint(Point3D *globalPt, double *Pot, Vector3D *Flux);
 
 // Choose between element and primitive representations
-neBEMGLOBAL int PrimAfter;
+neBEMGLOBAL int PrimAfter;       // for physical field computations.
+neBEMGLOBAL int WtFldPrimAfter;  // for weighting field computations.
 
 // Variables and functions related to voxelized output for Garfield++
 neBEMGLOBAL int OptVoxel;
@@ -370,7 +384,7 @@ typedef struct {
 } VoxelVol;
 neBEMGLOBAL VoxelVol Voxel;
 
-// Compute flux components, potential and regions within the voxelized 
+// Compute flux components, potential and regions within the voxelized
 // volume and store them in an external file
 neBEMGLOBAL int VoxelFPR(void);
 
@@ -399,11 +413,14 @@ neBEMGLOBAL MapVol Map;
 // and store them in an external file
 neBEMGLOBAL int MapFPR(void);
 
-// Variables and functions related to the FAST algorithm
+// Variables and functions related to the FAST algorithm (physical potential
+// and fields)
 neBEMGLOBAL int OptFastVol;
 neBEMGLOBAL int OptStaggerFastVol;
 neBEMGLOBAL int OptCreateFastPF;
 neBEMGLOBAL int OptReadFastPF;
+neBEMGLOBAL int VersionFV;   // although not being used, these two are
+neBEMGLOBAL int NbBlocksFV;  // assigned values through ComponentNeBem3d
 neBEMGLOBAL int NbPtSkip;
 neBEMGLOBAL int NbStgPtSkip;
 // inputs for the fast volume
@@ -442,39 +459,44 @@ neBEMGLOBAL double *IgnoreVolCrnrZ;
 // (see above for examples of creating arrays of structures)
 neBEMGLOBAL double ****FastPot;
 neBEMGLOBAL double ****FastFX, ****FastFY, ****FastFZ;
-neBEMGLOBAL double ****FastStgPot;
-neBEMGLOBAL double ****FastStgFX, ****FastStgFY, ****FastStgFZ;
+neBEMGLOBAL double ****StgFastPot;
+neBEMGLOBAL double ****StgFastFX, ****StgFastFY, ****StgFastFZ;
 neBEMGLOBAL double ****FastPotKnCh;
 neBEMGLOBAL double ****FastFXKnCh, ****FastFYKnCh, ****FastFZKnCh;
-neBEMGLOBAL double ****FastStgPotKnCh;
-neBEMGLOBAL double ****FastStgFXKnCh, ****FastStgFYKnCh, ****FastStgFZKnCh;
+neBEMGLOBAL double ****StgFastPotKnCh;
+neBEMGLOBAL double ****StgFastFXKnCh, ****StgFastFYKnCh, ****StgFastFZKnCh;
 
-// Compute potential and flux components within the FAST volume
-neBEMGLOBAL int FastVolPF(void);
-neBEMGLOBAL int FastVolElePF(void);
-neBEMGLOBAL int FastVolKnChPF(void);
+// Create Fast volumes with potential and flux components
+neBEMGLOBAL int CreateFastVolPF(void);
+neBEMGLOBAL int CreateFastVolElePF(void);
+neBEMGLOBAL int CreateFastVolKnChPF(void);
 
-// Compute potential and flux components at globalPt using FAST algorithm
+// Evaluate potential and flux components at globalPt using FAST algorithm
 neBEMGLOBAL int FastPFAtPoint(Point3D *globalPt, double *Pot, Vector3D *Flux);
 neBEMGLOBAL int FastElePFAtPoint(Point3D *globalPt, double *Pot,
                                  Vector3D *Flux);
 neBEMGLOBAL int FastKnChPFAtPoint(Point3D *globalPt, double *Pot,
                                   Vector3D *Flux);
 
+// identify the pickup electrode
+neBEMGLOBAL int IdPkupElektrd;
+
 // variables related to FIXED weighting field
-neBEMGLOBAL int OptFixedWtField;
-neBEMGLOBAL double FixedWtPotential;
-neBEMGLOBAL double FixedWtFieldX;
-neBEMGLOBAL double FixedWtFieldY;
-neBEMGLOBAL double FixedWtFieldZ;
+neBEMGLOBAL int OptFixedWtField[MAXWtFld];
+neBEMGLOBAL double FixedWtPotential[MAXWtFld];
+neBEMGLOBAL double FixedWtFieldX[MAXWtFld];
+neBEMGLOBAL double FixedWtFieldY[MAXWtFld];
+neBEMGLOBAL double FixedWtFieldZ[MAXWtFld];
 
 // Variable related to the weighting field FAST algorithm
-neBEMGLOBAL int OptWtFldFastVol;
-neBEMGLOBAL int OptWtFldStaggerFastVol;
-neBEMGLOBAL int OptWtFldCreateFastPF;
-neBEMGLOBAL int OptWtFldReadFastPF;
-neBEMGLOBAL int WtFldNbPtSkip;
-neBEMGLOBAL int WtFldNbStgPtSkip;
+neBEMGLOBAL int OptWtFldFastVol[MAXWtFld];
+neBEMGLOBAL int OptStaggerWtFldFastVol[MAXWtFld];
+neBEMGLOBAL int OptCreateWtFldFastPF[MAXWtFld];
+neBEMGLOBAL int OptReadWtFldFastPF[MAXWtFld];
+neBEMGLOBAL int VersionWtFldFV[MAXWtFld];   // although not being used, these
+neBEMGLOBAL int NbBlocksWtFldFV[MAXWtFld];  // are assigned values using Set fns
+neBEMGLOBAL int WtFldNbPtSkip[MAXWtFld];
+neBEMGLOBAL int StgWtFldNbPtSkip[MAXWtFld];
 // inputs for the fast volume
 typedef struct {
   double LX;
@@ -488,39 +510,45 @@ typedef struct {
   int NbOmitVols;
   int NbIgnoreVols;
 } WtFldFastAlgoVol;
-neBEMGLOBAL WtFldFastAlgoVol WtFldFastVol;
+neBEMGLOBAL WtFldFastAlgoVol WtFldFastVol[MAXWtFld];
 // inputs for each block within the fast volume
-neBEMGLOBAL int *WtFldBlkNbXCells;
-neBEMGLOBAL int *WtFldBlkNbYCells;
-neBEMGLOBAL int *WtFldBlkNbZCells;
-neBEMGLOBAL double *WtFldBlkLZ;
-neBEMGLOBAL double *WtFldBlkCrnrZ;
-neBEMGLOBAL double *WtFldOmitVolLX;
-neBEMGLOBAL double *WtFldOmitVolLY;
-neBEMGLOBAL double *WtFldOmitVolLZ;
-neBEMGLOBAL double *WtFldOmitVolCrnrX;
-neBEMGLOBAL double *WtFldOmitVolCrnrY;
-neBEMGLOBAL double *WtFldOmitVolCrnrZ;
-neBEMGLOBAL double *WtFldIgnoreVolLX;
-neBEMGLOBAL double *WtFldIgnoreVolLY;
-neBEMGLOBAL double *WtFldIgnoreVolLZ;
-neBEMGLOBAL double *WtFldIgnoreVolCrnrX;
-neBEMGLOBAL double *WtFldIgnoreVolCrnrY;
-neBEMGLOBAL double *WtFldIgnoreVolCrnrZ;
+neBEMGLOBAL int *WtFldBlkNbXCells[MAXWtFld];
+neBEMGLOBAL int *WtFldBlkNbYCells[MAXWtFld];
+neBEMGLOBAL int *WtFldBlkNbZCells[MAXWtFld];
+neBEMGLOBAL double *WtFldBlkLZ[MAXWtFld];
+neBEMGLOBAL double *WtFldBlkCrnrZ[MAXWtFld];
+neBEMGLOBAL double *WtFldOmitVolLX[MAXWtFld];
+neBEMGLOBAL double *WtFldOmitVolLY[MAXWtFld];
+neBEMGLOBAL double *WtFldOmitVolLZ[MAXWtFld];
+neBEMGLOBAL double *WtFldOmitVolCrnrX[MAXWtFld];
+neBEMGLOBAL double *WtFldOmitVolCrnrY[MAXWtFld];
+neBEMGLOBAL double *WtFldOmitVolCrnrZ[MAXWtFld];
+neBEMGLOBAL double *WtFldIgnoreVolLX[MAXWtFld];
+neBEMGLOBAL double *WtFldIgnoreVolLY[MAXWtFld];
+neBEMGLOBAL double *WtFldIgnoreVolLZ[MAXWtFld];
+neBEMGLOBAL double *WtFldIgnoreVolCrnrX[MAXWtFld];
+neBEMGLOBAL double *WtFldIgnoreVolCrnrY[MAXWtFld];
+neBEMGLOBAL double *WtFldIgnoreVolCrnrZ[MAXWtFld];
 // The following could have been members of a structure
 // (see above for examples of creating arrays of structures)
-neBEMGLOBAL double ****WtFldFastPot;
-neBEMGLOBAL double ****WtFldFastFX, ****WtFldFastFY, ****WtFldFastFZ;
-neBEMGLOBAL double ****WtFldFastStgPot;
-neBEMGLOBAL double ****WtFldFastStgFX, ****WtFldFastStgFY, ****WtFldFastStgFZ;
+neBEMGLOBAL double ****WtFldFastPot[MAXWtFld];
+neBEMGLOBAL double ****WtFldFastFX[MAXWtFld], ****WtFldFastFY[MAXWtFld],
+    ****WtFldFastFZ[MAXWtFld];
+neBEMGLOBAL double ****StgWtFldFastPot[MAXWtFld];
+neBEMGLOBAL double ****StgWtFldFastFX[MAXWtFld], ****StgWtFldFastFY[MAXWtFld],
+    ****StgWtFldFastFZ[MAXWtFld];
 
-// Compute weighting potential and flux components within the FAST volume
-neBEMGLOBAL int WtFldFastVolPF(void);
+// Create Fast volumes with weighting potential and flux components
+neBEMGLOBAL int CreateWtFldFastVolPF(int Id);
 
-// Compute weighting potential and flux components at globalPt using FAST
+// Evaluate weighting potential and flux components at globalPt using FAST
 // algorithm
 neBEMGLOBAL int WtFldFastPFAtPoint(Point3D *globalPt, double *Pot,
-                                   Vector3D *Flux);
+                                   Vector3D *Flux, int Id);
+
+// Weighting field values
+neBEMGLOBAL int WtFldPFAtPoint(Point3D *globalPt, double *Pot, Vector3D *Flux,
+                               int Id);
 
 // Compute potential at xlocal, ylocal, zlocal due to an element defined by
 // gtsrc (type), lxsrc (dimension), lzsrc (dimension), (length), dA (area)
@@ -542,10 +570,10 @@ neBEMGLOBAL void TriFlux(int src, Point3D *localPt, Vector3D *Flux);
 neBEMGLOBAL void WireFlux(int src, Point3D *localPt, Vector3D *Flux);
 
 // get both potential and flux
-neBEMGLOBAL void GetPFGCS(int type, double a, double b, Point3D *localPt, 
+neBEMGLOBAL void GetPFGCS(int type, double a, double b, Point3D *localPt,
                           double *Pot, Vector3D *Flux, DirnCosn3D *DirCos);
-neBEMGLOBAL void GetPF(int type, double a, double b, double x, double y, double z,
-                       double *Pot, Vector3D *Flux);
+neBEMGLOBAL void GetPF(int type, double a, double b, double x, double y,
+                       double z, double *Pot, Vector3D *Flux);
 neBEMGLOBAL void RecPF(double a, double b, double x, double y, double z,
                        double *Pot, Vector3D *Flux);
 neBEMGLOBAL void TriPF(double a, double b, double x, double y, double z,
@@ -563,12 +591,8 @@ neBEMGLOBAL void TriPrimPF(int src, Point3D *localPt, double *Pot,
 neBEMGLOBAL void WirePrimPF(int src, Point3D *localPt, double *Pot,
                             Vector3D *Flux);
 
-// Weighting field values
-neBEMGLOBAL int WtPFAtPoint(Point3D *globalPt, double *Pot, Vector3D *Flux,
-                            int Id);
-
 #ifdef __cplusplus
-} // namespace
+}  // namespace
 #endif
 
 #endif
