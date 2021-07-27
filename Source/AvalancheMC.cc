@@ -650,7 +650,6 @@ int AvalancheMC::GetField(const std::array<double, 3>& x,
   // Get the magnetic field, if requested.
   if (m_useBfield) {
     m_sensor->MagneticField(x[0], x[1], x[2], b[0], b[1], b[2], status);
-    for (size_t k = 0; k < 3; ++k) b[k] *= Tesla2Internal;
   }
   return 0;
 }
