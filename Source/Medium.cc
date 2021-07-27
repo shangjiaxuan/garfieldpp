@@ -191,7 +191,8 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
     vy = mu * ey;
     vz = mu * ez;
     return true;
-  } else if (velX.empty() || velB.empty()) {
+  } else if (velX.empty() || velB.empty() ||
+             (m_bFields.size() == 1 && fabs(m_bFields[0]) < Small)) {
     // Magnetic field, velocities along ExB, Bt not available.
     const double mu = q * ve / e;
     const double mu2 = mu * mu;
