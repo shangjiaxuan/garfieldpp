@@ -6364,7 +6364,7 @@ bool ComponentAnalyticField::SetupPlaneSignals() {
   //   (Last changed on 14/10/99.)
   //-----------------------------------------------------------------------
 
-  const int nPlanes = 5;
+  constexpr size_t nPlanes = 5;
   m_qplane.assign(nPlanes, std::vector<double>(m_nWires, 0.));
 
   double vw;
@@ -6467,7 +6467,12 @@ bool ComponentAnalyticField::SetupPlaneSignals() {
       // Next layer.
     }
   }
-  // Compute the background weighting fields, first in x.
+  // Compute the background weighting fields.
+  for (size_t i = 0; i < 5; ++i) {
+    m_planes[i].ewxcor = 0.;
+    m_planes[i].ewycor = 0.;
+  }
+  // First in x.
   if (m_ynplan[0] && m_ynplan[1]) {
     m_planes[0].ewxcor = 1. / (m_coplan[1] - m_coplan[0]);
     m_planes[1].ewxcor = 1. / (m_coplan[0] - m_coplan[1]);
@@ -6477,12 +6482,8 @@ bool ComponentAnalyticField::SetupPlaneSignals() {
   } else if (m_ynplan[1] && m_perx) {
     m_planes[0].ewxcor = 0.;
     m_planes[1].ewxcor = -1. / m_sx;
-  } else {
-    m_planes[0].ewxcor = m_planes[1].ewxcor = 0.;
   }
-  m_planes[2].ewxcor = m_planes[3].ewxcor = m_planes[4].ewxcor = 0.;
   // Next also in y.
-  m_planes[0].ewycor = m_planes[1].ewycor = 0.;
   if (m_ynplan[2] && m_ynplan[3]) {
     m_planes[2].ewycor = 1. / (m_coplan[3] - m_coplan[2]);
     m_planes[3].ewycor = 1. / (m_coplan[2] - m_coplan[3]);
@@ -6492,30 +6493,34 @@ bool ComponentAnalyticField::SetupPlaneSignals() {
   } else if (m_ynplan[3] && m_pery) {
     m_planes[2].ewycor = 0.;
     m_planes[3].ewycor = -1. / m_sy;
-  } else {
-    m_planes[2].ewycor = m_planes[3].ewycor = 0.;
   }
-  // The tube has no correction field.
-  m_planes[4].ewycor = 0.;
 
   // Debugging output.
   if (m_debug) {
     std::cout << m_className << "::SetupPlaneSignals:\n";
-    std::cout << "    Charges for currents induced in the planes:\n";
-    std::cout << "    Wire        x-Plane 1        x-Plane 2"
-              << "        y-Plane 1        y-Plane 2"
-              << "        Tube\n";
-    for (unsigned int i = 0; i < m_nWires; ++i) {
-      std::cout << "    " << i << "  " << m_qplane[0][i] << "    "
-                << m_qplane[1][i] << "    " << m_qplane[2][i] << "    "
-                << m_qplane[3][i] << "    " << m_qplane[4][i] << "\n";
+    if (m_nWires > 0) {
+      if (m_tube) {
+        std::cout << "    Charges for currents induced in the tube:\n"
+                  << "    Wire\n";
+        for (unsigned int i = 0; i < m_nWires; ++i) {
+          std::printf("   %5d  %15.8f\n", i, m_qplane[4][i]);
+        }
+      } else {
+        std::cout << "    Charges for currents induced in the planes:\n"
+                  << "    Wire        x-Plane 1        x-Plane 2"
+                  << "        y-Plane 1        y-Plane 2\n";
+        for (unsigned int i = 0; i < m_nWires; ++i) {
+          std::printf("   %5d  %15.8f  %15.8f  %15.8f  %15.8f\n", i,
+                      m_qplane[0][i], m_qplane[1][i], m_qplane[2][i],
+                      m_qplane[3][i]);
+        }
+      }
     }
-    std::cout << m_className << "::SetupPlaneSignals:\n";
-    std::cout << "    Bias fields:\n";
-    std::cout << "    Plane    x-Bias [1/cm]    y-Bias [1/cm]\n";
+    std::cout << "    Bias fields:\n"
+              << "    Plane    x-Bias [1/cm]    y-Bias [1/cm]\n";
     for (int i = 0; i < 4; ++i) {
-      std::cout << "    " << i << "  " << m_planes[i].ewxcor << "  "
-                << m_planes[i].ewycor << "\n";
+      std::printf("   %5d  %15.8f  %15.8f\n", i,
+                  m_planes[i].ewxcor, m_planes[i].ewycor);
     }
   }
 
@@ -8440,6 +8445,41 @@ double ComponentAnalyticField::WpotPlaneD30(const double xpos,
   return volt;
 }
 
+void ComponentAnalyticField::WfieldStrip(const double x, const double y, 
+                                         const double g, const double w, 
+                                         double& fx, double& fy) const {
+
+  // Define shorthand notations.
+  const double invg = 1. / g;
+  const double s = sin(Pi * y * invg);
+  const double c = cos(Pi * y * invg);
+  const double s2 = s * s;
+  // Evaluate the field.
+  const double a1 = Pi * (w - x) * invg;
+  if (a1 < 500.) {
+    const double e1 = exp(a1);
+    // Check for singularities.
+    if (c == e1) return;
+    const double d1 = c - e1;
+    const double t1 = 1. / (s2 + d1 * d1);
+    fx += e1 * t1;
+    fy -= (1. - c * e1) * t1;
+  }
+  const double a2 = -Pi * (w + x) * invg;
+  if (a2 < 500.) {
+    const double e2 = exp(a2);
+    // Check for singularities.
+    if (c == e2) return;
+    const double d2 = c - e2;
+    const double t2 = 1. / (s2 + d2 * d2);
+    fx -= e2 * t2;
+    fy += (1. - c * e2) * t2;
+  }
+  fx *= s * invg;
+  fy *= invg;
+
+}
+
 void ComponentAnalyticField::WfieldStripZ(
     const double xpos, const double ypos, double& ex, double& ey, 
     const int ip, const Strip& strip) const {
@@ -8477,24 +8517,8 @@ void ComponentAnalyticField::WfieldStripZ(
   // Make sure we are in the fiducial part of the weighting map.
   if (yw <= 0. || yw > strip.gap) return;
 
-  // Define shorthand notations.
-  const double invg = 1. / strip.gap;
-  const double s = sin(Pi * yw * invg);
-  const double c = cos(Pi * yw * invg);
-  // Strip halfwidth.
-  const double w = 0.5 * fabs(strip.smax - strip.smin);
-  const double e1 = exp(Pi * (w - xw) * invg);
-  const double e2 = exp(-Pi * (w + xw) * invg);
-  // Check for singularities.
-  if (c == e1 || c == e2) return;
-  // Evaluate the field.
-  const double s2 = s * s;
-  const double d1 = c - e1;
-  const double d2 = c - e2;
-  const double t1 = 1. / (s2 + d1 * d1);
-  const double t2 = 1. / (s2 + d2 * d2);
-  const double fx = s * (e1 * t1 - e2 * t2) * invg;
-  const double fy = ((1. - c * e2) * t2 - (1. - c * e1) * t1) * invg;
+  double fx = 0., fy = 0.;
+  WfieldStrip(xw, yw, strip.gap, 0.5 * fabs(strip.smax - strip.smin), fx, fy);
 
   // Rotate the field back to the original coordinates.
   switch (ip) {
@@ -8600,24 +8624,8 @@ void ComponentAnalyticField::WfieldStripXy(const double xpos, const double ypos,
   // Make sure we are in the fiducial part of the weighting map.
   if (yw <= 0. || yw > strip.gap) return;
 
-  // Define shorthand notations.
-  const double invg = 1. / strip.gap;
-  const double s = sin(Pi * yw * invg);
-  const double c = cos(Pi * yw * invg);
-  // Strip halfwidth.
-  const double w = 0.5 * fabs(strip.smax - strip.smin);
-  const double e1 = exp(Pi * (w - xw) * invg);
-  const double e2 = exp(-Pi * (w + xw) * invg);
-  // Check for singularities.
-  if (c == e1 || c == e2) return;
-  // Evaluate the field.
-  const double s2 = s * s;
-  const double d1 = c - e1;
-  const double d2 = c - e2;
-  const double t1 = 1. / (s2 + d1 * d1);
-  const double t2 = 1. / (s2 + d2 * d2);
-  const double fx = s * (e1 * t1 - e2 * t2) * invg;
-  const double fy = ((1. - c * e2) * t2 - (1. - c * e1) * t1) * invg;
+  double fx = 0., fy = 0.;
+  WfieldStrip(xw, yw, strip.gap, 0.5 * fabs(strip.smax - strip.smin), fx, fy);
 
   // Rotate the field back to the original coordinates.
   switch (ip) {
