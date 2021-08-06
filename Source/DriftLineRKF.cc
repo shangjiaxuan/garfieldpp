@@ -1596,14 +1596,16 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
                                  const std::vector<Vec>& xs,
                                  const std::vector<double>& ne) const {
 
-  const unsigned int nPoints = ts.size();
+  const auto nPoints = ts.size();
   if (nPoints < 2) return;
-  const double q = particle == Particle::Electron ? -1 * scale : scale;
+  const double q0 = particle == Particle::Electron ? -1 * scale : scale;
   
   if (m_useWeightingPotential) {
+    const bool aval = ne.size() == nPoints; 
     for (size_t i = 0; i < nPoints - 1; ++i) {
       const auto& x0 = xs[i];
       const auto& x1 = xs[i + 1];
+      const double q = aval ? q0 * 0.5 * (ne[i] + ne[i + 1]) : q0; 
       m_sensor->AddSignal(q, ts[i], ts[i + 1], 
                           x0[0], x0[1], x0[2], x1[0], x1[1], x1[2], 
                           false, true);
@@ -1621,7 +1623,7 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
     }
     vs.push_back(std::move(v));
   }
-  m_sensor->AddSignal(q, ts, xs, vs, ne, m_navg);
+  m_sensor->AddSignal(q0, ts, xs, vs, ne, m_navg);
 }
 
 bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
