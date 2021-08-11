@@ -172,6 +172,12 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     }
   } while (!ends_with(line, "# number of elements"));
   const int nElements = readInt(line);
+    std::cerr << m_className << "::Initialise:\n"
+              << "    nElements = " << nElements << ".\n";
+    std::cerr << m_className << "::Initialise:\n"
+              << "    notInRange = " << notInRange << ".\n";
+    std::cerr << m_className << "::Initialise:\n"
+              << "    nNodes = " << nNodes << ".\n";
   m_elements.clear();
   std::cout << m_className << "::Initialise: " << nElements << " elements.\n";
   std::getline(fmesh, line);
@@ -257,7 +263,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   }
   KDTree kdtree(points);
   std::vector<bool> used(nNodes, false);
-   // int notInRange = 0;
+
   for (int i = 0; i < nNodes; ++i) {
     double x, y, z, v;
     ffield >> x >> y >> z >> v;
@@ -291,11 +297,11 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   PrintProgress(1.);
   ffield.close();
   auto nMissing = std::count(used.begin(), used.end(), false);
-  if (nMissing > notInRange) {
+  if (nMissing > 0) {
     std::cerr << std::endl
               << m_className << "::Initialise:\n"
               << "    Missing potentials for " << nMissing << " nodes.\n";
-    return false;
+    //return false;
   }
 
   m_ready = true;
@@ -576,7 +582,9 @@ double ComponentComsol::WeightingPotential(const double xin, const double yin,
                                            const std::string& label) {
   // Do not proceed if not properly initialised.
   if (!m_ready) return 0.;
-    
+    std::cout << m_className << "::WeightingPotential:\n"
+              << "C1.\n";
+  if(!CheckInRange(xin,yin,zin)) return 0.;
   // Look for the label.
   const size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
@@ -614,6 +622,32 @@ double ComponentComsol::WeightingPotential(const double xin, const double yin,
     
     // TODO: Fix this bug when setting range: it gives nan! Print all variables used here to find the flaw.
   // Tetrahedral field
+    std::cout << m_className << "  iw = "<<iw<<".\n";
+    
+    std::cout << m_className << "  t1 = "<<t1<<".\n";
+    std::cout << m_className << "  t2 = "<<t2<<".\n";
+    std::cout << m_className << "  t3 = "<<t3<<".\n";
+    std::cout << m_className << "  t4 = "<<t4<<".\n";
+    
+    std::cout << m_className << "  element.emap[5] = "<<element.emap[5]<<".\n";
+    std::cout << m_className << "  element.emap[5] = "<<m_nodes.size()<<".\n";
+    
+    std::cout << m_className << "  n0.w[iw] = "<<n0.w[iw]<<".\n";
+    std::cout << m_className << "  n1.w[iw] = "<<n1.w[iw]<<".\n";
+    std::cout << m_className << "  n2.w[iw] = "<<n2.w[iw]<<".\n";
+    std::cout << m_className << "  n3.w[iw] = "<<n3.w[iw]<<".\n";
+    std::cout << m_className << "  n4.w[iw] = "<<n4.w[iw]<<".\n";
+    std::cout << m_className << "  n5.w[iw] = "<<n5.w[iw]<<".\n";
+    std::cout << m_className << "  n6.w[iw] = "<<n6.w[iw]<<".\n";
+    std::cout << m_className << "  n7.w[iw] = "<<n7.w[iw]<<".\n";
+    std::cout << m_className << "  n8.w[iw] = "<<n8.w[iw]<<".\n";
+    std::cout << m_className << "  n9.w[iw] = "<<n9.w[iw]<<".\n";
+    
+    std::cout << m_className << "  res = "<<n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
+    n2.w[iw] * t3 * (2 * t3 - 1) + n3.w[iw] * t4 * (2 * t4 - 1) +
+    4 * n4.w[iw] * t1 * t2 + 4 * n5.w[iw] * t1 * t3 +
+    4 * n6.w[iw] * t1 * t4 + 4 * n7.w[iw] * t2 * t3 +
+    4 * n8.w[iw] * t2 * t4 + 4 * n9.w[iw] * t3 * t4<<".\n";
   return n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
          n2.w[iw] * t3 * (2 * t3 - 1) + n3.w[iw] * t4 * (2 * t4 - 1) +
          4 * n4.w[iw] * t1 * t2 + 4 * n5.w[iw] * t1 * t3 +

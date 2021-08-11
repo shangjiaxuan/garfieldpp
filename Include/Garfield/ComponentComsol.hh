@@ -32,7 +32,8 @@ class ComponentComsol : public ComponentFieldMap {
                                    const double z, const double t,
                                    const std::string& label) override;
     
-    void SetRange(const double xmin,const double xmax,const double ymin,const double ymax,const double zmin,const double zmax){
+    void SetImportRange(const double xmin,const double xmax,const double ymin,const double ymax,const double zmin,const double zmax){
+        // TODO: Must happen before initialise function
         m_range.set = true;
         m_range.xmin = xmin;
         m_range.ymin = ymin;
