@@ -77,6 +77,19 @@ class ComponentParallelPlate : public Component {
                                   const double ymax, const double ysteps,
                                   const double zmin, const double zmax,
                                   const double zsteps);
+    
+    void LoadWeightingPotentialGrid(const std::string& label){
+        for (auto& electrode : m_readout_p) {
+          if (electrode.label == label) {
+        if(electrode.grid.LoadWeightingField(label +"map","xyz",true)){
+            std::cerr << m_className << "::LoadWeightingPotentialGrid: Weighting potential set for "<< label<<".\n";
+            electrode.m_usegrid = true;
+            return;
+        }
+          }
+        }
+        std::cerr << m_className << "::LoadWeightingPotentialGrid: Could not find file for "<< label<<".\n";
+    }
 
   Medium* GetMedium(const double x, const double y, const double z) override;
     
@@ -84,6 +97,27 @@ class ComponentParallelPlate : public Component {
 
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                       double& xmax, double& ymax, double& zmax) override;
+    
+    
+    // Obtain the index and permitivity of of the layer at hight z.
+    bool getLayer(const double y,int& m,double& epsM){
+        
+        int mholer = -1;
+        
+        for(int i = 1; i<m_N; i++){
+            if(y<=m_z[i]){
+                mholer = i;
+                break;
+            }
+        }
+        if(mholer==-1) return false;
+        
+        m = mholer;
+        epsM= m_epsHolder[m-1];
+        return true;
+    }
+    int NumberOfLayers(){return m_N-1;}
+    
  private:
   static constexpr double m_precision = 1.e-30;
   static constexpr double m_Vw = 1.;
@@ -95,7 +129,7 @@ class ComponentParallelPlate : public Component {
     
     int m_N = 0; ///<amount of layers
 
-    double m_upperBoundIntigration = 2000;
+    double m_upperBoundIntigration = 30;
 
     std::vector<double> m_eps; ///< list of irelative permitivities or layers
     std::vector<double> m_epsHolder;
@@ -174,24 +208,6 @@ class ComponentParallelPlate : public Component {
     
     // function connstructing the w, v, c and g matrices needed for constructing the weighting potentials equations.
     void constructGeometryFunction(const int N);
-    
-    // obtain the index and permitivity of of the layer at hight z.
-    bool getLayer(const double z,int& m,double& epsM){
-        
-        int mholer = -1;
-        
-        for(int i = 1; i<m_N; i++){
-            if(z<=m_z[i]){
-                mholer = i;
-                break;
-            }
-        }
-        if(mholer==-1) return false;
-        
-        m = mholer;
-        epsM= m_epsHolder[m-1];
-        return true;
-    }
     
     // build function h needed for the integrant of the weighting potential of a stip and pixel
     void setHIntegrant();

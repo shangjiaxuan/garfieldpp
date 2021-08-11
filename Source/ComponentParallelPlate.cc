@@ -43,15 +43,15 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     
     m_sigmaIndex = sigmaIndex;
     
-    m_upperBoundIntigration *= *max_element(std::begin(m_dHolder), std::end(m_dHolder));
+    //m_upperBoundIntigration *= *max_element(std::begin(m_dHolder), std::end(m_dHolder));
     // TODO:Remove LOG
-    LOG("ComponentParallelPlate::Setup:: Integration range = (0,"<<m_upperBoundIntigration<<").");
+    LOG("ComponentParallelPlate::Setup:: Max k integration range = (0,"<<200<<").");
     std::vector<double>  m_zHolder(N+1);
     m_zHolder[0] = 0;
     for(int i = 1; i<=N; i++){
         m_zHolder[i]=m_zHolder[i-1]+m_dHolder[i-1];
         
-        if(m_debug) LOG("ComponentParallelPlate::Setup:: layer "<<i<<":: z = "<<m_zHolder[i]);
+        if(m_debug) LOG("ComponentParallelPlate::Setup:: layer "<<i<<":: z = "<<m_zHolder[i]<<", epsr = "<<m_epsHolder[i-1]);
     }
     m_z = m_zHolder;
     
@@ -105,6 +105,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
         int im; double epsm;
         getLayer(z,im,epsm);
         double upLim = m_upperBoundIntigration;
+        if (z==0 || m_upperBoundIntigration/z>200){upLim = 200;}else{upLim*=1/z;}
         return m_wpPixelIntegral.Integral(0,upLim,0,upLim,1.e-12);
       break;
     }
@@ -113,6 +114,7 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
         int im; double epsm;
         getLayer(z,im,epsm);
         double upLim = m_upperBoundIntigration;
+        if (z==0 || m_upperBoundIntigration/z>200){upLim = 200;}else{upLim*=1/z;}
         return m_wpStripIntegral.Integral(0,upLim,1.e-12);
       break;
     }
@@ -574,10 +576,7 @@ void ComponentParallelPlate::SetWeightingPotentialGrid(const double xmin, const 
           
           electrode.grid.SaveWeightingField(this, label,label +"map","xyz");
           
-          if(electrode.grid.LoadWeightingField(label +"map","xyz",true)){
-              std::cerr << m_className << "::SetWeightingPotentialGrid: Weighting potential set for "<< label<<".\n";
-          }
-          electrode.m_usegrid = true;
+          LoadWeightingPotentialGrid(label);
       }
     }
     // TODO: Use existing classes for a grid based field map!
@@ -600,8 +599,7 @@ double ComponentParallelPlate::FindWeightingPotentialInGrid(Electrode& el,
                                                             const double x,
                                                             const double y,
                                                             const double z) {
-    
-    return el.grid.WeightingPotential(x,y,z, el.label);
+    return el.grid.WeightingPotential(y,z,x, el.label);
 }
 
 }  // namespace Garfield
