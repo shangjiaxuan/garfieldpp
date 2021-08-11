@@ -8,6 +8,7 @@
 #include "AvalancheMicroscopic.hh"
 #include "GarfieldConstants.hh"
 #include "Sensor.hh"
+#include "Garfield/ComponentParallelPlate.hh"
 
 namespace Garfield {
 
@@ -76,6 +77,9 @@ class AvalancheGrid {
   int GetAmountOfStartingElectrons() { return m_nestart; }
     /// Returns the final number of electrons in the avalanche.
     int GetAvalancheSize(){return m_avgrid.N;}
+    
+    ///Asigning layer index to all Avalanche nodes.
+    void AsignLayerIndex(ComponentParallelPlate* RPC);
 
   void EnableDebugging() { m_debug = true; }
 
@@ -107,12 +111,17 @@ class AvalancheGrid {
 
   bool m_driftAvalanche = false;
   bool m_importAvalanche = false;
+    
+    bool m_layerIndix = false;
+    std::vector<double> m_NLayer;
 
   std::string m_className = "AvalancheGrid";
 
   Sensor* m_sensor = nullptr;
 
   AvalancheMicroscopic* m_avmc = nullptr;
+    
+    bool m_printPar = false;
 
   struct Grid {
     std::vector<double> zgrid;  ///< Grid points of z-coordinate.
@@ -142,6 +151,8 @@ class AvalancheGrid {
         double iz = 0;
         
         int n = 1;
+        
+        int layer = 0;
         
         double townsend = 0;
         double attachment = 0;

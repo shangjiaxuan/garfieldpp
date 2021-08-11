@@ -129,7 +129,7 @@ bool AvalancheGrid::SnapToGrid(Grid& av, const double x, const double y,
     indexY = floor((y - av.ygrid.front()) / av.yStepSize);
     indexZ = round((z - av.zgrid.front()) / av.zStepSize);
     
-    if(m_debug) std::cerr << m_className << "::SnapToGrid: ix = "<< indexX<<", iy = "<< indexY<< ", iz = "<< indexZ<<".\n";
+    if(m_debug) std::cerr << m_className << "::SnapToGrid: ix = "<< indexX<<", iy = "<< indexY<< ", iz = "<< indexZ<<".\n\n";
     if (indexX < 0 || indexX >= av.xsteps || indexY < 0 || indexY >= av.ysteps ||
         indexZ < 0 || indexZ >= av.zsteps){
         if(m_debug) std::cerr << m_className << "::SnapToGrid: Point is outside the grid.\n";
@@ -156,12 +156,16 @@ bool AvalancheGrid::SnapToGrid(Grid& av, const double x, const double y,
         step = y - av.ygrid[indexY];
     }
     
-    // TODO:: Turn back on
     const int nholder = GetAvalancheSize(step, n, newNode.townsend, newNode.attachment);
-    //const int nholder = n;
+    if(nholder == 0){
+        if (m_debug)
+            std::cerr << m_className << "::SnapToGrid: n from 1 to 0 -> cancel.\n";
+        return false;
+    }
     
-    av.N += nholder;
-    newNode.n = nholder;
+    newNode.n = nholder<m_MaxSize ? nholder : m_MaxSize;
+    av.N += newNode.n;
+
     
     bool alreadyExists = false;
     
@@ -208,8 +212,6 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
         // Get avalanche size.
         Nholder = node.n;
         
-        if (m_debug) std::cerr<< "av.N = "<<av.N<<" -> ";
-        
         if (Nholder == 0) continue;  // If empty go to next point.
         if (m_diffusion) {
             // Idem to the else part of this function, but with the additional
@@ -226,7 +228,7 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
             // the size will be kept constant under the propagation.
             
             //TODO: how to handle saturation?
-            if (av.N < m_MaxSize) {
+            if (!m_layerIndix && av.N < m_MaxSize) {
                 int holdnsize = GetAvalancheSize(node.stepSize, node.n,
                                                  node.townsend, node.attachment);
                 
@@ -235,7 +237,18 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
                 
                 node.n = holdnsize;
                 
+            }else if (m_layerIndix && m_NLayer[node.layer-1] < m_MaxSize) {
+                int holdnsize = GetAvalancheSize(node.stepSize, node.n,
+                                                 node.townsend, node.attachment);
+                
+                if (m_MaxSize - m_NLayer[node.layer-1] < holdnsize - node.n)
+                    holdnsize = m_MaxSize - m_NLayer[node.layer-1] + node.n;
+                
+                node.n = holdnsize;
+                
             } else {
+                //TODO::Clean this up
+               // LOG("Layer "<<node.layer<< " is saturated:: Nluayer = "<<m_NLayer[node.layer-1]);
                 m_Saturated = true;
                 
                 if (m_SaturationTime == -1)
@@ -250,9 +263,14 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
                                 av.xgrid[node.ix + node.velNormal[0]],av.ygrid[node.iy + node.velNormal[1]], av.zgrid[node.iz +  node.velNormal[2]],
                                 false, true);
             
-            av.N += node.n-Nholder;  // Update total number of electrons.
+            // Update total number of electrons.
+            
+            if(m_layerIndix) m_NLayer[node.layer-1]+= node.n-Nholder;
+            
+            av.N += node.n-Nholder;
         }
-        if (m_debug) std::cerr <<av.N<<".\n";
+        
+        if (m_debug) std::cerr<< "n = "<<Nholder<<" -> "<<node.n<<".\n";
         
         // Update position index.
         
@@ -261,11 +279,11 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
         // After all active grid points have propagated, update the time.
         if (m_debug)   std::cerr << "t = "<<node.time<<" -> ";
         node.time += node.dt;
-        if (m_debug) std::cerr <<node.time<<".\n\n ";
+        if (m_debug) std::cerr <<node.time<<".\n";
         
         DeactivateNode(node);
     }
-    
+    if (m_debug) std::cerr<< "N = "<<av.N<<".\n\n";
 }
 
 void AvalancheGrid::DeactivateNode(AvalancheNode& node){
@@ -321,13 +339,19 @@ void AvalancheGrid::StartGridAvalanche() {
         NextAvalancheGridPoint(m_avgrid);
     }
     
+    std::vector<double> tlist = {};
+    for (AvalancheNode& node : m_activeNodes) {
+        tlist.push_back(node.time);
+    }
+    double maxTime = *max_element(std::begin(tlist), std::end(tlist));
+    
     if (m_Saturated)
         std::cerr << m_className
         << "::StartGridAvalanche::Avalanche maximum size of " << m_MaxSize
         << " electrons reached at " << m_SaturationTime << " ns.\n";
     
     std::cerr << m_className
-    << "::StartGridAvalanche::Final avalanche size = " << m_avgrid.N<<".\n";
+    << "::StartGridAvalanche::Final avalanche size = " << m_avgrid.N<<" ended at t = " << maxTime <<" ns.\n";
     
     return;
 }
@@ -456,11 +480,11 @@ bool AvalancheGrid::GetParameters(AvalancheNode& node){
     node.dt = std::abs(node.stepSize/node.velocity);
     
     // print
-    if(m_debug) std::cerr << m_className << "::GetParametersFromSensor::Electric field = ("
+    if(m_debug||!m_printPar) std::cerr << m_className << "::GetParametersFromSensor::Electric field = ("
         << e[0] / 1000 << ", " << e[1] / 1000 << ", " << e[2] / 1000
         << ") [kV/cm].\n";
     
-    if(m_debug) std::cerr << m_className
+    if(m_debug||!m_printPar) std::cerr << m_className
         << "::GetParametersFromSensor::Townsend = " << node.townsend
         << " [1/cm], Attachment = " <<node.attachment
         << " [1/cm], Velocity = " << node.velocity << " [cm/ns].\n";
@@ -468,7 +492,7 @@ bool AvalancheGrid::GetParameters(AvalancheNode& node){
     if(m_debug) std::cerr << m_className
     << "::StartGridAvalanche::Time steps per loop "
     << node.dt << " ns.\n";
-    
+    m_printPar =true;
     return true;
 }
 
@@ -484,5 +508,26 @@ void AvalancheGrid::Reset() {
     m_SaturationTime = -1;
     
     m_driftAvalanche = false;
+    
+    m_activeNodes.clear();
+    m_layerIndix = false;
+    m_NLayer.clear();
 }
+
+void AvalancheGrid::AsignLayerIndex(ComponentParallelPlate* RPC){
+    int im = 0;
+    double epsM = 0;
+    std::vector<double> nLayer(RPC->NumberOfLayers(),0);
+    for (AvalancheNode& node : m_activeNodes) {
+        double y =m_avgrid.ygrid[node.iy];
+        RPC->getLayer(y,im,epsM);
+        node.layer = im;
+        nLayer[im-1]+=node.n;
+        //std::cerr << m_className << "::AsignLayerIndex::im = "<<im<<".\n";
+    }
+    
+    m_NLayer = nLayer;
+    m_layerIndix = true;
+}
+
 }  // namespace Garfield
