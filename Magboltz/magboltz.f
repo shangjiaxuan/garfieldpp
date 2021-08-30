@@ -1,7 +1,14 @@
-C  PROGRAM MAGBOLTZ 2   VERSION 11.11     JANUARY  2021  
+C  PROGRAM MAGBOLTZ 2   VERSION 11.12     AUGUST   2021  
 C --------------------------------------------------------------------
 C  COPYRIGHT 2021   STEPHEN FRANCIS BIAGI
 C  ---------------------------------------
+C VERSION 11.12    UPDATED C3F8(2021) FROM VERSION C3F8(2002)
+C 
+C                  REMOVED FICTIONAL IONISATION RATE FOR ATTACHING GASES
+C                  AND RETURNED TO VERSION 10.n FOR THIS PROCESS
+C                  ALSO REMOVED EXTRA NULL COLLISIONS
+C                  FIXED EDIT ERRORS IN MAGNETIC FIELD CALCULATIONS
+C----------------------------------------------------------------------- 
 C VERSION 11.11    UPDATED CARBON MONOXIDE 
 C                  PREVIOUS VERSION 2003  UPDATE INCLUDES:CORRECT DIPOLE
 C                  ANGULAR DISTRIBUTION FOR ROTATIONS, NUMERICAL
@@ -417,7 +424,7 @@ C GAS48 :  ORTHO-DEUTERIUM   (2019)                                4*
 C GAS49 :  
 C GAS50 :  CHF3     (2001)                                         3*
 C GAS51 :  CF3BR    (2002) MAGIC GAS CONSTITUENT                   3* 
-C GAS52 :  C3F8     (2002)  (ANISOTROPIC)                          3*
+C GAS52 :  C3F8     (2021)  (ANISOTROPIC)                          4*
 C GAS53 :  OZONE    (2002)  RAD HARD (REMOVES CARBON DEPOSITS)     3*
 C GAS54 :  MERCURY  (2003)  INCLUDES DIMER X-SECTION               2*
 C GAS55 :  H2S      (2003)  POOR QUALITY DATA                      2* 
@@ -488,14 +495,22 @@ C   SPATIAL GRADIENTS IN THE SOLUTION .
       ALPP=ALPHA*760.0D0*TGAS/(TORR*293.15D0)            
       ATTP=ATT*760.0D0*TGAS/(TORR*293.15D0)
 C*******************      
-      SSTMIN=40.0D0
+      SSTMIN=25.0D0
+C     SSTMIN=1000000.
 C     SSTMIN=60.0D0
-C*****************      
-      IF(DABS(ALPP-ATTP).LT.SSTMIN) THEN
-       CALL OUTPUT2T
-C       GO TO 1
-       RETURN
+C*****************     
+      IF(DABS(ALPP-ATTP).GT.SSTMIN) GO TO 5 
+      IF(ALPP.GT.SSTMIN.OR.ATTP.GT.SSTMIN) THEN
+       IF(DABS(ALPP-ATTP).LT.SSTMIN) THEN
+        CALL OUTPUT2T
+C        GO TO 1
+        RETURN
+       ENDIF
+       GO TO 5
       ENDIF
+      CALL OUTPUT2T
+C      GO TO 1
+      RETURN
    5  IF(BMAG.EQ.0.0D0) THEN 
        CALL ALPCALCT
       ELSE IF(BTHETA.EQ.0.0D0.OR.BTHETA.EQ.180.0D0) THEN
@@ -507,8 +522,9 @@ C       GO TO 1
       ENDIF
       CALL OUTPUT2T
 C      GO TO 1
-  99  RETURN
+      RETURN
 C  99  STOP                 
+  99  RETURN
     6 CALL SETUP(LAST)                                                
       IF(LAST.EQ.1) GO TO 999
       IF(EFINAL.GT.0.0D0) GO TO 13
@@ -556,14 +572,22 @@ C   SPATIAL GRADIENTS IN THE SOLUTION .
       ALPP=ALPHA*760.0D0*TGAS/(TORR*293.15D0)            
       ATTP=ATT*760.0D0*TGAS/(TORR*293.15D0)
 C*******************      
-      SSTMIN=40.0D0
+      SSTMIN=25.0D0
+C     SSTMIN=100000.
 C     SSTMIN=60.0D0
 C*****************     
-      IF(DABS(ALPP-ATTP).LT.SSTMIN) THEN
-       CALL OUTPUT2
-C       GO TO 1
-       RETURN
+      IF(DABS(ALPP-ATTP).GT.SSTMIN) GO TO 15 
+      IF(ALPP.GT.SSTMIN.OR.ATTP.GT.SSTMIN) THEN
+       IF(DABS(ALPP-ATTP).LT.SSTMIN) THEN
+        CALL OUTPUT2
+C        GO TO 1
+        RETURN
+       ENDIF
+       GO TO 15
       ENDIF
+      CALL OUTPUT2
+C      GO TO 1
+      RETURN
    15 IF(BMAG.EQ.0.0D0) THEN 
        CALL ALPCALC
       ELSE IF(BTHETA.EQ.0.0D0.OR.BTHETA.EQ.180.0D0) THEN
@@ -574,7 +598,8 @@ C       GO TO 1
        CALL ALPCLCC
       ENDIF
       CALL OUTPUT2 
-C      GO TO 1 
+C      GO TO 1
+      RETURN 
 C  999 STOP                 
   999 RETURN
       END
@@ -604,7 +629,7 @@ C  ---------------------------------------------------------------
       CHARACTER*50 DSCRPT,SCRP1(300),SCRP2(300),SCRP3(300),SCRP4(300),
      /SCRP5(300),SCRP6(300)
       CHARACTER*50 DSCRPTN,SCRPN1(10),SCRPN2(10),SCRPN3(10),SCRPN4(10),
-     /SCRPN5(10),SCRPN6(10)
+     /SCRPN5(10),SCRPN6(10) 
       COMMON/CNSTS/ECHARG,EMASS,AMU,PIR2
       COMMON/RATIO/AN1,AN2,AN3,AN4,AN5,AN6,AN,FRAC(6)              
       COMMON/GASN/NGASN(6)                                    
@@ -619,18 +644,16 @@ C  ---------------------------------------------------------------
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX  
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),IPLAST(6),ISIZE(6),
-     /PENFRA(6,3,290),TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),IPLAST(6),ISIZE(6),
+     /PENFRA(6,3,300),TCFMAX(6)
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO
       COMMON/FRED/FCION(4000),FCATT(4000)
-      COMMON/IONFL/NC0(6,290),EC0(6,290),NG1(6,290),EG1(6,290),
-     /NG2(6,290),EG2(6,290),WKLM(6,290),EFL(6,290)
+      COMMON/IONFL/NC0(6,300),EC0(6,300),NG1(6,300),EG1(6,300),
+     /NG2(6,300),EG2(6,300),WKLM(6,300),EFL(6,300)
       COMMON/MRATIO/VAN1,VAN2,VAN3,VAN4,VAN5,VAN6,VAN
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)
       COMMON/NAMES/NAMEG(6)                               
-      COMMON/SCRIPT/DSCRPT(6,300),DSCRPTN(6,10) 
+      COMMON/SCRIPT/DSCRPT(6,300) 
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM               
       DIMENSION Q1(6,4000),Q2(6,4000),Q3(6,4000),Q4(6,4000),
      /Q5(6,4000),Q6(6,4000)
@@ -808,14 +831,14 @@ C
       QNUL1(K,I)=0.0
       QNUL2(K,I)=0.0
       QNUL3(K,I)=0.0
-      QNUL4(K,I)=0.0
+      QNUL3(K,I)=0.0
       QNUL5(K,I)=0.0
       QNUL6(K,I)=0.0
   224 CONTINUE
       ESTEP=EFINAL/DFLOAT(NSTEP)
       EHALF=ESTEP/2.0D0
       E(1)=EHALF
-      DO 3 I=2,N4000
+      DO 3 I=2,4000
       AJ=DFLOAT(I-1)
       E(I)=EHALF+ESTEP*AJ
     3 EROOT(I)=DSQRT(E(I))
@@ -827,18 +850,11 @@ C
       KIN4(I)=0
       KIN5(I)=0
     4 KIN6(I)=0
-      DO 6 I=1,290 
+      DO 6 I=1,300 
       DO 6 MGAS=1,6
     6 INDEX(MGAS,I)=0    
       DO 225 I=1,6
-      TCFMAX(I)=0.0D0
-      NPLAST(I)=0
-      DO 225 J=1,10
-      SCLENUL(I,J)=0.0D0
-      DO 225 K=1,N4000
-      TCFN(I,K)=0.0D0
-      CFN(I,K,J)=0.0D0
-  225 CONTINUE
+  225 TCFMAX(I)=0.0D0
 C                                                                       
 C   CALL GAS CROSS-SECTIONS 
       CALL GASMIX(NGASN(1),Q1,QIN1,NIN1,E1,EI1,NAME1,VIRIAL1,EB1,
@@ -1542,11 +1558,11 @@ C
       ENDIF                                             
 C ATTACHMENT
    50 IF(KGAS.EQ.1) THEN
-       IF(EFINAL.LT.E1(4)) GO TO 51 
+       IF(EFINAL.LT.E1(4)) GO TO 5521 
        IF(NATT1.GT.1) GO TO 551                                  
        NP=NP+1                                                         
        CF(KGAS,IE,NP)=Q1(4,IE)*VAN1
-       FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP)
+       FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
        PSCT(KGAS,IE,NP)=0.5D0
        ANGCT(KGAS,IE,NP)=1.0D0
        IF(IE.GT.1) GO TO 5521
@@ -1560,14 +1576,14 @@ C ATTACHMENT
        PENFRA(KGAS,1,NP)=0.0
        PENFRA(KGAS,2,NP)=0.0
        PENFRA(KGAS,3,NP)=0.0
-       GO TO 5521
+       GO TO 5521 
   551  DO 552 JJ=1,NATT1
-       NP=NP+1
+       NP=NP+1                                                         
        CF(KGAS,IE,NP)=QATT1(JJ,IE)*VAN1
-       FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP)
+       FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
        PSCT(KGAS,IE,NP)=0.5D0
        ANGCT(KGAS,IE,NP)=1.0D0
-       IF(IE.GT.1) GO TO 552
+       IF(IE.GT.1) GO TO 552 
        DSCRPT(KGAS,NP)=SCRP1(2+NION1+JJ)
        RGAS(KGAS,NP)=RGAS1
        EIN(KGAS,NP)=0.0D0
@@ -1581,14 +1597,14 @@ C ATTACHMENT
   552  CONTINUE
  5521  CONTINUE
       ELSE IF(KGAS.EQ.2) THEN
-       IF(EFINAL.LT.E2(4)) GO TO 51 
-       IF(NATT2.GT.1) GO TO 553                                  
+       IF(EFINAL.LT.E2(4)) GO TO 5541  
+       IF(NATT2.GT.1) GO TO 553                                 
        NP=NP+1                                                       
        CF(KGAS,IE,NP)=Q2(4,IE)*VAN2
        FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
        PSCT(KGAS,IE,NP)=0.5D0
        ANGCT(KGAS,IE,NP)=1.0D0
-       IF(IE.GT.1) GO TO 5541
+       IF(IE.GT.1) GO TO 5541 
        DSCRPT(KGAS,NP)=SCRP2(3+NION2)
        RGAS(KGAS,NP)=RGAS2
        EIN(KGAS,NP)=0.0D0
@@ -1601,12 +1617,12 @@ C ATTACHMENT
        PENFRA(KGAS,3,NP)=0.0
        GO TO 5541
   553  DO 554 JJ=1,NATT2
-       NP=NP+1
+       NP=NP+1                                                       
        CF(KGAS,IE,NP)=QATT2(JJ,IE)*VAN2
-       FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP)
+       FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
        PSCT(KGAS,IE,NP)=0.5D0
        ANGCT(KGAS,IE,NP)=1.0D0
-       IF(IE.GT.1) GO TO 554
+       IF(IE.GT.1) GO TO 554  
        DSCRPT(KGAS,NP)=SCRP2(2+NION2+JJ)
        RGAS(KGAS,NP)=RGAS2
        EIN(KGAS,NP)=0.0D0
@@ -1620,8 +1636,8 @@ C ATTACHMENT
   554  CONTINUE
  5541  CONTINUE
       ELSE IF(KGAS.EQ.3) THEN
-       IF(EFINAL.LT.E3(4)) GO TO 51      
-       IF(NATT3.GT.1) GO TO 555                             
+       IF(EFINAL.LT.E3(4)) GO TO 5561
+       IF(NATT3.GT.1) GO TO 555                                  
        NP=NP+1                                                         
        CF(KGAS,IE,NP)=Q3(4,IE)*VAN3
        FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
@@ -1634,7 +1650,7 @@ C ATTACHMENT
        INDEX(KGAS,NP)=0
        IPN(KGAS,NP)=-1
        L=3
-       IARRY(KGAS,NP)=L
+       IARRY(KGAS,NP)=0.0
        PENFRA(KGAS,1,NP)=0.0
        PENFRA(KGAS,2,NP)=0.0
        PENFRA(KGAS,3,NP)=0.0
@@ -1645,9 +1661,9 @@ C ATTACHMENT
        FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
        PSCT(KGAS,IE,NP)=0.5D0
        ANGCT(KGAS,IE,NP)=1.0D0
-       IF(IE.GT.1) GO TO 556
+       IF(IE.GT.1) GO TO 556 
        DSCRPT(KGAS,NP)=SCRP3(2+NION3+JJ)
-       RGAS(KGAS,NP)=RGAS3 
+       RGAS(KGAS,NP)=RGAS3
        EIN(KGAS,NP)=0.0D0
        INDEX(KGAS,NP)=0
        IPN(KGAS,NP)=-1
@@ -1656,17 +1672,17 @@ C ATTACHMENT
        PENFRA(KGAS,1,NP)=0.0
        PENFRA(KGAS,2,NP)=0.0
        PENFRA(KGAS,3,NP)=0.0
-  556  CONTINUE
+  556  CONTINUE       
  5561  CONTINUE
       ELSE IF(KGAS.EQ.4) THEN
-       IF(EFINAL.LT.E4(4)) GO TO 51      
-       IF(NATT4.GT.1) GO TO 557                             
+       IF(EFINAL.LT.E4(4)) GO TO 5581
+       IF(NATT4.GT.1) GO TO 557  
        NP=NP+1                                                         
        CF(KGAS,IE,NP)=Q4(4,IE)*VAN4
        FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
        PSCT(KGAS,IE,NP)=0.5D0
        ANGCT(KGAS,IE,NP)=1.0D0
-       IF(IE.GT.1) GO TO 5581
+       IF(IE.GT.1) GO TO 5581 
        DSCRPT(KGAS,NP)=SCRP4(3+NION4)
        RGAS(KGAS,NP)=RGAS4
        EIN(KGAS,NP)=0.0D0
@@ -1684,7 +1700,7 @@ C ATTACHMENT
        FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
        PSCT(KGAS,IE,NP)=0.5D0
        ANGCT(KGAS,IE,NP)=1.0D0
-       IF(IE.GT.1) GO TO 558
+       IF(IE.GT.1) GO TO 558  
        DSCRPT(KGAS,NP)=SCRP4(2+NION4+JJ)
        RGAS(KGAS,NP)=RGAS4
        EIN(KGAS,NP)=0.0D0
@@ -1698,8 +1714,8 @@ C ATTACHMENT
   558  CONTINUE
  5581  CONTINUE
       ELSE IF(KGAS.EQ.5) THEN
-       IF(EFINAL.LT.E5(4)) GO TO 51  
-       IF(NATT5.GT.1) GO TO 559                                 
+       IF(EFINAL.LT.E5(4)) GO TO 5601
+       IF(NATT5.GT.1) GO TO 559  
        NP=NP+1                                                         
        CF(KGAS,IE,NP)=Q5(4,IE)*VAN5
        FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
@@ -1723,7 +1739,7 @@ C ATTACHMENT
        FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
        PSCT(KGAS,IE,NP)=0.5D0
        ANGCT(KGAS,IE,NP)=1.0D0
-       IF(IE.GT.1) GO TO 560
+       IF(IE.GT.1) GO TO 560 
        DSCRPT(KGAS,NP)=SCRP5(2+NION5+JJ)
        RGAS(KGAS,NP)=RGAS5
        EIN(KGAS,NP)=0.0D0
@@ -1737,8 +1753,8 @@ C ATTACHMENT
   560  CONTINUE
  5601  CONTINUE
       ELSE
-       IF(EFINAL.LT.E6(4)) GO TO 51  
-       IF(NATT6.GT.1) GO TO 561                                 
+       IF(EFINAL.LT.E6(4)) GO TO 5621
+       IF(NATT6.GT.1) GO TO 561  
        NP=NP+1                                                         
        CF(KGAS,IE,NP)=Q6(4,IE)*VAN6
        FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
@@ -1747,7 +1763,7 @@ C ATTACHMENT
        IF(IE.GT.1) GO TO 5621
        DSCRPT(KGAS,NP)=SCRP6(3+NION6)
        RGAS(KGAS,NP)=RGAS6
-       EIN(KGAS,NP)=0.0D0
+       EIN(KGAS,NP)=0.0
        INDEX(KGAS,NP)=0
        IPN(KGAS,NP)=-1
        L=3
@@ -1762,10 +1778,10 @@ C ATTACHMENT
        FCATT(IE)=FCATT(IE)+CF(KGAS,IE,NP) 
        PSCT(KGAS,IE,NP)=0.5D0
        ANGCT(KGAS,IE,NP)=1.0D0
-       IF(IE.GT.1) GO TO 562
+       IF(IE.GT.1) GO TO 562 
        DSCRPT(KGAS,NP)=SCRP6(2+NION6+JJ)
        RGAS(KGAS,NP)=RGAS6
-       EIN(KGAS,NP)=0.0D0
+       EIN(KGAS,NP)=0.0
        INDEX(KGAS,NP)=0
        IPN(KGAS,NP)=-1
        L=3
@@ -1775,7 +1791,7 @@ C ATTACHMENT
        PENFRA(KGAS,3,NP)=0.0
   562  CONTINUE
  5621  CONTINUE
-      ENDIF
+      ENDIF 
 C INELASTIC AND SUPERELASTIC
    51 IF(KGAS.EQ.1) THEN
        IF(NIN1.EQ.0) GO TO 70                                           
@@ -1899,7 +1915,7 @@ C
        L=4
        IF(EI4(J).LT.0.0D0) L=5                                          
        IPN(KGAS,NP)=0  
-       IARRY(KGAS,NP)=L
+       IARRY(KGAS,NP)=L 
        DSCRPT(KGAS,NP)=SCRP4(4+NION4+NATT4+J)
        PENFRA(KGAS,1,NP)=PENFRA4(1,J)
        PENFRA(KGAS,2,NP)=PENFRA4(2,J)*1.D-16/DSQRT(3.0D0)
@@ -1931,7 +1947,7 @@ C
        L=4
        IF(EI5(J).LT.0.0D0) L=5                                          
        IPN(KGAS,NP)=0  
-       IARRY(KGAS,NP)=L
+       IARRY(KGAS,NP)=L 
        DSCRPT(KGAS,NP)=SCRP5(4+NION5+NATT5+J)
        PENFRA(KGAS,1,NP)=PENFRA5(1,J)
        PENFRA(KGAS,2,NP)=PENFRA5(2,J)*1.D-16/DSQRT(3.0D0)
@@ -2006,73 +2022,6 @@ C ---------------------------------------------------------------------
       FCION(IE)=FCION(IE)*EROOT(IE)                                     
       TCF(KGAS,IE)=TCF(KGAS,IE)*EROOT(IE)   
  700  CONTINUE 
-C
-      DO 637 IE=1,N4000
-C CALCULATION OF NULL COLLISION FREQUENCIES
-      NPLAST(1)=NUL1
-      NPLAST(2)=NUL2
-      NPLAST(3)=NUL3
-      NPLAST(4)=NUL4
-      NPLAST(5)=NUL5
-      NPLAST(6)=NUL6
-      IF((NUL1+NUL2+NUL3+NUL4+NUL5+NUL6).EQ.0) GO TO 638      
-      IF(NUL1.GT.0) THEN
-       DO 631 J=1,NPLAST(1)
-       SCLENUL(1,J)=SCLN1(J)
-       DSCRPTN(1,J)=SCRPN1(J)
-  631  CFN(1,IE,J)=QNUL1(J,IE)*VAN1*SCLENUL(1,J)
-      ENDIF
-      IF(NUL2.GT.0) THEN
-       DO 632 J=1,NPLAST(2)
-       SCLENUL(2,J)=SCLN2(J)
-       DSCRPTN(2,J)=SCRPN2(J)
-  632  CFN(2,IE,J)=QNUL2(J,IE)*VAN2*SCLENUL(2,J)
-      ENDIF
-      IF(NUL3.GT.0) THEN
-       DO 633 J=1,NPLAST(3)
-       SCLENUL(3,J)=SCLN3(3)
-       DSCRPTN(3,J)=SCRPN3(3)
-  633  CFN(3,IE,J)=QNUL3(J,IE)*VAN3*SCLENUL(3,J)
-      ENDIF
-      IF(NUL4.GT.0) THEN
-       DO 634 J=1,NPLAST(4)
-       SCLENUL(4,J)=SCLN4(J)
-       DSCRPTN(4,J)=SCRPN4(J)
-  634  CFN(4,IE,J)=QNUL4(J,IE)*VAN4*SCLENUL(4,J)
-      ENDIF
-      IF(NUL5.GT.0) THEN
-       DO 635 J=1,NPLAST(5)
-       SCLENUL(5,J)=SCLN5(J)
-       DSCRPTN(5,J)=SCRPN5(J)
-  635  CFN(5,IE,J)=QNUL5(J,IE)*VAN5*SCLENUL(5,J)
-      ENDIF
-      IF(NUL6.GT.0) THEN
-       DO 636 J=1,NPLAST(6)
-       SCLENUL(6,J)=SCLN6(J)
-       DSCRPTN(6,J)=SCRPN6(J)
-  636  CFN(6,IE,J)=QNUL6(J,IE)*VAN6*SCLENUL(6,J)
-      ENDIF
-C CALCULATE NULL COLLISION FREQUENCY FOR EACH GAS COMPONENT
-      DO 637 KGAS=1,NGAS
-      TCFN(KGAS,IE)=0.0D0
-      DO 6361 IL=1,NPLAST(KGAS)
-      TCFN(KGAS,IE)=TCFN(KGAS,IE)+CFN(KGAS,IE,IL)
-      IF(CFN(KGAS,IE,IL).LT.0.0D0) WRITE(6,777) CFN(KGAS,IE,IL),KGAS,IL
-  777 FORMAT(' WARNING  NEGATIVE NULL COLLISION FREQUENCY=',D12.3,' KGAS
-     / =',I2,' IL =',I2)
- 6361 CONTINUE
-      DO 6363 IL=1,NPLAST(KGAS)
-      IF(TCFN(KGAS,IE).EQ.0.0D0) GO TO 6362
-      CFN(KGAS,IE,IL)=CFN(KGAS,IE,IL)/TCFN(KGAS,IE)
-      GO TO 6363
- 6362 CFN(KGAS,IE,IL)=0.0D0
- 6363 CONTINUE
-      DO 6364 IL=2,NPLAST(KGAS)
-      CFN(KGAS,IE,IL)=CFN(KGAS,IE,IL)+CFN(KGAS,IE,IL-1)
- 6364 CONTINUE
-      TCFN(KGAS,IE)=TCFN(KGAS,IE)*EROOT(IE)
-  637 CONTINUE
-  638 CONTINUE
 C     WRITE(6,841) (INDEX(KGAS,J),J,KGAS, J=1,IPLAST(KGAS))
 C 841 FORMAT(2X,' INDEX=',I3,' J=',I3,' KGAS=',I2)                                  
 C  SET ANISOTROPIC FLAG IF ANISOTROPIC SCATTERING DATA IS DETECTED
@@ -2086,13 +2035,11 @@ C     IF(NISO.EQ.1) WRITE(6,7765) NISO
 C7765 FORMAT(3X,' ANISOTROPIC SCATTERING DETECTED NISO=',I5)            
 C -------------------------------------------------------------------   
 C   CALCULATE NULL COLLISION FREQUENCIES FOR EACH GAS COMPONENT                                  
-C ------------------------------------------------------------------- 
-      FAKEIN=DABS(FAKEI)/DFLOAT(NGAS) 
+C -------------------------------------------------------------------   
       DO 800 KGAS=1,NGAS
       TCFMAX(KGAS)=0.0D0
       DO 800 IE=1,4000
-      IF((TCF(KGAS,IE)+TCFN(KGAS,IE)+FAKEIN).GE.TCFMAX(KGAS)) 
-     /TCFMAX(KGAS)=TCF(KGAS,IE)+TCFN(KGAS,IE)+FAKEIN       
+      IF(TCF(KGAS,IE).GE.TCFMAX(KGAS)) TCFMAX(KGAS)=TCF(KGAS,IE)       
   800 CONTINUE                                        
 C CALCULATE EACH GAS CUMULATIVE FRACTIONAL NULL COLLISION FREQUENCIES
       TCFMX=0.0D0
@@ -2112,7 +2059,8 @@ C ---------------------------------------------------------------------
       QTOT(I)=AN1*Q1(1,I)+AN2*Q2(1,I)+AN3*Q3(1,I)+AN4*Q4(1,I)+
      /AN5*Q5(1,I)+AN6*Q6(1,I)            
       QEL(I)=AN1*Q1(2,I)+AN2*Q2(2,I)+AN3*Q3(2,I)+AN4*Q4(2,I)+
-     /AN5*Q5(2,I)+AN6*Q6(2,I)                          
+     /AN5*Q5(2,I)+AN6*Q6(2,I)             
+C                                                                       
       QION(1,I)=Q1(3,I)*AN1                                             
       QION(2,I)=Q2(3,I)*AN2                                             
       QION(3,I)=Q3(3,I)*AN3                                             
@@ -2566,9 +2514,8 @@ C     STOP
       COMMON/MRATIO/VAN1,VAN2,VAN3,VAN4,VAN5,VAN6,VAN
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS                             
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)              
       COMMON/DECOR/NCOLM,NCORLN,NCORST
-      COMMON/FAKE/FAKEI,IFAKE,FAKET(8),FAKED(9) 
       COMMON/DENS/DENSY(4000)
 C                                                                       
 C   NEW UPDATE OF CONSTANTS 2010
@@ -2682,18 +2629,13 @@ C ZERO COMMON BLOCKS OF OUTPUT RESULTS
       DYZER=0.0D0 
       DXYER=0.0D0 
       DXZER=0.0D0 
-      IFAKE=0
-      FAKEI=0.0D0
       DO 65 J=1,300                                                     
    65 TIME(J)=0.0D0                                                     
       DO 70 KGAS=1,6                              
       DO 70 K=1,5                        
    70 ICOLL(KGAS,K)=0 
-      DO 71 KGAS=1,6
-      DO 71 IL=1,10
-   71 ICOLNN(KGAS,IL)=0
       DO 80 KGAS=1,6  
-      DO 80 K=1,290 
+      DO 80 K=1,300 
    80 ICOLN(KGAS,K)=0                                                 
       DO 100 K=1,4000      
       DENSY(K)=0.0D0                                             
@@ -2744,15 +2686,14 @@ C   METRES PER PICOSECOND
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX  
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG  
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),IPLAST(6),ISIZE(6),
-     /PENFRA(6,3,290),TCFMAX(6)            
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),IPLAST(6),ISIZE(6),
+     /PENFRA(6,3,300),TCFMAX(6)            
       COMMON/NAMES/NAMEG(6)  
       COMMON/DECOR/NCOLM,NCORLN,NCORST    
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)             
       CHARACTER*25 NAMEG                                  
       WRITE(6,1)
-    1 FORMAT(2(/),10X,'PROGRAM MAGBOLTZ 2 VERSION 11.11',/)          
+    1 FORMAT(2(/),10X,'PROGRAM MAGBOLTZ 2 VERSION 11.12',/)          
       WRITE(6,10) NGAS                                                  
    10 FORMAT(10X,'MONTE CARLO SOLUTION FOR MIXTURE OF ',I2,' GASES.',/,
      /5X,'------------------------------------------------------')  
@@ -2810,8 +2751,8 @@ C 96  FORMAT(/,'  RANDOM NUMBER STARTER (SEED)=',F7.4)
       SUBROUTINE SORTT(KGAS,I,R2,IE)        
       IMPLICIT REAL*8 (A-H,O-Z)
       IMPLICIT INTEGER*8 (I-N)
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
 C         
 C    SELECTS COLLISION TYPE FROM COLLISION ARRAY BY BINARY STEP SAMPLING
@@ -2853,14 +2794,13 @@ C     CF GERJAN HAGELLAR
       COMMON/CNSTS/ECHARG,EMASS,AMU,PIR2             
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
       COMMON/DECOR/NCOLM,NCORLN,NCORST
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO
-      COMMON/IONFL/NC0(6,290),EC0(6,290),NG1(6,290),EG1(6,290),
-     /NG2(6,290),EG2(6,290),WKLM(6,290),EFL(6,290)
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO
+      COMMON/IONFL/NC0(6,300),EC0(6,300),NG1(6,300),EG1(6,300),
+     /NG2(6,300),EG2(6,300),WKLM(6,300),EFL(6,300)
       COMMON/VEL/WX,WY,WZ
       COMMON/VELERR/DWX,DWY,DWZ
       COMMON/CTOWNS/ALPHA,ATT
@@ -2871,12 +2811,11 @@ C     CF GERJAN HAGELLAR
       COMMON/DIFERB/DXXER,DYYER,DZZER,DYZER,DXYER,DXZER
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM               
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/RANM/RNMX(6)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)
       DIMENSION XST(2000000),YST(2000000),ZST(2000000),STO(2000000)
       DIMENSION WZST(10),AVEST(10)
-      DIMENSION DFZZST(10),DFYYST(10),DFXXST(10),TEMP(6,4000)
+      DIMENSION DFZZST(10),DFYYST(10),DFXXST(10)
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.  
 C   USED WITH MAGNETIC FIELD B =0.0   ELECTRIC FIELD IN Z DIRECTION.
@@ -2930,13 +2869,7 @@ C -------------------------------------------------------------------
 C GENERATE INITIAL RANDOM MAXWELL BOLTZMAN NUMBERS 
       CALL GERJAN
       IMBPT=0
-      TDASH=0.0D0                                       
-C
-      DO 111 K=1,6
-      DO 111 J=1,N4000
-  111 TEMP(K,J)=TCF(K,J)+TCFN(K,J) 
-      ABSFAKEI=0.0 
-      IFAKE=0            
+      TDASH=0.0D0                                                       
 C                                                                       
 C     INITIAL DIRECTION COSINES                                         
 C                                                                       
@@ -2991,33 +2924,14 @@ C CALCULATE ENERGY WITH STATIONARY GAS TARGET, EOK
       EOK=((VEX-VGX)**2+(VEY-VGY)**2+(VEZ-VGZ)**2)/CONST10
       IE=DINT(EOK/ESTEP)+1                                        
       IE=DMIN0(IE,N4000)
-C
-C     TEST FOR REAL OR NULL COLLISION 
-C                                  
-      R5=drand48(RDUM)                               
-      TEST1=TCF(KGAS,IE)/TCFMAX(KGAS)
-      IF(R5.LE.TEST1) GO TO 137                                         
-      NNULL=NNULL+1
-      TEST2=TEMP(KGAS,IE)/TCFMAX(KGAS)
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST(KGAS).EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(KGAS,IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(KGAS,I)=ICOLNN(KGAS,I)+1
-       GO TO 1
-      ENDIF                
-      TEST3=(TEMP(KGAS,IE)+ABSFAKEI)/TCFMAX(KGAS)   
-      IF(R5.LT.TEST3) THEN
-C FAKE IONISATION INCREMENT COUNTER
-       IFAKE=IFAKE+1
-       GO TO 1
-      ENDIF
-      GO TO 1
-  137 NCOL=NCOL+1
+C     TEST FOR REAL OR NULL COLLISION                                   
+      R4=drand48(RDUM)                               
+      TLIM=TCF(KGAS,IE)/TCFMAX(KGAS)
+      IF(R4.GT.TLIM) THEN                                             
+       NNULL=NNULL+1                                                    
+       GO TO 1    
+      ENDIF  
+      NCOL=NCOL+1
 C CALCULATE DIRECTION COSINES OF ELECTRON IN O KELVIN FRAME 
       CONST11=1.0D0/(CONST9*DSQRT(EOK))
       DXCOM=(VEX-VGX)*CONST11
@@ -3292,16 +3206,15 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/CTWNER/ALPER,ATTER
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX  
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG    
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)              
-      COMMON/SINT/SIMF(4000)                               
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)           
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)                         
+      COMMON/SINT/SIMF(4000)                                            
       COMMON/NAMES/NAMEG(6)
-      COMMON/SCRIPT/DSCRPT(6,300),DSCRPTN(6,10)
-      CHARACTER*50 DSCRPT,DSCRPTN                                   
+      COMMON/SCRIPT/DSCRPT(6,300)
+      CHARACTER*50 DSCRPT                                               
       CHARACTER*25 NAMEG
       WRITE(6,15)                                                       
       WRITE(6,15)                                                       
@@ -3336,9 +3249,9 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       DFLER1=DSQRT(DFLER**2+DWZ**2)     
       DFLER2=DFLER1/2.0                               
       WRITE(6,992) DIFLN,DFLER,DLOVMB,DFLER1,DLMN,DFLER2                
-  992 FORMAT(1/,2X,'LONGITUDINAL DIFFUSION =',D11.4,' +-',F8.1,'%',/,10X
-     /,'=',F9.4,' EV. +-',F8.2,'%',/,10X,'=',F9.3,' MICRONS/CENTIMETER**
-     /0.5  +-',F8.2,'%',/)                     
+  992 FORMAT(/,2X,'LONGITUDINAL DIFFUSION =',D11.4,' +-',F8.1,'%',/,10X,
+     /'=',F9.4,' EV. +-',F8.2,'%',/,10X,'=',F9.3,' MICRONS/CENTIMETER**0
+     /.5  +-',F8.2,'%',/)                     
       GO TO 900
   800 WRITE(6,954) 
   954 FORMAT(/,10X,' DIFFUSION IN CM**2/SEC.',/)     
@@ -3355,8 +3268,8 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
      /,' TRANSVERSE DIFFUSION =',D11.4,' +-',F8.2,'%',/,2X,'TRANSVERSE D
      /IFFUSION (PARALLEL TO B-FIELD) DIFXX=',D11.4,' +-',F8.2,'%',/)
   900 WRITE(6,333) ALPHA,ALPER,ATT,ATTER                             
-  333 FORMAT(2(/),'  IONISATION RATE /CM.=',E11.4,' +/-',F6.2,' PERCENT.
-     /',/,'  ATTACHMENT RATE /CM.=',E11.4,' +/-',F6.2,' PERCENT.',2(/)) 
+  333 FORMAT(2(/),'  IONISATION RATE /CM.=',D11.4,' +/-',F6.2,' PERCENT.
+     /',/,'  ATTACHMENT RATE /CM.=',D11.4,' +/-',F6.2,' PERCENT.',2(/)) 
       WRITE(6,960) AVE,DEN             
   960 FORMAT(/,2X,'MEAN ELECTRON ENERGY =',F9.4,' EV. ERROR =  +-',F8.2,
      /'%',/)              
@@ -3370,14 +3283,13 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
       COMMON/DECOR/NCOLM,NCORLN,NCORST
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO 
-      COMMON/IONFL/NC0(6,290),EC0(6,290),NG1(6,290),EG1(6,290),
-     /NG2(6,290),EG2(6,290),WKLM(6,290),EFL(6,290)
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO 
+      COMMON/IONFL/NC0(6,300),EC0(6,300),NG1(6,300),EG1(6,300),
+     /NG2(6,300),EG2(6,300),WKLM(6,300),EFL(6,300)
       COMMON/DIFVEL/DIFLN,DIFTR
       COMMON/DIFERL/DFLER,DFTER
       COMMON/DIFLAB/DIFXX,DIFYY,DIFZZ,DIFYZ,DIFXY,DIFXZ
@@ -3388,9 +3300,8 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/CTWNER/ALPER,ATTER
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)     
-      COMMON/RANM/RNMX(6)                   
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)  
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)     
+      COMMON/RANM/RNMX(6)                       
       DIMENSION XST(2000000),YST(2000000),ZST(2000000),STO(2000000) 
       DIMENSION WZST(10),AVEST(10)                          
       DIMENSION DFZZST(10),DFYYST(10),DFXXST(10),TEMP(6,4000)
@@ -3448,13 +3359,7 @@ C -------------------------------------------------------------------
 C GENERATE INITIAL RANDOM NUMBERS FOR MAXWELL BOLTZMAN 
       CALL GERJAN
       IMBPT=0
-      TDASH=0.0D0 
-C 
-      DO 111 K=1,6
-      DO 111 J=1,N4000
-  111 TEMP(K,J)=TCF(K,J)+TCFN(K,J)  
-      ABSFAKEI=FAKEI
-      IFAKE=0                                  
+      TDASH=0.0D0                                                       
 C                                                                       
 C     INITIAL DIRECTION COSINES                                         
 C                                                                       
@@ -3512,34 +3417,15 @@ C CALCULATE GAS VELOCITY VECTORS VGX,VGY,VGZ
 C CALCULATE ENERGY WITH STATIONARY GAS TARGET
       EOK=((CX2-VGX)**2+(CY2-VGY)**2+(CZ2-VGZ)**2)/CONST10              
       IE=DINT(EOK/ESTEP)+1                                            
-      IE=DMIN0(IE,N4000)   
-C                                           
-C     TEST FOR REAL OR NULL COLLISION
-C                                   
-      R5=drand48(RDUM)                                                
-      TEST1=TCF(KGAS,IE)/TCFMAX(KGAS)                            
-      IF(R5.LE.TEST1) GO TO 137                                   
-      NNULL=NNULL+1 
-      TEST2=TEMP(KGAS,IE)/TCFMAX(KGAS)
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST(KGAS).EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(KGAS,IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(KGAS,I)=ICOLNN(KGAS,I)+1
-       GO TO 1
-      ENDIF                                
-      TEST3=(TEMP(KGAS,IE)+ABSFAKEI)/TCFMAX(KGAS)
-      IF(R5.LT.TEST3) THEN
-C FAKE IONISATION INCREMENT COUNTER
-       IFAKE=IFAKE+1
-       GO TO 1
-      ENDIF 
-      GO TO 1
-  137 NCOL=NCOL+1                                                      
+      IE=DMIN0(IE,N4000)                                              
+C     TEST FOR REAL OR NULL COLLISION                                   
+      R4=drand48(RDUM)                                                
+      TLIM=TCF(KGAS,IE)/TCFMAX(KGAS)                            
+      IF(R4.GT.TLIM) THEN                                               
+       NNULL=NNULL+1                                                    
+       GO TO 1    
+      ENDIF   
+      NCOL=NCOL+1                                                      
 C  CALCULATE DIRECTION COSINES OF ELECTRON IN O KELVIN FRAME
       CONST11=1.0D0/(CONST9*DSQRT(EOK))
       DXCOM=(CX2-VGX)*CONST11
@@ -3784,7 +3670,7 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       ALPER=0.0
       IF(ANCION.EQ.0.0D0) GO TO 820
       ALPER=100.0*DSQRT(ANCION)/ANCION
-  820 ALPHA=ANCION/(ST*WZ)*1.0D12 
+  820 ALPHA=ANCION/(ST*WZ)*1.0D12                                       
       RETURN                                                            
       END                                                               
       SUBROUTINE MONTEBT                                                
@@ -3795,13 +3681,12 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO
-      COMMON/IONFL/NC0(6,290),EC0(6,290),NG1(6,290),EG1(6,290),
-     /NG2(6,290),EG2(6,290),WKLM(6,290),EFL(6,290)
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO
+      COMMON/IONFL/NC0(6,300),EC0(6,300),NG1(6,300),EG1(6,300),
+     /NG2(6,300),EG2(6,300),WKLM(6,300),EFL(6,300)
       COMMON/MIX2/ES(4000),EROOT(4000),QTOT(4000),QREL(4000),QINEL(4000)
      /,QEL(4000)      
       COMMON/DECOR/NCOLM,NCORLN,NCORST            
@@ -3815,13 +3700,12 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/CTWNER/ALPER,ATTER
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
-      COMMON/RANM/RNMX(6)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)            
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
+      COMMON/RANM/RNMX(6)                             
       DIMENSION XST(1000000),YST(1000000),ZST(1000000),STO(1000000)
       DIMENSION WZST(10),WYST(10),AVEST(10)
       DIMENSION DFZZST(10),DFYYST(10),DFXXST(10)
-      DIMENSION DFYZST(10),DFLNST(10),DFTRST(10),TEMP(6,4000)           
+      DIMENSION DFYZST(10),DFLNST(10),DFTRST(10),TEMP(6,4000)   
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY. 
 C   SUBROUTINE HANDLES MAGNETIC FIELD AND ELECTRIC FIELD
@@ -3872,13 +3756,6 @@ C -------------------------------------------------------------------
       NCOL=0                                                            
       NNULL=0  
       IEXTRA=0
-C
-      DO 111 K=1,6
-      DO 111 J=1,N4000
-  111 TEMP(K,J)=TCF(K,J)+TCFN(K,J)
-      ABSFAKEI=FAKEI
-      IFAKE=0
-C
 C GENERATE INITIAL RANDOM NUMBER FOR MAXWELL BOLTZMAN
       CALL GERJAN
       IMBTP=0
@@ -3937,32 +3814,14 @@ C CALCULATE ENERGY WITH STATIONARY GAS TARGET,EOK
       IE=DINT(EOK/ESTEP)+1                                             
       IE=DMIN0(IE,N4000)   
 C                                                                       
-C     TEST FOR REAL OR NULL COLLISION  
-C                                  
-      R5=drand48(RDUM)                                                
-      TEST1=TCF(KGAS,IE)/TCFMAX(KGAS)
-      IF(R5.LE.TEST1) GO TO 137                                         
-      NNULL=NNULL+1   
-      TEST2=TEMP(KGAS,IE)/TCFMAX(KGAS)
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST(KGAS).EQ.0) GO TO 1  
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(KGAS,IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(KGAS,I)=ICOLNN(KGAS,I)+1
-       GO TO 1
-      ENDIF                                 
-      TEST3=(TEMP(KGAS,IE)+ABSFAKEI)/TCFMAX(KGAS)
-      IF(R5.LT.TEST3) THEN
-C FAKE IONISATION INCREMENT COUNTER
-       IFAKE=IFAKE+1
-       GO TO 1
-      ENDIF   
-      GO TO 1     
-  137 NCOL=NCOL+1
+C     TEST FOR REAL OR NULL COLLISION                                   
+      R4=drand48(RDUM)                                                
+      TLIM=TCF(KGAS,IE)/TCFMAX(KGAS)
+      IF(R4.GT.TLIM) THEN                                               
+       NNULL=NNULL+1                                                    
+       GO TO 1   
+      ENDIF 
+      NCOL=NCOL+1
 C CALCULATE DIRECTION COSINES OF ELECTRON IN 0 KELVIN FRAME
       CONST11=1.0D0/(CONST9*DSQRT(EOK))
       DXCOM=(CX2-VGX)*CONST11
@@ -4252,13 +4111,12 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO
-      COMMON/IONFL/NC0(6,290),EC0(6,290),NG1(6,290),EG1(6,290),
-     /NG2(6,290),EG2(6,290),WKLM(6,290),EFL(6,290)
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO
+      COMMON/IONFL/NC0(6,300),EC0(6,300),NG1(6,300),EG1(6,300),
+     /NG2(6,300),EG2(6,300),WKLM(6,300),EFL(6,300)
       COMMON/MIX2/ES(4000),EROOT(4000),QTOT(4000),QREL(4000),QINEL(4000)
      /,QEL(4000)
       COMMON/DECOR/NCOLM,NCORLN,NCORST                        
@@ -4272,9 +4130,8 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/CTWNER/ALPER,ATTER   
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
-      COMMON/RANM/RNMX(6)  
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)             
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
+      COMMON/RANM/RNMX(6)                             
       DIMENSION XST(2000000),YST(2000000),ZST(2000000),STO(2000000)
       DIMENSION WZST(10),WYST(10),WXST(10),AVEST(10)
       DIMENSION DFZZST(10),DFYYST(10),DFXXST(10) 
@@ -4358,13 +4215,6 @@ C GENERATE INITIAL RANDOM NUMBER FOR MAXWELL BOLTZMAN
       CALL GERJAN
       IMBPT=0
       TDASH=0.0D0 
-C
-      DO 111 K=1,6
-      DO 111 J=1,N4000
-  111 TEMP(K,J)=TCF(K,J)+TCFN(K,J)
-      ABSFAKEI=FAKEI
-      IFAKE=0
-C
 C                                                                       
 C     INITIAL DIRECTION COSINES                                         
 C                                                                       
@@ -4419,32 +4269,14 @@ C CALCULATE ENERGY WITH STATIONARY GAS TARGET,EOK
       IE=DINT(EOK/ESTEP)+1                                             
       IE=DMIN0(IE,N4000)                                               
 C                                                                       
-C     TEST FOR REAL OR NULL COLLISION     
-C      
-      R5=drand48(RDUM)                                                  
-      TEST1=TCF(KGAS,IE)/TCFMAX(KGAS)            
-      IF(R5.LE.TEST1) GO TO 137                                        
-      NNULL=NNULL+1 
-      TEST2=TEMP(KGAS,IE)/TCFMAX(KGAS)
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST(KGAS).EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(KGAS,IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(KGAS,I)=ICOLNN(KGAS,I)+1
-       GO TO 1
-      ENDIF                              
-      TEST3=(TEMP(KGAS,IE)+ABSFAKEI)/TCFMAX(KGAS)
-      IF(R5.LT.TEST3) THEN
-C FAKE IONISATION INCREMENT COUNTER
-       IFAKE=IFAKE+1
-       GO TO 1
-      ENDIF
-      GO TO 1                      
-  137 NCOL=NCOL+1                                                     
+C     TEST FOR REAL OR NULL COLLISION           
+      R4=drand48(RDUM)                                                  
+      TLIM=TCF(KGAS,IE)/TCFMAX(KGAS)            
+      IF(R4.GT.TLIM) THEN                                               
+       NNULL=NNULL+1                                                    
+       GO TO 1  
+      ENDIF 
+      NCOL=NCOL+1                                                     
 C CALCULATE DIRECTION COSINES OF ELECTRON IN 0 KELVIN FRAME
       CONST11=1.0D0/(CONST9*DSQRT(EOK))
 C     VTOT=1.0D0/CONST11
@@ -4767,10 +4599,10 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX  
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM            
       COMMON/RANM/RNMX(6)                 
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO 
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO 
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND TESTS TO FIND IF THE UPPER ENERGY  
 C   LIMIT FOR THE ELECTRON ENERGY IS EXCEEDED. 
@@ -4844,8 +4676,8 @@ C
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(KGAS,IE)/TCFMAX(KGAS)                           
-      IF(R5.GT.TEST1) GO TO 1                                           
+      TLIM=TCF(KGAS,IE)/TCFMAX(KGAS)                           
+      IF(R5.GT.TLIM) GO TO 1                                           
 C                                                                       
       IF(IE.EQ.4000) THEN
 C ELECTRON ENERGY OUT OF RANGE
@@ -4950,10 +4782,10 @@ C LOOP
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/RANM/RNMX(6) 
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO 
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO 
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND TESTS TO FIND IF THE UPPER ENERGY  
 C   LIMIT FOR THE ELECTRON ENERGY IS EXCEEDED. 
@@ -5132,10 +4964,10 @@ C LOOP
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/RANM/RNMX(6)  
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND TESTS TO FIND IF THE UPPER ENERGY  
 C   LIMIT FOR THE ELECTRON ENERGY IS EXCEEDED. 
@@ -5326,10 +5158,6 @@ C LOOP
       COMMON/CTCALC/ZPLANE1,ZPLANE2,ZPLANE3,ZPLANE4,ZPLANE5,ZPLANE6,
      /ZPLANE7,ZPLANE8,IZFINAL
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
-     /,TCFMAX(6)
 C ---------------------------------------------------------------------      
 C  ESTIMATE TIME STEP AND SPACE STEPS FOR AVALANCHE SIMULATION IN 
 C  TIME OF FLIGHT AND STEADY STATE TOWNSEND SIMULATIONS.
@@ -5339,107 +5167,10 @@ C ------------------------------------------------------------------
       IMAX=NMAX/10000000 
       IF(IMAX.LT.5) IMAX=5 
       NMAX=IMAX*10000000
-      CORR=760.0*(273.15+TEMPC)/(293.15*TORR)  
-      ALPP=ALPHA/CORR
-      ATTP=ATT/CORR
-      ANETP=ALPP-ATTP
-      ANET=ALPHA-ATT
-      TCUTH=1.2D-10*CORR
-      TCUTL=1.D-13*CORR
-      ZCUTH=1.2D-2*CORR
-      ZCUTL=1.D-5*CORR
-C
-      IF(ANETP.GT.30.0) THEN
-       ALPHAD=0.0
-       ALP1=ALPHA
-       ATT1=ATT
-C WEAK ATTACHMENT
-       GO TO 6
-      ENDIF
-C SOME ATTACHMENT
-      IF(DABS(ANETP).LT.100.) THEN
-C SMALL NET ATTACHMENT
-       ALPHAD=DABS(ATT)*0.8
-      ELSE IF(DABS(ANETP).GE.100..AND.DABS(ANETP).LT.1000.) THEN
-C LARGER NET ATTACHMENT
-       ALPHAD=DABS(ANET)*0.65
-      ELSE IF(DABS(ANETP).GE.1000..AND.DABS(ANETP).LT.10000.) THEN
-       ALPHAD=DABS(ANET)*0.6
-      ELSE IF(DABS(ANETP).GE.10000..AND.DABS(ANETP).LT.100000.) THEN
-       ALPHAD=DABS(ANET)*0.5
-      ELSE IF(DABS(ANETP).GT.100000..AND.DABS(ANETP).LT.2000000.) THEN
-       ALPHAD=DABS(ANET)*0.2
-      ELSE
-       WRITE(6,91)
-   91  FORMAT(' ATTACHMENT TOO LARGE PROGRAM STOPPED')
-      ENDIF
-    3 VDST=WZ*1.D-5
-      FAKEI=ALPHAD*WZ*1.D-12
-      ALPHAST=0.85*DABS(ALPHAD+ANET)
-      TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.D5)
-      IF(TSTEP.GT.TCUTH) TSTEP=TCUTH
-      IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMIT
-      DO 4 J=1,NGAS
-    4 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)/DFLOAT(NGAS) 
-      WRITE(6,871) ALPHAST,ANET,ALPHAD,TSTEP
-  871 FORMAT(' ALPHAST1=',D10.3,' ANET1=',D10.3,' ALPHAD1=',D10.3,/,
-     /' TSTEP1=',D10.3) 
-C CONVERT TO PICOSECONDS 
-      TSTEP=TSTEP*1.0D12
-      TFINAL=7.0D0*TSTEP
-      ITFINAL=7
-C CALCULATE GOOD STARTING VALUES FOR ALPHA AND NETA
-      JPRT=0
-      CALL MONTEFTT(JPRT)
-      CALL PT(JPRT)
-      CALL TOF(JPRT)
-      ALP1=RALPHA/TOFWR*1.D7
-      ALP1ER=RALPER*ALP1/100.
-      ATT1=RATTOF/TOFWR*1.D7
-      ATT1ER=RATOFER*ATT1/100.     
-      WRITE(6,944) ALP1,ALP1ER,ATT1,ATT1ER
-  944 FORMAT(' GOOD STARTING VALUES FOR CALC:',/,' ALPHA=',D12.3,' ERR='
-     /,D12.3,/,' NETA =',D12.3,' ERR=',D12.3)
-C 
-C CALCULATE USING GO0D STARTING VALUES
-C RESET TCFMAX
-      DO 44 J=1,NGAS
-   44 TCFMAX(J)=TCFMAX(J)-DABS(FAKEI)/DFLOAT(NGAS) 
-C CALCULATE FAKE IONISATION RATE SCALING BY 1.2
-      ALPHAD=ATT1*1.2
-      IF((ALP1-ATT1).GT.30.*CORR) ALPHAD=DABS(ATT1)*0.4
-      IF(DABS(ALP1-ATT1).LT.(ALP1/10.0).OR.DABS(ALP1-ATT1).LT.
-     /(ATT1/10.0)) ALPHAD=DABS(ATT1)*0.3
-      IF((ALP1-ATT1).GT.100.*CORR) ALPHAD=0.0
-      WZ=TOFWR*1.D5
-C 
-    6 VDST=WZ*1.D-5
-      FAKEI=ALPHAD*WZ*1.D-12
-      ALPHAST=0.85*DABS(ALPHAD+ALP1-ATT1)    
-      IF((ALP1+ALPHAD).GT.(10.0*ALPHAST).OR.ATT1.GT.(10.0*ALPHAST)) THEN
-C LARGE CANCELLATION BETWEEN ALPHA AND NETA  REDUCE STEP SIZE BY 15.0
-       IF((ALP1+ALPHAD).GT.100.*CORR) THEN
-        ALPHAST=ALPHAST*15.0
-       ELSE IF((ALP1+ALPHAD).GT.50.0*CORR) THEN
-        ALPHAST=ALPHAST*12.0
-       ELSE 
-        ALPHAST=ALPHAST*8.0
-       ENDIF
-      ENDIF
+      ALPHAST=0.85D0*DABS(ALPHA-ATT) 
+      VDST=WZ*1.D-5 
       TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
       ZSTEP=DLOG(3.0D0)/ALPHAST
-      IF(TSTEP.GT.TCUTH.AND.ALPHAD.NE.0.0) TSTEP=TCUTH
-C     IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-      IF(ZSTEP.GT.ZCUTH.AND.ALPHAD.NE.0.0) ZSTEP=ZCUTH
-C     IF(ZSTEP.LT.ZCUTL) ZSTEP=ZCUTL
-C UPDATE NULL CLLISION FREQUENCY LIMIT
-      DO 10 J=1,NGAS
-   10 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)/DFLOAT(NGAS)
-      ANET2=ALP1-ATT1
-      WRITE(6,878) ALPHAST,ANET2,ALPHAD,TSTEP,ZSTEP
-  878 FORMAT(' ALPHAST=',D10.3,' ANET=',D10.3,' ALPHAD=',D10.3,/,
-     /' TSTEP=',D10.3,' ZSTEP=',D10.3)
 C  CONVERT TO METRES AND PICOSECONDS     
       TSTEP=TSTEP*1.0D12
       ZSTEP=ZSTEP*0.01D0
@@ -5462,8 +5193,7 @@ C CALC SST
       ZSTEPM=ZSTEP*1.0D6
       WRITE(6,12) ZSTEPM
    12 FORMAT(1(/),' SPACE STEP BETWEEN SAMPLING PLANES =',D12.5,' MICRON
-     /S.',/)   
-      JPRT=1
+     /S.',/)     
       CALL MONTEFDT
       CALL SST
 C--------------------------------------------------------      
@@ -5471,7 +5201,7 @@ C LOAD NEW ALPHA AND ATTACHMENT INTO COMMON BLOCKS
 C-----------------------------------------------
       ALPHA=ALPHSST
       ALPER=ALPHERR
-      ATT=ATTSST 
+      ATT=ATTSST
       ATTER=ATTERR        
 C-----------------------------------------------      
       WRITE(6,18) 
@@ -5486,22 +5216,20 @@ C-----------------------------------------------
    22 FORMAT(/,' SST TOWNSEND COEFICIENTS') 
       WRITE(6,23) ALPHSST,ALPHERR,ATTSST,ATTERR 
    23 FORMAT(/,' ALPHA =',F9.1,' +- ',F6.2,' %    ATT=',F9.1,' +- ',F6.2
-     /,' %')   
-      CALL OUTPUT1T                                        
+     /,' %')  
+C     CALL OUTPUT1T                                          
 C CALC TIME OF FLIGHT AND PT 
-
-  777 WRITE(6,25) 
+      WRITE(6,25) 
    25 FORMAT(/,2X,'SOLUTION FOR PULSED TOWNSEND AND TIME OF FLIGHT PARAM
      /ETERS',/,'  ------------------------------------------------------
      /--------') 
       WRITE(6,26) TSTEP 
    26 FORMAT(1(/),'  TIME STEP BETWEEN SAMPLING PLANES =',D12.5,' PICOSE
-     /CS.',/)     
-      JPRT=1
-      CALL MONTEFTT(JPRT)                             
+     /CS.',/)                     
+      CALL MONTEFTT                             
       CALL FRIEDLANDT 
-      CALL PT(JPRT) 
-      CALL TOF(JPRT) 
+      CALL PT 
+      CALL TOF 
       WRITE(6,27) RALPHA,RALPER,RATTOF,RATOFER 
    27 FORMAT(/,' PT IONISATION AND ATTACHMENT RATES *10**12/SEC',/,' ALP
      /HA=',D10.3,' +- ',F6.2,' %      ATT=',D10.3,' +- ',F6.2,' %')    
@@ -5523,56 +5251,36 @@ C CALCULATE TOWNSEND SST COEFICIENTS DIRECTLY FROM TOF RESULTS
   888 FORMAT(/,'TOWNSEND COEFICIENT (ALPHA-ATT) CALCULATED FROM TOF RESU
      /LTS:',/,' ALPHA-ATT /CM.=',D11.4,' N.B. APPROXIMATE FORMULA NOT AC
      /CURATE',/)                             
-C
-C CALCULATE DIRECTLY FROM TOF FREQUENCY
-C     ALP1=RALPHA/TOFWR*1.D7
-C     ALP1ER=RALPER*ALP1/100.
-C     ATT1=RATTOF/TOFWR*1.D7
-C     ATT1ER=RATOFER*ATT1/100.
-C
-C     WRITE(6,33) ALP1,ALP1ER,ATT1,ATT1ER
-C  33 FORMAT(' TOF TOWNSEND IN UNITS OF 1/CM:',/,'   GAIN =',D12.4,' +-'
-C    /,D12.4,/,' ATTACH =',D12.4,' +-',D12.4,/)  
       RETURN                                                     
       END                                                               
-      SUBROUTINE MONTEFTT(JPRT)                                        
+      SUBROUTINE MONTEFTT                                               
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/CNSTS/ECHARG,EMASS,AMU,PIR2
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
-      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAXOLD
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),IPLAST(6),ISIZE(6),
-     /PENFRA(6,3,290),TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
+      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX   
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),IPLAST(6),ISIZE(6),
+     /PENFRA(6,3,300),TCFMAX(6)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/RANM/RNMX(6)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS
-      COMMON/ISPT/XS(2000),YS(2000),ZS(2000),TS(2000),ES(2000),   
-     /DCX(2000),DCY(2000),DCZ(2000),IPL(2000)
+      COMMON/ISPT/XS(8000),YS(8000),ZS(8000),TS(8000),ES(8000),   
+     /DCX(8000),DCY(8000),DCZ(8000),IPL(8000)
       COMMON/TPLOUT/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),VZTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT 
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO 
-      COMMON/IONFL/NC0(6,290),EC0(6,290),NG1(6,290),EG1(6,290),
-     /NG2(6,290),EG2(6,290),WKLM(6,290),EFL(6,290)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
-      DIMENSION EPRM(10000000),IESPECP(100),TEMP(6,4000)            
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO 
+      COMMON/IONFL/NC0(6,300),EC0(6,300),NG1(6,300),EG1(6,300),
+     /NG2(6,300),EG2(6,300),WKLM(6,300),EFL(6,300)
+      DIMENSION EPRM(10000000),IESPECP(100),TEMP(6,4000) 
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
 C   THIS ROUTINE HANDLES TERMINATIONS AT FIXED DRIFT TIMES.   
 C ------------------------------------------------------------------- 
-      IF(JPRT.EQ.0) THEN
-C CALCULATION OF APPROXIMATE STARTING PARAMETERS
-       NMAX=NMAXOLD
-       IF(NMAXOLD.GT.80000000) NMAX=80000000
-      ELSE
-C ENTRY FOR NORMAL CALCULATION
-       NMAX=NMAXOLD
-      ENDIF 
       S=0.0D0 
       ST=0.0D0 
       X=0.0D0
@@ -5594,12 +5302,9 @@ C ENTRY FOR NORMAL CALCULATION
       DO 26 I=1,5
       DO 26 K=1,6
    26 ICOLL(K,I)=0
-      DO 27 I=1,290
+      DO 27 I=1,300
       DO 27 K=1,6
    27 ICOLN(K,I)=0
-      DO 271 I=1,10
-      DO 271 K=1,6
-  271 ICOLNN(K,I)=0
       DO 28 I=1,4000
    28 SPEC(I)=0.0D0            
       DO 33 I=1,100
@@ -5630,16 +5335,7 @@ C ENTRY FOR NORMAL CALCULATION
       NCLUS=0
       J1=1 
       ZSTRT=0.0D0
-      TSSTRT=0.0D0 
-C 
-      DO 111 K=1,6
-      DO 111 J=1,N4000
-  111 TEMP(K,J)=TCF(K,J)+TCFN(K,J)
-      ABSFAKEI=DABS(FAKEI) 
-      IFAKE=0
-      DO 112 J=1,8
-  112 IFAKET(J)=0
-C                                  
+      TSSTRT=0.0D0                                                    
 C     INITIAL DIRECTION COSINES                                         
       DCZ1=DCOS(THETA)                                                  
       DCX1=DSIN(THETA)*DCOS(PHI)                                        
@@ -5774,57 +5470,12 @@ C CALCULATE ENERGY WITH STATIONARY GAS TARGET
       EOK=((VEX-VGX)**2+(VEY-VGY)**2+(VEZ-VGZ)**2)/CONST10
       IE=DINT(EOK/ESTEP)+1                                             
       IE=DMIN0(IE,N4000)                                              
-C                                                    I                   
-C     TEST FOR REAL OR NULL COLLISION  
-C                                 
-      R5=drand48(RDUM)                                                  
-      TEST1=TCF(KGAS,IE)/TCFMAX(KGAS)                                  
-      IF(R5.LE.TEST1) GO TO 137                                         
-      NNULL=NNULL+1
-      TEST2=TEMP(KGAS,IE)/TCFMAX(KGAS)
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST(KGAS).EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(KGAS,IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(KGAS,I)=ICOLNN(KGAS,I)+1
-       GO TO 1
-      ENDIF                               
-      TEST3=(TEMP(KGAS,IE)+ABSFAKEI)/TCFMAX(KGAS)
-      IF(R5.LT.TEST3) THEN
-C FAKE COLLISION INCREMENT COUNTERS
-       IFAKE=IFAKE+1
-       IFAKET(IPLANE+1)=IFAKET(IPLANE+1)+1 
-       IF(FAKEI.LT.0.0) THEN
-        NEION=NEION+1
-C FAKE ATTACHMENT START NEW ELECTRON
-        IF(NELEC.EQ.(NCLUS+1)) GO TO 544
-C ELECTRON CAPTURED TAKE NEXT ELECTRON FROM STORE
-        GO TO 20
-       ENDIF
-C FAKE IONISATION ADD ELECTRON TO STORE
-       NCLUS=NCLUS+1
-       NPONT=NPONT+1
-       NMXADD=MAX(NPONT,NMXADD)
-       IF(NPONT.GT.2000) THEN 
-        WRITE(6,546) NPONT,ITER
-        STOP
-       ENDIF     
-       A=T*CONST9*DSQRT(E1)
-       XS(NPONT)=X+DCX1*A       
-       YS(NPONT)=Y+DCY1*A
-       ZS(NPONT)=Z+DCZ1*A+T*T*F1
-       TS(NPONT)=ST+T
-       ES(NPONT)=E
-       IPL(NPONT)=IPLANE
-       DCX(NPONT)=DCX2
-       DCY(NPONT)=DCY2
-       DCZ(NPONT)=DCZ2
-       GO TO 1
-      ENDIF                      
+C                                                                       
+C     TEST FOR REAL OR NULL COLLISION                                   
+      R4=drand48(RDUM)                                                  
+      TTEM=TCF(KGAS,IE)/TCFMAX(KGAS)                                  
+      IF(R4.LE.TTEM)GO TO 137                                           
+      NNULL=NNULL+1                                                     
       GO TO 1 
   137 NCOL=NCOL+1 
 C CALCULATE DIRECTION COSINES OF ELECTRON IN 0 KELVIN FRAME
@@ -5896,7 +5547,7 @@ C OF IONISATION ELECTRON
       NCLUS=NCLUS+1
       NPONT=NPONT+1
       NMXADD=MAX(NPONT,NMXADD)
-      IF(NPONT.GT.2000) THEN 
+      IF(NPONT.GT.8000) THEN 
       WRITE(6,546) NPONT,ITER
  546  FORMAT(2X,' PROGRAM STOPPED . NPONT=',I5,' ITER=',I10)
       STOP
@@ -5935,6 +5586,10 @@ C AUGER EMISSION WITHOUT FLUORESCENCE
        DO 701 JFL=1,NAUG
        NCLUS=NCLUS+1
        NPONT=NPONT+1
+       IF(NPONT.GT.8000) THEN 
+        WRITE(6,546) NPONT,ITER
+        STOP
+       ENDIF
        XS(NPONT)=X
        YS(NPONT)=Y
        ZS(NPONT)=Z
@@ -5969,7 +5624,7 @@ C  GIVE IONISATION OF THE OTHER GASES IN THE MIXTURE.
        IF(RAN.GT.PENFRA(KGAS,1,I)) GO TO 5
        NCLUS=NCLUS+1
        NPONT=NPONT+1
-       IF(NPONT.GT.2000) THEN 
+       IF(NPONT.GT.8000) THEN 
         WRITE(6,546) NPONT,ITER
         STOP
        ENDIF
@@ -6152,7 +5807,7 @@ C  MAIN LOOP END
      /ESTIMATED ALPHA.  NCLUS = ',I7,'  ITER =',I9)      
       STOP
       ENDIF
-      IF(JPRT.EQ.1) WRITE(6,878) NELEC,NEION,IPRIM
+      WRITE(6,878) NELEC,NEION,IPRIM
  878  FORMAT(/,' TOTAL NO OF ELECTRONS=',I10,/,' TOTAL NO OF NEG. IONS='
      /,I10,/,' TOTAL NO OF PRIMARIES=',I10)  
       EPRMBAR=0.0D0
@@ -6163,7 +5818,7 @@ C  MAIN LOOP END
  310  EPRMBAR=EPRMBAR+EPRM(I)
       EBAR=EPRMBAR/IPRIM
       EERR=DSQRT(E2PRM/IPRIM-EBAR**2)
-      IF(JPRT.EQ.1) WRITE(6,836) EBAR,EERR
+      WRITE(6,836) EBAR,EERR
  836  FORMAT(/,2X,'AVERAGE ENERGY OF PRIMARY ELECTRON =',F10.3,' EV.',/,
      /'   ENERGY SPREAD OF PRIMARY ELECTRON =',F10.3,' EV.')
 C     WRITE(6,835) (IESPECP(J),J=1,100)
@@ -6184,7 +5839,7 @@ C    /,10(2X,10I5,/))
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/TPLOUT/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),VZTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT 
 C-----------------------------------------------------------------------
@@ -6224,11 +5879,11 @@ C     DCY2=DCY1*CONST6
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/FRED/FCION(4000),FCATT(4000)                               
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS 
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
       COMMON/MIX2/E(4000),EROOT(4000),QTOT(4000),QREL(4000),QINEL(4000),
      /QEL(4000) 
@@ -6263,21 +5918,19 @@ C-----------------------------------------------------
      /E ATTACHMENT =',E11.4,' *10**12/SEC') 
       RETURN   
       END
-      SUBROUTINE PT(JPRT)
+      SUBROUTINE PT
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/TPLOUT/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),VZTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT
       COMMON/PTTOF/RI(8),EPT(8),VZPT(8),TTEST(8)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
       DIMENSION ANTPL(8)
 C ------------------------------------------------
 C CALCULATES PULSED TOWNSEND COEFFICIENTS
 C-------------------------------------------------
       ANTPL(1)=DFLOAT(NETPL(1))
       RI(1)=(DLOG(ANTPL(1))-DLOG(DFLOAT(IPRIM)))/TSTEP
-      RI(1)=RI(1)-FAKEI
       EPT(1)=ETPL(1)/ANTPL(1)
       TTEST(1)=TTPL(1)/ANTPL(1)
       VZPT(1)=1.0D+09*VZTPL(1)/ANTPL(1)
@@ -6288,23 +5941,21 @@ C-------------------------------------------------
       ENDIF      
       ANTPL(I)=DFLOAT(NETPL(I))
       RI(I)=(DLOG(ANTPL(I))-DLOG(ANTPL(I-1)))/TSTEP
-      RI(I)=RI(I)-FAKEI
       EPT(I)=ETPL(I)/ANTPL(I)
       TTEST(I)=TTPL(I)/ANTPL(I)
       VZPT(I)=1.0D+09*VZTPL(I)/ANTPL(I)
   10  CONTINUE
-  11  IF(JPRT.EQ.1) WRITE(6,900) ITFINAL
+  11  WRITE(6,900) ITFINAL
  900  FORMAT(2(/),' PULSED TOWNSEND RESULTS AT',I2,' SEQUENTIAL TIME PLA
      /NES',/,' PLANE NO.   (ION-ATT) FREQ.   ENERGY      WV      NO.OF E
      /LECTRONS',/)   
       DO 20 IPL=1,ITFINAL
-      IF(JPRT.EQ.1) WRITE(6,910) IPL,RI(IPL),EPT(IPL),VZPT(IPL),
-     /NETPL(IPL)
+      WRITE(6,910) IPL,RI(IPL),EPT(IPL),VZPT(IPL),NETPL(IPL)
  910  FORMAT(2X,I2,4X,E15.4,7X,F7.2,4X,F7.2,3X,I8)
   20  CONTINUE 
       RETURN
       END
-      SUBROUTINE TOF(JPRT)
+      SUBROUTINE TOF
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
@@ -6318,10 +5969,6 @@ C-------------------------------------------------
 C----------------------------------------------------------
 C CALCULATES TIME OF FLIGHT COEFFICIENTS
 C---------------------------------------------
-      IF(ITHRM.EQ.1) CALL COLFT(DUM1,DUM2,FRION,FRATT,DUM3,IDUM4)
-      IF(ITHRM.EQ.0) CALL COLF(DUM1,DUM2,FRION,FRATT,DUM3,IDUM4)
-      ATTOINT=FRATT/FRION
-      CORERR=DABS((FAKEI+FRION-FRATT)/(FRION-FRATT))
       ANTPL(1)=DFLOAT(NETPL(1))
       WR(1)=ZTPL(1)/(ANTPL(1)*TSTEP)
       DLTF(1)=((ZZTPL(1)/ANTPL(1))-(ZTPL(1)/ANTPL(1))**2)/(2.0D0*TSTEP)
@@ -6343,13 +5990,12 @@ C---------------------------------------------
       DXTF(I)=DXTF(I)*1.0D+16
       DYTF(I)=DYTF(I)*1.0D+16
   15  CONTINUE
-      IF(JPRT.EQ.1) WRITE(6,900) ITFINAL
+      WRITE(6,900) ITFINAL
  900  FORMAT(2(/),' TIME OF FLIGHT RESULTS AT',I2,' SEQUENTIAL TIME PLAN
      /ES',/,' PLANE NO.        DL         DX          DY            WR',
      //)
       DO 20 IPL=1,ITFINAL   
-      IF(JPRT.EQ.1) WRITE(6,910) IPL,DLTF(IPL),DXTF(IPL),DYTF(IPL),
-     /WR(IPL)
+      WRITE(6,910) IPL,DLTF(IPL),DXTF(IPL),DYTF(IPL),WR(IPL)
  910  FORMAT(3X,I3,4X,3F12.1,4X,F8.2)
   20  CONTINUE    
       IF(NETPL(1).GT.NETPL(ITFINAL)) THEN
@@ -6390,18 +6036,18 @@ C NET IONISATION TAKE RESULTS FROM PLANE ITFINAL
        I1=ITFINAL
        I2=ITFINAL-1  
        TOFENE=EPT(I1)
-       TOFENER=100.0D0*DABS((EPT(I1)-EPT(I2))/EPT(I1))
+       TOFENER=100.0D0*DABS((EPT(I1)-EPT(I2))/(2.0D0*EPT(I1)))
        TOFWV=VZPT(I1)
-       TOFWVER=100.0D0*DABS((VZPT(I1)-VZPT(I2))/VZPT(I1))
+       TOFWVER=100.0D0*DABS((VZPT(I1)-VZPT(I2))/(2.0D0*VZPT(I1)))
        TOFDL=DLTF(I1)
-       TOFDLER=100.0D0*DABS((DLTF(I1)-DLTF(I2))/DLTF(I1))
+       TOFDLER=100.0D0*DABS((DLTF(I1)-DLTF(I2))/(2.0D0*DLTF(I1)))
        TDT1=(DXTF(I1)+DYTF(I1))/2.0D0
        TDT2=(DXTF(I2)+DYTF(I2))/2.0D0
        TOFDT=TDT1
-       TOFDTER=100.0D0*DABS((TDT1-TDT2)/TDT1)
+       TOFDTER=100.0D0*DABS((TDT1-TDT2)/(2.0D0*TDT1))
        TOFWR=WR(I1)
-       TOFWRER=100.0D0*DABS((WR(I1)-WR(I2))/WR(I1))
-       ATER=DABS((RI(I1)-RI(I2))/RI(I1))
+       TOFWRER=100.0D0*DABS((WR(I1)-WR(I2))/(2.0D0*WR(I1)))
+       ATER=DABS((RI(I1)-RI(I2))/(2.0D0*RI(I1)))
        RALPHA=RI(I1)/(1.0D0-ATTOINT)
        RALPER=100.0D0*DSQRT(ATER**2+AIOERT**2)
        RATTOF=ATTOINT*RI(I1)/(1.0D0-ATTOINT)
@@ -6413,34 +6059,32 @@ C NET IONISATION TAKE RESULTS FROM PLANE ITFINAL
       ENDIF
       RETURN
       END               
-      SUBROUTINE MONTEFDT                                      
+      SUBROUTINE MONTEFDT                                               
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX   
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290), 
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS 
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/RANM/RNMX(6)
-      COMMON/IPS/XSS(2000),YSS(2000),ZSS(2000),TSS(2000),ESS(2000),
-     /DCXS(2000),DCYS(2000),DCZS(2000),IPLS(2000)  
+      COMMON/IPS/XSS(8000),YSS(8000),ZSS(8000),TSS(8000),ESS(8000),
+     /DCXS(8000),DCYS(8000),DCZS(8000),IPLS(8000)  
       COMMON/SPLOUT/ESPL(8),XSPL(8),YSPL(8),ZSPL(8),TSPL(8),XXSPL(8),
      /YYSPL(8),ZZSPL(8),VZSPL(8),TSSUM(8),TSSUM2(8),ATTOION,ATTIOER,
      /ATTATER,NESST(9)
       COMMON/SPL1/TMSPL(8),TTMSPL(8),RSPL(8),RRSPL(8),RRSPM(8)
       COMMON/CTCALC/ZPLANE1,ZPLANE2,ZPLANE3,ZPLANE4,ZPLANE5,ZPLANE6,
      /ZPLANE7,ZPLANE8,IZFINAL
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO 
-      COMMON/IONFL/NC0(6,290),EC0(6,290),NG1(6,290),EG1(6,290),
-     /NG2(6,290),EG2(6,290),WKLM(6,290),EFL(6,290)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO 
+      COMMON/IONFL/NC0(6,300),EC0(6,300),NG1(6,300),EG1(6,300),
+     /NG2(6,300),EG2(6,300),WKLM(6,300),EFL(6,300)
       DIMENSION EPRM(10000000),IESPECP(100),TEMP(6,4000)
 C----------------------------------------------------------------------
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
@@ -6467,12 +6111,9 @@ C -------------------------------------------------------------------
       DO 26 I=1,5
       DO 26 K=1,6
    26 ICOLL(K,I)=0
-      DO 27 I=1,290
+      DO 27 I=1,300
       DO 27 K=1,6
    27 ICOLN(K,I)=0
-      DO 271 I=1,10
-      DO 271 K=1,6
-  271 ICOLNN(K,I)=0
       DO 28 I=1,4000
    28 SPEC(I)=0.0D0            
       DO 33 I=1,100
@@ -6512,15 +6153,6 @@ C -------------------------------------------------------------------
       J1=1                                                       
       ZSTRT=0.0D0
       TSSTRT=0.0D0 
-C 
-      DO 111 K=1,6
-      DO 111 J=1,4000
-  111 TEMP(K,J)=TCF(K,J)+TCFN(K,J)
-      ABSFAKEI=DABS(FAKEI)
-      IFAKE=0
-      DO 112 J=1,9
-  112 IFAKED(J)=0
-C
 C GENERATE INITIAL RANDOM NUMBERS FOR MAXWELL BOLTZMAN 
       CALL GERJAN
       IMBPT=0
@@ -6674,7 +6306,7 @@ C CALCULATE DIRECTION COSINES BEFORE COLLISION
       DCZ2=DCZ1*CONST6+EFIELD*T*CONST5/DSQRT(E)
       AIS=1.0D0
       IF(DCZ2.LT.0.0) AIS=-1.0D0
-      DCZ2=AIS*DSQRT(1.0D0-DCX2*DCX2-DCY2*DCY2)
+      DCZ2=AIS*DSQRT(1.0D0-DCX2*DCX2-DCY2*DCY2) 
 C CALCULATE ELECTRON VELOCITY VECTORS VEX,VEY,VEZ
       VTOT=CONST9*DSQRT(E)
       VEX=DCX2*VTOT
@@ -6685,70 +6317,11 @@ C CALCULATE ENERGY WITH STATIONARY GAS TARGET
       IE=DINT(EOK/ESTEP)+1                                             
       IE=DMIN0(IE,N4000)                                              
 C                                                                       
-C     TEST FOR REAL OR NULL COLLISION 
-C                                  
-      R5=drand48(RDUM)                                        
-      TEST1=TCF(KGAS,IE)/TCFMAX(KGAS)                                 
-      IF(R5.LE.TEST1) GO TO 137                                        
-      NNULL=NNULL+1            
-      TEST2=TEMP(KGAS,IE)/TCFMAX(KGAS)
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST(KGAS).EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=1+1
-       IF(CFN(KGAS,IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(KGAS,I)=ICOLNN(KGAS,I)+1
-       GO TO 1
-      ENDIF                       
-      TEST3=(TEMP(KGAS,IE)+ABSFAKEI)/TCFMAX(KGAS)
-      IF(R5.LT.TEST3) THEN
-C FAKE IONISATION INCREMENT COUNTER AND ADD ELECTRON TO STORE
-       IFAKE=IFAKE+1
-       IFAKED(IZPLANE)=IFAKED(IZPLANE)+1
-       IF(FAKEI.LT.0.0) THEN
-        NEION=NEION+1
-C FAKE ATTACHMENT START NEW ELECTRON
-        IF(NELEC.EQ.(NCLUS+1)) GO TO 544
-C ELECTRON CAPTURED TAKE NEXT ELECTRON FROM STORE
-        GO TO 20
-       ENDIF
-C FAKE IONISATION ADD ELECTRON TO STORE
-       NCLUS=NCLUS+1
-       NPONT=NPONT+1
-       NMXADD=MAX(NPONT,NMXADD) 
-       IF(NPONT.GT.2000) THEN
-        WRITE(6,546) NPONT,ITER
-        STOP
-       ENDIF     
-       A=T*CONST9*DSQRT(E1)
-       XSS(NPONT)=X+DCX1*A        
-       YSS(NPONT)=Y+DCY1*A
-       ZSS(NPONT)=Z+DCZ1*A+T*T*F1
-       TSS(NPONT)=ST+T
-       ESS(NPONT)=E
-       DCXS(NPONT)=DCX2
-       DCYS(NPONT)=DCY2
-       AIS=1.0D0
-       IF(DCZ2.LT.0.0) AIS=-1.0D0
-C      DCZS(NPONT)=DCZ2
-       DCZS(NPONT)=AIS*DSQRT(1.0D0-DCX2*DCX2-DCY2*DCY2)
-       IDM1=1+DINT(ZSS(NPONT)/ZSTEP)
-C       IF(ZSS(NPONT).GT.ZFINAL.OR.ZSS(NPONT).LT.0.0) THEN
-C       NCLUS=NCLUS-1
-C       NPONT=NPONT-1
-C       IFAKE=IFAKE-1
-C       IFAKED(IZPLANE)=IFAKED(IZPLANE)-1
-C       GO TO 1
-C      ENDIF 
-       IF(IDM1.LT.1) IDM1=1
-       IF(IDM1.GT.9) IDM1=9     
-       IPLS(NPONT)=IDM1
-       NESST(IPLS(NPONT))=NESST(IPLS(NPONT))+1
-       GO TO 1
-      ENDIF                  
+C     TEST FOR REAL OR NULL COLLISION                                   
+      R4=drand48(RDUM)                                        
+      TTEM=TCF(KGAS,IE)/TCFMAX(KGAS)                                 
+      IF(R4.LE.TTEM)GO TO 137                                           
+      NNULL=NNULL+1                                                     
       GO TO 1
   137 NCOL=NCOL+1
 C CALCULATE DIRECTION COSINES OF ELECTRON IN 0 KELVIN FRAME
@@ -6829,7 +6402,7 @@ C OF IONISATION ELECTRON
       NCLUS=NCLUS+1
       NPONT=NPONT+1
       NMXADD=MAX(NPONT,NMXADD) 
-      IF(NPONT.GT.2000) THEN
+      IF(NPONT.GT.8000) THEN
       WRITE(6,546) NPONT,ITER
  546  FORMAT(2X,' PROGRAM STOPPED NPONT=',I5,' ITER=',I10)
       STOP
@@ -6909,7 +6482,7 @@ C IONISATION OF THE OTHER GASES IN THE MIXTURE.
        IF(RAN.GT.PENFRA(KGAS,1,I)) GO TO 5
        NCLUS=NCLUS+1
        NPONT=NPONT+1
-       IF(NPONT.GT.2000) THEN
+       IF(NPONT.GT.8000) THEN
         WRITE(6,546) NPONT,ITER
         STOP
        ENDIF 
@@ -7073,13 +6646,11 @@ C    INTERMEDIATE PRINTOUT
       W=W*1.0D+09                                                       
       XID=DFLOAT(ID)
       JCT=ID/100000
-C     IF(J1.LE.10) WRITE(6,201)                                         
+C     IF(J1.EQ.1) WRITE(6,201)                                         
 C 201 FORMAT(/,7X,'INTERMEDIATE OUTPUT',/,'    VEL       POS       TIME 
 C    /     COUNT')                  
 C     WRITE(6,202) W,ZTOTS,TTOTS,JCT     
-C 202 FORMAT(1X,F8.3,2(1X,D10.3),1X,I6)  
-C     write(6,7672) IFAKE 
-C7672 FORMAT(' IFAKE=',I10)
+C 202 FORMAT(1X,F8.3,2(1X,D10.3),1X,I6)    
       J1=J1+1            
       GO TO 1
 C  MAIN LOOP END          
@@ -7133,7 +6704,7 @@ C    /5,/))
       IMPLICIT INTEGER*8 (I-N)
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10) 
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300) 
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/SPLOUT/ESPL(8),XSPL(8),YSPL(8),ZSPL(8),TSPL(8),XXSPL(8),
      /YYSPL(8),ZZSPL(8),VZSPL(8),TSSUM(8),TSSUM2(8),ATTOION,ATTIOER,
@@ -7283,9 +6854,8 @@ C  FOUND BACKWARD SOLUTIONS
       COMMON/CTCALC/ZPLANE1,ZPLANE2,ZPLANE3,ZPLANE4,ZPLANE5,ZPLANE6,
      /ZPLANE7,ZPLANE8,IZFINAL
       COMMON/SSTOUT/VDOUT,VDERR,WSOUT,WSERR,DLOUT,DLERR,DTOUT,DTERR,
-     /ALPHSST,ALPHERR,ATTSST,ATTERR  
-      COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM      
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
+     /ALPHSST,ALPHERR,ATTSST,ATTERR     
+      COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM    
       DIMENSION ESST(8),VDSST(8),WSSST(8),DXSST(8),DYSST(8),WTEMP(8)
       DIMENSION DRSST(8)
       DIMENSION ALFNE(8),ALFNJ(8),ALFN(8),ZSST(8),DLSST(8)          
@@ -7295,7 +6865,7 @@ C CALCULATES STEADY STATE TOWNSEND COEFFICIENTS.
 C LOADS REULTS AND ERRORS INTO COMMON BLOCKS /SSTOUT/
 C -------------------------------------------------------------------
       VDOUT=0.0D0
-      VDERR=0.0D0
+      VDERR=0.0D0 
       WSOUT=0.0D0
       WSERR=0.0D0
       DLOUT=0.0D0
@@ -7333,17 +6903,8 @@ C  SUBSTITUTE NEPL FOR NEEST
      /(2.0D0*ZSTEP)    
       DLSST(1)=((TTMSPL(1)/TSSUM(1))-(TMSPL(1)/TSSUM(1))**2)*WSSST(1)**3
      //(2.0D0*ZSTEP)
-      IF(ITHRM.EQ.1) CALL COLFT(DUM1,DUM2,FRION,FRATT,DUM3,IDUM4) 
-      IF(ITHRM.EQ.0) CALL COLF(DUM1,DUM2,FRION,FRATT,DUM3,IDUM4)
-C CORRECT FOR FAKE IONISATION
-      CORF=(FRION-FRATT)/(FAKEI+FRION-FRATT) 
-      ATTOION=FRATT/FRION
-      CORERR=DABS((FAKEI+FRION-FRATT)/(FRION-FRATT))
-C     WRITE(6,8765) FAKEI,FRION,FRATT,CORF
-C8765 FORMAT(' FAKEI=',D12.4,' FRION=',D12.4,' FRATT=',D12.4,' CORF=',
-C    /D12.4)
       IF(NESST(1).EQ.0) GO TO 1 
-      ALFNE(1)=CORF*(DLOG(DFLOAT(NESST(1)))-DLOG(DFLOAT(IPRIM)))/ZSTEP
+      ALFNE(1)=(DLOG(DFLOAT(NESST(1)))-DLOG(DFLOAT(IPRIM)))/ZSTEP
     1 ALFNJ(1)=0.0D0
       ALFN(1)=0.0D0 
       DO 10 I=2,JPRINT 
@@ -7362,11 +6923,8 @@ C    /D12.4)
       ALFNJ(I)=(DLOG(TSSUM(I)*VDSST(I))-DLOG(TSSUM(I-1)*VDSST(I-1)))/ZST
      /EP
       ALFNE(I)=0.0D0
-      IF(NESST(I).EQ.0.OR.NESST(I-1).EQ.0) GO TO 9
+      IF(NESST(I).EQ.0.OR.NESST(I-1).EQ.0) GO TO 10
     9 ALFNE(I)=(DLOG(DFLOAT(NESST(I)))-DLOG(DFLOAT(NESST(I-1))))/ZSTEP
-      ALFN(I)=CORF*ALFN(I)
-      ALFNE(I)=CORF*ALFNE(I)
-      ALFNJ(I)=CORF*ALFNJ(I)
    10 CONTINUE
       DXFIN=((XXSPL(JPRINT)/TSSUM(JPRINT))-(XSPL(JPRINT)/TSSUM(JPRINT))
      /**2)*WSSST(JPRINT)/(JPRINT*2.0D0*ZSTEP)
@@ -7398,7 +6956,7 @@ C    /D12.4)
       DRSST(IPL)=(DXSST(IPL)+DYSST(IPL))/2.0    
   20  WRITE(6,810)IPL,NESST(IPL),VDSST(IPL),WSSST(IPL),DLSST(IPL),DRSST(
      /IPL),ESST(IPL),ALFN(IPL),ALFNJ(IPL),ALFNE(IPL)
- 810  FORMAT(1X,I2,2X,I7,2(1X,F6.1),2F9.1,F7.2,3F8.1)
+ 810  FORMAT(1X,I2,2X,I7,2(1X,F6.1),2F9.1,F6.2,3F8.2)
       IF(NESST(1).GT.NESST(5)) THEN
 C NET ATTACHMENT THEREFORE TAKE RESULTS FROM PLANE 2
        VDOUT=VDSST(2)
@@ -7439,19 +6997,17 @@ C NO IONISATION
       ELSE 
 C NET IONISATION THEREFORE TAKE RESULTS FROM PLANE 8
        VDOUT=VDSST(8)
-       VDERR=100.0D0*DABS((VDSST(8)-VDSST(7))/VDSST(8))
+       VDERR=100.0D0*DABS((VDSST(8)-VDSST(7))/(2.0D0*VDSST(8)))
        WSOUT=WSSST(8)
-       WSERR=100.0D0*DABS((WSSST(8)-WSSST(7))/WSSST(8))
+       WSERR=100.0D0*DABS((WSSST(8)-WSSST(7))/(2.0D0*WSSST(8)))
        DLOUT=DLFIN   
-       DLERR=100.0D0*DABS((DLOUT-DLSST(8))/DLOUT)
+       DLERR=100.0D0*DABS((DLOUT-DLSST(8))/(2.0D0*DLOUT))
        DTOUT=(DXFIN+DYFIN)/2.0D0
-       DTERR=100.0D0*DABS((DTOUT-DRSST(8))/DTOUT)
+       DTERR=100.0D0*DABS((DTOUT-DRSST(8))/(2.0D0*DTOUT))
        ATMP=(ALFN(8)+ALFNJ(8)+ALFNE(8))/3.0D0
        ATMP2=(ALFN(7)+ALFNJ(7)+ALFNE(7))/3.0D0
-       ATER=DABS((ATMP-ATMP2)/ATMP) 
+       ATER=DABS((ATMP-ATMP2)/(2.0D0*ATMP)) 
        ALPHSST=ATMP/(1.0D0-ATTOION)
-C      WRITE(6,885) ATMP,ATTOION
-C 885  FORMAT(' ATMP=',D12.4,' ATTOION=',D12.4)
        ALPHERR=100.0D0*DSQRT(ATER**2+ATTIOER**2)
        ATTSST=ATTOION*ATMP/(1.0D0-ATTOION)
        IF(ATTOION.NE.0.0D0) THEN
@@ -7473,17 +7029,16 @@ C 885  FORMAT(' ATMP=',D12.4,' ATTOION=',D12.4)
      /QIN6(250,4000),QSATT(4000)             
       COMMON/RATIO/AN1,AN2,AN3,AN4,AN5,AN6,AN,FRAC(6)                   
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)                 
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS 
       COMMON/SINT/SIMF(4000)                                            
       COMMON/NAMES/NAMEG(6)
-      COMMON/SCRIPT/DSCRPT(6,300),DSCRPTN(6,10)
-      CHARACTER*50 DSCRPT,DSCRPTN               
+      COMMON/SCRIPT/DSCRPT(6,300)                  
+      CHARACTER*50 DSCRPT                       
       CHARACTER*25 NAMEG  
       DIMENSION FREQEL(6),FREQSP(6),FREINE(6),FREATT(6),FREION(6)       
       DIMENSION SPECS(40)  
@@ -7533,31 +7088,6 @@ C     WRITE(6,15)
  1090 CONTINUE
  1100 CONTINUE
       WRITE(6,15)  
-      K=0
-      DO 1101 J=1,NGAS
- 1101 K=K+NPLAST(J) 
-      IF(K.EQ.0) GO TO 1092 
-      WRITE(6,335)
-  335 FORMAT(/,2X,'NULL COLLISION FREQUENCIES FOR GAS MIXTURE',/,'  NB. 
-     /OUTPUT CORRECTED FOR SCALING OF X-SECTIONS.',/,'------------------
-     /------------------------------')
-      DO 1091 JK=1,NGAS
-      IF(NPLAST(JK).EQ.0) GO TO 1091
-      WRITE(6,1065) NAMEG(JK)
-      DO 1080 JJ=1,NPLAST(JK) 
-      FRELV=FREQ*ICOLNN(JK,JJ)/DFLOAT(NREAL)
-      IF(ICOLNN(JK,JJ).EQ.0) THEN
-       ERRFE=0.0
-      ELSE
-       ERRFE=100.0D0*DSQRT(DFLOAT(ICOLNN(JK,JJ)))/DFLOAT(ICOLNN(JK,JJ))
-      ENDIF
-C RESCALE NULL COLLISIONS
-      FRELV=FRELV/(SCLENUL(JK,JJ)**2)
-      WRITE(6,1070) DSCRPTN(JK,JJ),FRELV,ERRFE
- 1080 CONTINUE
- 1091 CONTINUE
- 1092 CONTINUE
-      WRITE(6,15)
       WRITE(6,301)                                                      
   301 FORMAT(2(/),10X,' NORMALISED ENERGY DISTRIBUTION')                
       J1=0                                                              
@@ -7593,17 +7123,16 @@ C RESCALE NULL COLLISIONS
      /QIN6(250,4000),QSATT(4000)             
       COMMON/RATIO/AN1,AN2,AN3,AN4,AN5,AN6,AN,FRAC(6)                   
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
      /,TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)                
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS 
       COMMON/SINT/SIMF(4000)                                            
       COMMON/NAMES/NAMEG(6)
-      COMMON/SCRIPT/DSCRPT(6,300),DSCRPTN(6,10)
-      CHARACTER*50 DSCRPT,DSCRPTN               
+      COMMON/SCRIPT/DSCRPT(6,300)                  
+      CHARACTER*50 DSCRPT                       
       CHARACTER*25 NAMEG  
       DIMENSION FREQEL(6),FREQSP(6),FREINE(6),FREATT(6),FREION(6)       
       DIMENSION SPECS(40)  
@@ -7647,31 +7176,6 @@ C RESCALE NULL COLLISIONS
  1090 CONTINUE
  1100 CONTINUE
       WRITE(6,15) 
-      K=0
-      DO 1101 J=1,NGAS 
- 1101 K=K+NPLAST(J)
-      IF(K.EQ.0) GO TO 1092
-      WRITE(6,335)
-  335 FORMAT(/,2X,'NULL COLLISION FREQUENCIES FOR GAS MIXTURE',/,'  NB. 
-     /OUTPUT CORRECTED FOR SCALING OF X-SECTIONS.',/,'------------------
-     /------------------------------')
-      DO 1091 JK=1,NGAS
-      IF(NPLAST(JK).EQ.0) GO TO 1091
-      WRITE(6,1065) NAMEG(JK)
-      DO 1080 JJ=1,NPLAST(JK) 
-      FRELV=FREQ*ICOLNN(JK,JJ)/DFLOAT(NREAL)
-      IF(ICOLNN(JK,JJ).EQ.0) THEN
-       ERRFE=0.0
-      ELSE
-       ERRFE=100.0D0*DSQRT(DFLOAT(ICOLNN(JK,JJ)))/DFLOAT(ICOLNN(JK,JJ))
-      ENDIF
-C RESCALE NULL COLLISIONS
-      FRELV=FRELV/(SCLENUL(JK,JJ)**2)
-      WRITE(6,1070) DSCRPTN(JK,JJ),FRELV,ERRFE
- 1080 CONTINUE
- 1091 CONTINUE
- 1092 CONTINUE
-      WRITE(6,15)
 C     WRITE(6,301)                                                      
 C 301 FORMAT(2(/),10X,' NORMALISED ENERGY DISTRIBUTION')                
 C     J1=0                                                              
@@ -7708,10 +7212,9 @@ C 420 CONTINUE
       COMMON/CTOWNS/ALPHA,ATT
       COMMON/CTWNER/ALPER,ATTER
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),LAST(6),ISIZE(6),PENFRA(6,3,290)
-     /,TCFMAX(6)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),LAST(6),ISIZE(6),PENFRA(6,3,300)
+     /,TCFMAX(6) 
 C ----------------------------------------------------------------------     
 C  ESTIMATE TIME STEP  FOR AVALANCHE SIMULATION IN TIME OF FLIGHT SIM. 
 C  USES ESTIMATED GAIN OF 3.0 BETWEEN PLANES. 
@@ -7721,117 +7224,20 @@ C ----------------------------------------------------------------------
       IMAX=NMAX/10000000 
       IF(IMAX.LT.5) IMAX=5 
       NMAX=IMAX*10000000
+      ALPHAST=0.85D0*DABS(ALPHA-ATT) 
+      VDST=WZ*1.D-5
       CORR=760.0*(273.15+TEMPC)/(TORR*293.15)
-      ALPP=ALPHA/CORR
-      ATTP=ATT/CORR
-      ANETP=ALPP-ATTP
-      ANET=ALPHA-ATT
-      TCUTH=1.2D-10*CORR
-      TCUTL=1.D-13*CORR
-C   
-      IF (ANETP.GT.30.0) THEN
-       ALPHAD=0.0
-       ALP1=ALPHA
-       ATT1=ATT
-C WEAK ATTACHMENT
-       GO TO 6
-      ENDIF 
-C  SOME ATTACHMENT
-      IF(DABS(ANETP).LT.100.) THEN
-C SMALL NET ATTACHMENT
-       ALPHAD=DABS(ATT)*0.8
-      ELSE IF(DABS(ANETP).GE.100..AND.DABS(ANETP).LT.1000.) THEN
-C LARGER NET ATTACHMENT
-       ALPHAD=DABS(ANET)*0.65
-      ELSE IF(DABS(ANETP).GT.1000..AND.DABS(ANETP).LT.10000.) THEN
-       ALPHAD=DABS(ANET)*0.6
-      ELSE IF(DABS(ANETP).GT.10000..AND.DABS(ANETP).LT.100000.) THEN
-       ALPHAD=DABS(ANET)*0.5
-      ELSE IF(DABS(ANETP).GT.100000..AND.DABS(ANETP).LT.2000000.) THEN
-       ALPHAD=DABS(ANET)*0.4
-      ELSE 
-       WRITE(6,91) 
-   91 FORMAT(' ATTACHMENT TOO LARGE PROGRAM STOPPED')
-       STOP
-      ENDIF
-   3  VDST=DSQRT(WZ*WZ+WY*WY)*1.D-5
-      FAKEI=ALPHAD*WZ*1.D-12
-      ALPHAST=0.85*DABS(ALPHAD+ANET)                        
-      TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH) TSTEP=TCUTH
-      IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMIT
-      DO 4 J=1,NGAS 
-    4 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)/DFLOAT(NGAS)
-      WRITE(6,871) ALPHAST,ANET,ALPHAD,TSTEP
-  871 FORMAT(' ALPHAST1=',D10.3,' ANET1=',D10.3,' ALPHAD1=',D10.3,/,
-     /' TSTEP1=',D10.3)
-C  CONVERT TO  PICOSECONDS     
-      TSTEP=TSTEP*1.0D12
-      TFINAL=7.0D0*TSTEP
-      ITFINAL=7
-C CALCULATE GOOD STARTING VALUES FOR ALPHA AND NETA
-      JPRT=0
-      CALL MONTEFTGT(JPRT)
-      CALL PTG(JPRT)
-      CALL TOFG(JPRT)
-      TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY)
-      ALP1=RALPHA/TOFWR*1.D7
-      ALP1ER=RALPER*ALP1/100. 
-      ATT1=RATTOF/TOFWR*1.D7
-      ATT1ER=RATOFER*ATT1/100.
-      WRITE(6,944) ALP1,ALP1ER,ATT1,ATT1ER
-  944 FORMAT(' GOOD STARTING VALUES FOR CALC:',/,' ALPHA=',D12.3,' ERR='
-     /,D12.3,/,' NETA =',D12.3,' ERR=',D12.3)
-C
-C CALCULATE USING GOOD STARTING VALUES
-C  RESET TCFMAX
-      DO 44 J=1,NGAS
-   44 TCFMAX(J)=TCFMAX(J)-DABS(FAKEI)/DFLOAT(NGAS)
-C CALCULATE FAKE IONISATION RATE SCALING BY 1.2 
-      ALPHAD=DABS(ATT1)*1.2
-      IF((ALP1-ATT1).GT.30.*CORR) ALPHAD=DABS(ATT1)*0.4
-      IF(DABS(ALP1-ATT1).LT.(ALP1/10.0).OR.DABS(ALP1-ATT1).LT.
-     /(ATT1/10.0)) ALPHAD=DABS(ATT1)*0.3
-      IF((ALP1-ATT1).GT.100.*CORR) ALPHAD=0.0
-      WZ=TOFWRZ*1.D5 
-      WY=TOFWRY*1.D5 
-C
-C
-C NET IONISATION
-C   5 IF(ANET.GT.(11000./CORR)) THEN
-C LARGE IONISATION
-C      ALPHAD=7000.-(ALPHA-ATT)
-C     ELSE IF (DABS(ALPP).GT.(5.0*DABS(ANET)).OR.DABS(ATTP).GT.
-C    /(5.0*DABS(ANET))) THEN
-C LARGE CANCELLATION BETWEEN ATTACHMENT AND IONISATION
-C      ALPHAD=-6.0*(ALPHA-ATT)
-C     ELSE
-C      ALPHAD=0.0
-C     ENDIF
-    6 VTOT=DSQRT(WZ*WZ+WY*WY)
-      VDST=VTOT*1.D-5
-      FAKEI=ALPHAD*VTOT*1.D-12
-      ALPHAST=0.85D0*DABS(ALPHAD+ALP1-ATT1)
-      IF((ALP1+ALPHAD).GT.(10.0*ALPHAST).OR.ATT1.GT.(10.0*ALPHAST)) THEN
-C LARGE CANCELLATION BETWEEN ALPHA AND NETA. REDUCE STEP SIZE BY 15.0
-       IF((ALP1+ALPHAD).GT.100.*CORR) THEN
+      IF(ALPHA.GT.(10.0*ALPHAST).OR.ATT.GT.(10.0*ALPHAST)) THEN
+C  LARGE CANCELLATION BETWEEN ALPHA AND NETA REDUCE STEP SIZE BY 30.0
+       IF(ALPHA.GT.100.0*CORR) THEN
+        ALPHAST=ALPHAST*30.0
+       ELSE IF(ALPHA.GT.50.0*CORR) THEN
         ALPHAST=ALPHAST*15.0
-       ELSE IF((ALP1+ALPHAD).GT.50.0*CORR) THEN
-        ALPHAST=ALPHAST*12.0
        ELSE
         ALPHAST=ALPHAST*8.0
        ENDIF
-      ENDIF
+      ENDIF                                              
       TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH.AND.ALPHAD.NE.0.0) TSTEP=TCUTH
-C UPDATE NULL COLLISION FREQUENCY
-      DO 10 J=1,NGAS
-   10 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)/DFLOAT(NGAS)
-      ANET1=ALP1-ATT1
-      WRITE(6,878) ALPHAST,ANET1,ALPHAD,TSTEP
-  878 FORMAT(' ALPHAST=',D10.3,' ANET=',D10.3,' ALPHAD=',D10.3,/,
-     /' TSTEP=',D10.3)
       TSTEP=TSTEP*1.0D12
       TFINAL=7.0D0*TSTEP
       ITFINAL=7
@@ -7842,12 +7248,11 @@ C CALC TIME OF FLIGHT AND PT
      /--------')
       WRITE(6,26) TSTEP
    26 FORMAT(1(/),'  TIME STEP BETWEEN SAMPLING PLANES =',D12.5,' PICOSE
-     /CS.',/)        
-      JPRT=1             
-      CALL MONTEFTGT(JPRT)                            
+     /CS.',/)                     
+      CALL MONTEFTGT                            
       CALL FRIEDLANDT
-      CALL PTG(JPRT)
-      CALL TOFG(JPRT)
+      CALL PTG
+      CALL TOFG
       WRITE(6,27) RALPHA,RALPER,RATTOF,RATOFER
    27 FORMAT(/,'PT IONISATION AND ATTACHMENT RATES *10**12/SEC',/,'ALPHA
      /=',D10.3,' +- ',F6.2,' %      ATT=',D10.3,' +- ',F6.2,' %')    
@@ -7861,8 +7266,8 @@ C CALC TIME OF FLIGHT AND PT
    30 FORMAT(/,'TOF DRIFT VELOCITY')
       WRITE(6,31) TOFWRZ,TOFWRZER,TOFWRY,TOFWRYER   
    31 FORMAT(/,'WRZ=',F8.2,' +-',F6.1,' %    WRY=',F8.2,' +-',F6.1,' %')
-C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS      
-      TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY)
+C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS
+      TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY)      
       WRZN=TOFWR*1.0D05
       FC1=WRZN/(2.0D0*TOFDZZ)
       FC2=((RALPHA-RATTOF)*1.0D12)/TOFDZZ
@@ -7870,61 +7275,52 @@ C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS
       WRITE(6,888) ALPZZ
   888 FORMAT(/,'TOWNSEND COEFICIENT (ALPHA-ATT) CALCULATED FROM TOF RESU
      /LTS:',/,' ALPHA-ATT /CM.=',D11.4,' N.B. APPROXIMATE FORMULA NOT AC
-     /CURATE',/) 
+     /CURATE',/)
 C---- -------------------------------------------------    
 C      LOAD NEW ALPHA AND ATTACHMENT INTO COMMON BLOCKS
 C---- -------------------------------------------
       ALPHA=RALPHA/TOFWR*1.D7
       ALPER=RALPER*ALPHA/100.
       ATT=RATTOF/TOFWR*1.D7
-      ATTER=RATOFER*ATT/100.
+      ATTER=RATOFER*ATT*100.
 C     WRITE(6,32) ALPHA,ALPER,ATT,ATTER
 C  32 FORMAT(/,'TOWNSEND COEFICIENTS CALCULATED FROM TOF RESULTS:',2(/),
-C    /'IONISATION RATE /CM.=',D11.4,' +-',F6.2,/,'ATTACHMENT RATE /CM.='
-C    /,D11.4,' +-',F6.2,/)        
+C    /'IONISATION RATE /CM.=',D11.4,' +-',F6.2,' %',/,'ATTACHMENT RATE /
+C    /CM.=',D11.4,' +-',F6.2,' %',/,' N.B. APPROXIMATE FORMULA NOT ACCUR
+C    /ATE',/)           
 C --- -------------------------------------------      
       RETURN                                                     
       END                                                               
-      SUBROUTINE MONTEFTGT(JPRT)                                     
+      SUBROUTINE MONTEFTGT                                              
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
-      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAXOLD
+      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),IPLAST(6),ISIZE(6),
-     /PENFRA(6,3,290),TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),IPLAST(6),ISIZE(6),
+     /PENFRA(6,3,300),TCFMAX(6)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/RANM/RNMX(6)
-      COMMON/ISPT/XS(2000),YS(2000),ZS(2000),TS(2000),ES(2000),
-     /DCX(2000),DCY(2000),DCZ(2000),IPL(2000)
+      COMMON/ISPT/XS(8000),YS(8000),ZS(8000),TS(8000),ES(8000),
+     /DCX(8000),DCY(8000),DCZ(8000),IPL(8000)
       COMMON/TPLOUTG/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),YZTPL(8),VZTPL(8),VYTPL(8),NETPL(8),ATTOINT,
      /ATTERT,AIOERT 
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO 
-      COMMON/IONFL/NC0(6,290),EC0(6,290),NG1(6,290),EG1(6,290),
-     /NG2(6,290),EG2(6,290),WKLM(6,290),EFL(6,290)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
-      DIMENSION EPRM(10000000),IESPECP(100),TEMP(6,4000)           
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO 
+      COMMON/IONFL/NC0(6,300),EC0(6,300),NG1(6,300),EG1(6,300),
+     /NG2(6,300),EG2(6,300),WKLM(6,300),EFL(6,300)
+      DIMENSION EPRM(10000000),IESPECP(100),TEMP(6,4000)
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
 C   THIS ROUTINE HANDLES TERMINATIONS AT FIXED DRIFT TIMES. 
 C   B FIELD AT 90 DEGREES TO EFIELD  
 C ------------------------------------------------------------------- 
-      IF(JPRT.EQ.0) THEN
-C CALCULATION OF APPROXIMATE STARTING PARAMETERS
-       NMAX=NMAXOLD
-       IF(NMAXOLD.GT.80000000) NMAX=80000000
-      ELSE
-C ENTRY FOR NORMAL CALCULATION
-       NMAX=NMAXOLD 
-      ENDIF 
       S=0.0D0 
       ST=0.0D0 
       X=0.0D0
@@ -7950,11 +7346,8 @@ C ENTRY FOR NORMAL CALCULATION
       DO 26 I=1,5
    26 ICOLL(K,I)=0
       DO 27 K=1,6
-      DO 27 I=1,290
+      DO 27 I=1,300
    27 ICOLN(K,I)=0
-      DO 271 K=1,6
-      DO 271 I=1,10
-  271 ICOLNN(K,I)=0
       DO 28 I=1,4000
    28 SPEC(I)=0.0D0            
       DO 33 I=1,100
@@ -7986,15 +7379,6 @@ C ENTRY FOR NORMAL CALCULATION
       NPONT=0 
       NCLUS=0
       J1=1 
-C
-      DO 111 K=1,6
-      DO 111 J=1,N4000
-  111 TEMP(K,J)=TCF(K,J)+TCFN(K,J)
-      IFAKE=0
-      ABSFAKEI=DABS(FAKEI)
-      DO 112 J=1,8
-  112 IFAKET(J)=0
-C
 C GENERATE INITIAL RANDOM NUMBERS FOR MAXWELL BOLTZMAN 
       CALL GERJAN
       IMBPT=0
@@ -8145,56 +7529,11 @@ C CALCULATE ENERGY WITH STATIONARY GAS TARGET EOK
       IE=DINT(EOK/ESTEP)+1                                            
       IE=DMIN0(IE,N4000)                                               
 C                                                                       
-C     TEST FOR REAL OR NULL COLLISION   
-C                                
-      R5=drand48(RDUM)                                         
-      TEST1=TCF(KGAS,IE)/TCFMAX(KGAS)                                  
-      IF(R5.LE.TEST1) GO TO 137                                         
-      NNULL=NNULL+1 
-      TEST2=TEMP(KGAS,IE)/TCFMAX(KGAS)    
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST(KGAS).EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(KGAS,IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(KGAS,I)=ICOLNN(KGAS,I)+1
-       GO TO 1
-      ENDIF                      
-      TEST3=(TEMP(KGAS,IE)+ABSFAKEI)/TCFMAX(KGAS)
-      IF(R5.LT.TEST3) THEN
-C FAKE COLLISION INCREMENT COUNTER
-       IFAKE=IFAKE+1
-       IFAKET(IPLANE+1)=IFAKET(IPLANE+1)+1
-       IF(FAKEI.LT.0.0) THEN
-        NION=NION+1
-C FAKE ATTACHMENT START NEW ELECTRON
-        IF(NELEC.GT.(NCLUS+1)) GO TO 544
-C ELECTRON CAPTURED TAKE ELECTRON FROM STORE
-        GO TO 20
-       ENDIF
-C
-       NCLUS=NCLUS+1
-       NPONT=NPONT+1
-       NMXADD=MAX(NPONT,NMXADD)
-       IF(NPONT.GT.2000) THEN 
-        WRITE(6,546) NPONT,ITER
-        STOP
-       ENDIF     
-       XS(NPONT)=X+CX1*T       
-       YS(NPONT)=Y+EOVB*T+((CY1-EOVB)*SINWT+CZ1*(1.0D0-COSWT))/WB
-       ZS(NPONT)=Z+DZ
-       TS(NPONT)=ST+T
-       ES(NPONT)=E
-       IPL(NPONT)=IPLANE
-       BOT=1.0D0/DSQRT(CX2*CX2+CY2*CY2+CZ2*CZ2)
-       DCX(NPONT)=CX2*BOT
-       DCY(NPONT)=CY2*BOT
-       DCZ(NPONT)=CZ2*BOT
-       GO TO 1
-      ENDIF                  
+C     TEST FOR REAL OR NULL COLLISION                                   
+      R4=drand48(RDUM)                                         
+      TTEM=TCF(KGAS,IE)/TCFMAX(KGAS)                                  
+      IF(R4.LE.TTEM)GO TO 137                                           
+      NNULL=NNULL+1                                                     
       GO TO 1                             
   137 NCOL=NCOL+1
 C CALCULATE DIRECTION COSINES OF ELECTRON IN 0 KELVIN FRAME
@@ -8268,7 +7607,7 @@ C OF IONISATION ELECTRON
       NCLUS=NCLUS+1
       NPONT=NPONT+1
       NMXADD=MAX(NPONT,NMXADD)
-      IF(NPONT.GT.2000) THEN 
+      IF(NPONT.GT.8000) THEN 
       WRITE(6,546) NPONT,ITER
  546  FORMAT(2X,' PROGRAM STOPPED . NPONT=',I5,' ITER=',I10)
       STOP
@@ -8340,7 +7679,7 @@ C GIVE IONISATION OF THE OTHER GASES IN THE MIXTURE
        IF(RAN.GT.PENFRA(KGAS,1,I)) GO TO 5
        NCLUS=NCLUS+1
        NPONT=NPONT+1
-       IF(NPONT.GT.2000) THEN
+       IF(NPONT.GT.8000) THEN
         WRITE(6,546) NPONT,ITER
         STOP
        ENDIF
@@ -8524,7 +7863,7 @@ C  MAIN LOOP END
      /ESTIMATED ALPHA.  NCLUS = ',I7,'  ITER =',I9)      
       STOP
       ENDIF
-      IF(JPRT.EQ.1) WRITE(6,878) NELEC,NEION,IPRIM
+      WRITE(6,878) NELEC,NEION,IPRIM
  878  FORMAT(/,' TOTAL NO OF ELECTRONS=',I8,/,' TOTAL NO OF NEG. IONS=',
      /I8,/,' TOTAL NO OF PRIMARIES=',I8)  
       EPRMBAR=0.0D0
@@ -8535,7 +7874,7 @@ C  MAIN LOOP END
  310  EPRMBAR=EPRMBAR+EPRM(I)
       EBAR=EPRMBAR/IPRIM
       EERR=DSQRT(E2PRM/IPRIM-EBAR**2)
-      IF(JPRT.EQ.1) WRITE(6,836) EBAR,EERR
+      WRITE(6,836) EBAR,EERR
  836  FORMAT(/,2X,'AVERAGE ENERGY OF PRIMARY ELECTRON =',F10.3,' EV.',/,
      /'   ENERGY SPREAD OF PRIMARY ELECTRON =',F10.3,' EV.')
 C     WRITE(6,835) (IESPECP(J),J=1,100)
@@ -8557,7 +7896,7 @@ C    /,10(2X,10I5,/))
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/TPLOUTG/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),YZTPL(8),VZTPL(8),VYTPL(8),NETPL(8),ATTOINT,
      /ATTERT,AIOERT 
@@ -8601,7 +7940,7 @@ C CALC TIME LEFT TO ARRIVE AT PLANE
       NETPL(IPLANE)=NETPL(IPLANE)+1 
       RETURN
       END
-      SUBROUTINE PTG(JPRT)
+      SUBROUTINE PTG
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
@@ -8609,14 +7948,12 @@ C CALC TIME LEFT TO ARRIVE AT PLANE
      /YYTPL(8),ZZTPL(8),YZTPL(8),VZTPL(8),VYTPL(8),NETPL(8),ATTOINT,
      /ATTERT,AIOERT
       COMMON/PTTOFG/RI(8),EPT(8),VZPT(8),VYPT(8),TTEST(8)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
       DIMENSION ANTPL(8)
 C ------------------------------------------------
 C CALCULATES PULSED TOWNSEND COEFFICIENTS
 C-------------------------------------------------
       ANTPL(1)=DFLOAT(NETPL(1))
       RI(1)=(DLOG(ANTPL(1))-DLOG(DFLOAT(IPRIM)))/TSTEP
-      RI(1)=RI(1)-FAKEI
       EPT(1)=ETPL(1)/ANTPL(1)
       TTEST(1)=TTPL(1)/ANTPL(1)
       VZPT(1)=1.0D+09*VZTPL(1)/ANTPL(1)
@@ -8628,24 +7965,22 @@ C-------------------------------------------------
       ENDIF
       ANTPL(I)=DFLOAT(NETPL(I))      
       RI(I)=(DLOG(ANTPL(I))-DLOG(ANTPL(I-1)))/TSTEP
-      RI(I)=RI(I)-FAKEI
       EPT(I)=ETPL(I)/ANTPL(I)
       TTEST(I)=TTPL(I)/ANTPL(I)
       VZPT(I)=1.0D+09*VZTPL(I)/ANTPL(I)
       VYPT(I)=1.0D+09*VYTPL(I)/ANTPL(I)
   10  CONTINUE
-  11  IF(JPRT.EQ.1) WRITE(6,900) ITFINAL
+  11  WRITE(6,900) ITFINAL
  900  FORMAT(2(/),' PULSED TOWNSEND RESULTS AT',I2,' SEQUENTIAL TIME PLA
      /NES',/,'PLANE   (ION-ATT)FRQ.    ENERGY      WVZ       WVY   NO.OF
      / ELECTRONS',/)   
       DO 20 IPL=1,ITFINAL
-      IF(JPRT.EQ.1) WRITE(6,910) IPL,RI(IPL),EPT(IPL),VZPT(IPL),
-     /VYPT(IPL),NETPL(IPL)
+      WRITE(6,910) IPL,RI(IPL),EPT(IPL),VZPT(IPL),VYPT(IPL),NETPL(IPL)
  910  FORMAT(1X,I2,4X,D12.4,4X,F7.2,4X,F6.1,4X,F6.1,4X,I8)
   20  CONTINUE 
       RETURN
       END
-      SUBROUTINE TOFG(JPRT)
+      SUBROUTINE TOFG 
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
@@ -8663,7 +7998,6 @@ C CALCULATES TIME OF FLIGHT COEFFICIENTS
 C---------------------------------------------
       IF(ITHRM.EQ.1) CALL COLFT(DUM1,DUM2,FRION,FRATT,DUM3,IDUM4)
       IF(ITHRM.EQ.0) CALL COLF(DUM1,DUM2,FRION,FRATT,DUM3,IDUM4)
-      CORERR=DABS((FAKEI+FRION-FRATT)/(FRION-FRATT))
       ATTOINT=FRATT/FRION
       ANTPL(1)=DFLOAT(NETPL(1))
       WRZ(1)=ZTPL(1)/(ANTPL(1)*TSTEP)
@@ -8695,13 +8029,13 @@ C---------------------------------------------
       DYTF(I)=DYTF(I)*1.0D+16
       DYZTF(I)=DYZTF(I)*1.0D+16
   15  CONTINUE
-      IF(JPRT.EQ.1) WRITE(6,900) ITFINAL
+      WRITE(6,900) ITFINAL
  900  FORMAT(2(/),' TIME OF FLIGHT RESULTS AT',I2,' SEQUENTIAL TIME PLAN
      /ES',/,'PLANE    DZZ      DXX      DYY      DYZ        WRZ         
      /WRY',/)
       DO 20 IPL=1,ITFINAL   
-      IF(JPRT.EQ.1) WRITE(6,910) IPL,DZTF(IPL),DXTF(IPL),DYTF(IPL),
-     /DYZTF(IPL),WRZ(IPL),WRY(IPL)  
+      WRITE(6,910) IPL,DZTF(IPL),DXTF(IPL),DYTF(IPL),DYZTF(IPL),WRZ(IPL)
+     /,WRY(IPL)  
  910  FORMAT(1X,I2,2X,4F9.1,4X,F8.2,4X,F8.2)
   20  CONTINUE    
       IF(NETPL(1).GT.NETPL(ITFINAL)) THEN
@@ -8790,10 +8124,9 @@ C NET IONISATION TAKE RESULTS FROM PLANE ITFINAL
       COMMON/CTOWNS/ALPHA,ATT
       COMMON/CTWNER/ALPER,ATTER
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),IPLAST(6),ISIZE(6),
-     /PENFRA(6,3,290),TCFMAX(6)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),IPLAST(6),ISIZE(6),
+     /PENFRA(6,3,300),TCFMAX(6) 
 C ----------------------------------------------------------------------     
 C  ESTIMATE TIME STEP  FOR AVALANCHE SIMULATION IN TIME OF FLIGHT SIM. 
 C  USES ESTIMATED GAIN OF 3.0 BETWEEN PLANES. 
@@ -8803,118 +8136,20 @@ C ----------------------------------------------------------------------
       IMAX=NMAX/10000000 
       IF(IMAX.LT.5) IMAX=5 
       NMAX=IMAX*10000000
+      ALPHAST=0.85D0*DABS(ALPHA-ATT) 
+      VDST=WZ*1.D-5
       CORR=760.0*(TEMPC+273.15)/(TORR*293.15)
-      ALPP=ALPHA/CORR
-      ATTP=ATT/CORR
-      ANETP=ALPP-ATTP
-      ANET=ALPHA-ATT
-      TCUTH=1.2D-10*CORR
-      TCUTL=1.D-13*CORR
-C   
-      IF (ANETP.GT.30.0) THEN
-       ALPHAD=0.0
-       ALP1=ALPHA
-       ATT1=ATT
-C WEAK ATTACHMENT
-       GO TO 6
-      ENDIF 
-C  SOME ATTACHMENT
-      IF(DABS(ANETP).LT.100.) THEN
-C SMALL NET ATTACHMENT
-       ALPHAD=DABS(ATT)*0.8
-      ELSE IF(DABS(ANETP).GE.100..AND.DABS(ANETP).LT.1000.) THEN
-C LARGER NET ATTACHMENT
-       ALPHAD=DABS(ANET)*0.65
-      ELSE IF(DABS(ANETP).GT.1000..AND.DABS(ANETP).LT.10000.) THEN
-       ALPHAD=DABS(ANET)*0.6
-      ELSE IF(DABS(ANETP).GT.10000..AND.DABS(ANETP).LT.100000.) THEN
-       ALPHAD=DABS(ANET)*0.5
-      ELSE IF(DABS(ANETP).GT.100000..AND.DABS(ANETP).LT.2000000.) THEN
-       ALPHAD=DABS(ANET)*0.4
-      ELSE 
-       WRITE(6,91) 
-   91 FORMAT(' ATTACHMENT TOO LARGE PROGRAM STOPPED')
-       STOP
-      ENDIF
-   3  VDST=DSQRT(WZ*WZ+WY*WY+WX*WX)*1.D-5
-      FAKEI=ALPHAD*DSQRT(WZ*WZ+WY*WY+WZ*WZ)*1.D-12
-      ALPHAST=0.85*DABS(ALPHAD+ANET)                        
-      TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH) TSTEP=TCUTH
-      IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMIT
-      DO 4 J=1,NGAS 
-    4 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)/DFLOAT(NGAS)
-      WRITE(6,871) ALPHAST,ANET,ALPHAD,TSTEP
-  871 FORMAT(' ALPHAST1=',D10.3,' ANET1=',D10.3,' ALPHAD1=',D10.3,/,
-     /' TSTEP1=',D10.3)
-C  CONVERT TO  PICOSECONDS     
-      TSTEP=TSTEP*1.0D12
-      TFINAL=7.0D0*TSTEP
-      ITFINAL=7
-C CALCULATE GOOD STARTING VALUES FOR ALPHA AND NETA
-      JPRT=0
-      CALL MONTEFTHT(JPRT)
-      CALL PTH(JPRT)
-      CALL TOFH(JPRT)
-      TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY+TOFWRX*TOFWRX)
-      ALP1=RALPHA/TOFWR*1.D7
-      ALP1ER=RALPER*ALP1/100. 
-      ATT1=RATTOF/TOFWR*1.D7
-      ATT1ER=RATOFER*ATT1/100.
-      WRITE(6,944) ALP1,ALP1ER,ATT1,ATT1ER
-  944 FORMAT(' GOOD STARTING VALUES FOR CALC:',/,' ALPHA=',D12.3,' ERR='
-     /,D12.3,/,' NETA =',D12.3,' ERR=',D12.3)
-C
-C CALCULATE USING GOOD STARTING VALUES
-C  RESET TCFMAX
-      DO 44 J=1,NGAS
-   44 TCFMAX(J)=TCFMAX(J)-DABS(FAKEI)/DFLOAT(NGAS)
-C CALCULATE FAKE IONISATION RATE SCALING BY 1.2 
-      ALPHAD=DABS(ATT1)*1.2
-      IF((ALP1-ATT1).GT.30.*CORR) ALPHAD=DABS(ATT1)*0.4
-      IF(DABS(ALP1-ATT1).LT.(ALP1/10.0).OR.DABS(ALP1-ATT1).LT.
-     /(ATT1/10.0)) ALPHAD=DABS(ATT1)*0.3
-      IF((ALP1-ATT1).GT.100.*CORR) ALPHAD=0.0
-      WZ=TOFWRZ*1.D5
-      WY=TOFWRY*1.D5
-      WX=TOFWRX*1.D5
-C
-C
-C NET IONISATION
-C   5 IF(ANET.GT.(11000./CORR)) THEN
-C HIGH IONISATION
-C      ALPHAD=7000.-(ALPHA-ATT)
-C     ELSE IF (DABS(ALPP).GT.(5.0*DABS(ANET)).OR.DABS(ATTP).GT.
-C    /(5.0*DABS(ANET))) THEN
-C LARGE CANCELLATION BETWEEN ATTACHMENT AND IONISATION
-C      ALPHAD=-6.0*DABS(ALPHA-ATT)
-C     ELSE
-C      ALPHAD=0.0
-C     ENDIF
-    6 VTTT=DSQRT(WZ*WZ+WY*WY+WX*WX) 
-      VDST=VTTT*1.D-5
-      FAKEI=ALPHAD*VTTT*1.D-12
-      ALPHAST=0.85D0*DABS(ALPHAD+ALP1-ATT1)
-      IF((ALP1+ALPHAD).GT.(10.0*ALPHAST).OR.ATT1.GT.(10.0*ALPHAST)) THEN
-C LARGE CANCELLATION BETWEEN ALPHA AND NETA. REDUCE STEP SIZE BY 15.0
-       IF((ALP1+ALPHAD).GT.100.*CORR) THEN
+      IF(ALPHA.GT.(10.0*ALPHAST).OR.ATT.GT.(10.0*ALPHAST)) THEN
+C LARGE CANCELLATION BETWEEN ALPHA AND NETA REDUCE STEP SIZE BY 30.0
+       IF(ALPHA.GT.100.0*CORR) THEN
+        ALPHAST=ALPHAST*30.0
+       ELSE IF(ALPHA.GT.50.0*CORR) THEN
         ALPHAST=ALPHAST*15.0
-       ELSE IF((ALP1+ALPHAD).GT.50.0*CORR) THEN
-        ALPHAST=ALPHAST*12.0
        ELSE
         ALPHAST=ALPHAST*8.0
        ENDIF
-      ENDIF
+      ENDIF                                                 
       TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH.AND.ALPHAD.NE.0.0) TSTEP=TCUTH
-C UPDATE NULL COLLISION FREQUENCY
-      DO 10 J=1,NGAS
-   10 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)/NGAS
-      ANET1=ALP1-ATT1
-      WRITE(6,878) ALPHAST,ANET1,ALPHAD,TSTEP
-  878 FORMAT(' ALPHAST=',D10.3,' ANET=',D10.3,' ALPHAD=',D10.3,/,
-     /' TSTEP=',D10.3)
       TSTEP=TSTEP*1.0D12
       TFINAL=7.0D0*TSTEP
       ITFINAL=7
@@ -8925,12 +8160,11 @@ C CALC TIME OF FLIGHT AND PT
      /--------') 
       WRITE(6,26) TSTEP
    26 FORMAT(1(/),'  TIME STEP BETWEEN SAMPLING PLANES =',D12.5,' PICOSE
-     /CS.',/)       
-      JPRT=1              
-      CALL MONTEFTHT(JPRT)                             
+     /CS.',/)                     
+      CALL MONTEFTHT                             
       CALL FRIEDLANDT 
-      CALL PTH(JPRT)
-      CALL TOFH(JPRT)
+      CALL PTH
+      CALL TOFH
       WRITE(6,27) RALPHA,RALPER,RATTOF,RATOFER
    27 FORMAT(/,'PT IONISATION AND ATTACHMENT RATES *10**12/SEC',/,'ALPHA
      /=',D10.3,' +- ',F6.2,' %      ATT=',D10.3,' +- ',F6.2,' %')    
@@ -8946,8 +8180,8 @@ C CALC TIME OF FLIGHT AND PT
       WRITE(6,31) TOFWRZ,TOFWRZER,TOFWRY,TOFWRYER,TOFWRX,TOFWRXER   
    31 FORMAT(/,'WRZ=',F8.2,' +-',F6.1,' %    WRY=',F8.2,' +-',F6.1,' %  
      / WRX=',F8.2,' +-',F6.1,' %')  
-C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS   
-      TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY+TOFWRX*TOFWRX)   
+C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS
+      TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY+TOFWRX*TOFWRX)      
       WRZN=TOFWR*1.0D05
       FC1=WRZN/(2.0D0*TOFDZZ)
       FC2=((RALPHA-RATTOF)*1.0D12)/TOFDZZ
@@ -8955,49 +8189,48 @@ C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS
       WRITE(6,888) ALPZZ
   888 FORMAT(/,'TOWNSEND COEFICIENT (ALPHA-ATT) CALCULATED FROM TOF RESU
      /LTS:',/,' ALPHA-ATT /CM.=',D11.4,' N.B. APPROXIMATE FORMULA NOT AC
-     /CURATE',/)  
-C      -----------------------------------------------------    
+     /CURATE',/) 
+C-----------------------------------------------------    
 C LOAD NEW ALPHA AND ATTACHMENT INTO COMMON BLOCKS
-C      -----------------------------------------------
+C-----------------------------------------------
       ALPHA=RALPHA/TOFWR*1.D7
       ALPER=RALPER*ALPHA/100.
       ATT=RATTOF/TOFWR*1.D7
-      ATTER=RATOFER*ATT/100.
-C     WRITE(6,32) ALPHA,ALPER,ATT,ATTER 
+      ATTER=RATOFER*ATT/100. 
+C     WRITE(6,32) ALPHA,ALPER,ATT,ATTER
 C  32 FORMAT(/,'TOWNSEND COEFICIENTS CALCULATED FROM TOF RESULTS:',2(/),
-C    /'IONISATION RATE /CM.=',D11.4,' +-',F6.2,/,'ATTACHMENT RATE /CM.='
-C    /,D11.4,' +-',F6.2,/)           
+C    /'IONISATION RATE /CM.=',D11.4,' +-',F6.2,' %',/,'ATTACHMENT RATE /
+C    /CM.=',D11.4,' +-',F6.2,' %',/,' N.B. APPROXIMATE FORMULA NOT ACCUR
+C    /ATE',/)           
 C      ------------------------------------------      
       RETURN                                                     
       END                                                               
-      SUBROUTINE MONTEFTHT(JPRT)                                       
+      SUBROUTINE MONTEFTHT                                              
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
-      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAXOLD
+      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG
       COMMON/ROTS/RCS,RSN,EFZ100,EFX100,F1,EOVBR                        
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),IPLAST(6),ISIZE(6),
-     /PENFRA(6,3,290),TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),IPLAST(6),ISIZE(6),
+     /PENFRA(6,3,300),TCFMAX(6)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/RANM/RNMX(6)
-      COMMON/ISPT/XS(2000),YS(2000),ZS(2000),TS(2000),ES(2000),
-     /DCX(2000),DCY(2000),DCZ(2000),IPL(2000)
+      COMMON/ISPT/XS(8000),YS(8000),ZS(8000),TS(8000),ES(8000),
+     /DCX(8000),DCY(8000),DCZ(8000),IPL(8000)
       COMMON/TPLOUTH/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),YZTPL(8),XZTPL(8),XYTPL(8),VZTPL(8),VYTPL(8),
      /VXTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO 
-      COMMON/IONFL/NC0(6,290),EC0(6,290),NG1(6,290),EG1(6,290),
-     /NG2(6,290),EG2(6,290),WKLM(6,290),EFL(6,290)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
-      DIMENSION EPRM(10000000),IESPECP(100),TEMP(6,4000)
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO 
+      COMMON/IONFL/NC0(6,300),EC0(6,300),NG1(6,300),EG1(6,300),
+     /NG2(6,300),EG2(6,300),WKLM(6,300),EFL(6,300)
+      DIMENSION EPRM(10000000),IESPECP(100),TEMP(6,4000) 
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
 C   THIS ROUTINE HANDLES TERMINATIONS AT FIXED DRIFT TIMES. 
@@ -9008,14 +8241,6 @@ C   ROTATED INTO THE STANDARD COORDINATE FRAME WITH THE ELECTRIC FIELD
 C   ALONG THE Z-AXIS AND THE BFIELD AT AN ANGLE BTHETA TO THE ELECTRIC
 C   FIELD IN THE X-Z PLANE  
 C ------------------------------------------------------------------- 
-      IF(JPRT.EQ.0) THEN
-C CALCULATION OF APPROXIMATE STARTING PARAMETERS
-       NMAX=NMAXOLD
-       IF(NMAXOLD.GT.80000000) NMAX=80000000
-      ELSE
-C ENTRY FOR NORMAL CALCULATION
-       NMAX=NMAXOLD
-      ENDIF 
       S=0.0D0 
       ST=0.0D0 
       X=0.0D0
@@ -9038,12 +8263,9 @@ C ENTRY FOR NORMAL CALCULATION
       DO 26 I=1,5
       DO 26 K=1,6
    26 ICOLL(K,I)=0
-      DO 27 I=1,290
+      DO 27 I=1,300
       DO 27 K=1,6
    27 ICOLN(K,I)=0
-      DO 271 I=1,10
-      DO 271 K=1,6
-  271 ICOLNN(K,I)=0
       DO 28 I=1,4000
    28 SPEC(I)=0.0D0            
       DO 33 I=1,100
@@ -9083,15 +8305,6 @@ C ENTRY FOR NORMAL CALCULATION
       XSTRT=0.0D0
       TSSTRT=0.0D0 
       API=DACOS(-1.0D0)  
-C
-      DO 111 K=1,6
-      DO 111 J=1,N4000
-  111 TEMP(K,J)=TCF(K,J)+TCFN(K,J)
-      ABSFAKEI=DABS(FAKEI)
-      IFAKE=0
-      DO 112 J=1,8
-  112 IFAKET(J)=0
-C
 C CALC ROTATION MATRIX ANGLES
       RCS=DCOS((BTHETA-90.0D0)*API/180.0D0)
       RSN=DSIN((BTHETA-90.0D0)*API/180.0D0)
@@ -9219,10 +8432,10 @@ C TAKE ELECTRONS FROM STORE
       DZ=(CZ1*SINWT+(EOVBR-CY1)*(1.0D0-COSWT))/WB
       DX=CX1*T+F1*T*T
       E=E1+DZ*EFZ100+DX*EFX100
- 913  FORMAT(3X,' AFTER STORE ITER=',I10,' DZ=',D12.3,'E1=',D12.3,/,' CO
-     /SWT=',D12.6,' SINWT=',D12.6,' WBT=',D12.3,' CY1=',D12.3)   
+ 913  FORMAT(3X,' AFTER STORE ITER=',I10,' DZ=',D12.3,'E1=',D12.3,' COSW
+     /T=',D12.3,' SINWT=',D12.3,' WBT=',D12.3,' CY1=',D12.3)   
       IF(E.LT.0.0D0) THEN
-C      WRITE(6,913)ITER,DZ,E,COSWT,SINWT,WBT,CY1  
+       WRITE(6,913)ITER,DZ,E,COSWT,SINWT,WBT,CY1  
        E=0.001D0
       ENDIF            
 C CALCULATE ELECTRON VELOCITY IN LAB FRAME
@@ -9255,56 +8468,11 @@ C CALCULATE ENERGY WITH STATIONARY GAS TARGET, EOK.
       IE=DINT(EOK/ESTEP)+1                                             
       IE=DMIN0(IE,N4000)                                               
 C                                                                       
-C     TEST FOR REAL OR NULL COLLISION   
-C                                
-      R5=drand48(RDUM)                                           
-      TEST1=TCF(KGAS,IE)/TCFMAX(KGAS)                                   
-      IF(R5.LE.TEST1) GO TO 137
-      NNULL=NNULL+1
-      TEST2=TEMP(KGAS,IE)/TCFMAX(KGAS)
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST(KGAS).EQ.0) GO TO 1 
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(KGAS,IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(KGAS,I)=ICOLNN(KGAS,I)+1
-       GO TO 1
-      ENDIF  
-      TEST3=(TEMP(KGAS,IE)+ABSFAKEI)/TCFMAX(KGAS) 
-      IF(R5.LT.TEST3) THEN                                             
-C FAKE IONISATION INCREMENT COUNTER AND ADD ELECTRON TO STORE
-       IFAKE=IFAKE+1
-       IFAKET(IPLANE+1)=IFAKET(IPLANE+1)+1
-       IF(FAKEI.LT.0.0) THEN
-        NEION=NEION+1
-C FAKE ATTACHMENT START NEW ELECTRON
-        IF(NELEC.EQ.(NCLUS+1)) GO TO 544
-C ELECTRON CAPTURED TAKE NEW ELECTRON FROM STORE
-        GO TO 20
-       ENDIF
-C FAKE IONISATION ADD ELECTRON TO STORE
-       NCLUS=NCLUS+1
-       NPONT=NPONT+1
-       NMXADD=MAX(NPONT,NMXADD)
-       IF(NPONT.GT.2000) THEN 
-        WRITE(6,546) NPONT,ITER
-        STOP
-       ENDIF     
-       XS(NPONT)=X+DX       
-       YS(NPONT)=Y+EOVBR*T+((CY1-EOVBR)*SINWT+CZ1*(1.0D0-COSWT))/WB
-       ZS(NPONT)=Z+DZ
-       TS(NPONT)=ST+T
-       ES(NPONT)=E   
-       IPL(NPONT)=IPLANE
-       BOT=1.0D0/DSQRT(CX2*CX2+CY2*CY2+CZ2*CZ2)
-       DCX(NPONT)=CX2*BOT      
-       DCY(NPONT)=CY2*BOT    
-       DCZ(NPONT)=CZ2*BOT       
-       GO TO 1
-      ENDIF
+C     TEST FOR REAL OR NULL COLLISION                                   
+      R4=drand48(RDUM)                                           
+      TTEM=TCF(KGAS,IE)/TCFMAX(KGAS)                                    
+      IF(R4.LE.TTEM) GO TO 137
+      NNULL=NNULL+1                                                    
       GO TO 1 
   137 NCOL=NCOL+1   
 C CALCULATE DIRECTION COSINES OF ELECTRON IN 0 KELVIN FRAME
@@ -9379,7 +8547,7 @@ C OF IONISATION ELECTRON
       NCLUS=NCLUS+1
       NPONT=NPONT+1
       NMXADD=MAX(NPONT,NMXADD)
-      IF(NPONT.GT.2000) THEN 
+      IF(NPONT.GT.8000) THEN 
       WRITE(6,546) NPONT,ITER
  546  FORMAT(2X,' PROGRAM STOPPED . NPONT=',I5,' ITER=',I10)
       STOP
@@ -9451,7 +8619,7 @@ C GIVE IONISATION OF THE OTHER GASES IN THE MIXTURE
        IF(RAN.GT.PENFRA(KGAS,1,I)) GO TO 5
        NCLUS=NCLUS+1
        NPONT=NPONT+1
-       IF(NPONT.GT.2000) THEN
+       IF(NPONT.GT.8000) THEN
         WRITE(6,546) NPONT,ITER
         STOP
        ENDIF
@@ -9610,8 +8778,7 @@ C    INTERMEDIATE PRINTOUT
       WX=XTOTS/TTOTS
       WX=WX*1.0D+09
       JCT=ID/100000
-C      IF(J1.EQ.1) WRITE(6,201)                                         
-C 201 FORMAT(/,7X,'INTERMEDIATE OUTPUT',/,'    VELZ     VELY     VELX    
+C      IF(J1.EQ.1) WRITE(6,201)                                         C 201 FORMAT(/,7X,'INTERMEDIATE OUTPUT',/,'    VELZ     VELY     VELX   
 C    /   TIME       COUNT    ')      
 C ROTATE INTERMEDIATE OUTPUT INTO LAB FRAME 
       WZR=WZ*RCS-WX*RSN
@@ -9641,7 +8808,7 @@ C  MAIN LOOP END
      /ESTIMATED ALPHA.  NCLUS = ',I7,'  ITER =',I9)      
       STOP
       ENDIF
-      IF(JPRT.EQ.1) WRITE(6,878) NELEC,NEION,IPRIM
+      WRITE(6,878) NELEC,NEION,IPRIM
  878  FORMAT(/,' TOTAL NO OF ELECTRONS=',I8,/,' TOTAL NO OF NEG. IONS=',
      /I8,/,' TOTAL NO OF PRIMARIES=',I8)  
       EPRMBAR=0.0D0
@@ -9652,7 +8819,7 @@ C  MAIN LOOP END
  310  EPRMBAR=EPRMBAR+EPRM(I)
       EBAR=EPRMBAR/IPRIM
       EERR=DSQRT(E2PRM/IPRIM-EBAR**2)
-      IF(JPRT.EQ.1) WRITE(6,836) EBAR,EERR
+      WRITE(6,836) EBAR,EERR
  836  FORMAT(/,2X,'AVERAGE ENERGY OF PRIMARY ELECTRON =',F10.3,' EV.',/,
      /'   ENERGY SPREAD OF PRIMARY ELECTRON =',F10.3,' EV.')
 C     WRITE(6,835) (IESPECP(J),J=1,100)
@@ -9675,7 +8842,7 @@ C    /,10(2X,10I5,/))
       COMMON/ROTS/RCS,RSN,EFZ100,EFX100,F1,EOVBR
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/TPLOUTH/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),YZTPL(8),XZTPL(8),XYTPL(8),VZTPL(8),VYTPL(8),
      /VXTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT
@@ -9733,7 +8900,7 @@ C ROTATE VELOCITIES
       NETPL(IPLANE)=NETPL(IPLANE)+1 
       RETURN
       END 
-      SUBROUTINE PTH(JPRT)
+      SUBROUTINE PTH
       IMPLICIT REAL*8 (A-H,O-Z) 
       IMPLICIT INTEGER*8 (I-N)
       COMMON/ROTS/RCS,RSN,EFZ100,EFX100,F1,EOVBR                 
@@ -9742,14 +8909,12 @@ C ROTATE VELOCITIES
      /YYTPL(8),ZZTPL(8),YZTPL(8),XZTPL(8),XYTPL(8),VZTPL(8),VYTPL(8),
      /VXTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT
       COMMON/PTTOFH/RI(8),EPT(8),VZPT(8),VYPT(8),VXPT(8),TTEST(8)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
       DIMENSION ANTPL(8)
 C ------------------------------------------------
 C CALCULATES PULSED TOWNSEND COEFFICIENTS
 C-------------------------------------------------
       ANTPL(1)=DFLOAT(NETPL(1))
       RI(1)=(DLOG(ANTPL(1))-DLOG(DFLOAT(IPRIM)))/TSTEP
-      RI(1)=RI(1)-FAKEI
       EPT(1)=ETPL(1)/ANTPL(1)
       TTEST(1)=TTPL(1)/ANTPL(1)
       VZPT(1)=1.0D+09*VZTPL(1)/ANTPL(1)
@@ -9762,25 +8927,24 @@ C-------------------------------------------------
       ENDIF
       ANTPL(I)=DFLOAT(NETPL(I))      
       RI(I)=(DLOG(ANTPL(I))-DLOG(ANTPL(I-1)))/TSTEP
-      RI(I)=RI(I)-FAKEI
       EPT(I)=ETPL(I)/ANTPL(I)
       TTEST(I)=TTPL(I)/ANTPL(I)
       VZPT(I)=1.0D+09*VZTPL(I)/ANTPL(I)
       VYPT(I)=1.0D+09*VYTPL(I)/ANTPL(I)
       VXPT(I)=1.0D+09*VXTPL(I)/ANTPL(I)
   10  CONTINUE
-  11  IF(JPRT.EQ.1) WRITE(6,900) ITFINAL
+  11  WRITE(6,900) ITFINAL
  900  FORMAT(2(/),' PULSED TOWNSEND RESULTS AT',I2,' SEQUENTIAL TIME PLA
      /NES',/,'PLANE   (ION-ATT)FRQ.    ENERGY      WVZ       WVY       W
      /VX  NO.OF ELECTRNS',/)   
       DO 20 IPL=1,ITFINAL
-      IF(JPRT.EQ.1) WRITE(6,910) IPL,RI(IPL),EPT(IPL),VZPT(IPL),
-     /VYPT(IPL),VXPT(IPL),NETPL(IPL)
+      WRITE(6,910) IPL,RI(IPL),EPT(IPL),VZPT(IPL),VYPT(IPL),VXPT(IPL),
+     /NETPL(IPL)
  910  FORMAT(1X,I2,4X,D12.4,4X,F7.2,4X,F6.1,4X,F6.1,4X,F6.1,4X,I8)
   20  CONTINUE 
       RETURN
       END
-      SUBROUTINE TOFH(JPRT)
+      SUBROUTINE TOFH
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
@@ -9792,16 +8956,12 @@ C-------------------------------------------------
      /TOFDYY,TOFDYYER,TOFDYZ,TOFDYZER,TOFDXY,TOFDXYER,TOFDXZ,TOFDXZER,
      /TOFWRZ,TOFWRZER,TOFWRY,TOFWRYER,TOFWRX,TOFWRXER,RATTOF,RATOFER 
       COMMON/PTTOFH/RI(8),EPT(8),VZPT(8),VYPT(8),VXPT(8),TTEST(8)
-      COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
+      COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM 
       DIMENSION DZTF(8),DXTF(8),DYTF(8),DYZTF(8),DXYTF(8),DXZTF(8)
       DIMENSION WRZ(8),WRY(8),WRX(8),ANTPL(8) 
 C----------------------------------------------------------
 C CALCULATES TIME OF FLIGHT COEFFICIENTS
 C---------------------------------------------
-      IF(ITHRM.EQ.1) CALL COLFT(DUM1,DUM2,FRION,FRATT,DUM3,IDUM4)
-      IF(ITHRM.EQ.0) CALL COLF(DUM1,DUM2,FRION,FRATT,DUM3,IDUM4)
-      ATTOINT=FRATT/FRION
-      CORERR=DABS((FAKEI+FRION-FRATT)/(FRION-FRATT))
       ANTPL(1)=DFLOAT(NETPL(1))
       WRZ(1)=ZTPL(1)/(ANTPL(1)*TSTEP)
       WRY(1)=YTPL(1)/(ANTPL(1)*TSTEP)
@@ -9847,13 +9007,13 @@ C---------------------------------------------
       DXZTF(I)=DXZTF(I)*1.0D+16
       DXYTF(I)=DXYTF(I)*1.0D+16
   15  CONTINUE
-      IF(JPRT.EQ.1) WRITE(6,900) ITFINAL
+      WRITE(6,900) ITFINAL
  900  FORMAT(2(/),' TIME OF FLIGHT RESULTS AT',I2,' SEQUENTIAL TIME PLAN
      /ES',/,'PLANE    DZZ     DXX     DYY     DYZ     DXZ     DXY      W
      /RZ     WRY     WRX',/)
       DO 20 IPL=1,ITFINAL   
-      IF(JPRT.EQ.1) WRITE(6,910) IPL,DZTF(IPL),DXTF(IPL),DYTF(IPL),
-     /DYZTF(IPL),DXZTF(IPL),DXYTF(IPL),WRZ(IPL),WRY(IPL),WRX(IPL)  
+      WRITE(6,910) IPL,DZTF(IPL),DXTF(IPL),DYTF(IPL),DYZTF(IPL),        
+     /DXZTF(IPL),DXYTF(IPL),WRZ(IPL),WRY(IPL),WRX(IPL)  
  910  FORMAT(1X,I2,2X,6F8.1,3F8.2)              
   20  CONTINUE    
       IF(NETPL(1).GT.NETPL(ITFINAL)) THEN
@@ -9908,32 +9068,32 @@ C NET IONISATION TAKE RESULTS FROM PLANE ITFINAL
        I1=ITFINAL
        I2=ITFINAL-1  
        TOFENE=EPT(I1)
-       TOFENER=100.0D0*DABS((EPT(I1)-EPT(I2))/EPT(I1))
+       TOFENER=100.0D0*DABS((EPT(I1)-EPT(I2))/(2.0D0*EPT(I1)))
        TOFWVZ=VZPT(I1)
-       TOFWVZER=100.0D0*DABS((VZPT(I1)-VZPT(I2))/VZPT(I1))
+       TOFWVZER=100.0D0*DABS((VZPT(I1)-VZPT(I2))/(2.0D0*VZPT(I1)))
        TOFWVY=VYPT(I1)
-       TOFWVYER=100.0D0*DABS((VYPT(I1)-VYPT(I2))/VYPT(I1))
+       TOFWVYER=100.0D0*DABS((VYPT(I1)-VYPT(I2))/(2.0D0*VYPT(I1)))
        TOFWVX=VXPT(I1)
-       TOFWVXER=100.0D0*DABS((VXPT(I1)-VXPT(I2))/VXPT(I1))
+       TOFWVXER=100.0D0*DABS((VXPT(I1)-VXPT(I2))/(2.0D0*VXPT(I1)))
        TOFDZZ=DZTF(I1)
-       TOFDZZER=100.0D0*DABS((DZTF(I1)-DZTF(I2))/DZTF(I1))
+       TOFDZZER=100.0D0*DABS((DZTF(I1)-DZTF(I2))/(2.0D0*DZTF(I1)))
        TOFDXX=DXTF(I1)
-       TOFDXXER=100.0D0*DABS((DXTF(I1)-DXTF(I2))/DXTF(I1))
+       TOFDXXER=100.0D0*DABS((DXTF(I1)-DXTF(I2))/(2.0D0*DXTF(I1)))
        TOFDYY=DYTF(I1)
-       TOFDYYER=100.0D0*DABS((DYTF(I1)-DYTF(I2))/DYTF(I1))
+       TOFDYYER=100.0D0*DABS((DYTF(I1)-DYTF(I2))/(2.0D0*DYTF(I1)))
        TOFDYZ=DYZTF(I1)
-       TOFDYZER=100.0D0*DABS((DYZTF(I1)-DYZTF(I2))/DYZTF(I1))
+       TOFDYZER=100.0D0*DABS((DYZTF(I1)-DYZTF(I2))/(2.0D0*DYZTF(I1)))
        TOFDXZ=DXZTF(I1)
-       TOFDXZER=100.0D0*DABS((DXZTF(I1)-DXZTF(I2))/DXZTF(I1))
+       TOFDXZER=100.0D0*DABS((DXZTF(I1)-DXZTF(I2))/(2.0D0*DXZTF(I1)))
        TOFDXY=DXYTF(I1)
-       TOFDXYER=100.0D0*DABS((DXYTF(I1)-DXYTF(I2))/DXYTF(I1))
+       TOFDXYER=100.0D0*DABS((DXYTF(I1)-DXYTF(I2))/(2.0D0*DXYTF(I1)))
        TOFWRZ=WRZ(I1)
        TOFWRY=WRY(I1)
        TOFWRX=WRX(I1)
-       TOFWRZER=100.0D0*DABS((WRZ(I1)-WRZ(I2))/WRZ(I1))
-       TOFWRYER=100.0D0*DABS((WRY(I1)-WRY(I2))/WRY(I1))
-       TOFWRXER=100.0D0*DABS((WRX(I1)-WRX(I2))/WRX(I1))
-       ATER=DABS((RI(I1)-RI(I2))/RI(I1))
+       TOFWRZER=100.0D0*DABS((WRZ(I1)-WRZ(I2))/(2.0D0*WRZ(I1)))
+       TOFWRYER=100.0D0*DABS((WRY(I1)-WRY(I2))/(2.0D0*WRY(I1)))
+       TOFWRXER=100.0D0*DABS((WRX(I1)-WRX(I2))/(2.0D0*WRX(I1)))
+       ATER=DABS((RI(I1)-RI(I2))/(2.0D0*RI(I1)))
        RALPHA=RI(I1)/(1.0D0-ATTOINT)
        RALPER=100.0D0*DSQRT(ATER**2+AIOERT**2)
        RATTOF=ATTOINT*RI(I1)/(1.0D0-ATTOINT)
@@ -9956,10 +9116,9 @@ C NET IONISATION TAKE RESULTS FROM PLANE ITFINAL
       COMMON/CTOWNS/ALPHA,ATT
       COMMON/CTWNER/ALPER,ATTER
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),IPLAST(6),ISIZE(6),
-     /PENFRA(6,3,290),TCFMAX(6)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),IPLAST(6),ISIZE(6),
+     /PENFRA(6,3,300),TCFMAX(6)
 C ---------------------------------------------------------------------      
 C  ESTIMATE TIME STEP FOR AVALANCHE SIMULATION IN TIME OF FLIGHT SIM.
 C  USES ESTIMATED GAIN OF 3.0 BETWEEN PLANES. 
@@ -9969,115 +9128,20 @@ C ------------------------------------------------------------------
       IMAX=NMAX/10000000 
       IF(IMAX.LT.5) IMAX=5 
       NMAX=IMAX*10000000
+      ALPHAST=0.85D0*DABS(ALPHA-ATT)
       CORR=760.0*(TEMPC+273.15)/(TORR*293.15)
-      ALPP=ALPHA/CORR
-      ATTP=ATT/CORR
-      ANETP=ALPP-ATTP
-      ANET=ALPHA-ATT
-      TCUTH=1.2D-10*CORR
-      TCUTL=1.D-13*CORR
-C   
-      IF (ANETP.GT.30.0) THEN
-       ALPHAD=0.0
-       ALP1=ALPHA
-       ATT1=ATT
-C WEAK ATTACHMENT
-       GO TO 6
-      ENDIF 
-C  SOME ATTACHMENT
-      IF(DABS(ANETP).LT.100.) THEN
-C SMALL NET ATTACHMENT
-       ALPHAD=DABS(ATT)*0.8
-      ELSE IF(DABS(ANETP).GE.100..AND.DABS(ANETP).LT.1000.) THEN
-C LARGER NET ATTACHMENT
-       ALPHAD=DABS(ANET)*0.65
-      ELSE IF(DABS(ANETP).GT.1000..AND.DABS(ANETP).LT.10000.) THEN
-       ALPHAD=DABS(ANET)*0.6
-      ELSE IF(DABS(ANETP).GT.10000..AND.DABS(ANETP).LT.100000.) THEN
-       ALPHAD=DABS(ANET)*0.5
-      ELSE IF(DABS(ANETP).GT.100000..AND.DABS(ANETP).LT.2000000.) THEN
-       ALPHAD=DABS(ANET)*0.4
-      ELSE 
-       WRITE(6,91) 
-   91 FORMAT(' ATTACHMENT TOO LARGE PROGRAM STOPPED')
-       STOP
-      ENDIF
-   3  VDST=WZ*1.D-5
-      FAKEI=ALPHAD*WZ*1.D-12
-      ALPHAST=0.85*DABS(ALPHAD+ANET)                        
-      TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH) TSTEP=TCUTH
-      IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMIT
-      DO 4 J=1,NGAS
-    4 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)/DFLOAT(NGAS)
-      WRITE(6,871) ALPHAST,ANET,ALPHAD,TSTEP
-  871 FORMAT(' ALPHAST1=',D10.3,' ANET1=',D10.3,' ALPHAD1=',D10.3,/,
-     /' TSTEP1=',D10.3)
-C  CONVERT TO  PICOSECONDS     
-      TSTEP=TSTEP*1.0D12
-      TFINAL=7.0D0*TSTEP
-      ITFINAL=7
-C CALCULATE GOOD STARTING VALUES FOR ALPHA AND NETA
-      JPRT=0
-      CALL MONTEFTAT(JPRT)
-      CALL PT(JPRT)
-      CALL TOF(JPRT)
-      ALP1=RALPHA/TOFWR*1.D7
-      ALP1ER=RALPER*ALP1/100. 
-      ATT1=RATTOF/TOFWR*1.D7
-      ATT1ER=RATOFER*ATT1/100.
-      WRITE(6,944) ALP1,ALP1ER,ATT1,ATT1ER
-  944 FORMAT(' GOOD STARTING VALUES FOR CALC:',/,' ALPHA=',D12.3,' ERR='
-     /,D12.3,/,' NETA =',D12.3,' ERR=',D12.3)
-C
-C CALCULATE USING GOOD STARTING VALUES
-C  RESET TCFMAX
-      DO 44 J=1,NGAS
-   44 TCFMAX(J)=TCFMAX(J)-DABS(FAKEI)/DFLOAT(NGAS)
-C CALCULATE FAKE IONISATION RATE SCALING BY 1.2 
-      ALPHAD=ATT1*1.2
-      IF((ALP1-ATT1).GT.30.*CORR) ALPHAD=DABS(ATT1)*0.4
-      IF(DABS(ALP1-ATT1).LT.(ALP1/10.0).OR.DABS(ALP1-ATT1).LT.
-     /(ATT1/10.0)) ALPHAD=DABS(ATT1)*0.3
-      IF((ALP1-ATT1).GT.100.*CORR) ALPHAD=0.0
-      WZ=TOFWR*1.D5
-C
-C
-C NET IONISATION
-C   5 IF(ANET.GT.(11000./CORR)) THEN
-C LARGE IONISATION
-C      ALPHAD=7000.-(ALPHA-ATT)
-C     ELSE IF(DABS(ALPP).GT.(5.0*DABS(ANET)).OR.DABS(ATTP).GT.
-C    /(5.0*DABS(ANET))) THEN
-C LARGE CANCELLATION BETWEEN ATTACHMENT AND IONISATION
-C      ALPHAD=-6.0*(ALPHA-ATT)
-C     ELSE
-C      ALPHAD=0.0
-C     ENDIF 
-    6 VDST=WZ*1.D-5 
-      FAKEI=ALPHAD*WZ*1.D-12        
-      ALPHAST=0.85*DABS(ALPHAD+ALP1-ATT1) 
-      IF((ALP1+ALPHAD).GT.(10.0*ALPHAST).OR.ATT1.GT.(10.0*ALPHAST)) THEN
-C LARGE CANCELLATION BETWEEN ALPHA AND NETA. REDUCE STEP SIZE BY 15.0
-       IF((ALP1+ALPHAD).GT.100.*CORR) THEN
+      IF(ALPHA.GT.(10.0*ALPHAST).OR.ATT.GT.(10.0*ALPHAST)) THEN
+C LARGE CANCELLATION BETWEEN ALPHA AND NETA REDUCE STEP BY 30.0
+       IF(ALPHA.GT.100.0*CORR) THEN
+        ALPHAST=ALPHAST*30.0
+       ELSE IF(ALPHA.GT.50.0*CORR) THEN
         ALPHAST=ALPHAST*15.0
-       ELSE IF((ALP1+ALPHAD).GT.50.0*CORR) THEN
-        ALPHAST=ALPHAST*12.0
        ELSE
         ALPHAST=ALPHAST*8.0
        ENDIF
-      ENDIF                              
+      ENDIF 
+      VDST=WZ*1.D-5                                                 
       TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH.AND.ALPHAD.NE.0.0) TSTEP=TCUTH
-C     IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY
-      DO 10 J=1,NGAS
-   10 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)/DFLOAT(NGAS)
-      ANET1=ALP1-ATT1
-      WRITE(6,878) ALPHAST,ANET1,ALPHAD,TSTEP
-  878 FORMAT(' ALPHAST=',D10.3,' ANET=',D10.3,' ALPHAD=',D10.3,/,
-     /' TSTEP=',D10.3)
       TSTEP=TSTEP*1.0D12
       TFINAL=7.0D0*TSTEP
       ITFINAL=7
@@ -10088,12 +9152,11 @@ C CALC TIME OF FLIGHT AND PT
      /--------') 
       WRITE(6,26) TSTEP
    26 FORMAT(1(/),'  TIME STEP BETWEEN SAMPLING PLANES =',D12.5,' PICOSE
-     /CS.',/)       
-      JPRT=1              
-      CALL MONTEFTAT(JPRT)                            
+     /CS.',/)                     
+      CALL MONTEFTAT                            
       CALL FRIEDLANDT 
-      CALL PT(JPRT) 
-      CALL TOF(JPRT) 
+      CALL PT 
+      CALL TOF 
       WRITE(6,27) RALPHA,RALPER,RATTOF,RATOFER
    27 FORMAT(/,'PT IONISATION AND ATTACHMENT RATES *10**12/SEC',/,'ALPHA
      /=',D10.3,' +- ',F6.2,' %      ATT=',D10.3,' +- ',F6.2,' %')    
@@ -10110,63 +9173,55 @@ C      CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS
       WRN=TOFWR*1.0D05 
       FC1=WRN/(2.0D0*TOFDL) 
       FC2=((RALPHA-RATTOF)*1.0D12)/TOFDL   
-      ALPZZ=FC1-DSQRT(FC1**2-FC2)     
+      ALPZZ=FC1-DSQRT(FC1**2-FC2)            
       WRITE(6,32) ALPZZ
    32 FORMAT(/,'TOWNSEND COEFICIENT (ALPHA-ATT) CALCULATED FROM TOF RESU
      /LTS:',/,' ALPHA-ATT /CM.=',D11.4,' N.B. APPROXIMATE FORMULA NOT AC
-     /CURATE',/)       
+     /CURATE',/) 
 C---------------------------------------------------           
 C LOAD NEW ALPHA AND ATTACHMENT INTO COMMON BLOCKS
 C-----------------------------------------------
-      ALPHA=RALPHA/TOFWR*1.D7
+      ALPHA=RALPHA/TOFWR*1.D7 
       ALPER=RALPER*ALPHA/100.
       ATT=RATTOF/TOFWR*1.D7
       ATTER=RATOFER*ATT/100.
-C     WRITE(6,33) ALPHA,ALPER,ATT,ATTER 
-C 33  FORMAT(' TOF TOWNSEND IN UNITS OF 1/CM:',/,'   GAIN =',D12.4,' +-'
-C    /,D12.4,/,' ATTACH =',D12.4,' +-',D12.4,/)  
+C     WRITE(6,32) ALPHA,ALPER,ATT,ATTER 
+C 32  FORMAT(/,'TOWNSEND COEFICIENTS CALCULATED FROM TOF RESULTS:',2(/),
+C    /'IONISATION RATE /CM.=',D11.4,' +-',F6.2,' %',/,'ATTACHMENT RATE /
+C    /CM.=',D11.4,' +-',F6.2,' %',/,' N.B. APPROXIMATE FORMULA NOT ACCUR
+C    /ATE',/)          
 C-----------------------------------------------      
       RETURN                                                     
       END                                                               
-      SUBROUTINE MONTEFTAT(JPRT)                                   
+      SUBROUTINE MONTEFTAT                                             
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
-      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAXOLD 
+      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX 
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
-      COMMON/LARGET/CF(6,4000,290),EIN(6,290),TCF(6,4000),IARRY(6,290),
-     /RGAS(6,290),IPN(6,290),WPL(6,290),IPLAST(6),ISIZE(6),
-     /PENFRA(6,3,290),TCFMAX(6)
-      COMMON/LARGENT/CFN(6,4000,10),TCFN(6,4000),SCLENUL(6,10),NPLAST(6)
+      COMMON/LARGET/CF(6,4000,300),EIN(6,300),TCF(6,4000),IARRY(6,300),
+     /RGAS(6,300),IPN(6,300),WPL(6,300),IPLAST(6),ISIZE(6),
+     /PENFRA(6,3,300),TCFMAX(6)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS
       COMMON/THRM/AMGAS(6),VTMB(6),TCFMX,TCFMXG(6),ITHRM
       COMMON/RANM/RNMX(6)
-      COMMON/ISPT/XS(2000),YS(2000),ZS(2000),TS(2000),ES(2000),
-     /DCX(2000),DCY(2000),DCZ(2000),IPL(2000)
+      COMMON/ISPT/XS(8000),YS(8000),ZS(8000),TS(8000),ES(8000),
+     /DCX(8000),DCY(8000),DCZ(8000),IPL(8000)
       COMMON/TPLOUT/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),VZTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT 
-      COMMON/ANIST/PSCT(6,4000,290),ANGCT(6,4000,290),INDEX(6,290),NISO
-      COMMON/IONFL/NC0(6,290),EC0(6,290),NG1(6,290),EG1(6,290),
-     /NG2(6,290),EG2(6,290),WKLM(6,290),EFL(6,290)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
-      DIMENSION EPRM(10000000),IESPECP(100),TEMP(6,4000)            
+      COMMON/ANIST/PSCT(6,4000,300),ANGCT(6,4000,300),INDEX(6,300),NISO
+      COMMON/IONFL/NC0(6,300),EC0(6,300),NG1(6,300),EG1(6,300),
+     /NG2(6,300),EG2(6,300),WKLM(6,300),EFL(6,300)
+      DIMENSION EPRM(10000000),IESPECP(100),TEMP(6,4000)
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
 C   THIS ROUTINE HANDLES TERMINATIONS AT FIXED DRIFT TIMES.
 C   BFIELD PARALLEL TO EFIELD    
 C ------------------------------------------------------------------- 
-      IF(JPRT.EQ.0) THEN
-C CALCULATION OF APPROXIMATE STARTING PARAMETERS
-       NMAX=NMAXOLD
-       IF(NMAXOLD.GT.80000000) NMAX=80000000
-      ELSE
-C ENTRY FOR NORMAL CALCULATION
-       NMAX=NMAXOLD
-      ENDIF
       S=0.0D0 
       ST=0.0D0 
       X=0.0D0
@@ -10187,12 +9242,9 @@ C ENTRY FOR NORMAL CALCULATION
       DO 26 I=1,5
       DO 26 K=1,6
    26 ICOLL(K,I)=0
-      DO 27 I=1,290
+      DO 27 I=1,300
       DO 27 K=1,6
    27 ICOLN(K,I)=0
-      DO 271 I=1,10
-      DO 271 K=1,6
-  271 ICOLNN(K,I)=0
       DO 28 I=1,4000
    28 SPEC(I)=0.0D0            
       DO 33 I=1,100
@@ -10224,15 +9276,6 @@ C ENTRY FOR NORMAL CALCULATION
       J1=1 
       ZSTRT=0.0D0
       TSSTRT=0.0D0 
-C
-      DO 111 K=1,6
-      DO 111 J=1,N4000
-  111 TEMP(K,J)=TCF(K,J)+TCFN(K,J)
-      ABSFAKEI=DABS(FAKEI)
-      IFAKE=0
-      DO 112 J=1,8
-  112 IFAKET(J)=0
-C
 C GENERATE INITIAL RANDOM NUMBERS FOR MAXWELL BOLTZMAN
       CALL GERJAN
       IMBPT=0
@@ -10383,56 +9426,11 @@ C CALCULATE ENERGY WITH STATIONARY GAS TARGET, EOK.
       IE=DINT(EOK/ESTEP)+1                                             
       IE=DMIN0(IE,N4000)                                               
 C                                                                       
-C     TEST FOR REAL OR NULL COLLISION 
-C                                  
-      R5=drand48(RDUM)                                         
-      TEST1=TCF(KGAS,IE)/TCFMAX(KGAS)                                   
-      IF(R5.LE.TEST1) GO TO 137
-      NNULL=NNULL+1          
-      TEST2=TEMP(KGAS,IE)/TCFMAX(KGAS)
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST(KGAS).EQ.0) GO TO 1  
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(KGAS,IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(KGAS,I)=ICOLNN(KGAS,I)+1
-       GO TO 1
-      ENDIF   
-      TEST3=(TEMP(KGAS,IE)+ABSFAKEI)/TCFMAX(KGAS)
-      IF(R5.LT.TEST3) THEN
-C FAKE COLLISION INCREMENT COUNTERS
-       IFAKE=IFAKE+1
-       IFAKET(IPLANE+1)=IFAKET(IPLANE+1)+1
-       IF(FAKEI.LT.0.0) THEN
-        NEION=NEION+1
-C FAKE ATTACHMENT START NEW ELECTRON
-        IF(NELEC.EQ.(NCLUS+1)) GO TO 544
-C ELECTRON CAPTURED TAKE ELECTRON FROM STORE
-        GO TO 20
-       ENDIF
-C FAKE IONISATION ADD ELECTRON TO STORE
-       NCLUS=NCLUS+1
-       NPONT=NPONT+1
-       NMXADD=MAX(NPONT,NMXADD)
-       IF(NPONT.GT.2000) THEN 
-        WRITE(6,546) NPONT,ITER
-        STOP
-       ENDIF     
-       XS(NPONT)=X+(CX1*SINWT-CY1*(1.0D0-COSWT))/WB       
-       YS(NPONT)=Y+(CY1*SINWT+CX1*(1.0D0-COSWT))/WB
-       ZS(NPONT)=Z+DCZ1*T*CONST9*DSQRT(E1)+T*T*F1
-       TS(NPONT)=ST+T
-       ES(NPONT)=E
-       IPL(NPONT)=IPLANE
-       BOT=1.0D0/DSQRT(CX2*CX2+CY2*CY2+CZ2*CZ2)
-       DCX(NPONT)=CX2*BOT
-       DCY(NPONT)=CY2*BOT
-       DCZ(NPONT)=CZ2*BOT
-       GO TO 1
-      ENDIF
+C     TEST FOR REAL OR NULL COLLISION                                   
+      R4=drand48(RDUM)                                         
+      TTEM=TCF(KGAS,IE)/TCFMAX(KGAS)                                   
+      IF(R4.LE.TTEM) GO TO 137
+      NNULL=NNULL+1                                                    
       GO TO 1           
   137 NCOL=NCOL+1
 C CALCULATE DIRECTION COSINES OF ELECTRON IN 0 KELVIN FRAME
@@ -10507,7 +9505,7 @@ C OF IONISATION ELECTRON
       NCLUS=NCLUS+1
       NPONT=NPONT+1
       NMXADD=MAX(NPONT,NMXADD)
-      IF(NPONT.GT.2000) THEN 
+      IF(NPONT.GT.8000) THEN 
       WRITE(6,546) NPONT,ITER
  546  FORMAT(2X,' PROGRAM STOPPED . NPONT=',I5,' ITER=',I10)
       STOP
@@ -10541,6 +9539,10 @@ C AUGER EMISSION WITHOUT FLUORESCENCE
        DO 701 JKL=1,NAUG
        NCLUS=NCLUS+1
        NPONT=NPONT+1
+      IF(NPONT.GT.8000) THEN 
+       WRITE(6,546) NPONT,ITER
+       STOP
+      ENDIF
        XS(NPONT)=X
        YS(NPONT)=Y
        ZS(NPONT)=Z
@@ -10579,7 +9581,7 @@ C GIVE IONISATION OF THE OTHER GASES IN THE MIXTURE
        IF(RAN.GT.PENFRA(KGAS,1,I)) GO TO 5
        NCLUS=NCLUS+1
        NPONT=NPONT+1
-       IF(NPONT.GT.2000) THEN
+       IF(NPONT.GT.8000) THEN
         WRITE(6,546) NPONT,ITER
         STOP
        ENDIF
@@ -10760,7 +9762,7 @@ C  MAIN LOOP END
      /ESTIMATED ALPHA.  NCLUS = ',I7,'  ITER =',I9)      
       STOP
       ENDIF
-      IF(JPRT.EQ.1) WRITE(6,878) NELEC,NEION,IPRIM
+      WRITE(6,878) NELEC,NEION,IPRIM
  878  FORMAT(/,' TOTAL NO OF ELECTRONS=',I8,/,' TOTAL NO OF NEG. IONS=',
      /I8,/,' TOTAL NO OF PRIMARIES=',I8)  
       EPRMBAR=0.0D0
@@ -10771,7 +9773,7 @@ C  MAIN LOOP END
  310  EPRMBAR=EPRMBAR+EPRM(I)
       EBAR=EPRMBAR/IPRIM
       EERR=DSQRT(E2PRM/IPRIM-EBAR**2)
-      IF(JPRT.EQ.1) WRITE(6,836) EBAR,EERR
+      WRITE(6,836) EBAR,EERR
  836  FORMAT(/,2X,'AVERAGE ENERGY OF PRIMARY ELECTRON =',F10.3,' EV.',/,
      /'   ENERGY SPREAD OF PRIMARY ELECTRON =',F10.3,' EV.')
 C     WRITE(6,835) (IESPECP(J),J=1,100)
@@ -10793,7 +9795,7 @@ C    /,10(2X,10I5,/))
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/TPLOUT/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),VZTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT 
 C-----------------------------------------------------------------------
@@ -10828,7 +9830,6 @@ C CALC TIME LEFT TO ARRIVE AT PLANE
       NETPL(IPLANE)=NETPL(IPLANE)+1 
       RETURN
       END
-
       SUBROUTINE MIXER                                                  
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
@@ -10846,21 +9847,19 @@ C CALC TIME LEFT TO ARRIVE AT PLANE
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
-     /IPN(960),WPL(960),IPLAST,ISIZE,PENFRA(3,960),TCFMAX(8)  
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST       
+     /IPN(960),WPL(960),IPLAST,ISIZE,PENFRA(3,960),TCFMAX(8)         
       COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO
       COMMON/FRED/FCION(4000),FCATT(4000)
       COMMON/MRATIO/VAN1,VAN2,VAN3,VAN4,VAN5,VAN6,VAN
       COMMON/IONFL1/NC0(960),EC0(960),NG1(960),EG1(960),NG2(960),
      /EG2(960),WKLM(960),EFL(960)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
       COMMON/NAMES/NAMEG(6)                               
-      COMMON/SCRIP/DSCRPT(960),DSCRPTN(60)                             
+      COMMON/SCRIP/DSCRPT(960)                             
       CHARACTER*25 NAMEG,NAME1,NAME2,NAME3,NAME4,NAME5,NAME6
-      CHARACTER*50 DSCRPT,SCRP1(300),SCRP2(300),SCRP3(300),
-     /SCRP4(300),SCRP5(300),SCRP6(300) 
-      CHARACTER*50 DSCRPTN,SCRPN1(10),SCRPN2(10),SCRPN3(10),
-     /SCRPN4(10),SCRPN5(10),SCRPN6(10)                            
+      CHARACTER*50 DSCRPT,SCRP1(300),SCRP2(300),SCRP3(300),SCRP4(300),
+     /SCRP5(300),SCRP6(300)                            
+      CHARACTER*50 DSCRPTN,SCRPN1(10),SCRPN2(10),SCRPN3(10),SCRPN4(10),
+     /SCRPN5(10),SCRPN6(10) 
       DIMENSION Q1(6,4000),Q2(6,4000),Q3(6,4000),Q4(6,4000),
      /Q5(6,4000),Q6(6,4000)
       DIMENSION E1(6),E2(6),E3(6),E4(6),E5(6),E6(6),EI1(250),EI2(250),
@@ -10894,8 +9893,7 @@ C CALC TIME LEFT TO ARRIVE AT PLANE
      /QATT5(8,4000),QATT6(8,4000)
       DIMENSION QNUL1(10,4000),QNUL2(10,4000),QNUL3(10,4000),
      /QNUL4(10,4000),QNUL5(10,4000),QNUL6(10,4000),SCLN1(10),
-     /SCLN2(10),SCLN3(10),SCLN4(10),SCLN5(10),SCLN6(10)
-                                                                   
+     /SCLN2(10),SCLN3(10),SCLN4(10),SCLN5(10),SCLN6(10)  
 C  ---------------------------------------------------------------------
 C                                                                       
 C     SUBROUTINE FILLS ARRAYS OF COLLISION FREQUENCY              
@@ -10939,7 +9937,7 @@ C
       KEL4(J)=0
       KEL5(J)=0
       KEL6(J)=0                       
-      DO 1 I=1,N4000                                                   
+      DO 1 I=1,N4000                                                    
       Q1(J,I)=0.0D0                                                     
       Q2(J,I)=0.0D0                                                     
       Q3(J,I)=0.0D0                                                     
@@ -11033,17 +10031,17 @@ C
   223 CONTINUE
       DO 224 K=1,10
       DO 224 I=1,N4000
-      QNUL1(K,I)=0.0
-      QNUL2(K,I)=0.0
-      QNUL3(K,I)=0.0
-      QNUL4(K,I)=0.0
-      QNUL5(K,I)=0.0
-      QNUL6(K,I)=0.0
+      QNUL1(K,I)=0.0D0
+      QNUL2(K,I)=0.0D0
+      QNUL3(K,I)=0.0D0
+      QNUL4(K,I)=0.0D0
+      QNUL5(K,I)=0.0D0
+      QNUL6(K,I)=0.0D0
   224 CONTINUE
       ESTEP=EFINAL/DFLOAT(NSTEP)
       EHALF=ESTEP/2.0D0
       E(1)=EHALF
-      DO 3 I=2,N4000
+      DO 3 I=2,4000
       AJ=DFLOAT(I-1)
       E(I)=EHALF+ESTEP*AJ
     3 EROOT(I)=DSQRT(E(I))
@@ -11058,12 +10056,7 @@ C
       DO 6 I=1,960 
     6 INDEX(I)=0
       DO 7 I=1,8
-    7 TCFMAX(I)=0.0D0      
-      DO 225 J=1,60
-      DO 225 K=1,N4000
-      TCFN(K)=0.0D0
-      CFN(K,J)=0.0D0
-  225 CONTINUE                                         
+    7 TCFMAX(I)=0.0D0     
 C                                                                       
 C   CALL GAS CROSS-SECTIONS 
       CALL GASMIX(NGASN(1),Q1,QIN1,NIN1,E1,EI1,NAME1,VIRIAL1,EB1,
@@ -11110,10 +10103,10 @@ C     L=5*N-2    ATTACHMENT NTH GAS
 C     L=5*N-1    INELASTIC NTH GAS    
 C     L=5*N      SUPERELASTIC NTH GAS                                   
 C---------------------------------------------------------------   
-      DO 700 IE=1,N4000  
+      DO 700 IE=1,4000  
       FCION(IE)=0.0D0
-      FCATT(IE)=0.0D0
-C 
+      FCATT(IE)=0.0D0 
+C
       NP=1                                                              
       CF(IE,NP)=Q1(2,IE)*VAN1
       PSCT(IE,NP)=0.5D0
@@ -11139,7 +10132,7 @@ C
       IPN(NP)=0 
       L=1                                                      
       IARRY(NP)=L 
-      DSCRPT(NP)=SCRP1(2)  
+      DSCRPT(NP)=SCRP1(2)
       NAMEG(1)=NAME1  
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
@@ -11226,8 +10219,8 @@ C
       PENFRA(2,NP)=0.0D0
       PENFRA(3,NP)=0.0D0
    25 CONTINUE
-   30 IF(EFINAL.LT.E1(4)) GO TO 40   
-      IF(NATT1.GT.1) GO TO 551                                   
+   30 IF(EFINAL.LT.E1(4)) GO TO 40 
+      IF(NATT1.GT.1) GO TO 551                                     
       NP=NP+1                                                           
       CF(IE,NP)=Q1(4,IE)*VAN1
       FCATT(IE)=FCATT(IE)+CF(IE,NP) 
@@ -11245,21 +10238,21 @@ C
       PENFRA(2,NP)=0.0
       PENFRA(3,NP)=0.0
       GO TO 40
- 551  DO 552 JJ=1,NATT1
+  551 DO 552 JJ=1,NATT1
       NP=NP+1
       CF(IE,NP)=QATT1(JJ,IE)*VAN1
-      FCATT(IE)=FCATT(IE)+CF(IE,NP)
+      FCATT(IE)=FCATT(IE)+CF(IE,NP) 
       PSCT(IE,NP)=0.5D0
       ANGCT(IE,NP)=1.0D0
       IF(IE.GT.1) GO TO 552
-      DSCRPT(NP)=SCRP1(2+NION1+JJ)
-      RGAS(NP)=RGAS1
-      EIN(NP)=0.0D0
-      IPN(NP)=-1
-      INDEX(NP)=0
+      DSCRPT(NP)=SCRP1(2+NION1+JJ) 
+      RGAS(NP)=RGAS1                                                   
+      EIN(NP)=0.0D0   
+      IPN(NP)=-1             
+      INDEX(NP)=0                                     
       L=3
       IARRY(NP)=L
-      PENFRA(1,NP)=0.0
+      PENFRA(1,NP)=0.0  
       PENFRA(2,NP)=0.0
       PENFRA(3,NP)=0.0
   552 CONTINUE
@@ -11409,8 +10402,8 @@ C
       PENFRA(2,NP)=0.0D0
       PENFRA(3,NP)=0.0D0
    80 CONTINUE                      
-  130 IF(EFINAL.LT.E2(4)) GO TO 140
-      IF(NATT2.GT.1) GO TO 561                                     
+  130 IF(EFINAL.LT.E2(4)) GO TO 140 
+      IF(NATT2.GT.1) GO TO 561                                    
       NP=NP+1                                                           
       CF(IE,NP)=Q2(4,IE)*VAN2
       FCATT(IE)=FCATT(IE)+CF(IE,NP)  
@@ -11427,25 +10420,25 @@ C
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
       PENFRA(3,NP)=0.0        
-      GO TO 140
+      GO TO 140                                     
   561 DO 562 JJ=1,NATT2
-      NP=NP+1
+      NP=NP+1                                                           
       CF(IE,NP)=QATT2(JJ,IE)*VAN2
-      FCATT(IE)=FCATT(IE)+CF(IE,NP)
+      FCATT(IE)=FCATT(IE)+CF(IE,NP)  
       PSCT(IE,NP)=0.5D0
       ANGCT(IE,NP)=1.0D0
       IF(IE.GT.1) GO TO 562
-      DSCRPT(NP)=SCRP2(2+NION2+JJ)
-      RGAS(NP)=RGAS2
-      EIN(NP)=0.0
-      IPN(NP)=-1
-      INDEX(NP)=0
-      L=8
-      IARRY(NP)=L
+      DSCRPT(NP)=SCRP2(2+NION2+JJ) 
+      INDEX(NP)=0                                  
+      RGAS(NP)=RGAS2                                                    
+      EIN(NP)=0.0D0                                                     
+      IPN(NP)=-1            
+      L=8                                              
+      IARRY(NP)=L      
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
-      PENFRA(3,NP)=0.0
-  562 CONTINUE                               
+      PENFRA(3,NP)=0.0        
+  562 CONTINUE                                     
   140 IF(NIN2.EQ.0) GO TO 160                                           
       DO 150 J=1,NIN2
       NP=NP+1                                                           
@@ -11509,8 +10502,8 @@ C
       NAMEG(3)=NAME3 
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
-      PENFRA(3,NP)=0.0               
-C                                  
+      PENFRA(3,NP)=0.0       
+C                                          
   162 IF(EFINAL.LT.E3(3)) GO TO 230
       IF(NION3.GT.1) GO TO 170                                     
       NP=NP+1                                                           
@@ -11592,8 +10585,8 @@ C
       PENFRA(2,NP)=0.0D0
       PENFRA(3,NP)=0.0D0
   180 CONTINUE                                
-  230 IF(EFINAL.LT.E3(4)) GO TO 240 
-      IF(NATT3.GT.1) GO TO 571                                    
+  230 IF(EFINAL.LT.E3(4)) GO TO 240      
+      IF(NATT3.GT.1) GO TO 571                               
       NP=NP+1                                                           
       CF(IE,NP)=Q3(4,IE)*VAN3
       FCATT(IE)=FCATT(IE)+CF(IE,NP)
@@ -11609,26 +10602,26 @@ C
       DSCRPT(NP)=SCRP3(3+NION3)
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
-      PENFRA(3,NP)=0.0
+      PENFRA(3,NP)=0.0        
       GO TO 240
   571 DO 572 JJ=1,NATT3
-      NP=NP+1
-      CF(IE,NP)=QATT3(JJ,IE)*VAN3 
+      NP=NP+1                                                           
+      CF(IE,NP)=QATT3(JJ,IE)*VAN3
       FCATT(IE)=FCATT(IE)+CF(IE,NP)
       PSCT(IE,NP)=0.5D0
       ANGCT(IE,NP)=1.0D0
       IF(IE.GT.1) GO TO 572
-      DSCRPT(NP)=SCRP3(2+NION3+JJ)
-      RGAS(NP)=RGAS3
-      EIN(NP)=0.0D0
-      IPN(NP)=-1
-      INDEX(NP)=0
-      L=13
+      DSCRPT(NP)=SCRP3(2+NION3+JJ) 
+      INDEX(NP)=0                                            
+      RGAS(NP)=RGAS3                                                    
+      EIN(NP)=0.0D0                                                     
+      IPN(NP)=-1 
+      L=13                                                        
       IARRY(NP)=L
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
       PENFRA(3,NP)=0.0        
-  572 CONTINUE                            
+  572 CONTINUE
   240 IF(NIN3.EQ.0) GO TO 260                                           
       DO 250 J=1,NIN3 
       NP=NP+1                                                           
@@ -11775,8 +10768,8 @@ C
       PENFRA(2,NP)=0.0D0
       PENFRA(3,NP)=0.0D0
   280 CONTINUE      
-  330 IF(EFINAL.LT.E4(4)) GO TO 340     
-      IF(NATT4.GT.1) GO TO 581                               
+  330 IF(EFINAL.LT.E4(4)) GO TO 340   
+      IF(NATT4.GT.1) GO TO 581                                  
       NP=NP+1                                                           
       CF(IE,NP)=Q4(4,IE)*VAN4
       FCATT(IE)=FCATT(IE)+CF(IE,NP)
@@ -11792,26 +10785,26 @@ C
       DSCRPT(NP)=SCRP4(3+NION4)
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
-      PENFRA(3,NP)=0.0        
+      PENFRA(3,NP)=0.0 
       GO TO 340
-  581 DO 582 JJ=1,NATT4
-      NP=NP+1
+  581 DO 582 JJ=1,NATT4 
+      NP=NP+1                                                           
       CF(IE,NP)=QATT4(JJ,IE)*VAN4
       FCATT(IE)=FCATT(IE)+CF(IE,NP)
       PSCT(IE,NP)=0.5D0
       ANGCT(IE,NP)=1.0D0
       IF(IE.GT.1) GO TO 582
-      DSCRPT(NP)=SCRP4(2+NION4+JJ)
-      RGAS(NP)=RGAS4
-      EIN(NP)=0.0D0
-      IPN(NP)=-1
-      INDEX(NP)=0
-      L=18
+      DSCRPT(NP)=SCRP4(2+NION4+JJ)        
+      INDEX(NP)=0                             
+      RGAS(NP)=RGAS4                                                    
+      EIN(NP)=0.0D0                                                     
+      IPN(NP)=-1 
+      L=18                                                        
       IARRY(NP)=L
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
-      PENFRA(3,NP)=0.0
-  582 CONTINUE                                       
+      PENFRA(3,NP)=0.0 
+  582 CONTINUE
   340 IF(NIN4.EQ.0) GO TO 360                                           
       DO 350 J=1,NIN4 
       NP=NP+1
@@ -11958,8 +10951,8 @@ C
       PENFRA(2,NP)=0.0D0
       PENFRA(3,NP)=0.0D0
   380 CONTINUE                        
-  430 IF(EFINAL.LT.E5(4)) GO TO 440
-      IF(NATT5.GT.1) GO TO 591                                     
+  430 IF(EFINAL.LT.E5(4)) GO TO 440   
+      IF(NATT5.GT.1) GO TO 591                                  
       NP=NP+1                                                           
       CF(IE,NP)=Q5(4,IE)*VAN5
       FCATT(IE)=FCATT(IE)+CF(IE,NP)
@@ -11975,26 +10968,26 @@ C
       DSCRPT(NP)=SCRP5(3+NION5)  
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
-      PENFRA(3,NP)=0.0        
+      PENFRA(3,NP)=0.0
       GO TO 440
   591 DO 592 JJ=1,NATT5
-      NP=NP+1
+      NP=NP+1                                                           
       CF(IE,NP)=QATT5(JJ,IE)*VAN5
       FCATT(IE)=FCATT(IE)+CF(IE,NP)
       PSCT(IE,NP)=0.5D0
       ANGCT(IE,NP)=1.0D0
       IF(IE.GT.1) GO TO 592
-      DSCRPT(NP)=SCRP5(2+NION5+JJ)
-      RGAS(NP)=RGAS5
-      EIN(NP)=0.0D0
-      IPN(NP)=-1
-      INDEX(NP)=0
-      L=23
+      DSCRPT(NP)=SCRP5(2+NION5+JJ) 
+      INDEX(NP)=0                                     
+      RGAS(NP)=RGAS5                                                    
+      EIN(NP)=0.0D0                                                     
+      IPN(NP)=-1             
+      L=23                                            
       IARRY(NP)=L
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
       PENFRA(3,NP)=0.0
-  592 CONTINUE                        
+  592 CONTINUE 
   440 IF(NIN5.EQ.0) GO TO 460                                           
       DO 450 J=1,NIN5 
       NP=NP+1                                                           
@@ -12141,8 +11134,8 @@ C
       PENFRA(2,NP)=0.0D0
       PENFRA(3,NP)=0.0D0
   480 CONTINUE                      
-  530 IF(EFINAL.LT.E6(4)) GO TO 540  
-      IF(NATT6.GT.1) GO TO 601                                   
+  530 IF(EFINAL.LT.E6(4)) GO TO 540      
+      IF(NATT6.GT.1) GO TO 601                               
       NP=NP+1                                                           
       CF(IE,NP)=Q6(4,IE)*VAN6 
       FCATT(IE)=FCATT(IE)+CF(IE,NP)
@@ -12158,26 +11151,26 @@ C
       DSCRPT(NP)=SCRP6(3+NION6)
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
-      PENFRA(3,NP)=0.0       
-      GO TO 540
-  601 DO 602 JJ=1,NATT6
-      NP=NP+1
-      CF(IE,NP)=QATT6(JJ,IE)*VAN6
+      PENFRA(3,NP)=0.0        
+      GO TO 540 
+  601 DO 602 JJ=1,NATT6                                      
+      NP=NP+1                                                           
+      CF(IE,NP)=QATT6(JJ,IE)*VAN6 
       FCATT(IE)=FCATT(IE)+CF(IE,NP)
       PSCT(IE,NP)=0.5D0
       ANGCT(IE,NP)=1.0D0
       IF(IE.GT.1) GO TO 602
-      DSCRPT(NP)=SCRP6(2+NION6+JJ)
-      RGAS(NP)=RGAS6
-      EIN(NP)=0.0D0
+      DSCRPT(NP)=SCRP6(2+NION6+JJ)        
+      INDEX(NP)=0                            
+      RGAS(NP)=RGAS6                                                    
+      EIN(NP)=0.0D0                                                     
       IPN(NP)=-1
-      INDEX(NP)=0
-      L=28
-      IARRY(NP)=L
+      L=28                                                          
+      IARRY(NP)=L  
       PENFRA(1,NP)=0.0
       PENFRA(2,NP)=0.0
-      PENFRA(3,NP)=0.0
-  602 CONTINUE                                        
+      PENFRA(3,NP)=0.0        
+  602 CONTINUE
   540 IF(NIN6.EQ.0) GO TO 560                                           
       DO 550 J=1,NIN6 
       NP=NP+1                                                           
@@ -12212,7 +11205,7 @@ C
   550 CONTINUE                                                     
   560 CONTINUE     
 C                                                                       
-  600 CONTINUE   
+  600 CONTINUE                                                          
       IPLAST=NP 
       ISIZE=1
       IF(IPLAST.GE.2)   ISIZE=2   
@@ -12226,12 +11219,12 @@ C
       IF(IPLAST.GE.512) ISIZE=512
       IF(IPLAST.GE.1024)ISIZE=1024          
 C ----------------------------------------------------------------      
-C   CAN INCREASE ARRAY SIZE UP TO 1740 IF MORE COMPLEX MIXTURES USED.
-C   1740 = 6 * 290 ( 6 = MAX NO OF GASES. 290 = MAX NO OF LEVELS )    
+C   CAN INCREASE ARRAY SIZE UP TO 1800 IF MORE COMPLEX MIXTURES USED.
+C   1800 = 6 * 300 ( 6 = MAX NO OF GASES. 300 = MAX NO OF LEVELS )    
 C ------------------------------------------------------------------    
       IF(IPLAST.GT.960) WRITE(6,992)                                    
   992 FORMAT(/,/,6X,'WARNING TOO MANY LEVELS IN CALCULATION. CAN INCREAS
-     /E THE ARRAY SIZES FROM 960 UP TO 1740 MAXIMUM',/)                 
+     /E THE ARRAY SIZES FROM 960 UP TO 1800 MAXIMUM',/)                 
       IF(IPLAST.GT.960) STOP                                            
 C --------------------------------------------------------------------  
 C     CALCULATION OF TOTAL COLLISION FREQUENCY                          
@@ -12241,7 +11234,7 @@ C ---------------------------------------------------------------------
       TCF(IE)=TCF(IE)+CF(IE,IF)
       IF(CF(IE,IF).LT.0.0D0) WRITE(6,776) CF(IE,IF),IE,IF,IARRY(IF),EIN
      /(IF) 
-  776 FORMAT(' WARNING NEGATIVE COLLISION FREQUENCY =',D12.3,' IE =',I6,
+  776 FORMAT('  WARNING NEGATIVE COLLISION FEQUENCY =',D12.3,' IE =',I6,
      /' IF =',I3,' IARRY=',I5,' EIN=',F7.4)                             
  610  CONTINUE                                                          
       DO 620 IF=1,IPLAST                                                
@@ -12255,74 +11248,7 @@ C ---------------------------------------------------------------------
  630  CONTINUE                   
       FCATT(IE)=FCATT(IE)*EROOT(IE)
       FCION(IE)=FCION(IE)*EROOT(IE)                                     
-      TCF(IE)=TCF(IE)*EROOT(IE)
-C CALCULATION OF NULL COLLISION FREQUENCIES
-      NP=0
-      NPLAST=0
-      IF((NUL1+NUL2+NUL3+NUL4+NUL5+NUL6).EQ.0) GO TO 699
-      IF(NUL1.GT.0) THEN
-       DO 631 J=1,NUL1
-       NP=NP+1
-       SCLENUL(NP)=SCLN1(J)
-       DSCRPTN(NP)=SCRPN1(J)
-  631  CFN(IE,NP)=QNUL1(J,IE)*VAN1*SCLENUL(NP)
-      ENDIF      
-      IF(NUL2.GT.0) THEN
-       DO 632 J=1,NUL2
-       NP=NP+1
-       SCLENUL(NP)=SCLN2(J)
-       DSCRPTN(NP)=SCRPN2(J)
-  632  CFN(IE,NP)=QNUL2(J,IE)*VAN2*SCLENUL(NP)
-      ENDIF      
-      IF(NUL3.GT.0) THEN
-       DO 633 J=1,NUL3
-       NP=NP+1
-       SCLENUL(NP)=SCLN3(J)
-       DSCRPTN(NP)=SCRPN3(J)
-  633  CFN(IE,NP)=QNUL3(J,IE)*VAN3*SCLENUL(NP)
-      ENDIF      
-      IF(NUL4.GT.0) THEN
-       DO 634 J=1,NUL4
-       NP=NP+1
-       SCLENUL(NP)=SCLN4(J)
-       DSCRPTN(NP)=SCRPN4(J)
-  634  CFN(IE,NP)=QNUL4(J,IE)*VAN4*SCLENUL(NP)
-      ENDIF 
-      IF(NUL5.GT.0) THEN
-       DO 635 J=1,NUL5
-       NP=NP+1
-       SCLENUL(NP)=SCLN5(J)
-       DSCRPTN(NP)=SCRPN5(J)
-  635  CFN(IE,NP)=QNUL5(J,IE)*VAN5*SCLENUL(NP)
-      ENDIF 
-      IF(NUL6.GT.0) THEN
-       DO 636 J=1,NUL6
-       NP=NP+1
-       SCLENUL(NP)=SCLN6(J)
-       DSCRPTN(NP)=SCRPN6(J)
-  636  CFN(IE,NP)=QNUL6(J,IE)*VAN6*SCLENUL(NP) 
-      ENDIF 
-      NPLAST=NP
-C SUM NULL COLLISIONS 
-      TCFN(IE)=0.0
-      DO 640 IF=1,NPLAST
-      TCFN(IE)=TCFN(IE)+CFN(IE,IF) 
-      IF(CFN(IE,IF).LT.0.0D0) WRITE(6,779) CFN(IE,IF),IE,IF
-  779 FORMAT(' WARNING NEGATIVE NULL COLLISION FREQUENCY =',D12.3,
-     /' IE =',I6,' IF =',I3)                             
-  640 CONTINUE
-      DO 642 IF=1,NPLAST
-      IF(TCFN(IE).EQ.0.0D0) GO TO 641 
-      CFN(IE,IF)=CFN(IE,IF)/TCFN(IE)
-      GO TO 642
-  641 CFN(IE,IF)=0.0D0
-  642 CONTINUE
-      IF(NPLAST.EQ.1) GO TO 699
-      DO 643 IF=2,NPLAST
-      CFN(IE,IF)=CFN(IE,IF)+CFN(IE,IF-1)
-  643 CONTINUE
-      TCFN(IE)=TCFN(IE)*EROOT(IE)
-  699 CONTINUE
+      TCF(IE)=TCF(IE)*EROOT(IE)   
  700  CONTINUE 
 C     WRITE(6,841) (INDEX(J),J, J=1,IPLAST)
 C 841 FORMAT(2X,' INDEX=',I3,' J=',I3)                                  
@@ -12350,8 +11276,7 @@ C -------------------------------------------------------------------
       JLOW=DMAX0(JLOW,NONE)                                           
       JHI=DMIN0(JHI,N4000)
       DO 800 J=JLOW,JHI
-      IF((TCF(J)+TCFN(J)+DABS(FAKEI)).GE.TCFMAX(I)) TCFMAX(I)=TCF(J)+
-     /TCFN(J)+DABS(FAKEI)        
+      IF(TCF(J).GE.TCFMAX(I)) TCFMAX(I)=TCF(J)                          
   800 CONTINUE                                                          
   810 CONTINUE                                                          
 C -------------------------------------------------------------------   
@@ -12382,7 +11307,7 @@ C
   813  QION(3,I)=QION(3,I)+QION3(KION,I)*AN3
       ENDIF                                            
       QION(4,I)=Q4(3,I)*AN4
-      IF(NION1.GT.1) THEN
+      IF(NION4.GT.1) THEN
        QION(4,I)=0.0D0
        DO 814 KION=1,NION4
   814  QION(4,I)=QION(4,I)+QION4(KION,I)*AN4
@@ -12399,12 +11324,42 @@ C
        DO 816 KION=1,NION6
   816  QION(6,I)=QION(6,I)+QION6(KION,I)*AN6
       ENDIF                                            
-      QATT(1,I)=Q1(4,I)*AN1                                             
-      QATT(2,I)=Q2(4,I)*AN2                                             
-      QATT(3,I)=Q3(4,I)*AN3                                             
+      QATT(1,I)=Q1(4,I)*AN1  
+      IF(NATT1.GT.1) THEN
+       QATT(1,I)=0.0D0
+       DO 817 KATT=1,NATT1
+  817  QATT(1,I)=QATT(1,I)+QATT1(KATT,I)*AN1
+      ENDIF                                           
+      QATT(2,I)=Q2(4,I)*AN2                 
+      IF(NATT2.GT.1) THEN
+       QATT(2,I)=0.0D0
+       DO 818 KATT=1,NATT2
+  818  QATT(2,I)=QATT(2,I)+QATT2(KATT,I)*AN2
+      ENDIF                            
+      QATT(3,I)=Q3(4,I)*AN3                 
+      IF(NATT3.GT.1) THEN
+       QATT(3,I)=0.0D0
+       DO 819 KATT=1,NATT3
+  819  QATT(3,I)=QATT(3,I)+QATT3(KATT,I)*AN3
+      ENDIF                            
       QATT(4,I)=Q4(4,I)*AN4
+      IF(NATT4.GT.1) THEN
+       QATT(4,I)=0.0D0
+       DO 820 KATT=1,NATT4
+  820  QATT(4,I)=QATT(4,I)+QATT4(KATT,I)*AN4
+      ENDIF
       QATT(5,I)=Q5(4,I)*AN5
-      QATT(6,I)=Q6(4,I)*AN6                                             
+      IF(NATT5.GT.1) THEN
+       QATT(5,I)=0.0D0
+       DO 821 KATT=1,NATT5
+  821  QATT(5,I)=QATT(5,I)+QATT5(KATT,I)*AN5
+      ENDIF
+      QATT(6,I)=Q6(4,I)*AN6                 
+      IF(NATT6.GT.1) THEN
+       QATT(6,I)=0.0D0
+       DO 822 KATT=1,NATT5
+  822  QATT(5,I)=QATT(5,I)+QATT5(KATT,I)*AN6
+      ENDIF                            
 C                                                                       
   850 QREL(I)=0.0D0                                                     
       QSATT(I)=0.0D0                                                    
@@ -12458,9 +11413,8 @@ C
       COMMON/MRATIO/VAN1,VAN2,VAN3,VAN4,VAN5,VAN6,VAN
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS                             
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)               
       COMMON/DECOR/NCOLM,NCORLN,NCORST
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
       COMMON/DENS/DENSY(4000)
 C                                                                       
 C   NEW UPDATE OF CONSTANTS 2010
@@ -12573,16 +11527,12 @@ C ZERO COMMON BLOCKS OF OUTPUT RESULTS
       DYZER=0.0D0
       DXYER=0.0D0
       DXZER=0.0D0
-      IFAKE=0
-      FAKEI=0.0D0
       DO 65 J=1,300                                                     
    65 TIME(J)=0.0D0                                                     
       DO 70 K=1,30                                                      
    70 ICOLL(K)=0  
       DO 80 K=1,960
    80 ICOLN(K)=0   
-      DO 81 K=1,60
-   81 ICOLNN(K)=0                                                     
       DO 100 K=1,4000      
       DENSY(K)=0.0D0                                             
   100 SPEC(K)=0.0D0                                                     
@@ -12629,14 +11579,13 @@ C   METRES PER PICOSECOND
       COMMON/RATIO/AN1,AN2,AN3,AN4,AN5,AN6,AN,FRAC(6)              
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX  
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG  
-      COMMON/LARGE/RF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
+      COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),IPLAST,ISIZE,PENFRA(3,960),TCFMAX(8)            
       COMMON/NAMES/NAMEG(6) 
-      COMMON/DECOR/NCOLM,NCORLN,NCORST 
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)          
+      COMMON/DECOR/NCOLM,NCORLN,NCORST                          
       CHARACTER*25 NAMEG                                  
       WRITE(6,1)
-    1 FORMAT(2(/),10X,'PROGRAM MAGBOLTZ 2 VERSION 11.11',/)          
+    1 FORMAT(2(/),10X,'PROGRAM MAGBOLTZ 2 VERSION 11.12',/)          
       WRITE(6,10) NGAS                                                  
    10 FORMAT(10X,'MONTE CARLO SOLUTION FOR MIXTURE OF ',I2,' GASES.',/,
      /5X,'------------------------------------------------------')  
@@ -12691,7 +11640,7 @@ C 96  FORMAT(/,'  RANDOM NUMBER STARTER (SEED)=',F7.4)
      /Y INTERVALS (*10**12/SEC)',/,2(4(5X,D10.3)/))                    
       WRITE(6,111)  (TCF(L),L=250,3750,500)                             
   111 FORMAT('  REAL COLLISION FREQUENCY AT  8 EQUALLY SPACED ENERGY INT
-     /ERVALS (*10**12/SEC)',/,2(4(5X,D10.3)/))      
+     /ERVALS (*10**12/SEC)',/,2(4(5X,D10.3)/))                   
       RETURN                                                            
       END
       SUBROUTINE SORT(I,R2,IE)        
@@ -12727,7 +11676,6 @@ C
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX 
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
       COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO
       COMMON/IONFL1/NC0(960),EC0(960),NG1(960),EG1(960),NG2(960),
      /EG2(960),WKLM(960),EFL(960)
@@ -12741,12 +11689,10 @@ C
       COMMON/DIFLAB/DIFXX,DIFYY,DIFZZ,DIFYZ,DIFXY,DIFXZ
       COMMON/DIFERB/DXXER,DYYER,DZZER,DYZER,DXYER,DXZER
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       DIMENSION XST(2000000),YST(2000000),ZST(2000000),STO(2000000)
       DIMENSION WZST(10),AVEST(10)
-      DIMENSION DFZZST(10),DFYYST(10),DFXXST(10)
-      DIMENSION TEMP(4000)
+      DIMENSION DFZZST(10),DFYYST(10),DFXXST(10),TEMP(4000)
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.  
 C   USED WITH MAGNETIC FIELD B =0.0   ELECTRIC FIELD IN Z DIRECTION.
@@ -12799,12 +11745,7 @@ C -------------------------------------------------------------------
       NTMPFLG=0
       IEXTRA=0
       TDASH=0.0D0                  
-C 
-      DO 111 J=1,N4000
-  111 TEMP(J)=TCFN(J)+TCF(J)     
-      ABSFAKEI=DABS(FAKEI)
-      IFAKE=0
-C                                       
+C                                                                       
 C     INITIAL DIRECTION COSINES                                         
 C                                                                       
       DCZ1=DCOS(THETA)                                                  
@@ -12830,7 +11771,7 @@ C MAIN LOOP
       E=E1+(AP+BP*T)*T                                                  
       IE=DINT(E/ESTEP)+1                                               
       IE=DMIN0(IE,N4000)                                               
-      IF(TEMP(IE).GT.TLIM) THEN                             
+      IF(TCF(IE).GT.TLIM) THEN                                          
        TDASH=TDASH+DLOG(R1)/TLIM                                        
        TCFMAX(I)=1.05D0*TCFMAX(I)                                       
 C      WRITE(6,996)                                                    
@@ -12841,28 +11782,10 @@ C
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(IE)/TLIM                                             
-      IF(R5.LE.TEST1) GO TO 137                                         
-      NNULL=NNULL+1      
-      TEST2=TEMP(IE)/TLIM
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST.EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(I)=ICOLNN(I)+1
-       GO TO 1
-      ENDIF
-      TEST3=(TEMP(IE)+ABSFAKEI)/TLIM
-      IF(R5.LT.TEST3) THEN
-C FAKE IONISATION INCREMENT COUNTER
-       IFAKE=IFAKE+1
-       GO TO 1
-      ENDIF 
-      GO TO 1          
+      TLIM=TCF(IE)/TLIM                                                 
+      IF(R5.LE.TLIM) GO TO 137                                          
+      NNULL=NNULL+1                                                    
+      GO TO 1    
 C                                                                       
 C  CALCULATE DIRECTION COSINES AND POSITIONS AT INSTANT BEFORE COLLISION
 C    ALSO UPDATE DIFFUSION  AND ENERGY CALCULATIONS.                    
@@ -13112,7 +12035,7 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       ALPER=0.0D0 
       IF(ANCION.EQ.0.0D0) GO TO 820
       ALPER=100.0D0*DSQRT(ANCION)/ANCION
-  820 ALPHA=ANCION/(ST*WZ)*1.0D12 
+  820 ALPHA=ANCION/(ST*WZ)*1.0D12  
       RETURN                                                            
       END                                                               
       SUBROUTINE OUTPUT                                                 
@@ -13138,12 +12061,11 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)  
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)             
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)                             
       COMMON/SINT/SIMF(4000)                                            
       COMMON/NAMES/NAMEG(6)
-      COMMON/SCRIP/DSCRPT(960),DSCRPTN(60)
-      CHARACTER*50 DSCRPT,DSCRPTN                               
+      COMMON/SCRIP/DSCRPT(960)
+      CHARACTER*50 DSCRPT                                               
       CHARACTER*25 NAMEG
       WRITE(6,15)                                                       
       WRITE(6,15)                                                       
@@ -13197,11 +12119,11 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
      /,' TRANSVERSE DIFFUSION =',D11.4,' +-',F8.2,'%',/,2X,'TRANSVERSE D
      /IFFUSION (PARALLEL TO B-FIELD) DIFXX=',D11.4,' +-',F8.2,'%',/)
   900 WRITE(6,333) ALPHA,ALPER,ATT,ATTER                             
-  333 FORMAT(2(/),'  IONISATION RATE /CM.=',E11.4,' +/-',F6.2,' PERCENT.
-     /',/,'  ATTACHMENT RATE /CM.=',E11.4,' +/-',F6.2,' PERCENT.',2(/)) 
+  333 FORMAT(2(/),'  IONISATION RATE /CM.=',D11.4,' +/-',F6.2,' PERCENT.
+     /',/,'  ATTACHMENT RATE /CM.=',D11.4,' +/-',F6.2,' PERCENT.',2(/)) 
       WRITE(6,960) AVE,DEN             
   960 FORMAT(/,2X,'MEAN ELECTRON ENERGY =',F9.4,' EV. ERROR =  +-',F8.2,
-     /'%',/)           
+     /'%',/)              
       RETURN                                                            
       END
       SUBROUTINE MONTEA                                                 
@@ -13213,7 +12135,6 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
       COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO
       COMMON/IONFL1/NC0(960),EC0(960),NG1(960),EG1(960),NG2(960),
      /EG2(960),WKLM(960),EFL(960)  
@@ -13227,12 +12148,10 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/CTOWNS/ALPHA,ATT
       COMMON/CTWNER/ALPER,ATTER
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60) 
-      COMMON/FAKE/FAKEI,IFAKE,FAKET(8),FAKED(9)               
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)                            
       DIMENSION XST(2000000),YST(2000000),ZST(2000000),STO(2000000) 
       DIMENSION WZST(10),AVEST(10)                                 
-      DIMENSION DFZZST(10),DFYYST(10),DFXXST(10)
-      DIMENSION TEMP(4000)
+      DIMENSION DFZZST(10),DFYYST(10),DFXXST(10),TEMP(4000)
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.  
 C   USED WITH MAGNETIC FIELD , B , PARALLEL TO ELECTRIC FIELD IN THE
@@ -13283,12 +12202,7 @@ C -------------------------------------------------------------------
       NCOL=0                                                            
       NNULL=0
       IEXTRA=0 
-      TDASH=0.0D0 
-C
-      DO 111 J=1,N4000
-  111 TEMP(J)=TCFN(J)+TCF(J)                   
-      ABSFAKEI=FAKEI
-      IFAKE=0                      
+      TDASH=0.0D0                                                       
 C                                                                       
 C     INITIAL DIRECTION COSINES                                         
 C                                                                       
@@ -13319,38 +12233,20 @@ C MAIN LOOP
       E=E1+(AP+BP*T)*T                                                  
       IE=DINT(E/ESTEP)+1                                            
       IE=DMIN0(IE,N4000)                                              
-      IF(TEMP(IE).GT.TLIM) THEN                                         
+      IF(TCF(IE).GT.TLIM) THEN                                          
        TDASH=TDASH+DLOG(R1)/TLIM                                        
        TCFMAX(I)=1.05D0*TCFMAX(I)                                       
-C      WRITE(6,996)                                                      
-C996   FORMAT(/,5X,' WARNING NULL COLLISION TIME INCREASED',/)           
+C      WRITE(6,996)                                                 
+C996   FORMAT(/,5X,' WARNING NULL COLLISION TIME INCREASED',/)      
        GO TO 1  
       ENDIF                                                          
 C                                                                       
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(IE)/TLIM                                               
-      IF(R5.LE.TEST1) GO TO 137                                    
-      NNULL=NNULL+1 
-      TEST2=TEMP(IE)/TLIM
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST.EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(I)=ICOLNN(I)+1
-       GO TO 1
-      ENDIF
-      TEST3=(TEMP(IE)+ABSFAKEI)/TLIM
-      IF(R5.LT.TEST3) THEN
-C FAKE IONISATION INCREMENT COUNTER
-       IFAKE=IFAKE+1
-       GO TO 1
-      ENDIF
+      TLIM=TCF(IE)/TLIM                                                 
+      IF(R5.LE.TLIM) GO TO 137                                      
+      NNULL=NNULL+1                                                    
       GO TO 1    
 C                                                                       
 C  CALCULATE DIRECTION COSINES AND POSITIONS AT INSTANT BEFORE COLLISION
@@ -13600,7 +12496,7 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       ALPER=0.0
       IF(ANCION.EQ.0.0D0) GO TO 820
       ALPER=100.0*DSQRT(ANCION)/ANCION
-  820 ALPHA=ANCION/(ST*WZ)*1.0D12                                  
+  820 ALPHA=ANCION/(ST*WZ)*1.0D12                                       
       RETURN                                                            
       END                                                               
       SUBROUTINE MONTEB                                                 
@@ -13612,7 +12508,6 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
       COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO
       COMMON/IONFL1/NC0(960),EC0(960),NG1(960),EG1(960),NG2(960),
      /EG2(960),WKLM(960),EFL(960)
@@ -13628,13 +12523,11 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/CTOWNS/ALPHA,ATT
       COMMON/CTWNER/ALPER,ATTER
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)   
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)      
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)                             
       DIMENSION XST(2000000),YST(2000000),ZST(2000000),STO(2000000)
       DIMENSION WZST(10),WYST(10),AVEST(10)
       DIMENSION DFZZST(10),DFYYST(10),DFXXST(10)
-      DIMENSION DFYZST(10),DFLNST(10),DFTRST(10)  
-      DIMENSION TEMP(4000)                      
+      DIMENSION DFYZST(10),DFLNST(10),DFTRST(10),TEMP(4000)             
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY. 
 C   SUBROUTINE HANDLES MAGNETIC FIELD AND ELECTRIC FIELD
@@ -13686,12 +12579,7 @@ C -------------------------------------------------------------------
       NNULL=0  
       IEXTRA=0
       TDASH=0.0D0 
-      CONST9=CONST3*0.01D0
-C
-      DO 111 J=1,N4000
-  111 TEMP(J)=TCFN(J)+TCF(J)                     
-      ABSFAKEI=FAKEI
-      IFAKE=0                      
+      CONST9=CONST3*0.01D0                                              
 C                                                                       
 C     INITIAL DIRECTION COSINES                                         
 C                                                                       
@@ -13725,40 +12613,22 @@ C983  FORMAT(2X,' J2=',I12,' DZ=',D12.3,' E1=',D12.3,' COSWT=',D12.3
 C    /,' SINWT=',D12.3,' WBT=',D12.3,' CY1=',D12.3)                                                      
       IE=DINT(E/ESTEP)+1                                             
       IE=DMIN0(IE,N4000)                                              
-      IF(TEMP(IE).GT.TLIM) THEN                                       
+      IF(TCF(IE).GT.TLIM) THEN                                          
        TDASH=TDASH+DLOG(R1)/TLIM                                        
        TCFMAX(I)=1.05D0*TCFMAX(I)                                       
 C
 C      WRITE(6,996)
-C996   FORMAT(/,5X,' WARNING NULL COLLISION TIME INCREASED',/)           
+C996   FORMAT(/,5X,' WARNING NULL COLLISION TIME INCREASED',/)        
        GO TO 1   
       ENDIF                                                         
 C                                                                       
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(IE)/TLIM                                               
-      IF(R5.LE.TEST1) GO TO 137                                         
-      NNULL=NNULL+1 
-      TEST2=TEMP(IE)/TLIM
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST.EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(I)=ICOLNN(I)+1
-       GO TO 1
-      ENDIF
-      TEST3=(TEMP(IE)+ABSFAKEI)/TLIM
-      IF(R5.LT.TEST3) THEN
-C FAKE IONISATION INCREMENT COUNTER
-       IFAKE=IFAKE+1
-       GO TO 1
-      ENDIF
-      GO TO 1    
+      TLIM=TCF(IE)/TLIM                                                 
+      IF(R5.LE.TLIM) GO TO 137                                         
+      NNULL=NNULL+1                                                    
+      GO TO 1   
 C                                                                       
 C  CALCULATE DIRECTION COSINES AND POSITIONS AT INSTANT BEFORE COLLISION
 C    ALSO UPDATE DIFFUSION  AND ENERGY CALCULATIONS.                    
@@ -14037,7 +12907,7 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       ALPER=0.0D0
       IF(ANCION.EQ.0.0D0) GO TO 820
       ALPER=100.0D0*DSQRT(ANCION)/ANCION
-  820 ALPHA=ANCION/(ST*WZ)*1.0D12    
+  820 ALPHA=ANCION/(ST*WZ)*1.0D12             
       RETURN                                                            
       END 
       SUBROUTINE MONTEC                                                 
@@ -14049,7 +12919,6 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
       COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO  
       COMMON/IONFL1/NC0(960),EC0(960),NG1(960),EG1(960),NG2(960),
      /EG2(960),WKLM(960),EFL(960)      
@@ -14065,13 +12934,11 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/CTOWNS/ALPHA,ATT 
       COMMON/CTWNER/ALPER,ATTER   
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)    
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)            
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)                             
       DIMENSION XST(2000000),YST(2000000),ZST(2000000),STO(2000000)
       DIMENSION WZST(10),WYST(10),WXST(10),AVEST(10)
       DIMENSION DFZZST(10),DFYYST(10),DFXXST(10) 
-      DIMENSION DFYZST(10),DFXYST(10),DFXZST(10)
-      DIMENSION TEMP(4000)
+      DIMENSION DFYZST(10),DFXYST(10),DFXZST(10),TEMP(4000)
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY. 
 C   SUBROUTINE SOLVES MOTION IN COORDINATE SYSTEM WITH BFIELD
@@ -14145,12 +13012,7 @@ C
       NNULL=0    
       IEXTRA=0                                         
       TDASH=0.0D0 
-      CONST9=CONST3*0.01D0
-C
-      DO 111 J=1,N4000
-  111 TEMP(J)=TCFN(J)+TCF(J)                     
-      ABSFAKEI=FAKEI
-      IFAKE=0                    
+      CONST9=CONST3*0.01D0                                              
 C                                                                       
 C     INITIAL DIRECTION COSINES                                         
 C                                                                       
@@ -14185,39 +13047,21 @@ C983  FORMAT(2X,' J2=',I12,' DZ=',D12.3,' E1=',D12.3,' COSWT=',D12.3
 C    /,' SINWT=',D12.3,' WBT=',D12.3,' CY1=',D12.3)  
       IE=DINT(E/ESTEP)+1                                             
       IE=DMIN0(IE,N4000)                                               
-      IF(TEMP(IE).GT.TLIM) THEN                                        
+      IF(TCF(IE).GT.TLIM) THEN                                          
        TDASH=TDASH+DLOG(R1)/TLIM                                        
        TCFMAX(I)=1.05D0*TCFMAX(I)                                       
-C      WRITE(6,996)                                                      
-C996   FORMAT(/,5X,' WARNING NULL COLLISION TIME INCREASED',/)           
+C      WRITE(6,996)                                                
+C996   FORMAT(/,5X,' WARNING NULL COLLISION TIME INCREASED',/)        
        GO TO 1    
       ENDIF                                                        
 C                                                                       
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(IE)/TLIM                                               
-      IF(R5.LE.TEST1) GO TO 137                                         
-      NNULL=NNULL+1 
-      TEST2=TEMP(IE)/TLIM
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST.EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(I)=ICOLNN(I)+1
-       GO TO 1
-      ENDIF
-      TEST3=(TEMP(IE)+ABSFAKEI)/TLIM
-      IF(R5.LT.TEST3) THEN
-C FAKE IONISATION INCREMENT COUNTER
-       IFAKE=IFAKE+1
-       GO TO 1
-      ENDIF
-      GO TO 1    
+      TLIM=TCF(IE)/TLIM                                                 
+      IF(R5.LE.TLIM) GO TO 137                                    
+      NNULL=NNULL+1                                                    
+      GO TO 1  
 C                                                                       
 C  CALCULATE DIRECTION COSINES AND POSITIONS AT INSTANT BEFORE COLLISION
 C    ALSO UPDATE DIFFUSION  AND ENERGY CALCULATIONS.                    
@@ -14541,9 +13385,7 @@ C CALCULATE TOWNSEND COEFICIENTS AND ERRORS
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX   
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
-      COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO  
-      DIMENSION TEMP(4000)      
+      COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO        
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND TESTS TO FIND IF THE UPPER ENERGY  
 C   LIMIT FOR THE ELECTRON ENERGY IS EXCEEDED. 
@@ -14560,10 +13402,7 @@ C -------------------------------------------------------------------
       E1=ESTART    
       N4000=4000                                                     
       INTEM=8                                                           
-      TDASH=0.0D0         
-C
-      DO 111 J=1,4000
-  111 TEMP(J)=TCFN(J)+TCF(J)                                          
+      TDASH=0.0D0                                                       
 C                                                                       
 C     INITIAL DIRECTION COSINES                                         
 C                                                                       
@@ -14589,7 +13428,7 @@ C MAIN LOOP
       E=E1+(AP+BP*T)*T                                                  
       IE=DINT(E/ESTEP)+1
       IE=DMIN0(IE,N4000) 
-      IF(TEMP(IE).GT.TLIM) THEN                                       
+      IF(TCF(IE).GT.TLIM) THEN                                          
        TDASH=TDASH+DLOG(R1)/TLIM                                        
        TCFMAX(I)=1.05D0*TCFMAX(I)                                       
        GO TO 1   
@@ -14598,8 +13437,8 @@ C
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(IE)/TLIM                                               
-      IF(R5.GT.TEST1) GO TO 1                                          
+      TLIM=TCF(IE)/TLIM                                                 
+      IF(R5.GT.TLIM) GO TO 1                                            
 C                                                                       
 C  CALCULATE DIRECTION COSINES AT INSTANT BEFORE COLLISION
 C                       
@@ -14691,9 +13530,7 @@ C LOOP
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
-      COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO
-      DIMENSION TEMP(4000)        
+      COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO        
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND TESTS TO FIND IF THE UPPER ENERGY  
 C   LIMIT FOR THE ELECTRON ENERGY IS EXCEEDED. 
@@ -14712,10 +13549,7 @@ C -------------------------------------------------------------------
       N4000=4000                                                     
       INTEM=8                                                           
       TDASH=0.0D0 
-      CONST9=CONST3*0.01D0
-C
-      DO 111 J=1,4000
-  111 TEMP(J)=TCFN(J)+TCF(J)                                            
+      CONST9=CONST3*0.01D0                                              
 C                                                                       
 C     INITIAL DIRECTION COSINES                                         
 C                                                                       
@@ -14745,7 +13579,7 @@ C MAIN LOOP
       E=E1+DZ*EF100                                                     
       IE=DINT(E/ESTEP)+1 
       IE=DMIN0(IE,N4000) 
-      IF(TEMP(IE).GT.TLIM) THEN                                       
+      IF(TCF(IE).GT.TLIM) THEN                                          
        TDASH=TDASH+DLOG(R1)/TLIM                                        
        TCFMAX(I)=1.05D0*TCFMAX(I)                                       
        GO TO 1  
@@ -14754,8 +13588,8 @@ C
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM) 
-      TEST1=TCF(IE)/TLIM                                              
-      IF(R5.GT.TEST1) GO TO 1                                          
+      TLIM=TCF(IE)/TLIM                                                 
+      IF(R5.GT.TLIM) GO TO 1                                            
 C                                                                       
 C  CALCULATE DIRECTION COSINES AT INSTANT BEFORE COLLISION
 C                       
@@ -14854,9 +13688,7 @@ C LOOP
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
-      COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO  
-      DIMENSION TEMP(4000)     
+      COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO       
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND TESTS TO FIND IF THE UPPER ENERGY  
 C   LIMIT FOR THE ELECTRON ENERGY IS EXCEEDED. 
@@ -14880,10 +13712,7 @@ C -------------------------------------------------------------------
       N4000=4000                                                     
       INTEM=8                                                           
       TDASH=0.0D0 
-      CONST9=CONST3*0.01D0
-C 
-      DO 111 J=1,4000
-  111 TEMP(J)=TCFN(J)+TCF(J)                                            
+      CONST9=CONST3*0.01D0                                              
 C                                                                       
 C     INITIAL DIRECTION COSINES                                         
 C                                                                       
@@ -14914,7 +13743,7 @@ C MAIN LOOP
       E=E1+DZ*EFZ100+DX*EFX100                                          
       IE=DINT(E/ESTEP)+1 
       IE=DMIN0(IE,N4000) 
-      IF(TEMP(IE).GT.TLIM) THEN                                        
+      IF(TCF(IE).GT.TLIM) THEN                                          
        TDASH=TDASH+DLOG(R1)/TLIM                                        
        TCFMAX(I)=1.05D0*TCFMAX(I)                                       
        GO TO 1   
@@ -14923,8 +13752,8 @@ C
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(IE)/TLIM                                               
-      IF(R5.GT.TEST1) GO TO 1                                          
+      TLIM=TCF(IE)/TLIM                                                 
+      IF(R5.GT.TLIM) GO TO 1                                            
 C                                                                       
 C  CALCULATE DIRECTION COSINES AT INSTANT BEFORE COLLISION
 C                       
@@ -15028,7 +13857,6 @@ C LOOP
       COMMON/CTCALC/ZPLANE1,ZPLANE2,ZPLANE3,ZPLANE4,ZPLANE5,ZPLANE6,
      /ZPLANE7,ZPLANE8,IZFINAL
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)
 C ---------------------------------------------------------------------      
@@ -15041,119 +13869,20 @@ C ------------------------------------------------------------------
       IF(IMAX.LT.5) IMAX=5 
       NMAX=IMAX*10000000
       CORR=760.0*(TEMPC+273.15)/(TORR*293.15)
-      ALPP=ALPHA/CORR
-      ATTP=ATT/CORR
-      ANETP=ALPP-ATTP
-      ANET=ALPHA-ATT
-      TCUTH=1.2D-10*CORR
-      TCUTL=1.D-13*CORR
-      ZCUTH=1.2D-2*CORR
-      ZCUTL=1.D-5*CORR
-C   
-      IF (ANETP.GT.30.0) THEN
-       ALPHAD=0.0
-       ALP1=ALPHA
-       ATT1=ATT
-C WEAK ATTACHMENT
-       GO TO 6
-      ENDIF 
-C  SOME ATTACHMENT
-      IF(DABS(ANETP).LT.100.) THEN
-C SMALL NET ATTACHMENT
-       ALPHAD=DABS(ATT)*0.8
-      ELSE IF(DABS(ANETP).GE.100..AND.DABS(ANETP).LT.1000.) THEN
-C LARGER NET ATTACHMENT
-       ALPHAD=DABS(ANET)*0.65
-      ELSE IF(DABS(ANETP).GT.1000..AND.DABS(ANETP).LT.10000.) THEN
-       ALPHAD=DABS(ANET)*0.6
-      ELSE IF(DABS(ANETP).GT.10000..AND.DABS(ANETP).LT.100000.) THEN
-       ALPHAD=DABS(ANET)*0.5
-      ELSE IF(DABS(ANETP).GT.100000..AND.DABS(ANETP).LT.2000000.) THEN
-       ALPHAD=DABS(ANET)*0.2
-      ELSE 
-       WRITE(6,91) 
-   91 FORMAT(' ATTACHMENT TOO LARGE PROGRAM STOPPED')
-       STOP
-      ENDIF
-   3  VDST=WZ*1.D-5
-      FAKEI=ALPHAD*WZ*1.D-12
-      ALPHAST=0.85*DABS(ALPHAD+ANET)                      
-      TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH) TSTEP=TCUTH
-      IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMIT
-      DO 4 J=1,8
-    4 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)
-      WRITE(6,871) ALPHAST,ANET,ALPHAD,TSTEP
-  871 FORMAT(' ALPHAST1=',D10.3,' ANET1=',D10.3,' ALPHAD1=',D10.3,/,
-     /' TSTEP1=',D10.3)
-C  CONVERT TO  PICOSECONDS     
-      TSTEP=TSTEP*1.0D12
-      TFINAL=7.0D0*TSTEP
-      ITFINAL=7
-C CALCULATE GOOD STARTING VALUES FOR ALPHA AND NETA
-      JPRT=0
-      CALL MONTEFT(JPRT)
-      CALL PT(JPRT)
-      CALL TOF(JPRT)
-      ALP1=RALPHA/TOFWR*1.D7
-      ALP1ER=RALPER*ALP1/100. 
-      ATT1=RATTOF/TOFWR*1.D7
-      ATT1ER=RATOFER*ATT1/100.
-      WRITE(6,944) ALP1,ALP1ER,ATT1,ATT1ER
-  944 FORMAT(' GOOD STARTING VALUES FOR CALC:',/,' ALPHA=',D12.3,' ERR='
-     /,D12.3,/,' NETA =',D12.3,' ERR=',D12.3)
-C
-C CALCULATE USING GOOD STARTING VALUES
-C  RESET TCFMAX
-      DO 44 J=1,8
-   44 TCFMAX(J)=TCFMAX(J)-DABS(FAKEI)
-C CALCULATE FAKE IONISATION RATE SCALING BY 1.2 
-      ALPHAD=DABS(ATT1)*1.2
-      IF((ALP1-ATT1).GT.30.*CORR) ALPHAD=DABS(ATT1)*0.4
-      IF(DABS(ALP1-ATT1).LT.(ALP1/10.0).OR.DABS(ALP1-ATT1).LT.
-     /(ATT1/10.0)) ALPHAD=DABS(ATT1)*0.3
-      IF((ALP1-ATT1).GT.100.*CORR) ALPHAD=0.0
-      WZ=TOFWR*1.D5
-C
-C
-C NET IONISATION
-C   5 IF(ANET.GT.(11000./CORR)) THEN
-C HIGH  IONISATON       
-C      ALPHAD=7000.-(ALPHA-ATT)
-C     ELSE IF(DABS(ALPP).GT.(5.0*DABS(ANET)).OR.DABS(ATTP).GT.
-C    /(5.0*DABS(ANET)))THEN
-C LARGE CANCELLATION BETWEEN ATTACHMENT AND IONISATION
-C      ALPHAD=-6.0*(ALPHA-ATT) 
-C     ELSE
-C      ALPHAD=0.0
-C     ENDIF
-    6 VDST=WZ*1.D-5
-      FAKEI=ALPHAD*WZ*1.D-12
-      ALPHAST=0.85*DABS(ALPHAD+ALP1-ATT1)      
-      IF((ALP1+ALPHAD).GT.(10.0*ALPHAST).OR.ATT1.GT.(10.0*ALPHAST)) THEN
-C LARGE CANCELLATION BETWEEN ALPHA AND NETA. REDUCE STEP SIZE BY 20.0
-       IF((ALP1+ALPHAD).GT.100.*CORR) THEN
+      ALPHAST=0.85D0*DABS(ALPHA-ATT)
+      IF(ALPHA.GT.(10.0*ALPHAST).OR.ATT.GT.(10.0*ALPHAST)) THEN
+C LARGE CANCELLATION BETWEEN ALPHA AND NETA REDUCE STEP SIZE BY 30.0
+       IF(ALPHA.GT.100.0*CORR) THEN
+        ALPHAST=ALPHAST*30.0
+       ELSE IF(ALPHA.GT.50.0*CORR) THEN
         ALPHAST=ALPHAST*15.0
-       ELSE IF((ALP1+ALPHAD).GT.50.0*CORR) THEN
-        ALPHAST=ALPHAST*12.0
        ELSE
         ALPHAST=ALPHAST*8.0
        ENDIF
-      ENDIF
+      ENDIF 
+      VDST=WZ*1.D-5                                                 
       TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
       ZSTEP=DLOG(3.0D0)/ALPHAST
-      IF(TSTEP.GT.TCUTH.AND.ALPHAD.NE.0.0)  TSTEP=TCUTH
-C      IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-      IF(ZSTEP.GT.ZCUTH.AND.ALPHAD.NE.0.0)  ZSTEP=ZCUTH
-C      IF(ZSTEP.LT.ZCUTL) ZSTEP=ZCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMIT
-      DO 10 J=1,8
-   10 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)
-      ANET=ALP1-ATT1
-      WRITE(6,878) ALPHAST,ANET,ALPHAD,TSTEP,ZSTEP
-  878 FORMAT(' ALPHAST=',D10.3,' ANET=',D10.3,' ALPHAD=',D10.3,/,
-     /' TSTEP=',D10.3,' ZSTEP=',D10.3)
 C  CONVERT TO METRES AND PICOSECONDS     
       TSTEP=TSTEP*1.0D12
       ZSTEP=ZSTEP*0.01D0
@@ -15176,7 +13905,7 @@ C CALC SST
       ZSTEPM=ZSTEP*1.0D6
       WRITE(6,12) ZSTEPM
    12 FORMAT(1(/),' SPACE STEP BETWEEN SAMPLING PLANES =',D12.5,' MICRON
-     /S.',/)   
+     /S.',/)     
       CALL MONTEFD
       CALL SST
 C--------------------------------------------------------      
@@ -15186,35 +13915,34 @@ C-----------------------------------------------
       ALPER=ALPHERR
       ATT=ATTSST
       ATTER=ATTERR        
-C-----------------------------------------------     
+C-----------------------------------------------      
       WRITE(6,18) 
    18 FORMAT(/,' SST DRIFT VELOCITIES')   
       WRITE(6,19) VDOUT,VDERR,WSOUT,WSERR
-   19 FORMAT(/,' VD=',F9.1,' +- ',F6.2,' %   WS=',F9.1,' +- ',F6.2,' %')
+   19 FORMAT(/,' VD=',F9.2,' +- ',F6.2,' %   WS=',F9.2,' +- ',F6.2,' %')
       WRITE(6,20)      
    20 FORMAT(/,' SST DIFFUSION')  
       WRITE(6,21) DLOUT,DLERR,DTOUT,DTERR   
-   21 FORMAT(/,' DL=',F9.1,' +- ',F6.1,' %   DT=',F9.1,' +- ',F6.2,' %')
+   21 FORMAT(/,' DL=',F9.2,' +- ',F6.1,' %   DT=',F9.2,' +- ',F6.2,' %')
       WRITE(6,22) 
    22 FORMAT(/,' SST TOWNSEND COEFICIENTS')
       WRITE(6,23) ALPHSST,ALPHERR,ATTSST,ATTERR
-   23 FORMAT(/,' ALPHA=',F9.1,' +- ',F6.2,' %    ATT=',F9.1,' +- ',F6.2,
-     /' %')      
-      CALL OUTPUT1  
-  777 CONTINUE
+   23 FORMAT(/,' ALPHA=',F9.2' +- ',F6.2,' %    ATT=',F9.2,' +- ',F6.2,
+     /' %')   
+      CALL OUTPUT1
+C                                         
 C CALC TIME OF FLIGHT AND PT 
       WRITE(6,25)
    25 FORMAT(/,2X,'SOLUTION FOR PULSED TOWNSEND AND TIME OF FLIGHT PARAM
      /ETERS',/,'  ------------------------------------------------------
-     /--------')  
+     /--------') 
       WRITE(6,26) TSTEP
    26 FORMAT(1(/),'  TIME STEP BETWEEN SAMPLING PLANES =',D12.5,' PICOSE
-     /CS.',/)     
-      JPRT=1                
-      CALL MONTEFT(JPRT)                             
+     /CS.',/)                     
+      CALL MONTEFT                             
       CALL FRIEDLAND 
-      CALL PT(JPRT)
-      CALL TOF(JPRT)
+      CALL PT
+      CALL TOF
       WRITE(6,27) RALPHA,RALPER,RATTOF,RATOFER
    27 FORMAT(/,' PT IONISATION AND ATTACHMENT RATES *10**12/SEC',/,' ALP
      /HA=',D10.3,' +- ',F6.2,' %      ATT=',D10.3,' +- ',F6.2,' %')    
@@ -15231,57 +13959,37 @@ C CALCULATE TOWNSEND SST COEFICIENTS DIRECTLY FROM TOF RESULTS
       WRZN=TOFWR*1.0D05
       FC1=WRZN/(2.0D0*TOFDL)
       FC2=((RALPHA-RATTOF)*1.0D12)/TOFDL
-      ALPTEST=FC1-DSQRT(FC1**2-FC2)    
+      ALPTEST=FC1-DSQRT(FC1**2-FC2) 
       WRITE(6,888) ALPTEST
   888 FORMAT(/,'TOWNSEND COEFICIENT (ALPHA-ATT) CALCULATED FROM TOF RESU
      /LTS:',/,' ALPHA-ATT /CM.=',D11.4,' N.B. APPROXIMATE FORMULA NOT AC
      /CURATE',/)                             
-C
-C CALCULATE DIRECTLY FROM TOF FREQUENCY
-C     ALP1=RALPHA/TOFWR*1.D7
-C     ALP1ER=RALPER*ALP1/100. 
-C     ATT1=RATTOF/TOFWR*1.D7
-C     ATT1ER=RATOFER*ATT1/100.
-C
-C     WRITE(6,33) ALP1,ALP1ER,ATT1,ATT1ER
-C  33 FORMAT(' TOF TOWNSEND IN UNITS OF 1/CM:',/,'   GAIN =',D12.4,' +-'
-C    /,D12.4,/,' ATTACH =',D12.4,' +-',D12.4,/) 
       RETURN                                                     
       END                                                               
-      SUBROUTINE MONTEFT(JPRT)                                       
+      SUBROUTINE MONTEFT                                                
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
-      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAXOLD
+      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX   
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),IPLAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
       COMMON/IONFL1/NC0(960),EC0(960),NG1(960),EG1(960),NG2(960),
      /EG2(960),WKLM(960),EFL(960)
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS
-      COMMON/ISPT/XS(2000),YS(2000),ZS(2000),TS(2000),ES(2000),
-     /DCX(2000),DCY(2000),DCZ(2000),IPL(2000) 
+      COMMON/ISPT/XS(8000),YS(8000),ZS(8000),TS(8000),ES(8000),
+     /DCX(8000),DCY(8000),DCZ(8000),IPL(8000)
       COMMON/TPLOUT/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),VZTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT 
-      COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO      
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)        
-      DIMENSION EPRM(10000000),IESPECP(100),TEMP(4000)            
-C --- ----------------------------------------------------------------  
-C     CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
-C     THIS ROUTINE HANDLES TERMINATIONS AT FIXED DRIFT TIMES.   
-C --- ----------------------------------------------------------------
-      IF(JPRT.EQ.0) THEN
-C CALCULATION OF APPROXIMATE STARTING PARAMETERS 
-       NMAX=NMAXOLD
-       IF(NMAXOLD.GT.80000000) NMAX=80000000
-      ELSE
-C ENTRY FOR NORMAL CALCULATION
-       NMAX=NMAXOLD
-      ENDIF
+      COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO        
+      DIMENSION EPRM(10000000),IESPECP(100),TEMP(4000) 
+C -------------------------------------------------------------------   
+C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
+C   THIS ROUTINE HANDLES TERMINATIONS AT FIXED DRIFT TIMES.   
+C ------------------------------------------------------------------- 
       S=0.0D0 
       ST=0.0D0 
       X=0.0D0
@@ -15303,8 +14011,6 @@ C ENTRY FOR NORMAL CALCULATION
    26 ICOLL(I)=0
       DO 27 I=1,960
    27 ICOLN(I)=0
-      DO 271 I=1,60
-  271 ICOLNN(I)=0
       DO 28 I=1,4000
    28 SPEC(I)=0.0D0            
       DO 33 I=1,100
@@ -15336,15 +14042,7 @@ C ENTRY FOR NORMAL CALCULATION
       NCLUS=0
       J1=1 
       ZSTRT=0.0D0
-      TSSTRT=0.0D0                                    
-C
-      DO 111 J=1,4000
-  111 TEMP(J)=TCFN(J)+TCF(J)
-      ABSFAKEI=DABS(FAKEI)
-      IFAKE=0
-      DO 112 J=1,8
-  112 IFAKET(J)=0
-C                
+      TSSTRT=0.0D0                                                    
 C     INITIAL DIRECTION COSINES                                         
       DCZ1=DCOS(THETA)                                                  
       DCX1=DSIN(THETA)*DCOS(PHI)                                        
@@ -15452,55 +14150,10 @@ C
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(IE)/TLIM                                              
-      IF(R5.LE.TEST1) GO TO 137                                        
-      NNULL=NNULL+1                     
-      TEST2=TEMP(IE)/TLIM
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-       IF(NPLAST.EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(I)=ICOLNN(I)+1
-       GO TO 1
-      ENDIF
-      TEST3=(TEMP(IE)+ABSFAKEI)/TLIM
-      IF(R5.LT.TEST3) THEN
-C FAKE COLLISION INCREMENT COUNTERS 
-       IFAKE=IFAKE+1
-       IFAKET(IPLANE+1)=IFAKET(IPLANE+1)+1
-       IF(FAKEI.LT.0.0) THEN
-       NEION=NEION+1
-C FAKE ATTACHMENT START NEW ELECTRON         
-        IF(NELEC.EQ.(NCLUS+1)) GO TO 544
-C ELECTRON CAPTURED TAKE NEXT ELECTRON FROM STORE       
-        GO TO 20
-       ENDIF    
-C  FAKE IONISATION ADD ELECTRON TO STORE
-       NCLUS=NCLUS+1
-       NPONT=NPONT+1
-       NMXADD=MAX(NPONT,NMXADD)
-       IF(NPONT.GT.2000) THEN 
-        WRITE(6,546) NPONT,ITER
-        STOP
-       ENDIF     
-       A=T*CONST9*DSQRT(E1)
-       XS(NPONT)=X+DCX1*A       
-       YS(NPONT)=Y+DCY1*A
-       ZS(NPONT)=Z+DCZ1*A+T*T*F1
-       TS(NPONT)=ST+T
-       ES(NPONT)=E
-       IPL(NPONT)=IPLANE
-       CONST6=DSQRT(E1/E)
-       DCX(NPONT)=DCX1*CONST6
-       DCY(NPONT)=DCY1*CONST6
-       DCZ(NPONT)=DCZ1*CONST6+EFIELD*T*CONST5/DSQRT(E)
-       GO TO 1
-      ENDIF
-      GO TO 1
+      TTEM=TCF(IE)/TLIM                                                 
+      IF(R5.LE.TTEM)GO TO 137                                           
+      NNULL=NNULL+1                                                     
+      GO TO 1                                                           
 C                                                                       
 C  CALCULATE DIRECTION COSINES AND POSITIONS AT INSTANT BEFORE COLLISION
 C    ALSO UPDATE DIFFUSION  AND ENERGY CALCULATIONS.                    
@@ -15574,7 +14227,7 @@ C OF IONISATION ELECTRON
       NCLUS=NCLUS+1
       NPONT=NPONT+1
       NMXADD=MAX(NPONT,NMXADD)
-      IF(NPONT.GT.2000) THEN 
+      IF(NPONT.GT.8000) THEN 
       WRITE(6,546) NPONT,ITER
  546  FORMAT(2X,' PROGRAM STOPPED . NPONT=',I5,' ITER=',I10)
       STOP
@@ -15646,7 +14299,7 @@ C IONISATION OF THE OTHER GASES IN THE MIXTURE.
        IF(RAN.GT.PENFRA(1,I)) GO TO 5
        NCLUS=NCLUS+1
        NPONT=NPONT+1
-       IF(NPONT.GT.2000) THEN 
+       IF(NPONT.GT.8000) THEN 
         WRITE(6,546) NPONT,ITER
         STOP
        ENDIF
@@ -15817,7 +14470,7 @@ C  MAIN LOOP END
      /ESTIMATED ALPHA.  NCLUS = ',I7,'  ITER =',I9)      
       STOP
       ENDIF
-      IF(JPRT.EQ.1) WRITE(6,878) NELEC,NEION,IPRIM
+      WRITE(6,878) NELEC,NEION,IPRIM
  878  FORMAT(/,' TOTAL NO OF ELECTRONS=',I10,/,' TOTAL NO OF NEG. IONS='
      /,I10,/,' TOTAL NO OF PRIMARIES=',I10)  
       EPRMBAR=0.0D0
@@ -15828,7 +14481,7 @@ C  MAIN LOOP END
  310  EPRMBAR=EPRMBAR+EPRM(I)
       EBAR=EPRMBAR/IPRIM
       EERR=DSQRT(E2PRM/IPRIM-EBAR**2)
-      IF(JPRT.EQ.1) WRITE(6,836) EBAR,EERR
+      WRITE(6,836) EBAR,EERR
  836  FORMAT(/,2X,'AVERAGE ENERGY OF PRIMARY ELECTRON =',F10.3,' EV.',/,
      /'   ENERGY SPREAD OF PRIMARY ELECTRON =',F10.3,' EV.')
 C     WRITE(6,835) (IESPECP(J),J=1,100)
@@ -15836,9 +14489,9 @@ C835  FORMAT(/,2X,'ENERGY SPECTRUM OF PRIMARY ELECTRONS IN 1 EV. BINS',/
 C    /,10(2X,10I5,/))
       RETURN               
   315 IF(ITER.GT.NMAX) THEN
-       WRITE(6,991) ITER,NMAX,NPONT,NELEC,IPRIM,NMXADD,JPRT
+       WRITE(6,991) ITER,NMAX,NPONT,NELEC,IPRIM,NMXADD
  991   FORMAT(2(/),' PROGRAM STOPPED.  ITER =',I10,'    NMAX =',I10,/,
-     /' NPONT=',I4,' NELEC=',I8,' IPRIM=',I4,' NMXADD=',I3,' JPRT=',I3) 
+     /' NPONT=',I4,' NELEC=',I8,' IPRIM=',I4,' NMXADD=',I3)
        STOP
       ENDIF                                                             
       RETURN                                                            
@@ -15849,7 +14502,7 @@ C    /,10(2X,10I5,/))
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/TPLOUT/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),VZTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT 
 C-----------------------------------------------------------------------
@@ -15888,7 +14541,7 @@ C     DCY2=DCY1*CONST6
       IMPLICIT INTEGER*8 (I-N)
       COMMON/FRED/FCION(4000),FCATT(4000)                               
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS 
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
@@ -15907,6 +14560,10 @@ C-----------------------------------------------------
       EBAR=0.0D0
       FSUM=0.0D0
       DO 100 I=1,4000
+C     IF(TCF(I).EQ.0.0.OR.TTOTS.EQ.0.0) THEN
+C     WRITE(6,888) I,TCF(I),TTOTS
+C 888 FORMAT('IN FRIEDLAND I=',I4,' TCF(I)=',D12.4,' TTOTS=',D12.4)
+C     ENDIF
       FR(I)=SPEC(I)/TCF(I)
       EBAR=EBAR+E(I)*SPEC(I)/TCF(I)
       ALFBAR=ALFBAR+FCION(I)*SPEC(I)/TCF(I)
@@ -15931,13 +14588,12 @@ C-----------------------------------------------------
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX 
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS 
-      COMMON/IPS/XSS(2000),YSS(2000),ZSS(2000),TSS(2000),ESS(2000),
-     /DCXS(2000),DCYS(2000),DCZS(2000),IPLS(2000)  
+      COMMON/IPS/XSS(8000),YSS(8000),ZSS(8000),TSS(8000),ESS(8000),
+     /DCXS(8000),DCYS(8000),DCZS(8000),IPLS(8000)  
       COMMON/SPLOUT/ESPL(8),XSPL(8),YSPL(8),ZSPL(8),TSPL(8),XXSPL(8),
      /YYSPL(8),ZZSPL(8),VZSPL(8),TSSUM(8),TSSUM2(8),ATTOION,ATTIOER,
      /ATTATER,NESST(9)
@@ -15946,8 +14602,7 @@ C-----------------------------------------------------
      /ZPLANE7,ZPLANE8,IZFINAL
       COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO
       COMMON/IONFL1/NC0(960),EC0(960),NG1(960),EG1(960),NG2(960),
-     /EG2(960),WKLM(960),EFL(960)  
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)      
+     /EG2(960),WKLM(960),EFL(960)        
       DIMENSION EPRM(10000000),IESPECP(100),TEMP(4000)
 C----------------------------------------------------------------------
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
@@ -15974,8 +14629,6 @@ C -------------------------------------------------------------------
    26 ICOLL(I)=0
       DO 27 I=1,960
    27 ICOLN(I)=0
-      DO 271 I=1,60
-  271 ICOLNN(I)=0
       DO 28 I=1,4000
    28 SPEC(I)=0.0D0            
       DO 33 I=1,100
@@ -16015,15 +14668,7 @@ C -------------------------------------------------------------------
       NCLUS=0
       J1=1                                                       
       ZSTRT=0.0D0
-      TSSTRT=0.0D0  
-C
-      DO 111 J=1,4000
-  111 TEMP(J)=TCFN(J)+TCF(J)      
-      ABSFAKEI=DABS(FAKEI)
-      IFAKE=0
-      DO 112 J=1,9
-  112 IFAKED(J)=0
-C                                         
+      TSSTRT=0.0D0                                                      
 C     INITIAL DIRECTION COSINES                                         
       DCZ1=DCOS(THETA)                                                  
       DCX1=DSIN(THETA)*DCOS(PHI)                                        
@@ -16157,66 +14802,9 @@ C
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM) 
-      TEST1=TCF(IE)/TLIM                                                
-      IF(R5.LE.TEST1) GO TO 137                                         
-      NNULL=NNULL+1
-      TEST2=TEMP(IE)/TLIM
-      IF(R5.LT.TEST2) THEN
-C DETERMINE NULL COLLISION LEVEL
-       IF(NPLAST.EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(I)=ICOLNN(I)+1
-       GO TO 1
-      ENDIF                   
-      TEST3=(TEMP(IE)+ABSFAKEI)/TLIM
-      IF(R5.LT.TEST3) THEN       
-C FAKE COLLISION INCREMENT COUNTER 
-       IFAKE=IFAKE+1
-       IFAKED(IZPLANE)=IFAKED(IZPLANE)+1
-       IF(FAKEI.LT.0.0) THEN
-       NEION=NEION+1
-C FAKE ATTACHMENT START NEW ELECTRON
-        IF(NELEC.EQ.(NCLUS+1)) GO TO 544      
-C ELECTRON CAPTURED TAKE NEXT ELECTRON FROM STORE       
-        GO TO 20
-       ENDIF
-C FAKE IONISATION ADD ELECTRON TO STORE
-       NCLUS=NCLUS+1
-       NPONT=NPONT+1
-       NMXADD=MAX(NPONT,NMXADD) 
-       IF(NPONT.GT.2000) THEN
-        WRITE(6,546) NPONT,ITER
-        STOP
-       ENDIF     
-       A=T*CONST9*DSQRT(E1)
-C      A=AP*T
-       XSS(NPONT)=X+DCX1*A        
-       YSS(NPONT)=Y+DCY1*A
-       ZSS(NPONT)=Z+DCZ1*A+T*T*F1
-       TSS(NPONT)=ST+T
-       ESS(NPONT)=E
-       CONST6=DSQRT(E1/E)
-       DCXS(NPONT)=DCX1*CONST6
-       DCYS(NPONT)=DCY1*CONST6
-       DCZS(NPONT)=DCZ1*CONST6+EFIELD*T*CONST5/DSQRT(E)
-       IDM1=1+DINT(ZSS(NPONT)/ZSTEP)
-C      IF(ZSS(NPONT).GT.ZFINAL.OR.ZSS(NPONT).LT.0.0) THEN
-C       NCLUS=NCLUS-1
-C       NPONT=NPONT-1
-C       IFAKE=IFAKE-1
-C       IFAKED(IZPLANE)=IFAKED(IZPLANE)-1
-C       GO TO 1
-C      ENDIF
-       IF(IDM1.LT.1) IDM1=1
-       IF(IDM1.GT.9) IDM1=9     
-       IPLS(NPONT)=IDM1 
-       NESST(IPLS(NPONT))=NESST(IPLS(NPONT))+1
-       GO TO 1
-      ENDIF
+      TTEM=TCF(IE)/TLIM                                                 
+      IF(R5.LE.TTEM)GO TO 137                                           
+      NNULL=NNULL+1                                                     
       GO TO 1                                                           
 C                                                                       
 C  CALCULATE DIRECTION COSINES AND POSITIONS AT INSTANT BEFORE COLLISION
@@ -16299,7 +14887,7 @@ C OF IONISATION ELECTRON
       NCLUS=NCLUS+1
       NPONT=NPONT+1
       NMXADD=MAX(NPONT,NMXADD) 
-      IF(NPONT.GT.2000) THEN
+      IF(NPONT.GT.8000) THEN
       WRITE(6,546) NPONT,ITER
  546  FORMAT(2X,' PROGRAM STOPPED NPONT=',I5,' ITER=',I10)
       STOP
@@ -16379,7 +14967,7 @@ C IONISATION OF THE OTHER GASES IN THE MIXTURE.
        IF(RAN.GT.PENFRA(1,I)) GO TO 5
        NCLUS=NCLUS+1
        NPONT=NPONT+1
-       IF(NPONT.GT.2000) THEN
+       IF(NPONT.GT.8000) THEN
         WRITE(6,546) NPONT,ITER
         STOP
        ENDIF 
@@ -16582,7 +15170,7 @@ C    /5,/))
  991   FORMAT(2(/),' PROGRAM STOPPED.  ITER =',I10,'    NMAX =',I10,/,
      /' NPONT=',I4,' NELEC=',I8,' IPRIM=',I6,' NMXADD=',I3) 
        STOP
-      ENDIF   
+      ENDIF                                                             
       RETURN                                                            
       END
       SUBROUTINE SPLANE(T,E1,DCX1,DCY1,DCZ1,AP,BP,EFLD,TIMLFT,IZPLANE)
@@ -16590,7 +15178,7 @@ C    /5,/))
       IMPLICIT INTEGER*8 (I-N)
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60) 
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960) 
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/SPLOUT/ESPL(8),XSPL(8),YSPL(8),ZSPL(8),TSPL(8),XXSPL(8),
      /YYSPL(8),ZZSPL(8),VZSPL(8),TSSUM(8),TSSUM2(8),ATTOION,ATTIOER,
@@ -16742,14 +15330,13 @@ C  FOUND BACKWARD SOLUTIONS
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8) 
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST        
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)             
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS 
       COMMON/SINT/SIMF(4000)                                            
       COMMON/NAMES/NAMEG(6)
-      COMMON/SCRIP/DSCRPT(960),DSCRPTN(60)
-      CHARACTER*50 DSCRPT,DSCRPTN
+      COMMON/SCRIP/DSCRPT(960)               
+      CHARACTER*50 DSCRPT           
       CHARACTER*25 NAMEG  
       DIMENSION FREQEL(6),FREQSP(6),FREINE(6),FREATT(6),FREION(6)       
       DIMENSION SPECS(40)                                               
@@ -16808,24 +15395,6 @@ C     WRITE(6,15)
  1090 CONTINUE
  1100 CONTINUE
       WRITE(6,15)
-      IF(NPLAST.EQ.0) GO TO 1092
-      WRITE(6,335) 
-  335 FORMAT(/,2X,'NULL COLLISION FREQUENCIES FOR GAS MIXTURE',/,'  NB. 
-     /OUPUT CORRECTED FOR SCALING OF X-SECTIONS.',/, '------------------
-     /---------------------------')
-      DO 1091 JJ=1,NPLAST
-      FRELV=FREQ*ICOLNN(JJ)/DFLOAT(NREAL)
-      IF(ICOLNN(JJ).EQ.0) THEN
-       ERRFRE=0.0
-      ELSE
-       ERRFRE=100.0D0*DSQRT(DFLOAT(ICOLNN(JJ)))/DFLOAT(ICOLNN(JJ))
-      ENDIF  
-C RESCALE NULL COLLISIONS
-      FRELV=FRELV/(SCLENUL(JJ)**2)
-C       WRITE(6,1966) SCLENUL(JJ)
-C1966 FORMAT(' SCLENUL=',D12.4)
- 1091 WRITE(6,1070) DSCRPTN(JJ),FRELV,ERRFRE   
- 1092 WRITE(6,15)                  
       WRITE(6,301)                                                      
   301 FORMAT(2(/),10X,' NORMALISED ENERGY DISTRIBUTION')                
       J1=0                                                              
@@ -16855,7 +15424,7 @@ C1966 FORMAT(' SCLENUL=',D12.4)
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/OUTPTT/TIME(300),ICOLL(6,5),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,290),ICOLNN(6,10)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(6,300)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS 
 C CALCULATES REAL COLLISION FREQUENCIES FOR EVENT TYPES
       NINEL=0
@@ -16886,7 +15455,7 @@ C CALCULATES REAL COLLISION FREQUENCIES FOR EVENT TYPES
       IMPLICIT REAL*8 (A-H,O-Z)
       IMPLICIT INTEGER*8 (I-N)
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS 
 C CALCULATES REAL COLLISION FREQUENCIES FOR EVENT TYPES
       NINEL=ICOLL(4)+ICOLL(5)+ICOLL(9)+ICOLL(10)+ICOLL(14)+ICOLL(15)+
@@ -16921,14 +15490,13 @@ C CALCULATES REAL COLLISION FREQUENCIES FOR EVENT TYPES
       COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8) 
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST        
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)              
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS 
       COMMON/SINT/SIMF(4000)                                            
       COMMON/NAMES/NAMEG(6)
-      COMMON/SCRIP/DSCRPT(960),DSCRPTN(60)
-      CHARACTER*50 DSCRPT,DSCRPTN
+      COMMON/SCRIP/DSCRPT(960)               
+      CHARACTER*50 DSCRPT            
       CHARACTER*25 NAMEG  
       DIMENSION FREEL(6),FRESP(6),FREINE(6),FREATT(6),FREION(6)       
       DIMENSION SPECS(40)                                               
@@ -16975,24 +15543,6 @@ C     WRITE(6,15)
  1090 CONTINUE
  1100 CONTINUE
       WRITE(6,15)
-      IF(NPLAST.EQ.0) GO TO 1092 
-      WRITE(6,335) 
-  335 FORMAT(/,2X,'NULL COLLISION FREQUENCIES FOR GAS MIXTURE',/,'  NB. 
-     /OUPUT CORRECTED FOR SCALING OF X-SECTIONS.',/, '------------------
-     /---------------------------')
-      DO 1091 JJ=1,NPLAST
-      FRELV=FREQ*ICOLNN(JJ)/DFLOAT(NREAL)
-      IF(ICOLNN(JJ).EQ.0) THEN
-       ERRFRE=0.0
-      ELSE
-       ERRFRE=100.0D0*DSQRT(DFLOAT(ICOLNN(JJ)))/DFLOAT(ICOLNN(JJ))
-      ENDIF  
-C RESCALE NULL COLLISIONS
-      FRELV=FRELV/(SCLENUL(JJ)**2)
-C       WRITE(6,1966) SCLENUL(JJ)
-C1966 FORMAT(' SCLENUL=',D12.4)
- 1091 WRITE(6,1070) DSCRPTN(JJ),FRELV,ERRFRE   
- 1092 WRITE(6,15)                  
 C     WRITE(6,301)                                                      
 C 301 FORMAT(2(/),10X,' NORMALISED ENERGY DISTRIBUTION')                
 C     J1=0                                                              
@@ -17029,9 +15579,8 @@ C 420 CONTINUE
       COMMON/CTOWNS/ALPHA,ATT
       COMMON/CTWNER/ALPER,ATTER
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9) 
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
-     /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)  
+     /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8) 
 C ----------------------------------------------------------------------     
 C  ESTIMATE TIME STEP  FOR AVALANCHE SIMULATION IN TIME OF FLIGHT SIM. 
 C  USES ESTIMATED GAIN OF 3.0 BETWEEN PLANES. 
@@ -17042,116 +15591,19 @@ C ----------------------------------------------------------------------
       IF(IMAX.LT.5) IMAX=5 
       NMAX=IMAX*10000000
       CORR=760.0*(TEMPC+273.15)/(TORR*293.15)
-      ALPP=ALPHA/CORR
-      ATTP=ATT/CORR
-      ANETP=ALPP-ATTP
-      ANET=ALPHA-ATT
-      TCUTH=1.2D-10*CORR
-      TCUTL=1.D-13*CORR
-C   
-      IF (ANETP.GT.30.0) THEN
-       ALPHAD=0.0
-       ALP1=ALPHA
-       ATT1=ATT
-C WEAK ATTACHMENT
-       GO TO 6
-      ENDIF 
-C  SOME ATTACHMENT
-      IF(DABS(ANETP).LT.100.) THEN
-C SMALL NET ATTACHMENT
-       ALPHAD=DABS(ATT)*0.8
-      ELSE IF(DABS(ANETP).GE.100..AND.DABS(ANETP).LT.1000.) THEN
-C LARGER NET ATTACHMENT
-       ALPHAD=DABS(ANET)*0.65
-      ELSE IF(DABS(ANETP).GT.1000..AND.DABS(ANETP).LT.10000.) THEN
-       ALPHAD=DABS(ANET)*0.6
-      ELSE IF(DABS(ANETP).GT.10000..AND.DABS(ANETP).LT.100000.) THEN
-       ALPHAD=DABS(ANET)*0.5
-      ELSE IF(DABS(ANETP).GT.100000..AND.DABS(ANETP).LT.2000000.) THEN
-       ALPHAD=DABS(ANET)*0.4
-      ELSE 
-       WRITE(6,91) 
-   91 FORMAT(' ATTACHMENT TOO LARGE PROGRAM STOPPED')
-      ENDIF
-   3  VDST=DSQRT(WZ*WZ+WY*WY)*1.D-5
-      FAKEI=ALPHAD*DSQRT(WZ*WZ+WY*WY)*1.D-12
-      ALPHAST=0.85*DABS(ALPHAD+ANET)                        
-      TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH) TSTEP=TCUTH
-      IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMIT
-      DO 4 J=1,8
-    4 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)
-      WRITE(6,871) ALPHAST,ANET,ALPHAD,TSTEP
-  871 FORMAT(' ALPHAST1=',D10.3,' ANET1=',D10.3,' ALPHAD1=',D10.3,/,
-     /' TSTEP1=',D10.3)
-C  CONVERT TO  PICOSECONDS     
-      TSTEP=TSTEP*1.0D12
-      TFINAL=7.0D0*TSTEP
-      ITFINAL=7
-C CALCULATE GOOD STARTING VALUES FOR ALPHA AND NETA
-      JPRT=0
-      CALL MONTEFTG(JPRT)
-      CALL PTG(JPRT)
-      CALL TOFG(JPRT)
-      TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY)
-      ALP1=RALPHA/TOFWR*1.D7
-      ALP1ER=RALPER*ALP1/100. 
-      ATT1=RATTOF/TOFWR*1.D7
-      ATT1ER=RATOFER*ATT1/100.
-      WRITE(6,944) ALP1,ALP1ER,ATT1,ATT1ER
-  944 FORMAT(' GOOD STARTING VALUES FOR CALC:',/,' ALPHA=',D12.3,' ERR='
-     /,D12.3,/,' NETA =',D12.3,' ERR=',D12.3)
-C
-C CALCULATE USING GOOD STARTING VALUES
-C  RESET TCFMAX
-      DO 44 J=1,8
-   44 TCFMAX(J)=TCFMAX(J)-DABS(FAKEI)
-C CALCULATE FAKE IONISATION RATE SCALING BY 1.2 
-      ALPHAD=DABS(ATT1)*1.2
-      IF((ALP1-ATT1).GT.30.*CORR) ALPHAD=DABS(ATT1)*0.4
-      IF(DABS(ALP1-ATT1).LT.(ALP1/10.0).OR.DABS(ALP1-ATT1).LT.
-     /(ATT1/10.0)) ALPHAD=DABS(ATT1)*0.3
-      IF((ALP1-ATT1).GT.100.*CORR) ALPHAD=0.0
-      WZ=TOFWRZ*1.D5
-      WY=TOFWRY*1.D5
-C
-C
-C NET IONISATION
-C   5 IF((ANET).GT.(11000./CORR)) THEN
-C LARGE IONISATION
-C      ALPHAD=7000.-(ALPHA-ATT)
-C     ELSE IF (DABS(ALPP).GT.(5.0*DABS(ANET)).OR.DABS(ATTP).GT.
-C    /(5.0*DABS(ANET))) THEN
-C LARGE CANCELLATION BETWEEN ATTACHMENT AND IONISATON
-C      ALPHAD=-6.0*(ALPHA-ATT)
-C     ELSE
-C      ALPHAD=0.0
-C     ENDIF
-    6 VTOT=DSQRT(WZ*WZ+WY*WY) 
-      VDST=VTOT*1.D-5
-      FAKEI=ALPHAD*VTOT*1.D-12
-      ALPHAST=0.85D0*DABS(ALPHAD+ALP1-ATT1)
-      IF((ALP1+ALPHAD).GT.(10.0*ALPHAST).OR.ATT1.GT.(10.0*ALPHAST)) THEN
-C LARGE CANCELLATION BETWEEN ALPHA AND NETA. REDUCE STEP SIZE BY 15.0
-       IF((ALP1+ALPHAD).GT.100.*CORR) THEN
+      ALPHAST=0.85D0*DABS(ALPHA-ATT) 
+      IF(ALPHA.GT.(10.0*ALPHAST).OR.ATT.GT.(10.0*ALPHAST)) THEN
+C LARGE CANCELLATION BETWEEN ALPHA AND NETA REDUCE STEP BY 30.0
+       IF(ALPHA.GT.100.0*CORR) THEN
+        ALPHAST=ALPHAST*30.0
+       ELSE IF(ALPHA.GT.50.0*CORR) THEN
         ALPHAST=ALPHAST*15.0
-       ELSE IF((ALP1+ALPHAD).GT.50.0*CORR) THEN
-        ALPHAST=ALPHAST*12.0
        ELSE
         ALPHAST=ALPHAST*8.0
-       ENDIF 
-      ENDIF                          
+       ENDIF
+      ENDIF
+      VDST=WZ*1.D-5                                                 
       TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH.AND.ALPHAD.NE.0.0) TSTEP=TCUTH
-C     IF(TSTEP.LT.TCUTL) TSTEP=TCUTL 
-C UPDATE NULL COLLISION FREQUENCY LIMITS
-      DO 10 J=1,8
-   10 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)
-      ANET1=ALP1-ATT1
-      WRITE(6,878) ALPHAST,ANET1,ALPHAD,TSTEP
-  878 FORMAT(' ALPHAST=',D10.3,' ANET=',D10.3,' ALPHAD=',D10.3,/,
-     /' TSTEP=',D10.3) 
       TSTEP=TSTEP*1.0D12
       TFINAL=7.0D0*TSTEP
       ITFINAL=7
@@ -17163,11 +15615,10 @@ C CALC TIME OF FLIGHT AND PT
       WRITE(6,26) TSTEP
    26 FORMAT(1(/),'  TIME STEP BETWEEN SAMPLING PLANES =',D12.5,' PICOSE
      /CS.',/)                     
-      JPRT=1
-      CALL MONTEFTG(JPRT)                             
+      CALL MONTEFTG                             
       CALL FRIEDLAND 
-      CALL PTG(JPRT)
-      CALL TOFG(JPRT)
+      CALL PTG
+      CALL TOFG
       WRITE(6,27) RALPHA,RALPER,RATTOF,RATOFER
    27 FORMAT(/,'PT IONISATION AND ATTACHMENT RATES *10**12/SEC',/,'ALPHA
      /=',D10.3,' +- ',F6.2,' %      ATT=',D10.3,' +- ',F6.2,' %')    
@@ -17181,8 +15632,8 @@ C CALC TIME OF FLIGHT AND PT
    30 FORMAT(/,'TOF DRIFT VELOCITY')
       WRITE(6,31) TOFWRZ,TOFWRZER,TOFWRY,TOFWRYER   
    31 FORMAT(/,'WRZ=',F8.2,' +-',F6.1,' %    WRY=',F8.2,' +-',F6.1,' %')
-C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS     
-      TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY) 
+C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS      
+      TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY)
       WRZN=TOFWRZ*1.0D05
       FC1=WRZN/(2.0D0*TOFDZZ)
       FC2=((RALPHA-RATTOF)*1.0D12)/TOFDZZ
@@ -17194,56 +15645,40 @@ C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS
 C---- -------------------------------------------------    
 C      LOAD NEW ALPHA AND ATTACHMENT INTO COMMON BLOCKS
 C---- -------------------------------------------
-      ALP1=RALPHA/TOFWR*1.D7
-      ALP1ER=RALPER*ALP1/100.
-      ATT1=RATTOF/TOFWR*1.D7
-      ATT1ET=RATOFER*ATT1/100. 
-C     WRITE(6,32) ALP1,ALP1ER,ATT1,ATT1ET
-C  32 FORMAT(/,'TOWNSEND COEFICIENTS CALCULATED FROM TOF RESULTS:',2(/),
-C    /'IONISATION RATE /CM.=',D11.4,' +-',F6.2,/,'ATTACHMENT RATE /CM.='
-C    /,D11.4,' +-',F6.2,/)
-      ALPHA=ALP1
-      ATT=ATT1
+      ALPHA=RALPHA/TOFWR*1.D7
+      ATT=RATTOF/TOFWR*1.D7
+      ALP1ER=RALPER*ALPHA/100.
+      ATT1ET=RATOFER*ATT/100. 
 C --- -------------------------------------------      
       RETURN                                                     
       END                                                               
-      SUBROUTINE MONTEFTG(JPRT)                                     
+      SUBROUTINE MONTEFTG                                               
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
-      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAXOLD
+      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),IPLAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS
-      COMMON/ISPT/XS(2000),YS(2000),ZS(2000),TS(2000),ES(2000),
-     /DCX(2000),DCY(2000),DCZ(2000),IPL(2000)
+      COMMON/ISPT/XS(8000),YS(8000),ZS(8000),TS(8000),ES(8000),
+     /DCX(8000),DCY(8000),DCZ(8000),IPL(8000)
       COMMON/TPLOUTG/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),YZTPL(8),VZTPL(8),VYTPL(8),NETPL(8),ATTOINT,
      /ATTERT,AIOERT 
       COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO   
       COMMON/IONFL1/NC0(960),EC0(960),NG1(960),EG1(960),NG2(960),
-     /EG2(960),WKLM(960),EFL(960)  
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)  
-      DIMENSION EPRM(10000000),IESPECP(100),TEMP(4000)            
+     /EG2(960),WKLM(960),EFL(960)     
+      DIMENSION EPRM(10000000),IESPECP(100),TEMP(4000) 
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
 C   THIS ROUTINE HANDLES TERMINATIONS AT FIXED DRIFT TIMES. 
 C   B FIELD AT 90 DEGREES TO EFIELD  
 C ------------------------------------------------------------------- 
-      IF(JPRT.EQ.0) THEN
-C CALCULATION OF APPROXIMATE STARTING PARAMETERS
-       NMAX=NMAXOLD
-       IF(NMAXOLD.GT.80000000) NMAX=80000000
-      ELSE
-C ENTRY FOR NORMAL CALCULATION
-       NMAX=NMAXOLD
-      ENDIF
       S=0.0D0 
       ST=0.0D0 
       X=0.0D0
@@ -17267,8 +15702,6 @@ C ENTRY FOR NORMAL CALCULATION
    26 ICOLL(I)=0
       DO 27 I=1,960
    27 ICOLN(I)=0
-      DO 271 I=1,60
-  271 ICOLNN(I)=0
       DO 28 I=1,4000
    28 SPEC(I)=0.0D0            
       DO 33 I=1,100
@@ -17303,15 +15736,7 @@ C ENTRY FOR NORMAL CALCULATION
       J1=1 
       ZSTRT=0.0D0
       YSTRT=0.0D0
-      TSSTRT=0.0D0
-C
-      DO 111 J=1,4000
-  111 TEMP(J)=TCFN(J)+TCF(J)           
-      ABSFAKEI=DABS(FAKEI)
-      IFAKE=0
-      DO 112 J=1,8
-  112 IFAKET(J)=0
-C                               
+      TSSTRT=0.0D0                                                    
 C     INITIAL DIRECTION COSINES                                         
       DCZ1=DCOS(THETA)                                                  
       DCX1=DSIN(THETA)*DCOS(PHI)                                        
@@ -17436,56 +15861,9 @@ C
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(IE)/TLIM                                                
-      IF(R5.LE.TEST1) GO TO 137                                         
-      NNULL=NNULL+1
-      TEST2=TEMP(IE)/TLIM
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-      IF(NPLAST.EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(I)=ICOLNN(I)+1
-       GO TO 1
-      ENDIF                           
-      TEST3=(TEMP(IE)+ABSFAKEI)/TLIM
-      IF(R5.LT.TEST3) THEN
-C FAKE COLLISION INCREMENT COUNTER
-       IFAKE=IFAKE+1
-       IFAKET(IPLANE+1)=IFAKET(IPLANE+1)+1
-       IF(FAKEI.LT.0.0) THEN
-        NION=NION+1
-C FAKE ATTACHMENT START NEW ELECTRON
-        IF(NELEC.GT.(NCLUS+1)) GO TO 544
-C ELECTRON CAPTURED TAKE ELECTRON FROM STORE
-        GO TO 20
-       ENDIF
-C FAKE IONISATION ADD ELECTRON TO STORE
-       NCLUS=NCLUS+1
-       NPONT=NPONT+1
-       NMXADD=MAX(NPONT,NMXADD)
-       IF(NPONT.GT.2000) THEN 
-        WRITE(6,546) NPONT,ITER
-        STOP
-       ENDIF     
-       XS(NPONT)=X+CX1*T      
-       YS(NPONT)=Y+EOVB*T+((CY1-EOVB)*SINWT+CZ1*(1.0D0-COSWT))/WB
-       ZS(NPONT)=Z+DZ
-       TS(NPONT)=ST+T
-       ES(NPONT)=E   
-       IPL(NPONT)=IPLANE
-       CX2=CX1
-       CY2=(CY1-EOVB)*COSWT+CZ1*SINWT+EOVB
-       CZ2=CZ1*COSWT-(CY1-EOVB)*SINWT
-       BOT=1.0D0/DSQRT(CX2*CX2+CY2*CY2+CZ2*CZ2)
-       DCX(NPONT)=CX2*BOT
-       DCY(NPONT)=CY2*BOT
-       DCZ(NPONT)=CZ2*BOT
-       GO TO 1
-      ENDIF                          
+      TTEM=TCF(IE)/TLIM                                                 
+      IF(R5.LE.TTEM)GO TO 137                                           
+      NNULL=NNULL+1                                                     
       GO TO 1                                                           
 C                                                                       
 C  CALCULATE DIRECTION COSINES AND POSITIONS AT INSTANT BEFORE COLLISION
@@ -17565,12 +15943,12 @@ C OF IONISATION ELECTRON
       NCLUS=NCLUS+1
       NPONT=NPONT+1
       NMXADD=MAX(NPONT,NMXADD)
-      IF(NPONT.GT.2000) THEN 
+      IF(NPONT.GT.8000) THEN 
       WRITE(6,546) NPONT,ITER
  546  FORMAT(2X,' PROGRAM STOPPED . NPONT=',I5,' ITER=',I10)
       STOP
       ENDIF     
-      XS(NPONT)=X        
+      XS(NPONT)=X       
       YS(NPONT)=Y
       ZS(NPONT)=Z
       TS(NPONT)=ST
@@ -17637,7 +16015,7 @@ C IONISATION OF THE OTHER GASES IN THE MIXTURE
        IF(RAN.GT.PENFRA(1,I)) GO TO 5
        NCLUS=NCLUS+1
        NPONT=NPONT+1
-       IF(NPONT.GT.2000) THEN
+       IF(NPONT.GT.8000) THEN
         WRITE(6,546) NPONT,ITER
         STOP
        ENDIF
@@ -17814,7 +16192,7 @@ C  MAIN LOOP END
      /ESTIMATED ALPHA.  NCLUS = ',I7,'  ITER =',I9)      
       STOP
       ENDIF
-      IF(JPRT.EQ.1) WRITE(6,878) NELEC,NEION,IPRIM
+      WRITE(6,878) NELEC,NEION,IPRIM
  878  FORMAT(/,' TOTAL NO OF ELECTRONS=',I8,/,' TOTAL NO OF NEG. IONS=',
      /I8,/,' TOTAL NO OF PRIMARIES=',I8)  
       EPRMBAR=0.0D0
@@ -17825,7 +16203,7 @@ C  MAIN LOOP END
  310  EPRMBAR=EPRMBAR+EPRM(I)
       EBAR=EPRMBAR/IPRIM
       EERR=DSQRT(E2PRM/IPRIM-EBAR**2)
-      IF(JPRT.EQ.1) WRITE(6,836) EBAR,EERR
+      WRITE(6,836) EBAR,EERR
  836  FORMAT(/,2X,'AVERAGE ENERGY OF PRIMARY ELECTRON =',F10.3,' EV.',/,
      /'   ENERGY SPREAD OF PRIMARY ELECTRON =',F10.3,' EV.')
 C     WRITE(6,835) (IESPECP(J),J=1,100)
@@ -17847,7 +16225,7 @@ C    /,10(2X,10I5,/))
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/TPLOUTG/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),YZTPL(8),VZTPL(8),VYTPL(8),NETPL(8),ATTOINT,
      /ATTERT,AIOERT 
@@ -17903,10 +16281,9 @@ C CALC TIME LEFT TO ARRIVE AT PLANE
       COMMON/VEL/WX,WY,WZ
       COMMON/CTOWNS/ALPHA,ATT
       COMMON/CTWNER/ALPER,ATTER
-      COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
-      COMMON/FAKE/FAKEI,IFAKE,KAKET(8),FAKED(9) 
+      COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM 
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
-     /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8)  
+     /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8) 
 C ----------------------------------------------------------------------     
 C  ESTIMATE TIME STEP  FOR AVALANCHE SIMULATION IN TIME OF FLIGHT SIM. 
 C  USES ESTIMATED GAIN OF 3.0 BETWEEN PLANES. 
@@ -17917,118 +16294,19 @@ C ----------------------------------------------------------------------
       IF(IMAX.LT.5) IMAX=5 
       NMAX=IMAX*10000000
       CORR=760.0*(TEMPC+273.15)/(TORR*293.15)
-      ALPP=ALPHA/CORR
-      ATTP=ATT/CORR
-      ANETP=ALPP-ATTP
-      ANET=ALPHA-ATT
-      TCUTH=1.2D-10*CORR
-      TCUTL=1.D-13*CORR
-C   
-      IF (ANETP.GT.30.0) THEN
-       ALPHAD=0.0
-       ALP1=ALPHA
-       ATT1=ATT
-C WEAK ATTACHMENT
-       GO TO 6
-      ENDIF 
-C  SOME ATTACHMENT
-      IF(DABS(ANETP).LT.100.) THEN
-C SMALL NET ATTACHMENT
-       ALPHAD=DABS(ATT)*0.8
-      ELSE IF(DABS(ANETP).GE.100..AND.DABS(ANETP).LT.1000.) THEN
-C LARGER NET ATTACHMENT
-       ALPHAD=DABS(ANET)*0.65
-      ELSE IF(DABS(ANETP).GT.1000..AND.DABS(ANETP).LT.10000.) THEN
-       ALPHAD=DABS(ANET)*0.6
-      ELSE IF(DABS(ANETP).GT.10000..AND.DABS(ANETP).LT.100000.) THEN
-       ALPHAD=DABS(ANET)*0.5
-      ELSE IF(DABS(ANETP).GT.100000..AND.DABS(ANETP).LT.2000000.) THEN
-       ALPHAD=DABS(ANET)*0.4
-      ELSE 
-       WRITE(6,91) 
-   91 FORMAT(' ATTACHMENT TOO LARGE PROGRAM STOPPED')
-       STOP
-      ENDIF
-   3  VDST=DSQRT(WZ*WZ+WY*WY+WX*WX)*1.D-5
-      FAKEI=ALPHAD*DSQRT(WZ*WZ+WY*WY+WX*WX)*1.D-12
-      ALPHAST=0.85*DABS(ALPHAD+ANET)                        
-      TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH) TSTEP=TCUTH
-      IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMIT
-      DO 4 J=1,8
-    4 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)
-      WRITE(6,871) ALPHAST,ANET,ALPHAD,TSTEP
-  871 FORMAT(' ALPHAST1=',D10.3,' ANET1=',D10.3,' ALPHAD1=',D10.3,/,
-     /' TSTEP1=',D10.3)
-C  CONVERT TO  PICOSECONDS     
-      TSTEP=TSTEP*1.0D12
-      TFINAL=7.0D0*TSTEP
-      ITFINAL=7
-C CALCULATE GOOD STARTING VALUES FOR ALPHA AND NETA
-      JPRT=0
-      CALL MONTEFTH(JPRT)
-      CALL PTH(JPRT)
-      CALL TOFH(JPRT)
-      TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY+TOFWRX*TOFWRX)
-      ALP1=RALPHA/TOFWR*1.D7
-      ALP1ER=RALPER*ALP1/100. 
-      ATT1=RATTOF/TOFWR*1.D7
-      ATT1ER=RATOFER*ATT1/100.
-      WRITE(6,944) ALP1,ALP1ER,ATT1,ATT1ER
-  944 FORMAT(' GOOD STARTING VALUES FOR CALC:',/,' ALPHA=',D12.3,' ERR='
-     /,D12.3,/,' NETA =',D12.3,' ERR=',D12.3)
-C
-C CALCULATE USING GOOD STARTING VALUES
-C  RESET TCFMAX
-      DO 44 J=1,8
-   44 TCFMAX(J)=TCFMAX(J)-DABS(FAKEI)
-C CALCULATE FAKE IONISATION RATE SCALING BY 1.2 
-      ALPHAD=DABS(ATT1)*1.2
-      IF((ALP1-ATT1).GT.30.*CORR) ALPHAD=DABS(ATT1)*0.4
-      IF(DABS(ALP1-ATT1).LT.(ALP1/10.0).OR.DABS(ALP1-ATT1).LT.
-     /(ATT1/10.0)) ALPHAD=DABS(ATT1)*0.3
-      IF((ALP1-ATT1).GT.100.*CORR) ALPHAD=0.0
-      WZ=TOFWRZ*1.D5
-      WY=TOFWRY*1.D5
-      WX=TOFWRX*1.D5
-C
-C
-C NET IONISATION
-C   5 IF(ANET.GT.(11000./CORR)) THEN
-C HIGH IONISATION
-C      ALPHAD=7000.-(ALPHA-ATT)
-C     ELSE IF(DABS(ALPP).GT.(5.0*DANS(ANET)).OR.DABS(ATTP).GT.
-C    /(5.0*DABS(ANET))) THEN
-C LARGE CANCELLATION BETWEEN ATTACHMENT AND IONISATION
-C      ALPHAD=-6.0*(ALPHA-ATT)
-C     ELSE
-C      ALPHAD=0.0
-C     ENDIF
-    6 VTTT=DSQRT(WZ*WZ+WY*WY+WX*WX) 
-      VDST=VTTT*1.D-5
-      FAKEI=ALPHAD*VTTT*1.D-12  
-      ALPHAST=0.85*DABS(ALPHAD+ALP1-ATT1) 
-      IF((ALP1+ALPHAD).GT.(10.0*ALPHAST).OR.ATT1.GT.(10.0*ALPHAST)) THEN
-C LARGE CANCELLATION BETWEEN ALPHA AND NETA. REDUCE STEP SIZE BY 15.0
-       IF((ALP1+ALPHAD).GT.100.*CORR) THEN
+      ALPHAST=0.85D0*DABS(ALPHA-ATT) 
+      IF(ALPHA.GT.(10.0*ALPHAST).OR.ATT.GT.(10.0*ALPHAST)) THEN
+C LARGE CANCELLATION BETWEEN ALPHA AND NETA REDUCE STEP BY 30.0
+       IF(ALPHA.GT.100.0*CORR) THEN
+        ALPHAST=ALPHAST*30.0
+       ELSE IF(ALPHA.GT.50.0*CORR) THEN
         ALPHAST=ALPHAST*15.0
-       ELSE IF((ALP1+ALPHAD).GT.50.0*CORR) THEN
-        ALPHAST=ALPHAST*12.0
-       ELSE
+       ELSE 
         ALPHAST=ALPHAST*8.0
        ENDIF
       ENDIF
+      VDST=WZ*1.D-5                                                 
       TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH.AND.ALPHAD.NE.0.0) TSTEP=TCUTH
-C     IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMIT
-      DO 10 J=1,8
-   10 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)
-      ANET1=ALP1-ATT1  
-       WRITE(6,878) ALPHAST,ANET1,ALPHAD,TSTEP
-  878 FORMAT(' ALPHAST=',D10.3,' ANET=',D10.3,' ALPHAD=',D10.3,/,
-     /' TSTEP=',D10.3)
       TSTEP=TSTEP*1.0D12
       TFINAL=7.0D0*TSTEP
       ITFINAL=7
@@ -18039,12 +16317,11 @@ C CALC TIME OF FLIGHT AND PT
      /--------') 
       WRITE(6,26) TSTEP
    26 FORMAT(1(/),'  TIME STEP BETWEEN SAMPLING PLANES =',D12.5,' PICOSE
-     /CS.',/)    
-      JPRT=1                 
-      CALL MONTEFTH(JPRT)                             
+     /CS.',/)                     
+      CALL MONTEFTH                             
       CALL FRIEDLAND 
-      CALL PTH(JPRT)
-      CALL TOFH(JPRT)
+      CALL PTH
+      CALL TOFH
       WRITE(6,27) RALPHA,RALPER,RATTOF,RATOFER
    27 FORMAT(/,'PT IONISATION AND ATTACHMENT RATES *10**12/SEC',/,'ALPHA
      /=',D10.3,' +- ',F6.2,' %      ATT=',D10.3,' +- ',F6.2,' %')    
@@ -18060,9 +16337,9 @@ C CALC TIME OF FLIGHT AND PT
       WRITE(6,31) TOFWRZ,TOFWRZER,TOFWRY,TOFWRYER,TOFWRX,TOFWRXER   
    31 FORMAT(/,'WRZ=',F8.2,' +-',F6.1,' %    WRY=',F8.2,' +-',F6.1,' %  
      / WRX=',F8.2,' +-',F6.1,' %')  
-C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS      
+C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS               
       TOFWR=DSQRT(TOFWRZ*TOFWRZ+TOFWRY*TOFWRY+TOFWRX*TOFWRX)
-      WRZN=TOFWR*1.0D05
+      WRZN=TOFWRZ*1.0D05
       FC1=WRZN/(2.0D0*TOFDZZ)
       FC2=((RALPHA-RATTOF)*1.0D12)/TOFDZZ
       ALPZZ=FC1-DSQRT(FC1**2-FC2)
@@ -18073,44 +16350,40 @@ C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS
 C-----------------------------------------------------    
 C LOAD NEW ALPHA AND ATTACHMENT INTO COMMON BLOCKS
 C-----------------------------------------------
-      ALP1=RALPHA/TOFWR*1.D7
-      ALP1ER=RALPER*ALP1/100.
-      ATT1=RATTOF/TOFWR*1.D7
-      ATT1ER=RATOFER*ATT1/100.
-C     WRITE(6,32) ALP1,ALP1ER,ATT1,ATT1ER
+      ALPHA=RALPHA/TOFWR*1.D7
+      ATT=RATTOF/TOFWR*1.D7
+      ALPER=RALPER*ALPHA/100.
+      ATTER=RATOFER*ATT/100.
+C     WRITE(6,32) ALPHA,ALPER,ATT,ATTER
 C  32 FORMAT(/,'TOWNSEND COEFICIENTS CALCULATED FROM TOF RESULTS:',2(/),
-C    /'IONISATION RATE /CM.=',D11.4,' +-',F6.2,/,'ATTACHMENT RATE /CM.='
-C    /,D11.4,' +-',F6.2,/)
-      ALPHA=ALP1
-      ATT=ATT1
+C    /'IONISATION RATE /CM.=',D11.4,' +-',F6.2,' %',/,'ATTACHMENT RATE /
+C    /CM.=',D11.4,' +-',F6.2,' %',/)        
 C-----------------------------------------------      
       RETURN                                                     
       END                                                               
-      SUBROUTINE MONTEFTH(JPRT)                                   
+      SUBROUTINE MONTEFTH                                               
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
-      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAXOLD
+      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG
       COMMON/ROTS/RCS,RSN,EFZ100,EFX100,F1,EOVBR                        
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),IPLAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS
-      COMMON/ISPT/XS(2000),YS(2000),ZS(2000),TS(2000),ES(2000),
-     /DCX(2000),DCY(2000),DCZ(2000),IPL(2000)
+      COMMON/ISPT/XS(8000),YS(8000),ZS(8000),TS(8000),ES(8000),
+     /DCX(8000),DCY(8000),DCZ(8000),IPL(8000)
       COMMON/TPLOUTH/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),YZTPL(8),XZTPL(8),XYTPL(8),VZTPL(8),VYTPL(8),
      /VXTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT
       COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO  
       COMMON/IONFL1/NC0(960),EC0(960),NG1(960),EG1(960),NG2(960),
-     /EG2(960),WKLM(960),EFL(960) 
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)    
-      DIMENSION EPRM(10000000),IESPECP(100),TEMP(4000)            
+     /EG2(960),WKLM(960),EFL(960)      
+      DIMENSION EPRM(10000000),IESPECP(100),TEMP(4000) 
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
 C   THIS ROUTINE HANDLES TERMINATIONS AT FIXED DRIFT TIMES. 
@@ -18121,14 +16394,6 @@ C   ROTATED INTO THE STANDARD COORDINATE FRAME WITH THE ELECTRIC FIELD
 C   ALONG THE Z-AXIS AND THE BFIELD AT AN ANGLE BTHETA TO THE ELECTRIC
 C   FIELD IN THE X-Z PLANE  
 C ------------------------------------------------------------------- 
-      IF(JPRT.EQ.0) THEN
-C CALCULATION OF APPROXIMATE STARTING PARAMETERS
-       NMAX=NMAXOLD
-       IF(NMAXOLD.GT.80000000) NMAX=80000000
-      ELSE
-C ENTRY FOR NORMAL CALCULATION
-       NMAX=NMAXOLD
-      ENDIF
       S=0.0D0 
       ST=0.0D0 
       X=0.0D0
@@ -18153,8 +16418,6 @@ C ENTRY FOR NORMAL CALCULATION
    26 ICOLL(I)=0
       DO 27 I=1,960
    27 ICOLN(I)=0
-      DO 271 I=1,60
-  271 ICOLNN(I)=0
       DO 28 I=1,4000
    28 SPEC(I)=0.0D0            
       DO 33 I=1,100
@@ -18204,14 +16467,6 @@ C
       EFX100=EFIELD*100.0D0*DCOS(RTHETA)
       F1=EFIELD*CONST2*DCOS(RTHETA)
       EOVBR=EOVB*DSIN(RTHETA)
-C
-      DO 111 J=1,4000
-  111 TEMP(J)=TCFN(J)+TCF(J)
-      ABSFAKEI=DABS(FAKEI)
-      IFAKE=0
-      DO 112 J=1,8
-  112 IFAKET(J)=0
-C
 C     INITIAL DIRECTION COSINES                                         
       DCZ1=DCOS(THETA)                                                  
       DCX1=DSIN(THETA)*DCOS(PHI)                                        
@@ -18329,10 +16584,10 @@ C TAKE ELECTRONS FROM STORE
       DZ=(CZ1*SINWT+(EOVBR-CY1)*(1.0D0-COSWT))/WB
       DX=CX1*T+F1*T*T
       E=E1+DZ*EFZ100+DX*EFX100
- 913  FORMAT(3X,' AFTER STORE ITER=',I10,' DZ=',D12.3,'E1=',D12.3,/,' CO
-     /SWT=',D12.6,' SINWT=',D12.6,' WBT=',D12.3,' CY1=',D12.3)   
+ 913  FORMAT(3X,' AFTER STORE ITER=',I10,' DZ=',D12.3,'E1=',D12.3,' COSW
+     /T=',D12.3,' SINWT=',D12.3,' WBT=',D12.3,' CY1=',D12.3)   
       IF(E.LT.0.0D0) THEN
-C      WRITE(6,913)ITER,DZ,E,COSWT,SINWT,WBT,CY1  
+       WRITE(6,913)ITER,DZ,E,COSWT,SINWT,WBT,CY1  
        E=0.001D0
       ENDIF                                                   
       IE=DINT(E/ESTEP)+1                                               
@@ -18341,56 +16596,9 @@ C
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(IE)/TLIM                                                
-      IF(R5.LE.TEST1) GO TO 137                                         
-      NNULL=NNULL+1                         
-      TEST2=TEMP(IE)/TLIM
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-      IF(NPLAST.EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(I)=ICOLNN(I)+1
-       GO TO 1
-      ENDIF                         
-      TEST3=(TEMP(IE)+ABSFAKEI)/TLIM
-      IF(R5.LT.TEST3) THEN
-C FAKE IONISATION INCREMENT COUNTER AND ADD ELECTRON TO STORE
-       IFAKE=IFAKE+1
-       IFAKET(IPLANE+1)=IFAKET(IPLANE+1)+1
-       IF(FAKEI.LT.0.0) THEN
-        NEION=NEION+1
-C FAKE ATTACHMENT START NEW ELECTRON
-        IF(NELEC.EQ.(NCLUS+1)) GO TO 544
-C ELECTRON CAPTURED TAKE NEXT ELECTRON FROM STORE
-        GO TO 20
-       ENDIF
-C FAKE IONISATION ADD ELECTRON TO STORE
-       NCLUS=NCLUS+1
-       NPONT=NPONT+1
-       NMXADD=MAX(NPONT,NMXADD)
-       IF(NPONT.GT.2000) THEN 
-        WRITE(6,546) NPONT,ITER
-        STOP
-       ENDIF     
-       XS(NPONT)=X+DX       
-       YS(NPONT)=Y+EOVBR*T+((CY1-EOVBR)*SINWT+CZ1*(1.0D0-COSWT))/WB
-       ZS(NPONT)=Z+DZ
-       TS(NPONT)=ST+T
-       ES(NPONT)=E
-       IPL(NPONT)=IPLANE
-       CXT=CX1+2.0D0*T*F1
-       CYT=(CY1-EOVBR)*COSWT+CZ1*SINWT+EOVBR
-       CZT=CZ1*COSWT-(CY1-EOVBR)*SINWT 
-       BOT=1.0D0/DSQRT(CXT*CXT+CYT*CYT+CZT*CZT)
-       DCX(NPONT)=CXT*BOT
-       DCY(NPONT)=CYT*BOT
-       DCZ(NPONT)=CZT*BOT
-       GO TO 1
-      ENDIF   
+      TTEM=TCF(IE)/TLIM                                                 
+      IF(R5.LE.TTEM)GO TO 137                                           
+      NNULL=NNULL+1                                                     
       GO TO 1                                                           
 C                                                                       
 C  CALCULATE DIRECTION COSINES AND POSITIONS AT INSTANT BEFORE COLLISION
@@ -18472,7 +16680,7 @@ C OF IONISATION ELECTRON
       NCLUS=NCLUS+1
       NPONT=NPONT+1
       NMXADD=MAX(NPONT,NMXADD)
-      IF(NPONT.GT.2000) THEN 
+      IF(NPONT.GT.8000) THEN 
       WRITE(6,546) NPONT,ITER
  546  FORMAT(2X,' PROGRAM STOPPED . NPONT=',I5,' ITER=',I10)
       STOP
@@ -18544,7 +16752,7 @@ C IONISATION OF THE OTHER GASES IN THE MIXTURE
        IF(RAN.GT.PENFRA(1,I)) GO TO 5
        NCLUS=NCLUS+1
        NPONT=NPONT+1
-       IF(NPONT.GT.2000) THEN
+       IF(NPONT.GT.8000) THEN
         WRITE(6,546) NPONT,ITER
         STOP
        ENDIF
@@ -18697,7 +16905,7 @@ C    INTERMEDIATE PRINTOUT
       WX=WX*1.0D+09
       JCT=ID/100000
 C      IF(J1.EQ.1) WRITE(6,201)                                         
-C 201 FORMAT(/,7X,'INTERMEDIATE OUTPUT',/,'    VELZ     VELY     VELX    
+C 201 FORMAT(/,7X,'INTERMEDIATE OUTPUT',/,'    VELZ     VELY     VELX   
 C    /   TIME       COUNT    ')      
 C ROTATE INTERMEDIATE OUTPUT INTO LAB FRAME 
       WZR=WZ*RCS-WX*RSN
@@ -18727,7 +16935,7 @@ C  MAIN LOOP END
      /ESTIMATED ALPHA.  NCLUS = ',I7,'  ITER =',I9)      
       STOP
       ENDIF
-      IF(JPRT.EQ.1) WRITE(6,878) NELEC,NEION,IPRIM
+      WRITE(6,878) NELEC,NEION,IPRIM
  878  FORMAT(/,' TOTAL NO OF ELECTRONS=',I8,/,' TOTAL NO OF NEG. IONS=',
      /I8,/,' TOTAL NO OF PRIMARIES=',I8)  
       EPRMBAR=0.0D0
@@ -18738,7 +16946,7 @@ C  MAIN LOOP END
  310  EPRMBAR=EPRMBAR+EPRM(I)
       EBAR=EPRMBAR/IPRIM
       EERR=DSQRT(E2PRM/IPRIM-EBAR**2)
-      IF(JPRT.EQ.1) WRITE(6,836) EBAR,EERR
+      WRITE(6,836) EBAR,EERR
  836  FORMAT(/,2X,'AVERAGE ENERGY OF PRIMARY ELECTRON =',F10.3,' EV.',/,
      /'   ENERGY SPREAD OF PRIMARY ELECTRON =',F10.3,' EV.')
 C     WRITE(6,835) (IESPECP(J),J=1,100)
@@ -18761,7 +16969,7 @@ C    /,10(2X,10I5,/))
       COMMON/ROTS/RCS,RSN,EFZ100,EFX100,F1,EOVBR
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/TPLOUTH/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),YZTPL(8),XZTPL(8),XYTPL(8),VZTPL(8),VYTPL(8),
      /VXTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT
@@ -18819,7 +17027,7 @@ C ROTATE VELOCITIES
       NETPL(IPLANE)=NETPL(IPLANE)+1 
       RETURN
       END 
-      SUBROUTINE ALPCLCA   
+      SUBROUTINE ALPCLCA 
       IMPLICIT REAL*8 (A-H,O-Z)
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
@@ -18829,13 +17037,12 @@ C ROTATE VELOCITIES
       COMMON/VEL/WX,WY,WZ
       COMMON/CTOWNS/ALPHA,ATT
       COMMON/CTWNER/ALPER,ATTER
-      COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)
+      COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM 
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),LAST,ISIZE,PENFRA(3,960),TCFMAX(8) 
 C ---------------------------------------------------------------------      
 C  ESTIMATE TIME STEP FOR AVALANCHE SIMULATION IN TIME OF FLIGHT SIM.
-C  USES ESTIMATED GAIN OF 3.0 BETWEEN PILANES. 
+C  USES ESTIMATED GAIN OF 3.0 BETWEEN PLANES. 
 C  CALLS TOF AND PT SUBROUTINES AND UPDATES ALPHA AND ATT
 C  VERSION WITH BFIELD PARALLEL TO EFIELD 
 C ------------------------------------------------------------------
@@ -18843,114 +17050,19 @@ C ------------------------------------------------------------------
       IF(IMAX.LT.5) IMAX=5 
       NMAX=IMAX*10000000
       CORR=760.0*(TEMPC+273.15)/(TORR*293.15)
-      ALPP=ALPHA/CORR
-      ATTP=ATT/CORR
-      ANETP=ALPP-ATTP
-      ANET=ALPHA-ATT
-      TCUTH=1.2D-10*CORR
-      TCUTL=1.D-13*CORR
-C   
-      IF (ANETP.GT.30.0) THEN
-       ALPHAD=0.0
-       ALP1=ALPHA
-       ATT1=ATT
-C WEAK ATTACHMENT
-       GO TO 6
-      ENDIF 
-C  SOME ATTACHMENT
-      IF(DABS(ANETP).LT.100.) THEN
-C SMALL NET ATTACHMENT
-       ALPHAD=DABS(ATT)*0.8
-      ELSE IF(DABS(ANETP).GE.100..AND.DABS(ANETP).LT.1000.) THEN
-C LARGER NET ATTACHMENT
-       ALPHAD=DABS(ANET)*0.65
-      ELSE IF(DABS(ANETP).GT.1000..AND.DABS(ANETP).LT.10000.) THEN
-       ALPHAD=DABS(ANET)*0.6
-      ELSE IF(DABS(ANETP).GT.10000..AND.DABS(ANETP).LT.100000.) THEN
-       ALPHAD=DABS(ANET)*0.5
-      ELSE IF(DABS(ANETP).GT.100000..AND.DABS(ANETP).LT.2000000.) THEN
-       ALPHAD=DABS(ANET)*0.4
-      ELSE 
-       WRITE(6,91) 
-   91 FORMAT(' ATTACHMENT TOO LARGE PROGRAM STOPPED')
-       STOP
-      ENDIF
-   3  VDST=WZ*1.D-5
-      FAKEI=ALPHAD*WZ*1.D-12
-      ALPHAST=0.85*DABS(ALPHAD+ANET)                        
-      TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH) TSTEP=TCUTH
-      IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMIT
-      DO 4 J=1,8
-    4 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)
-      WRITE(6,871) ALPHAST,ANET,ALPHAD,TSTEP
-  871 FORMAT(' ALPHAST1=',D10.3,' ANET1=',D10.3,' ALPHAD1=',D10.3,/,
-     /' TSTEP1=',D10.3)
-C  CONVERT TO  PICOSECONDS     
-      TSTEP=TSTEP*1.0D12
-      TFINAL=7.0D0*TSTEP
-      ITFINAL=7
-C CALCULATE GOOD STARTING VALUES FOR ALPHA AND NETA
-      JPRT=0
-      CALL MONTEFTA(JPRT)
-      CALL PT(JPRT)
-      CALL TOF(JPRT)
-      ALP1=RALPHA/TOFWR*1.D7
-      ALP1ER=RALPER*ALP1/100. 
-      ATT1=RATTOF/TOFWR*1.D7
-      ATT1ER=RATOFER*ATT1/100.
-      WRITE(6,944) ALP1,ALP1ER,ATT1,ATT1ER
-  944 FORMAT(' GOOD STARTING VALUES FOR CALC:',/,' ALPHA=',D12.3,' ERR='
-     /,D12.3,/,' NETA =',D12.3,' ERR=',D12.3)
-C
-C CALCULATE USING GOOD STARTING VALUES
-C  RESET TCFMAX
-      DO 44 J=1,8
-   44 TCFMAX(J)=TCFMAX(J)-DABS(FAKEI)
-C CALCULATE FAKE IONISATION RATE SCALING BY 1.2 
-      ALPHAD=DABS(ATT1)*1.2
-      IF((ALP1-ATT1).GT.30.*CORR) ALPHAD=DABS(ATT1)*0.4
-      IF(DABS(ALP1-ATT1).LT.(ALP1/10.0).OR.DABS(ALP1-ATT1).LT.
-     /(ATT1/10.0)) ALPHAD=DABS(ATT1)*0.3
-      IF((ALP1-ATT1).GT.100.*CORR) ALPHAD=0.0
-      WZ=TOFWR*1.D5
-C
-C      
-C NET IONISATION
-C   5 IF((NET).GT.(11000./CORR)) THEN
-C  LARGE IONISATION
-C      ALPHAD=7000.-(ALPHA-ATT)
-C     ELSE IF(DABS(ALPP).GT.(5.0*DABS(ANET)).OR.DABS(ATTP).GT.
-C    /(5.0*DABS(ANET)))THEN 
-C LARGE CANCELLATION BETWEEN ATTACHMENT AND IONISATION
-C      ALPHAD=-6.0*(ALPHA-ATT)
-C     ELSE
-C      ALPHAD=0.0
-C     ENDIF
-    6 VDST=WZ*1.D-5 
-      FAKEI=ALPHAD*WZ*1.D-12          
-      ALPHAST=0.85*DABS(ALPHAD+ALP1-ATT1)
-      IF((ALP1+ALPHAD).GT.(10.0*ALPHAST).OR.ATT1.GT.(10.0*ALPHAST)) THEN
-C LARGE CANCELLATION BETWEEN ALPHA AND NETA. REDUCE STEP SIZE BY 15.0
-       IF((ALP1+ALPHAD).GT.100.*CORR) THEN
+      ALPHAST=0.85D0*DABS(ALPHA-ATT) 
+      IF(ALPHA.GT.(10.0*ALPHAST).OR.ATT.GT.(10.0*ALPHAST)) THEN
+C LARGE CANCELLATION BETWEEN ALPHA AND NETA REDUCE STEP BY 30.0
+       IF(ALPHA.GT.100.0*CORR) THEN
+        ALPHAST=ALPHAST*30.0
+       ELSE IF(ALPHA.GT.50.0*CORR) THEN
         ALPHAST=ALPHAST*15.0
-       ELSE IF((ALP1+ALPHAD).GT.50.0*CORR) THEN
-        ALPHAST=ALPHAST*12.0
        ELSE
         ALPHAST=ALPHAST*8.0
        ENDIF
-      ENDIF   
+      ENDIF
+      VDST=WZ*1.D-5                                                 
       TSTEP=DLOG(3.0D0)/(ALPHAST*VDST*1.0D5)
-      IF(TSTEP.GT.TCUTH.AND.ALPHAD.NE.0.0) TSTEP=TCUTH
-C     IF(TSTEP.LT.TCUTL) TSTEP=TCUTL
-C UPDATE NULL COLLISION FREQUENCY LIMITS
-      DO 10 J=1,8
-   10 TCFMAX(J)=TCFMAX(J)+DABS(FAKEI)
-      ANET1=ALP1-ATT1  
-      WRITE(6,878) ALPHAST,ANET1,ALPHAD,TSTEP
-  878 FORMAT(' ALPHAST=',D10.3,' ANET=',D10.3,' ALPHAD=',D10.3,/,
-     /' TSTEP=',D10.3) 
       TSTEP=TSTEP*1.0D12
       TFINAL=7.0D0*TSTEP
       ITFINAL=7
@@ -18961,17 +17073,16 @@ C CALC TIME OF FLIGHT AND PT
      /--------') 
       WRITE(6,26) TSTEP
    26 FORMAT(1(/),'  TIME STEP BETWEEN SAMPLING PLANES =',D12.5,' PICOSE
-     /CS.',/)            
-      JPRT=1         
-      CALL MONTEFTA(JPRT)                            
+     /CS.',/)                     
+      CALL MONTEFTA                            
       CALL FRIEDLAND 
-      CALL PT(JPRT) 
-      CALL TOF(JPRT) 
+      CALL PT 
+      CALL TOF 
       WRITE(6,27) RALPHA,RALPER,RATTOF,RATOFER
    27 FORMAT(/,'PT IONISATION AND ATTACHMENT RATES *10**12/SEC',/,'ALPHA
      /=',D10.3,' +- ',F6.2,' %      ATT=',D10.3,' +- ',F6.2,' %')    
       WRITE(6,28) 
-   28 FORMAT(/,' TOF DIFFUSION')
+   28 FORMAT(/,' TOF DIFFUSION') 
       WRITE(6,29) TOFDL,TOFDLER,TOFDT,TOFDTER 
    29 FORMAT(/,'  DL=',F8.1,' +- ',F6.1,' %       DT=',F8.1,' +- ',F6.1,
      /' %')     
@@ -18979,66 +17090,56 @@ C CALC TIME OF FLIGHT AND PT
    30 FORMAT(/,' TOF DRIFT VELOCITY')
       WRITE(6,31) TOFWR,TOFWRER   
    31 FORMAT(/,'    WR=',F8.2,' +- ',F6.2,' %') 
-C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS
+C CALCULATE TOWNSEND SST COEFICIENTS FROM TOF RESULTS         
       WRN=TOFWR*1.0D05
       FC1=WRN/(2.0D0*TOFDL)
       FC2=((RALPHA-RATTOF)*1.0D12)/TOFDL   
       ALPZZ=FC1-DSQRT(FC1**2-FC2)            
       WRITE(6,32) ALPZZ
-  32  FORMAT(/,'TOWNSEND COEFICIENT (ALPHA-ATT) CALCULATED FROM TOF RESU
+   32 FORMAT(/,'TOWNSEND COEFICIENT (ALPHA-ATT) CALCULATED FROM TOF RESU
      /LTS:',/,' ALPHA-ATT /CM.=',D11.4,' N.B. APPROXIMATE FORMULA NOT AC
-     /CURATE',/)          
+     /CURATE',/)
 C---------------------------------------------------           
 C LOAD NEW ALPHA AND ATTACHMENT INTO COMMON BLOCKS
 C-----------------------------------------------
-C   
+C
       ALPHA=RALPHA/TOFWR*1.D7
       ALPER=RALPER*ALPHA/100.
       ATT=RATTOF/TOFWR*1.D7
       ATTER=RATOFER*ATT/100.
 C
-C     WRITE(6,33) ALPHA,ALPER,ATT,ATTER  
-C  33 FORMAT(' TOF TOWNSEND IN UNITS OF 1/CM:',/,'   GAIN =',D12.4,' +-'
-C    /,D12.4,/,' ATTACH =',D12.4,' +-',D12.4,/)
+C     WRITE(6,33) ALPHA,ALPER,ATT,ATTER
+C 33  FORMAT(' TOF TOWNSEND IN UNITS OF 1/CM:',/,'   GAIN =',D12.4,' +-'
+C    /,D12.4,/,' ATTACH =',D12.4,' +-',D12.4,/)   
 C-----------------------------------------------      
       RETURN                                                     
       END                                                               
-      SUBROUTINE MONTEFTA(JPRT)                                    
+      SUBROUTINE MONTEFTA                                               
       IMPLICIT REAL*8 (A-H,O-Z)                                         
       IMPLICIT INTEGER*8 (I-N)
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
       COMMON/CNSTS1/CONST1,CONST2,CONST3,CONST4,CONST5                  
-      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAXOLD 
+      COMMON/SETP/TMAX,SMALL,API,ESTART,THETA,PHI,RSTART,EFIELD,NMAX 
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG                                   
       COMMON/LARGE/CF(4000,960),EIN(960),TCF(4000),IARRY(960),RGAS(960),
      /IPN(960),WPL(960),IPLAST,ISIZE,PENFRA(3,960),TCFMAX(8)
-      COMMON/LARGEN/CFN(4000,60),TCFN(4000),SCLENUL(60),NPLAST
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/TTRM/ZTOT,TTOT,ZTOTS,TTOTS
-      COMMON/ISPT/XS(2000),YS(2000),ZS(2000),TS(2000),ES(2000),
-     /DCX(2000),DCY(2000),DCZ(2000),IPL(2000)
+      COMMON/ISPT/XS(8000),YS(8000),ZS(8000),TS(8000),ES(8000),
+     /DCX(8000),DCY(8000),DCZ(8000),IPL(8000)
       COMMON/TPLOUT/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),VZTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT 
       COMMON/ANIS/PSCT(4000,960),ANGCT(4000,960),INDEX(960),NISO 
       COMMON/IONFL1/NC0(960),EC0(960),NG1(960),EG1(960),NG2(960),
-     /EG2(960),WKLM(960),EFL(960) 
-      COMMON/FAKE/FAKEI,IFAKE,IFAKET(8),IFAKED(9)   
-      DIMENSION EPRM(10000000),IESPECP(100),TEMP(4000)            
+     /EG2(960),WKLM(960),EFL(960)       
+      DIMENSION EPRM(10000000),IESPECP(100),TEMP(4000) 
 C -------------------------------------------------------------------   
 C   CALCULATES COLLISION EVENTS AND UPDATES DIFFUSION AND VELOCITY.
 C   THIS ROUTINE HANDLES TERMINATIONS AT FIXED DRIFT TIMES.
 C   BFIELD PARALLEL TO EFIELD    
 C ------------------------------------------------------------------- 
-      IF(JPRT.EQ.0) THEN
-C CALCULATION OF APPROXIMATE STARTING PARAMETERS
-       NMAX=NMAXOLD
-       IF(NMAXOLD.GT.80000000) NMAX=80000000
-      ELSE
-C ENTRY FOR NORMAL CALCULATION
-       NMAX=NMAXOLD
-      ENDIF
       S=0.0D0 
       ST=0.0D0 
       X=0.0D0
@@ -19059,8 +17160,6 @@ C ENTRY FOR NORMAL CALCULATION
    26 ICOLL(I)=0
       DO 27 I=1,960
    27 ICOLN(I)=0
-      DO 271 I=1,60
-  271 ICOLNN(I)=0
       DO 28 I=1,4000
    28 SPEC(I)=0.0D0            
       DO 33 I=1,100
@@ -19092,15 +17191,7 @@ C ENTRY FOR NORMAL CALCULATION
       NCLUS=0
       J1=1 
       ZSTRT=0.0D0
-      TSSTRT=0.0D0
-C
-      DO 111 J=1,4000
-  111 TEMP(J)=TCFN(J)+TCF(J)     
-      ABSFAKEI=DABS(FAKEI)
-      IFAKE=0
-      DO 112 J=1,8
-  112 IFAKET(J)=0
-C                                          
+      TSSTRT=0.0D0                                                    
 C     INITIAL DIRECTION COSINES                                         
       DCZ1=DCOS(THETA)                                                  
       DCX1=DSIN(THETA)*DCOS(PHI)                                        
@@ -19222,60 +17313,9 @@ C
 C     TEST FOR REAL OR NULL COLLISION                                   
 C                                                                       
       R5=drand48(RDUM)
-      TEST1=TCF(IE)/TLIM                                               
-      IF(R5.LE.TEST1) GO TO 137                                       
-      NNULL=NNULL+1               
-      TEST2=TEMP(IE)/TLIM
-      IF(R5.LT.TEST2) THEN
-C TEST FOR NULL LEVELS
-      IF(NPLAST.EQ.0) GO TO 1
-       R2=drand48(RDUM)
-       I=0
-  888  I=I+1
-       IF(CFN(IE,I).LT.R2) GO TO 888
-C INCREMENT NULL SCATTER SUM
-       ICOLNN(I)=ICOLNN(I)+1
-       GO TO 1
-      ENDIF                                      
-      TEST3=(TEMP(IE)+ABSFAKEI)/TLIM
-      IF(R5.LT.TEST3) THEN
-C FAKE COLLISION INCREMENT COUNTERS
-       IFAKE=IFAKE+1
-       IFAKET(IPLANE+1)=IFAKET(IPLANE+1)+1
-       IF(FAKEI.LT.0.0) THEN
-        NEION=NEION+1
-C FAKE ATTACHMENT START NEW ELECTRON
-        IF(NELEC.EQ.(NCLUS+1)) GO TO 544
-C ELECTRON CAPTURED TAKE ELECTRON FROM STORE
-        GO TO 20
-       ENDIF
-C FAKE IONISATION ADD ELECTRON TO STORE
-       NCLUS=NCLUS+1
-       NPONT=NPONT+1
-       NMXADD=MAX(NPONT,NMXADD)
-       IF(NPONT.GT.2000) THEN 
-        WRITE(6,546) NPONT,ITER
-        STOP
-       ENDIF     
-       WBT=WB*T
-       COSWT=DCOS(WBT)
-       SINWT=DSIN(WBT)
-       A=T*CONST9*DSQRT(E1)
-       XS(NPONT)=X+(CX1*SINWT-CY1*(1.0D0-COSWT))/WB       
-       YS(NPONT)=Y+(CY1*SINWT+CX1*(1.0D0-COSWT))/WB
-       ZS(NPONT)=Z+DCZ1*A+T*T*F1
-       TS(NPONT)=ST+T
-       ES(NPONT)=E
-       IPL(NPONT)=IPLANE
-       CXT=CX1*COSWT-CY1*SINWT
-       CYT=CY1*COSWT+CX1*SINWT
-       CONST6=DSQRT(E1/E)
-       BOT=1.0D0/(CONST9*DSQRT(E))
-       DCX(NPONT)=CXT*BOT
-       DCY(NPONT)=CYT*BOT
-       DCZ(NPONT)=DCZ1*CONST6+EFIELD*T*CONST5/DSQRT(E)     
-       GO TO 1
-      ENDIF
+      TTEM=TCF(IE)/TLIM                                                 
+      IF(R5.LE.TTEM)GO TO 137                                           
+      NNULL=NNULL+1                                                     
       GO TO 1                                                           
 C                                                                       
 C  CALCULATE DIRECTION COSINES AND POSITIONS AT INSTANT BEFORE COLLISION
@@ -19358,7 +17398,7 @@ C OF IONISATION ELECTRON
       NCLUS=NCLUS+1
       NPONT=NPONT+1
       NMXADD=MAX(NPONT,NMXADD)
-      IF(NPONT.GT.2000) THEN 
+      IF(NPONT.GT.8000) THEN 
       WRITE(6,546) NPONT,ITER
  546  FORMAT(2X,' PROGRAM STOPPED . NPONT=',I4,' ITER=',I10)
       STOP
@@ -19430,7 +17470,7 @@ C IONISATION OF THE OTHER GASES IN THE MIXTURE
        IF(RAN.GT.PENFRA(1,I)) GO TO 5
        NCLUS=NCLUS+1
        NPONT=NPONT+1
-       IF(NPONT.GT.2000) THEN
+       IF(NPONT.GT.8000) THEN
         WRITE(6,546) NPONT,ITER
         STOP
        ENDIF
@@ -19606,7 +17646,7 @@ C  MAIN LOOP END
      /ESTIMATED ALPHA.  NCLUS = ',I7,'  ITER =',I9)      
       STOP
       ENDIF
-      IF(JPRT.EQ.1) WRITE(6,878) NELEC,NEION,IPRIM
+      WRITE(6,878) NELEC,NEION,IPRIM
  878  FORMAT(/,' TOTAL NO OF ELECTRONS=',I8,/,' TOTAL NO OF NEG. IONS=',
      /I8,/,' TOTAL NO OF PRIMARIES=',I8)  
       EPRMBAR=0.0D0
@@ -19617,7 +17657,7 @@ C  MAIN LOOP END
  310  EPRMBAR=EPRMBAR+EPRM(I)
       EBAR=EPRMBAR/IPRIM
       EERR=DSQRT(E2PRM/IPRIM-EBAR**2)
-      IF(JPRT.EQ.1) WRITE(6,836) EBAR,EERR
+      WRITE(6,836) EBAR,EERR
  836  FORMAT(/,2X,'AVERAGE ENERGY OF PRIMARY ELECTRON =',F10.3,' EV.',/,
      /'   ENERGY SPREAD OF PRIMARY ELECTRON =',F10.3,' EV.')
 C     WRITE(6,835) (IESPECP(J),J=1,100)
@@ -19639,7 +17679,7 @@ C    /,10(2X,10I5,/))
       COMMON/BFLD/EOVB,WB,BTHETA,BMAG
       COMMON/CION/ALPHAST,VDST,TSTEP,ZSTEP,TFINAL,ZFINAL,ITFINAL,IPRIM
       COMMON/OUTPT/TIME(300),ICOLL(30),SPEC(4000),TMAX1,
-     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960),ICOLNN(60)
+     /AVE,DEN,XID,X,Y,Z,ST,NNULL,ICOLN(960)
       COMMON/TPLOUT/ETPL(8),XTPL(8),YTPL(8),ZTPL(8),TTPL(8),XXTPL(8),
      /YYTPL(8),ZZTPL(8),VZTPL(8),NETPL(8),ATTOINT,ATTERT,AIOERT 
 C-----------------------------------------------------------------------
@@ -31701,7 +29741,7 @@ C IONISATION CHARGE STATE =5
      /9000.,10000.,12000.,14000.,16000.,18000.,20000./        
       DATA YIN5/0.0,.00013,.0018,.0062,.0101,.0113,.0106,.0108,.0109,
      /.0104,
-     /.0098,.0089,.0078,.0073,.0069,.059,.051,.0047,.0042,.0039,
+     /.0098,.0089,.0078,.0073,.0069,.0059,.0051,.0047,.0042,.0039,
      /.0034,.0029,.0026,.0023,.0021,.00193,.00179,.00167,.00147,.00133,
      /.00120,.00111,.00095,.00084,.00076,.00070,.00065/
 C IONISATION CHARGE STATE =6
@@ -33584,7 +31624,7 @@ C    /SCRPT)
      /8.0D6,9.0D6,1.0D7,1.25D7,1.5D7,1.75D7,2.0D7,2.5D7,3.0D7,3.5D7,
      /4.0D7,4.5D7,5.0D7,6.0D7,7.0D7,8.0D7,9.0D7,1.0D8,1.25D8,1.5D8,
      /1.75D8,2.0D8,2.5D8,3.0D8,3.5D8,4.0D8,4.5D8,5.0D8,6.0D8,7.0D8,
-     /8.0D9,9.0D8,1.0D9/
+     /8.0D8,9.0D8,1.0D9/
 C ELASTIC MOMENTUM TRANSFER X-SECTION     
       DATA YELM/26.7,25.4,22.6,21.0,18.8,16.5,14.8,13.9,13.0,12.0,
      /11.2,10.05,9.05,8.20,7.50,6.25,5.30,4.60,3.88,3.22,
@@ -37013,7 +35053,7 @@ C  C2H2+
       DATA YION9/0.00,.013,.047,.078,.117,.151,.193,.223,.223,.226,
      /.234,.229,.231,.232,.232,.224,.212,.200,.189,.177,
      /.155,.142,.131,.119,.112,.0981,.0904,.0832,.0741,.0691,
-     /.0598,.0514,.0467,.0426,.0355,.0307,.0269,.0241,.0201,.173,
+     /.0598,.0514,.0467,.0426,.0355,.0307,.0269,.0241,.0201,.0173,
      /.0153,.0137,.0124,.0114/
 C  C2H3+
       DATA XION10/14.5,15.0,17.5,20.0,25.0,30.0,35.0,40.0,45.0,50.0,
@@ -46364,8 +44404,7 @@ C
       J=N3ATT                                                           
   270 A=(Y3ATT(J)-Y3ATT(J-1))/(X3ATT(J)-X3ATT(J-1))
       B=(X3ATT(J-1)*Y3ATT(J)-X3ATT(J)*Y3ATT(J-1))/(X3ATT(J-1)-X3ATT(J))
-C      THREEB=FAC*(A*EN+B)*1.D-16*T3B  
-      THREEB=FAC*(A*EN+B)*1.D-16  
+      THREEB=FAC*(A*EN+B)*1.D-16*T3B  
   300 Q(4,I)=SINGLE+THREEB   
       QATT(1,I)=Q(4,I)  
       Q(5,I)=0.0                                                        
@@ -50954,7 +48993,7 @@ C ELASTIC MOMENTUM TRANSFER
      /.007160,.005429,
      /.004269,.003452,.002855,.001908,.001372,.001038,8.156D-4,
      /5.451D-4,3.923D-4,2.973D-4,
-     /2.340D-4,1.895D-4,1.570D-4,1.136D-5,8.647D-5,6.838D-5,5.567D-5,
+     /2.340D-4,1.895D-4,1.570D-4,1.136D-4,8.647D-5,6.838D-5,5.567D-5,
      /4.635D-5,3.157D-5,2.316D-5,
      /1.788D-5,1.432D-5,9.937D-6,7.408D-6,5.797D-6,4.699D-6,3.910D-6,
      /3.321D-6,2.509D-6,1.982D-6,
@@ -60597,16 +58636,16 @@ C
       SCRPT(145)=' A 1PI V=0   DIPOLE F=.015465    ELOSS=  8.0277   '
       SCRPT(146)=' A 1PI V=1   DIPOLE F=.033506    ELOSS=  8.2115   '
       SCRPT(147)=' A 1PI V=2   DIPOLE F=.038375    ELOSS=  8.3907   '
-      SCRPT(148)=' A 1PI V=3   DIPOLE F=.33125     ELOSS=  8.5659   '
-      SCRPT(149)=' A 1PI V=4   DIPOLE F=.23101     ELOSS=  8.7367   '
+      SCRPT(148)=' A 1PI V=3   DIPOLE F=.033125    ELOSS=  8.5659   '
+      SCRPT(149)=' A 1PI V=4   DIPOLE F=.023101    ELOSS=  8.7367   '
       SCRPT(150)=' A 1PI V=5   DIPOLE F=.013842    ELOSS=  8.9032   '
-      SCRPT(151)=' A 1PI V=6   DIPOLE F=.076845    ELOSS=  9.0654   '
-      SCRPT(152)=' A 1PI V=7   DIPOLE F=.039520    ELOSS=  9.2234   '
-      SCRPT(153)=' A 1PI V=8   DIPOLE F=.019283    ELOSS=  9.3771   '
-      SCRPT(154)=' A 1PI V=9   DIPOLE F=.0090687   ELOSS=  9.5266   '
-      SCRPT(155)=' A 1PI V=10  DIPOLE F=.0039139   ELOSS=  9.6718   '
-      SCRPT(156)=' A 1PI V=11  DIPOLE F=.0017183   ELOSS=  9.8130   '
-      SCRPT(157)=' A 1PI V=12  DIPOLE F=.00085914  ELOSS=  9.9498   '
+      SCRPT(151)=' A 1PI V=6   DIPOLE F=.0076845   ELOSS=  9.0654   '
+      SCRPT(152)=' A 1PI V=7   DIPOLE F=.0039520   ELOSS=  9.2234   '
+      SCRPT(153)=' A 1PI V=8   DIPOLE F=.0019283   ELOSS=  9.3771   '
+      SCRPT(154)=' A 1PI V=9   DIPOLE F=.00090687  ELOSS=  9.5266   '
+      SCRPT(155)=' A 1PI V=10  DIPOLE F=.00039139  ELOSS=  9.6718   '
+      SCRPT(156)=' A 1PI V=11  DIPOLE F=.00017183  ELOSS=  9.8130   '
+      SCRPT(157)=' A 1PI V=12  DIPOLE F=.000085914 ELOSS=  9.9498   '
       SCRPT(158)=' B 3SIGMA                        ELOSS= 10.396    '   
       SCRPT(159)=' B 1SIGMA V=0 DIPOLE F=.0076654  ELOSS= 10.7762   '
       SCRPT(160)=' B 1SIGMA V=1 DIPOLE F=.0012601  ELOSS= 11.0344   '
@@ -70506,7 +68545,7 @@ C
      /25.0,30.0,50.0,100.,200.,1000.,10000.,100000./
       DATA YVIB4/0.00,.001,.029,.049,0.30,0.44,0.47,0.50,0.55,0.70,
      /0.75,1.15,1.40,1.70,1.80,1.70,1.50,1.40,0.90,0.66,
-     /0.57,0.40,0.22,0.92,0.04,.004,.0004,.00004/    
+     /0.57,0.40,0.22,.092,0.04,.004,.0004,.00004/    
       DATA XVIB5/.748,1.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,10.0,     
      /11.0,15.0,20.0,25.0,30.0,50.0,100.,200.,1000.,10000.,
      /100000./  
@@ -70751,7 +68790,7 @@ C
       QIN(9,I)=0.0                                                      
       IF(EN.LE.EIN(9)) GO TO 899                                        
       DO 860 J=2,NEXC2                                                  
-      IF(EN.LE.XEXC2(J)) GO TO 870                                      
+      IF(EN.LE.XEXC2(J)) GO TO 870                                     
   860 CONTINUE                                                          
       J=NEXC2                                                           
   870 A=(YEXC2(J)-YEXC2(J-1))/(XEXC2(J)-XEXC2(J-1))                     
@@ -78702,7 +76741,7 @@ C IONISATION
       DATA XATT/0.94,1.00,1.10,1.20,1.25,1.30,1.40,1.50,1.60,1.70,      
      /1.80,1.90,2.00,2.10,2.20,2.30,2.40,2.50,10.0,100000./             
       DATA YATT/0.00,0.03,.182,.272,.290,.282,.263,.219,.151,.106,      
-     /.069,.042,.026,.015,.011,.005,.002,.001,.001,.0000001/       
+     /.069,.042,.026,.015,.011,.005,.002,.001,.0001,.0000001/       
 C  EXCITATION                                                           
       DATA XEXC/7.00,8.00,9.00,10.0,11.0,12.0,14.0,17.0,20.0,30.0,      
      /40.0,60.0,80.0,100.,1000.,10000.,100000./                         
@@ -79732,7 +77771,7 @@ C VIBRATION HARMONIC (3(V1) + ALL OTHER HARMONICS)
 C  DISOCIATION X-SECTION (USED LOG INTERP HENCE FINITE AT THRESHOLD) 
       DATA XDISS/11.8,12.0,13.0,14.0,15.0,18.0,20.0,25.0,30.0,40.0,     
      /50.0,60.0,80.0,100.,120.,150.,200.,300.,400.,500.,
-     /600.,800.,1000.,2000.,4000.,10000.,10000,1.D6,1.D7/ 
+     /600.,800.,1000.,2000.,4000.,10000.,100000.,1.D6,1.D7/ 
       DATA YDISS/1.D-9,.011,.108,0.60,1.05,1.92,2.38,3.15,3.60,3.98,
      /4.13,4.28,4.35,4.28,4.20,4.17,4.02,3.83,3.68,3.53,   
      /3.23,2.70,2.28,1.23,.705,.315,.0315,.003,.0003/
@@ -80117,7 +78156,7 @@ C
      /6000.,7000.,8000.,9000.,1.0D4,1.25D4,1.5D4,1.75D4,2.0D4,2.5D4,
      /3.0D4,3.5D4,4.0D4,4.5D4,5.0D4,6.0D4,7.0D4,8.0D4,9.0D4,1.0D5,
      /1.25D5,1.5D5,1.75D5,2.0D5,2.5D5,3.0D5,3.5D5,4.0D5,4.5D5,5.0D5,
-     /6.0D5,7.0D5,8.0D5,9.0D5,1.0D6,1.25D6,1.5D6,1.75D6,3.0D6,2.5D6,
+     /6.0D5,7.0D5,8.0D5,9.0D5,1.0D6,1.25D6,1.5D6,1.75D6,2.0D6,2.5D6,
      /3.0D6,3.5D6,4.0D6,4.5D6,5.0D6,6.0D6,7.0D6,8.0D6,9.0D6,1.0D7,
      /1.25D7,1.5D7,1.75D7,2.0D7,2.5D7,3.0D7,3.5D7,4.0D7,4.5D7,5.0D7,
      /6.0D7,7.0D7,8.0D7,9.0D7,1.0D8,1.25D8,1.5D8,1.75D8,2.0D8,2.5D8,
@@ -89579,7 +87618,7 @@ C  SAVE COMPUTE TIME
       IF(EFINAL.LE.EIN(2)) NIN=1                                        
       IF(EFINAL.LE.EIN(1)) NIN=0                                        
       RETURN                                                            
-      END 
+      END
       SUBROUTINE GAS52(Q,QIN,NIN,E,EIN,NAME,VIRIAL,EOBY   
      /,PEQEL,PEQIN,PENFRA,KEL,KIN,QION,PEQION,EION,NION,QATT,NATT,
      /QNULL,NNULL,SCLN,NC0,EC0,WKLM,EFL,NG1,EG1,NG2,EG2,SCRPT,SCRPTN)
@@ -89587,363 +87626,1351 @@ C  SAVE COMPUTE TIME
       IMPLICIT INTEGER*8 (I-N)                                         
       COMMON/CNSTS/ECHARG,EMASS,AMU,PIR2                                
       COMMON/INPT/NGAS,NSTEP,NANISO,EFINAL,ESTEP,AKT,ARY,TEMPC,TORR,IPEN
+      COMMON/MIX2/EG(4000),EROOT(4000),QT1(4000),QT2(4000),
+     /QT3(4000),QT4(4000)
+      COMMON/DENS/DEN(4000)
       DIMENSION QATT(8,4000),QNULL(10,4000),SCLN(10)
       DIMENSION PEQEL(6,4000),PEQIN(250,4000),KIN(250),KEL(6)
       DIMENSION QION(30,4000),PEQION(30,4000),EION(30),EOBY(30)
       DIMENSION NC0(30),EC0(30),WKLM(30),EFL(30),NG1(30),EG1(30),
-     /NG2(30),EG2(30)
+     /NG2(30),EG2(30),IZBR(250),LEGAS(30),ISHELL(30)
       DIMENSION Q(6,4000),QIN(250,4000),E(6),EIN(250),PENFRA(3,250)   
-      DIMENSION XENM(56),YXMOM(56),XENT(56),YXTOT(56),
-     /XVIB2(22),YVIB2(22),XVIB3(22),YVIB3(22),XVIB4(22),YVIB4(22),
-     /XVIB5(22),YVIB5(22),XVIB6(22),YVIB6(22),YATT1(23),      
-     /XDISS(27),YDISS(27),XATT(23),YATT(23),XION(50),YION(50)
-      CHARACTER*50 SCRPT(300),SCRPTN(10)
+      DIMENSION XEL(151),YMT(151),YEL(151),YEPS(151),
+     /XION(47),YIONC(47),YIONG(47),XION1(29),YION1(29),
+     /XION2(29),YION2(29),XION3(29),YION3(29),XION4(29),YION4(29),
+     /XION5(21),YION5(21),XION6(21),YION6(21),XION7(15),YION7(15),
+     /XION8(81),YION8(81),XION9(79),YION9(79),
+     /XATT1(16),YATT1(16),XATT2(12),YATT2(12),XVIBR(26),YVIBR(26),
+     /XVIB1(16),YVIB1(16),XVIB2(16),YVIB2(16),XVIB3(16),YVIB3(16),
+     /XVIB4(23),YVIB4(23),XVIB5(17),YVIB5(17), 
+     /XTRP1(12),YTRP1(12),XTRP2(11),YTRP2(11),XTRP3(11),YTRP3(11),
+     /XTRP4(11),YTRP4(11) 
+      DIMENSION ENROT(145),ENRTS(145),YEPSR(145),YMTRT(145),XSECDUM(12)
+      DIMENSION Z6T(25),Z9T(25),EBRM(25)
+      DIMENSION IOFFN(250),IOFFION(30) 
+      CHARACTER*50 SCRPT(300),SCRPTN(10) 
       CHARACTER*25 NAME     
-C                                            
-      DATA XENM/0.0,0.001,0.002,0.004,0.007,0.01,.015,0.02,.025,0.03,
+C-----------------------------------------------------------------------
+C  ELASTIC                                          
+      DATA XEL/.0001,0.001,0.002,0.004,0.007,0.01,.015,0.02,.025,0.03,
      /0.04,0.05,0.06,0.07,0.08,0.09,0.10,0.12,0.15,0.20, 
      /0.25,0.30,0.35,0.40,0.45,0.50,0.60,0.70,0.80,0.90, 
      /1.00,1.50,2.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,
      /10.0,15.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0,
-     /100.0,200.,400.,1000.,10000.,100000./                             
+     /100.,120.,150.,200.,250.,300.,400.,500.,600.,800.,
+     /1000.,1250.,1500.,1750.,2000.,2500.,3000.,3500.,4000.,4500.,
+     /5000.,6000.,7000.,8000.,9000.,1.0D4,1.25D4,1.5D4,1.75D4,2.0D4,
+     /2.5D4,3.0D4,3.5D4,4.0D4,4.5D4,5.0D4,6.0D4,7.0D4,8.0D4,9.0D4,
+     /1.0D5,1.25D5,1.5D5,1.75D5,2.0D5,2.5D5,3.0D5,3.5D5,4.0D5,4.5D5,
+     /5.0D5,6.0D5,7.0D5,8.0D5,9.0D5,1.0D6,1.25D6,1.5D6,1.75D6,2.0D6,
+     /2.5D6,3.0D6,3.5D6,4.0D6,4.5D6,5.0D6,6.0D6,7.0D6,8.0D6,9.0D6,
+     /1.0D7,1.25D7,1.5D7,1.75D7,2.0D7,2.5D7,3.0D7,3.5D7,4.0D7,4.5D7,
+     /5.0D7,6.0D7,7.0D7,8.0D7,9.0D7,1.0D8,1.25D8,1.5D8,1.75D8,2.0D8,
+     /2.5D8,3.0D8,3.5D8,4.0D8,4.5D8,5.0D8,6.0D8,7.0D8,8.0D8,9.0D8,
+     /1.0D9/                             
 C  ELASTIC MOMENTUM TRANSFER
-      DATA YXMOM/56.0,52.0,49.0,42.0,35.0,28.0,21.0,16.5,13.5,11.5,
-     /9.20,7.40,6.10,5.20,4.20,3.90,4.00,4.40,5.20,6.40,
-     /7.60,8.50,9.60,10.2,10.8,11.3,12.0,12.5,12.9,13.1,
-     /13.2,13.6,14.0,14.5,15.5,16.5,17.5,18.5,19.5,20.5,
-     /21.5,25.0,25.5,23.5,20.5,16.8,14.0,12.2,10.7,9.60,
-     /8.50,4.50,2.20,0.85,.085,.0085/
-      DATA XENT/0.0,0.001,0.002,0.004,0.007,0.01,.015,0.02,.025,0.03,
-     /0.04,0.05,0.06,0.07,0.08,0.09,0.10,0.12,0.15,0.20, 
-     /0.25,0.30,0.35,0.40,0.45,0.50,0.60,0.70,0.80,0.90, 
-     /1.00,1.50,2.00,3.00,4.00,5.00,6.00,7.00,8.00,9.00,
-     /10.0,15.0,20.0,30.0,40.0,50.0,60.0,70.0,80.0,90.0,
-     /100.0,200.,400.,1000.,10000.,100000./                             
-C  ELASTIC TOTAL ( NO GOOD DATA AVAILABLE) 
-      DATA YXTOT/56*0.0/                                           
-C  VIBRATION V1 (RESONANCE ONLY)
-      DATA XVIB2/0.065,1.00,1.90,2.30,3.10,3.70,4.50,5.50,6.50,8.00,
-     /9.00,10.0,11.0,12.0,13.0,15.0,20.0,50.0,100.,1000.,             
-     /10000.,100000./                                        
-      DATA YVIB2/0.0,.0000001,.050,.113,.353,.328,.252,.227,.328,.378,
-     /.378,.315,.113,.050,.025,.013,.0025,.000013,.0000013,.00000013,  
-     /.000000013,.0000000013/                                
-C  VIBRATION V2  (RESONANCE ONLY)
-      DATA XVIB3/0.100,1.00,1.90,2.30,3.10,3.70,4.50,5.50,6.50,8.00,
-     /9.00,10.0,11.0,12.0,13.0,15.0,20.0,50.0,100.,1000.,      
-     /10000.,100000./                                        
-      DATA YVIB3/0.0,.0000001,.315,.617,1.94,1.87,1.39,1.26,1.84,2.07, 
-     /2.03,1.73,0.63,.277,.113,.050,.025,.000005,.0000005,.00000005, 
-     /.000000005,.0000000005/                             
-C  VIBRATION V3 (RESONANCE ONLY)
-      DATA XVIB4/0.155,1.00,1.90,2.30,3.10,3.70,4.50,5.50,6.50,8.00,
-     /9.00,10.0,11.0,12.0,13.0,15.0,20.0,50.0,100.,1000.,
-     /10000.,100000./                                        
-      DATA YVIB4/0.0,.0000001,.680,1.36,4.21,4.03,3.02,2.72,4.01,4.54,
-     /4.48,3.78,1.39,.605,.252,.126,.063,.00013,.000013,.0000013,
-     /.00000013,.000000013/                                
+      DATA YMT/55.0,49.0,43.0,31.0,23.5,20.0,16.5,14.5,13.0,12.1,
+     /10.4,9.50,8.50,7.50,6.40,3.60,2.20,1.60,1.85,2.60,
+     /3.30,4.15,4.90,5.50,5.95,6.30,6.80,7.30,7.55,7.80,
+     /8.10,9.20,10.1,11.8,13.1,15.0,16.9,18.5,19.7,20.7,
+     /21.6,25.0,25.5,23.8,22.0,20.4,18.9,17.2,15.7,14.2,
+     /13.0,11.0,9.00,6.14,4.49,3.43,2.26,1.64,1.27,.828,
+     /.617,.443,.333,.259,.215,.150,.110,.0837,.0663,.0538,
+     /.0447,.0323,.0246,.0193,.0157,.0130,.00867,.00624,.00473,.00372,
+     /.00249,.00179,.00136,.00107,.867D-3,.718D-3,.520D-3,.396D-3,
+     /.313D-3,.255D-3,
+     /.213D-3,.145D-3,.106D-3,.821D-4,.658D-4,.457D-4,.341D-4,.267D-4,
+     /.216D-4,.180D-4,
+     /.153D-4,.116D-4,.913D-5,.745D-5,.623D-5,.530D-5,.380D-5,.286D-5,
+     /.225D-5,.183D-5,
+     /.128D-5,.952D-6,.739D-6,.592D-6,.486D-6,.406D-6,.298D-6,.228D-6,
+     /.181D-6,.147D-6,
+     /.122D-6,.818D-7,.589D-7,.445D-7,.349D-7,.232D-7,.165D-7,.124D-7,
+     /.965D-8,.773D-8,
+     /.633D-8,.448D-8,.333D-8,.257D-8,.204D-8,.166D-8,.107D-8,.748D-9,
+     /.551D-9,.423D-9,
+     /.271D-9,.188D-9,.138D-9,.106D-9,.838D-10,.679D-10,.472D-10,
+     /.346D-10,.265D-10,.210D-10,
+     /.170D-10/   
+      DATA YEL/55.0,49.0,43.0,31.0,23.5,20.0,16.5,14.5,13.0,12.1,
+     /10.4,9.50,8.50,7.50,6.40,3.60,2.20,1.60,1.85,2.60,
+     /3.30,4.15,4.90,5.50,5.95,6.30,6.80,7.30,7.55,7.80,
+     /10.4,13.3,15.9,20.4,23.5,25.5,27.5,28.0,29.1,30.4,
+     /31.6,35.0,37.2,36.0,34.0,32.2,30.6,28.2,26.5,24.9,
+     /24.0,21.8,18.5,14.8,12.6,11.0,9.00,7.80,7.00,5.80,
+     /5.20,4.50,3.95,3.50,3.25,2.74,2.33,2.03,1.80,1.62,
+     /1.47,1.24,1.07,.948,.849,.769,.624,.526,.456,.402,
+     /.327,.277,.241,.214,.193,.176,.151,.133,.120,.109,
+     /.100,.0850,.0750,.0678,.0624,.0550,.0501,.0466,.0441,.0421,
+     /.0406,.0383,.0367,.0356,.0347,.0341,.0330,.0323,.0318,.0315,
+     /.0311,.0308,.0307,.0306,.0305,.0305,.0304,.0303,.0303,.0303,
+     /.0303,.0302,.0302,.0302,.0302,26*.0302/
+C OKHRIMOVSKKY FUNCTION EPSILON
+C EPSILON=1.0-YEPS
+      DATA YEPS/1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,
+     /1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,
+     /1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,1.00,
+     /.67294,.55520,.48543,.41589,.39161,.42661,.45840,.51631,.53734,
+     /.54248,
+     /.54591,.58670,.54845,.51683,.49891,.48190,.46220,.45275,.43164,
+     /.40545,
+     /.37266,.33193,.31278,.24199,.19015,.15443,.11099,.08521,.06871,
+     /.04879,
+     /.03768,.02917,.02366,.01988,.01715,.01339,.010978,.009287,.008044,
+     /.007093,
+     /.006340,.005226,.004444,.003861,.003414,.003057,.002423,.002004,
+     /.001708,.001486,
+     /.001178,9.734D-4,8.280D-4,7.193D-4,6.353D-4,5.679D-4,4.674D-4,
+     /3.957D-4,3.389D-4,3.007D-4,
+     /2.677D-4,2.084D-4,1.693D-4,1.415D-4,1.209D-4,9.250D-5,7.390D-5,
+     /6.085D-5,5.127D-5,4.396D-5,
+     /3.821D-5,2.984D-5,2.407D-5,1.990D-5,1.677D-5,1.435D-5,1.030D-5,
+     /7.743D-6,6.046D-6,4.861D-6,
+     /3.345D-6,2.447D-6,1.869D-6,1.475D-6,1.194D-6,9.868D-7,7.067D-7,
+     /5.313D-7,4.139D-7,3.317D-7,
+     /2.716D-7,1.775D-7,1.250D-7,9.275D-8,7.153D-8,4.623D-8,3.229D-8,
+     /2.381D-8,1.826D-8,1.443D-8,
+     /1.168D-8,8.088D-9,5.914D-9,4.502D-9,3.536D-9,2.846D-9,1.792D-9,
+     /1.226D-9,8.89D-10,6.72D-10,
+     /4.21D-10,2.88D-10,2.08D-10,1.57D-10,1.23D-10,9.9D-11,6.7D-11,
+     /4.9D-11,3.7D-11,2.9D-11,
+     /2.3D-11/
+C     
+C-----------------------------------------------------------------------
+C-----------------------------------------------------------------------
+C DIPOLE ANGULAR DISTRIBUTION FUNCTIONS 
+C INELASTIC ANGULAR DISTRIBUTION  DIPOLE FORM
+C ENERGY IN UNITS OF THE ENERGY LEVEL. 
+C ENRTS FOR SUPER ELASTIC 
+C ENROT FOR NORMAL ELASTIC
+C YEPSR  : OKHRIMOVSKKY  1.0-EPS
+C YMTRT  : RATIO OF MT/TOT  FOR DIPOLE ROT
+      DATA ENRTS/0.00,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,
+     /0.10,0.11,0.12,0.13,0.14,0.16,0.18,0.20,0.22,0.25,
+     /0.28,0.31,0.34,0.37,0.40,0.44,0.48,0.52,0.56,0.60,
+     /0.65,0.70,0.75,0.80,0.90,1.00,1.10,1.20,1.30,1.40,
+     /1.60,1.80,2.00,2.20,2.40,2.60,2.80,3.00,3.50,4.00,
+     /4.50,5.00,5.50,6.00,7.00,8.00,9.00,10.0,11.0,12.0,
+     /14.0,16.0,18.0,20.0,22.0,25.0,30.0,35.0,40.0,45.0,
+     /50.0,60.0,70.0,80.0,90.0,100.,120.,140.,160.,180.,
+     /200.,250.,300.,350.,400.,500.,600.,700.,800.,1000.,
+     /1200.,1400.,1600.,1800.,2000.,2500.,3000.,3500.,4000.,5000.,
+     /6000.,7000.,8000.,9000.,10000.,12000.,14000.,16000.,18000.,20000.,
+     /25000.,30000.,35000.,40000.,50000.,60000.,80000.,1.0D5,1.5D5,
+     /2.0D5,
+     /2.5D5,3.0D5,3.5D5,4.0D5,5.0D5,6.0D5,7.0D5,8.0D5,9.0D5,1.0D6,
+     /1.2D6,1.4D6,1.6D6,1.8D6,2.0D6,2.5D6,3.0D6,3.5D6,4.0D6,5.0D6,
+     /6.0D6,7.0D6,8.0D6,9.0D6,1.0D7/
+      DATA ENROT/1.0,1.01,1.02,1.03,1.04,1.05,1.06,1.07,1.08,1.09,
+     /1.10,1.11,1.12,1.13,1.14,1.16,1.18,1.20,1.22,1.25,
+     /1.28,1.31,1.34,1.37,1.40,1.44,1.48,1.52,1.56,1.60,
+     /1.65,1.70,1.75,1.80,1.90,2.00,2.10,2.20,2.30,2.40,
+     /2.60,2.80,3.00,3.20,3.40,3.60,3.80,4.00,4.50,5.00,
+     /5.50,6.00,6.50,7.00,8.00,9.00,10.0,11.0,12.0,13.0,
+     /15.0,17.0,19.0,21.0,23.0,26.0,31.0,36.0,41.0,46.0,
+     /51.0,61.0,71.0,81.0,91.0,101.,121.,141.,161.,181.,
+     /201.,251.,301.,351.,401.,501.,601.,701.,801.,1001.,
+     /1201.,1401.,1601.,1801.,2001.,2501.,3001.,3501.,4001.,5001.,
+     /6001.,7001.,8001.,9001.,10001.,12001.,14001.,16001.,18001.,20001.,
+     /25001.,30001.,35001.,40001.,50001.,60001.,80001.,1.0D5,1.5D5,
+     /2.0D5,
+     /2.5D5,3.0D5,3.5D5,4.0D5,5.0D5,6.0D5,7.0D5,8.0D5,9.0D5,1.0D6,
+     /1.2D6,1.4D6,1.6D6,1.8D6,2.0D6,2.5D6,3.0D6,3.5D6,4.0D6,5.0D6,
+     /6.0D6,7.0D6,8.0D6,9.0D6,1.0D7/
+      DATA YEPSR/1.0,.90060,.86030,.83000,.80486,.78309,.76390,.74641,
+     /.73054,.71571,
+     /.70205,.68931,.67720,.66584,.65510,.63516,.61705,.60056,.58510,
+     /.56417,
+     /.54521,.52802,.51233,.49782,.48448,.46818,.45320,.43962,.42704,
+     /.41555,
+     /.40221,.39009,.37891,.36854,.35015,.33409,.32004,.30760,.29649,
+     /.28657,
+     /.26933,.25493,.24266,.23212,.22286,.21483,.20763,.20114,.18760,
+     /.17674,
+     /.16791,.16044,.15403,.14857,.13951,.13226,.12637,.12143,.11718,
+     /.11346,
+     /.10742,.10255,.09859,.09519,.09234,.08867,.08387,.08017,.07716,
+     /.07465,
+     /.07252,.06913,.06641,.06426,.06240,.06087,.05833,.05628,.05467,
+     /.05327,
+     /.05208,.04973,.04794,.04652,.04534,.04347,.04210,.04096,.04001,
+     /.03854,
+     /.03740,.03648,.03570,.03506,.03450,.03336,.03248,.03173,.03115,
+     /.03021,
+     /.02946,.02886,.02835,.02792,.02754,.02692,.02641,.02597,.02561,
+     /.02529,
+     /.02463,.02411,.02369,.02334,.02277,.02232,.02165,.02115,.02030,
+     /.01973,
+     /.01931,.01898,.01870,.01847,.01810,.01780,.01756,.01735,.01718,
+     /.01702,
+     /.01675,.01654,.01635,.01620,.01606,.01576,.01553,.01534,.01518,
+     /.01490,
+     /.01472,.01456,.01440,.01427,.01418/
+      DATA YMTRT/0.0,.9336,.9065,.8860,.8689,.8540,.8408,.8287,.8176,
+     /.8073,
+     /.7977,.7887,.7801,.7720,.7643,.7499,.7367,.7245,.7131,.6974,
+     /.6830,.6698,.6576,.6462,.6356,.6225,.6103,.5991,.5886,.5789, 
+     /.5675,.5570,.5472,.5380,.5214,.5066,.4934,.4815,.4707,.4609,
+     /.4435,.4286,.4156,.4042,.3940,.3850,.3768,.3693,.3533,.3401,
+     /.3291,.3196,.3113,.3041,.2919,.2819,.2736,.2665,.2603,.2548,
+     /.2457,.2382,.2320,.2266,.2220,.2160,.2080,.2017,.1965,.1921,
+     /.1883,.1822,.1772,.1732,.1697,.1668,.1619,.1579,.1547,.1519,
+     /.1495,.1447,.1410,.1380,.1355,.1315,.1285,.1260,.1239,.1206,
+     /.1180,.1159,.1141,.1126,.1113,.1086,.1065,.1047,.1033,.1010,
+     /.09915,.09766,.09640,.09532,.09437,.09277,.09147,.09036,.08941,
+     /.08858,
+     /.08686,.08550,.08439,.08345,.08193,.08072,.07889,.07752,.07516,
+     /.07357,
+     /.07238,.07144,.07066,.07000,.06892,.06807,.06736,.06676,.06624,
+     /.06578,
+     /.06500,.06436,.06381,.06334,.06292,.06204,.06133,.06078,.06027,
+     /.05944,
+     /.05889,.05839,.05790,.05749,.05723/
+C--------------------------------------------------------------------
+C VIBRATION RESONANCE SHAPE
+      DATA XVIBR/1.00,1.20,1.40,1.60,1.80,2.00,2.20,2.40,2.60,2.80,
+     /3.00,3.30,3.60,3.90,4.50,5.00,5.50,6.00,7.00,8.00,
+     /9.00,10.0,11.0,12.0,13.0,14.0/
+      DATA YVIBR/.001,0.10,0.20,0.36,0.58,0.90,1.40,2.00,2.65,3.90,
+     /5.00,5.00,4.50,3.70,2.90,2.80,3.50,5.00,5.00,4.40,
+     /5.50,5.00,2.50,0.80,0.30,0.01/
 C  VIBRATION HARMONIC 2(V3)
-      DATA XVIB5/0.35,1.00,1.90,2.30,3.10,3.70,4.50,5.50,6.50,8.00,
-     /9.00,10.0,11.0,12.0,13.0,15.0,20.0,50.0,100.,1000.,
-     /10000.,100000./                                        
-      DATA YVIB5/0.0,.0000001,.243,.486,1.51,1.43,1.08,.972,1.43,1.62,
-     /1.59,1.35,.486,.216,.081,.054,.027,.00027,.000027,.0000027,
-     /.00000027,.000000027/                                
-C VIBRATION HARMONIC (3(V3) + ALL OTHER HARMONICS)
-      DATA XVIB6/0.500,1.00,1.90,2.30,3.10,3.70,4.50,5.50,6.50,8.00,
-     /9.00,10.0,11.0,12.0,13.0,15.0,20.0,50.0,100.,1000.,
-     /10000.,100000./                                        
-      DATA YVIB6/0.0,.0000001,.826,1.65,5.12,4.90,3.65,3.30,4.85,5.50,
-     /5.45,4.60,1.65,.735,.300,.160,.070,.00023,.000023,.0000023,
-     /.00000023,.000000023/                                
-C  DISOCIATION X-SECTION                                                
-      DATA XDISS/11.0,12.0,13.0,14.0,15.0,18.0,20.0,25.0,30.0,40.0,     
-     /50.0,60.0,80.0,100.,120.,150.,200.,300.,400.,500.,
-     /600.,800.,1000.,2000.,4000.,10000.,100000./ 
-      DATA YDISS/0.00,.005,.070,0.22,0.75,1.70,2.25,2.90,3.15,3.35,
-     /3.45,3.50,3.60,3.60,3.60,3.55,3.50,3.35,3.25,3.08,   
-     /2.80,2.45,2.05,1.12,0.65,0.30,0.030/ 
-C ION NISHIMURA ET AL          
-      DATA XION/13.38,16.0,17.0,18.0,19.0,20.0,22.0,24.0,26.0,28.0,     
+      DATA XVIB4/0.35,0.80,1.80,2.20,2.40,2.60,2.90,3.10,3.40,3.70,
+     /4.00,4.50,5.00,5.50,6.00,7.00,8.00,9.00,10.0,11.0,
+     /12.0,13.0,14.0/
+      DATA YVIB4/.001,0.20,0.30,0.40,0.65,0.72,1.10,1.40,1.40,1.26,
+     /1.04,0.82,0.79,0.98,1.40,1.40,1.24,1.55,1.40,0.70,
+     /0.23,.084,.0028/
+C
+C-----------------------------------------------------------------------
+C TRIPLET X-SECTIONS
+      DATA XTRP1/9.40,10.4,11.9,12.9,13.9,14.9,16.9,18.9,21.9,24.9,
+     /28.9,31.9/
+      DATA YTRP1/0.00,.003,.0102,.0156,.0174,.0186,.0210,.0210,.0186,
+     /.0156,
+     /.0114,.0090/
+      DATA XTRP2/10.4,11.9,12.9,13.9,14.9,16.9,18.9,21.9,24.9,28.9,
+     /31.9/       
+      DATA YTRP2/0.00,.018,.0336,.0384,.0408,.0450,.0462,.0408,.0342,
+     /.0252,
+     /.0198/      
+      DATA XTRP3/11.8,12.8,13.8,14.8,16.8,18.8,21.8,24.8,28.8,31.8,
+     /36.8/           
+      DATA YTRP3/0.00,.0501,.104,.121,.137,.144,.144,.137,.108,.0832,
+     /.0616/        
+      DATA XTRP4/14.8,15.8,16.8,17.8,19.8,21.8,24.8,27.8,31.8,34.8,
+     /39.8/           
+      DATA YTRP4/0.00,.418,.864,1.01,1.14,1.20,1.20,1.14,.898,.696,
+     /.514/         
+C---------------------------------------------------------------------
+C---------------------------------------------------------------------
+C ION NISHIMURA ET AL (GROSS)  mod below 24 ev and above 50ev
+      DATA XION/13.35,16.0,17.0,18.0,19.0,20.0,22.0,24.0,26.0,28.0,    
      /30.0,32.0,34.0,36.0,38.0,40.0,42.0,44.0,46.0,48.0,                
      /50.0,60.0,70.0,80.0,90.0,100.,125.,150.,175.,200.,                
      /250.,300.,350.,400.,450.,500.,600.,700.,800.,900.,                
-     /1000.,1250.,1500.,1750.,2000.,2500.,3000.,10000.,20000.,100000./  
-      DATA YION/0.00,.129,.316,.562,.815,1.13,1.81,2.31,3.08,3.58,     
+     /1000.,1250.,1500.,1750.,2000.,2500.,3000./   
+      DATA YIONG/.001,.450,.600,.755,.937,1.15,1.95,2.45,3.08,3.58,     
      /4.10,4.57,5.12,5.58,5.88,6.54,7.01,7.43,7.85,8.31,                
-     /8.99,10.4,11.3,11.9,12.5,12.8,13.3,13.4,13.2,12.8,                
-     /12.1,11.2,10.5,9.80,9.31,8.61,7.80,6.99,6.41,5.82,                
-     /5.48,4.64,4.05,3.62,3.31,2.78,2.44,0.88,0.48,0.13/
-C ATTACHMENT     
-      DATA XATT/0.70,0.80,1.00,1.50,1.70,2.00,2.30,2.50,2.70,3.00,
-     /3.50,4.00,4.50,5.00,5.50,6.00,6.50,7.00,8.00,10.0,
-     /20.0,100.0,100000./
-C PRESSURE DEPENDENT ATTACHMENT X-SEC     
-      DATA YATT/.000,.003,.006,.028,.049,.092,.097,.073,.035,.026, 
-     /.021,.017,.015,.012,.008,.006,.005,.005,.005,.004,   
-     /.002,.00005,.0000005/  
-C  DISOCIATIVE ATTACHMENT
-      DATA YATT1/0.00,0.00,0.00,.002,.010,.026,.066,.099,.127,.103,
-     /.055,.025,.009,.004,.004,.004,.003,.003,.002,.001,
-     /.001,.00005,.0000005/
+     /8.80,9.80,10.5,11.1,11.4,11.7,12.0,12.1,11.9,11.7,                
+     /11.0,10.6,10.1,9.50,9.10,8.50,7.80,6.99,6.41,5.82,                
+     /5.48,4.64,4.05,3.62,3.31,2.78,2.44/
+C COUNTING IONISATION mod below 24ev
+      DATA YIONC/.001,.450,.600,.755,.937,1.15,1.95,2.45,3.08,3.58,     
+     /4.10,4.57,5.12,5.58,5.88,6.54,7.00,7.41,7.81,8.25,                
+     /8.72,9.65,10.2,10.8,10.9,11.1,11.3,11.4,11.2,11.0,                
+     /10.9,10.0,9.53,9.01,8.63,8.07,7.41,6.64,6.09,5.53,                
+     /5.21,4.41,3.85,3.44,3.14,2.64,2.32/
+C DISSOCIATIVE IONISATION TO CF3 +
+      DATA XION1/13.35,14.0,16.0,18.0,20.0,22.0,24.0,26.0,28.0,30.0,
+     /32.0,34.0,36.0,38.0,40.0,42.0,44.0,46.0,48.0,50.0,
+     /60.0,70.0,80.0,90.0,100.,125.,150.,175.,200./
+      DATA YION1/.001,.099,.327,.482,.700,1.21,1.55,2.44,2.49,2.73,
+     /3.08,3.49,3.84,4.09,4.60,4.87,5.10,5.31,5.55,5.80,
+     /6.39,6.66,6.99,6.94,7.08,7.51,7.56,7.56,7.28/
+C DISSOCIATIVE IONISATION TO C2F5 +
+      DATA XION2/13.35,14.0,16.0,18.0,20.0,22.0,24.0,26.0,28.0,30.0,
+     /32.0,34.0,36.0,38.0,40.0,42.0,44.0,46.0,48.0,50.0,
+     /60.0,70.0,80.0,90.0,100.,125.,150.,175.,200./
+      DATA YION2/.0001,.0112,.0373,.0550,.0798,.131,.160,.195,.219,.243,
+     /.257,.272,.280,.277,.288,.303,.316,.326,.339,.352,
+     /.405,.416,.429,.414,.426,.347,.346,.328,.335/
+C DISSOCIATIVE IONISATION TO C2F4 +
+      DATA XION3/13.50,14.0,16.0,18.0,20.0,22.0,24.0,26.0,28.0,30.0,
+     /32.0,34.0,36.0,38.0,40.0,42.0,44.0,46.0,48.0,50.0,
+     /60.0,70.0,80.0,90.0,100.,125.,150.,175.,200./
+      DATA YION3/.0001,.0101,.0454,.0671,.0973,.155,.182,.214,.231,.244,
+     /.259,.276,.286,.285,.300,.322,.342,.362,.384,.408,
+     /.467,.531,.570,.546,.569,.475,.470,.447,.437/
+C DISSOCIATIVE IONISATION TO C3F7 +
+      DATA XION4/15.45,16.0,17.0,18.0,20.0,22.0,24.0,26.0,28.0,30.0,
+     /32.0,34.0,36.0,38.0,40.0,42.0,44.0,46.0,48.0,50.0,
+     /60.0,70.0,80.0,90.0,100.,125.,150.,175.,200./
+      DATA YION4/.001,.039,.1100,.151,.274,.448,.544,.662,.741,.816,   
+     /.882,.957,1.01,1.03,1.11,1.20,1.30,1.40,1.50,1.61,
+     /1.69,1.79,1.80,1.92,1.85,1.72,1.74,1.60,1.65/
+     /
+C DISSOCIATIVE IONISATION TO CF +  
+      DATA XION5/21.1,30.0,32.0,34.0,36.0,38.0,40.0,42.0,44.0,46.0,
+     /48.0,50.0,60.0,70.0,80.0,90.0,100.,125.,150.,175.,
+     /200./
+      DATA YION5/.0001,.0631,.0804,.101,.123,.142,.173,.204,.237,.272,
+     /.310,.352,.458,.521,.620,.656,.708,.756,.788,.790,
+     /.782/                         
+C DISSOCIATIVE IONISATION TO CF2 + 
+      DATA XION6/26.7,30.0,32.0,34.0,36.0,38.0,40.0,42.0,44.0,46.0,
+     /48.0,50.0,60.0,70.0,80.0,90.0,100.,125.,150.,175.,
+     /200./
+      DATA YION6/.0001,.0119,.0210,.0323,.0449,.0574,.0752,.0959,.118,
+     /.141,
+     /.167,.196,.279,.348,.399,.423,.473,.543,.554,.537,
+     /.549/    
+C DISSOCIATIVE IONISATION TO DOUBLE CHARGED STATES ++
+      DATA XION7/39.0,42.0,44.0,46.0,48.0,50.0,60.0,70.0,80.0,90.0,
+     /100.,125.,150.,175.,200./
+      DATA YION7/.0001,0.01,0.02,0.04,0.06,0.08,0.15,0.22,0.30,0.55,
+     /0.60,0.67,0.67,0.66,0.64/                                      
+C CARBON K-SHELL IONISATION X-SECTION
+      DATA XION8/285.,298.,307.,316.,325.,335.,345.,365.,398.,422.,
+     /447.,473.,501.,531.,613.,668.,708.,750.,817.,917.,
+     /1000.,1122.,1296.,1496.,1679.,1884.,2054.,2238.,2512.,2985.,
+     /3981.,5012.,7079.,1.0D4,1.50D4,2.05D4,2.51D4,3.07D4,4.10D4,5.01D4,
+     /6.13D4,7.08D4,8.18D4,1.0D5,1.54D5,2.05D5,2.99D5,4.10D5,5.01D5,
+     /6.13D5,
+     /7.08D5,8.18D5,1.0D6,1.25D6,1.5D6,2.05D6,3.07D6,4.10D6,5.01D6,
+     /6.13D6,
+     /7.08D6,8.18D6,1.0D7,1.5D7,2.05D7,3.07D7,4.10D7,5.01D7,6.13D7,
+     /7.08D7,
+     /8.18D7,1.0D8,1.5D8,2.05D8,3.07D8,4.10D8,5.01D8,6.13D8,7.08D8,
+     /8.18D8,
+     /1.0D9/
+      DATA YION8/1.D-6,1.66D-4,3.48D-4,5.25D-4,6.96D-4,8.63D-4,1.02D-3,
+     /1.33D-3,1.75D-3,2.01D-3,
+     /2.24D-3,2.46D-3,2.66D-3,2.84D-3,3.21D-3,3.38D-3,3.47D-3,3.55D-3,
+     /3.65D-3,3.72D-3,
+     /3.75D-3,3.74D-3,3.68D-3,3.57D-3,3.45D-3,3.31D-3,3.19D-3,3.07D-3,
+     /2.91D-3,2.66D-3,
+     /2.25D-3,1.95D-3,1.55D-3,1.21D-3,8.97D-4,7.07D-4,6.07D-4,5.21D-4,
+     /4.21D-4,3.63D-4,
+     /3.14D-4,2.84D-4,2.57D-4,2.25D-4,1.74D-4,1.50D-4,1.28D-4,1.15D-4,
+     /1.09D-4,1.05D-4,
+     /1.03D-4,1.02D-4,1.01D-4,1.005D-4,1.01D-4,1.03D-4,1.07D-4,1.11D-4,
+     /1.14D-4,1.17D-4,
+     /1.20D-4,1.22D-4,1.25D-4,1.32D-4,1.38D-4,1.45D-4,1.50D-4,1.54D-4,
+     /1.58D-4,1.60D-4,
+     /1.63D-4,1.67D-4,1.74D-4,1.80D-4,1.87D-4,1.92D-4,1.96D-4,2.00D-4,
+     /2.02D-4,2.05D-4,
+     /2.09D-4/
+C FLUORINE K-SHELL IONISATION X-SECTION
+      DATA XION9/685.4,705.,726.,747.,770.,792.,816.,840.,865.,890.,
+     /916.,944.,1000.,1090.,1188.,1296.,1496.,1679.,1884.,2054.,
+     /2238.,2512.,2985.,3758.,4467.,5158.,5957.,7079.,1.0D4,1.26D4,
+     /1.50D4,2.05D4,2.51D4,3.07D4,4.10D4,5.01D4,6.13D4,7.08D4,8.18D4,
+     /1.0D5,
+     /1.50D5,2.05D5,2.99D5,4.10D5,5.01D5,6.13D5,7.08D5,8.18D5,1.00D6,
+     /1.26D6,
+     /1.50D6,2.05D6,3.07D6,4.10D6,5.01D6,6.13D6,7.08D6,8.18D6,1.00D7,
+     /1.26D7,
+     /1.50D7,2.05D7,3.07D7,4.10D7,5.01D7,6.13D7,7.08D7,8.18D7,1.00D8,
+     /1.26D8,
+     /1.50D8,2.05D8,3.07D8,4.10D8,5.01D8,6.13D8,7.08D8,8.18D8,1.00D9/
+      DATA YION9/1.D-6,3.39D-5,6.77D-5,1.00D-4,1.32D-4,1.63D-4,1.92D-4,
+     /2.21D-4,2.48D-4,2.75D-4,
+     /3.00D-4,3.25D-4,3.71D-4,4.33D-4,4.87D-4,5.34D-4,5.96D-4,6.32D-4,
+     /6.57D-4,6.69D-4,
+     /6.77D-4,6.79D-4,6.68D-4,6.33D-4,5.97D-4,5.62D-4,5.25D-4,4.80D-4,
+     /3.93D-4,3.41D-4,
+     /3.04D-4,2.45D-4,2.13D-4,1.85D-4,1.51D-4,1.31D-4,1.14D-4,1.04D-4,
+     /9.46D-5,8.32D-5,
+     /6.58D-5,5.60D-5,4.80D-5,4.35D-5,4.15D-5,4.00D-5,3.93D-5,3.89D-5,
+     /3.85D-5,3.86D-5,
+     /3.89D-5,3.98D-5,4.17D-5,4.33D-5,4.45D-5,4.58D-5,4.68D-5,4.78D-5,
+     /4.92D-5,5.09D-5,
+     /5.21D-5,5.45D-5,5.75D-5,5.96D-5,6.12D-5,6.27D-5,6.38D-5,6.49D-5,
+     /6.64D-5,6.82D-5,
+     /6.95D-5,7.19D-5,7.50D-5,7.72D-5,7.88D-5,8.03D-5,8.14D-5,8.25D-5,
+     /8.40D-5/
+C--------------------------------------------------------------------
+C  DISOCIATIVE ATTACHMENT TO MAINLY F- CHRISTOPHOROU AND OLTHOFF 
+      DATA XATT1/1.80,2.00,2.30,2.50,2.70,3.00,3.50,4.00,4.50,5.00,
+     /5.50,6.00,6.50,7.00,7.50,8.00/
+      DATA YATT1/.0005,.0155,.039,.058,.0745,.0755,.0385,.0145,.005,
+     /.0025,
+     /.0025,.0025,.002,.0015,.001,.0005/ 
+C ATTACHMENT  TO C3F8-   
+      DATA XATT2/0.75,0.80,1.00,1.50,1.70,2.00,2.30,2.50,2.70,3.00,
+     /3.50,4.00/
+C PRESSURE DEPENDENT ATTACHMENT X-SEC 
+C TABLE IN UNITS OF 10**-16 FOR P=760 TORR AND T=25 CELSIUS   
+      DATA YATT2/.00044,.00132,.00352,.0167,.0308,.0493,.0462,.0378,
+     /.0180,.0088,  
+     /.0220,.00044/
 C ---------------------------------------------------------------------      
-C    APPROXIMATE PRESSURE DEPENDENCE OF ATTACHMENT IS INCLUDED
+C      
+      NANISO=2
+      IF(NANISO.EQ.0) NAME=' C3F8  2021     ISOTROPIC'  
+      IF(NANISO.EQ.2) NAME=' C3F8  2021   ANISOTROPIC'
+C*******************************************************************
+C ---------------------------------------------------------------------      
+C    APPROXIMATE PRESSURE DEPENDENCE OF 3 BODY ATTACHMENT IS INCLUDED
 C    ALLOWS SUPERELASTIC SCATTERING TO ALL VIBRATIONAL LEVELS
 C    EXCLUDING VIBRATION HARMONICS.
 C    BORN ANGULAR DISTRIBUTION FOR  V2(0.100) AND V3(0.155) LEVELS.
 C -------------------------------------------------------------------- 
-C      
-      NAME=' C3F8  -2002-- '                                            
-C                   
-      NION=1
-      NATT=1
-      NIN=9  
-      NNULL=0
 C
-      DO 1 J=1,6
-    1 KEL(J)=0
-      DO 2 J=1,NIN
-    2 KIN(J)=0
-C ANISOTROPIC SCATTERING FOR LEVELS 5 AND 6
-      KIN(5)=1
-      KIN(6)=1
+C  XSEC SCALING
+      ANV1RES=0.06555         
+      ANV2RES=0.350175           
+      ANV3RES=0.74175          
+      AMPHAR=0.8625                         
+C      
+      A0=0.5291772083D-8
+      RY=13.60569172
+C       
+C BORN-BETHE VALUES FOR IONISATION
+      CONST=1.873884D-20
+      EMASS2=1021997.804
+      API=DACOS(-1.0D0)
+      BBCONST=16.0*API*A0*A0*RY*RY/EMASS2
+C CONSTANTS FOR IONISATION
+      AM2=20.5
+      C=235.0
+C 
+      NASIZE=4000
+      NBREM=25
+      NRTANG=145
+      NION=9
+      NATT=2
+      NIN=24 
+      NNULL=0
+C 
+      DO 1 J=1,NIN
+    1 IZBR(J)=0
+      IZBR(NIN+1)=6
+      IZBR(NIN+2)=9
+C USE OKHRIMOVSKKY FOR ELASTIC AND IONISATION 
+      DO 2 J=1,6
+    2 KEL(J)=2
+C USE OKHRIMOVSKKY FOR INELASTICS
+      DO 3 J=1,NIN
+    3 KIN(J)=2
 C                                                                             
-      NDATA=56 
-      NETOT=56                                                        
-      NVIB2=22                                                          
-      NVIB3=22                                                          
-      NVIB4=22                                                          
-      NVIB5=22                                                          
-      NVIB6=22
-      NDISS=27
-      NATT1=23
-      NIOND=50
+      NDATA=151 
+      NVIBR=26
+      NVIB1=16                                                          
+      NVIB2=16                                                          
+      NVIB3=16                                                          
+      NVIB4=23                                                          
+      NVIB5=17
+      NTRP1=12   
+      NTRP2=11
+      NTRP3=11
+      NTRP4=11
+C
+      NATT1=16
+      NATT2=12
+      NIONC=47
+      NION1=29
+      NION2=29
+      NION3=29
+      NION4=29
+      NION5=21
+      NION6=21
+      NION7=15
+      NION8=81
+      NION9=79
+C
       E(1)=0.0                                                          
       E(2)=2.0*EMASS/(188.0193*AMU)                                     
-      E(3)=13.38                                                        
+      E(3)=13.35                                                        
       E(4)=0.0                                                          
       E(5)=0.0                                                          
       E(6)=0.0
-      EOBY(1)=13.38
+C
+      EION(1)=13.35
+      EION(2)=13.35
+      EION(3)=13.50
+      EION(4)=15.45
+      EION(5)=21.1
+      EION(6)=26.7
+      EION(7)=39.0
+      EION(8)=285.0
+      EION(9)=685.4
+C OPAL BEATY
+      DO 4 L=1,NION
+      EOBY(L)=13.35
+    4 CONTINUE
+C CALCULATE AUGER FLUORESCENCE AND DOUBLE CHARGE STATE PARAMETERS
+      DO 31 JK=1,NION
+      LEGAS(JK)=0
+      ISHELL(JK)=0
+      NC0(JK)=0
+      EC0(JK)=0.0
+      WKLM(JK)=0.0
+      EFL(JK)=0.0
+      NG1(JK)=0
+      EG1(JK)=0.0
+      NG2(JK)=0
+      EG2(JK)=0.0
+   31 CONTINUE
+C ALL DOUBLE CHARGED STATES
+      NC0(7)=1
+      EC0(7)=2.0
+C K-SHELL CARBON
+      LEGAS(8)=1
+      ISHELL(8)=1
+      NC0(8)=2
+      EC0(8)=253.0
+      WKLM(8)=0.0026
+      EFL(8)=273.0
+      NG1(8)=1
+      EG1(8)=253.
+      NG2(8)=2
+      EG2(8)=5.
+C K-SHELL FLUORINE
+      LEGAS(9)=2
+      ISHELL(9)=1
+      NC0(9)=3
+      EC0(9)=625.2
+      WKLM(9)=0.010
+      EFL(9)=668.0
+      NG1(9)=2
+      EG1(9)=625.2
+      NG2(9)=1
+      EG2(9)=5.
+C
+C
       EIN(1)=-0.065
-      EIN(2)=-0.100 
-      EIN(3)=-0.155                                              
-      EIN(4)=0.065                                                      
-      EIN(5)=0.100 
-      EIN(6)=0.155                                                      
-      EIN(7)=0.35                                                       
-      EIN(8)=0.500 
-      EIN(9)=11.0
-      SCRPT(1)='                              '
-      SCRPT(2)=' ELASTIC       C3F8           '
-      SCRPT(3)=' IONISATION    ELOSS= 13.38   '
-      SCRPT(4)=' ATTACHMENT                   '
-      SCRPT(5)='                              '
-      SCRPT(6)='                              '
-      SCRPT(7)=' VIB V1        ELOSS= -0.065  '
-      SCRPT(8)=' VIB V2        ELOSS= -0.100  '
-      SCRPT(9)=' VIB V3        ELOSS= -0.155  '
-      SCRPT(10)=' VIB V1        ELOSS=  0.065  '
-      SCRPT(11)=' VIB V2        ELOSS=  0.100  '
-      SCRPT(12)=' VIB V3        ELOSS=  0.155  '
-      SCRPT(13)=' VIB 2V3       ELOSS=  0.35   '
-      SCRPT(14)=' VIB           ELOSS=  0.50   '
-      SCRPT(15)=' EXC DISOCN    ELOSS= 11.0    '
-      APOP1=DEXP(EIN(1)/AKT)
-      APOP2=DEXP(EIN(2)/AKT)
-      APOP3=DEXP(EIN(3)/AKT)
-      EN=-ESTEP/2.0                                      
-      DO 9000 I=1,NSTEP                                              
-      EN=EN+ESTEP                                                       
-      DO 10 J=2,NDATA                                                   
-      IF(EN.LE.XENM(J)) GO TO 20                                        
-   10 CONTINUE                                                          
-      J=NDATA                                                           
-   20 A=(YXMOM(J)-YXMOM(J-1))/(XENM(J)-XENM(J-1))                       
-      B=(XENM(J-1)*YXMOM(J)-XENM(J)*YXMOM(J-1))/(XENM(J-1)-XENM(J))     
-      XMOMT=(A*EN+B)*1.0D-16
-      DO 50 J=2,NETOT
-      IF(EN.LE.XENT(J)) GO TO 60
+      EIN(2)=-0.065
+      EIN(3)=-0.100 
+      EIN(4)=-0.100 
+      EIN(5)=-0.155                                              
+      EIN(6)=-0.155                                              
+      EIN(7)=0.065                                                      
+      EIN(8)=0.065                                                      
+      EIN(9)=0.100 
+      EIN(10)=0.100 
+      EIN(11)=0.155                                                 
+      EIN(12)=0.155                                                   
+      EIN(13)=0.35                                                    
+      EIN(14)=0.500 
+      EIN(15)=9.4 
+      EIN(16)=9.5
+      EIN(17)=10.4
+      EIN(18)=10.5
+      EIN(19)=11.8
+      EIN(20)=11.9
+      EIN(21)=13.5
+      EIN(22)=14.8
+      EIN(23)=15.5
+      EIN(24)=20.5
+C
+C OFFSET ENERGY FOR IONISATION ELECTRON ANGULAR DISTRIBUTION
+      DO 40 J=1,NION
+      DO 39 I=1,NASIZE
+      IF(EG(I).GT.EION(J)) THEN
+       IOFFION(J)=I-1
+       GO TO 40
+      ENDIF
+   39 CONTINUE
+   40 CONTINUE
+C OFFSET ENERGY FOR EXCITATION ANGULAR DISTRIBUTION
+      DO 50 NL=1,NIN
+      DO 49 I=1,NASIZE
+      IF(EG(I).GT.DABS(EIN(NL))) THEN
+       IOFFN(NL)=I-1
+       GO TO 50
+      ENDIF 
+   49 CONTINUE
    50 CONTINUE
-      J=NETOT
-   60 A=(YXTOT(J)-YXTOT(J-1))/(XENT(J)-XENT(J-1))                       
-      B=(XENT(J-1)*YXTOT(J)-XENT(J)*YXTOT(J-1))/(XENT(J-1)-XENT(J))     
-      XTOT=(A*EN+B)*1.0D-16
-      Q(2,I)=XTOT
-      PEQEL(2,I)=0.5+(XTOT-XMOMT)/XTOT
-      IF(KEL(2).EQ.0) Q(2,I)=XMOMT
-      IF(KEL(2).EQ.0) PEQEL(2,I)=0.5
-C      
-      Q(3,I)=0.0                                                        
-      IF(EN.LT.E(3)) GO TO 200                                          
-      DO 110 J=2,NIOND                                                 
-      IF(EN.LE.XION(J)) GO TO 120                                       
-  110 CONTINUE                                                          
-      J=NIOND                                                          
-  120 A=(YION(J)-YION(J-1))/(XION(J)-XION(J-1))                         
-      B=(XION(J-1)*YION(J)-XION(J)*YION(J-1))/(XION(J-1)-XION(J))       
-      Q(3,I)=(A*EN+B)*1.D-16                                            
-C                                                                       
-  200 Q(4,I)=0.0                           
-      QATT(1,I)=Q(4,I)                             
-      IF(EN.LT.XATT(1)) GO TO 250                                       
-      IF(EN.GT.XATT(NATT1)) GO TO 250                                   
+C***********************************************************************
+C ENTER PENNING TRANSFER FRACTION FOR EACH LEVEL
+C SET PENNING TRANSFER FRACTION TO ZERO FOR LOW LEVELS
+      DO 60 K=1,NIN
+      DO 60 L=1,3
+       PENFRA(L,K)=0.0
+   60 CONTINUE
+C--------------------------------------------------------------------
+C PENNING TRANSFER FRACTION FOR LEVELS ABOVE 6.0EV
+      DO 61 K=61,NIN
+      PENFRA(1,K)=0.0
+C PENNING TRANSFER DISTANCE IN MICRONS
+      PENFRA(2,K)=1.0
+C PENNING TRANSFER TIME IN PICOSECONDS
+      PENFRA(3,K)=1.0
+      IF(IPEN.EQ.0) GO TO 61
+      WRITE(6,999) NAME,EIN(K),PENFRA(1,K),PENFRA(2,K),PENFRA(3,K)
+  999 FORMAT(' GAS = ',A25,' ENERGY LEVEL = ',F7.4,' EV.',/,' PENNING PR
+     /OBABILITY = ',F5.3,' ABS.LENGTH = ',F7.2,' DECAY TIME = ',F7.1,/)
+   61 CONTINUE
+C***********************************************************************
+C
+C
+      SCRPT(1)='                                                  '
+      IF(NANISO.EQ.2) THEN
+       SCRPT(2)=' ELASTIC   ANISOTROPIC C3F8  CARBON HEXAFLUORIDE  '
+      ELSE IF(NANISO.EQ.0) THEN
+       SCRPT(2)=' ELASTIC     ISOTROPIC C3F8  CARBON HEXAFLUORIDE  '
+      ELSE
+       WRITE(6,998)
+  998  FORMAT(' NO ANGULAR DISTRIBUTION SPECIFIED. PROGRAM STOPPED ')
+       STOP
+      ENDIF
+      SCRPT(3)=' IONISATION DISSOCIATIVE   CF3 +   ELOSS=  13.35  ' 
+      SCRPT(4)=' IONISATION DISSOCIATIVE  C2F5 +   ELOSS=  13.35  '
+      SCRPT(5)=' IONISATION DISSOCIATIVE  C2F4 +   ELOSS=  13.50  ' 
+      SCRPT(6)=' IONISATION DISSOCIATIVE  C3F7 +   ELOSS=  15.45  '
+      SCRPT(7)=' IONISATION DISSOCIATIVE    CF +   ELOSS=  21.1   '
+      SCRPT(8)=' IONISATION DISSOCIATIVE   CF2 +   ELOSS=  26.7   '
+      SCRPT(9)=' IONISATION ALL DOUBLE CHARGE  ++  ELOSS=  39.0   '
+      SCRPT(10)=' IONISATION    CARBON   K-SHELL    ELOSS= 285.0   '
+      SCRPT(11)=' IONISATION    FLUORINE K-SHELL    ELOSS= 685.4   '
+      SCRPT(12)=' ATTACHMENT  2 BODY DISSOCATIVE (F-)              '
+      SCRPT(13)=' ATTACHMENT  3 BODY (C3F8-)                       '
+      SCRPT(14)='                                                  '
+      SCRPT(15)='                                                  '
+      SCRPT(16)=' VIB V1 DIPOLE ONLY                ELOSS= -0.065  '
+      SCRPT(17)=' VIB1   RESONANCE ONLY             ELOSS= -0.065  '
+      SCRPT(18)=' VIB V2  DIPOLE ONLY               ELOSS= -0.100  '
+      SCRPT(19)=' VIB V2  RESONANCE ONLY            ELOSS= -0.100  '
+      SCRPT(20)=' VIB V3  DIPOLE ONLY               ELOSS= -0.155  '
+      SCRPT(21)=' VIB V3  RESONANCE ONLY            ELOSS= -0.155  '
+      SCRPT(22)=' VIB V1  DIPOLE ONLY               ELOSS=  0.065  '
+      SCRPT(23)=' VIB V1  RESONANCE ONLY            ELOSS=  0.065  '
+      SCRPT(24)=' VIB V2  DIPOLE ONLY               ELOSS=  0.100  '
+      SCRPT(25)=' VIB V2  RESONANCE ONLY            ELOSS=  0.100  '
+      SCRPT(26)=' VIB V3  DIPOLE ONLY               ELOSS=  0.155  '
+      SCRPT(27)=' VIB V3  RESONANCE ONLY            ELOSS=  0.155  '
+      SCRPT(28)=' VIB 2V3                           ELOSS=  0.35   '
+      SCRPT(29)=' VIB                               ELOSS=  0.50   '
+      SCRPT(30)=' NEUTRAL DISS   NON-DIPOLE         ELOSS=  9.4    '
+      SCRPT(31)=' NEUTRAL DISS   DIPOLE    F=0.032  ELOSS=  9.5    '
+      SCRPT(32)=' NEUTRAL DISS   NON-DIPOLE         ELOSS= 10.4    '
+      SCRPT(33)=' NEUTRAL DISS   DIPOLE    F=0.054  ELOSS= 10.5    '   
+      SCRPT(34)=' NEUTRAL DISS   NON-DIPOLE         ELOSS= 11.8    '
+      SCRPT(35)=' NEUTRAL DISS   DIPOLE    F=0.252  ELOSS= 11.9    '
+      SCRPT(36)=' NEUTRAL DISS   DIPOLE    F=0.941  ELOSS= 13.5    '
+      SCRPT(37)=' NEUTRAL DISS   NON-DIPOLE         ELOSS= 14.8    '
+      SCRPT(38)=' NEUTRAL DISS   DIPOLE    F=10.4   ELOSS= 15.5    '    
+      SCRPT(39)=' NEUTRAL DISS   DIPOLE    F=5.20   ELOSS= 20.5    '    
+C--------------------------------------------------------------------        
+C
+C DENSITY CORERCTION FOR 3-BODY ATTACHMENT CROSS-SECTION
+C CRITICAL DENSITY : 31 TORR = ANCRIT
+      ANCRIT=31.0 
+      FAC=1.0/(ANCRIT/TORR+1.0)
+C     write(6,99) FAC,TORR,ANCRIT
+C 99  format(' FAC=',D12.4,' TORR=',D12.4' ncrit=',D12.4)
+C
+C GROUPED VIBRATIONS SO NO DEGENERACY CALCULATION POSSIBLE
+C USED INDEPENDENT APPROXIMATION FOR UPPER STATE POPULATION
+      APOP1=DEXP(EIN(1)/AKT)
+      APOP2=DEXP(EIN(3)/AKT)
+      APOP3=DEXP(EIN(5)/AKT)
+C RENORMALISE GS POPULATION TO ACCOUNT FOR EXCITATION FROM EXCITED STATE
+      APOPGS=1.0
+C
+      DO 9000 I=1,NSTEP  
+      EN=EG(I)
+      GAMMA1=(EMASS2+2.0D0*EN)/EMASS2
+      GAMMA2=GAMMA1*GAMMA1
+      BETA=DSQRT(1.0D0-1.0D0/GAMMA2)
+      BETA2=BETA*BETA   
+C
+C ELASTIC CALCULATION
+      Q(2,I)=0.0D0             
+      IF(EN.LE.XEL(1)) THEN
+       QELA=YEL(1)*1.D-16
+       QMMT=YMT(1)*1.D-16
+       EPS=YEPS(1)
+       GO TO 20
+      ENDIF
+      DO 18 J=2,NDATA  
+      IF(EN.LE.XEL(J)) GO TO 19                                         
+   18 CONTINUE                                                          
+      J=NDATA        
+C USE LOG INTERPOLATION 
+   19 YXJ=DLOG(YEL(J))
+      YXJ1=DLOG(YEL(J-1))
+      XNJ=DLOG(XEL(J))
+      XNJ1=DLOG(XEL(J-1))
+      A=(YXJ-YXJ1)/(XNJ-XNJ1)
+      B=(XNJ1*YXJ-XNJ*YXJ1)/(XNJ1-XNJ)
+      QELA=DEXP(A*DLOG(EN)+B)*1.D-16
+      YXJ=DLOG(YMT(J))
+      YXJ1=DLOG(YMT(J-1))
+      A=(YXJ-YXJ1)/(XNJ-XNJ1)
+      B=(XNJ1*YXJ-XNJ*YXJ1)/(XNJ1-XNJ)
+      QMMT=DEXP(A*DLOG(EN)+B)*1.D-16
+C  ANGULAR DISTRIBUTION FOR ELASTICS (OKHRIMOVSSKY)
+      A=(YEPS(J)-YEPS(J-1))/(XEL(J)-XEL(J-1))
+      B=(XEL(J-1)*YEPS(J)-XEL(J)*YEPS(J-1))/(XEL(J-1)-XEL(J))
+      EPS=A*EN+B
+C CONVERT TO (1.0-EPS)
+   20 EPS=1.0-EPS
+      IF(NANISO.EQ.2) THEN
+C USE ELASTIC (ANISOTROPIC SCATTERING)
+       Q(2,I)=QELA      
+       PEQEL(2,I)=EPS
+      ELSE IF(NANISO.EQ.0) THEN
+C USE ISOTROPIC MT ELASTIC
+       Q(2,I)=QMMT      
+       PEQEL(2,I)=0.0
+      ELSE
+       WRITE(6,996)
+  996 FORMAT(' PROGRAM STOPPED BAD CHOICE OF ANGULAR SCATTERING')
+       STOP
+      ENDIF
+C -------------------------------------------------------------------
+C ZERO IONISATION ARRAYS 
+C     
+      DO 101 J=1,NION         
+      PEQION(J,I)=0.0
+  101 QION(J,I)=0.0
+C
+C IF ENERGY GT 3 KEV USE OSCILLATOR STRENGTH FOR IONISATION
+C CALCULATE  COUNTING AND GROSS IONISATION               
+      IF(EN.LT.EION(1)) GO TO 190
+      IF(EN.GT.3000.) GO TO 140                                       
+      DO 102 J=2,NIONC                                                 
+      IF(EN.LE.XION(J)) GO TO 103                                     
+  102 CONTINUE                                                          
+      J=NIONC                                                          
+  103 X1=DLOG(XION(J))
+      X2=DLOG(XION(J-1))
+      Y1=DLOG(YIONC(J))
+      Y2=DLOG(YIONC(J-1))                   
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QIONC=DEXP(A*DLOG(EN)+B)*1.D-16  
+      Y1=DLOG(YIONG(J))
+      Y2=DLOG(YIONG(J-1))
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QIONG=DEXP(A*DLOG(EN)+B)*1.D-16  
+C 
+C IONISATION TO CF3 +
+      IF(EN.GT.200.) GO TO 108 
+      DO 106 J=2,NION1
+      IF(EN.LE.XION1(J)) GO TO 107
+  106 CONTINUE
+      J=NION1
+  107 X1=DLOG(XION1(J))
+      X2=DLOG(XION1(J-1))
+      Y1=DLOG(YION1(J))
+      Y2=DLOG(YION1(J-1))
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QION(1,I)=DEXP(A*DLOG(EN)+B)*1.D-16
+      GO TO 109
+  108 QION(1,I)=QIONC*0.660
+C  IONISATION TO C2F5 + 
+  109 IF(EN.LE.EION(2)) GO TO 190
+      IF(EN.GT.200.) GO TO 112
+      DO 110 J=2,NION2
+      IF(EN.LE.XION2(J)) GO TO 111
+  110 CONTINUE
+      J=NION2
+  111 X1=DLOG(XION2(J))
+      X2=DLOG(XION2(J-1))
+      Y1=DLOG(YION2(J))
+      Y2=DLOG(YION2(J-1))
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QION(2,I)=DEXP(A*DLOG(EN)+B)*1.D-16
+      GO TO 113
+  112 QION(2,I)=QIONC*0.0304
+C  IONISATION TO C2F4 + 
+  113 IF(EN.LE.EION(3)) GO TO 190
+      IF(EN.GT.200.) GO TO 116
+      DO 114 J=2,NION3
+      IF(EN.LE.XION3(J)) GO TO 115
+  114 CONTINUE
+      J=NION3
+  115 X1=DLOG(XION3(J))
+      X2=DLOG(XION3(J-1))
+      Y1=DLOG(YION3(J))
+      Y2=DLOG(YION3(J-1))
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QION(3,I)=DEXP(A*DLOG(EN)+B)*1.D-16
+      GO TO 117
+  116 QION(3,I)=QIONC*0.0396
+C  IONISATION TO C3F7 + 
+  117 IF(EN.LE.EION(4)) GO TO 190
+      IF(EN.GT.200.) GO TO 120
+      DO 118 J=2,NION4
+      IF(EN.LE.XION4(J)) GO TO 119
+  118 CONTINUE
+      J=NION4
+  119 X1=DLOG(XION4(J))
+      X2=DLOG(XION4(J-1))
+      Y1=DLOG(YION4(J))
+      Y2=DLOG(YION4(J-1))
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QION(4,I)=DEXP(A*DLOG(EN)+B)*1.D-16
+      GO TO 121
+  120 QION(4,I)=QIONC*0.150 
+C  IONISATION TO CF +   
+  121 IF(EN.LE.EION(5)) GO TO 190
+      IF(EN.GT.200.) GO TO 124
+      DO 122 J=2,NION5
+      IF(EN.LE.XION5(J)) GO TO 123
+  122 CONTINUE
+      J=NION5
+  123 X1=DLOG(XION5(J))
+      X2=DLOG(XION5(J-1))
+      Y1=DLOG(YION5(J))
+      Y2=DLOG(YION5(J-1))
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QION(5,I)=DEXP(A*DLOG(EN)+B)*1.D-16
+      GO TO 125
+  124 QION(5,I)=QIONC*0.0710
+C  IONISATION TO CF2 +  
+  125 IF(EN.LE.EION(6)) GO TO 190
+      IF(EN.GT.200.) GO TO 128
+      DO 126 J=2,NION6
+      IF(EN.LE.XION6(J)) GO TO 127
+  126 CONTINUE
+      J=NION6
+  127 X1=DLOG(XION6(J))
+      X2=DLOG(XION6(J-1))
+      Y1=DLOG(YION6(J))
+      Y2=DLOG(YION6(J-1))
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QION(6,I)=DEXP(A*DLOG(EN)+B)*1.D-16
+      GO TO 129
+  128 QION(6,I)=QIONC*0.0498
+C  IONISATION TO ALL DOUBLY CHARGE STATES  ++
+  129 IF(EN.LE.EION(7)) GO TO 190
+      IF(EN.GT.200.) GO TO 132
+      DO 130 J=2,NION7
+      IF(EN.LE.XION7(J)) GO TO 131
+  130 CONTINUE
+      J=NION7
+  131 X1=DLOG(XION7(J))
+      X2=DLOG(XION7(J-1))
+      Y1=DLOG(YION7(J))
+      Y2=DLOG(YION7(J-1))
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QION(7,I)=DEXP(A*DLOG(EN)+B)*1.D-16
+      GO TO 145
+  132 QION(7,I)=QIONC*0.0526 
+      GO TO 145
+C ENEERGY ABOVE 5KEV USE BORN-BETHE X-SECTION
+  140 X2=1.0D0/BETA2
+      X1=X2*DLOG(BETA2/(1.0D0-BETA2))-1.0D0
+      QBB=CONST*(AM2*(X1-DEN(I)/2.0)+C*X2)
+      QIONC=QBB
+      QIONG=QBB*1.052
+      QION(1,I)=QIONC*0.660
+      QION(2,I)=QIONC*0.0304
+      QION(3,I)=QIONC*0.0396
+      QION(4,I)=QIONC*0.150
+      QION(5,I)=QIONC*0.0710
+      QION(6,I)=QIONC*0.0498
+      QION(7,I)=QIONC*0.0526
+C
+C CARBON K-SHELL IONISATION
+  145 IF(EN.LE.EION(8)) GO TO 190
+      DO 146 J=2,NION8
+      IF(EN.LE.XION8(J)) GO TO 147
+  146 CONTINUE         
+      J=NION8
+  147 A=(YION8(J)-YION8(J-1))/(XION8(J)-XION8(J-1))
+      B=(XION8(J-1)*YION8(J)-XION8(J)*YION8(J-1))/(XION8(J-1)-XION8(J))
+      QION(8,I)=(A*EN+B)*1.D-16
+C FLUORINE K-SHELL IONISATION
+      IF(EN.LE.EION(9)) GO TO 190
+      DO 151 J=2,NION9
+      IF(EN.LE.XION9(J)) GO TO 152
+  151 CONTINUE         
+      J=NION9
+  152 A=(YION9(J)-YION9(J-1))/(XION9(J)-XION9(J-1))
+      B=(XION9(J-1)*YION9(J)-XION9(J)*YION9(J-1))/(XION9(J-1)-XION9(J))
+      QION(9,I)=(A*EN+B)*1.D-16
+C
+C IONISATION ANGULAR DISTRIBUTION
+  190 DO 191 J=1,NION
+      IF(EN.LE.(2.0*EION(J))) GO TO 191
+      PEQION(J,I)=PEQEL(2,(I-IOFFION(J)))
+C SET TO ISOTROPIC IF NANISO=0
+      IF(NANISO.EQ.0) PEQION(J,I)=0.0
+  191 CONTINUE
+      SUMION=QION(1,I)+QION(2,I)+QION(3,I)+QION(4,I)+QION(5,I)+QION(6,I)
+     /+QION(7,I)+QION(8,I)+QION(9,I)  
+C---------------------------------------------------------------------
+C--------------------------------------------------------------------- 
+C  ATTACHMENT DISSOCIATIVE MAINLY TO F-  
+  200 Q(4,I)=0.0  
+      SUMATT=0.0                         
+      QATT(1,I)=0.0                             
+      IF(EN.LT.XATT1(1)) GO TO 230                                   
+      IF(EN.GT.XATT1(NATT1)) GO TO 230                            
       DO 210 J=2,NATT1                                                  
-      IF(EN.LE.XATT(J)) GO TO 220                                       
+      IF(EN.LE.XATT1(J)) GO TO 220                                     
   210 CONTINUE                                                          
       J=NATT1                                                           
-  220 A=(YATT(J)-YATT(J-1))/(XATT(J)-XATT(J-1))                         
-      B=(XATT(J-1)*YATT(J)-XATT(J)*YATT(J-1))/(XATT(J-1)-XATT(J))
-      A1=(YATT1(J)-YATT1(J-1))/(XATT(J)-XATT(J-1))                      
-      B1=(XATT(J-1)*YATT1(J)-XATT(J)*YATT1(J-1))/(XATT(J-1)-XATT(J))
-      Q(4,I)=((A*EN+B)+(A1*EN+B1)*TORR/2280.0)*1.D-16  
-      QATT(1,I)=Q(4,I)
+  220 X1=DLOG(XATT1(J))
+      X2=DLOG(XATT1(J-1))
+      Y1=DLOG(YATT1(J))
+      Y2=DLOG(YATT1(J-1))
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QATT(1,I)=DEXP(A*DLOG(EN)+B)*1.D-16
+  230 CONTINUE
+C ATTACHMENT 3 BODY TO C3H8-
+C******************************************************************
+C FOR MIXTURE DATA FURTHER SCALING NECESSARY USE FACTOR T3B
+C FOR SCALING IN PURE GAS USE T3B=1.0
+      T3B=1.0
+C SCALING FACTOR PROPORTIONAL TO C3F8 FRACTION IN NOBLE GAS MIXTURES
+C******************************************************************
+      QATT(2,I)=0.0
+      IF(EN.LT.XATT2(1)) GO TO 250
+      IF(EN.GT.XATT2(NATT2)) GO TO 250
+      DO 231 J=1,NATT2
+      IF(EN.LE.XATT2(J)) GO TO 235
+  231 CONTINUE
+      J=NATT2
+  235 X1=DLOG(XATT2(J))
+      X2=DLOG(XATT2(J-1))
+      Y1=DLOG(YATT2(J))
+      Y2=DLOG(YATT2(J-1))
+      A=(Y1-Y2)/(X1-X2)
+      B=(X2*Y1-X1*Y2)/(X2-X1)
+      QATT(2,I)=DEXP(A*DLOG(EN)+B)*1.D-16*FAC*T3B       
+C ----------------------------------------------------------------------     
   250 Q(5,I)=0.0                                                        
       Q(6,I)=0.0
+C     SUMATT=QATT(1,I)+QATT(2,I)
+C     WRITE(6,8456) EN,SUMION,SUMATT,QATT(1,I),QATT(2,I)
+C8456 FORMAT(' EN=',D12.4,' SUMION=',D12.4,' SUMATT=',D12.4,
+C    /' QATT1=',D12.4,' QATT2=',D12.4)
+C ----------------------------------------------------------------------     
+C---------------------------------------------------------------------
+C ZERO INELASTIC ARRAYS
+      DO 310 L=1,NIN
+      QIN(L,I)=0.0D0
+      PEQIN(L,I)=0.0D0
+  310 CONTINUE
 C           
-C SUPERELASTICS                                                                          
-      QIN(1,I)=0.0
-      QIN(2,I)=0.0
-      QIN(3,I)=0.0
-      IF(EN.EQ.0.0) GO TO 305
-C SUPERELASTIC OF VIBRATION V1        
+C SUPERELASTIC OF VIBRATION V1 DIPOLE 
       EFAC=DSQRT(1.0-(EIN(1)/EN))
-      QIN(1,I)=0.070*DLOG((EFAC+1.0)/(EFAC-1.0))/EN
-      DO 260 J=2,NVIB2
-      IF((EN+EIN(4)).LE.XVIB2(J)) GO TO 270
-  260 CONTINUE
-      J=NVIB2
-  270 A=(YVIB2(J)-YVIB2(J-1))/(XVIB2(J)-XVIB2(J-1))                     
-      B=(XVIB2(J-1)*YVIB2(J)-XVIB2(J)*YVIB2(J-1))/(XVIB2(J-1)-XVIB2(J))
-      QIN(1,I)=QIN(1,I)+(EN+EIN(4))*(A*(EN+EIN(4))+B)/EN 
-      QIN(1,I)=QIN(1,I)*APOP1/(1.0+APOP1)*1.D-16
-C  SUPERELASTIC OF VIBRATION V2
-      EFAC=DSQRT(1.0-(EIN(2)/EN))
-      QIN(2,I)=0.850*DLOG((EFAC+1.0)/(EFAC-1.0))/EN 
-      DO 280 J=2,NVIB3
-      IF((EN+EIN(5)).LE.XVIB3(J)) GO TO 290
-  280 CONTINUE
-      J=NVIB3
-  290 A=(YVIB3(J)-YVIB3(J-1))/(XVIB3(J)-XVIB3(J-1))                     
-      B=(XVIB3(J-1)*YVIB3(J)-XVIB3(J)*YVIB3(J-1))/(XVIB3(J-1)-XVIB3(J))
-      QIN(2,I)=QIN(2,I)+(EN+EIN(5))*(A*(EN+EIN(5))+B)/EN 
-      QIN(2,I)=QIN(2,I)*APOP2/(1.0+APOP2)*1.D-16 
-C SUPERELASTIC OF VIBRATION V3
-      EFAC=DSQRT(1.0-(EIN(3)/EN))
-      QIN(3,I)=1.600*DLOG((EFAC+1.0)/(EFAC-1.0))/EN
-      DO 300 J=2,NVIB4
-      IF((EN+EIN(6)).LE.XVIB4(J))GO TO 301
-  300 CONTINUE
-      J=NVIB4
-  301 A=(YVIB4(J)-YVIB4(J-1))/(XVIB4(J)-XVIB4(J-1))                     
-      B=(XVIB4(J-1)*YVIB4(J)-XVIB4(J)*YVIB4(J-1))/(XVIB4(J-1)-XVIB4(J)) 
-      QIN(3,I)=QIN(3,I)+(EN+EIN(6))*(A*(EN+EIN(6))+B)/EN
-      QIN(3,I)=QIN(3,I)*APOP3/(1.0+APOP3)*1.D-16            
-C 
-  305 CONTINUE
-      QIN(4,I)=0.0                                                      
-      IF(EN.LE.EIN(4)) GO TO 400                                        
-      DO 310 J=2,NVIB2                                                  
-      IF(EN.LE.XVIB2(J)) GO TO 320                                      
-  310 CONTINUE                                                          
-      J=NVIB2                                                           
-  320 A=(YVIB2(J)-YVIB2(J-1))/(XVIB2(J)-XVIB2(J-1))                     
-      B=(XVIB2(J-1)*YVIB2(J)-XVIB2(J)*YVIB2(J-1))/(XVIB2(J-1)-XVIB2(J)) 
-      EFAC=DSQRT(1.0-(EIN(4)/EN))
-      QIN(4,I)=0.070*DLOG((1.0+EFAC)/(1.0-EFAC))/EN 
-      QIN(4,I)=((A*EN+B)+QIN(4,I))*1.0/(1.0+APOP1)*1.D-16
-  400 CONTINUE                                                          
-C                                                                       
-      QIN(5,I)=0.0                                                      
-      IF(EN.LE.EIN(5)) GO TO 500                                        
-      DO 410 J=2,NVIB3                                                  
-      IF(EN.LE.XVIB3(J)) GO TO 420                                      
-  410 CONTINUE                                                          
-      J=NVIB3                                                           
-  420 A=(YVIB3(J)-YVIB3(J-1))/(XVIB3(J)-XVIB3(J-1))                     
-      B=(XVIB3(J-1)*YVIB3(J)-XVIB3(J)*YVIB3(J-1))/(XVIB3(J-1)-XVIB3(J)) 
-      EFAC=DSQRT(1.0-(EIN(5)/EN))
-      QIN(5,I)=0.850*DLOG((1.0+EFAC)/(1.0-EFAC))/EN
-      ELF=EN-EIN(5)
-      FWD=DLOG((EN+ELF)/(EN+ELF-2.0*DSQRT(EN*ELF)))
-      BCK=DLOG((EN+ELF+2.0*DSQRT(EN*ELF))/(EN+ELF))
-C ASSUME RATIO  MOM.T /TOT X-SECT FOR RESONANCE PART = RAT3
-      RAT3=0.80 
-      XMT=((1.5-FWD/(FWD+BCK))*QIN(5,I)+RAT3*(A*EN+B))*1.0D-16
-      XMT=XMT/(1.0+APOP2)        
-      QIN(5,I)=((A*EN+B)+QIN(5,I))*1.0/(1.0+APOP2)*1.D-16
-      PEQIN(5,I)=0.5+(QIN(5,I)-XMT)/QIN(5,I)
-  500 CONTINUE                                                          
+      QIN(1,I)=0.063*DLOG((EFAC+1.0)/(EFAC-1.0))/EN
+      QIN(1,I)=QIN(1,I)*APOP1/(1.0+APOP1)*1.D-16     
 C
-      QIN(6,I)=0.0                                                      
-      IF(EN.LE.EIN(6)) GO TO 600                                        
-      DO 510 J=2,NVIB4                                                  
-      IF(EN.LE.XVIB4(J)) GO TO 520                                      
-  510 CONTINUE                                                          
-      J=NVIB4                                                           
-  520 A=(YVIB4(J)-YVIB4(J-1))/(XVIB4(J)-XVIB4(J-1))                     
-      B=(XVIB4(J-1)*YVIB4(J)-XVIB4(J)*YVIB4(J-1))/(XVIB4(J-1)-XVIB4(J)) 
-      EFAC=DSQRT(1.0-(EIN(6)/EN))
-      QIN(6,I)=1.600*DLOG((1.0+EFAC)/(1.0-EFAC))/EN
-      ELF=EN-EIN(6)
-      FWD=DLOG((EN+ELF)/(EN+ELF-2.0*DSQRT(EN*ELF)))
-      BCK=DLOG((EN+ELF+2.0*DSQRT(EN*ELF))/(EN+ELF))
-C   ASSUME RATIO MOM T./ TOT X-SECT FOR RESONANCE PART = RAT4 
-      RAT4=0.80   
-      XMT=((1.5-FWD/(FWD+BCK))*QIN(6,I)+RAT4*(A*EN+B))*1.0D-16
-      XMT=XMT/(1.0+APOP3)
-      QIN(6,I)=((A*EN+B)+QIN(6,I))*1.0/(1.0+APOP3)*1.D-16
-      PEQIN(6,I)=0.5+(QIN(6,I)-XMT)/QIN(6,I)
-  600 CONTINUE                                                          
-C                                                                       
-      QIN(7,I)=0.0                                                      
-      IF(EN.LE.EIN(7)) GO TO 700                                        
-      DO 610 J=2,NVIB5                                                  
-      IF(EN.LE.XVIB5(J)) GO TO 620                                      
+C SUPERELASTIC OF VIBRATION V1 RESONANCE
+      IF((EN-EIN(2)).LE.XVIBR(1)) GO TO 3611
+      IF((EN-EIN(2).GT.XVIBR(NVIBR))) GO TO 3611
+      DO 360 J=2,NVIBR
+      IF((EN-EIN(2)).LE.XVIBR(J)) GO TO 361
+  360 CONTINUE     
+      J=NVIBR
+  361 X1L=DLOG(XVIBR(J))
+      X2L=DLOG(XVIBR(J-1))
+      Y1L=DLOG(YVIBR(J))
+      Y2L=DLOG(YVIBR(J-1))
+      A=(Y1L-Y2L)/(X1L-X2L)
+      B=(X2L*Y1L-X1L*Y2L)/(X2L-X1L)
+      QIN(2,I)=(EN-EIN(2))*DEXP(A*DLOG(EN-EIN(2))+B)/EN*APOP1/
+     /(1.0+APOP1)
+      QIN(2,I)=QIN(2,I)*1.D-16*ANV1RES
+ 3611 CONTINUE    
+C  SUPERELASTIC OF VIBRATION V2 DIPOLE
+      EFAC=DSQRT(1.0-(EIN(3)/EN))
+      QIN(3,I)=0.892*DLOG((EFAC+1.0)/(EFAC-1.0))/EN       
+      QIN(3,I)=QIN(3,I)*APOP2/(1.0+APOP2)*1.D-16     
+C
+C SUPERLEASTIC OF VIBRATION V2 RESONANCE
+      IF((EN-EIN(4)).LE.XVIBR(1)) GO TO 3631
+      IF((EN-EIN(4)).GT.XVIBR(NVIBR)) GO TO 3631
+      DO 362 J=2,NVIBR
+      IF((EN-EIN(4)).LE.XVIBR(J)) GO TO 363
+  362 CONTINUE
+      J=NVIBR
+  363 X1L=DLOG(XVIBR(J))
+      X2L=DLOG(XVIBR(J-1))
+      Y1L=DLOG(YVIBR(J))
+      Y2L=DLOG(YVIBR(J-1))
+      A=(Y1L-Y2L)/(X1L-X2L)
+      B=(X2L*Y1L-X1L*Y2L)/(X2L-X1L)
+      QIN(4,I)=(EN-EIN(4))*DEXP(A*DLOG(EN-EIN(4))+B)/EN*APOP2/
+     /(1.0+APOP2)
+      QIN(4,I)=QIN(4,I)*1.D-16*ANV2RES
+ 3631 CONTINUE
+C
+C SUPERELASTIC OF VIBRATION V3 DIPOLE
+      EFAC=DSQRT(1.0-(EIN(5)/EN))
+      QIN(5,I)=1.680*DLOG((EFAC+1.0)/(EFAC-1.0))/EN
+      QIN(5,I)=QIN(5,I)*APOP3/(1.0+APOP3)*1.D-16               
+C 
+C SUPERLELASTIC OF VIBRATION V3 RESONANCE
+      IF((EN-EIN(6)).LE.XVIBR(1)) GO TO 3651
+      IF((EN-EIN(6)).GT.XVIBR(NVIBR)) GO TO 3651
+      DO 364 J=2,NVIBR
+      IF((EN-EIN(6)).LE.XVIBR(J))GO TO 365
+  364 CONTINUE
+      J=NVIBR
+  365 X1L=DLOG(XVIBR(J))
+      X2L=DLOG(XVIBR(J-1))
+      Y1L=DLOG(YVIBR(J))
+      Y2L=DLOG(YVIBR(J-1))
+      A=(Y1L-Y2L)/(X1L-X2L)
+      B=(X2L*Y1L-X1L*Y2L)/(X2L-X1L)
+      QIN(6,I)=(EN-EIN(6))*DEXP(A*DLOG(EN-EIN(6))+B)/EN*APOP3/
+     /(1.0+APOP3)
+      QIN(6,I)=QIN(6,I)*1.D-16*ANV3RES
+ 3651 CONTINUE   
+  
+C
+C VIBRATION V1  DIPOLE
+      IF(EN.LE.EIN(7)) GO TO 380
+      EFAC=DSQRT(1.0-(EIN(7)/EN))
+      QIN(7,I)=0.063*DLOG((1.0+EFAC)/(1.0-EFAC))/EN
+C      QIN(7,I)=QIN(7,I)*1.0/(1.0+APOP1)*1.D-16      
+C RENORMALISE
+      QIN(7,I)=QIN(7,I)*1.D-16     
+C
+C VIBRATION V1 RESONANCE
+      IF(EN.LE.XVIBR(1)) GO TO 3721
+      IF(EN.GT.XVIBR(NVIBR)) GO TO 3721                              
+      DO 371 J=2,NVIBR                                                  
+      IF(EN.LE.XVIBR(J)) GO TO 372                                      
+  371 CONTINUE                                                          
+      J=NVIBR                                                           
+  372 X1L=DLOG(XVIBR(J))
+      X2L=DLOG(XVIBR(J-1))
+      Y1L=DLOG(YVIBR(J))
+      Y2L=DLOG(YVIBR(J-1))
+      A=(Y1L-Y2L)/(X1L-X2L)
+      B=(X2L*Y1L-X1L*Y2L)/(X2L-X1L)
+C     QIN(8,I)=DEXP(A*DLOG(EN)+B)*1.0/(1.0+APOP1)*1.D-16
+C RENORMALISE
+      QIN(8,I)=DEXP(A*DLOG(EN)+B)*1.D-16*ANV1RES 
+ 3721 CONTINUE   
+C
+C VIBRATION V2 DIPOLE                              
+      IF(EN.LE.EIN(9)) GO TO 380     
+      EFAC=DSQRT(1.0-(EIN(9)/EN))
+      QIN(9,I)=0.892*DLOG((1.0+EFAC)/(1.0-EFAC))/EN
+C      QIN(9,I)=QIN(9,I)*1.0/(1.0+APOP2)*1.D-16     
+C RENORMALISE
+      QIN(9,I)=QIN(9,I)*1.D-16     
+C
+C VIBRATION V2 RESONANCE
+      IF(EN.LE.XVIBR(1)) GO TO 3741
+      IF(EN.GT.XVIBR(NVIBR)) GO TO 3741
+      DO 373 J=2,NVIBR                                                  
+      IF(EN.LE.XVIBR(J)) GO TO 374                                      
+  373 CONTINUE                                                          
+      J=NVIBR                                                           
+  374 X1L=DLOG(XVIBR(J))
+      X2L=DLOG(XVIBR(J-1))
+      Y1L=DLOG(YVIBR(J))
+      Y2L=DLOG(YVIBR(J-1))
+      A=(Y1L-Y2L)/(X1L-X2L)
+      B=(X2L*Y1L-X1L*Y2L)/(X2L-X1L)
+C     QIN(10,I)=DEXP(A*DLOG(EN)+B)*1.0/(1.0+APOP2)*1.D-16
+C RENORMALISE
+      QIN(10,I)=DEXP(A*DLOG(EN)+B)*1.D-16*ANV2RES 
+ 3741 CONTINUE
+C
+C VIBRATION V3 DIPOLE
+      IF(EN.LE.EIN(11)) GO TO  380 
+      EFAC=DSQRT(1.0-(EIN(11)/EN))
+      QIN(11,I)=1.680*DLOG((1.0+EFAC)/(1.0-EFAC))/EN
+C     QIN(11,I)=QIN(11,I)*1.0/(1.0+APOP3)*1.D-16     
+C RENORMALISE
+      QIN(11,I)=QIN(11,I)*1.D-16       
+C
+C VIBRATION V3 RESONANCE
+      IF(EN.LE.XVIBR(1)) GO TO 3761
+      IF(EN.GT.XVIBR(NVIBR)) GO TO 3761
+      DO 375 J=2,NVIBR                                                  
+      IF(EN.LE.XVIBR(J)) GO TO 376                                      
+  375 CONTINUE                                                          
+      J=NVIBR                                                           
+  376 X1L=DLOG(XVIBR(J))
+      X2L=DLOG(XVIBR(J-1))
+      Y1L=DLOG(YVIBR(J))
+      Y2L=DLOG(YVIBR(J-1))
+      A=(Y1L-Y2L)/(X1L-X2L)
+      B=(X2L*Y1L-X1L*Y2L)/(X2L-X1L)
+C     QIN(12,I)=DEXP(A*DLOG(EN)+B)*1.0/(1.0+APOP3)*1.D-16
+C RENORMALISE
+      QIN(12,I)=DEXP(A*DLOG(EN)+B)*1.D-16*ANV3RES
+ 3761 CONTINUE
+ 380  CONTINUE 
+C   
+C CALCULATE DIPOLE ANGULAR DISTRIBUTION FOR FIRST 3 VIBRATIONAL STATES
+C SUPERELASTICS                                                     
+      DO 385 L=1,3
+      EPOINT=EN/DABS(EIN(2*L))
+      IF(EPOINT.GT.ENRTS(NRTANG)) THEN
+       WRITE(6,922) EPOINT,ENRTS(NRTANG),EN
+  922  FORMAT(' ENERGY ERROR IN VIB SUPER ANG CALC  EPOINT=',D12.4,' ENR
+     /TS=',D12.4,' EN=',D12.4)
+      ENDIF
+      DO 381 M=2,NRTANG
+      IF(EPOINT.LE.ENRTS(M)) GO TO 382
+  381 CONTINUE
+      M=NRTANG
+  382 A=(YEPSR(M)-YEPSR(M-1))/(ENRTS(M)-ENRTS(M-1))
+      B=(ENRTS(M-1)*YEPSR(M)-ENRTS(M)*YEPSR(M-1))/(ENRTS(M-1)-ENRTS(M))
+      EPSIL=A*EPOINT+B
+      PEQIN((2*L-1),I)=1.0-EPSIL
+C CALCULATE THE USED MT XSEC
+      A=(YMTRT(M)-YMTRT(M-1))/(ENRTS(M)-ENRTS(M-1))
+      B=(ENRTS(M-1)*YMTRT(M)-ENRTS(M)*YMTRT(M-1))/(ENRTS(M-1)-ENRTS(M))
+      XSECDUM(2*L-1)=A*EPOINT+B
+      XSECDUM(2*L-1)=XSECDUM(2*L-1)*QIN((2*L-1),I)
+  385 CONTINUE
+C SET RESONANCE ANG DIST TO ISOTROPIC
+      DO 386 KK=1,3
+      PEQIN((2*KK),I)=0.0
+      XSECDUM(2*KK)=QIN((2*KK),I) 
+  386 CONTINUE   
+C     WRITE(6,944) EN,QIN(1,I),XSECDUM(1),QIN(2,I),XSECDUM(2),QIN(3,I),
+C    /XSECDUM(3)
+C 944 FORMAT(' ENERGY=',D12.4,' V1 SUPER=',D12.4,' V1 SUPER MT=',D12.4,/
+C    /,22X,' V2 SUPER=',D12.4,' V2 SUPER MT=',D12.4,/,22X,' V3 SUPER=',
+C    /D12.4,' V3 SUPER MT=',D12.4,/)      
+C
+C CALCULATE DIPOLE ANGULAR DISTRIBUTION FOR FIRST 3 VIBRATIONAL STATES
+C NORMAL INELASTICS
+      DO 395 L=4,6
+      EPOINT=EN/DABS(EIN(2*L))
+      IF(EPOINT.GT.ENROT(NRTANG)) THEN
+       WRITE(6,923) EPOINT,ENROT(NRTANG),EN
+  923  FORMAT(' ENERGY ERROR IN VIB ANG CALC  EPOINT=',D12.4,' ENROT=',
+     /D12.4,' EN=',D12.4)
+      ENDIF
+      IF(EN.LE.EIN(2*L)) THEN
+       PEQIN((2*L),I)=0.0
+       XSECDUM(2*L)=0.0
+       GO TO 395
+      ENDIF
+      DO 391 M=2,NRTANG
+      IF(EPOINT.LE.ENROT(M)) GO TO 392
+  391 CONTINUE
+      M=NRTANG
+  392 A=(YEPSR(M)-YEPSR(M-1))/(ENROT(M)-ENROT(M-1))
+      B=(ENROT(M-1)*YEPSR(M)-ENROT(M)*YEPSR(M-1))/(ENROT(M-1)-ENROT(M))
+      EPSIL=A*EPOINT+B
+      PEQIN(L,I)=1.0-EPSIL
+C CALCULATE THE USED MT XSEC
+      A=(YMTRT(M)-YMTRT(M-1))/(ENROT(M)-ENROT(M-1))
+      B=(ENROT(M-1)*YMTRT(M)-ENROT(M)*YMTRT(M-1))/(ENROT(M-1)-ENROT(M))
+      XSECDUM(2*L-1)=A*EPOINT+B
+      XSECDUM(2*L-1)=XSECDUM(2*L-1)*QIN((2*L-1),I)
+  395 CONTINUE
+C SET RESONANCE ANG DIST TO ISOTROPIC
+      DO 396 KK=4,6
+      PEQIN((2*KK),I)=0.0
+      XSECDUM(2*KK)=QIN((2*KK),I) 
+  396 CONTINUE
+C     WRITE(6,945) EN,QIN(4,I),XSECDUM(4),QIN(5,I),XSECDUM(5),QIN(6,I),
+C    /XSECDUM(6)
+C 945 FORMAT(' ENERGY=',D12.4,' V1=',D12.4,' V1 MT=',D12.4,/,
+C    /22X,' V2=',D12.4,' V2 MT=',D12.4,/,22X,' V3=',
+C    /D12.4,' V3 MT=',D12.4,/)      
+C
+C----------------------------------------------------------------------
+C VIBRATION 2V3
+      IF(EN.LE.XVIB4(1)) GO TO 700    
+      IF(EN.GT.XVIB4(NVIB4)) GO TO 621                                 
+      DO 610 J=2,NVIB4                                                  
+      IF(EN.LE.XVIB4(J)) GO TO 620                                      
   610 CONTINUE                                                          
-      J=NVIB5                                                           
-  620 A=(YVIB5(J)-YVIB5(J-1))/(XVIB5(J)-XVIB5(J-1))                     
-      B=(XVIB5(J-1)*YVIB5(J)-XVIB5(J)*YVIB5(J-1))/(XVIB5(J-1)-XVIB5(J)) 
-      QIN(7,I)=(A*EN+B)*1.D-16                                          
+      J=NVIB4                                                           
+  620 X1L=DLOG(XVIB4(J))
+      X2L=DLOG(XVIB4(J-1))
+      Y1L=DLOG(YVIB4(J))
+      Y2L=DLOG(YVIB4(J-1))
+      A=(Y1L-Y2L)/(X1L-X2L)
+      B=(X2L*Y1L-X1L*Y2L)/(X2L-X1L)
+      QIN(13,I)=DEXP(A*DLOG(EN)+B)*1.D-16           
+      GO TO 622
+  621 QIN(13,I)=YVIB4(NVIB4)*(XVIB4(NVIB4)/EN)**2*1.D-16       
+C ISOTROPIC           
+  622 PEQIN(13,I)=0.0                          
   700 CONTINUE                                                          
-C                                                                       
-      QIN(8,I)=0.0                                                      
-      IF(EN.LE.EIN(8)) GO TO 800                                        
-      DO 710 J=2,NVIB6                                                  
-      IF(EN.LE.XVIB6(J)) GO TO 720                                      
+C
+C VIBRATION HARMONICS 
+C                                                                      
+      IF(EN.LE.XVIBR(1)) GO TO 800    
+      IF(EN.GT.XVIBR(NVIBR)) GO TO 721                                 
+      DO 710 J=2,NVIBR                                                  
+      IF(EN.LE.XVIBR(J)) GO TO 720                                      
   710 CONTINUE                                                          
-      J=NVIB6                                                           
-  720 A=(YVIB6(J)-YVIB6(J-1))/(XVIB6(J)-XVIB6(J-1))                     
-      B=(XVIB6(J-1)*YVIB6(J)-XVIB6(J)*YVIB6(J-1))/(XVIB6(J-1)-XVIB6(J)) 
-      QIN(8,I)=(A*EN+B)*1.D-16                                          
-  800 CONTINUE                                                          
-C                                                                       
-      QIN(9,I)=0.0                                                      
-      IF(EN.LE.EIN(9)) GO TO 900                                        
-      DO 810 J=2,NDISS                                                  
-      IF(EN.LE.XDISS(J)) GO TO 820                                      
+      J=NVIBR                                                           
+  720 X1L=DLOG(XVIBR(J))
+      X2L=DLOG(XVIBR(J-1))
+      Y1L=DLOG(YVIBR(J))
+      Y2L=DLOG(YVIBR(J-1))
+      A=(Y1L-Y2L)/(X1L-X2L)
+      B=(X2L*Y1L-X1L*Y2L)/(X2L-X1L)
+      QIN(14,I)=DEXP(A*DLOG(EN)+B)*1.D-16*AMPHAR    
+      GO TO 722
+  721 QIN(14,I)=YVIBR(NVIBR)*(XVIBR(NVIBR)/EN)**2*1.D-16*AMPHAR
+C ISOTROPIC
+  722 PEQIN(14,I)=0.0    
+  800 CONTINUE
+C     
+C DISSOCIATIVE EXCITATION  TRIPLET
+C                                                                  
+      IF(EN.LE.EIN(15)) GO TO 900   
+      IF(EN.GT.XTRP1(NTRP1)) GO TO 812                                
+      DO 810 J=2,NTRP1                                                  
+      IF(EN.LE.XTRP1(J)) GO TO 811                                      
   810 CONTINUE                                                          
-      J=NDISS                                                           
-  820 A=(YDISS(J)-YDISS(J-1))/(XDISS(J)-XDISS(J-1))                     
-      B=(XDISS(J-1)*YDISS(J)-XDISS(J)*YDISS(J-1))/(XDISS(J-1)-XDISS(J)) 
-      QIN(9,I)=(A*EN+B)*1.D-16       
-  900 CONTINUE                                                          
-C                             
-      Q(1,I)=Q(2,I)+Q(3,I)+Q(4,I)+QIN(1,I)+QIN(2,I)+QIN(3,I)+QIN(4,I)+ 
-     /QIN(5,I)+QIN(6,I)+QIN(7,I)+QIN(8,I)+QIN(9,I)           
+      J=NTRP1                                                           
+  811 A=(YTRP1(J)-YTRP1(J-1))/(XTRP1(J)-XTRP1(J-1))                     
+      B=(XTRP1(J-1)*YTRP1(J)-XTRP1(J)*YTRP1(J-1))/(XTRP1(J-1)-XTRP1(J)) 
+      QIN(15,I)=(A*EN+B)*1.D-16       
+      GO TO 813
+  812 QIN(15,I)=YTRP1(NTRP1)*(XTRP1(NTRP1)/EN)**2*1.D-16       
+C            
+  813 IF(EN.LE.3.0*EIN(15)) GO TO 815
+      PEQIN(15,I)=PEQEL(2,(I-IOFFN(15)))
+C
+C DISSOCIATIVE EXCITATION DIPOLE
+  815 IF(EN.LE.EIN(16)) GO TO 900
+      QIN(16,I)=.0320000/(EIN(16)*BETA2)*(DLOG(BETA2*GAMMA2*EMASS2/(4.0
+     /*EIN(16)))-BETA2-DEN(I)/2.0)*BBCONST*EN/(EN+EIN(16)+E(3))       
+      IF(QIN(16,I).LT.0.0) QIN(16,I)=0.0
+      IF(EN.LE.(3.0*EIN(16))) GO TO 820
+      PEQIN(16,I)=PEQEL(2,(I-IOFFN(16))) 
+C
+C DISSOCIATIVE EXCITATION  TRIPLET
+C                                                                  
+  820 IF(EN.LE.EIN(17)) GO TO 900   
+      IF(EN.GT.XTRP2(NTRP2)) GO TO 832                                
+      DO 830 J=2,NTRP2                                                  
+      IF(EN.LE.XTRP2(J)) GO TO 831                                      
+  830 CONTINUE                                                          
+      J=NTRP2                                                           
+  831 A=(YTRP2(J)-YTRP2(J-1))/(XTRP2(J)-XTRP2(J-1))                     
+      B=(XTRP2(J-1)*YTRP2(J)-XTRP2(J)*YTRP2(J-1))/(XTRP2(J-1)-XTRP2(J)) 
+      QIN(17,I)=(A*EN+B)*1.D-16       
+      GO TO 833
+  832 QIN(17,I)=YTRP2(NTRP2)*(XTRP2(NTRP2)/EN)**2*1.D-16       
+C                 
+  833 IF(EN.LE.3.0*EIN(17)) GO TO 835
+      PEQIN(17,I)=PEQEL(2,(I-IOFFN(17)))
+C
+C DISSOCIATIVE EXCITATION DIPOLE
+  835 IF(EN.LE.EIN(18)) GO TO 900
+      QIN(18,I)=.0540000/(EIN(18)*BETA2)*(DLOG(BETA2*GAMMA2*EMASS2/(4.0
+     /*EIN(18)))-BETA2-DEN(I)/2.0)*BBCONST*EN/(EN+EIN(18)+E(3)) 
+      IF(QIN(18,I).LT.0.0) QIN(18,I)=0.0
+      IF(EN.LE.(3.0*EIN(18))) GO TO 840
+      PEQIN(18,I)=PEQEL(2,(I-IOFFN(18))) 
+C
+C DISSOCIATIVE EXCITATION  TRIPLET
+C                                                                  
+  840 IF(EN.LE.EIN(19)) GO TO 900   
+      IF(EN.GT.XTRP3(NTRP3)) GO TO 852                                
+      DO 850 J=2,NTRP3                                                  
+      IF(EN.LE.XTRP3(J)) GO TO 851                                      
+  850 CONTINUE                                                          
+      J=NTRP3                                                           
+  851 A=(YTRP3(J)-YTRP3(J-1))/(XTRP3(J)-XTRP3(J-1))                     
+      B=(XTRP3(J-1)*YTRP3(J)-XTRP3(J)*YTRP3(J-1))/(XTRP3(J-1)-XTRP3(J)) 
+      QIN(19,I)=(A*EN+B)*1.D-16                        
+      GO TO 853
+  852 QIN(19,I)=YTRP3(NTRP3)*(XTRP3(NTRP3)/EN)**2*1.D-16                
+C                 
+  853 IF(EN.LE.3.0*EIN(19)) GO TO 855
+      PEQIN(19,I)=PEQEL(2,(I-IOFFN(19)))
+C
+C DISSOCIATIVE EXCITATION DIPOLE
+  855 IF(EN.LE.EIN(20)) GO TO 900
+      QIN(20,I)=.2520000/(EIN(20)*BETA2)*(DLOG(BETA2*GAMMA2*EMASS2/(4.0
+     /*EIN(20)))-BETA2-DEN(I)/2.0)*BBCONST*EN/(EN+EIN(20)+E(3))        
+      IF(QIN(20,I).LT.0.0) QIN(20,I)=0.0
+      IF(EN.LE.(3.0*EIN(20))) GO TO 860
+      PEQIN(20,I)=PEQEL(2,(I-IOFFN(20))) 
+C
+C DISSOCIATIVE EXCITATION DIPOLE
+  860 IF(EN.LE.EIN(21)) GO TO 900
+      QIN(21,I)=.9410000/(EIN(21)*BETA2)*(DLOG(BETA2*GAMMA2*EMASS2/(4.0
+     /*EIN(21)))-BETA2-DEN(I)/2.0)*BBCONST*EN/(EN+EIN(21)+E(3))        
+      IF(QIN(21,I).LT.0.0) QIN(21,I)=0.0
+      IF(EN.LE.(3.0*EIN(21))) GO TO 865
+      PEQIN(21,I)=PEQEL(2,(I-IOFFN(21))) 
+C
+C DISSOCIATIVE EXCITATION  TRIPLET
+  865 IF(EN.LE.EIN(22)) GO TO 900   
+      IF(EN.GT.XTRP4(NTRP4)) GO TO 868                                
+      DO 866 J=2,NTRP4                                                  
+      IF(EN.LE.XTRP4(J)) GO TO 867                                      
+  866 CONTINUE                                                          
+      J=NTRP4                                                           
+  867 A=(YTRP4(J)-YTRP4(J-1))/(XTRP4(J)-XTRP4(J-1))                     
+      B=(XTRP4(J-1)*YTRP4(J)-XTRP4(J)*YTRP4(J-1))/(XTRP4(J-1)-XTRP4(J)) 
+      QIN(22,I)=(A*EN+B)*1.D-16                        
+      GO TO 869
+  868 QIN(22,I)=YTRP4(NTRP4)*(XTRP4(NTRP4)/EN)**2*1.D-16               
+C                 
+  869 IF(EN.LE.3.0*EIN(22)) GO TO 870
+      PEQIN(22,I)=PEQEL(2,(I-IOFFN(22)))
+C
+C DISSOCIATIVE EXCITATION DIPOLE
+  870 IF(EN.LE.EIN(23)) GO TO 900
+      QIN(23,I)=10.40000/(EIN(23)*BETA2)*(DLOG(BETA2*GAMMA2*EMASS2/(4.0
+     /*EIN(23)))-BETA2-DEN(I)/2.0)*BBCONST*EN/(EN+EIN(23)+E(3))         
+      IF(QIN(23,I).LT.0.0) QIN(23,I)=0.0
+      IF(EN.LE.(3.0*EIN(23))) GO TO 875
+      PEQIN(23,I)=PEQEL(2,(I-IOFFN(23))) 
+C
+C DISSOCIATIVE EXCITATION DIPOLE
+  875 IF(EN.LE.EIN(24)) GO TO 900
+      QIN(24,I)=5.200000/(EIN(24)*BETA2)*(DLOG(BETA2*GAMMA2*EMASS2/(4.0
+     /*EIN(24)))-BETA2-DEN(I)/2.0)*BBCONST*EN/(EN+EIN(24)+E(3))         
+      IF(QIN(24,I).LT.0.0) QIN(24,I)=0.0
+      IF(EN.LE.(3.0*EIN(24))) GO TO 880
+      PEQIN(24,I)=PEQEL(2,(I-IOFFN(24))) 
+C
+  880 CONTINUE
+  900 CONTINUE   
+C     WRITE(6,9011) EN,QIN(1,I),QIN(2,I),QIN(3,I),QIN(4,I),QIN(5,I),
+C    /QIN(6,I),QIN(7,I),QIN(8,I),QIN(9,I),QIN(10,I),QIN(11,I),QIN(12,I),
+C    /QIN(13,I),QIN(14,I)
+C9011 FORMAT(' EN=',D12.4,' QIN=',7(D12.4,2X),/,16X,' QIN=',7(D12.4,2X))
+C     write(6,9012) Q(2,I),QATT(1,I),QATT(2,I)
+C9012 format(2X,D12.4,2X D12.4,2X,D12.4)         
+C     
+C     QSUP=QIN(1,I)+QIN(2,I)+QIN(3,I)+QIN(4,I)+QIN(5,I)+QIN(6,I)
+C     QVIB=QIN(7,I)+QIN(8,I)+QIN(9,I)+QIN(10,I)+QIN(11,I)+QIN(12,I)+
+C    /QIN(13,I)+QIN(14,I)
+C     QTRP=QIN(15,I)+QIN(17,I)+QIN(19,I)
+C     QSNG=QIN(16,I)+QIN(18,I)+QIN(20,I)+QIN(21,I)+QIN(22,I)
+C     QIONS=QION(1,I)+QION(2,I)+QION(3,I)+QION(4,I)+QION(5,I)+QION(6,I)+
+C    /QION(7,I)+QION(8,I),QION(9,I)
+C     QATS=QATT(1,I)+QATT(2,I)
+C     QTT=QSUP+QVIB+QTRP+QSNG+QIONS+QATT
+C     WRITE(6,910) EN,QSUP,QVIB,QTRP,QSNG,QIONS,QATS,QTT
+C 910 FORMAT(' EN=',D12.4,' QSUP=',D12.4,' QVIB=',D12.4,' QTRP=',D12.4,
+C    /' QSNG=',D12.4,/,16X,'QIONS=',D12.4,' QATT=',D12.4,'  QTT=',D12.4,
+C    //)
  9000 CONTINUE                                                          
 C  SAVE COMPUTE TIME
-      IF(EFINAL.LE.EIN(9)) NIN=8    
-      IF(EFINAL.LE.EIN(8)) NIN=7
-      IF(EFINAL.LE.EIN(7)) NIN=6                                        
-      IF(EFINAL.LE.EIN(6)) NIN=5
-      IF(EFINAL.LE.EIN(5)) NIN=4
-      IF(EFINAL.LE.EIN(4)) NIN=3                                        
-      IF(EFINAL.LE.EIN(3)) NIN=2                                        
-      IF(EFINAL.LE.EIN(2)) NIN=1                                        
-      IF(EFINAL.LE.EIN(1)) NIN=0                                        
-      RETURN                                                            
-      END 
+      DO 9900 K=1,NIN
+      IF(EFINAL.LE.EIN(K)) THEN
+       NIN=K-1
+       GO TO 9901
+      ENDIF
+ 9900 CONTINUE
+ 9901 CONTINUE 
+      IF(NIN.LT.6) NIN=6
+      RETURN 
+      END                  
       SUBROUTINE GAS53(Q,QIN,NIN,E,EIN,NAME,VIRIAL,EOBY
      /,PEQEL,PEQIN,PENFRA,KEL,KIN,QION,PEQION,EION,NION,QATT,NATT,
      /QNULL,NNULL,SCLN,NC0,EC0,WKLM,EFL,NG1,EG1,NG2,EG2,SCRPT,SCRPTN)  
