@@ -7,8 +7,8 @@ if sys.platform == 'darwin':
   ROOT.gSystem.Load(path + '/lib/libmagboltz.dylib')
   ROOT.gSystem.Load(path + '/lib/libGarfield.dylib')
 else:
-  ROOT.gSystem.Load(path + '/install/lib/libmagboltz.so')
-  ROOT.gSystem.Load(path + '/install/lib/libGarfield.so')
+  ROOT.gSystem.Load(path + '/lib/libmagboltz.so')
+  ROOT.gSystem.Load(path + '/lib/libGarfield.so')
 
 ROOT.Garfield.SetDefaultStyle()
 
