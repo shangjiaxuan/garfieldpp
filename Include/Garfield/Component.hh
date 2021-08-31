@@ -287,6 +287,8 @@ class Component {
   /// Switch off debugging messages.
   void DisableDebugging() { m_debug = false; }
 
+  /// Does the component have maps of the Townsend coefficient?
+  virtual bool HasTownsendMap() const { return false; }
   /// Does the component have attachment maps?
   virtual bool HasAttachmentMap() const { return false; }
   /// Does the component have velocity maps?
@@ -302,6 +304,18 @@ class Component {
   virtual bool HoleAttachment(const double /*x*/, const double /*y*/,
                               const double /*z*/, double& eta) {
     eta = 0;
+    return false;
+  }
+  /// Get the electron Townsend coefficient.
+  virtual bool ElectronTownsend(const double /*x*/, const double /*y*/,
+                                const double /*z*/, double& alpha) {
+    alpha = 0;
+    return false;
+  }
+  /// Get the hole Townsend coefficient.
+  virtual bool HoleTownsend(const double /*x*/, const double /*y*/,
+                            const double /*z*/, double& alpha) {
+    alpha = 0;
     return false;
   }
   /// Get the electron drift velocity.

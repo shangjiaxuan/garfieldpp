@@ -103,6 +103,11 @@ class ComponentTcadBase : public Component {
   bool SetAcceptor(const size_t acceptorNumber, const double exsec,
                    const double hxsec, const double concentration);
 
+  /// Switch use of the imported impact ionisation map on/off.
+  void EnableAlphaMap(const bool on) { m_useAlphaMap = on; }
+  bool HasTownsendMap() const override {
+    return m_useAlphaMap && !(m_eAlpha.empty() && m_hAlpha.empty());
+  }
   /// Switch use of the imported trapping map on/off.
   void EnableAttachmentMap(const bool on) { m_useAttachmentMap = on; }
   bool HasAttachmentMap() const override {
@@ -117,6 +122,11 @@ class ComponentTcadBase : public Component {
                            double& etau) override;
   bool GetHoleLifetime(const double x, const double y, const double z,
                        double& htau) override;
+
+  bool ElectronTownsend(const double x, const double y, const double z,
+                        double& alpha) override;
+  bool HoleTownsend(const double x, const double y, const double z,
+                    double& alpha) override;
   
   // Mobilities
   bool GetElectronMobility(const double x, const double y, const double z, 
@@ -185,6 +195,9 @@ class ComponentTcadBase : public Component {
   // Mobilities [cm2 / (V ns)]
   std::vector<double> m_eMobility;
   std::vector<double> m_hMobility; 
+  // Impact ionisation coefficients [1 / cm]
+  std::vector<double> m_eAlpha;
+  std::vector<double> m_hAlpha;
   // Lifetimes [ns]
   std::vector<double> m_eLifetime;
   std::vector<double> m_hLifetime;
@@ -210,6 +223,8 @@ class ComponentTcadBase : public Component {
   bool m_useVelocityMap = false;
   // Use trapping map or not.
   bool m_useAttachmentMap = false;
+  // Use impact ionisation map or not.
+  bool m_useAlphaMap = false;
 
   // Bounding box.
   std::array<double, 3> m_bbMin = {{0., 0., 0.}};
