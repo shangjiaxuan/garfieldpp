@@ -248,7 +248,7 @@ class AvalancheMC {
   unsigned int m_navg = 1;
   bool m_useWeightingPotential = true;
   bool m_doInducedCharge = false;
-  bool m_doEquilibration = true;
+  bool m_doEquilibration = false;
   bool m_doRKF = false;
   bool m_useDiffusion = true;
   bool m_useAttachment = true;
