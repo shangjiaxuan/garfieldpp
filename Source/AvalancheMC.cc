@@ -650,7 +650,6 @@ int AvalancheMC::GetField(const std::array<double, 3>& x,
   // Get the magnetic field, if requested.
   if (m_useBfield) {
     m_sensor->MagneticField(x[0], x[1], x[2], b[0], b[1], b[2], status);
-    for (size_t k = 0; k < 3; ++k) b[k] *= Tesla2Internal;
   }
   return 0;
 }
@@ -755,6 +754,32 @@ double AvalancheMC::GetAttachment(const Particle particle, Medium* medium,
     medium->HoleAttachment(e[0], e[1], e[2], b[0], b[1], b[2], eta);
   }
   return eta;
+}
+
+double AvalancheMC::GetTownsend(const Particle particle, Medium* medium,
+                                const std::array<double, 3>& x,
+                                const std::array<double, 3>& e,
+                                const std::array<double, 3>& b) const {
+  double alpha = 0.;
+  if (m_useTownsendMap) {
+    const auto nComponents = m_sensor->GetNumberOfComponents();
+    for (size_t i = 0; i < nComponents; ++i) {
+      auto cmp = m_sensor->GetComponent(i);
+      if (!cmp->HasTownsendMap()) continue;
+      if (particle == Particle::Electron) {
+        if (!cmp->ElectronTownsend(x[0], x[1], x[2], alpha)) continue;
+      } else {
+        if (!cmp->HoleTownsend(x[0], x[1], x[2], alpha)) continue;
+      }
+      return alpha;
+    }
+  }
+  if (particle == Particle::Electron) {
+    medium->ElectronTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
+  } else {
+    medium->HoleTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
+  }
+  return alpha;
 }
 
 void AvalancheMC::StepRKF(const Particle particle,
@@ -1029,14 +1054,7 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
       std::array<double, 3> v;
       if (!GetVelocity(particle, medium, x, e, b, v)) continue;
       // Get Townsend and attachment coefficients.
-      double alpha = 0.;
-
-      if (particle == Particle::Electron) {
-        medium->ElectronTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
-      } else {
-        medium->HoleTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
-      }
-
+      double alpha = GetTownsend(particle, medium, x, e, b);
       double eta = GetAttachment(particle, medium, x, e, b);
       if (eta < 0.) {
         eta = std::abs(eta) * Mag(v) / veff;

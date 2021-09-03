@@ -28,7 +28,8 @@ float Interpolate(const std::array<float, SIZE>& xs,
   const auto y0 = ys[it0 - begin];
   const auto y1 = ys[it1 - begin];
   // Linear interpolation.
-  return y0 + (x - *it0) * (y1 - y0) / (*it1 - *it0);
+  const auto f = (x - *it0) / (*it1 - *it0);
+  return y1 * f + (1. - f) * y0;
 }
 }
 

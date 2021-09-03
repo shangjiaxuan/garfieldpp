@@ -141,11 +141,13 @@ bool ComponentTcadBase<N>::Initialise(const std::string& gridfilename,
   std::cout << m_className << "::Initialise:\n"
             << "    Available data:\n";
   if (!m_epot.empty()) std::cout << "      Electrostatic potential\n";
-  if (!m_efield.empty())    std::cout << "      Electric field\n";
+  if (!m_efield.empty()) std::cout << "      Electric field\n";
   if (!m_eMobility.empty()) std::cout << "      Electron mobility\n";
   if (!m_hMobility.empty()) std::cout << "      Hole mobility\n";
   if (!m_eVelocity.empty()) std::cout << "      Electron velocity\n";
   if (!m_hVelocity.empty()) std::cout << "      Hole velocity\n";
+  if (!m_eAlpha.empty()) std::cout << "      Electron impact ionisation\n";
+  if (!m_hAlpha.empty()) std::cout << "      Hole impact ionisation\n";
   if (!m_eLifetime.empty()) std::cout << "      Electron lifetime\n";
   if (!m_hLifetime.empty()) std::cout << "      Hole lifetime\n";
   if (!m_donors.empty()) {
@@ -403,6 +405,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
     ++iLine;
     // Strip white space from the beginning of the line.
     ltrim(line);
+    if (line.empty()) continue;
     // Find entry 'nb_regions'.
     if (line.substr(0, 10) != "nb_regions") continue;
     const auto pEq = line.find('=');
@@ -443,6 +446,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
   while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
+    if (line.empty()) continue;
     // Find entry 'regions'.
     if (line.substr(0, 7) != "regions") continue;
     // Get region names (given in brackets).
@@ -479,6 +483,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
   while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
+    if (line.empty()) continue;
     // Find section 'Vertices'.
     if (line.substr(0, 8) != "Vertices") continue;
     // Get number of vertices (given in brackets).
@@ -520,6 +525,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
   while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
+    if (line.empty()) continue;
     // Find section 'Edges'.
     if (line.substr(0, 5) != "Edges") continue;
     // Get the number of edges (given in brackets).
@@ -577,6 +583,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
     while (std::getline(gridfile, line)) {
       ++iLine;
       ltrim(line);
+      if (line.empty()) continue;
       // Find section 'Faces'.
       if (line.substr(0, 5) != "Faces") continue;
       // Get the number of faces (given in brackets).
@@ -621,6 +628,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
   while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
+    if (line.empty()) continue;
     // Find section 'Elements'.
     if (line.substr(0, 8) != "Elements") continue;
     // Get number of elements (given in brackets).
@@ -867,6 +875,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
   // Assign regions to elements.
   while (std::getline(gridfile, line)) {
     ltrim(line);
+    if (line.empty()) continue;
     // Find section 'Region'.
     if (line.substr(0, 6) != "Region") continue;
     // Get region name (given in brackets).
@@ -932,6 +941,8 @@ bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
   while (std::getline(datafile, line)) {
     // Strip white space from the beginning of the line.
     ltrim(line);
+    // Skip empty lines.
+    if (line.empty()) continue;
     // Find data section.
     if (line.substr(0, 8) != "function") continue;
     // Read type of data set.
@@ -949,6 +960,9 @@ bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
     data.str(line);
     data >> dataset;
     data.clear();
+    if (m_debug) {
+      std::cout << "    Found dataset " << dataset << ".\n";
+    }
     if (dataset == "ElectrostaticPotential") {
       m_epot.assign(nVertices, 0.);
       if (!ReadDataset(datafile, dataset)) {
@@ -983,6 +997,18 @@ bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
       m_hMobility.assign(nVertices, 0.);
       if (!ReadDataset(datafile, dataset)) {
         m_hMobility.clear();
+        return false;
+      }
+    } else if (dataset == "eAlphaAvalanche") {
+      m_eAlpha.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_eAlpha.clear();
+        return false;
+      }
+    } else if (dataset == "hAlphaAvalanche") {
+      m_hAlpha.assign(nVertices, 0.);
+      if (!ReadDataset(datafile, dataset)) {
+        m_hAlpha.clear();
         return false;
       }
     } else if (dataset == "eLifetime") {
@@ -1035,6 +1061,8 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
     hDriftVelocity,
     eMobility,
     hMobility,
+    eAlpha,
+    hAlpha,
     eLifetime,
     hLifetime,
     DonorTrapOccupation,
@@ -1054,6 +1082,10 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
     ds = eMobility;
   } else if (dataset == "hMobility") {
     ds = hMobility;
+  } else if (dataset == "eAlphaAvalanche") {
+    ds = eAlpha;
+  } else if (dataset == "hAlphaAvalanche") {
+    ds = hAlpha;
   } else if (dataset == "eLifetime") {
     ds = eLifetime;
   } else if (dataset == "hLifetime") {
@@ -1073,7 +1105,6 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
   if (ds == EField || ds == eDriftVelocity || ds == hDriftVelocity) {
     isVector = true;
   }
-
   std::string line;
   std::getline(datafile, line);
   std::getline(datafile, line);
@@ -1098,6 +1129,7 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
               << "    Unknown region " << name << ".\n";
     return false;
   }
+
   // Get the number of values.
   std::getline(datafile, line);
   if (!ExtractFromBrackets(line)) {
@@ -1121,11 +1153,10 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
       isInRegion[m_elements[j].vertex[k]] = true;
     }
   }
-
   unsigned int ivertex = 0;
   for (int j = 0; j < nValues; ++j) {
     // Read the next value.
-    std::array<double, N> val;
+    std::array<long double, N> val;
     if (isVector) {
       for (size_t k = 0; k < N; ++k) datafile >> val[k];
     } else {
@@ -1172,6 +1203,12 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
         // Convert from cm2 / (V s) to cm2 / (V ns).
         m_hMobility[ivertex] = val[0] * 1.e-9;
         break;
+      case eAlpha:
+        m_eAlpha[ivertex] = val[0];
+        break;
+      case hAlpha:
+        m_hAlpha[ivertex] = val[0];
+        break;
       case eLifetime:
         // Convert from s to ns.
         m_eLifetime[ivertex] = val[0] * 1.e9;
@@ -1216,6 +1253,7 @@ bool ComponentTcadBase<N>::LoadWeightingField(
   while (std::getline(datafile, line)) {
     // Strip white space from the beginning of the line.
     ltrim(line);
+    if (line.empty()) continue;
     // Find data section.
     if (line.substr(0, 8) != "function") continue;
     // Read type of data set.
@@ -1449,6 +1487,20 @@ bool ComponentTcadBase<N>::HoleAttachment(const double x, const double y,
 }
 
 template<size_t N>
+bool ComponentTcadBase<N>::ElectronTownsend(const double x, const double y,
+                                            const double z, double& alpha) {
+  Interpolate(x, y, z, m_eAlpha, alpha);
+  return true;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::HoleTownsend(const double x, const double y,
+                                        const double z, double& alpha) {
+  Interpolate(x, y, z, m_hAlpha, alpha);
+  return true;
+}
+
+template<size_t N>
 bool ComponentTcadBase<N>::ElectronVelocity(const double x, const double y,
                                             const double z, double& vx, 
                                             double& vy, double& vz) {
@@ -1536,6 +1588,8 @@ void ComponentTcadBase<N>::Cleanup() {
   m_hVelocity.clear();
   m_eMobility.clear();
   m_hMobility.clear();
+  m_eAlpha.clear();
+  m_hAlpha.clear();
   m_eLifetime.clear();
   m_hLifetime.clear();
   m_donors.clear();

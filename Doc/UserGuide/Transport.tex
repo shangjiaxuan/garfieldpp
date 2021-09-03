@@ -391,24 +391,37 @@ are tracked. If the time coordinate of a particle crosses the upper limit,
 it is stopped and assigned the status code -17.
 Slicing the calculation into time steps can be useful for instance 
 for making a movie of the avalanche evolution 
-or for calculations involving space charge.
+or for calculations involving space charge. 
+Another useful function for that purpose is
+\begin{lstlisting}
+bool ResumeAvalanche(const bool electron = true, const bool hole = true);
+\end{lstlisting}
+\begin{description}
+  \item[electron,hole] flags to switch off the electron (hole) component of the avalanche
+\end{description}
+which instructs \texttt{AvalancheMC} to continue the avalanche simulation 
+from the most recent set of end points. 
+
 The time window can be removed using
 \begin{lstlisting}
 void UnsetTimeWindow();
 \end{lstlisting}
 
-By default, the Townsend and attachment coefficients are integrated over 
-path segments projected onto the local drift velocity vector. 
-This feature, which can be activated or deactivated by calling the function
+Using the function 
 \begin{lstlisting}
 void EnableProjectedPathIntegration(const bool on = true);
 \end{lstlisting} 
-ensures that the path length integral does not depend on the step size.
-Using 
+one can request the Townsend and attachment coefficients to 
+be projected onto the local drift velocity vector when integrating 
+them over drift path segments.
+By default, this feature is switched off.
+%It ensures that the path length integral does not depend on the step size.
+The function 
 \begin{lstlisting}
 void EnableAvalancheSizeLimit(const unsigned int size);
 \end{lstlisting}
-an upper limit to the number of electrons in an avalanche can be imposed.
+sets an upper limit to the number of electrons in an avalanche 
+can be imposed.
 
 \section{Microscopic tracking}\label{Sec:MicroscopicTracking}
 In the microscopic tracking approach -- implemented at present only for electrons --

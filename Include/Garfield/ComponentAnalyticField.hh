@@ -639,6 +639,8 @@ class ComponentAnalyticField : public Component {
   void WfieldStripXy(const double xpos, const double ypos, const double zpos,
                      double& ex, double& ey, double& ez, 
                      const int ip, const Strip& strip) const;
+  void WfieldStrip(const double x, const double y, const double g, 
+                   const double w, double& fx, double& fy) const; 
   void WfieldPixel(const double xpos, const double ypos, const double zpos,
                    double& ex, double& ey, double& ez,
                    const int ip, const Pixel& pixel) const;

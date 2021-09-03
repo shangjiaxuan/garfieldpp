@@ -68,9 +68,10 @@ class AvalancheMC {
   /// Switch off attachment and multiplication.
   void DisableAttachment() { m_useAttachment = false; }
 
+  /// Retrieve the Townsend coefficient from the component.
+  void EnableTownsendMap(const bool on = true) { m_useTownsendMap = on; }
   /// Retrieve the attachment coefficient from the component.
   void EnableAttachmentMap(const bool on = true) { m_useAttachmentMap = on; }
-
   /// Retrieve the drift velocity from the component.
   void EnableVelocityMap(const bool on = true) { m_useVelocityMap = on; }
 
@@ -247,7 +248,7 @@ class AvalancheMC {
   unsigned int m_navg = 1;
   bool m_useWeightingPotential = true;
   bool m_doInducedCharge = false;
-  bool m_doEquilibration = true;
+  bool m_doEquilibration = false;
   bool m_doRKF = false;
   bool m_useDiffusion = true;
   bool m_useAttachment = true;
@@ -259,6 +260,8 @@ class AvalancheMC {
   /// Scaling factor for ion signals.
   double m_scaleI = 1.;
 
+  /// Take Townsend coefficients from the component.
+  bool m_useTownsendMap = false;
   /// Take attachment coefficients from the component.
   bool m_useAttachmentMap = false;
   /// Take the drift velocities from the component.
@@ -324,6 +327,11 @@ class AvalancheMC {
                        const std::array<double, 3>& x,
                        const std::array<double, 3>& e,
                        const std::array<double, 3>& b) const;
+  /// Compute the Townsend coefficient.
+  double GetTownsend(const Particle particle, Medium* medium,
+                     const std::array<double, 3>& x,
+                     const std::array<double, 3>& e,
+                     const std::array<double, 3>& b) const;
   /// Compute end point and effective velocity for a step.
   void StepRKF(const Particle particle, const std::array<double, 3>& x0,
                const std::array<double, 3>& v0, const double dt,
