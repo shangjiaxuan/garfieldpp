@@ -651,8 +651,7 @@ double ComponentComsol::WeightingPotential(const double xin, const double yin,
   const Node& n7 = m_nodes[element.emap[7]];
   const Node& n8 = m_nodes[element.emap[8]];
   const Node& n9 = m_nodes[element.emap[9]];
-    
-    // TODO: Fix this bug when setting range: it gives nan! Print all variables used here to find the flaw.
+
   // Tetrahedral field
   return n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
          n2.w[iw] * t3 * (2 * t3 - 1) + n3.w[iw] * t4 * (2 * t4 - 1) +
