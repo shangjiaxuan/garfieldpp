@@ -131,7 +131,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   } while (!ends_with(line, "# number of mesh points") &&
            !ends_with(line, "# number of mesh vertices"));
   const int nNodes = readInt(line);
-    int notInRange = 0;
+    int nInRange = 0;
   std::cout << m_className << "::Initialise: " << nNodes << " nodes.\n";
   do {
     if (!std::getline(fmesh, line)) {
@@ -148,11 +148,13 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     newNode.x *= m_unit;
     newNode.y *= m_unit;
     newNode.z *= m_unit;
-    if(!CheckInRange(newNode.x,newNode.y,newNode.z)){
-        notInRange++;
-        continue;
-    }
-    m_nodes.push_back(std::move(newNode));
+      
+      if(m_range.set){
+          m_nodesHolder.push_back(std::move(newNode));
+          if(CheckInRange(newNode.x,newNode.y,newNode.z)) nInRange++;
+      }else{
+          m_nodes.push_back(std::move(newNode));
+      }
   }
 
   do {
@@ -172,12 +174,6 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     }
   } while (!ends_with(line, "# number of elements"));
   const int nElements = readInt(line);
-    std::cerr << m_className << "::Initialise:\n"
-              << "    nElements = " << nElements << ".\n";
-    std::cerr << m_className << "::Initialise:\n"
-              << "    notInRange = " << notInRange << ".\n";
-    std::cerr << m_className << "::Initialise:\n"
-              << "    nNodes = " << nNodes << ".\n";
   m_elements.clear();
   std::cout << m_className << "::Initialise: " << nElements << " elements.\n";
   std::getline(fmesh, line);
@@ -190,9 +186,43 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     for (int j = 0; j < 10; ++j) {
       fmesh >> newElement.emap[perm[j]];
     }
-    m_elements.push_back(std::move(newElement));
+      if(m_range.set){
+          if(ElementInRange(newElement)){
+              m_elements.push_back(std::move(newElement));
+              for(int j = 0; j<10; j++){
+                  m_nodeIndices.push_back(newElement.emap[j]);
+              }
+          }
+      }else{
+          m_elements.push_back(std::move(newElement));
+      }
   }
-
+    if(m_range.set){
+        std::vector<int> m_nodeMap(nNodes,-1);
+        //Rearange m_nodeIndices and delete duplicates
+        sort(m_nodeIndices.begin(), m_nodeIndices.end());
+        m_nodeIndices.erase(std::unique(m_nodeIndices.begin(), m_nodeIndices.end()), m_nodeIndices.end());
+        //Go over m_nodeIndices and add the corresponding m_nodesHolder node to m_nodes
+        for(int& i : m_nodeIndices){
+            m_nodes.push_back(m_nodesHolder[i]);
+            //Update m_nodeMap to get correct node Id.
+            m_nodeMap[i] = m_nodes.size()-1;
+   //         std::cerr << m_className << "::Initialise:\n"
+     //                 << "    Mapping node: " << i << " -> "<< m_nodes.size()-1 <<".\n";
+        }
+        //Go over m_elements and update the node Id's using the map you just created
+        for(Element& takeElement : m_elements){
+            for (int j = 0; j < 10; ++j) {
+      //          std::cerr << m_className << "::Initialise:\n"
+      //                    << "    Mapping element: " << takeElement.emap[j] << " -> "<< m_nodeMap[takeElement.emap[j]] <<".\n";
+                takeElement.emap[j]=m_nodeMap[takeElement.emap[j]];
+                if(takeElement.emap[j]==-1){
+                    return false;
+                }
+            }
+        }
+    }
+    
   do {
     if (!std::getline(fmesh, line)) {
       std::cerr << m_className << "::Initialise:\n"
@@ -262,15 +292,16 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     points.push_back(std::move(point));
   }
   KDTree kdtree(points);
-  std::vector<bool> used(nNodes, false);
-
+    
+    const int usedSize = m_range.set ? m_nodes.size() : nNodes;
+  std::vector<bool> used(usedSize, false);
   for (int i = 0; i < nNodes; ++i) {
     double x, y, z, v;
     ffield >> x >> y >> z >> v;
     x *= m_unit;
     y *= m_unit;
     z *= m_unit;
-      if(!CheckInRange(x,y,z)) continue;
+    if(!CheckInRange(x,y,z)) continue;
     std::vector<double> w;
     for (size_t j = 0; j < nWeightingFields; ++j) {
       double p;
@@ -296,12 +327,13 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   }
   PrintProgress(1.);
   ffield.close();
-  auto nMissing = std::count(used.begin(), used.end(), false);
+  auto nMissing = std::count(used.begin(), used.end(), false) ;
+    if(m_range.set) nMissing = nMissing - m_nodes.size() + nInRange;
   if (nMissing > 0) {
     std::cerr << std::endl
               << m_className << "::Initialise:\n"
               << "    Missing potentials for " << nMissing << " nodes.\n";
-    //return false;
+      return false;
   }
 
   m_ready = true;
@@ -622,32 +654,6 @@ double ComponentComsol::WeightingPotential(const double xin, const double yin,
     
     // TODO: Fix this bug when setting range: it gives nan! Print all variables used here to find the flaw.
   // Tetrahedral field
-    std::cout << m_className << "  iw = "<<iw<<".\n";
-    
-    std::cout << m_className << "  t1 = "<<t1<<".\n";
-    std::cout << m_className << "  t2 = "<<t2<<".\n";
-    std::cout << m_className << "  t3 = "<<t3<<".\n";
-    std::cout << m_className << "  t4 = "<<t4<<".\n";
-    
-    std::cout << m_className << "  element.emap[5] = "<<element.emap[5]<<".\n";
-    std::cout << m_className << "  element.emap[5] = "<<m_nodes.size()<<".\n";
-    
-    std::cout << m_className << "  n0.w[iw] = "<<n0.w[iw]<<".\n";
-    std::cout << m_className << "  n1.w[iw] = "<<n1.w[iw]<<".\n";
-    std::cout << m_className << "  n2.w[iw] = "<<n2.w[iw]<<".\n";
-    std::cout << m_className << "  n3.w[iw] = "<<n3.w[iw]<<".\n";
-    std::cout << m_className << "  n4.w[iw] = "<<n4.w[iw]<<".\n";
-    std::cout << m_className << "  n5.w[iw] = "<<n5.w[iw]<<".\n";
-    std::cout << m_className << "  n6.w[iw] = "<<n6.w[iw]<<".\n";
-    std::cout << m_className << "  n7.w[iw] = "<<n7.w[iw]<<".\n";
-    std::cout << m_className << "  n8.w[iw] = "<<n8.w[iw]<<".\n";
-    std::cout << m_className << "  n9.w[iw] = "<<n9.w[iw]<<".\n";
-    
-    std::cout << m_className << "  res = "<<n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
-    n2.w[iw] * t3 * (2 * t3 - 1) + n3.w[iw] * t4 * (2 * t4 - 1) +
-    4 * n4.w[iw] * t1 * t2 + 4 * n5.w[iw] * t1 * t3 +
-    4 * n6.w[iw] * t1 * t4 + 4 * n7.w[iw] * t2 * t3 +
-    4 * n8.w[iw] * t2 * t4 + 4 * n9.w[iw] * t3 * t4<<".\n";
   return n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
          n2.w[iw] * t3 * (2 * t3 - 1) + n3.w[iw] * t4 * (2 * t4 - 1) +
          4 * n4.w[iw] * t1 * t2 + 4 * n5.w[iw] * t1 * t3 +
