@@ -9,8 +9,6 @@
 
 #include "Garfield/GarfieldConstants.hh"
 
-#define LOG(x) std::cout<<x<<std::endl
-
 namespace Garfield {
 
 ComponentParallelPlate::ComponentParallelPlate() : Component("ParallelPlate") {}
@@ -23,18 +21,17 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     const int Nholder1 = eps.size();
     const int Nholder2 = d.size();
     if(N!=Nholder1||N!=Nholder2){
-        LOG("ComponentParallelPlate::Setup:: Inconsistency between the number of layers, permittivities and thicknesses given.");
+        std::cout << m_className << "::Inconsistency between the number of layers, permittivities and thicknesses given.\n";
         return;
     }else if(N<2){
-        LOG("ComponentParallelPlate::Setup:: Number of layers must be larger then 1.");
+        
+        std::cout << m_className << "::Setup:: Number of layers must be larger then 1.\n";
         return;
     }
     
-    if(m_debug) LOG("ComponentParallelPlate::Setup:: Loading parameters.");
+    if(m_debug) std::cout << m_className << "::Setup:: Loading parameters.\n";
     m_epsHolder = eps;
     m_eps = placeHolder;
-    // TODO: Check equations if relative permitivity is ok.
-    //std::for_each(m_epsHolder.begin(), m_epsHolder.end(), [=](double &n){ n*=m_eps0; });
     
     m_dHolder = d;
     m_d = placeHolder;
@@ -42,28 +39,25 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     m_V = V;
     
     m_sigmaIndex = sigmaIndex;
-    
-    //m_upperBoundIntigration *= *max_element(std::begin(m_dHolder), std::end(m_dHolder));
-    // TODO:Remove LOG
-    LOG("ComponentParallelPlate::Setup:: Max k integration range = (0,"<<200<<").");
+ 
     std::vector<double>  m_zHolder(N+1);
     m_zHolder[0] = 0;
     for(int i = 1; i<=N; i++){
         m_zHolder[i]=m_zHolder[i-1]+m_dHolder[i-1];
         
-        if(m_debug) LOG("ComponentParallelPlate::Setup:: layer "<<i<<":: z = "<<m_zHolder[i]<<", epsr = "<<m_epsHolder[i-1]);
+        if(m_debug) std::cout << m_className << "Setup:: layer "<<i<<":: z = "<<m_zHolder[i]<<", epsr = "<<m_epsHolder[i-1]);
     }
     m_z = m_zHolder;
     
-    if(m_debug) LOG("ComponentParallelPlate::Setup:: Constructing matrices");
+    if(m_debug) std::cout << m_className << "Setup:: Constructing matrices.\n";
     constructGeometryMatrices(m_N);
     
-    if(m_debug) LOG("ComponentParallelPlate::Setup:: Computing weighting potential functions.");
+    if(m_debug) std::cout << m_className << "Setup:: Computing weighting potential functions.\n";
     setHIntegrant();
     setwpStripIntegrant();
     setwpPixelIntegrant();
     
-    LOG("ComponentParallelPlate::Setup:: Geometry with N = "<< N <<" layers set.");
+    std::cout << m_className << "Setup:: Geometry with N = "<< N <<" layers set.\n";
 }
 
 bool ComponentParallelPlate::GetBoundingBox(double& x0, double& y0, double& z0,
@@ -79,7 +73,7 @@ bool ComponentParallelPlate::GetBoundingBox(double& x0, double& y0, double& z0,
   x0 = -std::numeric_limits<double>::infinity();
   z1 = +std::numeric_limits<double>::infinity();
   x1 = +std::numeric_limits<double>::infinity();
-  // TODO: check!
+  
   y0 = 0.;
   y1 = m_z.back();
   return true;
@@ -178,7 +172,6 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
     
     ey = constEFieldLayer(im);
     
-    // TODO: check sign
     v = -m_V - (z-m_z[im-1]) * constEFieldLayer(im);
     for(int i=1; i<=im-1;i++){
         v-=(m_z[i]-m_z[i-1])* constEFieldLayer(i);
@@ -478,7 +471,6 @@ void ComponentParallelPlate::setHIntegrant(){
         if(!getLayer(z,im,epsM)) return 0.;
         LayerUpdate(z,im,epsM);
         
-        //if(pow(2,m_N-im-1)<1) return 0.;
         for(int i=0; i<pow(2,m_N-im-1);i++){
             h+=m_gMatrix[im][i]*sinh(kk*(m_wMatrix[im][i]+m_z.back()-z));
         }
@@ -547,7 +539,7 @@ bool ComponentParallelPlate::decToBinary(int n,std::vector<int>& binaryNum)
     int i = 0;
     while (n > 0) {
         if(i+1>L){
-            LOG("Size of binary exceeds amount of colomb.");
+            std::cerr << m_className << "::decToBinary: Size of binary exceeds amount of colomb.\n";
             return false; // Triggered if binary expression is larger then n.
         }
         // storing remainder in binary array
@@ -579,7 +571,6 @@ void ComponentParallelPlate::SetWeightingPotentialGrid(const double xmin, const 
           LoadWeightingPotentialGrid(label);
       }
     }
-    // TODO: Use existing classes for a grid based field map!
  
 }
 
