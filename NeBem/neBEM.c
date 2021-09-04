@@ -391,10 +391,10 @@ int LHMatrix(void) {
           // Axes direction are, however, still global which when rotated to ECS
           // system, yields FinalVector[].
           {  // Rotate point3D from global to local system
+            double InitialVector[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
             double TransformationMatrix[3][3] = {
                 {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
             DirnCosn3D *DirCos = &(EleArr + elesrc - 1)->G.DC;
-
             TransformationMatrix[0][0] = DirCos->XUnit.X;
             TransformationMatrix[0][1] = DirCos->XUnit.Y;
             TransformationMatrix[0][2] = DirCos->XUnit.Z;
@@ -404,9 +404,8 @@ int LHMatrix(void) {
             TransformationMatrix[2][0] = DirCos->ZUnit.X;
             TransformationMatrix[2][1] = DirCos->ZUnit.Y;
             TransformationMatrix[2][2] = DirCos->ZUnit.Z;
-
-            double InitialVector[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
             double FinalVector[3] = {0., 0., 0.};
+
             for (int i = 0; i < 3; ++i) {
               for (int j = 0; j < 3; ++j) {
                 FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
@@ -558,10 +557,12 @@ int LHMatrix(void) {
                     Point3D localP;
                     // axis direction in the global system
                     {  // Rotate point3D from global to local system
+                      // Vector in the GCS
+                      double InitialVector[3] = {xfld - XOfRpt, yfld - YOfRpt,
+                                                 zfld - ZOfRpt};
                       double TransformationMatrix[3][3] = {
                           {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
                       DirnCosn3D *DirCos = &(EleArr + elesrc - 1)->G.DC;
-
                       TransformationMatrix[0][0] = DirCos->XUnit.X;
                       TransformationMatrix[0][1] = DirCos->XUnit.Y;
                       TransformationMatrix[0][2] = DirCos->XUnit.Z;
@@ -571,11 +572,8 @@ int LHMatrix(void) {
                       TransformationMatrix[2][0] = DirCos->ZUnit.X;
                       TransformationMatrix[2][1] = DirCos->ZUnit.Y;
                       TransformationMatrix[2][2] = DirCos->ZUnit.Z;
-
-                      // Vector in the GCS
-                      double InitialVector[3] = {xfld - XOfRpt, yfld - YOfRpt,
-                                                 zfld - ZOfRpt};
                       double FinalVector[3] = {0., 0., 0.};
+
                       for (int i = 0; i < 3; ++i) {
                         for (int j = 0; j < 3; ++j) {
                           FinalVector[i] +=
@@ -2153,19 +2151,12 @@ double ValueKnCh(int elefld) {
     Point3D *pOrigin = &(EleArr + elesrc - 1)->G.Origin;
 
     {  // Rotate point3D from global to local system
-      double InitialVector[4];
-      double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 1.0}};
+      double InitialVector[3] =
+             {xfld - pOrigin->X, yfld - pOrigin->Y, zfld - pOrigin->Z};
+      double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0}};
       DirnCosn3D *DirCos = &(EleArr + elesrc - 1)->G.DC;
-      double FinalVector[4];
-
-      InitialVector[0] = xfld - pOrigin->X;
-      InitialVector[1] = yfld - pOrigin->Y;
-      InitialVector[2] = zfld - pOrigin->Z;
-      InitialVector[3] = 1.0;
-
       TransformationMatrix[0][0] = DirCos->XUnit.X;
       TransformationMatrix[0][1] = DirCos->XUnit.Y;
       TransformationMatrix[0][2] = DirCos->XUnit.Z;
@@ -2175,10 +2166,11 @@ double ValueKnCh(int elefld) {
       TransformationMatrix[2][0] = DirCos->ZUnit.X;
       TransformationMatrix[2][1] = DirCos->ZUnit.Y;
       TransformationMatrix[2][2] = DirCos->ZUnit.Z;
+      double FinalVector[3];
 
-      for (int i = 0; i < 4; ++i) {
+      for (int i = 0; i < 3; ++i) {
         FinalVector[i] = 0.0;
-        for (int j = 0; j < 4; ++j) {
+        for (int j = 0; j < 3; ++j) {
           FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
         }
       }
@@ -2208,8 +2200,9 @@ double ValueKnCh(int elefld) {
     }           // switch over gtsrc ends
   }             // for all source elements - elesrc
 
+  value += MyFACTOR;  // in order reduce divisions by MyFACTOR later
   if (dbgFn) {
-    printf("value after known charges on elements: %g\n", value);
+    printf("value after known charges on elements (* MyFACTOR): %g\n", value);
   }
 
   // globalP is now required with a different definition
@@ -2226,7 +2219,7 @@ double ValueKnCh(int elefld) {
     sourcePt.Y = PointKnChArr[point].P.Y;
     sourcePt.Z = PointKnChArr[point].P.Z;
     value += PointKnChArr[point].Assigned *
-             PointKnChPF(sourcePt, fieldPt, &tmpglobalF) / MyFACTOR;
+             PointKnChPF(sourcePt, fieldPt, &tmpglobalF);
   }  // for all points
   if (dbgFn) {
     printf("value after known charges at points: %g\n", value);
@@ -2250,7 +2243,7 @@ double ValueKnCh(int elefld) {
           stopPt.Y, stopPt.Z, radius, LineKnChArr[line].Assigned);
     }
     value += LineKnChArr[line].Assigned *
-             LineKnChPF(startPt, stopPt, fieldPt, &tmpglobalF) / MyFACTOR;
+             LineKnChPF(startPt, stopPt, fieldPt, &tmpglobalF);
   }  // for lines
   if (dbgFn) {
     printf("value after known charges on lines: %g\n", value);
@@ -2263,8 +2256,7 @@ double ValueKnCh(int elefld) {
     value +=
         (AreaKnChArr + area - 1)->Assigned *
         AreaKnChPF((AreaKnChArr + area - 1)->NbVertices,
-                   ((AreaKnChArr + area - 1)->Vertex), fieldPt, &tmpglobalF) /
-        MyFACTOR;
+                   ((AreaKnChArr + area - 1)->Vertex), fieldPt, &tmpglobalF);
   }  // for areas
   if (dbgFn) {
     printf("value after known charges on areas: %g\n", value);
@@ -2275,11 +2267,12 @@ double ValueKnCh(int elefld) {
     value += (VolumeKnChArr + vol - 1)->Assigned *
              VolumeKnChPF((VolumeKnChArr + vol - 1)->NbVertices,
                           ((VolumeKnChArr + vol - 1)->Vertex), fieldPt,
-                          &tmpglobalF) /
-             MyFACTOR;
+                          &tmpglobalF);
   }  // for vols
+
+  value /= MyFACTOR;
   if (dbgFn) {
-    printf("value after known charges in volumes: %g\n", value);
+    printf("value after known charges in volumes (/ MyFACTOR): %g\n", value);
   }
 
   return (value);
@@ -2327,19 +2320,12 @@ double ContinuityKnCh(int elefld) {
     }
 
     {  // Rotate point3D from global to local system
-      double InitialVector[4];
-      double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 1.0}};
+      double InitialVector[3]
+                = {xfld - pOrigin->X, yfld - pOrigin->Y, zfld - pOrigin->Z};
+      double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0}};
       DirnCosn3D *DirCos = &(EleArr + elesrc - 1)->G.DC;
-      double FinalVector[4];
-
-      InitialVector[0] = xfld - pOrigin->X;
-      InitialVector[1] = yfld - pOrigin->Y;
-      InitialVector[2] = zfld - pOrigin->Z;
-      InitialVector[3] = 1.0;
-
       TransformationMatrix[0][0] = DirCos->XUnit.X;
       TransformationMatrix[0][1] = DirCos->XUnit.Y;
       TransformationMatrix[0][2] = DirCos->XUnit.Z;
@@ -2349,10 +2335,11 @@ double ContinuityKnCh(int elefld) {
       TransformationMatrix[2][0] = DirCos->ZUnit.X;
       TransformationMatrix[2][1] = DirCos->ZUnit.Y;
       TransformationMatrix[2][2] = DirCos->ZUnit.Z;
+      double FinalVector[3];
 
-      for (int i = 0; i < 4; ++i) {
+      for (int i = 0; i < 3; ++i) {
         FinalVector[i] = 0.0;
-        for (int j = 0; j < 4; ++j) {
+        for (int j = 0; j < 3; ++j) {
           FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
         }
       }
@@ -2410,8 +2397,9 @@ double ContinuityKnCh(int elefld) {
     }                                // else self-influence
   }                                  // for elesrc
 
+  value *= MyFACTOR; // so that later MyFACTOR divisions are reduced.
   if (dbgFn) {
-    printf("value: %g\n", value);
+    printf("value (* MyFACTOR): %g\n", value);
   }
 
   // Contributions from points, lines areas and volumes carrying known charge
@@ -2429,7 +2417,7 @@ double ContinuityKnCh(int elefld) {
     (void)PointKnChPF(sourcePt, fieldPt, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
-    value -= PointKnChArr[point].Assigned * localF.Y / MyFACTOR;
+    value -= PointKnChArr[point].Assigned * localF.Y;
   }  // loop over points NbPointsKnCh
 
   for (int line = 1; line <= NbLinesKnCh; ++line) {
@@ -2452,7 +2440,7 @@ double ContinuityKnCh(int elefld) {
     (void)LineKnChPF(startPt, stopPt, fieldPt, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
-    value -= LineKnChArr[line].Assigned * localF.Y / MyFACTOR;
+    value -= LineKnChArr[line].Assigned * localF.Y;
   }  // loop over lines
   // Simplifying conversions, similar to points and lines may be necessary.
   for (int area = 1; area <= NbAreasKnCh; ++area) {
@@ -2461,7 +2449,7 @@ double ContinuityKnCh(int elefld) {
                    ((AreaKnChArr + area - 1)->Vertex), fieldPt, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
-    value -= (AreaKnChArr + area - 1)->Assigned * localF.Y / MyFACTOR;
+    value -= (AreaKnChArr + area - 1)->Assigned * localF.Y;
   }  // loop over areas
 
   // Simplifying conversions, similar to points and lines may be necessary.
@@ -2471,9 +2459,10 @@ double ContinuityKnCh(int elefld) {
                      ((VolumeKnChArr + vol - 1)->Vertex), fieldPt, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
-    value -= (VolumeKnChArr + vol - 1)->Assigned * localF.Y / MyFACTOR;
+    value -= (VolumeKnChArr + vol - 1)->Assigned * localF.Y;
   }  // loop over volumes
 
+  value /= MyFACTOR; // factored in
   return (value);
 }  // end of ContinuityKnCh
 
@@ -2515,19 +2504,12 @@ double ValueChUp(int elefld) {
     Point3D *pOrigin = &(EleArr + elesrc - 1)->G.Origin;
 
     {  // Rotate point3D from global to local system
-      double InitialVector[4];
-      double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 1.0}};
+      double InitialVector[3]
+                  = {xfld - pOrigin->X, yfld - pOrigin->Y, zfld - pOrigin->Z};
+      double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0}};
       DirnCosn3D *DirCos = &(EleArr + elesrc - 1)->G.DC;
-      double FinalVector[4];
-
-      InitialVector[0] = xfld - pOrigin->X;
-      InitialVector[1] = yfld - pOrigin->Y;
-      InitialVector[2] = zfld - pOrigin->Z;
-      InitialVector[3] = 1.0;
-
       TransformationMatrix[0][0] = DirCos->XUnit.X;
       TransformationMatrix[0][1] = DirCos->XUnit.Y;
       TransformationMatrix[0][2] = DirCos->XUnit.Z;
@@ -2537,10 +2519,11 @@ double ValueChUp(int elefld) {
       TransformationMatrix[2][0] = DirCos->ZUnit.X;
       TransformationMatrix[2][1] = DirCos->ZUnit.Y;
       TransformationMatrix[2][2] = DirCos->ZUnit.Z;
+      double FinalVector[3];
 
-      for (int i = 0; i < 4; ++i) {
+      for (int i = 0; i < 3; ++i) {
         FinalVector[i] = 0.0;
-        for (int j = 0; j < 4; ++j) {
+        for (int j = 0; j < 3; ++j) {
           FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
         }
       }
@@ -2570,8 +2553,9 @@ double ValueChUp(int elefld) {
     }           // switch over gtsrc ends
   }             // for all source elements - elesrc
 
+  value *= MyFACTOR;
   if (dbgFn) {
-    printf("value after known charges on elements: %g\n", value);
+    printf("value after known charges on elements (*MyFACTOR): %g\n", value);
   }
 
   // globalP is now required with a different definition
@@ -2584,8 +2568,7 @@ double ValueChUp(int elefld) {
   Vector3D tmpglobalF;  // flux not being used to evaluate Dirichlet value.
   for (int point = 1; point <= NbPointsKnCh; ++point) {
     value += (PointKnChArr + point - 1)->Assigned *
-             PointKnChPF((PointKnChArr + point - 1)->P, globalP, &tmpglobalF) /
-             MyFACTOR;
+             PointKnChPF((PointKnChArr + point - 1)->P, globalP, &tmpglobalF);
   }  // for all points
   if (dbgFn) {
     printf("value after known charges at points: %g\n", value);
@@ -2595,8 +2578,7 @@ double ValueChUp(int elefld) {
   for (int line = 1; line <= NbLinesKnCh; ++line) {
     value += (LineKnChArr + line - 1)->Assigned *
              LineKnChPF((LineKnChArr + line - 1)->Start,
-                        (LineKnChArr + line - 1)->Stop, globalP, &tmpglobalF) /
-             MyFACTOR;
+                        (LineKnChArr + line - 1)->Stop, globalP, &tmpglobalF);
   }  // for lines
   if (dbgFn) {
     printf("value after known charges on lines: %g\n", value);
@@ -2607,8 +2589,7 @@ double ValueChUp(int elefld) {
     value +=
         (AreaKnChArr + area - 1)->Assigned *
         AreaKnChPF((AreaKnChArr + area - 1)->NbVertices,
-                   ((AreaKnChArr + area - 1)->Vertex), globalP, &tmpglobalF) /
-        MyFACTOR;
+                   ((AreaKnChArr + area - 1)->Vertex), globalP, &tmpglobalF);
   }  // for areas
   if (dbgFn) {
     printf("value after known charges on areas: %g\n", value);
@@ -2619,11 +2600,12 @@ double ValueChUp(int elefld) {
     value += (VolumeKnChArr + vol - 1)->Assigned *
              VolumeKnChPF((VolumeKnChArr + vol - 1)->NbVertices,
                           ((VolumeKnChArr + vol - 1)->Vertex), globalP,
-                          &tmpglobalF) /
-             MyFACTOR;
+                          &tmpglobalF);
   }  // for vols
+
+  value /= MyFACTOR;
   if (dbgFn) {
-    printf("value after known charges in volumes: %g\n", value);
+    printf("value after known charges in volumes (/ MyFACTOR): %g\n", value);
     printf("Exiting ValueChUp ...\n");
   }
 
@@ -2667,19 +2649,12 @@ double ContinuityChUp(int elefld) {
     }
 
     {  // Rotate point3D from global to local system
-      double InitialVector[4];
-      double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 0.0},
-                                           {0.0, 0.0, 0.0, 1.0}};
+      double InitialVector[3]
+                = {xfld - pOrigin->X, yfld - pOrigin->Y, zfld - pOrigin->Z};
+      double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0},
+                                           {0.0, 0.0, 0.0}};
       DirnCosn3D *DirCos = &(EleArr + elesrc - 1)->G.DC;
-
-      double FinalVector[4];
-      InitialVector[0] = xfld - pOrigin->X;
-      InitialVector[1] = yfld - pOrigin->Y;
-      InitialVector[2] = zfld - pOrigin->Z;
-      InitialVector[3] = 1.0;
-
       TransformationMatrix[0][0] = DirCos->XUnit.X;
       TransformationMatrix[0][1] = DirCos->XUnit.Y;
       TransformationMatrix[0][2] = DirCos->XUnit.Z;
@@ -2689,10 +2664,11 @@ double ContinuityChUp(int elefld) {
       TransformationMatrix[2][0] = DirCos->ZUnit.X;
       TransformationMatrix[2][1] = DirCos->ZUnit.Y;
       TransformationMatrix[2][2] = DirCos->ZUnit.Z;
+      double FinalVector[3];
 
-      for (int i = 0; i < 4; ++i) {
+      for (int i = 0; i < 3; ++i) {
         FinalVector[i] = 0.0;
-        for (int j = 0; j < 4; ++j) {
+        for (int j = 0; j < 3; ++j) {
           FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
         }
       }
@@ -2749,8 +2725,9 @@ double ContinuityChUp(int elefld) {
     }                                // else self-influence
   }
 
+  value *= MyFACTOR;
   if (dbgFn) {
-    printf("value: %g\n", value);
+    printf("value (* MyFACTOR): %g\n", value);
   }
 
   // Contributions from points, lines areas and volumes carrying known charge
@@ -2764,7 +2741,7 @@ double ContinuityChUp(int elefld) {
     (void)PointKnChPF((PointKnChArr + point - 1)->P, globalP, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
-    value -= (PointKnChArr + point - 1)->Assigned * localF.Y / MyFACTOR;
+    value -= (PointKnChArr + point - 1)->Assigned * localF.Y;
   }  // loop over points NbPointsKnCh
 
   for (int line = 1; line <= NbLinesKnCh; ++line) {
@@ -2773,7 +2750,7 @@ double ContinuityChUp(int elefld) {
                    (LineKnChArr + line - 1)->Stop, globalP, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
-    value -= (LineKnChArr + line - 1)->Assigned * localF.Y / MyFACTOR;
+    value -= (LineKnChArr + line - 1)->Assigned * localF.Y;
   }  // loop over lines
 
   for (int area = 1; area <= NbAreasKnCh; ++area) {
@@ -2782,7 +2759,7 @@ double ContinuityChUp(int elefld) {
                    ((AreaKnChArr + area - 1)->Vertex), globalP, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
-    value -= (AreaKnChArr + area - 1)->Assigned * localF.Y / MyFACTOR;
+    value -= (AreaKnChArr + area - 1)->Assigned * localF.Y;
   }  // loop over areas
 
   for (int vol = 1; vol <= NbVolumesKnCh; ++vol) {
@@ -2791,10 +2768,12 @@ double ContinuityChUp(int elefld) {
                      ((VolumeKnChArr + vol - 1)->Vertex), globalP, &globalF);
     localF =
         RotateVector3D(&globalF, &(EleArr + elefld - 1)->G.DC, global2local);
-    value -= (VolumeKnChArr + vol - 1)->Assigned * localF.Y / MyFACTOR;
+    value -= (VolumeKnChArr + vol - 1)->Assigned * localF.Y;
   }  // loop over volumes
 
+  value /= MyFACTOR;
   if (dbgFn) {
+    printf("value after known charges in volumes (/ MyFACTOR): %g\n", value);
     printf("Exiting ContinuityChUp ...\n");
   }
 

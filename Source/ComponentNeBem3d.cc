@@ -386,6 +386,25 @@ Medium* ComponentNeBem3d::GetMedium(const double x, const double y,
   return m_geometry->GetMedium(x, y, z, true);
 }
 
+void ComponentNeBem3d::InitValues() {
+  std::cout << "ComponentNeBem3d::InitValues ...\n";
+
+  // Set initial values of Weighting field Fast volume related parameters
+  // Since MAXWtFld is not a variable, we do not need neBEM::
+  for (int id = 1; id < MAXWtFld; ++id) {
+    neBEM::OptFixedWtField[id] = 0;
+    neBEM::OptWtFldFastVol[id] = 0;
+    m_optWtFldFastVol[id] = 0;
+    m_optCreateWtFldFastPF[id] = 0;
+    m_optReadWtFldFastPF[id] = 0;
+    // std::cout << id << ", " << neBEM::OptFixedWtField[id] << "' "
+    //           << neBEM::OptWtFldFastVol[id] << ", "
+    //           << m_optWtFldFastVol[id] << ", "
+    //           << m_optCreateWtFldFastPF[id] << ", "
+    //           << m_optReadWtFldFastPF[id] << "\n";
+  }
+}
+
 void ComponentNeBem3d::ElectricField(const double x, const double y,
                                      const double z, double& ex, double& ey,
                                      double& ez, double& v, Medium*& m,
@@ -1392,17 +1411,6 @@ bool ComponentNeBem3d::Initialise() {
                       std::make_move_iterator(elements.end()));
   }
 
-  /*
-    // Set initial values of Weighting field Fast volume related parameters
-    for(int id = 1; id < MAXWtFld; ++id) {
-      neBEM::OptFixedWtField[id] = 0;
-      neBEM::OptWtFldFastVol[id] = 0;
-      m_optWtFldFastVol[id] = 0;
-      m_optCreateWtFldFastPF[id] = 0;
-      m_optReadWtFldFastPF[id] = 0;
-    }
-  */
-
   // Set the user options.
   // Number of threads and use of primary average properties
   neBEM::NbThreads = m_nThreads;
@@ -1417,8 +1425,8 @@ bool ComponentNeBem3d::Initialise() {
   neBEM::VersionFV = m_versionFV;
   neBEM::NbBlocksFV = m_nbBlocksFV;
   // Weighting potential and field related Fast volume details
+  // Since MAXWtFld is not a variable, we do not need neBEM::
   for (int id = 1; id < MAXWtFld; ++id) {
-    // neBEM::IdPkupElektrd = m_idWtField;
     neBEM::OptWtFldFastVol[id] = m_optWtFldFastVol[id];
     neBEM::OptCreateWtFldFastPF[id] = m_optCreateWtFldFastPF[id];
     neBEM::OptReadWtFldFastPF[id] = m_optReadWtFldFastPF[id];

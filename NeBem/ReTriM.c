@@ -3122,7 +3122,7 @@ int InitChargingUp(void) {
                   distele = (eleOrigin.X - xend) * (eleOrigin.X - xend) +
                             (eleOrigin.Y - yend) * (eleOrigin.Y - yend) +
                             (eleOrigin.Z - zend) * (eleOrigin.Z - zend);
-                  distele = pow(distele, 0.5);
+                  distele = sqrt(distele);
 
                   if (ele == ElementBgn[nearestprim]) {
                     mindistele = distele;
@@ -3880,7 +3880,7 @@ int InitChargingUp(void) {
                   distele = (eleOrigin.X - xend) * (eleOrigin.X - xend) +
                             (eleOrigin.Y - yend) * (eleOrigin.Y - yend) +
                             (eleOrigin.Z - zend) * (eleOrigin.Z - zend);
-                  distele = pow(distele, 0.5);
+                  distele = sqrt(distele);
 
                   if (ele == ElementBgn[nearestprim]) {
                     mindistele = distele;

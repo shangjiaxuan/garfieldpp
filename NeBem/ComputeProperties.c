@@ -360,287 +360,6 @@ void WireFlux(int ele, Point3D *localP, Vector3D *localF) {
 #endif
 }  // end of WireFlux
 
-/* PFAtPoint without multi-threading (borrowed from 1.8.15)
-// do not erase this redundant function - the multi-threaded version is quite
-// complex and this may work as a fall-back option.
-// Gives three components of the total Potential and flux in the global
-// coordinate system due to all the elements
-int PFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
-  double xfld = globalP->X;
-  double yfld = globalP->Y;
-  double zfld = globalP->Z;
-  Point3D fldpt;
-  fldpt.X = xfld; fldpt.Y = yfld; fldpt.Z = zfld;
-  double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
-                                       {0.0, 0.0, 0.0},
-                                       {0.0, 0.0, 0.0}};
-
-  // Compute Potential and field at different locations
-  *Potential = globalF->X = globalF->Y = globalF->Z = 0.0;
-
-  // Effects due to base primitives and their repetitions are considered in the
-  // local coordinate system of the primitive (or element), while effects due to
-  // mirror elements and their repetitions are considered in the global
-  // coordinate system (GCS). This works because the direction cosines of a
-  // primitive (and its elements) and those of its repetitions are the same.
-  // As a result, we can do just one transformation from local to global at the
-  // end of calculations related to a primitive. This can save substantial
-  // computation if a discretized version of the primitive is being used since
-  // we avoid one unnecessary transformation for each element that comprises a
-  // primitive.
-  // Begin with primitive description of the device
-  double tmpPot;
-  Vector3D tmpF;
-
-  for(unsigned int primsrc = 1; primsrc <= NbPrimitives; ++primsrc) {
-    double xpsrc = PrimOriginX[primsrc];
-    double ypsrc = PrimOriginY[primsrc];
-    double zpsrc = PrimOriginZ[primsrc];
-
-    Vector3D localF;
-    localF.X = localF.Y = localF.Z = 0.0;
-
-    // Set up transform matrix for this primitive, which is also the same for
-    // all the elements belonging to this primitive
-    TransformationMatrix[0][0] = PrimDC[primsrc].XUnit.X;
-    TransformationMatrix[0][1] = PrimDC[primsrc].XUnit.Y;
-    TransformationMatrix[0][2] = PrimDC[primsrc].XUnit.Z;
-    TransformationMatrix[1][0] = PrimDC[primsrc].YUnit.X;
-    TransformationMatrix[1][1] = PrimDC[primsrc].YUnit.Y;
-    TransformationMatrix[1][2] = PrimDC[primsrc].YUnit.Z;
-    TransformationMatrix[2][0] = PrimDC[primsrc].ZUnit.X;
-    TransformationMatrix[2][1] = PrimDC[primsrc].ZUnit.Y;
-    TransformationMatrix[2][2] = PrimDC[primsrc].ZUnit.Z;
-
-    // The total influence is due to primitives on the basic device and due to
-    // virtual primitives arising out of repetition, reflection etc and not
-    // residing on the basic device
-
-    { // basic device
-      Point3D localPP; // point primitive
-      // point translated to the ECS origin, but axes direction global
-      { // Rotate point from global to local system
-        double InitialVector[3] = {xfld - xpsrc, yfld - ypsrc, zfld - zpsrc};
-        double FinalVector[3] = {0., 0., 0.};
-        for (int i = 0; i < 3; ++i) {
-          for (int j = 0 ; j < 3; ++j) {
-            FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
-          }
-        }
-        localPP.X = FinalVector[0];
-        localPP.Y = FinalVector[1];
-        localPP.Z = FinalVector[2];
-      } // Point3D rotated
-
-      // evaluate possibility whether primitive influence is accurate enough
-      // This could be based on localPP and the subtended solid angle
-      int PrimOK = 0;
-
-      if (PrimOK) { // if 1, then only primitive influence will be considered
-        // Potential and flux (local system) due to base primitive
-        GetPrimPF(primsrc, &localPP, &tmpPot, &tmpF);
-        const double qpr = AvChDen[primsrc] + AvAsgndChDen[primsrc];
-        *Potential += qpr * tmpPot;
-        localF.X += qpr * tmpF.X;
-        localF.Y += qpr * tmpF.Y;
-        localF.Z += qpr * tmpF.Z;
-        if (DebugLevel == 301) {
-          printf("PFAtPoint base primitive =>\n");
-          printf("primsrc: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n",
-                  primsrc, localPP.X, localPP.Y, localPP.Z);
-          printf("primsrc: %d, Pot: %lg, Fx: %lg, Fx: %lg, Fz: %lg\n",
-                  primsrc, tmpPot, tmpF.X, tmpF.Y, tmpF.Z);
-          printf("primsrc: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz:
-%lg\n", primsrc, *Potential, localF.X, localF.Y, localF.Z);
-        }
-      } else {
-        // element influence
-
-        for (unsigned int ele = ElementBgn[primsrc]; ele <= ElementEnd[primsrc];
-++ele) { double xsrc = (EleArr+ele-1)->G.Origin.X; double ysrc =
-(EleArr+ele-1)->G.Origin.Y; double zsrc = (EleArr+ele-1)->G.Origin.Z;
-          // Rotate point from global to local system
-          // matrix as for primitive
-          double vG[3] = {xfld - xsrc, yfld - ysrc, zfld - zsrc};
-          double vL[3] = {0., 0., 0.};
-          for (int i = 0; i < 3; ++i) {
-            for (int j = 0; j < 3; ++j) {
-              vL[i] += TransformationMatrix[i][j] * vG[j];
-            }
-          }
-          // Potential and flux (local system)
-          const int type = (EleArr + ele - 1)->G.Type;
-          const double a = (EleArr + ele - 1)->G.LX;
-          const double b = (EleArr + ele - 1)->G.LZ;
-          GetPF(type, a, b, vL[0], vL[1], vL[2], &tmpPot, &tmpF);
-          const double qel = (EleArr+ele-1)->Solution +
-(EleArr+ele-1)->Assigned;
-          (*Potential) += qel * tmpPot;
-          localF.X += qel * tmpF.X;
-          localF.Y += qel * tmpF.Y;
-          localF.Z += qel * tmpF.Z;
-          if (DebugLevel == 301) {
-            printf("PFAtPoint base primitive =>\n");
-            printf("ele: %d, xlocal: %lg, ylocal: %lg, zlocal %lg\n",
-                   ele, vL[0], vL[1], vL[2]);
-            printf("ele: %d, Pot: %lg, Fx: %lg, Fx: %lg, Fz: %lg\n",
-                   ele, tmpPot, tmpF.X, tmpF.Y, tmpF.Z);
-            printf("ele: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg, SumFz: %lg\n",
-                   ele, *Potential, localF.X, localF.Y, localF.Z);
-          }
-        } // for all the elements on this primsrc primitive
-      } // else elements influence
-    } // basic device ends
-
-    if (MirrorTypeX[primsrc] || MirrorTypeY[primsrc] || MirrorTypeZ[primsrc]) {
-      // Mirror effect of base primitives
-      printf("Mirror may not be correctly implemented ...\n");
-      exit(0);
-    } // Mirror effect ends
-
-    // Flux due to repeated primitives
-    if ((PeriodicTypeX[primsrc] == 1) || (PeriodicTypeY[primsrc] == 1) ||
-        (PeriodicTypeZ[primsrc] == 1)) {
-      if (PeriodicInX[primsrc] || PeriodicInY[primsrc] || PeriodicInZ[primsrc])
-{ for (int xrpt = -PeriodicInX[primsrc]; xrpt <= PeriodicInX[primsrc]; ++xrpt) {
-          double XPOfRpt = xpsrc + XPeriod[primsrc] * (double)xrpt;
-          for (int yrpt = -PeriodicInY[primsrc]; yrpt <= PeriodicInY[primsrc];
-++yrpt) { double YPOfRpt = ypsrc + YPeriod[primsrc] * (double)yrpt; for (int
-zrpt = -PeriodicInZ[primsrc]; zrpt <= PeriodicInZ[primsrc]; ++zrpt) { double
-ZPOfRpt = zpsrc + ZPeriod[primsrc] * (double)zrpt; if ((xrpt == 0) && (yrpt ==
-0) && (zrpt == 0)) { continue; // this is the base device
-              }
-              { // basic primitive repeated
-                Point3D localPPR;
-                {
-                  double InitialVector[3] = {xfld - XPOfRpt, yfld - YPOfRpt,
-zfld - ZPOfRpt}; double FinalVector[3] = {0., 0., 0.}; for (int i = 0; i < 3;
-++i) { for (int j = 0; j < 3; ++j) { FinalVector[i] +=
-TransformationMatrix[i][j] * InitialVector[j];
-                    }
-                  }
-                  localPPR.X = FinalVector[0];
-                  localPPR.Y = FinalVector[1];
-                  localPPR.Z = FinalVector[2];
-                } // Point3D rotated
-                int PrimOK = 0;
-                // consider primitive representation accurate enough if it is
-                // repeated and beyond PrimAfter repetitions.
-                if (PrimAfter == 0) {
-                  // If PrimAfter is zero, PrimOK is always zero
-                  PrimOK = 0;
-                  // and the following is not evaluated at all.
-                } else if (abs(xrpt) > PrimAfter && abs(yrpt) > PrimAfter) {
-                  PrimOK = 1;
-                }
-                if (PrimOK) {
-                  // use primitive representation
-                  // Potential and flux (local system) due to repeated primitive
-                  GetPrimPF(primsrc, &localPPR, &tmpPot, &tmpF);
-                  const double qpr = AvChDen[primsrc] + AvAsgndChDen[primsrc];
-                  *Potential += qpr * tmpPot;
-                  localF.X += qpr * tmpF.X;
-                  localF.Y += qpr * tmpF.Y;
-                  localF.Z += qpr * tmpF.Z;
-                  if (DebugLevel == 301) {
-                    printf("primsrc: %d, xlocal: %lg, ylocal: %lg, zlocal:
-%lg\n", primsrc, localPPR.X, localPPR.Y, localPPR.Z); printf("primsrc: %d, Pot:
-%lg, Fx: %lg, Fy: %lg, Fz: %lg\n", primsrc, tmpPot * qpr, tmpF.X * qpr, tmpF.Y *
-qpr, tmpF.Z * qpr); printf("primsrc: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg,
-SumFz: %lg\n", primsrc, *Potential, localF.X, localF.Y, localF.Z);
-                  }
-                } else {
-                  // use discretized representation of a repeated primitive
-                  Point3D localPER; // point element repeated
-                  for (unsigned int ele = ElementBgn[primsrc]; ele <=
-ElementEnd[primsrc]; ++ele) { double xsrc = (EleArr+ele-1)->G.Origin.X; double
-ysrc = (EleArr+ele-1)->G.Origin.Y; double zsrc = (EleArr+ele-1)->G.Origin.Z;
-
-                    double XOfRpt = xsrc + XPeriod[primsrc] * (double)xrpt;
-                    double YOfRpt = ysrc + YPeriod[primsrc] * (double)yrpt;
-                    double ZOfRpt = zsrc + ZPeriod[primsrc] * (double)zrpt;
-
-                    // Rotate from global to local system
-                    double vG[3] = {xfld - XOfRpt, yfld - YOfRpt, zfld -
-ZOfRpt}; double vL[3] = {0., 0., 0.}; for (int i = 0; i < 3; ++i) { for (int j =
-0; j < 3; ++j) { vL[i] += TransformationMatrix[i][j] * vG[j];
-                      }
-                    }
-                    const int type = (EleArr + ele - 1)->G.Type;
-                    const double a = (EleArr + ele - 1)->G.LX;
-                    const double b = (EleArr + ele - 1)->G.LZ;
-                    GetPF(type, a, b, vL[0], vL[1], vL[2], &tmpPot, &tmpF);
-                    const double qel = (EleArr+ele-1)->Solution +
-(EleArr+ele-1)->Assigned; *Potential += qel * tmpPot; localF.X += qel * tmpF.X;
-                    localF.Y += qel * tmpF.Y;
-                    localF.Z += qel * tmpF.Z;
-                    if (DebugLevel == 301) {
-                      printf("primsrc: %d, ele: %d, xlocal: %lg, ylocal: %lg,
-zlocal: %lg\n", primsrc, ele, vL[0], vL[1], vL[2]); printf("primsrc: %d, Pot:
-%lg, Fx: %lg, Fy: %lg, Fz: %lg\n", primsrc tmpPot * qel, tmpF.X * qel, tmpF.Y *
-qel, tmpF.Z * qel); printf("primsrc: %d, SumPot: %lg, SumFx: %lg, SumFy: %lg,
-SumFz: %lg\n", primsrc, *Potential, localF.X, localF.Y, localF.Z);
-                    }
-                  } // for all elements on this primitive
-                }
-              } // repetition of basic primitive
-            } // for zrpt
-          } // for yrpt
-        } // for xrpt
-      } // PeriodicInX || PeriodicInY || PeriodicInZ
-    } // PeriodicType == 1
-
-    tmpF = RotateVector3D(&localF, &PrimDC[primsrc], local2global);
-    globalF->X += tmpF.X;
-    globalF->Y += tmpF.Y;
-    globalF->Z += tmpF.Z;
-  } // for all primitives: basic device, mirror reflections and repetitions
-
-  (*Potential) /= MyFACTOR;
-  globalF->X /= MyFACTOR;
-  globalF->Y /= MyFACTOR;
-  globalF->Z /= MyFACTOR;
-
-  // ExactPointP and ExactPointF should also have an ExactPointPF
-  // Similarly for area and volume element related functions
-  // since there is no intermediate function that interfaces ExactPointP etc
-  // division by MyFACTOR is necessary
-  for (unsigned int point = 1; point <= NbPtsKnCh; ++point) {
-    tmpPot = ExactPointP(&(PtKnChArr+point-1)->P, globalP);
-    (*Potential) += (PtKnChArr+point-1)->Assigned * tmpPot / MyFACTOR;
-    ExactPointF(&(PtKnChArr+point-1)->P, globalP, &tmpF);
-    globalF->X += (PtKnChArr+point-1)->Assigned * tmpF.X / MyFACTOR;
-    globalF->Y += (PtKnChArr+point-1)->Assigned * tmpF.Y / MyFACTOR;
-    globalF->Z += (PtKnChArr+point-1)->Assigned * tmpF.Z / MyFACTOR;
-  }
-
-  for (unsigned int line = 1; line <= NbLinesKnCh; ++line) {
-    (*Potential) += 0.0;
-    globalF->X += 0.0;
-    globalF->Y += 0.0;
-    globalF->Z += 0.0;
-  }
-
-  for (unsigned int area = 1; area <= NbAreasKnCh; ++area) {
-    (*Potential) += 0.0;
-    globalF->X += 0.0;
-    globalF->Y += 0.0;
-    globalF->Z += 0.0;
-  }
-
-  for (unsigned int vol = 1; vol <= NbVolsKnCh; ++vol) {
-    (*Potential) += 0.0;
-    globalF->X += 0.0;
-    globalF->Y += 0.0;
-    globalF->Z += 0.0;
-  }
-
-  (*Potential) += VSystemChargeZero; // respect total system charge constraint
-  return(0);
-} // end of PFAtPoint
-// do not erase this redundant function.
-PFAtPoint borrowed from V1.8.15 ends here */
-
 // Gives three components of the total Potential and flux in the global
 // coordinate system due to all the interface elements and all known charges.
 // It may be interesting to inspect the relative influence of these two factors.
@@ -1345,7 +1064,7 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
 // At present implemented without OpenMP
 // Evaluate effects due to known charge distributions
 // Since there is no intermediate function that interfaces PointKnChPF etc,
-// division by MyFACTOR is necessary.
+// division by MyFACTOR is necessary - carried out just before end of function.
 // CHECK OpenMP / GPU possibilities:
 // Do parallelize before using these known charges - points or distributions
 int KnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
@@ -1368,14 +1087,14 @@ int KnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
     srcPt.Z = PointKnChArr[point].P.Z;
 
     tmpPot = PointKnChPF(srcPt, fldPt, &tmpF);
-    (*Potential) += PointKnChArr[point].Assigned * tmpPot / MyFACTOR;
-    globalF->X += PointKnChArr[point].Assigned * tmpF.X / MyFACTOR;
-    globalF->Y += PointKnChArr[point].Assigned * tmpF.Y / MyFACTOR;
-    globalF->Z += PointKnChArr[point].Assigned * tmpF.Z / MyFACTOR;
+    (*Potential) += PointKnChArr[point].Assigned * tmpPot;
+    globalF->X += PointKnChArr[point].Assigned * tmpF.X;
+    globalF->Y += PointKnChArr[point].Assigned * tmpF.Y;
+    globalF->Z += PointKnChArr[point].Assigned * tmpF.Z;
   }
 
   if (dbgFn) {
-    printf("Final values due to all known point charges: ");
+    printf("Final values due to all known point charges (*MyFACTOR): ");
     // printf("xfld\tyfld\tzfld\tPot\tFx\tFy\tFz\n"); // refer, do not uncomment
     printf("%lg\t%lg\t%lg\t%lg\t%lg\t%lg\t%lg\n\n", fldPt.X, fldPt.Y, fldPt.Z,
            (*Potential), globalF->X, globalF->Y, globalF->Z);
@@ -1391,14 +1110,14 @@ int KnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
     stopPt.Y = LineKnChArr[line].Stop.Y;
     stopPt.Z = LineKnChArr[line].Stop.Z;
     tmpPot = LineKnChPF(startPt, stopPt, fldPt, &tmpF);
-    (*Potential) += LineKnChArr[line].Assigned * tmpPot / MyFACTOR;
-    globalF->X += LineKnChArr[line].Assigned * tmpF.X / MyFACTOR;
-    globalF->Y += LineKnChArr[line].Assigned * tmpF.Y / MyFACTOR;
-    globalF->Z += LineKnChArr[line].Assigned * tmpF.Z / MyFACTOR;
+    (*Potential) += LineKnChArr[line].Assigned * tmpPot;
+    globalF->X += LineKnChArr[line].Assigned * tmpF.X;
+    globalF->Y += LineKnChArr[line].Assigned * tmpF.Y;
+    globalF->Z += LineKnChArr[line].Assigned * tmpF.Z;
   }
 
   if (dbgFn) {
-    printf("Final values due to all known line charges: ");
+    printf("Final values due to all known line charges (*MyFACTOR): ");
     // printf("xfld\tyfld\tzfld\tPot\tFx\tFy\tFz\n"); // refer, do not uncomment
     printf("%lg\t%lg\t%lg\t%lg\t%lg\t%lg\t%lg\n\n", fldPt.X, fldPt.Y, fldPt.Z,
            (*Potential), globalF->X, globalF->Y, globalF->Z);
@@ -1410,14 +1129,14 @@ int KnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   for (int area = 1; area <= NbAreasKnCh; ++area) {
     tmpPot = AreaKnChPF((AreaKnChArr + area - 1)->NbVertices,
                         ((AreaKnChArr + area - 1)->Vertex), fldPt, &tmpF);
-    (*Potential) += (AreaKnChArr + area - 1)->Assigned * tmpPot / MyFACTOR;
-    globalF->X += (AreaKnChArr + area - 1)->Assigned * tmpF.X / MyFACTOR;
-    globalF->Y += (AreaKnChArr + area - 1)->Assigned * tmpF.Y / MyFACTOR;
-    globalF->Z += (AreaKnChArr + area - 1)->Assigned * tmpF.Z / MyFACTOR;
+    (*Potential) += (AreaKnChArr + area - 1)->Assigned * tmpPot;
+    globalF->X += (AreaKnChArr + area - 1)->Assigned * tmpF.X;
+    globalF->Y += (AreaKnChArr + area - 1)->Assigned * tmpF.Y;
+    globalF->Z += (AreaKnChArr + area - 1)->Assigned * tmpF.Z;
   }
 
   if (dbgFn) {
-    printf("Final values due to all known area charges: ");
+    printf("Final values due to all known area charges (*MyFACTOR): ");
     // printf("xfld\tyfld\tzfld\tPot\tFx\tFy\tFz\n"); // refer, do not uncomment
     printf("%lg\t%lg\t%lg\t%lg\t%lg\t%lg\t%lg\n\n", fldPt.X, fldPt.Y, fldPt.Z,
            (*Potential), globalF->X, globalF->Y, globalF->Z);
@@ -1427,20 +1146,25 @@ int KnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   for (int vol = 1; vol <= NbVolumesKnCh; ++vol) {
     tmpPot = VolumeKnChPF((VolumeKnChArr + vol - 1)->NbVertices,
                           ((VolumeKnChArr + vol - 1)->Vertex), fldPt, &tmpF);
-    (*Potential) += (VolumeKnChArr + vol - 1)->Assigned * tmpPot / MyFACTOR;
-    globalF->X += (VolumeKnChArr + vol - 1)->Assigned * tmpF.X / MyFACTOR;
-    globalF->Y += (VolumeKnChArr + vol - 1)->Assigned * tmpF.Y / MyFACTOR;
-    globalF->Z += (VolumeKnChArr + vol - 1)->Assigned * tmpF.Z / MyFACTOR;
+    (*Potential) += (VolumeKnChArr + vol - 1)->Assigned * tmpPot;
+    globalF->X += (VolumeKnChArr + vol - 1)->Assigned * tmpF.X;
+    globalF->Y += (VolumeKnChArr + vol - 1)->Assigned * tmpF.Y;
+    globalF->Z += (VolumeKnChArr + vol - 1)->Assigned * tmpF.Z;
   }
 
   if (dbgFn) {
-    printf("Final values due to all known charges (after adding volumes): ");
+    printf("Final values due to all known volume charges (*MyFACTOR): ");
     // printf("xfld\tyfld\tzfld\tPot\tFx\tFy\tFz\n"); // for reference, do not
     // uncomment
     printf("%lg\t%lg\t%lg\t%lg\t%lg\t%lg\t%lg\n\n", fldPt.X, fldPt.Y, fldPt.Z,
            (*Potential), globalF->X, globalF->Y, globalF->Z);
     fflush(stdout);
   }
+
+  (*Potential) /= MyFACTOR;
+  globalF->X /= MyFACTOR;
+  globalF->Y /= MyFACTOR;
+  globalF->Z /= MyFACTOR;
 
   return 0;
 }  // KnChPFAtPoint ends
@@ -2162,7 +1886,7 @@ int CreateFastVolElePF(void) {
                     "wrong ElePFAtPoint return value in FastVolElePF.\n");
                 // return -1;
               }
-            }
+            }  // else omitFlag
             if (dbgFn) {
               printf("%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\n",
                      point.X / LengthScale, point.Y / LengthScale,
@@ -2360,7 +2084,7 @@ int CreateFastVolElePF(void) {
                       "wrong PFAtPoint return value in FastVolElePF.\n");
                   // return -1;
                 }
-              }
+              } // else omitFlag
               if (dbgFn) {
                 printf("%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\n",
                        point.X / LengthScale, point.Y / LengthScale,
@@ -2385,9 +2109,9 @@ int CreateFastVolElePF(void) {
             fprintf(fStgFastVolPF,
                     "%4d\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\n",
                     block, point.X / LengthScale, point.Y / LengthScale,
-                    point.Z / LengthScale, FastPot[block][i][j][k],
-                    FastFX[block][i][j][k], FastFY[block][i][j][k],
-                    FastFZ[block][i][j][k]);
+                    point.Z / LengthScale, StgFastPot[block][i][j][k],
+                    StgFastFX[block][i][j][k], StgFastFY[block][i][j][k],
+                    StgFastFZ[block][i][j][k]);
           }
           fflush(fStgFastVolPF);  // file output over
 
@@ -2403,451 +2127,6 @@ int CreateFastVolElePF(void) {
 
   return 0;
 }  // CreateFastVolElePF ends
-
-/* This at present is unnecessary since FastVolElePF considers effects due to
- * elements, as well as known charges.
-// Compute potential and field in a mesh within the Fast Volume
-// Possible pitfall: evaluation of n-skips
-// As the name implies, this function does NOT use the ElePFAtPoint function.
-// Only KnChPFAtPoint is included in the resulting values.
-// These effects due to known charge distributions are expected to be
-// perturbations on the background system.
-int CreateFastVolKnChPF(void) {
-int dbgFn = 0;
-int fstatus;
-
-int nbXCells;
-int nbYCells;
-int nbZCells;
-double startX;
-double startY;
-double startZ;
-double delX;
-double delY;
-double delZ;
-
-printf("\nPotential and field computation within basic fast volume\n");
-int blktotpt;	// total number of points in a given block
-int bskip = 0, iskip = 0, jskip = 0, kskip = 0;
-
-// calculate n-skips based on NbPtSkip
-if(NbPtSkip)
-        {
-        int volptcnt = 0, endskip = 0;
-
-        for(int block = 1; block <= FastVol.NbBlocks; ++block)
-                {
-                nbXCells = BlkNbXCells[block];
-                nbYCells = BlkNbYCells[block];
-                nbZCells = BlkNbZCells[block];
-                for(int i = 1; i <= nbXCells+1; ++i)
-                        {
-                for(int j = 1; j <= nbYCells+1; ++j)
-                {
-                for(int k = 1; k <= nbZCells+1; ++k)
-                {
-                                        ++volptcnt;
-
-                                        if(volptcnt == NbPtSkip)
-                                                {
-                                                bskip = block-1; iskip = i-1;
-jskip = j-1; kskip = k; endskip = 1;
-                                                }
-
-                                        if(endskip) break;
-                                        }
-                                if(endskip) break;
-                                }
-                        if(endskip) break;
-                        }
-                if(endskip) break;
-                }
-        if(dbgFn)
-                {
-                printf("Basic fast volume => bskip, iskip, jskip, kskip: %d, %d,
-%d, %d\n", bskip, iskip, jskip, kskip);
-                }
-        }	// NbPtSkip
-
-char FastVolKnChPFFile[256];
-FILE *fFastVolKnChPF;
-strcpy(FastVolKnChPFFile, BCOutDir);
-strcat(FastVolKnChPFFile, "/FastVolKnChPF.out");
-fFastVolKnChPF = fopen(FastVolKnChPFFile, "w");
-if(fFastVolKnChPF == NULL)
-        {
-        neBEMMessage("FastVolKnChPF - FastVolKnChPFFile");
-        return -1;
-        }
-fprintf(fFastVolKnChPF, "#block\tX\tY\tZ\tPot\tFX\tFY\tFZ\n");
-
-if(dbgFn)
-        {
-        printf("FastVolKnChPF.out created ...\n"); fflush(stdout);
-        }
-
-for(int block = 1+bskip; block <= FastVol.NbBlocks; ++block)
-        {
-        nbXCells = BlkNbXCells[block];
-        nbYCells = BlkNbYCells[block];
-        nbZCells = BlkNbZCells[block];
-        startX = FastVol.CrnrX;
-        startY = FastVol.CrnrY;
-        startZ = BlkCrnrZ[block];
-        delX = FastVol.LX / nbXCells;
-        delY = FastVol.LY / nbYCells;
-        delZ = BlkLZ[block] / nbZCells;
-        printf("NbBlocks: %d, block: %d, nbXCells: %d, nbYCells: %d, nbZCells:
-%d\n", FastVol.NbBlocks, block, nbXCells, nbYCells, nbZCells);
-
-        if(dbgFn)
-                {
-                printf("block: %d\n", block);
-                printf("nbXCells, nbYCells, nbZCells: %d, %d, %d\n",
-                                                nbXCells, nbYCells, nbZCells);
-                printf("startX, startY, startZ: %le, %le, %le\n", startX,
-startY, startZ); printf("delX, delY, delZ: %le, %le, %le\n", delX, delY, delZ);
-                printf("bskip, iskip, jskip, kskip: %d, %d, %d, %d\n",
-                                                bskip, iskip, jskip, kskip);
-                fflush(stdout);
-                }
-
-        blktotpt = (nbXCells+1)*(nbYCells+1)*(nbZCells+1);
-        for(int i = 1+iskip; i <= nbXCells+1; ++i)
-                {
-        for(int j = 1+jskip; j <= nbYCells+1; ++j)
-        {
-
-                        printf("Fast volume => block: %3d, i: %4d, j: %4d",
-block, i, j); fflush(stdout);
-
-                        Point3D point;
-                        int nthreads = 1, tid = 0;
-                        #pragma omp parallel private(nthreads, tid)
-                        {
-                        if(dbgFn)
-                                {
-                                tid = omp_get_thread_num();
-                                if (tid == 0)
-                                {
-                                nthreads = omp_get_num_threads();
-                                printf("Starting fast volume computation with %d
-threads\n", nthreads);
-                                }
-                                }
-
-                        int k;
-                        int omitFlag;
-                        double potential;
-                        Vector3D field;
-                        #pragma omp for private(k, point, omitFlag, potential,
-field) for(k = 1+kskip; k <= nbZCells+1; ++k)
-        {
-                        point.X = startX + (i-1)*delX;
-                point.Y = startY + (j-1)*delY;
-        point.Z = startZ + (k-1)*delZ;
-
-                                // Check whether the point falls within a volume
-that should be ignored omitFlag = 0; for(int omit = 1; omit <=
-FastVol.NbOmitVols; ++omit)
-                                {
-                                        if((point.X > OmitVolCrnrX[omit])
-                                                        && (point.X <
-OmitVolCrnrX[omit]+OmitVolLX[omit])
-                                                        && (point.Y >
-OmitVolCrnrY[omit])
-                                                        && (point.Y <
-OmitVolCrnrY[omit]+OmitVolLY[omit])
-                                                        && (point.Z >
-OmitVolCrnrZ[omit])
-                                                        && (point.Z <
-OmitVolCrnrZ[omit]+OmitVolLZ[omit]))
-                                                {
-                                                omitFlag = 1;
-                                                break;
-                                                }
-                                        }	// loop over omitted volumes
-
-                                if(dbgFn)
-                                        {
-                                        printf("block, i, j, k: %d, %d, %d,
-%d\n", block, i, j, k); printf("point X, Y, Z: %.8lg\t%.8lg\t%.8lg\n",
-                        point.X/LengthScale, point.Y/LengthScale,
-point.Z/LengthScale); printf("omitFlag: %d\n", omitFlag); fflush(stdout);
-                                        }
-
-                                if(omitFlag)
-                                        {
-                                        potential = field.X = field.Y = field.Z
-= 0.0;
-                                        }
-                                else
-                                        {
-                fstatus = KnChPFAtPoint(&point, &potential, &field);
-                if(fstatus != 0)
-                                                {
-                                                neBEMMessage("wrong
-KnChPFAtPoint return value in FastVolKnChPF.\n");
-                                                // return -1;
-                                                }
-                                        }
-                                if(dbgFn)
-                                        {
-                printf("%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\n",
-                        point.X/LengthScale, point.Y/LengthScale,
-point.Z/LengthScale, potential/LengthScale, field.X, field.Y, field.Z);
-                                        fflush(stdout);
-                                        }
-
-                                FastPot[block][i][j][k] = potential;
-                                FastFX[block][i][j][k] = field.X;
-                                FastFY[block][i][j][k] = field.Y;
-                                FastFZ[block][i][j][k] = field.Z;
-                }	// loop k
-                        }	// pragma omp parallel
-
-                        for(int k = 1+kskip; k <= nbZCells+1; ++k)	// file
-output
-                        {
-                        point.X = startX + (i-1)*delX;
-                point.Y = startY + (j-1)*delY;
-                        point.Z = startZ + (k-1)*delZ;
-
-                fprintf(fFastVolKnChPF,
-                        "%4d\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\n",
-                        block,
-                                                                point.X/LengthScale,
-point.Y/LengthScale, point.Z/LengthScale,
-                        FastPot[block][i][j][k],FastFX[block][i][j][k],
-                                                                FastFY[block][i][j][k],
-FastFZ[block][i][j][k]);
-                                }
-                        fflush(fFastVolKnChPF);	// file output over
-
-                        printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
-                }	// loop j
-                }	// loop i
-        }	// loop block
-
-fclose(fFastVolKnChPF);
-
-if(OptStaggerFastVol)
-        {
-        printf("Potential and field computation within staggered fast
-volume\n");
-
-        bskip = iskip = jskip = kskip = 0;
-
-        // calculate n-skips based on NbStgPtSkip
-        if(NbStgPtSkip)
-                {
-                int volptcnt = 0, endskip = 0;
-
-                for(int block = 1; block <= FastVol.NbBlocks; ++block)
-                        {
-                        nbXCells = BlkNbXCells[block];
-                        nbYCells = BlkNbYCells[block];
-                        nbZCells = BlkNbZCells[block];
-                        for(int i = 1; i <= nbXCells+1; ++i)
-                                {
-                        for(int j = 1; j <= nbYCells+1; ++j)
-                        {
-                        for(int k = 1; k <= nbZCells+1; ++k)
-                        {
-                                                ++volptcnt;
-
-                                                if(volptcnt == NbStgPtSkip)
-                                                        {
-                                                        bskip = block-1; iskip =
-i-1; jskip = j-1; kskip = k; endskip = 1;
-                                                        }
-
-                                                if(endskip) break;
-                                                }
-                                        if(endskip) break;
-                                        }
-                                if(endskip) break;
-                                }
-                        if(endskip) break;
-                        }
-                if(dbgFn)
-                        {
-                        printf("Staggered volume => bskip, iskip, jskip, kskip:
-%d, %d, %d, %d\n", bskip, iskip, jskip, kskip);
-                        }
-                }	// NbStgPtSkip
-
-        char StgFastVolKnChPFFile[256];
-        FILE *fStgFastVolKnChPF;
-        strcpy(StgFastVolKnChPFFile, BCOutDir);
-        strcat(StgFastVolKnChPFFile, "/StgFastVolKnChPF.out");
-        fStgFastVolKnChPF = fopen(StgFastVolKnChPFFile, "w");
-        if(fStgFastVolKnChPF == NULL)
-                {
-                neBEMMessage("FastVolKnChPF - StgFastVolKnChPFFile");
-                return -1;
-                }
-        fprintf(fStgFastVolKnChPF, "#block\tX\tY\tZ\tPot\tFX\tFY\tFZ\n");
-
-        if(dbgFn)
-                {
-                printf("StgFastVolKnChPF.out created ...\n"); fflush(stdout);
-                }
-
-        for(int block = 1+bskip; block <= FastVol.NbBlocks; ++block)
-                {
-                nbXCells = BlkNbXCells[block];
-                nbYCells = BlkNbYCells[block];
-                nbZCells = BlkNbZCells[block];
-                startX = FastVol.CrnrX + FastVol.LX;
-                startY = FastVol.CrnrY + FastVol.YStagger;
-                startZ = BlkCrnrZ[block];
-                delX = FastVol.LX / nbXCells;
-                delY = FastVol.LY / nbYCells;
-                delZ = BlkLZ[block] / nbZCells;
-                printf(
-                                        "NbBlocks: %d, block: %d, nbXCells: %d,
-nbYCells: %d, nbZCells: %d\n", FastVol.NbBlocks, block, nbXCells, nbYCells,
-nbZCells);
-
-                if(dbgFn)
-                        {
-                        printf("block: %d\n", block);
-                        printf("nbXCells, nbYCells, nbZCells: %d, %d, %d\n",
-                                                        nbXCells, nbYCells,
-nbZCells); printf("startX, startY, startZ: %le, %le, %le\n", startX, startY,
-startZ); printf("delX, delY, delZ: %le, %le, %le\n", delX, delY, delZ);
-                        printf("bskip, iskip, jskip, kskip: %d, %d, %d, %d\n",
-                                                        bskip, iskip, jskip,
-kskip); fflush(stdout);
-                        }
-
-                blktotpt = (nbXCells+1)*(nbYCells+1)*(nbZCells+1);
-                for(int i = 1+iskip; i <= nbXCells+1; ++i)
-                        {
-                for(int j = 1+jskip; j <= nbYCells+1; ++j)
-                {
-
-                                printf("Fast volume => block: %3d, i: %4d, j:
-%4d", block, i, j); fflush(stdout);
-
-                                Point3D point;
-                                int nthreads, tid;
-                                #pragma omp parallel private(nthreads, tid)
-                                {
-                                if(dbgFn)
-                                        {
-                                        tid = omp_get_thread_num();
-                                        if (tid == 0)
-                                        {
-                                        nthreads = omp_get_num_threads();
-                                        printf(
-                                                                "Starting
-staggered fast volume computation with %d threads\n", nthreads);
-                                        }
-                                }
-
-                                int k;
-                                int omitFlag;
-                                double potential;
-                                Vector3D field;
-                                #pragma omp for private(k, point, omitFlag,
-potential, field) for(k = 1+kskip; k <= nbZCells+1; ++k)
-                {
-                                point.X = startX + (i-1)*delX;
-                        point.Y = startY + (j-1)*delY;
-                point.Z = startZ + (k-1)*delZ;
-
-                                        // Check whether point falls within a
-volume that should be ignored omitFlag = 0; for(int omit = 1; omit <=
-FastVol.NbOmitVols; ++omit)
-                                        {
-                                                if((point.X >
-OmitVolCrnrX[omit]+FastVol.LX)
-                                                                && (point.X <
-OmitVolCrnrX[omit]+OmitVolLX[omit]+FastVol.LX)
-                                                                && (point.Y >
-OmitVolCrnrY[omit]+FastVol.YStagger)
-                                                                && (point.Y <
-OmitVolCrnrY[omit]+OmitVolLY[omit]+FastVol.YStagger)
-                                                                && (point.Z >
-OmitVolCrnrZ[omit])
-                                                                && (point.Z <
-OmitVolCrnrZ[omit]+OmitVolLZ[omit]))
-                                                        {
-                                                        omitFlag = 1;
-                                                        break;
-                                                        }
-                                                }	// loop over omitted
-volumes
-
-                                        if(dbgFn)
-                                                {
-                        printf("point X, Y, Z: %.8lg\t%.8lg\t%.8lg\n",
-                        point.X/LengthScale, point.Y/LengthScale,
-point.Z/LengthScale); printf("omitFlag: %d\n", omitFlag); fflush(stdout);
-                                                }
-
-                                        if(omitFlag)
-                                                {
-                                                potential = field.X = field.Y =
-field.Z = 0.0;
-                                                }
-                                        else
-                                                {
-                        fstatus = KnChPFAtPoint(&point, &potential, &field);
-                        if(fstatus != 0)
-                                                        {
-                                                        neBEMMessage("wrong
-KnChPFAtPoint return value in FastVolKnChPF.\n");
-                                                        // return -1;
-                                                        }
-                                                }
-                                        if(dbgFn)
-                                                {
-                        printf("%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\n",
-                        point.X/LengthScale, point.Y/LengthScale,
-point.Z/LengthScale, potential/LengthScale, field.X, field.Y, field.Z);
-                                                fflush(stdout);
-                                                }
-
-                                        StgFastPot[block][i][j][k] = potential;
-                                        StgFastFX[block][i][j][k] = field.X;
-                                        StgFastFY[block][i][j][k] = field.Y;
-                                        StgFastFZ[block][i][j][k] = field.Z;
-                }	// loop k
-                                }	// pragma omp
-
-                                for(int k = 1+kskip; k <= nbZCells+1; ++k)
-// file output
-                                {
-                                point.X = startX + (i-1)*delX;
-                        point.Y = startY + (j-1)*delY;
-                                point.Z = startZ + (k-1)*delZ;
-
-                        fprintf(fStgFastVolKnChPF,
-                                "%4d\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\n",
-                                block,
-                                                                        point.X/LengthScale,
-point.Y/LengthScale, point.Z/LengthScale,
-                                FastPot[block][i][j][k],FastFX[block][i][j][k],
-                                                                        FastFY[block][i][j][k],
-FastFZ[block][i][j][k]);
-                                        }
-                                fflush(fStgFastVolKnChPF);	// file output
-over
-
-                                printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b");
-                }	// loop j
-                }	// loop i
-                }	// loop block
-
-        fclose(fStgFastVolKnChPF);
-        }	// if OptStaggerFastVol
-
-return 0;
-}	// CreateFastVolKnChPF ends
-*/
 
 // Gives three components of the total Potential and flux in the global
 // coordinate system due to all the elements using the results stored in
@@ -3056,7 +2335,6 @@ int FastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   if (dbgFn)
     printf("equivalent dist adjusted for staggered: %g, %g, %g\n", dx, dy, dz);
 
-  /*
   // Check whether the point falls within a volume that is omitted
   for(int omit = 1; omit <= FastVol.NbOmitVols; ++omit) {
     if ((dx >= (OmitVolCrnrX[omit]-FastVol.CrnrX)) && 
@@ -3070,25 +2348,8 @@ int FastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
       globalF->X = 0.0; globalF->Y = 0.0; globalF->Z = 0.0;
     }
   }	// loop over omitted volumes
-  */
 
   // Find the block in which the point lies
-  /*
-  int thisBlock = 1;
-  if(FastVol.NbBlocks > 1) {
-    for(int block = 1; block <= FastVol.NbBlocks; ++block) {
-      if(dbgFn) {
-        printf("dz,(BlkCrnrZ-CornerZ),(BlkCrnrZ+BlkLZ-CornerZ): %lg, %lg, %lg\n", dz, (BlkCrnrZ[block]-CornerZ), (BlkCrnrZ[block]+BlkLZ[block]-CornerZ));
-      }
-      if((dz >= (BlkCrnrZ[block]-CornerZ)) && 
-         (dz <= (BlkCrnrZ[block]+BlkLZ[block]-CornerZ))) {
-        thisBlock = block;
-        break;
-      }
-    }
-  }	// if NbBlocks > 1
-  */
-
   int thisBlock = 0;
   for (int block = 1; block <= FastVol.NbBlocks; ++block) {
     double blkBtmZ = BlkCrnrZ[block] - CornerZ;  // since CornerZ has been
@@ -3549,7 +2810,6 @@ int FastKnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   if (dbgFn)
     printf("equivalent dist adjusted for staggered: %g, %g, %g\n", dx, dy, dz);
 
-  /*
   // Check whether the point falls within a volume that is omitted
   for(int omit = 1; omit <= FastVol.NbOmitVols; ++omit) {
     if((dx >= (OmitVolCrnrX[omit]-FastVol.CrnrX)) && 
@@ -3563,22 +2823,6 @@ int FastKnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
       globalF->X = 0.0; globalF->Y = 0.0; globalF->Z = 0.0;
     }
   }	// loop over omitted volumes
-
-  // Find the block in which the point lies
-  int thisBlock = 1;
-  if(FastVol.NbBlocks > 1) {
-    for(int block = 1; block <= FastVol.NbBlocks; ++block) {
-      if(dbgFn) {
-        printf("dz,(BlkCrnrZ-CornerZ),(BlkCrnrZ+BlkLZ-CornerZ): %lg, %lg, %lg\n", dz, (BlkCrnrZ[block]-CornerZ), (BlkCrnrZ[block]+BlkLZ[block]-CornerZ));
-      }
-      if((dz >= (BlkCrnrZ[block]-CornerZ)) && 
-         (dz <= (BlkCrnrZ[block]+BlkLZ[block]-CornerZ))) {
-        thisBlock = block;
-        break;
-      }
-    }
-  }	// if NbBlocks > 1
-  */
 
   int thisBlock = 0;
   for (int block = 1; block <= FastVol.NbBlocks; ++block) {
@@ -4263,53 +3507,9 @@ int WtFldPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
   globalF->Z = totF.Z / MyFACTOR;
 #endif
 
-  /* for weighting field, effect of KnCh is possibly zero.
-  double tmpPot; Vector3D tmpF;
-  // ExactPointP and ExactPointF should also have an ExactPointPF
-  // Similarly for area and volume element related functions
-  // since there is no intermediate function that interfaces ExactPointP etc
-  // division by MyFACTOR is necessary
-  // Do parallelize before using these known charges - points or distributions
-  for (int point = 1; point <= NbPtsKnCh; ++point) {
-    tmpPot = ExactPointP(&(PtKnChArr+point-1)->P, globalP);
-    (*Potential) += (PtKnChArr+point-1)->Assigned * tmpPot / MyFACTOR;
-    ExactPointF(&(PtKnChArr+point-1)->P, globalP, &tmpF);
-    globalF->X += (PtKnChArr+point-1)->Assigned * tmpF.X / MyFACTOR;
-    globalF->Y += (PtKnChArr+point-1)->Assigned * tmpF.Y / MyFACTOR;
-    globalF->Z += (PtKnChArr+point-1)->Assigned * tmpF.Z / MyFACTOR;
-  } // for all points
-
-  for (int line = 1; line <= NbLinesKnCh; ++line) {
-    (*Potential) += 0.0;
-    globalF->X += 0.0;
-    globalF->Y += 0.0;
-    globalF->Z += 0.0;
-  } // for all lines
-
-  for (int area = 1; area <= NbAreasKnCh; ++area) {
-    (*Potential) += 0.0;
-    globalF->X += 0.0;
-    globalF->Y += 0.0;
-    globalF->Z += 0.0;
-  } // for all areas
-
-  for (int vol = 1; vol <= NbVolsKnCh; ++vol) {
-    (*Potential) += 0.0;
-    globalF->X += 0.0;
-    globalF->Y += 0.0;
-    globalF->Z += 0.0;
-  } // for all volumes
-
-  // This should be the final position
-  // *Potential = totPot;
-  // globalF->X = totF.X;
-  // globalF->Y = totF.Y;
-  // globalF->Z = totF.Z;
-  // effect of KnCh is possibly zero on weighting field
-  */
-
-  /* Similarly, there is no reason to respect constraint on total system charge
-  (*Potential) += VSystemChargeZero;  // respect total system charge constraint
+  /*
+  For weighting field, effect of KnCh is possibly zero.
+  Similarly, there is no reason to respect constraint on total system charge.
   */
 
   if (dbgFn) {
@@ -4513,7 +3713,7 @@ int CreateWtFldFastVolPF(int IdWtField) {
                 neBEMMessage("wrong return from WtFldPFAtPoint.\n");
                 // return -1;
               }
-            }
+            } // else omitFlag
             if (dbgFn) {
               printf("%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\n",
                      point.X / LengthScale, point.Y / LengthScale,
@@ -4723,7 +3923,7 @@ int CreateWtFldFastVolPF(int IdWtField) {
                       "CreateWtFldFastVolElePF.\n");
                   // return -1;
                 }
-              }
+              } // else omitFlag
               if (dbgFn) {
                 printf("%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\t%.8lg\n",
                        point.X / LengthScale, point.Y / LengthScale,
@@ -5002,39 +4202,7 @@ int WtFldFastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
   if (dbgFn)
     printf("equivalent dist adjusted for staggered: %g, %g, %g\n", dx, dy, dz);
 
-  /*
-  // Check whether the point falls within a volume that is omitted
-  for(int omit = 1; omit <= WtFldFastVol.NbOmitVols; ++omit) {
-    if((dx >= (WtFldOmitVolCrnrX[omit]-WtFldFastVol.CrnrX)) && 
-       (dx <= (WtFldOmitVolCrnrX[omit]+WtFldOmitVolLX[omit]-WtFldFastVol.CrnrX)) && 
-       (dy >= (WtFldOmitVolCrnrY[omit]-WtFldFastVol.CrnrY)) && 
-       (dy <= (WtFldOmitVolCrnrY[omit]+WtFldOmitVolLY[omit]-WtFldFastVol.CrnrY)) && 
-       (dz >= (WtFldOmitVolCrnrZ[omit]-WtFldFastVol.CrnrZ)) && 
-       (dz <= (WtFldOmitVolCrnrZ[omit]+WtFldOmitVolLZ[omit]-WtFldFastVol.CrnrZ))) {
-      neBEMMessage("In FastPFAtPoint: point in an omitted volume!\n"); 
-      *Potential = 0.0; 
-      globalF->X = 0.0; globalF->Y = 0.0; globalF->Z = 0.0;
-    }
-  }	// loop over omitted volumes
-  */
-
   // Find the block in which the point lies
-  /*
-  int thisBlock = 1;
-  if(WtFldFastVol.NbBlocks > 1) {
-    for(int block = 1; block <= WtFldFastVol.NbBlocks; ++block) {
-      if(dbgFn) {
-        printf("dz,(WtFldBlkCrnrZ-CornerZ),(WtFldBlkCrnrZ+WtFldBlkLZ-CornerZ): %lg, %lg, %lg\n", dz, (WtFldBlkCrnrZ[block]-CornerZ), (WtFldBlkCrnrZ[block]+WtFldBlkLZ[block]-CornerZ));
-      }
-      if((dz >= (WtFldBlkCrnrZ[block]-CornerZ)) && 
-         (dz <= (WtFldBlkCrnrZ[block]+WtFldBlkLZ[block]-CornerZ))) {
-        thisBlock = block;
-        break;
-      }
-    }
-  }	// if NbBlocks > 1
-  */
-
   int thisBlock = 0;
   for (int block = 1; block <= WtFldFastVol[IdWtField].NbBlocks; ++block) {
     double blkBtmZ =

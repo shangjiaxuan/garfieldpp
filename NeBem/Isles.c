@@ -1803,6 +1803,7 @@ double ExactAxialP_W(double rW, double lW, double Z) {
 }  // ExactAxialP ends
 
 // Axial field along the axis of the wire
+// Repeated execution of similar expression - can be optimized
 double ExactAxialFZ_W(double rW, double lW, double Z) {
   if (DebugISLES) printf("In ExactAxialFZ_W ...\n");
   double h = 0.5 * lW;
@@ -2105,6 +2106,7 @@ double ExactThinP_W(double rW, double lW, double X, double Y, double Z) {
 }  // ExactThinP_W ends
 
 // Exact FX due to thin wire at an arbitrary location
+// Repeated execution of similar expression - can be optimized
 double ExactThinFX_W(double rW, double lW, double X, double Y, double Z) {
   if (DebugISLES) {
     printf("In ExactThinFX_W ...\n");
@@ -2124,6 +2126,7 @@ double ExactThinFX_W(double rW, double lW, double X, double Y, double Z) {
 }  // ExactThinFX_W ends
 
 // Exact FY due to thin wire at an arbitrary location
+// Repeated execution of similar expression - can be optimized
 double ExactThinFY_W(double rW, double lW, double X, double Y, double Z) {
   if (DebugISLES) {
     printf("In ExactThinFY_W ...\n");
@@ -2143,6 +2146,7 @@ double ExactThinFY_W(double rW, double lW, double X, double Y, double Z) {
 }  // ExactThinFY_W ends
 
 // Exact FZ (axial field) due to thin wire at an arbitrary location
+// Repeated execution of similar expression - can be optimized
 double ExactThinFZ_W(double rW, double lW, double X, double Y, double Z) {
   if (DebugISLES) {
     printf("In ExactThinFZ_W ...\n");
@@ -2204,11 +2208,11 @@ ISLESGLOBAL int ExactRingPF(double a, Point3D localPt, double *potential,
   // will immediately give us unit Y. The rest can be easily deduced.
 
   double roe = localPt.X * localPt.X + localPt.Y * localPt.Y;
-  roe = pow(roe, 0.5);
+  roe = sqrt(roe);
   double z = localPt.Z;
   double r1dot = ((a + roe) * (a + roe)) + z * z;
-  r1dot = pow(r1dot, 0.5);
-  double u = 2.0 * pow((a * roe), 0.5) / r1dot;
+  r1dot = sqrt(r1dot);
+  double u = 2.0 * sqrt(a * roe) / r1dot;
 
   // K1 and K2 are complete elliptic integrals
   // K implies first kind, according to GSL (and Wikipedia) convention
@@ -2376,18 +2380,10 @@ double LineKnChPF(Point3D LineStart, Point3D LineStop, Point3D FieldPt,
   // Axes direction are, however, still global which when rotated to ECS
   // system, yields FinalVector[].
   {  // Rotate point3D from global to local system to get localPt.
-    double InitialVector[4];
-    double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                         {0.0, 0.0, 0.0, 0.0},
-                                         {0.0, 0.0, 0.0, 0.0},
-                                         {0.0, 0.0, 0.0, 1.0}};
-    double FinalVector[4];
-
-    InitialVector[0] = xfld - xorigin;
-    InitialVector[1] = yfld - yorigin;
-    InitialVector[2] = zfld - zorigin;
-    InitialVector[3] = 1.0;
-
+    double InitialVector[3] = {xfld - xorigin, yfld - yorigin, zfld - zorigin};
+    double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                         {0.0, 0.0, 0.0},
+                                         {0.0, 0.0, 0.0}};
     TransformationMatrix[0][0] = DirCos.XUnit.X;
     TransformationMatrix[0][1] = DirCos.XUnit.Y;
     TransformationMatrix[0][2] = DirCos.XUnit.Z;
@@ -2397,10 +2393,11 @@ double LineKnChPF(Point3D LineStart, Point3D LineStop, Point3D FieldPt,
     TransformationMatrix[2][0] = DirCos.ZUnit.X;
     TransformationMatrix[2][1] = DirCos.ZUnit.Y;
     TransformationMatrix[2][2] = DirCos.ZUnit.Z;
+    double FinalVector[3];
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 3; ++i) {
       FinalVector[i] = 0.0;
-      for (int j = 0; j < 4; ++j) {
+      for (int j = 0; j < 3; ++j) {
         FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
       }
     }
@@ -2467,20 +2464,16 @@ double LineKnChPF(Point3D LineStart, Point3D LineStop, Point3D FieldPt,
   */
 
   // MatLab expressions: PFXYZ_MatLab15_4.out
+  double tmpxy = xpt * xpt + ypt * ypt;
+  double tmpzplus = sqrt(zptplus * zptplus + xpt * xpt + ypt * ypt);
+  double tmpzminus = sqrt(xpt * xpt + ypt * ypt + zptminus * zptminus);
   Pot =
-      log(zptplus + sqrt(zptplus * zptplus + xpt * xpt + ypt * ypt))  
-      - log(zptminus + sqrt(xpt * xpt + ypt * ypt + zptminus * zptminus));
-  localF.X = xpt * ((zptplus / (xpt * xpt + ypt * ypt)  // MatLab
-                     / sqrt(zptplus * zptplus + xpt * xpt + ypt * ypt)) -
-                    (zptminus / (xpt * xpt + ypt * ypt) /
-                     sqrt(zptminus * zptminus + xpt * xpt + ypt * ypt)));
-  localF.Y = ypt * ((zptplus / (xpt * xpt + ypt * ypt)  // MatLab
-                     / sqrt(zptplus * zptplus + xpt * xpt + ypt * ypt)) -
-                    (zptminus / (xpt * xpt + ypt * ypt) /
-                     sqrt(zptminus * zptminus + xpt * xpt + ypt * ypt)));
-  localF.Z =
-      (1.0 / sqrt(zptminus * zptminus + xpt * xpt + ypt * ypt))  // MatLab
-      - (1.0 / sqrt(zptplus * zptplus + xpt * xpt + ypt * ypt));
+      log(zptplus + tmpzplus) - log(zptminus + tmpzminus);
+  localF.X = xpt * ((zptplus / tmpxy / tmpzplus) -
+                    (zptminus / tmpxy / tmpzminus));
+  localF.Y = ypt * ((zptplus / tmpxy / tmpzplus) -
+                    (zptminus / tmpxy / tmpzminus));
+  localF.Z = (1.0 / tmpzminus) - (1.0 / tmpzplus);
   if (debugFn) {
     printf("Using MatLab expressions =>\n");
     printf("Pot: %lg\n", Pot);
@@ -2617,18 +2610,10 @@ double WireKnChPF(Point3D WireStart, Point3D WireStop, double radius,
   // Axes direction are, however, still global which when rotated to ECS
   // system, yields FinalVector[].
   {  // Rotate point3D from global to local system to get localPt.
-    double InitialVector[4];
-    double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                         {0.0, 0.0, 0.0, 0.0},
-                                         {0.0, 0.0, 0.0, 0.0},
-                                         {0.0, 0.0, 0.0, 1.0}};
-    double FinalVector[4];
-
-    InitialVector[0] = xfld - xorigin;
-    InitialVector[1] = yfld - yorigin;
-    InitialVector[2] = zfld - zorigin;
-    InitialVector[3] = 1.0;
-
+    double InitialVector[3] = {xfld - xorigin, yfld - yorigin, zfld - zorigin};
+    double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                         {0.0, 0.0, 0.0},
+                                         {0.0, 0.0, 0.0}};
     TransformationMatrix[0][0] = DirCos.XUnit.X;
     TransformationMatrix[0][1] = DirCos.XUnit.Y;
     TransformationMatrix[0][2] = DirCos.XUnit.Z;
@@ -2638,10 +2623,11 @@ double WireKnChPF(Point3D WireStart, Point3D WireStop, double radius,
     TransformationMatrix[2][0] = DirCos.ZUnit.X;
     TransformationMatrix[2][1] = DirCos.ZUnit.Y;
     TransformationMatrix[2][2] = DirCos.ZUnit.Z;
+    double FinalVector[3];
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 3; ++i) {
       FinalVector[i] = 0.0;
-      for (int j = 0; j < 4; ++j) {
+      for (int j = 0; j < 3; ++j) {
         FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
       }
     }
@@ -2777,18 +2763,10 @@ double AreaKnChPF(int NbVertices, Point3D *Vertex, Point3D FieldPt,
   // Axes direction are, however, still global which when rotated to ECS
   // system, yields FinalVector[].
   {  // Rotate point3D from global to local system to get localPt.
-    double InitialVector[4];
-    double TransformationMatrix[4][4] = {{0.0, 0.0, 0.0, 0.0},
-                                         {0.0, 0.0, 0.0, 0.0},
-                                         {0.0, 0.0, 0.0, 0.0},
-                                         {0.0, 0.0, 0.0, 1.0}};
-    double FinalVector[4];
-
-    InitialVector[0] = xfld - xorigin;
-    InitialVector[1] = yfld - yorigin;
-    InitialVector[2] = zfld - zorigin;
-    InitialVector[3] = 1.0;
-
+    double InitialVector[3] = {xfld - xorigin, yfld - yorigin, zfld - zorigin};
+    double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
+                                         {0.0, 0.0, 0.0},
+                                         {0.0, 0.0, 0.0}};
     TransformationMatrix[0][0] = DirCos.XUnit.X;
     TransformationMatrix[0][1] = DirCos.XUnit.Y;
     TransformationMatrix[0][2] = DirCos.XUnit.Z;
@@ -2798,10 +2776,11 @@ double AreaKnChPF(int NbVertices, Point3D *Vertex, Point3D FieldPt,
     TransformationMatrix[2][0] = DirCos.ZUnit.X;
     TransformationMatrix[2][1] = DirCos.ZUnit.Y;
     TransformationMatrix[2][2] = DirCos.ZUnit.Z;
+    double FinalVector[3];
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 3; ++i) {
       FinalVector[i] = 0.0;
-      for (int j = 0; j < 4; ++j) {
+      for (int j = 0; j < 3; ++j) {
         FinalVector[i] += TransformationMatrix[i][j] * InitialVector[j];
       }
     }
