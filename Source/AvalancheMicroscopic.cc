@@ -54,6 +54,10 @@ void RotationMatrix(double bx, double by, double bz, const double bmag,
       rB[1][1] = (bx * by * by + bz * bz) * btInv;
       rB[2][2] = (bx * bz * bz + by * by) * btInv;
       rB[1][2] = rB[2][1] = (bx - 1.) * by * bz * btInv;
+    } else if (bx < 0.) {
+      // B field is anti-parallel to x.
+      rB[0][0] = -1.;
+      rB[1][1] = -1.;
     }
   }
   // Calculate the second rotation matrix (rotation around x axis).
