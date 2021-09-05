@@ -58,7 +58,7 @@ namespace Garfield {
 int Medium::m_idCounter = -1;
 
 Medium::Medium() : m_id(++m_idCounter) {
-  // Initialise the transport tables.
+  // Initialise the tables.
   m_bFields.assign(1, 0.);
   m_bAngles.assign(1, HalfPi);
 
@@ -220,7 +220,8 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
     uexb[2] = ue[2];
   }
 
-  double ubt[3] = {uexb[1] * ez - uexb[2] * ey, uexb[2] * ex - uexb[0] * ez,
+  double ubt[3] = {uexb[1] * ez - uexb[2] * ey, 
+                   uexb[2] * ex - uexb[0] * ez,
                    uexb[0] * ey - uexb[1] * ex};
   const double bt = sqrt(ubt[0] * ubt[0] + ubt[1] * ubt[1] + ubt[2] * ubt[2]);
   if (bt > 0.) {
@@ -234,14 +235,13 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
   }
 
   if (m_debug) {
-    std::cout << std::setprecision(5);
-    std::cout << m_className << "::Velocity:\n"
-              << "    unit vector along E:     (" << ue[0] << ", " << ue[1]
-              << ", " << ue[2] << ")\n";
-    std::cout << "    unit vector along E x B: (" << uexb[0] << ", "
-              << uexb[1] << ", " << uexb[2] << ")\n";
-    std::cout << "    unit vector along Bt:    (" << ubt[0] << ", " << ubt[1]
-              << ", " << ubt[2] << ")\n";
+    std::cout << m_className << "::Velocity:\n";
+    std::printf("    unit vector along E:     (%15.5f, %15.5f, %15.5f)\n",
+                ue[0], ue[1], ue[2]);
+    std::printf("    unit vector along E x B: (%15.5f, %15.5f, %15.5f)\n",
+                uexb[0], uexb[1], uexb[2]);
+    std::printf("    unit vector along Bt:    (%15.5f, %15.5f, %15.5f)\n",
+                ubt[0], ubt[1], ubt[2]);
   }
 
   // Calculate the velocities in all directions.
@@ -250,6 +250,7 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
     std::cerr << m_className << "::Velocity: Interpolation along ExB failed.\n";
     return false;
   }
+  vexb *= q;
   double vbt = 0.;
   if (!Interpolate(e0, b, ebang, velB, vbt, m_intpVel, m_extrVel)) {
     std::cerr << m_className << "::Velocity: Interpolation along Bt failed.\n";
@@ -260,10 +261,10 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
   } else {
     vbt = -fabs(vbt);
   }
-  vx = q * (ve * ue[0] + q * q * vbt * ubt[0] + q * vexb * uexb[0]);
-  vy = q * (ve * ue[1] + q * q * vbt * ubt[1] + q * vexb * uexb[1]);
-  vz = q * (ve * ue[2] + q * q * vbt * ubt[2] + q * vexb * uexb[2]);
-
+  vbt *= q * q;
+  vx = q * (ve * ue[0] + vbt * ubt[0] + vexb * uexb[0]);
+  vy = q * (ve * ue[1] + vbt * ubt[1] + vexb * uexb[1]);
+  vz = q * (ve * ue[2] + vbt * ubt[2] + vexb * uexb[2]);
   return true;
 }
 
@@ -1185,16 +1186,14 @@ void Medium::SetInterpolationMethodIonDissociation(const unsigned int intrp) {
 
 double Medium::GetAngle(const double ex, const double ey, const double ez,
                         const double bx, const double by, const double bz,
-                        const double e, const double b) const {
-  const double eb = e * b; 
+                        const double emag, const double bmag) const {
+  const double eb = emag * bmag; 
   if (eb <= 0.) return m_bAngles[0];
   const double einb = fabs(ex * bx + ey * by + ez * bz);
   if (einb > 0.2 * eb) {
-    const double ebxy = ex * by - ey * bx;
-    const double ebxz = ex * bz - ez * bx;
-    const double ebzy = ez * by - ey * bz;
+    double exb[3] = {ex * by - ey * bx, ex * bz - ez * bx, ez * by - ey * bz};
     return asin(
-        std::min(1., sqrt(ebxy * ebxy + ebxz * ebxz + ebzy * ebzy) / eb));
+        std::min(1., sqrt(exb[0] * exb[0] + exb[1] * exb[1] + exb[2] * exb[2]) / eb));
   }
   return acos(std::min(1., einb / eb));
 }
