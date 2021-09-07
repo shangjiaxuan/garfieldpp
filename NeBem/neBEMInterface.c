@@ -112,7 +112,7 @@ int neBEMInitialize(void) {
   */
   // PrimAfter is assigned a value through "SetPrimAfter" member function of
   // ComponentNeBem3d class.
-  // Default value of PrimAfter is zero.
+  // Default value of PrimAfter is a negative integer.
 
 #ifdef _OPENMP
   int MaxProcessors = omp_get_num_procs();

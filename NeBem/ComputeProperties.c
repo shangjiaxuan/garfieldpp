@@ -498,13 +498,12 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
       int PrimOK = 0;
       // consider primitive representation accurate enough if it is
       // repeated and beyond PrimAfter repetitions.
-      if (PrimAfter < 0) {
-        // If PrimAfter is less than zero, PrimOK is zero
+      if (PrimAfter < 0) { // If PrimAfter < 0, PrimOK is zero
         PrimOK = 0;
       } else if (PrimAfter == 0) {  // only this is necessary
         PrimOK = 1;
       } else if (PrimAfter > 0) {
-        PrimOK = 0;
+        PrimOK = 1;
       }
       if (PrimOK) {
         // Only primitive influence will be considered
@@ -640,10 +639,10 @@ int ElePFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
                 int repPrimOK = 0;
                 // consider primitive representation accurate enough if it is
                 // repeated and beyond PrimAfter repetitions.
-                if (PrimAfter == 0) {
-                  // If PrimAfter is zero, repPrimOK is always zero
+                if (PrimAfter < 0) { // If PrimAfter <0, repPrimOK is zero
                   repPrimOK = 0;
-                } else if ((abs(xrpt) > PrimAfter) && (abs(yrpt) > PrimAfter)) {
+                } else if ((abs(xrpt) >= PrimAfter)
+                            && (abs(yrpt) >= PrimAfter)) {
                   repPrimOK = 1;
                 }
                 if (repPrimOK) {
@@ -3196,13 +3195,12 @@ int WtFldPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
         int PrimOK = 0;
         // consider primitive representation accurate enough if it is
         // repeated and beyond WtFldPrimAfter repetitions.
-        if (WtFldPrimAfter < 0) {
-          // If WtFldPrimAfter is less than zero, PrimOK is zero
+        if (WtFldPrimAfter < 0) { // If WtFldPrimAfter <0, PrimOK is zero
           PrimOK = 0;
         } else if (WtFldPrimAfter == 0) {  // only this is necessary
           PrimOK = 1;
         } else if (WtFldPrimAfter > 0) {
-          PrimOK = 0;
+          PrimOK = 1;
         }
         if (PrimOK) {
           // Potential and flux (local system) due to base primitive
@@ -3343,11 +3341,10 @@ int WtFldPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF,
 
                   // consider primitive representation accurate enough if it is
                   // repeated and beyond WtFldPrimAfter repetitions.
-                  if (WtFldPrimAfter < 0) {
-                    // If WtFldPrimAfter is less than zero, repPrimOK is zero
+                  if (WtFldPrimAfter < 0) {//WtFldPrimAfter <0 => repPrimOK = 0
                     repPrimOK = 0;
-                  } else if ((abs(xrpt) > WtFldPrimAfter) &&
-                             (abs(yrpt) > WtFldPrimAfter)) {
+                  } else if ((abs(xrpt) >= WtFldPrimAfter) &&
+                             (abs(yrpt) >= WtFldPrimAfter)) {
                     repPrimOK = 1;
                   }
                   // enforce primitive representation since it is unlikely

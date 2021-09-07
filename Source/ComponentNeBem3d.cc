@@ -38,6 +38,7 @@ std::array<double, 3> UnitVector(const std::array<double, 3>& a) {
   const std::array<double, 3> b = {a[0] / mag, a[1] / mag, a[2] / mag};
   return b;
 }
+
 std::array<double, 3> CrossProduct(const std::array<double, 3>& u,
                                    const std::array<double, 3>& v) {
   const std::array<double, 3> w = {u[1] * v[2] - u[2] * v[1],
@@ -378,7 +379,9 @@ namespace Garfield {
 
 ComponentNeBem3d* gComponentNeBem3d = nullptr;
 
-ComponentNeBem3d::ComponentNeBem3d() : Component("NeBem3d") {}
+ComponentNeBem3d::ComponentNeBem3d() : Component("NeBem3d") {
+  InitValues();
+}
 
 Medium* ComponentNeBem3d::GetMedium(const double x, const double y,
                                     const double z) {
@@ -387,21 +390,15 @@ Medium* ComponentNeBem3d::GetMedium(const double x, const double y,
 }
 
 void ComponentNeBem3d::InitValues() {
-  std::cout << "ComponentNeBem3d::InitValues ...\n";
 
-  // Set initial values of Weighting field Fast volume related parameters
+  // Set initial values of weighting field fast volume related parameters
   // Since MAXWtFld is not a variable, we do not need neBEM::
-  for (int id = 1; id < MAXWtFld; ++id) {
+  for(int id = 1; id < MAXWtFld; ++id) {
     neBEM::OptFixedWtField[id] = 0;
     neBEM::OptWtFldFastVol[id] = 0;
     m_optWtFldFastVol[id] = 0;
     m_optCreateWtFldFastPF[id] = 0;
     m_optReadWtFldFastPF[id] = 0;
-    // std::cout << id << ", " << neBEM::OptFixedWtField[id] << "' "
-    //           << neBEM::OptWtFldFastVol[id] << ", "
-    //           << m_optWtFldFastVol[id] << ", "
-    //           << m_optCreateWtFldFastPF[id] << ", "
-    //           << m_optReadWtFldFastPF[id] << "\n";
   }
 }
 
@@ -1410,6 +1407,8 @@ bool ComponentNeBem3d::Initialise() {
                       std::make_move_iterator(elements.begin()),
                       std::make_move_iterator(elements.end()));
   }
+
+  InitValues();
 
   // Set the user options.
   // Number of threads and use of primary average properties

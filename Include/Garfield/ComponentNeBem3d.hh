@@ -196,21 +196,17 @@ class ComponentNeBem3d : public Component {
   void SetNumberOfThreads(const unsigned int n) { m_nThreads = n > 0 ? n : 1; }
 
   /// Set the number of repetitions after which primitive properties are used
-  /// for physical field (previously unsigned int)
-  void SetPrimAfter(const int n) {
-    // m_primAfter = n > 0 ? n : 0;
-    m_primAfter = n;
-  }
+  /// for the physical field. 
+  /// A negative value (default) implies all the elements are always evaluated.
+  void SetPrimAfter(const int n) { m_primAfter = n; }
 
   /// Set the number of repetitions after which primitive properties are used
-  /// for weighting field (previously unsigned int)
-  void SetWtFldPrimAfter(const int n) {
-    // m_wtFldPrimAfter = n > 0 ? n : 0;
-    m_wtFldPrimAfter = n;
-  }
+  /// for the weighting field.
+  /// A negative value (default) implies all the elements are always evaluated.
+  void SetWtFldPrimAfter(const int n) { m_wtFldPrimAfter = n; }
 
   /// Set option related to removal of primitives.
-  void SetOptRmPrim(const unsigned int n) { m_optRmPrim = n > 0 ? n : 0; }
+  void SetOptRmPrim(const unsigned int n) { m_optRmPrim = n; }
 
  protected:
   void Reset() override;
@@ -319,11 +315,11 @@ class ComponentNeBem3d : public Component {
 
   // Weighting potential and field related Fast volume information
   unsigned int m_idWtField = 0;
-  unsigned int m_optWtFldFastVol[10];
-  unsigned int m_optCreateWtFldFastPF[10];
-  unsigned int m_optReadWtFldFastPF[10];
-  unsigned int m_versionWtFldFV[10];
-  unsigned int m_nbBlocksWtFldFV[10];
+  unsigned int m_optWtFldFastVol[11];
+  unsigned int m_optCreateWtFldFastPF[11];
+  unsigned int m_optReadWtFldFastPF[11];
+  unsigned int m_versionWtFldFV[11];
+  unsigned int m_nbBlocksWtFldFV[11];
 
   // Known charge options
   unsigned int m_optKnownCharge = 0;
@@ -335,14 +331,17 @@ class ComponentNeBem3d : public Component {
   unsigned int m_nThreads = 1;
 
   // Number of repetitions, after which only primitive properties are used.
-  unsigned int m_primAfter = 0;  // zero implies elements are used all the time.
+  // a negative value implies elements are used always.
+  int m_primAfter = -1;  
 
   // Number of repetitions, after which only primitive properties are used
-  // for weighting field calculations
-  unsigned int m_wtFldPrimAfter = 0;  // zero implies elements are used always.
+  // for weighting field calculations.
+  // A negative value implies only elements are used.
+  int m_wtFldPrimAfter = -1;  
 
-  // Option for removing primitives from a device geometry
-  unsigned int m_optRmPrim = 0;  // zero implies none to be removed
+  // Option for removing primitives from a device geometry.
+  // Zero implies none to be removed.
+  unsigned int m_optRmPrim = 0;  
 
   static constexpr double MinDist = 1.e-6;
   /// Target size of elements [cm].
