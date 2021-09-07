@@ -57,15 +57,7 @@ bool MediumDiamond::ElectronVelocity(
     vy = mu * ey;
     vz = mu * ez;
   } else {
-    // Hall mobility
-    const double muH = m_eHallFactor * mu;
-    const double muH2 = muH * muH;
-    const double eb = bx * ex + by * ey + bz * ez;
-    const double f = mu / (1. + muH2 * b2);
-    // Compute the drift velocity using the Langevin equation.
-    vx = f * (ex + muH * (ey * bz - ez * by) + muH2 * bx * eb);
-    vy = f * (ey + muH * (ez * bx - ex * bz) + muH2 * by * eb);
-    vz = f * (ez + muH * (ex * by - ey * bx) + muH2 * bz * eb);
+    Langevin(ex, ey, ez, bx, by, bz, mu, m_eHallFactor * mu, vx, vy, vz); 
   }
   return true;
 }
@@ -114,15 +106,7 @@ bool MediumDiamond::HoleVelocity(
     vy = mu * ey;
     vz = mu * ez;
   } else {
-    // Hall mobility
-    const double muH = m_hHallFactor * mu;
-    const double muH2 = muH * muH;
-    const double eb = bx * ex + by * ey + bz * ez;
-    const double f = muH / (1. + muH2 * b2);
-    // Compute the drift velocity using the Langevin equation.
-    vx = f * (ex + muH * (ey * bz - ez * by) + muH2 * bx * eb);
-    vy = f * (ey + muH * (ez * bx - ex * bz) + muH2 * by * eb);
-    vz = f * (ez + muH * (ex * by - ey * bx) + muH2 * bz * eb);
+    Langevin(ex, ey, ez, bx, by, bz, mu, m_hHallFactor * mu, vx, vy, vz);
   }
   return true;
 }

@@ -194,13 +194,7 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
   } else if (velX.empty() || velB.empty() ||
              (m_bFields.size() == 1 && fabs(m_bFields[0]) < Small)) {
     // Magnetic field, velocities along ExB, Bt not available.
-    const double mu = q * ve / e;
-    const double mu2 = mu * mu;
-    const double eb = bx * ex + by * ey + bz * ez;
-    const double f = mu / (1. + mu2 * b * b);
-    vx = f * (ex + mu * (ey * bz - ez * by) + mu2 * bx * eb);
-    vy = f * (ey + mu * (ez * bx - ex * bz) + mu2 * by * eb);
-    vz = f * (ez + mu * (ex * by - ey * bx) + mu2 * bz * eb);
+    Langevin(ex, ey, ez, bx, by, bz, q * ve / e, vx, vy, vz);
     return true;
   }
 
@@ -266,6 +260,39 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
   vy = q * (ve * ue[1] + vbt * ubt[1] + vexb * uexb[1]);
   vz = q * (ve * ue[2] + vbt * ubt[2] + vexb * uexb[2]);
   return true;
+}
+
+void Medium::Langevin(const double ex, const double ey, const double ez,
+                      double bx, double by, double bz, const double mu,
+                      double& vx, double& vy, double& vz) {
+
+  bx *= Tesla2Internal;
+  by *= Tesla2Internal;
+  bz *= Tesla2Internal;
+  const double b2 = bx * bx + by * by + bz * bz;
+  const double mu2 = mu * mu;
+  const double eb = bx * ex + by * ey + bz * ez;
+  const double f = mu / (1. + mu2 * b2);
+  vx = f * (ex + mu * (ey * bz - ez * by) + mu2 * bx * eb);
+  vy = f * (ey + mu * (ez * bx - ex * bz) + mu2 * by * eb);
+  vz = f * (ez + mu * (ex * by - ey * bx) + mu2 * bz * eb);
+}
+
+void Medium::Langevin(const double ex, const double ey, const double ez,
+                      double bx, double by, double bz, 
+                      const double mu, const double muH,
+                      double& vx, double& vy, double& vz) {
+
+  bx *= Tesla2Internal;
+  by *= Tesla2Internal;
+  bz *= Tesla2Internal;
+  const double b2 = bx * bx + by * by + bz * bz;
+  const double mu2 = muH * muH;
+  const double f = mu / (1. + mu2 * b2);
+  const double eb = bx * ex + by * ey + bz * ez;
+  vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
+  vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
+  vz = f * (ez + muH * (ex * by - ey * bx) + mu2 * bz * eb);
 }
 
 bool Medium::Diffusion(const double ex, const double ey, const double ez,
@@ -588,12 +615,7 @@ bool Medium::IonVelocity(const double ex, const double ey, const double ez,
     vy = mu * ey;
     vz = mu * ez;
   } else {
-    const double eb = bx * ex + by * ey + bz * ez;
-    const double mu2 = mu * mu;
-    const double f = mu / (1. + mu2 * b * b);
-    vx = f * (ex + mu * (ey * bz - ez * by) + mu2 * bx * eb);
-    vy = f * (ey + mu * (ez * bx - ex * bz) + mu2 * by * eb);
-    vz = f * (ez + mu * (ex * by - ey * bx) + mu2 * bz * eb);
+    Langevin(ex, ey, ez, bx, by, bz, mu, vx, vy, vz);
   }
 
   return true;

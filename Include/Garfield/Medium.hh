@@ -597,6 +597,13 @@ class Medium {
                 const std::vector<std::vector<std::vector<double> > >& velB,
                 const std::vector<std::vector<std::vector<double> > >& velX,
                 const double q, double& vx, double& vy, double& vz) const;
+  static void Langevin(const double ex, const double ey, const double ez,
+                       double bx, double by, double bz, const double mu, 
+                       double& vx, double& vy, double& vz);
+  static void Langevin(const double ex, const double ey, const double ez,
+                       double bx, double by, double bz, 
+                       const double mu, const double muH,
+                       double& vx, double& vy, double& vz);
   bool Diffusion(const double ex, const double ey, const double ez,
                  const double bx, const double by, const double bz,
                  const std::vector<std::vector<std::vector<double> > >& difL,
