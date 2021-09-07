@@ -17,7 +17,7 @@ class ComponentNeBem3d : public Component {
   ~ComponentNeBem3d() {}
 
   Medium* GetMedium(const double x, const double y, const double z) override;
-  void InitValues();
+
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
   void ElectricField(const double x, const double y, const double z, double& ex,
@@ -365,6 +365,7 @@ class ComponentNeBem3d : public Component {
   /// Electrode labels and corresponding neBEM weighting field indices.
   std::map<std::string, int> m_wfields;
 
+  void InitValues();
   /// Reduce panels to the basic period.
   void ShiftPanels(std::vector<Panel>& panels) const;
   /// Isolate the parts of polygon 1 that are not hidden by 2 and vice versa.
