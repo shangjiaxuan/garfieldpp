@@ -320,21 +320,11 @@ class MediumSilicon : public Medium {
   void UpdateImpactIonisationVanOverstraetenDeMan();
   void UpdateImpactIonisationGrant();
 
-  bool ElectronMobilityMinimos(const double e, double& mu) const;
-  bool ElectronMobilityCanali(const double e, double& mu) const;
-  bool ElectronMobilityReggiani(const double e, double& mu) const;
-  bool ElectronImpactIonisationVanOverstraetenDeMan(const double e,
-                                                    double& alpha) const;
-  bool ElectronImpactIonisationGrant(const double e, double& alpha) const;
-  bool ElectronImpactIonisationMassey(const double e, double& alpha) const;
+  double ElectronMobility(const double e) const;
+  double ElectronAlpha(const double e) const;
 
-  bool HoleMobilityMinimos(const double e, double& mu) const;
-  bool HoleMobilityCanali(const double e, double& mu) const;
-  bool HoleMobilityReggiani(const double e, double& mu) const;
-  bool HoleImpactIonisationVanOverstraetenDeMan(const double e,
-                                                double& alpha) const;
-  bool HoleImpactIonisationGrant(const double e, double& alpha) const;
-  bool HoleImpactIonisationMassey(const double e, double& alpha) const;
+  double HoleMobility(const double e) const;
+  double HoleAlpha(const double e) const;
 
   bool LoadOpticalData(const std::string& filename);
 
