@@ -1198,22 +1198,8 @@ bool MediumSilicon::UpdateTransportParameters() {
   }
 
   if (!m_hasUserMobility) {
-    // Calculate lattice mobility
-    switch (m_latticeMobilityModel) {
-      case LatticeMobility::Minimos:
-        UpdateLatticeMobilityMinimos();
-        break;
-      case LatticeMobility::Sentaurus:
-        UpdateLatticeMobilitySentaurus();
-        break;
-      case LatticeMobility::Reggiani:
-        UpdateLatticeMobilityReggiani();
-        break;
-      default:
-        std::cerr << m_className << "::UpdateTransportParameters:\n    "
-                  << "Unknown lattice mobility model. Program bug!\n";
-        break;
-    }
+    // Calculate lattice mobility.
+    UpdateLatticeMobility();
 
     // Calculate doping mobility
     switch (m_dopingMobilityModel) {
@@ -1232,17 +1218,7 @@ bool MediumSilicon::UpdateTransportParameters() {
 
   // Calculate saturation velocity
   if (!m_hasUserSaturationVelocity) {
-    switch (m_saturationVelocityModel) {
-      case SaturationVelocity::Minimos:
-        UpdateSaturationVelocityMinimos();
-        break;
-      case SaturationVelocity::Canali:
-        UpdateSaturationVelocityCanali();
-        break;
-      case SaturationVelocity::Reggiani:
-        UpdateSaturationVelocityReggiani();
-        break;
-    }
+    UpdateSaturationVelocity();
   }
 
   // Calculate high field saturation parameters
@@ -1274,50 +1250,36 @@ bool MediumSilicon::UpdateTransportParameters() {
 }
 
 void MediumSilicon::UpdateLatticeMobilityMinimos() {
-  // References:
-  // - S. Selberherr, W. Haensch, M. Seavey, J. Slotboom,
-  //   Solid State Electronics 33 (1990), 1425-1436
-  // - Minimos 6.1 User's Guide (1999)
 
-  // Lattice mobilities at 300 K [cm2 / (V ns)]
-  constexpr double eMu0 = 1.43e-6;
-  constexpr double hMu0 = 0.46e-6;
+void MediumSilicon::UpdateLatticeMobility() {
+
   // Temperature normalized to 300 K
   const double t = m_temperature / 300.;
-  // Temperature dependence of lattice mobility
-  m_eLatticeMobility = eMu0 * pow(t, -2.);
-  m_hLatticeMobility = hMu0 * pow(t, -2.18);
-}
 
-void MediumSilicon::UpdateLatticeMobilitySentaurus() {
-  // References:
-  // - C. Lombardi et al.,
-  //   IEEE Trans. CAD 7 (1988), 1164-1171
-  // - Sentaurus Device User Guide (2007)
-
-  // Lattice mobilities at 300 K [cm2 / (V ns)]
-  constexpr double eMu0 = 1.417e-6;
-  constexpr double hMu0 = 0.4705e-6;
-  // Temperature normalized to 300 K
-  const double t = m_temperature / 300.;
-  // Temperature dependence of lattice mobility
-  m_eLatticeMobility = eMu0 * pow(t, -2.5);
-  m_hLatticeMobility = hMu0 * pow(t, -2.2);
-}
-
-void MediumSilicon::UpdateLatticeMobilityReggiani() {
-  // Reference:
-  // - M. A. Omar, L. Reggiani
-  //   Solid State Electronics 30 (1987), 693-697
-
-  // Lattice mobilities at 300 K [cm2 / (V ns)]
-  constexpr double eMu0 = 1.320e-6;
-  constexpr double hMu0 = 0.460e-6;
-  // Temperature normalized to 300 K
-  const double t = m_temperature / 300.;
-  // Temperature dependence of lattice mobility
-  m_eLatticeMobility = eMu0 * pow(t, -2.);
-  m_hLatticeMobility = hMu0 * pow(t, -2.2);
+  switch (m_latticeMobilityModel) {
+    case LatticeMobility::Minimos:
+      // - S. Selberherr, W. Haensch, M. Seavey, J. Slotboom,
+      //   Solid State Electronics 33 (1990), 1425
+      // - Minimos 6.1 User's Guide (1999)
+      m_eLatticeMobility = 1.43e-6 * pow(t, -2.);
+      m_hLatticeMobility = 0.46e-6 * pow(t, -2.18);
+      break;
+    case LatticeMobility::Sentaurus:
+      // - C. Lombardi et al., IEEE Trans. CAD 7 (1988), 1164
+      // - Sentaurus Device User Guide (2007)
+      m_eLatticeMobility = 1.417e-6 * pow(t, -2.5);
+      m_hLatticeMobility = 0.4705e-6 * pow(t, -2.2);
+      break;
+    case LatticeMobility::Reggiani:
+      // M. A. Omar, L. Reggiani, Solid State Electronics 30 (1987), 693
+      m_eLatticeMobility = 1.320e-6 * pow(t, -2.);
+      m_hLatticeMobility = 0.460e-6 * pow(t, -2.2);
+      break;
+    default:
+      std::cerr << m_className << "::UpdateLatticeMobility:\n"
+                << "    Unknown lattice mobility model. Program bug!\n";
+      break;
+  }
 }
 
 void MediumSilicon::UpdateDopingMobilityMinimos() {
@@ -1393,34 +1355,33 @@ void MediumSilicon::UpdateDopingMobilityMasetti() {
                 hMu1 / (1. + pow(hCs / m_dopingConcentration, hBeta));
 }
 
-void MediumSilicon::UpdateSaturationVelocityMinimos() {
-  // References:
-  // - R. Quay, C. Moglestue, V. Palankovski, S. Selberherr,
-  //   Materials Science in Semiconductor Processing 3 (2000), 149-155
-  // - Minimos NT User Guide (2004)
+void MediumSilicon::UpdateSaturationVelocity() {
 
-  // Temperature-dependence of saturation velocities [cm / ns]
-  m_eSatVel = 1.e-2 / (1. + 0.74 * (m_temperature / 300. - 1.));
-  m_hSatVel = 0.704e-2 / (1. + 0.37 * (m_temperature / 300. - 1.));
-}
-
-void MediumSilicon::UpdateSaturationVelocityCanali() {
-  // References:
-  // - C. Canali, G. Majni, R. Minder, G. Ottaviani,
-  //   IEEE Transactions on Electron Devices 22 (1975), 1045-1047
-  // - Sentaurus Device User Guide (2007)
-
-  m_eSatVel = 1.07e-2 * pow(300. / m_temperature, 0.87);
-  m_hSatVel = 8.37e-3 * pow(300. / m_temperature, 0.52);
-}
-
-void MediumSilicon::UpdateSaturationVelocityReggiani() {
-  // Reference:
-  // - M. A. Omar, L. Reggiani
-  //   Solid State Electronics 30 (1987), 693-697
-
-  m_eSatVel = 1.470e-2 * sqrt(tanh(150. / m_temperature));
-  m_hSatVel = 0.916e-2 * sqrt(tanh(300. / m_temperature));
+  switch (m_saturationVelocityModel) {
+    case SaturationVelocity::Minimos:
+      // - R. Quay, C. Moglestue, V. Palankovski, S. Selberherr,
+      //   Materials Science in Semiconductor Processing 3 (2000), 149
+      // - Minimos NT User Guide (2004)
+      m_eSatVel = 1.e-2 / (1. + 0.74 * (m_temperature / 300. - 1.));
+      m_hSatVel = 0.704e-2 / (1. + 0.37 * (m_temperature / 300. - 1.));
+      break;
+    case SaturationVelocity::Canali:
+      // - C. Canali, G. Majni, R. Minder, G. Ottaviani,
+      //   IEEE Transactions on Electron Devices 22 (1975), 1045
+      // - Sentaurus Device User Guide (2007)
+      m_eSatVel = 1.07e-2 * pow(300. / m_temperature, 0.87);
+      m_hSatVel = 8.37e-3 * pow(300. / m_temperature, 0.52);
+      break;
+    case SaturationVelocity::Reggiani:
+      // M. A. Omar, L. Reggiani, Solid State Electronics 30 (1987), 693
+      m_eSatVel = 1.470e-2 * sqrt(tanh(150. / m_temperature));
+      m_hSatVel = 0.916e-2 * sqrt(tanh(300. / m_temperature));
+      break;
+    default:
+      std::cerr << m_className << "::UpdateSaturationVelocity:\n" 
+                << "    Unknown saturation velocity model. Program bug!\n";
+      break;
+  }
 }
 
 void MediumSilicon::UpdateHighFieldMobilityCanali() {

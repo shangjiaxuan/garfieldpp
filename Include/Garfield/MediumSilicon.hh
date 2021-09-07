@@ -304,16 +304,12 @@ class MediumSilicon : public Medium {
   std::vector<std::pair<double, double> > m_opticalDataEpsilon;
 
   bool UpdateTransportParameters();
-  void UpdateLatticeMobilityMinimos();
-  void UpdateLatticeMobilitySentaurus();
-  void UpdateLatticeMobilityReggiani();
+  void UpdateLatticeMobility();
 
   void UpdateDopingMobilityMinimos();
   void UpdateDopingMobilityMasetti();
 
-  void UpdateSaturationVelocityMinimos();
-  void UpdateSaturationVelocityCanali();
-  void UpdateSaturationVelocityReggiani();
+  void UpdateSaturationVelocity();
 
   void UpdateHighFieldMobilityCanali();
 
