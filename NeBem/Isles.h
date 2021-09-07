@@ -11,6 +11,7 @@
 #endif
 
 #include <math.h>
+#include <stdio.h>
 
 #include "Vector.h"
 
@@ -24,7 +25,7 @@
 #define ST_PI 3.14159265358979323846
 
 #ifdef __cplusplus
-namespace neBEM { 
+namespace neBEM {
 #endif
 
 ISLESGLOBAL char ISLESVersion[10];
@@ -115,7 +116,19 @@ ISLESGLOBAL double ExactThinFZ_W(double rW, double lW, double X, double Y,
 ISLESGLOBAL int ExactThinWire(double rW, double lW, double X, double Y,
                               double Z, double *potential, Vector3D *Flux);
 
-// All coordiantes and vectors are in the global co-ordinate system.
+// The point is passed in the local coordinate system, in the ECS of the ring
+// In the ECS, plane of the ring is r,theta (XY) and z is the ordinate
+// up and down of this plane.
+ISLESGLOBAL int ExactRingPF(double rW, Point3D localPt, double *potential,
+                            Vector3D *Flux);
+
+// The point is passed in the local coordinate system, in the ECS of the disc
+// In the ECS, plane of the ring is r,theta (XY) and z is the ordinate
+// up and down of this plane.
+ISLESGLOBAL int ExactDiscPF(double rW, Point3D localPt, double *potential,
+                            Vector3D *Flux);
+
+// All coordinates and vectors are in the global co-ordinate system.
 // In case of area (both triangular and rectangular), it is assumed that
 // the +ve normal direction is obtained by
 // \vec{P1-P0} \cross \vec{P2-P1}.
@@ -125,11 +138,17 @@ ISLESGLOBAL double PointKnChPF(Point3D SourcePt, Point3D FieldPt,
                                Vector3D *globalF);
 
 ISLESGLOBAL double LineKnChPF(Point3D LineStart, Point3D LineStop,
+                              Point3D FieldPt, Vector3D *globalF);
+
+ISLESGLOBAL double WireKnChPF(Point3D WireStart, Point3D WireStop,
                               double radius, Point3D FieldPt,
                               Vector3D *globalF);
 
 ISLESGLOBAL double AreaKnChPF(int NbVertices, Point3D *Vertices,
                               Point3D FieldPt, Vector3D *globalF);
+
+ISLESGLOBAL double ApproxVolumeKnChPF(int NbPts, Point3D *SourcePt,
+                                      Point3D FieldPt, Vector3D *globalF);
 
 ISLESGLOBAL double VolumeKnChPF(int NbPts, Point3D *Vertices, Point3D FieldPt,
                                 Vector3D *globalF);
@@ -137,7 +156,7 @@ ISLESGLOBAL double VolumeKnChPF(int NbPts, Point3D *Vertices, Point3D FieldPt,
 ISLESGLOBAL int Sign(double x);
 
 #ifdef __cplusplus
-} // namespace
+}  // namespace
 #endif
 
 #endif

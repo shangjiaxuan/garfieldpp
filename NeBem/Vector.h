@@ -112,7 +112,7 @@ VGLOBAL double **MatrixProduct(int NbRows1, int NbCols1, double **Matrix1,
                                int NbRows2, int NbCols2, double **Matrix2);
 
 #ifdef __cplusplus
-} // namespace
+}  // namespace
 #endif
 
 #endif

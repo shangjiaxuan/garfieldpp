@@ -131,7 +131,7 @@ NRGLOBAL float *vector();
 #endif /* ANSI */
 
 #ifdef __cplusplus
-} // namespace
+}  // namespace
 #endif
 
 #endif /* _NR_UTILS_H_ */
@@ -155,7 +155,7 @@ NRGLOBAL void svbksb(double **a, double *w, double **v, int matrow, int matcol,
                      double *V, double *ChDen);
 
 #ifdef __cplusplus
-} // namespace
+}  // namespace
 #endif
 
 #endif /* NR */
