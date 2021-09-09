@@ -1434,18 +1434,24 @@ void MediumSilicon::UpdateImpactIonisation() {
       m_hImpactA1 = 5.60e5 * gamma;
       m_hImpactB1 = 1.32e6 * gamma;
     }
-    return;
+  } else if (m_impactIonisationModel == ImpactIonisation::Massey) {
+    // D. J. Massey, J. P. R. David, and G. J. Rees,
+    // IEEE Trans. Electron Devices 53 (2006), 2328
+    m_eImpactA0 = 4.43e5;
+    m_eImpactB0 = 9.66e5 + 4.99e2 * m_temperature;
+
+    m_hImpactA0 = 1.13e6;
+    m_hImpactB0 = 1.71e6 + 1.09e3 * m_temperature;
   } else if (m_impactIonisationModel == ImpactIonisation::Okuto) {
     const double dt = m_temperature - 300.;
     m_eImpactA0 = 0.426 * (1. + 3.05e-4 * dt);
     m_hImpactA0 = 0.243 * (1. + 5.35e-4 * dt);
     m_eImpactB0 = 4.81e5 * (1. + 6.86e-4 * dt);
     m_hImpactB0 = 6.53e5 * (1. + 5.67e-4 * dt);
-    return;
+  } else {
+    std::cerr << m_className << "::UpdateImpactIonisation:\n"
+              << "    Unknown impact ionisation model. Program bug!\n";
   }
-
-  std::cerr << m_className << "::UpdateImpactIonisation:\n"
-            << "    Unknown impact ionisation model. Program bug!\n";
 }
 
 double MediumSilicon::ElectronMobility(const double emag) const {
@@ -1494,13 +1500,7 @@ double MediumSilicon::ElectronAlpha(const double emag) const {
       return m_eImpactA2 * exp(-m_eImpactB2 / emag);
     }
   } else if (m_impactIonisationModel == ImpactIonisation::Massey) {
-    // D. J. Massey, J. P. R. David, and G. J. Rees,
-    // IEEE Trans. Electron Devices 53 (2006), 2328
-    constexpr double a = 4.43e5;
-    constexpr double c = 9.66e5;
-    constexpr double d = 4.99e2;
-    const double b = c + d * m_temperature;
-    return a * exp(-b / emag);
+    return m_eImpactA0 * exp(-m_eImpactB0 / emag);
   } else if (m_impactIonisationModel == ImpactIonisation::Okuto) {
     const double f = m_eImpactB0 / emag;
     return m_eImpactA0 * emag * exp(-f * f);
@@ -1549,13 +1549,7 @@ double MediumSilicon::HoleAlpha(const double emag) const {
       return m_hImpactA1 * exp(-m_hImpactB1 / emag);
     } 
   } else if (m_impactIonisationModel == ImpactIonisation::Massey) {
-    // D. J. Massey, J. P. R. David, and G. J. Rees,
-    // IEEE Trans. Electron Devices 53 (2006), 2328
-    constexpr double a = 1.13e6;
-    constexpr double c = 1.71e6;
-    constexpr double d = 1.09e3;
-    const double b = c + d * m_temperature;
-    return a * exp(-b / emag);
+    return m_hImpactA0 * exp(-m_hImpactB0 / emag);
   } else if (m_impactIonisationModel == ImpactIonisation::Okuto) {
     const double f = m_hImpactB0 / emag;
     return m_hImpactA0 * emag * exp(-f * f);
