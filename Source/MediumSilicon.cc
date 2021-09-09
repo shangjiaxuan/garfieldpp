@@ -430,6 +430,11 @@ void MediumSilicon::SetImpactIonisationModelMassey() {
   m_isChanged = true;
 }
 
+void MediumSilicon::SetImpactIonisationModelOkutoCrowell() {
+  m_impactIonisationModel = ImpactIonisation::Okuto;
+  m_isChanged = true;
+}
+
 bool MediumSilicon::SetMaxElectronEnergy(const double e) {
   if (e <= m_eMinG + Small) {
     std::cerr << m_className << "::SetMaxElectronEnergy:\n"
@@ -1181,21 +1186,8 @@ bool MediumSilicon::Initialise() {
 bool MediumSilicon::UpdateTransportParameters() {
   std::lock_guard<std::mutex> guard(m_mutex);
 
-  // Calculate impact ionisation coefficients
-  switch (m_impactIonisationModel) {
-    case ImpactIonisation::VanOverstraeten:
-      UpdateImpactIonisationVanOverstraetenDeMan();
-      break;
-    case ImpactIonisation::Grant:
-      UpdateImpactIonisationGrant();
-      break;
-    case ImpactIonisation::Massey:
-      break;
-    default:
-      std::cerr << m_className << "::UpdateTransportParameters:\n    "
-                << "Unknown impact ionisation model. Program bug!\n";
-      break;
-  }
+  // Calculate impact ionisation coefficients.
+  UpdateImpactIonisation();
 
   if (!m_hasUserMobility) {
     // Calculate lattice mobility.
@@ -1248,8 +1240,6 @@ bool MediumSilicon::UpdateTransportParameters() {
 
   return true;
 }
-
-void MediumSilicon::UpdateLatticeMobilityMinimos() {
 
 void MediumSilicon::UpdateLatticeMobility() {
 
@@ -1397,88 +1387,91 @@ void MediumSilicon::UpdateHighFieldMobilityCanali() {
   m_hBetaCanaliInv = 1. / m_hBetaCanali;
 }
 
-void MediumSilicon::UpdateImpactIonisationVanOverstraetenDeMan() {
+void MediumSilicon::UpdateImpactIonisation() {
 
-  // References:
-  //  - R. van Overstraeten and H. de Man,
-  //    Solid State Electronics 13 (1970), 583-608
-  //  - W. Maes, K. de Meyer and R. van Overstraeten,
-  //    Solid State Electronics 33 (1990), 705-718
-  //  - Sentaurus Device User Guide (2016)
+  if (m_impactIonisationModel == ImpactIonisation::VanOverstraeten ||
+      m_impactIonisationModel == ImpactIonisation::Grant) {
 
-  // Temperature dependence as in Sentaurus Device
-  // Optical phonon energy
-  constexpr double hbarOmega = 0.063;
-  // Temperature scaling coefficient
-  const double gamma =
-      tanh(hbarOmega / (2. * BoltzmannConstant * 300.)) /
-      tanh(hbarOmega / (2. * BoltzmannConstant * m_temperature));
+    // Temperature dependence as in Sentaurus Device
+    // Optical phonon energy
+    constexpr double hbarOmega = 0.063;
+    // Temperature scaling coefficient
+    const double gamma =
+        tanh(hbarOmega / (2. * BoltzmannConstant * 300.)) /
+        tanh(hbarOmega / (2. * BoltzmannConstant * m_temperature));
 
-  // Low field coefficients taken from Maes, de Meyer, van Overstraeten
-  // eImpactA0 = gamma * 3.318e5;
-  // eImpactB0 = gamma * 1.135e6;
-  m_eImpactA0 = gamma * 7.03e5;
-  m_eImpactB0 = gamma * 1.231e6;
-  m_eImpactA1 = gamma * 7.03e5;
-  m_eImpactB1 = gamma * 1.231e6;
+    if (m_impactIonisationModel == ImpactIonisation::VanOverstraeten) {
+      // - R. van Overstraeten and H. de Man,
+      //   Solid State Electronics 13 (1970), 583
+      // - W. Maes, K. de Meyer and R. van Overstraeten,
+      //   Solid State Electronics 33 (1990), 705
+      // - Sentaurus Device User Guide (2016)
 
-  m_hImpactA0 = gamma * 1.582e6;
-  m_hImpactB0 = gamma * 2.036e6;
-  m_hImpactA1 = gamma * 6.71e5;
-  m_hImpactB1 = gamma * 1.693e6;
+      // Low field coefficients taken from Maes, de Meyer, van Overstraeten
+      // eImpactA0 = gamma * 3.318e5;
+      // eImpactB0 = gamma * 1.135e6;
+      m_eImpactA0 = gamma * 7.03e5;
+      m_eImpactB0 = gamma * 1.231e6;
+      m_eImpactA1 = gamma * 7.03e5;
+      m_eImpactB1 = gamma * 1.231e6;
+
+      m_hImpactA0 = gamma * 1.582e6;
+      m_hImpactB0 = gamma * 2.036e6;
+      m_hImpactA1 = gamma * 6.71e5;
+      m_hImpactB1 = gamma * 1.693e6;
+    } else if (m_impactIonisationModel == ImpactIonisation::Grant) {
+      // W. N. Grant, Solid State Electronics 16 (1973), 1189
+      // Sentaurus Device User Guide (2007)
+      m_eImpactA0 = 2.60e6 * gamma;
+      m_eImpactB0 = 1.43e6 * gamma;
+      m_eImpactA1 = 6.20e5 * gamma;
+      m_eImpactB1 = 1.08e6 * gamma;
+      m_eImpactA2 = 5.05e5 * gamma;
+      m_eImpactB2 = 9.90e5 * gamma;
+
+      m_hImpactA0 = 2.00e6 * gamma;
+      m_hImpactB0 = 1.97e6 * gamma;
+      m_hImpactA1 = 5.60e5 * gamma;
+      m_hImpactB1 = 1.32e6 * gamma;
+    }
+    return;
+  } else if (m_impactIonisationModel == ImpactIonisation::Okuto) {
+    const double dt = m_temperature - 300.;
+    m_eImpactA0 = 0.426 * (1. + 3.05e-4 * dt);
+    m_hImpactA0 = 0.243 * (1. + 5.35e-4 * dt);
+    m_eImpactB0 = 4.81e5 * (1. + 6.86e-4 * dt);
+    m_hImpactB0 = 6.53e5 * (1. + 5.67e-4 * dt);
+    return;
+  }
+
+  std::cerr << m_className << "::UpdateImpactIonisation:\n"
+            << "    Unknown impact ionisation model. Program bug!\n";
 }
 
-void MediumSilicon::UpdateImpactIonisationGrant() {
-  // References:
-  // - W. N. Grant,
-  //   Solid State Electronics 16 (1973), 1189 - 1203
-  // - Sentaurus Device User Guide (2007)
+double MediumSilicon::ElectronMobility(const double emag) const {
 
-  // Temperature dependence as in Sentaurus Device
-  // Optical phonon energy
-  constexpr double hbarOmega = 0.063;
-  // Temperature scaling coefficient
-  const double gamma =
-      tanh(hbarOmega / (2. * BoltzmannConstant * 300.)) /
-      tanh(hbarOmega / (2. * BoltzmannConstant * m_temperature));
-
-  m_eImpactA0 = 2.60e6 * gamma;
-  m_eImpactB0 = 1.43e6 * gamma;
-  m_eImpactA1 = 6.20e5 * gamma;
-  m_eImpactB1 = 1.08e6 * gamma;
-  m_eImpactA2 = 5.05e5 * gamma;
-  m_eImpactB2 = 9.90e5 * gamma;
-
-  m_hImpactA0 = 2.00e6 * gamma;
-  m_hImpactB0 = 1.97e6 * gamma;
-  m_hImpactA1 = 5.60e5 * gamma;
-  m_hImpactB1 = 1.32e6 * gamma;
-}
-
-double MediumSilicon::ElectronMobility(const double e) const {
-
-  if (e < Small) return 0.;
+  if (emag < Small) return 0.;
 
   if (m_highFieldMobilityModel == HighFieldMobility::Minimos) {
     // Minimos User's Guide (1999)
-    const double r = 2 * m_eMobility * e / m_eSatVel;
+    const double r = 2 * m_eMobility * emag / m_eSatVel;
     return 2. * m_eMobility / (1. + sqrt(1. + r * r));
   } else if (m_highFieldMobilityModel == HighFieldMobility::Canali) {
     // Sentaurus Device User Guide (2007)
-    const double r = m_eMobility * e / m_eSatVel;
+    const double r = m_eMobility * emag / m_eSatVel;
     return m_eMobility / pow(1. + pow(r, m_eBetaCanali), m_eBetaCanaliInv);
   } else if (m_highFieldMobilityModel == HighFieldMobility::Reggiani) {
     // M. A. Omar, L. Reggiani, Solid State Electronics 30 (1987), 693
-    const double r = m_eMobility * e / m_eSatVel;
+    const double r = m_eMobility * emag / m_eSatVel;
     constexpr double k = 1. / 1.5;
     return m_eMobility / pow(1. + pow(r, 1.5), k);
   }
   return m_eMobility;
 }
 
-double MediumSilicon::ElectronAlpha(const double e) const {
+double MediumSilicon::ElectronAlpha(const double emag) const {
 
-  if (e < Small) return 0.;
+  if (emag < Small) return 0.;
   
   if (m_impactIonisationModel == ImpactIonisation::VanOverstraeten) {
     // - R. van Overstraeten and H. de Man,
@@ -1486,71 +1479,74 @@ double MediumSilicon::ElectronAlpha(const double e) const {
     // - W. Maes, K. de Meyer and R. van Overstraeten,
     //   Solid State Electronics 33 (1990), 705
     // - Sentaurus Device User Guide (2016)
-    if (e < 4e5) {
-      return m_eImpactA0 * exp(-m_eImpactB0 / e);
+    if (emag < 4e5) {
+      return m_eImpactA0 * exp(-m_eImpactB0 / emag);
     } else {
-      return m_eImpactA1 * exp(-m_eImpactB1 / e);
+      return m_eImpactA1 * exp(-m_eImpactB1 / emag);
     }
   } else if (m_impactIonisationModel == ImpactIonisation::Grant) {
     // W. N. Grant, Solid State Electronics 16 (1973), 1189
-    if (e < 2.4e5) {
-      return m_eImpactA0 * exp(-m_eImpactB0 / e);
-    } else if (e < 5.3e5) {
-      return m_eImpactA1 * exp(-m_eImpactB1 / e);
+    if (emag < 2.4e5) {
+      return m_eImpactA0 * exp(-m_eImpactB0 / emag);
+    } else if (emag < 5.3e5) {
+      return m_eImpactA1 * exp(-m_eImpactB1 / emag);
     } else {
-      return m_eImpactA2 * exp(-m_eImpactB2 / e);
+      return m_eImpactA2 * exp(-m_eImpactB2 / emag);
     }
-  } else if (m_impactIonisationModel == ImpactIonisation::Grant) {
+  } else if (m_impactIonisationModel == ImpactIonisation::Massey) {
     // D. J. Massey, J. P. R. David, and G. J. Rees,
     // IEEE Trans. Electron Devices 53 (2006), 2328
     constexpr double a = 4.43e5;
     constexpr double c = 9.66e5;
     constexpr double d = 4.99e2;
     const double b = c + d * m_temperature;
-    return a * exp(-b / e);
+    return a * exp(-b / emag);
+  } else if (m_impactIonisationModel == ImpactIonisation::Okuto) {
+    const double f = m_eImpactB0 / emag;
+    return m_eImpactA0 * emag * exp(-f * f);
   }
   std::cerr << m_className << "::ElectronAlpha: Unknown model. Program bug!\n";
   return 0.;
 }
 
-double MediumSilicon::HoleMobility(const double e) const {
+double MediumSilicon::HoleMobility(const double emag) const {
 
-  if (e < Small) return 0.;
+  if (emag < Small) return 0.;
 
   if (m_highFieldMobilityModel == HighFieldMobility::Minimos) {
     // Minimos User's Guide (1999)
-    return m_hMobility / (1. + m_hMobility * e / m_eSatVel);
+    return m_hMobility / (1. + m_hMobility * emag / m_eSatVel);
   } else if (m_highFieldMobilityModel == HighFieldMobility::Canali) {
     // Sentaurus Device User Guide (2007)
-    const double r = m_hMobility * e / m_hSatVel;
+    const double r = m_hMobility * emag / m_hSatVel;
     return m_hMobility / pow(1. + pow(r, m_hBetaCanali), m_hBetaCanaliInv);
   } else if (m_highFieldMobilityModel == HighFieldMobility::Reggiani) {
     // M. A. Omar, L. Reggiani, Solid State Electronics 30 (1987), 693
-    const double r = m_hMobility * e / m_hSatVel;
+    const double r = m_hMobility * emag / m_hSatVel;
     return m_hMobility / sqrt(1. + r * r);
   }
   return m_hMobility;
 }
 
-double MediumSilicon::HoleAlpha(const double e) const {
+double MediumSilicon::HoleAlpha(const double emag) const {
 
-  if (e < Small) return 0.;
+  if (emag < Small) return 0.;
 
   if (m_impactIonisationModel == ImpactIonisation::VanOverstraeten) {
     // - R. van Overstraeten and H. de Man,
     //   Solid State Electronics 13 (1970), 583
     // - Sentaurus Device User Guide (2016)
-    if (e < 4e5) {
-      return m_hImpactA0 * exp(-m_hImpactB0 / e);
+    if (emag < 4e5) {
+      return m_hImpactA0 * exp(-m_hImpactB0 / emag);
     } else {
-      return m_hImpactA1 * exp(-m_hImpactB1 / e);
+      return m_hImpactA1 * exp(-m_hImpactB1 / emag);
     }
   } else if (m_impactIonisationModel == ImpactIonisation::Grant) {
     // W. N. Grant, Solid State Electronics 16 (1973), 1189
-    if (e < 5.3e5) {
-      return m_hImpactA0 * exp(-m_hImpactB0 / e);
+    if (emag < 5.3e5) {
+      return m_hImpactA0 * exp(-m_hImpactB0 / emag);
     } else {
-      return m_hImpactA1 * exp(-m_hImpactB1 / e);
+      return m_hImpactA1 * exp(-m_hImpactB1 / emag);
     } 
   } else if (m_impactIonisationModel == ImpactIonisation::Massey) {
     // D. J. Massey, J. P. R. David, and G. J. Rees,
@@ -1559,8 +1555,11 @@ double MediumSilicon::HoleAlpha(const double e) const {
     constexpr double c = 1.71e6;
     constexpr double d = 1.09e3;
     const double b = c + d * m_temperature;
-    return a * exp(-b / e);
-  } 
+    return a * exp(-b / emag);
+  } else if (m_impactIonisationModel == ImpactIonisation::Okuto) {
+    const double f = m_hImpactB0 / emag;
+    return m_hImpactA0 * emag * exp(-f * f);
+  }
   std::cerr << m_className << "::HoleAlpha: Unknown model. Program bug!\n";
   return 0.;
 }

@@ -90,6 +90,8 @@ class MediumSilicon : public Medium {
   void SetImpactIonisationModelGrant();
   /// Calculate &alpha; using the Massey model.
   void SetImpactIonisationModelMassey();
+  /// Calculate &alpha; using the Okuto-Crowell model.
+  void SetImpactIonisationModelOkutoCrowell();
 
   /// Apply a scaling factor to the diffusion coefficients.
   void SetDiffusionScaling(const double d) { m_diffScale = d; }
@@ -156,7 +158,7 @@ class MediumSilicon : public Medium {
   enum class DopingMobility { Minimos = 0, Masetti };
   enum class SaturationVelocity { Minimos = 0, Canali, Reggiani };
   enum class HighFieldMobility { Minimos = 0, Canali, Reggiani, Constant };
-  enum class ImpactIonisation { VanOverstraeten = 0, Grant, Massey };
+  enum class ImpactIonisation { VanOverstraeten = 0, Grant, Massey, Okuto };
 
   std::mutex m_mutex;
 
@@ -313,8 +315,7 @@ class MediumSilicon : public Medium {
 
   void UpdateHighFieldMobilityCanali();
 
-  void UpdateImpactIonisationVanOverstraetenDeMan();
-  void UpdateImpactIonisationGrant();
+  void UpdateImpactIonisation();
 
   double ElectronMobility(const double e) const;
   double ElectronAlpha(const double e) const;
