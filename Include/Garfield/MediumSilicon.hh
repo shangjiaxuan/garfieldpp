@@ -90,6 +90,8 @@ class MediumSilicon : public Medium {
   void SetImpactIonisationModelGrant();
   /// Calculate &alpha; using the Massey model.
   void SetImpactIonisationModelMassey();
+  /// Calculate &alpha; using the Okuto-Crowell model.
+  void SetImpactIonisationModelOkutoCrowell();
 
   /// Apply a scaling factor to the diffusion coefficients.
   void SetDiffusionScaling(const double d) { m_diffScale = d; }
@@ -156,7 +158,7 @@ class MediumSilicon : public Medium {
   enum class DopingMobility { Minimos = 0, Masetti };
   enum class SaturationVelocity { Minimos = 0, Canali, Reggiani };
   enum class HighFieldMobility { Minimos = 0, Canali, Reggiani, Constant };
-  enum class ImpactIonisation { VanOverstraeten = 0, Grant, Massey };
+  enum class ImpactIonisation { VanOverstraeten = 0, Grant, Massey, Okuto };
 
   std::mutex m_mutex;
 
@@ -304,37 +306,22 @@ class MediumSilicon : public Medium {
   std::vector<std::pair<double, double> > m_opticalDataEpsilon;
 
   bool UpdateTransportParameters();
-  void UpdateLatticeMobilityMinimos();
-  void UpdateLatticeMobilitySentaurus();
-  void UpdateLatticeMobilityReggiani();
+  void UpdateLatticeMobility();
 
   void UpdateDopingMobilityMinimos();
   void UpdateDopingMobilityMasetti();
 
-  void UpdateSaturationVelocityMinimos();
-  void UpdateSaturationVelocityCanali();
-  void UpdateSaturationVelocityReggiani();
+  void UpdateSaturationVelocity();
 
   void UpdateHighFieldMobilityCanali();
 
-  void UpdateImpactIonisationVanOverstraetenDeMan();
-  void UpdateImpactIonisationGrant();
+  void UpdateImpactIonisation();
 
-  bool ElectronMobilityMinimos(const double e, double& mu) const;
-  bool ElectronMobilityCanali(const double e, double& mu) const;
-  bool ElectronMobilityReggiani(const double e, double& mu) const;
-  bool ElectronImpactIonisationVanOverstraetenDeMan(const double e,
-                                                    double& alpha) const;
-  bool ElectronImpactIonisationGrant(const double e, double& alpha) const;
-  bool ElectronImpactIonisationMassey(const double e, double& alpha) const;
+  double ElectronMobility(const double e) const;
+  double ElectronAlpha(const double e) const;
 
-  bool HoleMobilityMinimos(const double e, double& mu) const;
-  bool HoleMobilityCanali(const double e, double& mu) const;
-  bool HoleMobilityReggiani(const double e, double& mu) const;
-  bool HoleImpactIonisationVanOverstraetenDeMan(const double e,
-                                                double& alpha) const;
-  bool HoleImpactIonisationGrant(const double e, double& alpha) const;
-  bool HoleImpactIonisationMassey(const double e, double& alpha) const;
+  double HoleMobility(const double e) const;
+  double HoleAlpha(const double e) const;
 
   bool LoadOpticalData(const std::string& filename);
 
