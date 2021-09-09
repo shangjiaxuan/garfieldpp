@@ -45,6 +45,9 @@ class ViewMedium : public ViewBase {
   /// Set the angle to use when plotting as function of E or B.
   void SetAngle(const double angle) { m_angle = angle; }
 
+  void EnableExport(const std::string& txtfile) { m_outfile = txtfile; }
+  void DisableExport() { m_outfile = ""; }
+
   /** Plot the drift velocity components of electrons in the medium.
     * \param xaxis abscissa.
     *   - 'e': electric field, 
@@ -164,6 +167,8 @@ class ViewMedium : public ViewBase {
   std::vector<short> m_colours;
   std::vector<std::string> m_labels;
 
+  std::string m_outfile;
+
   void PlotVelocity(const Axis xaxis, const Charge particle,
                     const bool same);
   void PlotDiffusion(const Axis xaxis, const Charge particle,
@@ -176,6 +181,7 @@ class ViewMedium : public ViewBase {
   void ResetY();
   void ResetX(const Axis xaxis);
   void Draw();
+  void Export();
 
   Axis GetAxis(const char xaxis) const;
   bool GetGrid(std::array<std::vector<double>, 3>& grid,

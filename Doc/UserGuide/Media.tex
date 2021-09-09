@@ -266,7 +266,17 @@ to be used to identify them can be customized using
 void SetLabels(const std::vector<std::string>& labels);
 void SetColours(const std::vector<short>& cols);
 \end{lstlisting}
- 
+
+If the function
+\begin{lstlisting}
+void EnableExport(const std::string& txtfile);
+\end{lstlisting} 
+\begin{description}
+  \item[txtfile] name of the output text file
+\end{description}
+is called before one of the \texttt{Plot..} functions, the 
+plot data will be saved to a text file.
+
 \section{Electron scattering rates}
 
 For calculating electron drift lines using ``microscopic tracking'' 
