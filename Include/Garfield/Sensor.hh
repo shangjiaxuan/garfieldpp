@@ -263,7 +263,6 @@ class Sensor {
 
   /// Components
   std::vector<std::tuple<Component*, bool, bool> > m_components;
-  Component* m_lastComponent = nullptr;
 
   struct Electrode {
     Component* comp;

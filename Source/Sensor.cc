@@ -159,23 +159,10 @@ double Sensor::WeightingPotential(const double x, const double y,
 bool Sensor::GetMedium(const double x, const double y, const double z,
                        Medium*& m) {
   m = nullptr;
-
-  // Make sure there is at least one component.
-  if (m_components.empty()) return false;
-
-  // Check if we are still in the same component as in the previous call.
-  if (m_lastComponent) {
-    m = m_lastComponent->GetMedium(x, y, z);
-    if (m) return true;
-  }
-
   for (const auto& cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
     m = std::get<0>(cmp)->GetMedium(x, y, z);
-    if (m) {
-      m_lastComponent = std::get<0>(cmp);
-      return true;
-    }
+    if (m) return true;
   }
   return false;
 }
@@ -391,7 +378,6 @@ void Sensor::AddElectrode(Component* cmp, const std::string& label) {
 void Sensor::Clear() {
   std::lock_guard<std::mutex> guard(m_mutex);
   m_components.clear();
-  m_lastComponent = nullptr;
   m_electrodes.clear();
   m_nTimeBins = 200;
   m_tStart = 0.;
