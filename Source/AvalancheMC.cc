@@ -915,11 +915,9 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
     const double q = std::max(etas[i] / nDiv, 0.);
     // Start with the initial electron (or hole).
     int ne = 1;
+    int ni = 0;
     // Loop over the subdivisions.
     for (int j = 0; j < nDiv; ++j) {
-      // Count the number of ions/holes (or electrons) produced 
-      // along this subdivision.
-      int ni = 0;
       if (ne > 100) {
         // Gaussian approximation.
         const int gain = int(ne * p + RndmGaussian() * sqrt(ne * p * (1. - p)));
@@ -935,27 +933,6 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
           }
           if (RndmUniform() < q) --ne;
         }
-      }
-      if (ni > 0) {
-        if (other == Particle::Hole) {
-          m_nHoles += ni;
-        } else if (other == Particle::Ion) {
-          m_nIons += ni;
-        } else {
-          m_nElectrons += ni;
-        } 
-        for (int k = 0; k < ni; ++k) {
-          const double f0 = (j + RndmUniform()) / nDiv;
-          const double f1 = 1. - f0;
-          DriftPoint point;
-          point.x[0] = f0 * driftLine[i].x[0] + f1 * driftLine[i + 1].x[0]; 
-          point.x[1] = f0 * driftLine[i].x[1] + f1 * driftLine[i + 1].x[1]; 
-          point.x[2] = f0 * driftLine[i].x[2] + f1 * driftLine[i + 1].x[2];
-          point.t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
-          point.particle = other;
-          point.n = 1;
-          secondaries.push_back(std::move(point));
-        } 
       }
       // Check if the electron (or hole) has survived.
       if (ne <= 0) {
@@ -989,6 +966,35 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
       } else if (particle == Particle::Hole) {
         m_nHoles += ne - 1;
       }
+    }
+    // Add the new holes/ions to the table.
+    if (ni > 0) {
+      if (other == Particle::Hole) {
+        m_nHoles += ni;
+      } else if (other == Particle::Ion) {
+        m_nIons += ni;
+      } else {
+        m_nElectrons += ni;
+      } 
+      const auto x0 = driftLine[i].x;
+      const auto x1 = driftLine[i + 1].x;
+      const double a = 1. / std::log1p(ni);
+      for (int j = 0; j < ni; ++j) {
+        // const double f1 = sqrt(RndmUniform();
+        double f1 = RndmUniform();
+        while (ni * RndmUniform() > exp(a * f1) - 1.) {
+          f1 = RndmUniform();
+        }
+        const double f0 = 1. - f1;
+        DriftPoint point;
+        for (size_t k = 0; k < 3; ++k) {
+          point.x[k] = f0 * x0[k] + f1 * x1[k]; 
+        }
+        point.t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
+        point.particle = other;
+        point.n = 1;
+        secondaries.push_back(std::move(point));
+      } 
     }
     // If trapped, exit the loop over the drift line.
     if (status == StatusAttached) return true;
