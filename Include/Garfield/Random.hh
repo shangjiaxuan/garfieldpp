@@ -66,6 +66,22 @@ inline double RndmVoigt(const double mu, const double sigma,
   return mu + x * Sqrt2 * sigma;
 }
 
+inline unsigned int RndmYuleFurry(const double mean) {
+
+  if (mean <= 0.) return 0;
+  const double u = RndmUniform(); 
+  double p = 1. / mean;
+  const double q = 1. - p; 
+  double sum = p;
+  unsigned int k = 1;
+  while (sum < u) {
+    ++k;
+    p *= q;
+    sum += p;
+  }
+  return k;
+}
+
 /// Draw a Polya distributed random number.
 inline double RndmPolya(const double theta) {
   // Algorithm from Review of Particle Physics

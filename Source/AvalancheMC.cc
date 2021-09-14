@@ -904,56 +904,64 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
   if (particle == Particle::Electron) {
     other = semiconductor ? Particle::Hole : Particle::Ion;
   } 
-  // Subdivision of a step.
-  constexpr double probth = 0.01;
   // Loop over the drift line.
   for (size_t i = 0; i < nPoints - 1; ++i) {
-    // Compute the number of subdivisions.
-    const int nDiv = std::max(int((alps[i] + etas[i]) / probth), 1);
-    // Compute the probabilities for gain and loss.
-    const double p = std::max(alps[i] / nDiv, 0.);
-    const double q = std::max(etas[i] / nDiv, 0.);
     // Start with the initial electron (or hole).
     int ne = 1;
     int ni = 0;
-    // Loop over the subdivisions.
-    for (int j = 0; j < nDiv; ++j) {
-      if (ne > 100) {
-        // Gaussian approximation.
-        const int gain = int(ne * p + RndmGaussian() * sqrt(ne * p * (1. - p)));
-        const int loss = int(ne * q + RndmGaussian() * sqrt(ne * q * (1. - q)));
-        ne += gain - loss;
-        ni += gain;
-      } else {
-        // Binomial approximation
-        for (int k = ne; k--;) {
-          if (RndmUniform() < p) {
-            ++ne;
-            ++ni;
-          }
-          if (RndmUniform() < q) --ne;
-        }
-      }
-      // Check if the electron (or hole) has survived.
-      if (ne <= 0) {
-        status = StatusAttached;
-        if (particle == Particle::Electron) {
-          --m_nElectrons;
-        } else if (particle == Particle::Hole) {
-          --m_nHoles;
+    if (etas[i] < Small) {
+      const double mean = std::exp(alps[i]);
+      ne = RndmYuleFurry(mean);
+      ni = ne - 1;
+      // ni = int(std::log(RndmUniformPos()) / std::log1p(-1. / mean));
+      // ne = 1 + ni;
+    } else {
+      // Subdivision of a step.
+      constexpr double probth = 0.01;
+      // Compute the number of subdivisions.
+      const int nDiv = std::max(int((alps[i] + etas[i]) / probth), 1);
+      // Compute the probabilities for gain and loss.
+      const double p = std::max(alps[i] / nDiv, 0.);
+      const double q = std::max(etas[i] / nDiv, 0.);
+      // Loop over the subdivisions.
+      for (int j = 0; j < nDiv; ++j) {
+        if (ne > 100) {
+          // Gaussian approximation.
+          const int gain = int(ne * p + RndmGaussian() * sqrt(ne * p * (1. - p)));
+          const int loss = int(ne * q + RndmGaussian() * sqrt(ne * q * (1. - q)));
+          ne += gain - loss;
+          ni += gain;
         } else {
-          --m_nIons;
+          // Binomial approximation
+          for (int k = ne; k--;) {
+            if (RndmUniform() < p) {
+              ++ne;
+              ++ni;
+            }
+            if (RndmUniform() < q) --ne;
+          }
         }
-        const double f0 = (j + 0.5) / nDiv;
-        const double f1 = 1. - f0;
-        const auto x0 = driftLine[i].x;
-        const auto x1 = driftLine[i + 1].x;
-        driftLine.resize(i + 2);
-        for (size_t k = 0; k < 3; ++k) {
-          driftLine[i + 1].x[k] = f0 * x0[k] + f1 * x1[k];
+        // Check if the electron (or hole) has survived.
+        if (ne <= 0) {
+          status = StatusAttached;
+          if (particle == Particle::Electron) {
+            --m_nElectrons;
+          } else if (particle == Particle::Hole) {
+            --m_nHoles;
+          } else {
+            --m_nIons;
+          }
+          const double f0 = (j + 0.5) / nDiv;
+          const double f1 = 1. - f0;
+          const auto x0 = driftLine[i].x;
+          const auto x1 = driftLine[i + 1].x;
+          driftLine.resize(i + 2);
+          for (size_t k = 0; k < 3; ++k) {
+            driftLine[i + 1].x[k] = f0 * x0[k] + f1 * x1[k];
+          }
+          driftLine[i + 1].t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
+          break;
         }
-        driftLine[i + 1].t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
-        break;
       }
     }
     // Add the new electrons to the table.
@@ -980,11 +988,8 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
       const auto x1 = driftLine[i + 1].x;
       const double a = 1. / std::log1p(ni);
       for (int j = 0; j < ni; ++j) {
-        // const double f1 = sqrt(RndmUniform();
-        double f1 = RndmUniform();
-        while (ni * RndmUniform() > exp(a * f1) - 1.) {
-          f1 = RndmUniform();
-        }
+        // const double f1 = sqrt(RndmUniform());
+        const double f1 = a * std::log1p(RndmUniform() * ni);
         const double f0 = 1. - f1;
         DriftPoint point;
         for (size_t k = 0; k < 3; ++k) {
@@ -994,7 +999,7 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
         point.particle = other;
         point.n = 1;
         secondaries.push_back(std::move(point));
-      } 
+      }
     }
     // If trapped, exit the loop over the drift line.
     if (status == StatusAttached) return true;
