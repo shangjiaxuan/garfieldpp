@@ -986,10 +986,10 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
       } 
       const auto x0 = driftLine[i].x;
       const auto x1 = driftLine[i + 1].x;
-      const double a = 1. / std::log1p(ni);
+      const double n1 = std::exp(alps[i]) - 1;
+      const double a1 = n1 > 0. ? 1. / std::log1p(n1) : 0.;
       for (int j = 0; j < ni; ++j) {
-        // const double f1 = sqrt(RndmUniform());
-        const double f1 = a * std::log1p(RndmUniform() * ni);
+        const double f1 = n1 > 0. ? a1 * std::log1p(RndmUniform() * n1) : 0.5;
         const double f0 = 1. - f1;
         DriftPoint point;
         for (size_t k = 0; k < 3; ++k) {
