@@ -910,11 +910,8 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
     int ne = 1;
     int ni = 0;
     if (etas[i] < Small) {
-      const double mean = std::exp(alps[i]);
-      ne = RndmYuleFurry(mean);
+      ne = RndmYuleFurry(std::exp(alps[i]));
       ni = ne - 1;
-      // ni = int(std::log(RndmUniformPos()) / std::log1p(-1. / mean));
-      // ne = 1 + ni;
     } else {
       // Subdivision of a step.
       constexpr double probth = 0.01;

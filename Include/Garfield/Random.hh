@@ -66,9 +66,13 @@ inline double RndmVoigt(const double mu, const double sigma,
   return mu + x * Sqrt2 * sigma;
 }
 
+/// Draw a random number from a geometric distribution.
 inline unsigned int RndmYuleFurry(const double mean) {
 
   if (mean <= 0.) return 0;
+  return 1 + static_cast<unsigned int>(std::log(RndmUniformPos()) / 
+                                       std::log1p(-1. / mean));
+  /*
   const double u = RndmUniform(); 
   double p = 1. / mean;
   const double q = 1. - p; 
@@ -80,6 +84,7 @@ inline unsigned int RndmYuleFurry(const double mean) {
     sum += p;
   }
   return k;
+  */
 }
 
 /// Draw a Polya distributed random number.
