@@ -20,6 +20,13 @@ double Mag(const std::array<double, 3>& x) {
   return sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
 }
 
+double Dist(const std::array<double, 3>& x0, 
+            const std::array<double, 3>& x1) {
+  std::array<double, 3> d = x1;
+  for (size_t i = 0; i < 3; ++i) d[i] -= x0[i];
+  return Mag(d); 
+}
+
 }  // namespace
 
 namespace Garfield {
@@ -288,7 +295,6 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
     std::array<double, 3> v0;
     if (!GetVelocity(particle, medium, x0, e0, b0, v0)) {
       status = StatusCalculationAbandoned;
-      std::cerr << m_className + "::DriftLine: Abandoning the calculation.\n";
       break;
     }
 
@@ -343,7 +349,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
       if (m_stepModel != StepModel::FixedTime) {
         t1 += sigma * sigma / (2 * dif);
       }
-      for (unsigned int i = 0; i < 3; ++i) x1[i] += RndmGaussian(0., sigma);
+      for (size_t i = 0; i < 3; ++i) x1[i] += RndmGaussian(0., sigma);
     } else {
       // Drift and diffusion. Determine the time step.
       double dt = 0.;
@@ -390,15 +396,40 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
           }
         }
       }
-      // Compute the proposed end-point of this step and the mean velocity.
+      // Compute the proposed end point of this step.
+      for (size_t k = 0; k < 3; ++k) x1[k] += dt * v0[k];
       std::array<double, 3> v1 = v0;
+      const unsigned int nMaxIter = 3;
+      for (unsigned int i = 0; i < nMaxIter; ++i) {
+        status = GetField(x1, e0, b0, medium);
+        if (status != 0) {
+          // Point is outside the active region. Reduce the step size.
+          for (size_t k = 0; k < 3; ++k) x1[k] = 0.5 * (x0[k] + x1[k]);
+          continue;
+        }
+        // Compute the velocity at the proposed end point.
+        if (!GetVelocity(particle, medium, x1, e0, b0, v1)) {
+          status = StatusCalculationAbandoned;
+          break;
+        }
+        const double v1mag = Mag(v1);
+        const double rho = fabs(v1mag - vmag) / (vmag + v1mag);
+        if (rho > 0.05) {
+          // Halve the step.
+          for (size_t k = 0; k < 3; ++k) x1[k] = 0.5 * (x0[k] + x1[k]);
+          continue;
+        }
+        // Compute the mean velocity.
+        vmag = 0.5 * (vmag + v1mag);
+        break;
+      }
+      if (status == StatusCalculationAbandoned) break;
+      dt = Dist(x0, x1) / vmag;
       if (m_doRKF) {
         StepRKF(particle, x0, v0, dt, x1, v1, status);
         vmag = Mag(v1);
-      } else {
-        for (unsigned int k = 0; k < 3; ++k) x1[k] += dt * v0[k];
       }
-
+      // TODO!
       if (m_useDiffusion) AddDiffusion(sqrt(vmag * dt), difl, dift, x1, v1);
       t1 += dt;
     }
@@ -464,6 +495,10 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
     // Update the current position and time.
     x0 = x1;
     t0 = t1;
+  }
+ 
+  if (status == StatusCalculationAbandoned) {
+    std::cerr << m_className + "::DriftLine: Abandoned the calculation.\n";
   }
 
   // Compute Townsend and attachment coefficients for each drift step.
