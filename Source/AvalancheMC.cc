@@ -399,7 +399,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
       // Compute the proposed end point of this step.
       for (size_t k = 0; k < 3; ++k) x1[k] += dt * v0[k];
       std::array<double, 3> v1 = v0;
-      const unsigned int nMaxIter = 3;
+      constexpr unsigned int nMaxIter = 3;
       for (unsigned int i = 0; i < nMaxIter; ++i) {
         status = GetField(x1, e0, b0, medium);
         if (status != 0) {
@@ -414,13 +414,14 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
         }
         const double v1mag = Mag(v1);
         const double rho = fabs(v1mag - vmag) / (vmag + v1mag);
-        if (rho > 0.05) {
+        if (rho > 0.05 && i < nMaxIter - 1) {
           // Halve the step.
           for (size_t k = 0; k < 3; ++k) x1[k] = 0.5 * (x0[k] + x1[k]);
           continue;
         }
         // Compute the mean velocity.
         vmag = 0.5 * (vmag + v1mag);
+        for (size_t k = 0; k < 3; ++k) v1[k] = 0.5 * (v0[k] + v1[k]);
         break;
       }
       if (status == StatusCalculationAbandoned) break;
@@ -429,7 +430,6 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
         StepRKF(particle, x0, v0, dt, x1, v1, status);
         vmag = Mag(v1);
       }
-      // TODO!
       if (m_useDiffusion) AddDiffusion(sqrt(vmag * dt), difl, dift, x1, v1);
       t1 += dt;
     }
