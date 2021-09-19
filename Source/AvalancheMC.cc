@@ -7,6 +7,7 @@
 #include "Garfield/AvalancheMC.hh"
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Numerics.hh"
 #include "Garfield/Random.hh"
 
 namespace {
@@ -405,6 +406,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
         if (status != 0) {
           // Point is outside the active region. Reduce the step size.
           for (size_t k = 0; k < 3; ++k) x1[k] = 0.5 * (x0[k] + x1[k]);
+          dt *= 0.5;
           continue;
         }
         // Compute the velocity at the proposed end point.
@@ -414,18 +416,12 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
         }
         const double v1mag = Mag(v1);
         const double rho = fabs(v1mag - vmag) / (vmag + v1mag);
-        if (rho > 0.05 && i < nMaxIter - 1) {
-          // Halve the step.
-          for (size_t k = 0; k < 3; ++k) x1[k] = 0.5 * (x0[k] + x1[k]);
-          continue;
-        }
-        // Compute the mean velocity.
-        vmag = 0.5 * (vmag + v1mag);
-        for (size_t k = 0; k < 3; ++k) v1[k] = 0.5 * (v0[k] + v1[k]);
-        break;
+        if (rho < 0.05) break;
+        // Halve the step.
+        for (size_t k = 0; k < 3; ++k) x1[k] = 0.5 * (x0[k] + x1[k]);
+        dt *= 0.5;
       }
       if (status == StatusCalculationAbandoned) break;
-      dt = Dist(x0, x1) / vmag;
       if (m_doRKF) {
         StepRKF(particle, x0, v0, dt, x1, v1, status);
         vmag = Mag(v1);
@@ -463,9 +459,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
       }
       status = StatusLeftDriftMedium;
       // Adjust the time step.
-      std::array<double, 3> dc = {xc[0] - x0[0], xc[1] - x0[1], xc[2] - x0[2]};
-      std::array<double, 3> d1 = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
-      const double tc = t0 + (t1 - t0) * Mag(dc) / Mag(d1);
+      const double tc = t0 + (t1 - t0) * Dist(x0, xc) / Dist(x0, x1);
       // Add the point to the drift line.
       AddPoint(xc, tc, particle, 1, m_drift);
       break;
@@ -478,9 +472,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
       }
       status = StatusHitPlane;
       // Adjust the time step.
-      std::array<double, 3> dc = {xc[0] - x0[0], xc[1] - x0[1], xc[2] - x0[2]};
-      std::array<double, 3> d1 = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
-      const double tc = t0 + (t1 - t0) * Mag(dc) / Mag(d1);
+      const double tc = t0 + (t1 - t0) * Dist(x0, xc) / Dist(x0, x1);
       // Add the point to the drift line.
       AddPoint(xc, tc, particle, 1, m_drift);
       break;
@@ -1048,14 +1040,11 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
   //             drift line.
   // -----------------------------------------------------------------------
 
-  // Locations and weights for 6-point Gaussian integration
-  constexpr double tg[6] = {-0.932469514203152028, -0.661209386466264514,
-                            -0.238619186083196909, 0.238619186083196909,
-                            0.661209386466264514,  0.932469514203152028};
-  constexpr double wg[6] = {0.171324492379170345, 0.360761573048138608,
-                            0.467913934572691047, 0.467913934572691047,
-                            0.360761573048138608, 0.171324492379170345};
- 
+  // Locations and weights for Gaussian integration.
+  constexpr size_t nG = 6;
+  auto tg = Numerics::GaussLegendreNodes6();
+  auto wg = Numerics::GaussLegendreWeights6();
+
   const size_t nPoints = driftLine.size();
   alps.assign(nPoints, 0.);
   etas.assign(nPoints, 0.);
@@ -1073,7 +1062,7 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
     const double veff = dmag / (driftLine[i + 1].t - driftLine[i].t);
     // Integrate drift velocity and Townsend and attachment coefficients.
     std::array<double, 3> vd = {0., 0., 0.};
-    for (size_t j = 0; j < 6; ++j) {
+    for (size_t j = 0; j < nG; ++j) {
       const double f = 0.5 * (1. + tg[j]);
       std::array<double, 3> x = x0;
       for (size_t k = 0; k < 3; ++k) x[k] += f * del[k];
@@ -1087,8 +1076,8 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
         // Check if this point is the last but one.
         if (i < nPoints - 2) {
           std::cerr << m_className << "::ComputeAlphaEta: Got status " << status
-                    << " at segment " << j + 1 << "/6, drift point " << i + 1
-                    << "/" << nPoints << ".\n";
+                    << " at segment " << j + 1 << "/" << nG 
+                    << ", drift point " << i + 1 << "/" << nPoints << ".\n";
           return false;
         }
         continue;

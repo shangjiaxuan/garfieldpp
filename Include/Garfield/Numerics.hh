@@ -1,6 +1,7 @@
 #ifndef G_NUMERICS_H
 #define G_NUMERICS_H
 
+#include <array>
 #include <functional>
 #include <complex>
 #include <vector>
@@ -9,6 +10,45 @@ namespace Garfield {
 
 /// Collection of numerical routines.
 namespace Numerics {
+
+constexpr std::array<double, 2> GaussLegendreNodes2() {
+  return {-0.577350269189625765, 0.577350269189625765};
+}
+constexpr std::array<double, 2> GaussLegendreWeights2() {
+  return {1., 1.};
+}
+constexpr std::array<double, 3> GaussLegendreNodes3() {
+  return {-0.774596669241483377, 0., 0.774596669241483377};
+}
+constexpr std::array<double, 3> GaussLegendreWeights3() {
+  return {5. / 9., 8. / 9., 5. / 9.};
+}
+constexpr std::array<double, 4> GaussLegendreNodes4() {
+  return {-0.861136311594052575, -0.339981043584856265,
+           0.339981043584856265,  0.861136311594052575};
+}
+constexpr std::array<double, 4> GaussLegendreWeights4() {
+  return {0.347854845137453857, 0.652145154862546143,
+          0.652145154862546143, 0.347854845137453857}; 
+}
+constexpr std::array<double, 5> GaussLegendreNodes5() {
+  return {-0.906179845938663993, -0.538469310105683091, 0.,
+           0.538469310105683091,  0.906179845938663993};
+}
+constexpr std::array<double, 5> GaussLegendreWeights5() {
+  return {0.236926885056189088, 0.478628670499366468, 128. / 225.,
+          0.478628670499366468, 0.236926885056189088};
+}
+constexpr std::array<double, 6> GaussLegendreNodes6() {
+  return {-0.932469514203152028, -0.661209386466264514,
+          -0.238619186083196909,  0.238619186083196909,
+           0.661209386466264514,  0.932469514203152028};
+}
+constexpr std::array<double, 6> GaussLegendreWeights6() {
+  return {0.171324492379170345, 0.360761573048138608,
+          0.467913934572691047, 0.467913934572691047,
+          0.360761573048138608, 0.171324492379170345};
+}
 
 /// Functions for performing numerical integration (quadrature). 
 /// Reimplemented from %QUADPACK.
