@@ -248,7 +248,7 @@ class AvalancheMC {
   unsigned int m_navg = 1;
   bool m_useWeightingPotential = true;
   bool m_doInducedCharge = false;
-  bool m_doEquilibration = false;
+  bool m_doEquilibration = true;
   bool m_doRKF = false;
   bool m_useDiffusion = true;
   bool m_useAttachment = true;
@@ -351,7 +351,7 @@ class AvalancheMC {
                        const bool semiconductor = false);
   /// Compute Townsend and attachment coefficients along the current drift line.
   bool ComputeAlphaEta(const Particle particle,
-                       const std::vector<DriftPoint>& driftLine,
+                       std::vector<DriftPoint>& driftLine,
                        std::vector<double>& alphas,
                        std::vector<double>& etas) const;
   bool Equilibrate(std::vector<double>& alphas) const;

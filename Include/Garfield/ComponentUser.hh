@@ -16,7 +16,10 @@ class ComponentUser : public Component {
   /// Destructor
   ~ComponentUser() {}
 
-  Medium* GetMedium(const double x, const double y, const double z) override;
+  Medium* GetMedium(const double x, const double y, const double z) override {
+    return !m_hasArea ? Component::GetMedium(x, y, z) : 
+                        InArea(x, y, z) ? m_medium : nullptr;
+  }
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
   void ElectricField(const double x, const double y, const double z, double& ex,
@@ -106,12 +109,9 @@ class ComponentUser : public Component {
   void UpdatePeriodicity() override;
 
   bool InArea(const double x, const double y, const double z) {
-    if (x < m_xmin[0] || x > m_xmax[0] ||
-        y < m_xmin[1] || y > m_xmax[1] ||
-        z < m_xmin[2] || z > m_xmax[2]) {
-      return false;
-    }
-    return true; 
+    return (x >= m_xmin[0] && x <= m_xmax[0] &&
+            y >= m_xmin[1] && y <= m_xmax[1] && 
+            z >= m_xmin[2] && z <= m_xmax[2]);
   }
 
 };

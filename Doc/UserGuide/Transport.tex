@@ -414,7 +414,7 @@ void EnableProjectedPathIntegration(const bool on = true);
 one can request the Townsend and attachment coefficients to 
 be projected onto the local drift velocity vector when integrating 
 them over drift path segments.
-By default, this feature is switched off.
+By default, this feature is switched on.
 %It ensures that the path length integral does not depend on the step size.
 The function 
 \begin{lstlisting}
@@ -456,7 +456,7 @@ void AvalancheElectron(const double x0, const double y0, const double z0,
   \item[e0] initial energy (eV)
   \item[dx0, dy0, dz0] initial direction 
 \end{description}
-If the norm of the direction vector is zero, 
+If the length of the direction vector is zero, 
 the initial direction is randomized.
 
 After the calculation is finished, the number of electrons 
