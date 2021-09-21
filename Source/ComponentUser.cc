@@ -6,13 +6,6 @@ namespace Garfield {
 
 ComponentUser::ComponentUser() : Component("User") {}
 
-Medium* ComponentUser::GetMedium(const double x, const double y, 
-                                 const double z) {
-
-  if (!m_hasArea) return Component::GetMedium(x, y, z);
-  return InArea(x, y, z) ? m_medium : nullptr; 
-}
-
 void ComponentUser::ElectricField(const double x, const double y,
                                   const double z, double& ex, double& ey,
                                   double& ez, Medium*& m, int& status) {
