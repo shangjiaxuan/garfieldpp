@@ -28,6 +28,17 @@ double Dist(const std::array<double, 3>& x0,
   return Mag(d); 
 }
 
+double Slope(const double x0, const double x1) {
+  return (x0 > 0. && x1 > 0.) ? fabs(x1 - x0) / (x0 + x1) : 0.;
+}
+
+std::array<double, 3> MidPoint(const std::array<double, 3>& x0,
+                               const std::array<double, 3>& x1) {
+  std::array<double, 3> xm;
+  for (size_t k = 0; k < 3; ++k) xm[k] = 0.5 * (x0[k] + x1[k]);
+  return xm;
+}
+
 }  // namespace
 
 namespace Garfield {
@@ -405,7 +416,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
         status = GetField(x1, e0, b0, medium);
         if (status != 0) {
           // Point is outside the active region. Reduce the step size.
-          for (size_t k = 0; k < 3; ++k) x1[k] = 0.5 * (x0[k] + x1[k]);
+          x1 = MidPoint(x0, x1);
           dt *= 0.5;
           continue;
         }
@@ -414,11 +425,9 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
           status = StatusCalculationAbandoned;
           break;
         }
-        const double v1mag = Mag(v1);
-        const double rho = fabs(v1mag - vmag) / (vmag + v1mag);
-        if (rho < 0.05) break;
+        if (Slope(vmag, Mag(v1)) < 0.05) break;
         // Halve the step.
-        for (size_t k = 0; k < 3; ++k) x1[k] = 0.5 * (x0[k] + x1[k]);
+        x1 = MidPoint(x0, x1);
         dt *= 0.5;
       }
       if (status == StatusCalculationAbandoned) break;
@@ -920,9 +929,9 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
                                   std::vector<DriftPoint>& driftLine,
                                   int& status, std::vector<DriftPoint>& secondaries, 
                                   const bool semiconductor) {
-  const size_t nPoints = driftLine.size();
-  std::vector<double> alps(nPoints, 0.);
-  std::vector<double> etas(nPoints, 0.);
+
+  std::vector<double> alps;
+  std::vector<double> etas;
   // Compute the integrated Townsend and attachment coefficients.
   if (!ComputeAlphaEta(particle, driftLine, alps, etas)) return false;
 
@@ -931,6 +940,7 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
   if (particle == Particle::Electron) {
     other = semiconductor ? Particle::Hole : Particle::Ion;
   } 
+  const size_t nPoints = driftLine.size();
   // Loop over the drift line.
   for (size_t i = 0; i < nPoints - 1; ++i) {
     // Start with the initial electron (or hole).
@@ -1032,23 +1042,53 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
 }
 
 bool AvalancheMC::ComputeAlphaEta(const Particle particle,
-                                  const std::vector<DriftPoint>& driftLine,
+                                  std::vector<DriftPoint>& driftLine,
                                   std::vector<double>& alps,
                                   std::vector<double>& etas) const {
   // -----------------------------------------------------------------------
-  //    DLCEQU - Computes equilibrated alpha's and eta's over the current
-  //             drift line.
+  //    DLCEQU - Computes equilibrated alphas and etas.
   // -----------------------------------------------------------------------
+
+  // Loop a first time over the drift line and get alpha at each point.
+  size_t nPoints = driftLine.size();
+  alps.assign(nPoints, 0.);
+  etas.assign(nPoints, 0.);
+  for (size_t i = 0; i < nPoints; ++i) {
+    const auto& x0 = driftLine[i].x;
+    std::array<double, 3> e0, b0;
+    Medium* medium = nullptr;
+    if (GetField(x0, e0, b0, medium) != 0) continue;
+    alps[i] = GetTownsend(particle, medium, x0, e0, b0);
+  }
+
+  std::vector<DriftPoint> driftLineExt;
+  for (size_t i = 0; i < nPoints - 1; ++i) {
+    const auto& p0 = driftLine[i];
+    const auto& p1 = driftLine[i + 1];
+    driftLineExt.push_back(p0);
+    if (Slope(alps[i], alps[i + 1]) < 0.5) continue;
+    auto xm = MidPoint(p0.x, p1.x);
+    std::array<double, 3> em, bm;
+    Medium* medium = nullptr;
+    if (GetField(xm, em, bm, medium) != 0) continue;
+    auto pm = p0;
+    pm.x = xm;
+    pm.t = 0.5 * (p0.t + p1.t);
+    driftLineExt.push_back(std::move(pm));
+  }
+  driftLineExt.push_back(driftLine.back());
+  driftLine.swap(driftLineExt);
+
+  nPoints = driftLine.size();
+  alps.assign(nPoints, 0.);
+  etas.assign(nPoints, 0.);
+  if (nPoints < 2) return true;
 
   // Locations and weights for Gaussian integration.
   constexpr size_t nG = 6;
   auto tg = Numerics::GaussLegendreNodes6();
   auto wg = Numerics::GaussLegendreWeights6();
 
-  const size_t nPoints = driftLine.size();
-  alps.assign(nPoints, 0.);
-  etas.assign(nPoints, 0.);
-  if (nPoints < 2) return true;
   bool equilibrate = m_doEquilibration;
   // Loop over the drift line.
   for (size_t i = 0; i < nPoints - 1; ++i) {
@@ -1116,15 +1156,17 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
   if (!equilibrate) return true;
   if (!Equilibrate(alps)) {
     if (m_debug) {
-      std::cerr << m_className << "::ComputeAlphaEta:\n    Unable to even out "
-                << "alpha steps. Calculation is probably inaccurate.\n";
+      std::cerr << m_className << "::ComputeAlphaEta:\n"
+                << "    Unable to even out alpha steps.\n"
+                << "    Calculation is probably inaccurate.\n";
     }
     return false;
   }
   if (!Equilibrate(etas)) {
     if (m_debug) {
-      std::cerr << m_className << "::ComputeAlphaEta:\n    Unable to even out "
-                << "eta steps. Calculation is probably inaccurate.\n";
+      std::cerr << m_className << "::ComputeAlphaEta:\n"
+                << "    Unable to even out eta steps.\n"
+                << "    Calculation is probably inaccurate.\n";
     }
     return false;
   }
