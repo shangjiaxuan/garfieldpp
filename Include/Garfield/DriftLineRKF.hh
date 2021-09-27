@@ -208,12 +208,10 @@ class DriftLineRKF {
                     const double bx, const double by, const double bz,
                     Medium* medium, const Particle particle,
                     double& dl, double& dt) const;
-  bool GetAlpha(const double ex, const double ey, const double ez,
-                const double bx, const double by, const double bz,
-                Medium* medium, const Particle particle, double& alpha) const;
-  bool GetEta(const double ex, const double ey, const double ez,
-              const double bx, const double by, const double bz,
-              Medium* medium, const Particle particle, double& eta) const;
+  bool GetAlpha(const std::array<double, 3>& x,
+                const Particle particle, double& alpha) const;
+  bool GetEta(const std::array<double, 3>& x,
+              const Particle particle, double& eta) const;
 
   // Terminate a drift line at the edge of a boundary.
   bool Terminate(const std::array<double, 3>& xx0,

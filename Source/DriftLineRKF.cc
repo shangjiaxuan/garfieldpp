@@ -6,6 +6,7 @@
 #include "Garfield/DriftLineRKF.hh"
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Numerics.hh"
 #include "Garfield/Random.hh"
 
 namespace {
@@ -40,6 +41,13 @@ double Dist(const std::array<double, 3>& x0,
             const std::array<double, 3>& x1) {
 
   return Mag(x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]);
+}
+
+std::array<double, 3> MidPoint(const std::array<double, 3>& x0,
+                               const std::array<double, 3>& x1) {
+ std::array<double, 3> xm;
+ for (size_t k = 0; k < 3; ++k) xm[k] = 0.5 * (x0[k] + x1[k]);
+ return xm;
 }
 }
 
@@ -146,11 +154,11 @@ bool DriftLineRKF::AddIonTail(const std::vector<double>& te,
                               const std::vector<double>& ni,
                               const double scale) {
   // SIGETR, SIGIOR
-  const unsigned int nPoints = te.size();
+  const size_t nPoints = te.size();
   if (nPoints < 2) return false;
   if (ni.size() != nPoints) return false;
   // Loop over the electron track.
-  for (unsigned int i = 1; i < nPoints; ++i) {
+  for (size_t i = 1; i < nPoints; ++i) {
     // Skip points where there are no ions yet.
     if (scale * ni[i] < 1.) continue;
     // Skip also points with a negligible contribution.
@@ -578,48 +586,37 @@ bool DriftLineRKF::Avalanche(const Particle particle,
                              std::vector<double>& ni, double& scale) {
 
   // SIGETR
-  const unsigned int nPoints = xs.size();
+  const size_t nPoints = xs.size();
   if (nPoints < 2) return true;
-  // Locations and weights for 6-point Gaussian integration
-  constexpr double tg[6] = {-0.932469514203152028, -0.661209386466264514,
-                            -0.238619186083196909, 0.238619186083196909,
-                            0.661209386466264514,  0.932469514203152028};
-  constexpr double wg[6] = {0.171324492379170345, 0.360761573048138608,
-                            0.467913934572691047, 0.467913934572691047,
-                            0.360761573048138608, 0.171324492379170345};
+  // Locations and weights for 6-point Gaussian integration.
+  const size_t nG = 6;
+  auto tg = Numerics::GaussLegendreNodes6();
+  auto wg = Numerics::GaussLegendreWeights6();
 
   ne.assign(nPoints, 1.);
   ni.assign(nPoints, 0.);
   bool start = false;
   bool overflow = false;
   // Loop over the drift line.
-  for (unsigned int i = 1; i < nPoints; ++i) {
+  for (size_t i = 1; i < nPoints; ++i) {
     const auto& xp = xs[i - 1];
     const auto& x = xs[i];
     const Vec dx = {x[0] - xp[0], x[1] - xp[1], x[2] - xp[2]};
     // Calculate the integrated Townsend and attachment coefficients.
     double alpsum = 0.;
     double etasum = 0.;
-    for (unsigned int j = 0; j < 6; ++j) {
+    for (unsigned int j = 0; j < nG; ++j) {
       const double f = 0.5 * (1. + tg[j]);
       Vec xj = xp;
       for (unsigned int k = 0; k < 3; ++k) xj[k] += f * dx[k];
-      double ex = 0., ey = 0., ez = 0.;
-      double bx = 0., by = 0., bz = 0.;
-      Medium* medium = nullptr;
-      if (GetField(xj, ex, ey, ez, bx, by, bz, medium) != 0) {
-        std::cerr << m_className << "::Avalanche:\n    Invalid field at "
-                  << "drift line point " << i  << ", segment " << j << ".\n";
-        continue;
-      }
       double alp = 0.;
-      if (!GetAlpha(ex, ey, ez, bx, by, bz, medium, particle, alp)) {
+      if (!GetAlpha(xj, particle, alp)) {
         std::cerr << m_className << "::Avalanche:\n    Cannot retrieve alpha at "
                   << "drift line point " << i  << ", segment " << j << ".\n";
         continue;
       }
       double eta = 0.;
-      if (!GetEta(ex, ey, ez, bx, by, bz, medium, particle, eta)) {
+      if (!GetEta(xj, particle, eta)) {
         std::cerr << m_className << "::Avalanche:\n    Cannot retrieve eta at "
                   << "drift line point " << i  << ", segment " << j << ".\n";
         continue;
@@ -699,7 +696,7 @@ double DriftLineRKF::GetArrivalTimeSpread(const double eps) {
   //             Simpson integration.
   // -----------------------------------------------------------------------
 
-  const unsigned int nPoints = m_x.size();
+  const size_t nPoints = m_x.size();
   // Return straight away if there is only one point.
   if (nPoints < 2) return 0.;
   const Particle particle = m_particle;
@@ -707,7 +704,7 @@ double DriftLineRKF::GetArrivalTimeSpread(const double eps) {
   // First get a rough estimate of the result.
   double crude = 0.;
   double varPrev = 0.;
-  for (unsigned int i = 0; i < nPoints; ++i) {
+  for (size_t i = 0; i < nPoints; ++i) {
     // Get the drift velocity and diffusion coefficients at this step.
     double ex = 0., ey = 0., ez = 0.;
     double bx = 0., by = 0., bz = 0.;
@@ -738,10 +735,7 @@ double DriftLineRKF::GetArrivalTimeSpread(const double eps) {
     const double sigma = dl / speed;
     const double var = sigma * sigma;
     if (i > 0) {
-      const auto& x = m_x[i];
-      const auto& xPrev = m_x[i - 1];
-      const double d = Mag(x[0] - xPrev[0], x[1] - xPrev[1], x[2] - xPrev[2]);
-      crude += 0.5 * d * (var + varPrev);
+      crude += 0.5 * Dist(m_x[i - 1], m_x[i]) * (var + varPrev);
     }
     varPrev = var;
   }
@@ -749,7 +743,7 @@ double DriftLineRKF::GetArrivalTimeSpread(const double eps) {
 
   const double tol = eps * crude; 
   double sum = 0.;
-  for (unsigned int i = 0; i < nPoints - 1; ++i) {
+  for (size_t i = 0; i < nPoints - 1; ++i) {
     sum += IntegrateDiffusion(m_x[i], m_x[i + 1], particle, tol);
   }
   return sqrt(sum);
@@ -763,7 +757,7 @@ double DriftLineRKF::GetGain(const double eps) {
   //             integration.
   // -----------------------------------------------------------------------
 
-  const unsigned int nPoints = m_x.size();
+  const size_t nPoints = m_x.size();
   // Return straight away if there is only one point.
   if (nPoints < 2) return 1.;
   const Particle particle = m_particle;
@@ -773,27 +767,16 @@ double DriftLineRKF::GetGain(const double eps) {
   // First get a rough estimate of the result.
   double crude = 0.;
   double alphaPrev = 0.;
-  for (unsigned int i = 0; i < nPoints; ++i) {
+  for (size_t i = 0; i < nPoints; ++i) {
     // Get the Townsend coefficient at this step.
-    double ex = 0., ey = 0., ez = 0.;
-    double bx = 0., by = 0., bz = 0.;
-    Medium* medium = nullptr;
-    if (GetField(m_x[i], ex, ey, ez, bx, by, bz, medium) != 0) {
-      std::cerr << m_className << "::GetGain:\n"
-                << "    Invalid drift line point " << i << ".\n";
-      continue;
-    }
     double alpha = 0.;
-    if (!GetAlpha(ex, ey, ez, bx, by, bz, medium, particle, alpha)) {
+    if (!GetAlpha(m_x[i], particle, alpha)) {
       std::cerr << m_className << "::GetGain:\n"
                 << "    Cannot retrieve alpha at point " << i << ".\n";
       continue;
     }
     if (i > 0) {
-      const auto& x = m_x[i];
-      const auto& xPrev = m_x[i - 1];
-      const double d = Mag(x[0] - xPrev[0], x[1] - xPrev[1], x[2] - xPrev[2]);
-      crude += 0.5 * d * (alpha + alphaPrev);
+      crude += 0.5 * Dist(m_x[i - 1], m_x[i]) * (alpha + alphaPrev);
     }
     alphaPrev = alpha;
   }
@@ -803,7 +786,7 @@ double DriftLineRKF::GetGain(const double eps) {
   // Calculate the integration tolerance based on the rough estimate.
   const double tol = eps * crude;
   double sum = 0.;
-  for (unsigned int i = 0; i < nPoints - 1; ++i) {
+  for (size_t i = 0; i < nPoints - 1; ++i) {
     sum += IntegrateAlpha(m_x[i], m_x[i + 1], particle, tol);
   }
   return exp(sum);
@@ -817,7 +800,7 @@ double DriftLineRKF::GetLoss(const double eps) {
   //             integration.
   // -----------------------------------------------------------------------
 
-  const unsigned int nPoints = m_x.size();
+  const size_t nPoints = m_x.size();
   // Return straight away if there is only one point.
   if (nPoints < 2) return 1.;
   const Particle particle = m_particle;
@@ -828,26 +811,15 @@ double DriftLineRKF::GetLoss(const double eps) {
   double crude = 0.;
   double etaPrev = 0.;
   for (unsigned int i = 0; i < nPoints; ++i) {
-    // Get the Townsend coefficient at this step.
-    double ex = 0., ey = 0., ez = 0.;
-    double bx = 0., by = 0., bz = 0.;
-    Medium* medium = nullptr;
-    if (GetField(m_x[i], ex, ey, ez, bx, by, bz, medium) != 0) {
-      std::cerr << m_className << "::GetLoss:\n"
-                << "    Invalid drift line point " << i << ".\n";
-      continue;
-    }
+    // Get the attachment coefficient at this step.
     double eta = 0.;
-    if (!GetEta(ex, ey, ez, bx, by, bz, medium, particle, eta)) {
+    if (!GetEta(m_x[i], particle, eta)) {
       std::cerr << m_className << "::GetLoss:\n"
                 << "    Cannot retrieve eta at point " << i << ".\n";
       continue;
     }
     if (i > 0) {
-      const auto& x = m_x[i];
-      const auto& xPrev = m_x[i - 1];
-      const double d = Mag(x[0] - xPrev[0], x[1] - xPrev[1], x[2] - xPrev[2]);
-      crude += 0.5 * d * (eta + etaPrev);
+      crude += 0.5 * Dist(m_x[i - 1], m_x[i]) * (eta + etaPrev);
     }
     etaPrev = eta;
   }
@@ -855,7 +827,7 @@ double DriftLineRKF::GetLoss(const double eps) {
   // Calculate the integration tolerance based on the rough estimate.
   const double tol = eps * crude;
   double sum = 0.;
-  for (unsigned int i = 0; i < nPoints - 1; ++i) {
+  for (size_t i = 0; i < nPoints - 1; ++i) {
     sum += IntegrateEta(m_x[i], m_x[i + 1], particle, tol);
   }
   return exp(-sum);
@@ -949,10 +921,15 @@ bool DriftLineRKF::GetDiffusion(const double ex, const double ey,
   return false;
 }
 
-bool DriftLineRKF::GetAlpha(const double ex, const double ey, const double ez,
-                            const double bx, const double by, const double bz,
-                            Medium* medium, const Particle particle,
-                            double& alpha) const {
+bool DriftLineRKF::GetAlpha(const std::array<double, 3>& x,
+                            const Particle particle, double& alpha) const {
+
+  double ex = 0., ey = 0., ez = 0.;
+  double bx = 0., by = 0., bz = 0.;
+  Medium* medium = nullptr;
+  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) {
+    return false;
+  }
   if (particle == Particle::Electron || particle == Particle::Positron) {
     return medium->ElectronTownsend(ex, ey, ez, bx, by, bz, alpha);
   } else if (particle == Particle::Hole) {
@@ -961,10 +938,14 @@ bool DriftLineRKF::GetAlpha(const double ex, const double ey, const double ez,
   return false;
 }
 
-bool DriftLineRKF::GetEta(const double ex, const double ey, const double ez,
-                          const double bx, const double by, const double bz,
-                          Medium* medium, const Particle particle,
-                          double& eta) const {
+bool DriftLineRKF::GetEta(const std::array<double, 3>& x,
+                          const Particle particle, double& eta) const {
+  double ex = 0., ey = 0., ez = 0.;
+  double bx = 0., by = 0., bz = 0.;
+  Medium* medium = nullptr;
+  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) {
+    return false;
+  }
   if (particle == Particle::Electron) {
     return medium->ElectronAttachment(ex, ey, ez, bx, by, bz, eta);
   } else if (particle == Particle::Hole) {
@@ -1028,8 +1009,7 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
       break; 
     }
     // Calculate the mid point and evaluate the field.
-    Vec xm;
-    for (unsigned int j = 0; j < 3; ++j) xm[j] = 0.5 * (x0[j] + x1[j]);
+    const Vec xm = MidPoint(x0, x1);
     double ex = 0., ey = 0., ez = 0.;
     Medium* medium = nullptr;
     m_sensor->ElectricField(xm[0], xm[1], xm[2], ex, ey, ez, medium, status);
@@ -1050,7 +1030,7 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
     speed = 0.5 * (speed + Mag(v0));
   }
   // Calculate the time step.
-  const double dt = Mag(x0[0] - xx0[0], x0[1] - xx0[1], x0[2] - xx0[2]) / speed;
+  const double dt = Dist(xx0, x0) / speed;
   // Add the last point, just inside the drift area.
   ts.push_back(ts.back() + dt);
   xs.push_back(x0);
@@ -1150,8 +1130,7 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
       return false;
     }
     // Get a point halfway between for an accuracy check.
-    Vec xm;
-    for (unsigned int j = 0; j < 3; ++j) xm[j] = 0.5 * (x0[j] + x1[j]);
+    const Vec xm = MidPoint(x0, x1);
     // Calculate the drift velocity at the mid point.
     Vec vm;
     if (!GetVelocity(xm, particle, vm, status)) {
@@ -1365,8 +1344,7 @@ double DriftLineRKF::IntegrateDiffusion(const std::array<double, 3>& xi,
       break;
     }
     // Determine drift velocity and diffusion at the mid point of the step.
-    Vec xm;
-    for (unsigned int i = 0; i < 3; ++i) xm[i] = 0.5 * (x0[i] + x1[i]);
+    const Vec xm = MidPoint(x0, x1);
     if (GetField(xm, ex, ey, ez, bx, by, bz, medium) != 0) {
       std::cerr << m_className << "::IntegrateDiffusion: Invalid mid point.\n";
       break;
@@ -1415,36 +1393,20 @@ double DriftLineRKF::IntegrateAlpha(const std::array<double, 3>& xi,
                                     const std::array<double, 3>& xe,
                                     const Particle particle, const double tol) {
 
-  double ex = 0., ey = 0., ez = 0.;
-  double bx = 0., by = 0., bz = 0.;
-  Medium* medium = nullptr;
-
-  // Make sure the starting point is valid.
-  Vec x0 = xi;
-  if (GetField(x0, ex, ey, ez, bx, by, bz, medium) != 0) {
-    std::cerr << m_className << "::IntegrateAlpha: Invalid starting point "
-              << PrintVec(xi) << ".\n";
-    return 0.;
-  }
   // Determine the Townsend coefficient at the initial point.
+  Vec x0 = xi;
   double alpha0 = 0.;
-  if (!GetAlpha(ex, ey, ez, bx, by, bz, medium, particle, alpha0)) {
+  if (!GetAlpha(x0, particle, alpha0)) {
     std::cerr << m_className << "::IntegrateAlpha:\n"
-              << "    Cannot retrieve Townsend coefficient at initial point.\n";
-    return 0.;
-  }
-  // Make sure the end point is valid.
-  Vec x1 = xe;
-  if (GetField(x1, ex, ey, ez, bx, by, bz, medium) != 0) {
-    std::cerr << m_className << "::IntegrateAlpha: Invalid end point "
-              << PrintVec(xe) << ".\n";
+              << "    Cannot retrieve alpha at initial point.\n";
     return 0.;
   }
   // Determine the Townsend coefficient at the end point.
+  Vec x1 = xe;
   double alpha1 = 0.;
-  if (!GetAlpha(ex, ey, ez, bx, by, bz, medium, particle, alpha1)) {
+  if (!GetAlpha(x1, particle, alpha1)) {
     std::cerr << m_className << "::IntegrateAlpha:\n"
-              << "    Cannot retrieve Townsend coefficient at end point.\n";
+              << "    Cannot retrieve alpha at end point.\n";
     return 0.;
   }
   double integral = 0.;
@@ -1462,26 +1424,17 @@ double DriftLineRKF::IntegrateAlpha(const std::array<double, 3>& xi,
       continue;
     }
     // Calculate the Townsend coefficient at the end point of the step.
-    if (GetField(x1, ex, ey, ez, bx, by, bz, medium) != 0) {
-      std::cerr << m_className << "::IntegrateAlpha: Invalid end point.\n";
-      break;
-    }
-    if (!GetAlpha(ex, ey, ez, bx, by, bz, medium, particle, alpha1)) {
+    if (!GetAlpha(x1, particle, alpha1)) {
       std::cerr << m_className << "::IntegrateAlpha:\n"
-                << "    Cannot retrieve Townsend coefficient at end point.\n";
+                << "    Cannot retrieve alpha at end point.\n";
       break;
     }
     // Calculate the Townsend coefficient at the mid point of the step.
-    Vec xm;
-    for (unsigned int i = 0; i < 3; ++i) xm[i] = 0.5 * (x0[i] + x1[i]);    
-    if (GetField(xm, ex, ey, ez, bx, by, bz, medium) != 0) {
-      std::cerr << m_className << "::IntegrateAlpha: Invalid mid point.\n";
-      break;
-    }
+    const Vec xm = MidPoint(x0, x1);
     double alpham = 0.;
-    if (!GetAlpha(ex, ey, ez, bx, by, bz, medium, particle, alpham)) {
+    if (!GetAlpha(xm, particle, alpham)) {
       std::cerr << m_className << "::IntegrateAlpha:\n"
-                << "    Cannot retrieve Townsend coefficient at mid point.\n";
+                << "    Cannot retrieve alpha at mid point.\n";
       break;
     }
     // Compare first and second order estimates.
@@ -1504,37 +1457,20 @@ double DriftLineRKF::IntegrateAlpha(const std::array<double, 3>& xi,
 double DriftLineRKF::IntegrateEta(const std::array<double, 3>& xi, 
                                   const std::array<double, 3>& xe,
                                   const Particle particle, const double tol) {
-
-  double ex = 0., ey = 0., ez = 0.;
-  double bx = 0., by = 0., bz = 0.;
-  Medium* medium = nullptr;
-
-  // Make sure the starting point is valid.
-  Vec x0 = xi;
-  if (GetField(x0, ex, ey, ez, bx, by, bz, medium) != 0) {
-    std::cerr << m_className << "::IntegrateEta: Invalid starting point "
-              << PrintVec(xi) << ".\n";
-    return 0.;
-  }
   // Determine the attachment coefficient at the initial point.
+  Vec x0 = xi;
   double eta0 = 0.;
-  if (!GetEta(ex, ey, ez, bx, by, bz, medium, particle, eta0)) {
+  if (!GetEta(x0, particle, eta0)) {
     std::cerr << m_className << "::IntegrateEta:\n"
-              << "    Cannot retrieve att. coefficient at initial point.\n";
-    return 0.;
-  }
-  // Make sure the end point is valid.
-  Vec x1 = xe;
-  if (GetField(x1, ex, ey, ez, bx, by, bz, medium) != 0) {
-    std::cerr << m_className << "::IntegrateEta: Invalid end point "
-              << PrintVec(xe) << ".\n";
+              << "    Cannot retrieve eta at initial point.\n";
     return 0.;
   }
   // Determine the attachment coefficient at the end point.
+  Vec x1 = xe;
   double eta1 = 0.;
-  if (!GetEta(ex, ey, ez, bx, by, bz, medium, particle, eta1)) {
+  if (!GetEta(x1, particle, eta1)) {
     std::cerr << m_className << "::IntegrateEta:\n"
-              << "    Cannot retrieve att. coefficient at end point.\n";
+              << "    Cannot retrieve eta at end point.\n";
     return 0.;
   }
   double integral = 0.;
@@ -1552,26 +1488,17 @@ double DriftLineRKF::IntegrateEta(const std::array<double, 3>& xi,
       continue;
     }
     // Calculate the attachment coefficient at the end point of the step.
-    if (GetField(x1, ex, ey, ez, bx, by, bz, medium) != 0) {
-      std::cerr << m_className << "::IntegrateEta: Invalid end point.\n";
-      break;
-    }
-    if (!GetEta(ex, ey, ez, bx, by, bz, medium, particle, eta1)) {
+    if (!GetEta(x1, particle, eta1)) {
       std::cerr << m_className << "::IntegrateEta:\n"
-                << "    Cannot retrieve att. coefficient at end point.\n";
+                << "    Cannot retrieve eta at end point.\n";
       break;
     }
     // Calculate the attachment coefficient at the mid point of the step.
-    Vec xm;
-    for (unsigned int i = 0; i < 3; ++i) xm[i] = 0.5 * (x0[i] + x1[i]);    
-    if (GetField(xm, ex, ey, ez, bx, by, bz, medium) != 0) {
-      std::cerr << m_className << "::IntegrateEta: Invalid mid point.\n";
-      break;
-    }
+    const Vec xm = MidPoint(x0, x1);
     double etam = 0.;
-    if (!GetEta(ex, ey, ez, bx, by, bz, medium, particle, etam)) {
+    if (!GetEta(xm, particle, etam)) {
       std::cerr << m_className << "::IntegrateEta:\n"
-                << "    Cannot retrieve att. coefficient at mid point.\n";
+                << "    Cannot retrieve eta at mid point.\n";
       break;
     }
     // Compare first and second order estimates.
@@ -1882,8 +1809,7 @@ void DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
       break; 
     }
     // Calculate the mid point and evaluate the field.
-    Vec xm;
-    for (unsigned int j = 0; j < 3; ++j) xm[j] = 0.5 * (x0[j] + x1[j]);
+    const Vec xm = MidPoint(x0, x1);
     double ex = 0., ey = 0., ez = 0.;
     Medium* medium = nullptr;
     int status = 0;
