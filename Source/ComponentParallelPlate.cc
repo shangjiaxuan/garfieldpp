@@ -45,7 +45,7 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,std::vec
     for(int i = 1; i<=N; i++){
         m_zHolder[i]=m_zHolder[i-1]+m_dHolder[i-1];
         
-        if(m_debug) std::cout << m_className << "Setup:: layer "<<i<<":: z = "<<m_zHolder[i]<<", epsr = "<<m_epsHolder[i-1]);
+        if(m_debug) std::cout << m_className << "Setup:: layer "<<i<<":: z = "<<m_zHolder[i]<<", epsr = "<<m_epsHolder[i-1]<<".\n";
     }
     m_z = m_zHolder;
     
@@ -82,6 +82,11 @@ bool ComponentParallelPlate::GetBoundingBox(double& x0, double& y0, double& z0,
 double ComponentParallelPlate::IntegratePromptField(const Electrode& el, int comp,
                                               const double x, const double y,
                                               const double z) {
+    Electrode elPlace = el;
+    int compPlace = comp;
+    double posPlace = x;
+    posPlace = y;
+    posPlace = z;
     return 0;
 }
 
@@ -387,7 +392,7 @@ bool ComponentParallelPlate::Ntheta(int N,std::vector<std::vector<int>>& thetaMa
 
 void ComponentParallelPlate::constructGeometryMatrices(const int N){
     
-    int nRow = N;int nColomb = pow(2,N-1);
+    int nRow = N;
     
     std::vector<std::vector<int>> sigmaMatrix;
     std::vector<std::vector<int>> thetaMatrix;
