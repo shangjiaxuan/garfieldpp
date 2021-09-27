@@ -64,6 +64,8 @@ bool ComponentComsol::Initialise(const std::string& mesh,
                                  const std::string& field,
                                  const std::string& unit) {
   Reset();
+    m_nodesHolder = {};
+    m_nodeIndices = {};
 
   // Get the conversion factor to be applied to the coordinates.
   m_unit = ScalingFactor(unit);
@@ -205,16 +207,12 @@ bool ComponentComsol::Initialise(const std::string& mesh,
         //Go over m_nodeIndices and add the corresponding m_nodesHolder node to m_nodes
         for(int& i : m_nodeIndices){
             m_nodes.push_back(m_nodesHolder[i]);
-            //Update m_nodeMap to get correct node Id.
+            //Update m_nodeMap to get correct node idex.
             m_nodeMap[i] = m_nodes.size()-1;
-   //         std::cerr << m_className << "::Initialise:\n"
-     //                 << "    Mapping node: " << i << " -> "<< m_nodes.size()-1 <<".\n";
         }
-        //Go over m_elements and update the node Id's using the map you just created
+        //Go over m_elements and update the node idex using the map you just created
         for(Element& takeElement : m_elements){
             for (int j = 0; j < 10; ++j) {
-      //          std::cerr << m_className << "::Initialise:\n"
-      //                    << "    Mapping element: " << takeElement.emap[j] << " -> "<< m_nodeMap[takeElement.emap[j]] <<".\n";
                 takeElement.emap[j]=m_nodeMap[takeElement.emap[j]];
                 if(takeElement.emap[j]==-1){
                     return false;
@@ -333,7 +331,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     std::cerr << std::endl
               << m_className << "::Initialise:\n"
               << "    Missing potentials for " << nMissing << " nodes.\n";
-      return false;
+      //return false;
   }
 
   m_ready = true;
@@ -614,8 +612,6 @@ double ComponentComsol::WeightingPotential(const double xin, const double yin,
                                            const std::string& label) {
   // Do not proceed if not properly initialised.
   if (!m_ready) return 0.;
-    std::cout << m_className << "::WeightingPotential:\n"
-              << "C1.\n";
   if(!CheckInRange(xin,yin,zin)) return 0.;
   // Look for the label.
   const size_t iw = GetWeightingFieldIndex(label);
@@ -808,7 +804,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
       std::pow(10, static_cast<unsigned int>(
                        std::max(std::floor(std::log10(nNodes)) - 1, 1.)));
   std::cout << m_className << "::SetDelayedWeightingField:\n"
-            << "    Reading weighting potentials.\n";
+            << "    Reading weighting potentials for "<< label<< ".\n";
   PrintProgress(0.);
 
   while (std::getline(ffield, line)) {
@@ -825,7 +821,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
     x *= m_unit;
     y *= m_unit;
     z *= m_unit;
-    if(!CheckInRange(x,y,z))continue;
+    if(!CheckInRange(x,y,z)) continue;
     const std::vector<double> pt = {x, y, z};
     std::vector<KDTreeResult> res;
     kdtree.n_nearest(pt, 1, res);
@@ -864,11 +860,13 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
 double ComponentComsol::DelayedWeightingPotential(const double xin,
                                                   const double yin,
                                                   const double zin,
-                                                  const double t,
+                                                  const double tin,
                                                   const std::string& label) {
   if (m_wdtimes.empty()) return 0.;
   // Assume no weighting field for times outside the range of available maps.
-  if (t < m_wdtimes.front() || t > m_wdtimes.back()) return 0.;
+  if (tin < m_wdtimes.front()) return 0.;
+    double t = tin;
+    if(tin > m_wdtimes.back()) t = m_wdtimes.back();
 
   // Do not proceed if not properly initialised.
   if (!m_ready) return 0.;
@@ -959,7 +957,10 @@ void ComponentComsol::SetTimeInterval(const double mint, const double maxt,
 }
 
 bool ComponentComsol::GetTimeInterval(const std::string& field) {
-  if (!m_wdtimes.empty()) return false;
+  if (!m_wdtimes.empty()) std::cout << std::endl
+      << m_className
+      << "::GetTimeInterval: Overwriting time interval of weighting "
+         "potential.\n";
 
   std::ifstream ffield;
   ffield.open(field.c_str(), std::ios::in);
