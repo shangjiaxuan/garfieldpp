@@ -10,8 +10,6 @@
 #include <TF1.h>
 #include <TF2.h>
 
-#define LOG(x) std::cout<<x<<std::endl
-
 namespace Garfield {
 
 /// Component for parallel-plate geometries.
@@ -35,10 +33,6 @@ class ComponentParallelPlate : public Component {
   void ElectricField(const double x, const double y, const double z, double& ex,
                      double& ey, double& ez, Medium*& m, int& status) override;
   void ElectricField(const double x, const double y, const double z, double& ex,double& ey, double& ez, double& v, Medium*& m, int& status) override;
-
-  void WeightingField(const double x, const double y, const double z,
-                      double& wx, double& wy, double& wz,
-                      const std::string& label) override;
 
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
@@ -178,9 +172,7 @@ class ComponentParallelPlate : public Component {
   std::vector<std::string> m_readout;
   std::vector<Electrode> m_readout_p;
 
-  // Functions that calculate the electric field and potential
-  double IntegratePromptField(const Electrode& el, int comp, const double x,
-                        const double y, const double z);
+  // Functions that calculate the weighting potential
 
   double IntegratePromptPotential(const Electrode& el, const double x,
                                   const double y, const double z);

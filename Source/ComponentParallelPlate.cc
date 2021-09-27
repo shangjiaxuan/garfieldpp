@@ -79,19 +79,6 @@ bool ComponentParallelPlate::GetBoundingBox(double& x0, double& y0, double& z0,
   return true;
 }
 
-double ComponentParallelPlate::IntegratePromptField(const Electrode& el, int comp,
-                                              const double x, const double y,
-                                              const double z) {
-    Electrode elPlace = el;
-    int compPlace = comp;
-    double posPlace = x;
-    posPlace = y;
-    posPlace = z;
-    
-    
-    return 0;
-}
-
 double ComponentParallelPlate::IntegratePromptPotential(const Electrode& el,
                                                         const double x,
                                                         const double y,
@@ -213,28 +200,6 @@ bool ComponentParallelPlate::GetVoltageRange(double& vmin, double& vmax) {
     vmax = m_V;
   }
   return true;
-}
-
-void ComponentParallelPlate::WeightingField(const double x, const double y,
-                                            const double z, double& wx,
-                                            double& wy, double& wz,
-                                            const std::string& label) {
-    
-    // Here I switch conventions back with the y-axis the direction of drift.
-    
-  wx = 0;
-  wy = 0;
-  wz = 0;
-  for (const auto& electrode : m_readout_p) {
-    if (electrode.label == label) {
-        
-        double yin = y;
-        if(!electrode.formAnode) yin = m_z.back()-y;
-      wx = IntegratePromptField(electrode, fieldcomponent::ycomp, z, x, yin);
-      wy = IntegratePromptField(electrode, fieldcomponent::zcomp, z, x, yin);
-      wz = IntegratePromptField(electrode, fieldcomponent::xcomp, z, x, yin);
-    }
-  }
 }
 
 double ComponentParallelPlate::WeightingPotential(const double x,
