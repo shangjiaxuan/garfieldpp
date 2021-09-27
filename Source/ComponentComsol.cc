@@ -321,7 +321,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
       ffield.close();
       return false;
     }
-      if( !CheckInRange(x,y,z) && res[0].dis> 1e-08) continue;
+      if( !CheckInRange(x,y,z) && res[0].dis> maxNodeDistance) continue;
     const size_t k = res[0].idx;
     used[k] = true;
     m_nodes[k].v = v;
@@ -403,7 +403,7 @@ bool ComponentComsol::SetWeightingField(const std::string& field,
     std::vector<KDTreeResult> res;
     kdtree.n_nearest(pt, 1, res);
       
-      if( !CheckInRange(x,y,z) && res[0].dis> 1e-08) continue;
+      if( !CheckInRange(x,y,z) && res[0].dis> maxNodeDistance) continue;
     if (res.empty()) {
       std::cerr << m_className << "::SetWeightingField:\n"
                 << "    Could not find a matching mesh node for point (" << x
@@ -832,7 +832,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
     const std::vector<double> pt = {x, y, z};
     std::vector<KDTreeResult> res;
     kdtree.n_nearest(pt, 1, res);
-      if( !CheckInRange(x,y,z) && res[0].dis> 1e-08) continue;
+      if( !CheckInRange(x,y,z) && res[0].dis> maxNodeDistance) continue;
     if (res.empty()) {
       std::cerr << m_className << "::SetDelayedWeightingField:\n"
                 << "    Could not find a matching mesh node for point (" << x

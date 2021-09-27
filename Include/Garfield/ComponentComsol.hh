@@ -75,6 +75,7 @@ class ComponentComsol : public ComponentFieldMap {
  private:
   double m_unit = 100.;
   bool m_timeset = false;
+    const double maxNodeDistance = 1e-08;
     
     std::vector<Node> m_nodesHolder;
 

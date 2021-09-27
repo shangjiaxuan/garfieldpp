@@ -55,24 +55,28 @@ class ComponentParallelPlate : public Component {
   /// the second argument to false.
   void AddPlane(const std::string& label, bool fromAnode = true);
 
-  // Setting the medium
+    /// Setting the medium
   void SetMedium(Medium* medium) { m_medium = medium; }
 
-  // This will calculate the electrode's time-dependent weighting potential on
-  // the specified grid.
+    /** Calculate time-dependent weighting potential on a grid.
+     * \param xmin,ymin,zmin minimum value of the interval in the \f$x\f$-, \f$y\f$- and \f$z\f$-direction.
+     * \param xmax,ymax,zmax maximum value of the interval in the \f$x\f$-,\f$y\f$- and \f$z\f$-direction.
+     * \param xsteps,ysteps,zsteps mumber of grid nodes in the \f$x\f$-,\f$y\f$- and \f$z\f$-direction.
+     * \param label give name using a string.
+     */
   void SetWeightingPotentialGrid(const double xmin, const double xmax,
                                  const double xsteps, const double ymin, const double ymax,
                                  const double ysteps, const double zmin, const double zmax,
                                  const double zsteps, const std::string& label);
 
-  // This will calculate all electrodes time-dependent weighting potential on
-  // the specified grid.
+  /// This will calculate all electrodes time-dependent weighting potential on the specified grid.
   void SetWeightingPotentialGrids(const double xmin, const double xmax,
                                   const double xsteps, const double ymin,
                                   const double ymax, const double ysteps,
                                   const double zmin, const double zmax,
                                   const double zsteps);
     
+    /// This will load a previously calculated grid of time-dependant weighting potential values.
     void LoadWeightingPotentialGrid(const std::string& label){
         for (auto& electrode : m_readout_p) {
           if (electrode.label == label) {
@@ -87,8 +91,6 @@ class ComponentParallelPlate : public Component {
     }
 
   Medium* GetMedium(const double x, const double y, const double z) override;
-    
-    void SetGrid(const double xmin, const double ymin, const double zmin,const double xmax, const double ymax, const double zmax);
 
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                       double& xmax, double& ymax, double& zmax) override;

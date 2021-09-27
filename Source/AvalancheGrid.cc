@@ -489,7 +489,6 @@ bool AvalancheGrid::GetParameters(AvalancheNode& node){
 
 void AvalancheGrid::Reset() {
     
-    //TODO:Reset everything
     std::cerr << m_className << "::Reset::Resetting AvalancheGrid.\n";
     m_avgrid.time = 0;
     m_avgrid.N = 0;
