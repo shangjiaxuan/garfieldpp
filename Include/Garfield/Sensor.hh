@@ -77,6 +77,9 @@ class Sensor {
   /// Check if a point is inside the user area.
   bool IsInArea(const double x, const double y, const double z);
 
+  /// Check if a point is inside an active medium and inside the user area.
+  bool IsInside(const double x, const double y, const double z);
+
   /// Return the voltage range.
   bool GetVoltageRange(double& vmin, double& vmax);
 
