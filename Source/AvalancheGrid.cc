@@ -124,7 +124,7 @@ bool AvalancheGrid::SnapToGrid(Grid& av, const double x, const double y,
     
     int indexX, indexY, indexZ = 0;
     
-    // TODO: Snap must be dependent on the direction of drift..
+    // TODO: Snap must be dependent on the direction of drift.
     indexX = round((x - av.xgrid.front()) / av.xStepSize);
     indexY = floor((y - av.ygrid.front()) / av.yStepSize);
     indexZ = round((z - av.zgrid.front()) / av.zStepSize);
@@ -176,7 +176,7 @@ bool AvalancheGrid::SnapToGrid(Grid& av, const double x, const double y,
         }
     }
     
-    //TODO: What if time changes as you are importing avalanches
+    //TODO: What if time changes as you are importing avalanches?
     newNode.time=av.time;
     if(!alreadyExists) m_activeNodes.push_back(newNode);
     
@@ -213,21 +213,11 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
         Nholder = node.n;
         
         if (Nholder == 0) continue;  // If empty go to next point.
-        if (m_diffusion) {
-            // Idem to the else part of this function, but with the additional
-            // step that after the new avalanche size is calculated the charges
-            // will be spread over the neighboring x-points following the normal
-            // distribution given by the transverse diffusion coefficient.
-            
-            //TODO: Implement.
-            continue;
-        } else {
             // If the total avalanche size is smaller than the set saturation
             // limit the GetAvalancheSize function is utilized to obtain the size
             // after its propagation to the next z-coordinate grid point. Else,
             // the size will be kept constant under the propagation.
             
-            //TODO: how to handle saturation?
             if (!m_layerIndix && av.N < m_MaxSize) {
                 int holdnsize = GetAvalancheSize(node.stepSize, node.n,
                                                  node.townsend, node.attachment);
@@ -247,8 +237,6 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
                 node.n = holdnsize;
                 
             } else {
-                //TODO::Clean this up
-               // LOG("Layer "<<node.layer<< " is saturated:: Nluayer = "<<m_NLayer[node.layer-1]);
                 m_Saturated = true;
                 
                 if (m_SaturationTime == -1)
@@ -267,7 +255,10 @@ void AvalancheGrid::NextAvalancheGridPoint(Grid& av) {
             
             if(m_layerIndix) m_NLayer[node.layer-1]+= node.n-Nholder;
             
-            av.N += node.n-Nholder;
+            av.N += node.n - Nholder;
+        
+        if (m_diffusion){
+         //TODO: to impliment
         }
         
         if (m_debug) std::cerr<< "n = "<<Nholder<<" -> "<<node.n<<".\n";

@@ -165,6 +165,8 @@ class AvalancheGrid {
         double dt = -1.; ///< time step.
         
         bool active = true;
+        double dSigmaL = 0;
+        double dSigmaT = 0;
     };
     
     std::vector<AvalancheNode> m_activeNodes= {};
@@ -192,6 +194,7 @@ class AvalancheGrid {
   bool GetParameters(AvalancheNode& newNode);
     
     void DeactivateNode(AvalancheNode& node);
+
 };
 }  // namespace Garfield
 
