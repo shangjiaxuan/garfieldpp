@@ -705,35 +705,13 @@ double DriftLineRKF::GetArrivalTimeSpread(const double eps) {
   double crude = 0.;
   double varPrev = 0.;
   for (size_t i = 0; i < nPoints; ++i) {
-    // Get the drift velocity and diffusion coefficients at this step.
-    double ex = 0., ey = 0., ez = 0.;
-    double bx = 0., by = 0., bz = 0.;
-    Medium* medium = nullptr;
-    if (GetField(m_x[i], ex, ey, ez, bx, by, bz, medium) != 0) {
+    // Get the variance at this point.
+    double var = 0.;
+    if (!GetVar(m_x[i], particle, var)) {
       std::cerr << m_className << "::GetArrivalTimeSpread:\n"
-                << "    Invalid drift line point " << i << ".\n";
+              << "    Cannot retrieve variance at point " << i << ".\n";
       continue;
     }
-    Vec v;
-    if (!GetVelocity(ex, ey, ez, bx, by, bz, medium, particle, v)) {
-      std::cerr << m_className << "::GetArrivalTimeSpread:\n"
-              << "    Cannot retrieve drift velocity at point " << i << ".\n";
-      continue;
-    }
-    const double speed = Mag(v);
-    if (speed < Small) {
-      std::cerr << m_className << "::GetArrivalTimeSpread:\n"
-                << "    Zero drift velocity at point " << i << ".\n";
-      continue;
-    }
-    double dl = 0., dt = 0.;
-    if (!GetDiffusion(ex, ey, ez, bx, by, bz, medium, particle, dl, dt)) {
-      std::cerr << m_className << "::GetArrivalTimeSpread:\n"
-              << "    Cannot retrieve diffusion at point " << i << ".\n";
-      continue;
-    }
-    const double sigma = dl / speed;
-    const double var = sigma * sigma;
     if (i > 0) {
       crude += 0.5 * Dist(m_x[i - 1], m_x[i]) * (var + varPrev);
     }
@@ -768,7 +746,7 @@ double DriftLineRKF::GetGain(const double eps) {
   double crude = 0.;
   double alphaPrev = 0.;
   for (size_t i = 0; i < nPoints; ++i) {
-    // Get the Townsend coefficient at this step.
+    // Get the Townsend coefficient at this point.
     double alpha = 0.;
     if (!GetAlpha(m_x[i], particle, alpha)) {
       std::cerr << m_className << "::GetGain:\n"
@@ -811,7 +789,7 @@ double DriftLineRKF::GetLoss(const double eps) {
   double crude = 0.;
   double etaPrev = 0.;
   for (unsigned int i = 0; i < nPoints; ++i) {
-    // Get the attachment coefficient at this step.
+    // Get the attachment coefficient at this point.
     double eta = 0.;
     if (!GetEta(m_x[i], particle, eta)) {
       std::cerr << m_className << "::GetLoss:\n"
@@ -921,15 +899,42 @@ bool DriftLineRKF::GetDiffusion(const double ex, const double ey,
   return false;
 }
 
+bool DriftLineRKF::GetVar(const std::array<double, 3>& x,
+                          const Particle particle, double& var) const {
+  var = 0.;
+  double ex = 0., ey = 0., ez = 0.;
+  double bx = 0., by = 0., bz = 0.;
+  Medium* medium = nullptr;
+  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return false;
+
+  // Get the drift velocity.
+  Vec v;
+  if (!GetVelocity(ex, ey, ez, bx, by, bz, medium, particle, v)) {
+    return false;
+  }
+  double speed = Mag(v);
+  if (speed < Small) {
+    std::cerr << m_className << "::GetVariance: Zero velocity.\n";
+    return false;
+  }
+  // Get the diffusion coefficients.
+  double dl = 0., dt = 0.;
+  if (!GetDiffusion(ex, ey, ez, bx, by, bz, medium, particle, dl, dt)) {
+    return false;
+  }
+  const double sigma = dl / speed;
+  var = sigma * sigma;
+  return true;
+}
+
 bool DriftLineRKF::GetAlpha(const std::array<double, 3>& x,
                             const Particle particle, double& alpha) const {
 
   double ex = 0., ey = 0., ez = 0.;
   double bx = 0., by = 0., bz = 0.;
   Medium* medium = nullptr;
-  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) {
-    return false;
-  }
+  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return false;
+
   if (particle == Particle::Electron || particle == Particle::Positron) {
     return medium->ElectronTownsend(ex, ey, ez, bx, by, bz, alpha);
   } else if (particle == Particle::Hole) {
@@ -943,9 +948,8 @@ bool DriftLineRKF::GetEta(const std::array<double, 3>& x,
   double ex = 0., ey = 0., ez = 0.;
   double bx = 0., by = 0., bz = 0.;
   Medium* medium = nullptr;
-  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) {
-    return false;
-  }
+  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return false;
+
   if (particle == Particle::Electron) {
     return medium->ElectronAttachment(ex, ey, ez, bx, by, bz, eta);
   } else if (particle == Particle::Hole) {
@@ -1242,71 +1246,21 @@ double DriftLineRKF::IntegrateDiffusion(const std::array<double, 3>& xi,
                                         const std::array<double, 3>& xe,
                                         const Particle particle, 
                                         const double tol) {
-
-  double ex = 0., ey = 0., ez = 0.;
-  double bx = 0., by = 0., bz = 0.;
-  Medium* medium = nullptr;
-
   // Make sure the starting point is valid.
   Vec x0 = xi;
-  if (GetField(x0, ex, ey, ez, bx, by, bz, medium) != 0) {
-    std::cerr << m_className << "::IntegrateDiffusion: Invalid starting point "
-              << PrintVec(xi) << ".\n";
-    return 0.;
-  }
-
-  // Determine the drift velocity at the starting point.
-  Vec v0;
-  if (!GetVelocity(ex, ey, ez, bx, by, bz, medium, particle, v0)) {
+  double var0 = 0.;
+  if (!GetVar(x0, particle, var0)) {
     std::cerr << m_className << "::IntegrateDiffusion:\n"
-              << "    Cannot retrieve drift velocity at initial point.\n";
-    return 0.;
+              << "    Cannot retrieve variance at initial point.\n";
   }
-  double speed0 = Mag(v0);
-  if (speed0 < Small) {
-    std::cerr << m_className << "::IntegrateDiffusion:\n"
-              << "    Zero velocity at starting point.\n";
-    return 0.;
-  }
-  // Determine the diffusion coefficients at the initial point.
-  double dl0 = 0., dt0 = 0.;
-  if (!GetDiffusion(ex, ey, ez, bx, by, bz, medium, particle, dl0, dt0)) {
-    std::cerr << m_className << "::IntegrateDiffusion:\n"
-              << "    Cannot retrieve diffusion at initial point.\n";
-    return 0.;
-  }
-  const double sigma0 = dl0 / speed0;
-  double var0 = sigma0 * sigma0;
 
   // Make sure the end point is valid.
   Vec x1 = xe;
-  if (GetField(x1, ex, ey, ez, bx, by, bz, medium) != 0) {
-    std::cerr << m_className << "::IntegrateDiffusion: Invalid end point "
-              << PrintVec(xe) << ".\n";
-    return 0.;
-  }
-  // Determine the drift velocity at the end point.
-  Vec v1;
-  if (!GetVelocity(ex, ey, ez, bx, by, bz, medium, particle, v1)) {
+  double var1 = 0.;
+  if (!GetVar(x1, particle, var1)) {
     std::cerr << m_className << "::IntegrateDiffusion:\n"
-              << "    Cannot retrieve drift velocity at end point.\n";
-    return 0.;
+              << "    Cannot retrieve variance at end point.\n";
   }
-  double speed1 = Mag(v1);
-  if (speed1 < Small) {
-    std::cerr << m_className << "::IntegrateDiffusion:\n"
-              << "    Zero velocity at end point.\n";
-    return 0.;
-  }
-  // Determine the diffusion coefficients at the end point.
-  double dl1 = 0., dt1 = 0.;
-  if (!GetDiffusion(ex, ey, ez, bx, by, bz, medium, particle, dl1, dt1)) {
-    std::cerr << m_className << "::IntegrateDiffusion:\n"
-              << "    Cannot retrieve diffusion at initial point.\n";
-    return 0.;
-  }
-  double sigma1 = dl1 / speed1;
-  double var1 = sigma1 * sigma1;
 
   double integral = 0.;
   while (Dist(xe, x0) > 1.e-6) {
@@ -1322,55 +1276,20 @@ double DriftLineRKF::IntegrateDiffusion(const std::array<double, 3>& xi,
       x1 = xe;
       continue;
     }
-    // Calculate drift velocity and diffusion at the end point of the step.
-    if (GetField(x1, ex, ey, ez, bx, by, bz, medium) != 0) {
-      std::cerr << m_className << "::IntegrateDiffusion: Invalid end point.\n";
+    // Determine the variance at the end point of the step.
+    if (!GetVar(x1, particle, var1)) {
+      std::cerr << m_className << "::IntegrateDiffusion:\n"
+                << "    Cannot retrieve variance at end point.\n";
       break;
     }
-    if (!GetVelocity(ex, ey, ez, bx, by, bz, medium, particle, v1)) {
-      std::cerr << m_className << "::IntegrateDiffusion:\n"
-                << "    Cannot retrieve drift velocity at end point.\n";
-      break;
-    }
-    speed1 = Mag(v1);
-    if (speed1 < Small) {
-      std::cerr << m_className << "::IntegrateDiffusion:\n"
-                << "    Zero drift velocity at end point.\n";
-      break;
-    } 
-    if (!GetDiffusion(ex, ey, ez, bx, by, bz, medium, particle, dl1, dt1)) {
-      std::cerr << m_className << "::IntegrateDiffusion:\n"
-                << "    Cannot retrieve diffusion at end point.\n";
-      break;
-    }
-    // Determine drift velocity and diffusion at the mid point of the step.
+    // Determine the variance at the mid point of the step.
     const Vec xm = MidPoint(x0, x1);
-    if (GetField(xm, ex, ey, ez, bx, by, bz, medium) != 0) {
-      std::cerr << m_className << "::IntegrateDiffusion: Invalid mid point.\n";
+    double varm = 0.;
+    if (!GetVar(xm, particle, varm)) {
+      std::cerr << m_className << "::IntegrateDiffusion:\n"
+                << "    Cannot retrieve variance at mid point.\n";
       break;
     }
-    Vec vm;
-    if (!GetVelocity(ex, ey, ez, bx, by, bz, medium, particle, vm)) {
-      std::cerr << m_className << "::IntegrateDiffusion:\n"
-                << "    Cannot retrieve drift velocity at mid point.\n";
-      break;
-    }
-    const double speedm = Mag(vm);
-    if (speedm < Small) {
-      std::cerr << m_className << "::IntegrateDiffusion:\n"
-                << "    Zero drift velocity at mid point.\n";
-      break;
-    } 
-    double dlm = 0., dtm = 0.;
-    if (!GetDiffusion(ex, ey, ez, bx, by, bz, medium, particle, dlm, dtm)) {
-      std::cerr << m_className << "::IntegrateDiffusion:\n"
-                << "    Cannot retrieve diffusion at mid point.\n";
-      break;
-    }
-    sigma1 = dl1 / speed1;
-    var1 = sigma1 * sigma1;
-    const double sigmam = dlm / speedm;
-    const double varm = sigmam * sigmam;
     // Compare first and second order estimates 
     // (integrals calculated using trapezoidal and Simpson's rule).
     if (fabs(var0 - 2 * varm + var1) * sqrt(d * 2 / (var0 + var1)) / 6. < tol) {

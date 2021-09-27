@@ -208,6 +208,8 @@ class DriftLineRKF {
                     const double bx, const double by, const double bz,
                     Medium* medium, const Particle particle,
                     double& dl, double& dt) const;
+  bool GetVar(const std::array<double, 3>& x,
+              const Particle particle, double& var) const;
   bool GetAlpha(const std::array<double, 3>& x,
                 const Particle particle, double& alpha) const;
   bool GetEta(const std::array<double, 3>& x,
