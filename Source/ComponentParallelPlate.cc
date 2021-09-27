@@ -87,6 +87,8 @@ double ComponentParallelPlate::IntegratePromptField(const Electrode& el, int com
     double posPlace = x;
     posPlace = y;
     posPlace = z;
+    
+    
     return 0;
 }
 
@@ -177,7 +179,7 @@ void ComponentParallelPlate::ElectricField(const double x, const double y,
     
     ey = constEFieldLayer(im);
     
-    v = -m_V - (z-m_z[im-1]) * constEFieldLayer(im);
+    v = -m_V - (y-m_z[im-1]) * constEFieldLayer(im);
     for(int i=1; i<=im-1;i++){
         v-=(m_z[i]-m_z[i-1])* constEFieldLayer(i);
     }
@@ -223,15 +225,14 @@ void ComponentParallelPlate::WeightingField(const double x, const double y,
   wx = 0;
   wy = 0;
   wz = 0;
-    // TODO: implement weighting field
   for (const auto& electrode : m_readout_p) {
     if (electrode.label == label) {
-      wx = electrode.flip *
-        IntegratePromptField(electrode, fieldcomponent::ycomp, z, x, y);
-      wy = electrode.flip *
-        IntegratePromptField(electrode, fieldcomponent::zcomp, z, x, y);
-      wz = electrode.flip *
-        IntegratePromptField(electrode, fieldcomponent::xcomp, z, x, y);
+        
+        double yin = y;
+        if(!electrode.formAnode) yin = m_z.back()-y;
+      wx = IntegratePromptField(electrode, fieldcomponent::ycomp, z, x, yin);
+      wy = IntegratePromptField(electrode, fieldcomponent::zcomp, z, x, yin);
+      wz = IntegratePromptField(electrode, fieldcomponent::xcomp, z, x, yin);
     }
   }
 }
@@ -247,10 +248,12 @@ double ComponentParallelPlate::WeightingPotential(const double x,
 
   for (auto& electrode : m_readout_p) {
     if (electrode.label == label) {
+        double yin = y;
+        if(!electrode.formAnode) yin = m_z.back()-y;
       if (!electrode.m_usegrid) {
-        ret += electrode.flip * IntegratePromptPotential(electrode, z, x, y);
+        ret += IntegratePromptPotential(electrode, z, x, yin);
       } else {
-        ret += FindWeightingPotentialInGrid(electrode, z, x, y);
+        ret += FindWeightingPotentialInGrid(electrode, z, x, yin);
       }
     }
   }
@@ -286,7 +289,7 @@ void ComponentParallelPlate::UpdatePeriodicity() {
 
 void ComponentParallelPlate::AddPixel(double x, double z, double lx_input,
                                       double lz_input,
-                                      const std::string& label) {
+                                      const std::string& label, bool anode) {
     
     // Here I switch conventions back with the y-axis the direction of drift.
     
@@ -302,6 +305,8 @@ void ComponentParallelPlate::AddPixel(double x, double z, double lx_input,
   pixel.ypos = x;
   pixel.lx = lz_input;
   pixel.ly = lx_input;
+    
+    pixel.formAnode = anode;
 
   m_readout.push_back(label);
   m_readout_p.push_back(std::move(pixel));
@@ -309,7 +314,7 @@ void ComponentParallelPlate::AddPixel(double x, double z, double lx_input,
 }
 
 void ComponentParallelPlate::AddStrip(double z, double lz_input,
-                                      const std::string& label) {
+                                      const std::string& label, bool anode) {
   const auto it = std::find(m_readout.cbegin(), m_readout.cend(), label);
   if (it != m_readout.end() && m_readout.size() > 0) {
     std::cerr << m_className << "::AddStrip:\n"
@@ -320,6 +325,8 @@ void ComponentParallelPlate::AddStrip(double z, double lz_input,
   strip.ind = structureelectrode::Strip;
   strip.xpos = z;
   strip.lx = lz_input;
+    
+    strip.formAnode = anode;
 
   m_readout.push_back(label);
   m_readout_p.push_back(std::move(strip));
@@ -337,7 +344,7 @@ void ComponentParallelPlate::AddPlane(const std::string& label, bool anode) {
   plate.label = label;
   plate.ind = structureelectrode::Plane;
 
-  if (!anode) plate.flip = -1;
+  plate.formAnode = anode;
 
   m_readout.push_back(label);
   m_readout_p.push_back(std::move(plate));

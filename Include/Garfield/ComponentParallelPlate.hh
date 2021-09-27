@@ -50,15 +50,16 @@ class ComponentParallelPlate : public Component {
    * \param lx width in the along \f$x\f$.
    * \param lz width in the along \f$z\f$.
    * \param label give name using a string.
+   * \param fromAnode is \f$true\f$ is the electrode is the andode and \f$false\f$ if it is the cathode.
    */
   void AddPixel(double x, double z, double lx, double lz,
-                const std::string& label);
+                const std::string& label,bool fromAnode = true);
   /// Add strip electrode.
-  void AddStrip(double z, double lz, const std::string& label);
+  void AddStrip(double z, double lz, const std::string& label,bool fromAnode = true);
 
   /// Add plane electrode, if you want to read the signal from the cathode set
   /// the second argument to false.
-  void AddPlane(const std::string& label, bool anode = true);
+  void AddPlane(const std::string& label, bool fromAnode = true);
 
   // Setting the medium
   void SetMedium(Medium* medium) { m_medium = medium; }
@@ -162,7 +163,7 @@ class ComponentParallelPlate : public Component {
     int ind = structureelectrode::NotSet;  ///< Readout group.
     double xpos, ypos;                     ///< Coordinates in x/y.
     double lx, ly;                         ///< Dimensions in the x-y plane.
-    double flip = 1;                       ///< Dimensions in the x-y plane.
+    bool formAnode = true;                       ///< Dimensions in the x-y plane.
       
      bool m_usegrid =false;                ///< Enabeling grid based calculations.
     ComponentGrid grid; ///< grid object.
