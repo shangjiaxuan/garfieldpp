@@ -75,8 +75,8 @@ class ComponentComsol : public ComponentFieldMap {
  private:
   double m_unit = 100.;
   bool m_timeset = false;
+    
     std::vector<Node> m_nodesHolder;
-    std::vector<int> m_nodeIndices;
 
   bool GetTimeInterval(const std::string& file);
     
@@ -104,11 +104,17 @@ class ComponentComsol : public ComponentFieldMap {
     }
     
     bool ElementInRange(Element& newElement){
-        for(int i = 0; i<10; i++){
-            Node nodeCheck = m_nodesHolder[newElement.emap[i]];
-            if(CheckInRange(nodeCheck.x,nodeCheck.y,nodeCheck.z)) return true;
+        
+        if(m_range.set){
+            for(int i = 0; i<10; i++){
+                Node nodeCheck = m_nodesHolder[newElement.emap[i]];
+                if(!CheckInRange(nodeCheck.x,nodeCheck.y,nodeCheck.z)) return false;
+            }
         }
-        return false;
+        
+        if(m_materials[newElement.matmap].eps != 1) return false;
+            
+        return true;
     }
 };
 }  // namespace Garfield

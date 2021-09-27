@@ -64,8 +64,8 @@ bool ComponentComsol::Initialise(const std::string& mesh,
                                  const std::string& field,
                                  const std::string& unit) {
   Reset();
-    m_nodesHolder = {};
-    m_nodeIndices = {};
+    
+    std::vector<int> m_nodeIndices;
 
   // Get the conversion factor to be applied to the coordinates.
   m_unit = ScalingFactor(unit);
@@ -158,7 +158,10 @@ bool ComponentComsol::Initialise(const std::string& mesh,
           m_nodes.push_back(std::move(newNode));
       }
   }
-
+    
+    std::vector<Element> m_elementsHolder;
+    std::vector<bool> m_elementsIndices;
+    
   do {
     if (!std::getline(fmesh, line)) {
       std::cerr << m_className << "::Initialise:\n"
@@ -188,17 +191,34 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     for (int j = 0; j < 10; ++j) {
       fmesh >> newElement.emap[perm[j]];
     }
-      if(m_range.set){
-          if(ElementInRange(newElement)){
-              m_elements.push_back(std::move(newElement));
-              for(int j = 0; j<10; j++){
-                  m_nodeIndices.push_back(newElement.emap[j]);
-              }
-          }
-      }else{
-          m_elements.push_back(std::move(newElement));
-      }
+      m_elementsHolder.push_back(std::move(newElement));
   }
+    
+  do {
+    if (!std::getline(fmesh, line)) {
+      std::cerr << m_className << "::Initialise:\n"
+                << "    Error parsing " << mesh << ".\n";
+      fmesh.close();
+      return false;
+    }
+  } while (line.find("# Geometric entity indices") == std::string::npos);
+  for (auto& element : m_elementsHolder) {
+    int domain;
+    fmesh >> domain;
+    element.matmap = domain2material.count(domain) ? domain2material[domain]
+                                                   : nMaterials - 1;
+  }
+  fmesh.close();
+    
+    for(auto& takeElement: m_elementsHolder){
+            if(ElementInRange(takeElement)){
+                for(int j = 0; j<10; j++){
+                    m_nodeIndices.push_back(takeElement.emap[j]);
+                }
+                m_elements.push_back(std::move(takeElement));
+            }
+    }
+    
     if(m_range.set){
         std::vector<int> m_nodeMap(nNodes,-1);
         //Rearange m_nodeIndices and delete duplicates
@@ -220,22 +240,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
             }
         }
     }
-    
-  do {
-    if (!std::getline(fmesh, line)) {
-      std::cerr << m_className << "::Initialise:\n"
-                << "    Error parsing " << mesh << ".\n";
-      fmesh.close();
-      return false;
-    }
-  } while (line.find("# Geometric entity indices") == std::string::npos);
-  for (auto& element : m_elements) {
-    int domain;
-    fmesh >> domain;
-    element.matmap = domain2material.count(domain) ? domain2material[domain]
-                                                   : nMaterials - 1;
-  }
-  fmesh.close();
+
 
   std::ifstream ffield;
   ffield.open(field.c_str(), std::ios::in);
@@ -299,7 +304,6 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     x *= m_unit;
     y *= m_unit;
     z *= m_unit;
-    if(!CheckInRange(x,y,z)) continue;
     std::vector<double> w;
     for (size_t j = 0; j < nWeightingFields; ++j) {
       double p;
@@ -317,6 +321,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
       ffield.close();
       return false;
     }
+      if( !CheckInRange(x,y,z) && res[0].dis> 1e-08) continue;
     const size_t k = res[0].idx;
     used[k] = true;
     m_nodes[k].v = v;
