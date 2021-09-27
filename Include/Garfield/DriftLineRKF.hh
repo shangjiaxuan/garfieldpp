@@ -97,9 +97,9 @@ class DriftLineRKF {
   /// Get the end point and status flag of the most recent drift line.
   void GetEndPoint(double& x, double& y, double& z, double& t, int& st) const;
   /// Get the number of points of the most recent drift line.
-  unsigned int GetNumberOfDriftLinePoints() const { return m_x.size(); }
+  size_t GetNumberOfDriftLinePoints() const { return m_x.size(); }
   /// Get the coordinates and time of a point along the most recent drift line.
-  void GetDriftLinePoint(const unsigned int i, double& x, double& y, double& z,
+  void GetDriftLinePoint(const size_t i, double& x, double& y, double& z,
                          double& t) const;
 
   /// Compute the sigma of the arrival time distribution for the current 

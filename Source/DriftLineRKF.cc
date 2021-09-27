@@ -1023,7 +1023,7 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
   // Final point just outside the medium.
   Vec x1 = xx1;
   // Perform some bisections.
-  const unsigned int nBisections = 20;
+  constexpr unsigned int nBisections = 20;
   for (unsigned int i = 0; i < nBisections; ++i) {
     // Quit bisection when interval becomes too small.
     bool small = true;
@@ -1040,13 +1040,11 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
       }
       break; 
     }
-    // Calculate the mid point and evaluate the field.
+    // Calculate the mid point.
     const Vec xm = MidPoint(x0, x1);
-    double ex = 0., ey = 0., ez = 0.;
-    Medium* medium = nullptr;
-    m_sensor->ElectricField(xm[0], xm[1], xm[2], ex, ey, ez, medium, status);
-    if (!m_sensor->IsInArea(xm[0], xm[1], xm[2])) status = -1;
-    if (status == 0) {
+    // Halve the step.
+    if (m_sensor->IsInside(xm[0], xm[1], xm[2]) &&
+        m_sensor->IsInArea(xm[0], xm[1], xm[2])) {
       x0 = xm;
     } else {
       x1 = xm;
@@ -1256,7 +1254,7 @@ void DriftLineRKF::GetEndPoint(double& x, double& y, double& z, double& t,
   stat = m_status;
 }
 
-void DriftLineRKF::GetDriftLinePoint(const unsigned int i, double& x, double& y,
+void DriftLineRKF::GetDriftLinePoint(const size_t i, double& x, double& y,
                                      double& z, double& t) const {
   if (i >= m_x.size()) {
     std::cerr << m_className << "::GetDriftLinePoint: Index out of range.\n";
@@ -1738,7 +1736,7 @@ void DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
   // Final point just outside the medium.
   Vec x1 = xx1;
   // Perform some bisections.
-  const unsigned int nBisections = 20;
+  constexpr unsigned int nBisections = 20;
   for (unsigned int i = 0; i < nBisections; ++i) {
     // Quit bisection when interval becomes too small.
     bool small = true;
@@ -1755,13 +1753,11 @@ void DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
       }
       break; 
     }
-    // Calculate the mid point and evaluate the field.
+    // Calculate the mid point.
     const Vec xm = MidPoint(x0, x1);
-    double ex = 0., ey = 0., ez = 0.;
-    Medium* medium = nullptr;
-    int status = 0;
-    m_sensor->ElectricField(xm[0], xm[1], xm[2], ex, ey, ez, medium, status);
-    if (status == 0) {
+    // Halve the step.
+    if (m_sensor->IsInside(xm[0], xm[1], xm[2]) &&
+        m_sensor->IsInArea(xm[0], xm[1], xm[2])) {
       x0 = xm;
     } else {
       x1 = xm;
