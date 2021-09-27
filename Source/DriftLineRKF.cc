@@ -45,9 +45,9 @@ double Dist(const std::array<double, 3>& x0,
 
 std::array<double, 3> MidPoint(const std::array<double, 3>& x0,
                                const std::array<double, 3>& x1) {
- std::array<double, 3> xm;
- for (size_t k = 0; k < 3; ++k) xm[k] = 0.5 * (x0[k] + x1[k]);
- return xm;
+  std::array<double, 3> xm;
+  for (size_t k = 0; k < 3; ++k) xm[k] = 0.5 * (x0[k] + x1[k]);
+  return xm;
 }
 }
 
@@ -249,6 +249,20 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
   //                Mathematic II, chapter 7, page 122, 1978, HTB, Springer.
   // -----------------------------------------------------------------------
 
+  // Set the numerical constants for the RKF integration.
+  constexpr double c10 = 214. / 891.;
+  constexpr double c11 = 1. / 33.;
+  constexpr double c12 = 650. / 891.;
+  constexpr double c20 = 533. / 2106.;
+  constexpr double c22 = 800. / 1053.;
+  constexpr double c23 = -1. / 78.;
+
+  constexpr double b10 = 1. / 4.;
+  constexpr double b20 = -189. / 800.;
+  constexpr double b21 = 729. / 800.;
+  constexpr double b30 = 214. / 891.;
+  constexpr double b31 = 1. / 33.;
+  constexpr double b32 = 650. / 891.;
 
   // Reset the drift line.
   ts.clear();
@@ -269,42 +283,22 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
   double zmin = 0., zmax = 0.;
   bool bbox = m_sensor->GetArea(xmin, ymin, zmin, xmax, ymax, zmax);
 
-  // Initialise the current position.
-  Vec x0 = {xi, yi, zi};
-  // Make sure the initial position is at a valid location.
-  double ex = 0., ey = 0., ez = 0.;
-  double bx = 0., by = 0., bz = 0.;
-  Medium* medium = nullptr;
-  if (GetField(x0, ex, ey, ez, bx, by, bz, medium) != 0) { 
-    std::cerr << m_className << "::DriftLine:\n"
-              << "    No valid field at initial position.\n";
-    flag = StatusLeftDriftMedium;
-    return false;
-  }
-
-  // Set the numerical constants for the RKF integration.
-  constexpr double c10 = 214. / 891.;
-  constexpr double c11 = 1. / 33.;
-  constexpr double c12 = 650. / 891.;
-  constexpr double c20 = 533. / 2106.;
-  constexpr double c22 = 800. / 1053.;
-  constexpr double c23 = -1. / 78.;
-
-  constexpr double b10 = 1. / 4.;
-  constexpr double b20 = -189. / 800.;
-  constexpr double b21 = 729. / 800.;
-  constexpr double b30 = 214. / 891.;
-  constexpr double b31 = 1. / 33.;
-  constexpr double b32 = 650. / 891.;
-
   // Set the charge of the drifting particle.
   const double charge = particle == Particle::Electron ? -1 : 1;
 
+  // Initialise the current position.
+  Vec x0 = {xi, yi, zi};
+
   // Initialise the particle velocity.
   Vec v0 = {0., 0., 0.};
-  if (!GetVelocity(ex, ey, ez, bx, by, bz, medium, particle, v0)) {
+  if (!GetVelocity(x0, particle, v0, flag)) {
+    flag = StatusCalculationAbandoned;
     std::cerr << m_className << "::DriftLine:\n"
               << "    Cannot retrieve drift velocity.\n";
+    return false;
+  } else if (flag != 0) {
+    std::cerr << m_className << "::DriftLine:\n"
+              << "    No valid field at initial position.\n";
     return false;
   }
 
@@ -491,9 +485,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     // Update the position and time.
     for (unsigned int i = 0; i < 3; ++i) x0[i] += h * phi1[i];
     t0 += h;
-    // Check the new position.
-    m_sensor->ElectricField(x0[0], x0[1], x0[2], ex, ey, ez, medium, stat);
-    if (stat != 0) {
+    if (!m_sensor->IsInside(x0[0], x0[1], x0[2])) {
       // The new position is not inside a valid drift medium.
       // Terminate the drift line.
       if (m_debug) {
@@ -788,7 +780,7 @@ double DriftLineRKF::GetLoss(const double eps) {
   // First get a rough estimate of the result.
   double crude = 0.;
   double etaPrev = 0.;
-  for (unsigned int i = 0; i < nPoints; ++i) {
+  for (size_t i = 0; i < nPoints; ++i) {
     // Get the attachment coefficient at this point.
     double eta = 0.;
     if (!GetEta(m_x[i], particle, eta)) {
@@ -825,17 +817,39 @@ bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
                                const Particle particle,
                                std::array<double, 3>& v, int& status) const {
   v.fill(0.);
+  status = 0;
+  // Stop if we are outside the drift area.
+  if (!m_sensor->IsInArea(x[0], x[1], x[2])) {
+    status = StatusLeftDriftArea;
+    return true;
+  } 
+  if (m_useVelocityMap && 
+      particle != Particle::Ion && particle != Particle::NegativeIon) {
+    // We assume there is only one component with a velocity map.
+    const auto nComponents = m_sensor->GetNumberOfComponents();
+    for (size_t i = 0; i < nComponents; ++i) {
+      auto cmp = m_sensor->GetComponent(i);
+      if (!cmp->HasVelocityMap()) continue;
+      bool ok = false;
+      if (particle == Particle::Electron || particle == Particle::Positron) {
+        ok = cmp->ElectronVelocity(x[0], x[1], x[2], v[0], v[1], v[2]);
+      } else if (particle == Particle::Hole) {
+        ok = cmp->HoleVelocity(x[0], x[1], x[2], v[0], v[1], v[2]);
+      }
+      if (!ok) continue;
+      // Seems to have worked.
+      if (particle == Particle::Positron) {
+        for (unsigned int k = 0; k < 3; ++k) v[k] *= -1;
+      }
+      return true;
+    }
+  }
   double ex = 0., ey = 0., ez = 0.;
   double bx = 0., by = 0., bz = 0.;
   Medium* medium = nullptr;
   // Stop if we are outside a valid drift medium.
   status = GetField(x, ex, ey, ez, bx, by, bz, medium);
   if (status != 0) return true;
-  // Also stop if we are outside the drift area.
-  if (!m_sensor->IsInArea(x[0], x[1], x[2])) {
-    status = StatusLeftDriftArea;
-    return true;
-  } 
   if (particle == Particle::Electron) {
     return medium->ElectronVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } else if (particle == Particle::Ion) {
@@ -858,6 +872,7 @@ bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
   return false;
 }
 
+/*
 bool DriftLineRKF::GetVelocity(const double ex, const double ey,
                                const double ez, const double bx,
                                const double by, const double bz, 
@@ -883,12 +898,16 @@ bool DriftLineRKF::GetVelocity(const double ex, const double ey,
   }
   return false;
 }
+*/
 
-bool DriftLineRKF::GetDiffusion(const double ex, const double ey,
-                                const double ez, const double bx,
-                                const double by, const double bz, 
-                                Medium* medium, const Particle particle,
+bool DriftLineRKF::GetDiffusion(const std::array<double, 3>& x,
+                                const Particle particle,
                                 double& dl, double& dt) const {
+  double ex = 0., ey = 0., ez = 0.;
+  double bx = 0., by = 0., bz = 0.;
+  Medium* medium = nullptr;
+  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return false;
+
   if (particle == Particle::Electron || particle == Particle::Positron) {
     return medium->ElectronDiffusion(ex, ey, ez, bx, by, bz, dl, dt);
   } else if (particle == Particle::Ion || particle == Particle::NegativeIon) {
@@ -902,26 +921,20 @@ bool DriftLineRKF::GetDiffusion(const double ex, const double ey,
 bool DriftLineRKF::GetVar(const std::array<double, 3>& x,
                           const Particle particle, double& var) const {
   var = 0.;
-  double ex = 0., ey = 0., ez = 0.;
-  double bx = 0., by = 0., bz = 0.;
-  Medium* medium = nullptr;
-  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return false;
-
   // Get the drift velocity.
+  int stat;
   Vec v;
-  if (!GetVelocity(ex, ey, ez, bx, by, bz, medium, particle, v)) {
-    return false;
-  }
-  double speed = Mag(v);
+  if (!GetVelocity(x, particle, v, stat)) return false;
+
+  const double speed = Mag(v);
   if (speed < Small) {
     std::cerr << m_className << "::GetVariance: Zero velocity.\n";
     return false;
   }
   // Get the diffusion coefficients.
   double dl = 0., dt = 0.;
-  if (!GetDiffusion(ex, ey, ez, bx, by, bz, medium, particle, dl, dt)) {
-    return false;
-  }
+  if (!GetDiffusion(x, particle, dl, dt)) return false;
+
   const double sigma = dl / speed;
   var = sigma * sigma;
   return true;
@@ -930,6 +943,21 @@ bool DriftLineRKF::GetVar(const std::array<double, 3>& x,
 bool DriftLineRKF::GetAlpha(const std::array<double, 3>& x,
                             const Particle particle, double& alpha) const {
 
+  alpha = 0.;
+  if (m_useTownsendMap && (particle == Particle::Electron || 
+      particle == Particle::Hole || particle == Particle::Positron)) {
+    const auto nComponents = m_sensor->GetNumberOfComponents();
+    for (size_t i = 0; i < nComponents; ++i) {
+      auto cmp = m_sensor->GetComponent(i);
+      if (!cmp->HasTownsendMap()) continue;
+      if (particle == Particle::Electron || particle == Particle::Positron) {
+        if (!cmp->ElectronTownsend(x[0], x[1], x[2], alpha)) continue;
+      } else {
+        if (!cmp->HoleTownsend(x[0], x[1], x[2], alpha)) continue;
+      }
+      return alpha;
+    }
+  }
   double ex = 0., ey = 0., ez = 0.;
   double bx = 0., by = 0., bz = 0.;
   Medium* medium = nullptr;
