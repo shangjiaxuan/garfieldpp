@@ -174,14 +174,17 @@ Similarly, the function
 \begin{lstlisting}
 void GetArrivalTimeSpread(const double eps = 1.e-4);
 \end{lstlisting}
-returns the $\sigma$ of the arrival time distribution calculated by 
-integrating the longitudinal diffusion coefficient along the drift line. 
+computes the $\sigma$ of the arrival time distribution by 
+integrating quadratically the ratio of longitudinal diffusion coefficient 
+and drift velocity over the drift line,
+\begin{equation*}
+  \sigma^{2} = \int\left(D_{L}/v_{\text{D}}\right)^2\,\text{d}s.
+\end{equation*}
 
 The points along the most recent drift line are accessible through the functions
 \begin{lstlisting}
-unsigned int GetNumberOfDriftLinePoints() const;
-void GetDriftLinePoint(const unsigned int i, 
-                       double& x, double& y, double& z, double& t) const;
+size_t GetNumberOfDriftLinePoints() const;
+void GetDriftLinePoint(const size_t i, double& x, double& y, double& z, double& t) const;
 \end{lstlisting}
 \begin{description}
   \item[i] index of the point.

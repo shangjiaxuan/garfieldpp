@@ -260,6 +260,16 @@ bool Sensor::IsInArea(const double x, const double y, const double z) {
   return false;
 }
 
+bool Sensor::IsInside(const double x, const double y, const double z) {
+  double ex = 0., ey = 0., ez = 0.;
+  Medium* medium = nullptr;
+  int status = 0;
+  ElectricField(x, y, z, ex, ey, ez, medium, status);
+  if (status != 0 || !medium) return false;
+
+  return true;
+}
+   
 bool Sensor::CrossedWire(const double x0, const double y0, const double z0,
                          const double x1, const double y1, const double z1,
                          double& xc, double& yc, double& zc,

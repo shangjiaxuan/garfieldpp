@@ -69,6 +69,11 @@ class DriftLineRKF {
   /// shape parameter theta.
   void SetGainFluctuationsPolya(const double theta, const double mean = -1.);
 
+  /// Retrieve the Townsend coefficient from the component.
+  void EnableTownsendMap(const bool on = true) { m_useTownsendMap = on; }
+  /// Retrieve the drift velocity from the component.
+  void EnableVelocityMap(const bool on = true) { m_useVelocityMap = on; }
+
   /// Simulate the drift line of an electron with a given starting point.
   bool DriftElectron(const double x0, const double y0, const double z0,
                      const double t0);
@@ -92,9 +97,9 @@ class DriftLineRKF {
   /// Get the end point and status flag of the most recent drift line.
   void GetEndPoint(double& x, double& y, double& z, double& t, int& st) const;
   /// Get the number of points of the most recent drift line.
-  unsigned int GetNumberOfDriftLinePoints() const { return m_x.size(); }
+  size_t GetNumberOfDriftLinePoints() const { return m_x.size(); }
   /// Get the coordinates and time of a point along the most recent drift line.
-  void GetDriftLinePoint(const unsigned int i, double& x, double& y, double& z,
+  void GetDriftLinePoint(const size_t i, double& x, double& y, double& z,
                          double& t) const;
 
   /// Compute the sigma of the arrival time distribution for the current 
@@ -127,7 +132,7 @@ class DriftLineRKF {
   Sensor* m_sensor = nullptr;
 
   enum class Particle { Electron = 0, Ion, Hole, Positron, NegativeIon };
-  // Type of particle (of the most current drift line).
+  // Type of particle (of the most recent drift line).
   Particle m_particle = Particle::Electron;
 
   // Maximum allowed step size.
@@ -162,6 +167,11 @@ class DriftLineRKF {
   double m_scaleH = 1.;
   // Scaling factor for ion signals.
   double m_scaleI = 1.;
+
+  // Use drift velocity maps?
+  bool m_useVelocityMap = false;
+  // Use maps for the Townsend coefficient?
+  bool m_useTownsendMap = false;
 
   // Flag wether to simulate electron multiplication or not.
   bool m_doAvalanche = true;
@@ -200,20 +210,14 @@ class DriftLineRKF {
   // Calculate transport parameters for the respective particle type.
   bool GetVelocity(const std::array<double, 3>& x, const Particle particle,
                    std::array<double, 3>& v, int& status) const;
-  bool GetVelocity(const double ex, const double ey, const double ez,
-                   const double bx, const double by, const double bz,
-                   Medium* medium, const Particle particle,
-                   std::array<double, 3>& v) const;
-  bool GetDiffusion(const double ex, const double ey, const double ez,
-                    const double bx, const double by, const double bz,
-                    Medium* medium, const Particle particle,
+  bool GetDiffusion(const std::array<double, 3>& x, const Particle particle,
                     double& dl, double& dt) const;
-  bool GetAlpha(const double ex, const double ey, const double ez,
-                const double bx, const double by, const double bz,
-                Medium* medium, const Particle particle, double& alpha) const;
-  bool GetEta(const double ex, const double ey, const double ez,
-              const double bx, const double by, const double bz,
-              Medium* medium, const Particle particle, double& eta) const;
+  bool GetVar(const std::array<double, 3>& x,
+              const Particle particle, double& var) const;
+  bool GetAlpha(const std::array<double, 3>& x,
+                const Particle particle, double& alpha) const;
+  bool GetEta(const std::array<double, 3>& x,
+              const Particle particle, double& eta) const;
 
   // Terminate a drift line at the edge of a boundary.
   bool Terminate(const std::array<double, 3>& xx0,
