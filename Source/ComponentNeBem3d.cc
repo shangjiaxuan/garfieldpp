@@ -1408,8 +1408,6 @@ bool ComponentNeBem3d::Initialise() {
                       std::make_move_iterator(elements.end()));
   }
 
-  InitValues();
-
   // Set the user options.
   // Number of threads and use of primary average properties
   neBEM::NbThreads = m_nThreads;
