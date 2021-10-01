@@ -181,6 +181,15 @@ void MediumMagboltz::EnableRadiationTrapping() {
   }
 }
 
+bool MediumMagboltz::EnablePenningTransfer() {
+  m_rPenning.fill(0.);
+  m_lambdaPenning.fill(0.);
+  if (!MediumGas::EnablePenningTransfer()) return false;
+
+  m_usePenning = true;
+  return true;
+}   
+
 bool MediumMagboltz::EnablePenningTransfer(const double r,
                                            const double lambda) {
    
@@ -270,13 +279,12 @@ bool MediumMagboltz::EnablePenningTransfer(const double r, const double lambda,
   if (nLevelsFound > 0) {
     std::cout << m_className << "::EnablePenningTransfer:\n"
               << "    Penning transfer parameters for " << nLevelsFound
-              << " excitation levels set to:\n"
+              << " " << gasname << " excitation levels set to:\n"
               << "      r      = " << m_rPenningGas[iGas] << "\n"
               << "      lambda = " << m_lambdaPenningGas[iGas] << " cm\n";
   } else {
-    std::cerr << m_className << "::EnablePenningTransfer:\n"
-              << "    Specified gas (" << gasname
-              << ") has no excitation levels in the present energy range.\n";
+    std::cerr << m_className << "::EnablePenningTransfer:\n    " << gasname
+              << " has no excitation levels in the present energy range.\n";
   }
 
   m_usePenning = true;
