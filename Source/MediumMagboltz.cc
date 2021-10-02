@@ -277,11 +277,17 @@ bool MediumMagboltz::EnablePenningTransfer(const double r, const double lambda,
   }
 
   if (nLevelsFound > 0) {
-    std::cout << m_className << "::EnablePenningTransfer:\n"
-              << "    Penning transfer parameters for " << nLevelsFound
-              << " " << gasname << " excitation levels set to:\n"
-              << "      r      = " << m_rPenningGas[iGas] << "\n"
-              << "      lambda = " << m_lambdaPenningGas[iGas] << " cm\n";
+    std::cout << m_className << "::EnablePenningTransfer:\n";
+    if (m_lambdaPenningGas[iGas] > 0.) {
+      std::cout << "    Penning transfer parameters for " << nLevelsFound
+                << " " << gasname << " excitation levels set to:\n"
+                << "      r = " << m_rPenningGas[iGas] << ", lambda = "
+                << m_lambdaPenningGas[iGas] << " cm\n";
+    } else {
+      std::cout << "    Penning transfer probability for " << nLevelsFound
+                << " " << gasname << " excitation levels set to r = "
+                << m_rPenningGas[iGas] << "\n";
+    }
   } else {
     std::cerr << m_className << "::EnablePenningTransfer:\n    " << gasname
               << " has no excitation levels in the present energy range.\n";
