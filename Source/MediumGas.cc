@@ -2321,6 +2321,7 @@ bool MediumGas::EnablePenningTransfer() {
   auto itCH4 = std::find(m_gas.cbegin(), m_gas.cend(), "CH4");
   auto itC2H2 = std::find(m_gas.cbegin(), m_gas.cend(), "C2H2");
   auto itC2H6 = std::find(m_gas.cbegin(), m_gas.cend(), "C2H6");
+  auto itC3H8 = std::find(m_gas.cbegin(), m_gas.cend(), "C3H8");
   auto itC4H10 = std::find(m_gas.cbegin(), m_gas.cend(), "iC4H10");
 
   auto itTMA = std::find(m_gas.cbegin(), m_gas.cend(), "TMA");
@@ -2377,6 +2378,17 @@ bool MediumGas::EnablePenningTransfer() {
       if (fabs(c - 0.1) > 0.01) std::cout << " for 10% C2H6";
       if (fabs(p - 1.) > 1.e-3) std::cout << " at atmospheric pressure";
       std::cout << ".\n";
+    }
+    gas = "Ar";
+  } else if (itAr != m_gas.cend() && itC3H8 != m_gas.cend()) {
+    constexpr double a1 = 0.4536;
+    constexpr double a2 = 0.0035;
+    const int iC3H8 = std::distance(m_gas.cbegin(), itC3H8);
+    const double cC3H8 = m_fraction[iC3H8];
+    rP = (a1 * cC3H8) / (cC3H8 + a2);
+    if (fabs(p - 1.) > 1.e-3) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability at atmospheric pressure.\n";
     }
     gas = "Ar";
   } else if (itAr != m_gas.cend() && itC4H10 != m_gas.cend()) {
