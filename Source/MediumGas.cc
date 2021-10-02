@@ -2478,9 +2478,9 @@ bool MediumGas::EnablePenningTransfer() {
 bool MediumGas::EnablePenningTransfer(const double r,
                                       const double lambda) {
 
-  if (r < 0. || r > 1.) {
+  if (r < 0. ) {
     std::cerr << m_className << "::EnablePenningTransfer:\n"
-              << "    Transfer probability must be in the range [0, 1].\n";
+              << "    Transfer probability must be >= 0.\n";
     return false;
   }
 
@@ -2532,9 +2532,9 @@ bool MediumGas::EnablePenningTransfer(const double r,
 bool MediumGas::EnablePenningTransfer(const double r, const double lambda,
                                       std::string gasname) {
 
-  if (r < 0. || r > 1.) {
+  if (r < 0.) {
     std::cerr << m_className << "::EnablePenningTransfer:\n"
-              << "    Transfer probability must be in the range [0, 1].\n";
+              << "    Transfer probability must be >= 0.\n";
     return false;
   }
 
