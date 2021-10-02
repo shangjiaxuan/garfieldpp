@@ -621,11 +621,10 @@ excitation energy \(\epsilon_{i}\) exceeding the ionisation potential
 be ``converted'' to an ionisation.
 The simulation of Penning transfer can be switched on/off using
 \begin{lstlisting}
-void EnablePenningTransfer(const double r, const double lambda);
+void EnablePenningTransfer();
 void EnablePenningTransfer(const double r, const double lambda, 
                            std::string gasname);
-void DisablePenningTransfer();
-void DisablePenningTransfer(std::string gasname);
+void EnablePenningTransfer(const double r, const double lambda);
 \end{lstlisting}
 \begin{description}
   \item[r] value of the transfer efficiency
@@ -634,10 +633,25 @@ void DisablePenningTransfer(std::string gasname);
   \item[gasname] name of the gas the excitation levels of which are to be assigned 
                  the specified transfer efficiency 
 \end{description}
-The functions without the \texttt{gasname} parameter
-switch on/off Penning transfer globally for all gases in the mixture. 
+The first function, which takes no arguments, 
+calculates the Penning transfer probability for the current gas mixture
+using pre-implemented parameterisations taken from literature 
+\cite{Sahin2010,Sahin2017,Sahin2018,Sahin2021}, if available. 
+
+The second function sets the Penning transfer probability for a 
+specific gas component in the mixture.
+ 
+The third function (without the \texttt{gasname} parameter)
+activates Penning transfer globally for all gases in the mixture. 
 Note that \(r\) is an average transfer efficiency, it is assumed to be the same 
 for all energetically eligible levels (\(\epsilon_{i} > \epsilon_{\text{ion}}\)).
+
+Penning transfer can be switched off, globally or for a specific component, 
+using
+\begin{lstlisting}
+void DisablePenningTransfer();
+void DisablePenningTransfer(std::string gasname);
+\end{lstlisting}
 
 If the gas table includes excitation and ionisation rates as function 
 of the electric and magnetic fields, the Townsend coefficient is updated 
@@ -653,6 +667,7 @@ $r_{\text{exc}, i}$ is the rate of an excited level $i$ with an excitation
 energy above the ionisation potential of the gas mixture, and 
 $r_{\text{ion}, i}$ is the rate of an ionization level $i$.
 
+\newpage
 \section{Semiconductors}
 \subsection{Silicon}\label{Sec:Silicon}
 Like for all \texttt{Medium} classes the user has the possibility to specify the 
