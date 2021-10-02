@@ -3,6 +3,7 @@
 
 #include "Garfield/Component.hh"
 #include "Garfield/FundamentalConstants.hh"
+#include "Garfield/Numerics.hh"
 
 namespace Garfield {
 
@@ -141,12 +142,8 @@ double Component::IntegrateFluxCircle(const double xc, const double yc,
   }
   // Number of Gaussian quadrature points per interval.
   constexpr size_t nG = 6;
-  constexpr std::array<double, nG> t = {
-      -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
-      0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
-  constexpr std::array<double, nG> w = {
-      0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
-      0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+  auto tg = Numerics::GaussLegendreNodes6();
+  auto wg = Numerics::GaussLegendreWeights6();
 
   // Width and half-width of intervals.
   const double d = TwoPi / nI;
@@ -158,13 +155,13 @@ double Component::IntegrateFluxCircle(const double xc, const double yc,
   // Perform the integration.
   double s = 0.;
   for (size_t i = 0; i < nG; ++i) {
-    const double phi0 = h * (1. + t[i]);
+    const double phi0 = h * (1. + tg[i]);
     for (unsigned int k = 0; k < nI; ++k) {
       const double phi = phi0 + k * d;
       const double cp = cos(phi);
       const double sp = sin(phi);
       ElectricField(xc + cp * r, yc + sp * r, 0., ex, ey, ez, m, status);
-      s += w[i] * r * (ex * cp + ey * sp);
+      s += wg[i] * r * (ex * cp + ey * sp);
     }
   }
   return h * s * VacuumPermittivity;
@@ -181,12 +178,8 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
   }
   // Number of Gaussian quadrature points.
   constexpr size_t nG = 6;
-  constexpr std::array<double, nG> t = {
-      -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
-      0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
-  constexpr std::array<double, nG> w = {
-      0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
-      0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+  auto tg = Numerics::GaussLegendreNodes6();
+  auto wg = Numerics::GaussLegendreWeights6();
 
   const double r2 = r * r;
   // Width and half-width of theta intervals.
@@ -203,7 +196,7 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
   double s2 = 0.;
   // Loop over theta.
   for (size_t i = 0; i < nG; ++i) {
-    const double theta0 = ht * (1. + t[i]) - HalfPi;
+    const double theta0 = ht * (1. + tg[i]) - HalfPi;
     for (unsigned int k = 0; k < nI; ++k) {
       const double theta = theta0 + k * dt;
       const double ct = cos(theta);
@@ -212,7 +205,7 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
       double s1 = 0.;
       // Loop over phi.
       for (size_t ii = 0; ii < nG; ++ii) {
-        const double phi0 = hp * (1. + t[ii]);
+        const double phi0 = hp * (1. + tg[ii]);
         for (unsigned int kk = 0; kk < nI; ++kk) {
           const double phi = phi0 + kk * dp;
           const double cp = cos(phi);
@@ -220,10 +213,10 @@ double Component::IntegrateFluxSphere(const double xc, const double yc,
           const double x = xc + cp * ct * r;
           const double y = yc + sp * ct * r;
           ElectricField(x, y, z, ex, ey, ez, m, status);
-          s1 += w[ii] * ((ex * cp + ey * sp) * ct + ez * st);
+          s1 += wg[ii] * ((ex * cp + ey * sp) * ct + ez * st);
         }
       }
-      s2 += w[i] * r2 * ct * hp * s1;
+      s2 += wg[i] * r2 * ct * hp * s1;
     }
   }
   return ht * s2 * VacuumPermittivity;
@@ -261,12 +254,8 @@ double Component::IntegrateFluxParallelogram(
   }
   // Number of Gaussian quadrature points.
   constexpr size_t nG = 6;
-  constexpr std::array<double, nG> t = {
-      -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
-      0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
-  constexpr std::array<double, nG> w = {
-      0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
-      0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+  auto tg = Numerics::GaussLegendreNodes6();
+  auto wg = Numerics::GaussLegendreWeights6();
 
   // Compute the normal vector.
   const double xn = dy1 * dz2 - dz1 * dy2;
@@ -299,12 +288,12 @@ double Component::IntegrateFluxParallelogram(
   // Perform the integration.
   double s2 = 0.;
   for (size_t i = 0; i < nG; ++i) {
-    const double v0 = hv * (1. + t[i]);
+    const double v0 = hv * (1. + tg[i]);
     for (unsigned int k = 0; k < nV; ++k) {
       const double v = v0 + k * dv;
       double s1 = 0.;
       for (size_t ii = 0; ii < nG; ++ii) {
-        const double u0 = hu * (1. + t[ii]);
+        const double u0 = hu * (1. + tg[ii]);
         for (unsigned int kk = 0; kk < nU; ++kk) {
           const double u = u0 + kk * du;
           const double x = x0 + u * dx1 + v * dx2;
@@ -315,10 +304,10 @@ double Component::IntegrateFluxParallelogram(
           } else {
             ElectricField(x, y, z, fx, fy, fz, m, status);
           }
-          s1 += w[ii] * (fx * xn + fy * yn + fz * zn);
+          s1 += wg[ii] * (fx * xn + fy * yn + fz * zn);
         }
       }
-      s2 += w[i] * hu * s1;
+      s2 += wg[i] * hu * s1;
     }
   }
   return hv * s2;
@@ -369,12 +358,8 @@ double Component::IntegrateFluxLine(const double x0, const double y0,
 
   // Perform the integration.
   constexpr size_t nG = 6;
-  constexpr std::array<double, nG> t = {
-      -0.932469514203152028, -0.661209386466264514, -0.238619186083196909,
-      0.238619186083196909,  0.661209386466264514,  0.932469514203152028};
-  constexpr std::array<double, nG> w = {
-      0.171324492379170345, 0.360761573048138608, 0.467913934572691047,
-      0.467913934572691047, 0.360761573048138608, 0.171324492379170345};
+  auto tg = Numerics::GaussLegendreNodes6();
+  auto wg = Numerics::GaussLegendreWeights6();
 
   const double d = 1. / nI;
   const double h = 0.5 * d;
@@ -384,7 +369,7 @@ double Component::IntegrateFluxLine(const double x0, const double y0,
   int status = 0;
   double s = 0.;
   for (size_t i = 0; i < nG; ++i) {
-    const double u0 = h * (1. + t[i]);
+    const double u0 = h * (1. + tg[i]);
     for (unsigned int k = 0; k < nI; ++k) {
       const double u = u0 + k * d;
       const double x = x0 + u * vx;
@@ -396,7 +381,7 @@ double Component::IntegrateFluxLine(const double x0, const double y0,
         // TODO: -1?
         fn = isign * fn > 0 ? fabs(fn) : -1.;
       }
-      s += w[i] * fn;
+      s += wg[i] * fn;
     }
   }
   return s * vmag;

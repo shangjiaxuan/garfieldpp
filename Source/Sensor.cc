@@ -496,12 +496,9 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
               << "  Velocity: (" << vx << ", " << vy << ", " << vz << ")\n";
   }
   // Locations and weights for 6-point Gaussian integration
-  constexpr double tg[6] = {-0.932469514203152028, -0.661209386466264514,
-                            -0.238619186083196909, 0.238619186083196909,
-                            0.661209386466264514,  0.932469514203152028};
-  constexpr double wg[6] = {0.171324492379170345, 0.360761573048138608,
-                            0.467913934572691047, 0.467913934572691047,
-                            0.360761573048138608, 0.171324492379170345};
+  constexpr size_t nG = 6;
+  auto tg = Numerics::GaussLegendreNodes6();
+  auto wg = Numerics::GaussLegendreWeights6();
   for (auto& electrode : m_electrodes) {
     const std::string lbl = electrode.label;
     if (m_debug) std::cout << "  Electrode " << electrode.label << ":\n";
@@ -518,7 +515,7 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
       double wx = 0., wy = 0., wz = 0.;
       // Calculate the weighting field for this electrode.
       if (integrateWeightingField) {
-        for (size_t j = 0; j < 6; ++j) {
+        for (size_t j = 0; j < nG; ++j) {
           const double s = 0.5 * (1. + tg[j]);
           const double x = x0 + s * dx;
           const double y = y0 + s * dy;
@@ -715,12 +712,10 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
   if (!m_delayedSignal) return;
   if (m_delayedSignalTimes.empty()) return;
   // Locations and weights for 6-point Gaussian integration
-  constexpr double tg[6] = {-0.932469514203152028, -0.661209386466264514,
-                            -0.238619186083196909, 0.238619186083196909,
-                            0.661209386466264514,  0.932469514203152028};
-  constexpr double wg[6] = {0.171324492379170345, 0.360761573048138608,
-                            0.467913934572691047, 0.467913934572691047,
-                            0.360761573048138608, 0.171324492379170345};
+  constexpr size_t nG = 6;
+  auto tg = Numerics::GaussLegendreNodes6();
+  auto wg = Numerics::GaussLegendreWeights6();
+
   const size_t nd = m_delayedSignalTimes.size();
   for (size_t k = 0; k < nPoints - 1; ++k) {
     const double t0 = ts[k];
@@ -746,7 +741,7 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
         const double dy = scale * (x1[1] - x0[1]);
         const double dz = scale * (x1[2] - x0[2]);
         double sum = 0.;
-        for (size_t j = 0; j < 6; ++j) {
+        for (size_t j = 0; j < nG; ++j) {
           const double f = 0.5 * (1. + tg[j]);
           const double t = m_delayedSignalTimes[i] - f * step;
           // Calculate the delayed weighting field.
