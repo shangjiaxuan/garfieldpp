@@ -57,6 +57,7 @@ class MediumMagboltz : public MediumGas {
   /// Switch off discrete photoabsorption levels.
   void DisableRadiationTrapping() { m_useRadTrap = false; }
 
+  bool EnablePenningTransfer() override;
   bool EnablePenningTransfer(const double r, const double lambda) override;
   bool EnablePenningTransfer(const double r, const double lambda,
                              std::string gasname) override;

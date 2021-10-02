@@ -181,7 +181,7 @@ bool MediumGas::SetComposition(const std::string& gas1, const double f1,
     m_name += m_gas[i];
     sum += m_fraction[i];
   }
-  // Normalise the fractions to one.
+  // Normalise the fractions to unity.
   for (unsigned int i = 0; i < m_nComponents; ++i) {
     m_fraction[i] /= sum;
   }
@@ -2299,12 +2299,188 @@ void MediumGas::ResetTables() {
   m_ionRates.clear();
 }
 
+bool MediumGas::EnablePenningTransfer() {
+  DisablePenningTransfer();
+ 
+  if (m_nComponents != 2) { 
+    std::cerr << m_className << "::EnablePenningTransfer:\n"
+              << "    Penning transfer probability for " << m_name
+              << " is not implemented.\n";
+    return false;
+  }
+
+  const double p = m_pressure / AtmosphericPressure;
+
+  auto itNe = std::find(m_gas.cbegin(), m_gas.cend(), "Ne");
+  auto itAr = std::find(m_gas.cbegin(), m_gas.cend(), "Ar");
+  auto itXe = std::find(m_gas.cbegin(), m_gas.cend(), "Xe");
+
+  auto itN2 = std::find(m_gas.cbegin(), m_gas.cend(), "N2");
+  auto itCO2 = std::find(m_gas.cbegin(), m_gas.cend(), "CO2");
+
+  auto itCH4 = std::find(m_gas.cbegin(), m_gas.cend(), "CH4");
+  auto itC2H2 = std::find(m_gas.cbegin(), m_gas.cend(), "C2H2");
+  auto itC2H6 = std::find(m_gas.cbegin(), m_gas.cend(), "C2H6");
+  auto itC4H10 = std::find(m_gas.cbegin(), m_gas.cend(), "iC4H10");
+
+  auto itTMA = std::find(m_gas.cbegin(), m_gas.cend(), "TMA");
+
+  double rP = 0.;
+  std::string gas = "";
+  if (itAr != m_gas.cend() && itCO2 != m_gas.cend()) {
+    gas = "Ar";
+    const int iCO2 = std::distance(m_gas.cbegin(), itCO2);
+    const double cCO2 = m_fraction[iCO2]; 
+    if (fabs(p - 1.) < 1.e-3) {
+      // 2014 paper with p = 1 atm
+      // http://dx.doi.org/10.1016/j.nima.2014.09.061
+      constexpr double a1 = 0.6643;
+      constexpr double a2 = 0.0518;
+      constexpr double a3 = 0.0028;
+      rP = (a1 * cCO2 + a3) / (cCO2 + a2);
+    } else {
+      // http://dx.doi.org/10.1088/1748-0221/12/01/C01035
+      constexpr double a1 = 0.627898;
+      constexpr double a2 = 0.041394;
+      constexpr double a3 = 0.004716;
+      constexpr double a4 = 0.001562;
+      constexpr double a5 = 0.002422;
+      constexpr double a6 = 0.027115;
+      const double pcCO2 = p * cCO2;
+      const double pcAr = p * (1. - cCO2);
+      rP = (a5 * pcAr * pcAr + a1 * pcCO2 + a4 * cCO2 + a3) /
+           (a6 * pcAr * pcAr + pcCO2 + a2);
+    }
+  } else if (itAr != m_gas.cend() && itCH4 != m_gas.cend()) {
+    // http://dx.doi.org/10.1088/1748-0221/5/05/P05002
+    constexpr double b1 =  0.1956;
+    constexpr double b2 = 16.38;
+    constexpr double b3 = 22.12;
+    constexpr double b4 =  3.842;
+    constexpr double b5 =  2.992;
+    constexpr double b6 = b4;
+    const int iCH4 = std::distance(m_gas.cbegin(), itCH4);
+    const double cCH4 = m_fraction[iCH4];
+    const double pcAr = p * (1. - cCH4);
+    rP = (b4 * p * cCH4 + b1 * pcAr + b2 * cCH4 + b5) / 
+         (b6 * p * cCH4 + pcAr + b3);
+    gas = "Ar";
+  } else if (itAr != m_gas.cend() && itC2H6 != m_gas.cend()) { 
+    // http://dx.doi.org/10.1088/1748-0221/5/05/P05002
+    // There is only one value for this mixture: c = 0.1, p = 1 atm.
+    rP = 0.31;
+    const int iC2H6 = std::distance(m_gas.cbegin(), itC2H6);
+    const double c = m_fraction[iC2H6];
+    if (fabs(c - 0.1) > 0.01 || fabs(p - 1.) > 1.e-3) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability";
+      if (fabs(c - 0.1) > 0.01) std::cout << " for 10% C2H6";
+      if (fabs(p - 1.) > 1.e-3) std::cout << " at atmospheric pressure";
+      std::cout << ".\n";
+    }
+    gas = "Ar";
+  } else if (itAr != m_gas.cend() && itC4H10 != m_gas.cend()) {
+    // http://dx.doi.org/10.1088/1748-0221/5/05/P05002
+    // There is only one value for this mixture: c = 0.1, p = 1 atm.
+    rP = 0.40;
+    const int iC4H10 = std::distance(m_gas.cbegin(), itC4H10);
+    const double c = m_fraction[iC4H10];
+    if (fabs(c - 0.1) > 0.01 || fabs(p - 1.) > 1.e-3) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability";
+      if (fabs(c - 0.1) > 0.01) std::cout << " for 10% iC4H10";
+      if (fabs(p - 1.) > 1.e-3) std::cout << " at atmospheric pressure";
+      std::cout << ".\n";
+    }
+    gas = "Ar";
+  } else if (itAr != m_gas.cend() && itC2H2 != m_gas.cend()) {
+    // http://dx.doi.org/10.1088/1748-0221/5/05/P05002
+    // For this mixture r_p is constant but it has different values for 
+    // cylindrical and parallel plate chambers.
+    // I have used the case of cylindrical chamber here.
+    rP = 0.72;
+    if (fabs(p - 1.) > 1.e-3) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability at atmospheric pressure.\n";
+    }
+    gas = "Ar";
+  } else if (itAr != m_gas.cend() && itXe != m_gas.cend()) {
+    // http://dx.doi.org/10.1088/1748-0221/5/05/P05002
+    constexpr double a1 = 1.248;
+    constexpr double a2 = 0.039;
+    constexpr double a3 = 0.008;
+    constexpr double a4 = 0;
+    const int iXe = std::distance(m_gas.cbegin(), itXe);
+    const double cXe = m_fraction[iXe];
+    const double cAr = 1. - cXe; 
+    rP = (a1 * cXe + a3) / (a4 * cAr * cAr + cXe + a2);
+    if (fabs(p - 1.) > 1.e-3) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability at atmospheric pressure.\n";
+    }
+    gas = "Ar";
+  } else if (itNe != m_gas.cend() && itCO2 != m_gas.cend()) {
+    // https://doi.org/10.1088/1748-0221/16/03/P03026
+    constexpr double a1 = 0.71104;
+    constexpr double a2 = 0.06323;
+    constexpr double a3 = 0.03085;
+    constexpr double a4 = 4.20089;
+    constexpr double a5 = 0.07831;
+    constexpr double a6 = 0.13235;
+    constexpr double a7 = 1.47470;
+    const int iCO2 = std::distance(m_gas.cbegin(), itCO2);
+    const double cCO2 = m_fraction[iCO2];
+    const double pcCO2 = p * cCO2;
+    const double pcNe = p * (1.- cCO2); 
+    rP = (a5 * pcNe * pcNe + a7 * cCO2 * cCO2 + a1 * pcCO2 + a3) / 
+         (a6 * pcNe * pcNe + a4 * cCO2 * cCO2 + pcCO2 + a2);
+    gas = "Ne";
+  } else if (itNe != m_gas.cend() && itN2 != m_gas.cend()) {
+    // https://doi.org/10.1088/1748-0221/16/03/P03026
+    constexpr double a1 = 0.55802;
+    constexpr double a2 = 0.00514;
+    constexpr double a3 = 0.00206;
+    constexpr double a4 = 0.55385;
+    constexpr double a5 = 0.01153;
+    constexpr double a6 = 0.02073;
+    constexpr double a7 = 0.01;
+    const int iN2 = std::distance(m_gas.cbegin(), itN2);
+    const double cN2 = m_fraction[iN2];
+    const double pcNe = p * (1. - cN2);
+    rP = (a5 * pcNe * pcNe + a7 * cN2 * cN2 + a1 * p * cN2 + a3) / 
+         (a6 * pcNe * pcNe + a4 * cN2 * cN2 + p * cN2 + a2);
+    gas = "Ne";
+  } else if (itXe != m_gas.cend() && itTMA != m_gas.cend()) {
+    // https://doi.org/10.1088/1748-0221/13/10/P10032
+    constexpr double a1 = 0.2472;
+    constexpr double a2 = 0.2372;
+    constexpr double a3 = 0.0414;
+    // This mixture's r_P is not a function of the fraction of TMA,
+    // only the pressure.
+    rP = (a1 * p + a3) / (p + a2);
+    const int iTMA = std::distance(m_gas.cbegin(), itTMA);
+    const double cTMA = m_fraction[iTMA];
+    if (fabs(cTMA - 0.05) > 0.002) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability for 5% TMA.\n";
+    }
+    gas = "Xe";
+  } else {
+    std::cerr << m_className << "::EnablePenningTransfer:\n"
+              << "    Penning transfer probability for " << m_name
+              << " is not implemented.\n";
+    return false;
+  }
+  rP = std::max(rP, 0.);
+  return EnablePenningTransfer(rP, 0., gas);
+}
+
 bool MediumGas::EnablePenningTransfer(const double r,
                                       const double lambda) {
 
-  if (r < 0. || r > 1.) {
+  if (r < 0. ) {
     std::cerr << m_className << "::EnablePenningTransfer:\n"
-              << "    Transfer probability must be in the range [0, 1].\n";
+              << "    Transfer probability must be >= 0.\n";
     return false;
   }
 
@@ -2356,9 +2532,9 @@ bool MediumGas::EnablePenningTransfer(const double r,
 bool MediumGas::EnablePenningTransfer(const double r, const double lambda,
                                       std::string gasname) {
 
-  if (r < 0. || r > 1.) {
+  if (r < 0.) {
     std::cerr << m_className << "::EnablePenningTransfer:\n"
-              << "    Transfer probability must be in the range [0, 1].\n";
+              << "    Transfer probability must be >= 0.\n";
     return false;
   }
 
@@ -2418,7 +2594,7 @@ bool MediumGas::EnablePenningTransfer(const double r, const double lambda,
   if (nLevelsFound > 0) {
     std::cout << m_className << "::EnablePenningTransfer:\n"
               << "    Updated transfer probabilities for " << nLevelsFound 
-              << " excitation rates.\n";
+              << " " << gasname << " excitation rates.\n";
     AdjustTownsendCoefficient();
   } else {
     std::cerr << m_className << "::EnablePenningTransfer:\n    Warning: present"

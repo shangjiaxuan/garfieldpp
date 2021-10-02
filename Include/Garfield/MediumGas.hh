@@ -52,6 +52,9 @@ class MediumGas : public Medium {
   /// Read table of gas properties from and merge with the existing dataset.
   bool MergeGasFile(const std::string& filename, const bool replaceOld);
 
+  /// Switch on simulation of Penning transfers, using pre-implemented 
+  /// parameterisations of the transfer probability (if available).
+  virtual bool EnablePenningTransfer();
   /** Switch on simulation of Penning transfers by means of
     * transfer probabilities, for all excitation levels in the mixture.
     * \param r transfer probability [0, 1]
