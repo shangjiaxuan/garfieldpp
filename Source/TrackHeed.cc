@@ -99,7 +99,7 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
   }
 
   ClearParticleBank();
-
+  m_photons.clear();
   m_deltaElectrons.clear();
   m_conductionElectrons.clear();
   m_conductionIons.clear();
@@ -182,7 +182,7 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
                            m_stepAngleStraight * Heed::CLHEP::rad,
                            m_stepAngleCurved * Heed::CLHEP::rad);
   // Transport the particle.
-  if (m_useOneStepFly) {
+  if (m_oneStepFly) {
     particle.fly(m_particleBank, true);
   } else {
     particle.fly(m_particleBank);
@@ -221,19 +221,26 @@ double TrackHeed::GetStoppingPower() {
 
 bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
                            double& tcls, int& n, double& e, double& extra) {
-  int ni = 0;
-  return GetCluster(xcls, ycls, zcls, tcls, n, ni, e, extra);
+  int ni = 0, np = 0;
+  return GetCluster(xcls, ycls, zcls, tcls, n, ni, np, e, extra);
 }
 
 bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
-                           double& tcls, int& ne, int& ni, double& e,
+                           double& tcls, int& ne, int& ni, double& e, 
                            double& extra) {
+  int np = 0;
+  return GetCluster(xcls, ycls, zcls, tcls, ne, ni, np, e, extra);
+}
+
+bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
+                           double& tcls, int& ne, int& ni, int& np, 
+                           double& e, double& extra) {
   // Initialise and reset.
   xcls = ycls = zcls = tcls = 0.;
   extra = 0.;
-  ne = ni = 0;
+  ne = ni = np = 0;
   e = 0.;
-
+  m_photons.clear();
   m_deltaElectrons.clear();
   m_conductionElectrons.clear();
   m_conductionIons.clear();
@@ -311,16 +318,16 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
                                   delta->conduction_ions.end());
         } else {
           // Add the delta electron to the list, for later use.
-          deltaElectron newDeltaElectron;
-          newDeltaElectron.x = delta->position().x * 0.1 + m_cX;
-          newDeltaElectron.y = delta->position().y * 0.1 + m_cY;
-          newDeltaElectron.z = delta->position().z * 0.1 + m_cZ;
-          newDeltaElectron.t = delta->time();
-          newDeltaElectron.e = delta->kinetic_energy() * 1.e6;
-          newDeltaElectron.dx = delta->direction().x;
-          newDeltaElectron.dy = delta->direction().y;
-          newDeltaElectron.dz = delta->direction().z;
-          m_deltaElectrons.push_back(std::move(newDeltaElectron));
+          DeltaElectron deltaElectron;
+          deltaElectron.x = delta->position().x * 0.1 + m_cX;
+          deltaElectron.y = delta->position().y * 0.1 + m_cY;
+          deltaElectron.z = delta->position().z * 0.1 + m_cZ;
+          deltaElectron.t = delta->time();
+          deltaElectron.e = delta->kinetic_energy() * 1.e6;
+          deltaElectron.dx = delta->direction().x;
+          deltaElectron.dy = delta->direction().y;
+          deltaElectron.dz = delta->direction().z;
+          m_deltaElectrons.push_back(std::move(deltaElectron));
         }
         continue;
       }
@@ -337,7 +344,20 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
       const double z = photon->position().z * 0.1 + m_cZ;
       if (!IsInside(x, y, z)) continue;
       // Transport the photon.
-      if (m_usePhotonReabsorption) photon->fly(newSecondaries);
+      if (m_doPhotonReabsorption) {
+        photon->fly(newSecondaries);
+      } else {
+        Photon unabsorbedPhoton;
+        unabsorbedPhoton.x = photon->position().x * 0.1 + m_cX;
+        unabsorbedPhoton.y = photon->position().y * 0.1 + m_cY;
+        unabsorbedPhoton.z = photon->position().z * 0.1 + m_cZ;
+        unabsorbedPhoton.t = photon->time();
+        unabsorbedPhoton.e = photon->m_energy * 1.e6;
+        unabsorbedPhoton.dx = photon->direction().x;
+        unabsorbedPhoton.dy = photon->direction().y;
+        unabsorbedPhoton.dz = photon->direction().z;
+        m_photons.push_back(std::move(unabsorbedPhoton));
+      }
     }
     for (auto secondary : secondaries)
       if (secondary) delete secondary;
@@ -348,6 +368,7 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
   ne = m_doDeltaTransport ? m_conductionElectrons.size()
                           : m_deltaElectrons.size();
   ni = m_conductionIons.size();
+  np = m_photons.size();
   return true;
 }
 
@@ -407,6 +428,26 @@ bool TrackHeed::GetIon(const unsigned int i, double& x, double& y, double& z,
   y = m_conductionIons[i].y * 0.1 + m_cY;
   z = m_conductionIons[i].z * 0.1 + m_cZ;
   t = m_conductionIons[i].time;
+  return true;
+}
+
+bool TrackHeed::GetPhoton(const unsigned int i, double& x, double& y,
+                          double& z, double& t, double& e, double& dx,
+                          double& dy, double& dz) const {
+  // Make sure a photon with this number exists.
+  if (i >= m_photons.size()) {
+    std::cerr << m_className << "::GetPhoton: Index out of range.\n";
+    return false;
+  }
+
+  x = m_photons[i].x;
+  y = m_photons[i].y;
+  z = m_photons[i].z;
+  t = m_photons[i].t;
+  e = m_photons[i].e;
+  dx = m_photons[i].dx;
+  dy = m_photons[i].dy;
+  dz = m_photons[i].dz;
   return true;
 }
 
@@ -474,7 +515,7 @@ void TrackHeed::TransportDeltaElectron(const double x0, const double y0,
     m_mediumName = medium->GetName();
     m_mediumDensity = medium->GetMassDensity();
   }
-
+  m_photons.clear();
   m_deltaElectrons.clear();
   m_conductionElectrons.clear();
   m_conductionIons.clear();
@@ -527,18 +568,28 @@ void TrackHeed::TransportDeltaElectron(const double x0, const double y0,
 void TrackHeed::TransportPhoton(const double x0, const double y0,
                                 const double z0, const double t0,
                                 const double e0, const double dx0,
-                                const double dy0, const double dz0, int& nel) {
-  int ni = 0;
-  TransportPhoton(x0, y0, z0, t0, e0, dx0, dy0, dz0, nel, ni);
+                                const double dy0, const double dz0, int& ne) {
+  int ni = 0, np = 0;
+  TransportPhoton(x0, y0, z0, t0, e0, dx0, dy0, dz0, ne, ni, np);
 }
 
 void TrackHeed::TransportPhoton(const double x0, const double y0,
                                 const double z0, const double t0,
                                 const double e0, const double dx0,
-                                const double dy0, const double dz0, int& nel,
+                                const double dy0, const double dz0, int& ne,
                                 int& ni) {
-  nel = 0;
+  int np = 0;
+  TransportPhoton(x0, y0, z0, t0, e0, dx0, dy0, dz0, ne, ni, np);
+} 
+
+void TrackHeed::TransportPhoton(const double x0, const double y0,
+                                const double z0, const double t0,
+                                const double e0, const double dx0,
+                                const double dy0, const double dz0, int& ne,
+                                int& ni, int& np) {
+  ne = 0;
   ni = 0;
+  np = 0;
 
   // Make sure the energy is positive.
   if (e0 <= 0.) {
@@ -590,6 +641,7 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
   // Clusters from the current track will be lost.
   m_hasActiveTrack = false;
   ClearParticleBank();
+  m_photons.clear();
   m_deltaElectrons.clear();
   m_conductionElectrons.clear();
   m_conductionIons.clear();
@@ -639,16 +691,16 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
                                   delta->conduction_ions.end());
         } else {
           // Add the delta electron to the list, for later use.
-          deltaElectron newDeltaElectron;
-          newDeltaElectron.x = delta->position().x * 0.1 + m_cX;
-          newDeltaElectron.y = delta->position().y * 0.1 + m_cY;
-          newDeltaElectron.z = delta->position().z * 0.1 + m_cZ;
-          newDeltaElectron.t = delta->time();
-          newDeltaElectron.e = delta->kinetic_energy() * 1.e6;
-          newDeltaElectron.dx = delta->direction().x;
-          newDeltaElectron.dy = delta->direction().y;
-          newDeltaElectron.dz = delta->direction().z;
-          m_deltaElectrons.push_back(std::move(newDeltaElectron));
+          DeltaElectron deltaElectron;
+          deltaElectron.x = delta->position().x * 0.1 + m_cX;
+          deltaElectron.y = delta->position().y * 0.1 + m_cY;
+          deltaElectron.z = delta->position().z * 0.1 + m_cZ;
+          deltaElectron.t = delta->time();
+          deltaElectron.e = delta->kinetic_energy() * 1.e6;
+          deltaElectron.dx = delta->direction().x;
+          deltaElectron.dy = delta->direction().y;
+          deltaElectron.dz = delta->direction().z;
+          m_deltaElectrons.push_back(std::move(deltaElectron));
         }
         continue;
       }
@@ -661,8 +713,19 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
         ClearBank(newSecondaries);
         return;
       }
-      if (m_usePhotonReabsorption) {
+      if (m_doPhotonReabsorption) {
         fluorescencePhoton->fly(newSecondaries);
+      } else {
+        Photon unabsorbedPhoton;
+        unabsorbedPhoton.x = fluorescencePhoton->position().x * 0.1 + m_cX;
+        unabsorbedPhoton.y = fluorescencePhoton->position().y * 0.1 + m_cY;
+        unabsorbedPhoton.z = fluorescencePhoton->position().z * 0.1 + m_cZ;
+        unabsorbedPhoton.t = fluorescencePhoton->time();
+        unabsorbedPhoton.e = fluorescencePhoton->m_energy * 1.e6;
+        unabsorbedPhoton.dx = fluorescencePhoton->direction().x;
+        unabsorbedPhoton.dy = fluorescencePhoton->direction().y;
+        unabsorbedPhoton.dz = fluorescencePhoton->direction().z;
+        m_photons.push_back(std::move(unabsorbedPhoton));
       }
     }
     secondaries.swap(newSecondaries);
@@ -670,9 +733,10 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
   }
   ClearBank(secondaries);
   // Get the total number of electrons produced in this step.
-  nel = m_doDeltaTransport ? m_conductionElectrons.size()
-                           : m_deltaElectrons.size();
+  ne = m_doDeltaTransport ? m_conductionElectrons.size()
+                          : m_deltaElectrons.size();
   ni = m_conductionIons.size();
+  np = m_photons.size();
 }
 
 void TrackHeed::EnableElectricField() { m_fieldMap->UseEfield(true); }
