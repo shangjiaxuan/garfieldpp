@@ -784,8 +784,8 @@ void ComponentAnsys123::ElectricField(const double xin, const double yin,
 
   // Drift medium?
   if (m_debug) {
-    std::cout << m_className << "::ElectricField:\n";
-    std::cout << "    Material " << element.matmap << ", drift flag "
+    std::cout << m_className << "::ElectricField:\n"
+              << "    Material " << element.matmap << ", drift flag "
               << m_materials[element.matmap].driftmedium << ".\n";
   }
   m = m_materials[element.matmap].medium;
