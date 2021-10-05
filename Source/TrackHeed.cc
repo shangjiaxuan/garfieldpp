@@ -670,6 +670,18 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
                           m_fieldMap.get());
   std::vector<Heed::gparticle*> secondaries;
   photon.fly(secondaries);
+  if (secondaries.empty()) {
+    Photon unabsorbedPhoton;
+    unabsorbedPhoton.x = photon.position().x * 0.1 + m_cX;
+    unabsorbedPhoton.y = photon.position().y * 0.1 + m_cY;
+    unabsorbedPhoton.z = photon.position().z * 0.1 + m_cZ;
+    unabsorbedPhoton.t = photon.time();
+    unabsorbedPhoton.e = photon.m_energy * 1.e6;
+    unabsorbedPhoton.dx = photon.direction().x;
+    unabsorbedPhoton.dy = photon.direction().y;
+    unabsorbedPhoton.dz = photon.direction().z;
+    m_photons.push_back(std::move(unabsorbedPhoton));
+  }
 
   while (!secondaries.empty()) {
     std::vector<Heed::gparticle*> newSecondaries;
