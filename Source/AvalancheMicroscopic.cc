@@ -1510,6 +1510,26 @@ void AvalancheMicroscopic::Terminate(double x0, double y0, double z0, double t0,
       t1 = tm;
     }
   }
+    bool outsideMedium = true;
+    while(outsideMedium){
+        d *= 0.5;
+        const double xm = 0.5 * (x0 + x1);
+        const double ym = 0.5 * (y0 + y1);
+        const double zm = 0.5 * (z0 + z1);
+        const double tm = 0.5 * (t0 + t1);
+        // Check if the mid-point is inside the drift medium.
+        double ex = 0., ey = 0., ez = 0.;
+        Medium* medium = nullptr;
+        int status = 0;
+        m_sensor->ElectricField(xm, ym, zm, ex, ey, ez, medium, status);
+        if (status == 0 && m_sensor->IsInArea(xm, ym, zm)) {
+            outsideMedium = false;
+        }
+        x1 = xm;
+        y1 = ym;
+        z1 = zm;
+        t1 = tm;
+    }
 }
 
 }  // namespace Garfield

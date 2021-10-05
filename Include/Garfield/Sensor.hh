@@ -229,7 +229,7 @@ class Sensor {
                  const bool useWeightingPotential = false);
 
   /// Exporting induced signal to a csv file.
-  void ExportSignal(const std::string& label, const std::string& filename);
+  void ExportSignal(const std::string& label, const std::string& filename,const bool chargeCariers = false);
 
   /// Add the induced charge from a charge carrier drift between two points.
   void AddInducedCharge(const double q, const double x0, const double y0,
