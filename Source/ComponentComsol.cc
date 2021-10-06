@@ -482,48 +482,12 @@ void ComponentComsol::ElectricField(const double xin, const double yin,
   if (m_debug) {
     PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 10);
   }
-  const Node &n0 = m_nodes[element.emap[0]];
-  const Node &n1 = m_nodes[element.emap[1]];
-  const Node &n2 = m_nodes[element.emap[2]];
-  const Node &n3 = m_nodes[element.emap[3]];
-  const Node &n4 = m_nodes[element.emap[4]];
-  const Node &n5 = m_nodes[element.emap[5]];
-  const Node &n6 = m_nodes[element.emap[6]];
-  const Node &n7 = m_nodes[element.emap[7]];
-  const Node &n8 = m_nodes[element.emap[8]];
-  const Node &n9 = m_nodes[element.emap[9]];
-  // Tetrahedral field
-  volt = n0.v * t1 * (2 * t1 - 1) + n1.v * t2 * (2 * t2 - 1) +
-         n2.v * t3 * (2 * t3 - 1) + n3.v * t4 * (2 * t4 - 1) +
-         4 * n4.v * t1 * t2 + 4 * n5.v * t1 * t3 + 4 * n6.v * t1 * t4 +
-         4 * n7.v * t2 * t3 + 4 * n8.v * t2 * t4 + 4 * n9.v * t3 * t4;
-  ex = -(n0.v * (4 * t1 - 1) * jac[0][1] + n1.v * (4 * t2 - 1) * jac[1][1] +
-         n2.v * (4 * t3 - 1) * jac[2][1] + n3.v * (4 * t4 - 1) * jac[3][1] +
-         n4.v * (4 * t2 * jac[0][1] + 4 * t1 * jac[1][1]) +
-         n5.v * (4 * t3 * jac[0][1] + 4 * t1 * jac[2][1]) +
-         n6.v * (4 * t4 * jac[0][1] + 4 * t1 * jac[3][1]) +
-         n7.v * (4 * t3 * jac[1][1] + 4 * t2 * jac[2][1]) +
-         n8.v * (4 * t4 * jac[1][1] + 4 * t2 * jac[3][1]) +
-         n9.v * (4 * t4 * jac[2][1] + 4 * t3 * jac[3][1])) /
-       det;
-  ey = -(n0.v * (4 * t1 - 1) * jac[0][2] + n1.v * (4 * t2 - 1) * jac[1][2] +
-         n2.v * (4 * t3 - 1) * jac[2][2] + n3.v * (4 * t4 - 1) * jac[3][2] +
-         n4.v * (4 * t2 * jac[0][2] + 4 * t1 * jac[1][2]) +
-         n5.v * (4 * t3 * jac[0][2] + 4 * t1 * jac[2][2]) +
-         n6.v * (4 * t4 * jac[0][2] + 4 * t1 * jac[3][2]) +
-         n7.v * (4 * t3 * jac[1][2] + 4 * t2 * jac[2][2]) +
-         n8.v * (4 * t4 * jac[1][2] + 4 * t2 * jac[3][2]) +
-         n9.v * (4 * t4 * jac[2][2] + 4 * t3 * jac[3][2])) /
-       det;
-  ez = -(n0.v * (4 * t1 - 1) * jac[0][3] + n1.v * (4 * t2 - 1) * jac[1][3] +
-         n2.v * (4 * t3 - 1) * jac[2][3] + n3.v * (4 * t4 - 1) * jac[3][3] +
-         n4.v * (4 * t2 * jac[0][3] + 4 * t1 * jac[1][3]) +
-         n5.v * (4 * t3 * jac[0][3] + 4 * t1 * jac[2][3]) +
-         n6.v * (4 * t4 * jac[0][3] + 4 * t1 * jac[3][3]) +
-         n7.v * (4 * t3 * jac[1][3] + 4 * t2 * jac[2][3]) +
-         n8.v * (4 * t4 * jac[1][3] + 4 * t2 * jac[3][3]) +
-         n9.v * (4 * t4 * jac[2][3] + 4 * t3 * jac[3][3])) /
-       det;
+  std::array<double, 10> v;
+  for (size_t i = 0; i < 10; ++i) {
+    v[i] = m_nodes[element.emap[i]].v;
+  }
+  volt = Potential13(v, {t1, t2, t3, t4});
+  Field13(v, {t1, t2, t3, t4}, jac, det, ex, ey, ez);
 
   // Transform field to global coordinates
   UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
@@ -537,8 +501,7 @@ void ComponentComsol::ElectricField(const double xin, const double yin,
   m = m_materials[element.matmap].medium;
   status = -5;
   if (m_materials[element.matmap].driftmedium) {
-    if (m && m->IsDriftable())
-      status = 0;
+    if (m && m->IsDriftable()) status = 0;
   }
 }
 
@@ -583,52 +546,11 @@ void ComponentComsol::WeightingField(const double xin, const double yin,
   if (m_debug) {
     PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 10, iw);
   }
-  const Node &n0 = m_nodes[element.emap[0]];
-  const Node &n1 = m_nodes[element.emap[1]];
-  const Node &n2 = m_nodes[element.emap[2]];
-  const Node &n3 = m_nodes[element.emap[3]];
-  const Node &n4 = m_nodes[element.emap[4]];
-  const Node &n5 = m_nodes[element.emap[5]];
-  const Node &n6 = m_nodes[element.emap[6]];
-  const Node &n7 = m_nodes[element.emap[7]];
-  const Node &n8 = m_nodes[element.emap[8]];
-  const Node &n9 = m_nodes[element.emap[9]];
-  // Tetrahedral field
-  wx = -(n0.w[iw] * (4 * t1 - 1) * jac[0][1] +
-         n1.w[iw] * (4 * t2 - 1) * jac[1][1] +
-         n2.w[iw] * (4 * t3 - 1) * jac[2][1] +
-         n3.w[iw] * (4 * t4 - 1) * jac[3][1] +
-         n4.w[iw] * (4 * t2 * jac[0][1] + 4 * t1 * jac[1][1]) +
-         n5.w[iw] * (4 * t3 * jac[0][1] + 4 * t1 * jac[2][1]) +
-         n6.w[iw] * (4 * t4 * jac[0][1] + 4 * t1 * jac[3][1]) +
-         n7.w[iw] * (4 * t3 * jac[1][1] + 4 * t2 * jac[2][1]) +
-         n8.w[iw] * (4 * t4 * jac[1][1] + 4 * t2 * jac[3][1]) +
-         n9.w[iw] * (4 * t4 * jac[2][1] + 4 * t3 * jac[3][1])) /
-       det;
-
-  wy = -(n0.w[iw] * (4 * t1 - 1) * jac[0][2] +
-         n1.w[iw] * (4 * t2 - 1) * jac[1][2] +
-         n2.w[iw] * (4 * t3 - 1) * jac[2][2] +
-         n3.w[iw] * (4 * t4 - 1) * jac[3][2] +
-         n4.w[iw] * (4 * t2 * jac[0][2] + 4 * t1 * jac[1][2]) +
-         n5.w[iw] * (4 * t3 * jac[0][2] + 4 * t1 * jac[2][2]) +
-         n6.w[iw] * (4 * t4 * jac[0][2] + 4 * t1 * jac[3][2]) +
-         n7.w[iw] * (4 * t3 * jac[1][2] + 4 * t2 * jac[2][2]) +
-         n8.w[iw] * (4 * t4 * jac[1][2] + 4 * t2 * jac[3][2]) +
-         n9.w[iw] * (4 * t4 * jac[2][2] + 4 * t3 * jac[3][2])) /
-       det;
-
-  wz = -(n0.w[iw] * (4 * t1 - 1) * jac[0][3] +
-         n1.w[iw] * (4 * t2 - 1) * jac[1][3] +
-         n2.w[iw] * (4 * t3 - 1) * jac[2][3] +
-         n3.w[iw] * (4 * t4 - 1) * jac[3][3] +
-         n4.w[iw] * (4 * t2 * jac[0][3] + 4 * t1 * jac[1][3]) +
-         n5.w[iw] * (4 * t3 * jac[0][3] + 4 * t1 * jac[2][3]) +
-         n6.w[iw] * (4 * t4 * jac[0][3] + 4 * t1 * jac[3][3]) +
-         n7.w[iw] * (4 * t3 * jac[1][3] + 4 * t2 * jac[2][3]) +
-         n8.w[iw] * (4 * t4 * jac[1][3] + 4 * t2 * jac[3][3]) +
-         n9.w[iw] * (4 * t4 * jac[2][3] + 4 * t3 * jac[3][3])) /
-       det;
+  std::array<double, 10> v;
+  for (size_t i = 0; i < 10; ++i) {
+    v[i] = m_nodes[element.emap[i]].w[iw];
+  }
+  Field13(v, {t1, t2, t3, t4}, jac, det, wx, wy, wz);
 
   // Transform field to global coordinates
   UnmapFields(wx, wy, wz, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
@@ -669,23 +591,11 @@ double ComponentComsol::WeightingPotential(const double xin, const double yin,
     PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
                  iw);
   }
-  const Node &n0 = m_nodes[element.emap[0]];
-  const Node &n1 = m_nodes[element.emap[1]];
-  const Node &n2 = m_nodes[element.emap[2]];
-  const Node &n3 = m_nodes[element.emap[3]];
-  const Node &n4 = m_nodes[element.emap[4]];
-  const Node &n5 = m_nodes[element.emap[5]];
-  const Node &n6 = m_nodes[element.emap[6]];
-  const Node &n7 = m_nodes[element.emap[7]];
-  const Node &n8 = m_nodes[element.emap[8]];
-  const Node &n9 = m_nodes[element.emap[9]];
-
-  // Tetrahedral field
-  return n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
-         n2.w[iw] * t3 * (2 * t3 - 1) + n3.w[iw] * t4 * (2 * t4 - 1) +
-         4 * n4.w[iw] * t1 * t2 + 4 * n5.w[iw] * t1 * t3 +
-         4 * n6.w[iw] * t1 * t4 + 4 * n7.w[iw] * t2 * t3 +
-         4 * n8.w[iw] * t2 * t4 + 4 * n9.w[iw] * t3 * t4;
+  std::array<double, 10> v;
+  for (size_t i = 0; i < 10; ++i) {
+    v[i] = m_nodes[element.emap[i]].w[iw];
+  }
+  return Potential13(v, {t1, t2, t3, t4});
 }
 
 Medium *ComponentComsol::GetMedium(const double xin, const double yin,
@@ -944,38 +854,20 @@ double ComponentComsol::DelayedWeightingPotential(const double xin,
     PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
                  iw);
   }
-  const Node &n0 = m_nodes[element.emap[0]];
-  const Node &n1 = m_nodes[element.emap[1]];
-  const Node &n2 = m_nodes[element.emap[2]];
-  const Node &n3 = m_nodes[element.emap[3]];
-  const Node &n4 = m_nodes[element.emap[4]];
-  const Node &n5 = m_nodes[element.emap[5]];
-  const Node &n6 = m_nodes[element.emap[6]];
-  const Node &n7 = m_nodes[element.emap[7]];
-  const Node &n8 = m_nodes[element.emap[8]];
-  const Node &n9 = m_nodes[element.emap[9]];
-  // Tetrahedral field
 
   const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
   const auto it0 = std::prev(it1);
 
   const double dt = t - *it0;
   const unsigned int i0 = it0 - m_wdtimes.cbegin();
-  double dp0 =
-      n0.dw[iw][i0] * t1 * (2 * t1 - 1) + n1.dw[iw][i0] * t2 * (2 * t2 - 1) +
-      n2.dw[iw][i0] * t3 * (2 * t3 - 1) + n3.dw[iw][i0] * t4 * (2 * t4 - 1) +
-      4 * n4.dw[iw][i0] * t1 * t2 + 4 * n5.dw[iw][i0] * t1 * t3 +
-      4 * n6.dw[iw][i0] * t1 * t4 + 4 * n7.dw[iw][i0] * t2 * t3 +
-      4 * n8.dw[iw][i0] * t2 * t4 + 4 * n9.dw[iw][i0] * t3 * t4;
-
   const unsigned int i1 = it1 - m_wdtimes.cbegin();
-
-  double dp1 =
-      n0.dw[iw][i1] * t1 * (2 * t1 - 1) + n1.dw[iw][i1] * t2 * (2 * t2 - 1) +
-      n2.dw[iw][i1] * t3 * (2 * t3 - 1) + n3.dw[iw][i1] * t4 * (2 * t4 - 1) +
-      4 * n4.dw[iw][i1] * t1 * t2 + 4 * n5.dw[iw][i1] * t1 * t3 +
-      4 * n6.dw[iw][i1] * t1 * t4 + 4 * n7.dw[iw][i1] * t2 * t3 +
-      4 * n8.dw[iw][i1] * t2 * t4 + 4 * n9.dw[iw][i1] * t3 * t4;
+  std::array<double, 10> v0, v1;
+  for (size_t i = 0; i < 10; ++i) {
+    v0[i] = m_nodes[element.emap[i]].dw[iw][i0];
+    v1[i] = m_nodes[element.emap[i]].dw[iw][i1];
+  }
+  const double dp0 = Potential13(v0, {t1, t2, t3, t4});
+  const double dp1 = Potential13(v1, {t1, t2, t3, t4});
 
   const double f1 = dt / (*it1 - *it0);
   const double f0 = 1. - f1;
