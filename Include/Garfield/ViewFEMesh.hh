@@ -7,6 +7,7 @@
 
 #include <TArrayD.h>
 #include <TGaxis.h>
+#include <TGeoManager.h>
 #include <TMatrixD.h>
 
 #include "ComponentCST.hh"
@@ -23,7 +24,7 @@ class ViewFEMesh : public ViewBase {
   /// Constructor.
   ViewFEMesh();
   /// Destructor.
-  ~ViewFEMesh() = default;
+  ~ViewFEMesh();
 
   /// Set the component from which to retrieve the mesh and field.
   void SetComponent(ComponentFieldMap* cmp);
@@ -43,7 +44,7 @@ class ViewFEMesh : public ViewBase {
   void DisableAxes() { m_drawAxes = false; }
 
   /// Plot method to be called by user
-  bool Plot();
+  bool Plot(const bool twod = true);
 
   /// Element fill switch; 2D only, set false for wireframe mesh
   void SetFillMesh(const bool f) { m_fillMesh = f; }
@@ -86,7 +87,7 @@ class ViewFEMesh : public ViewBase {
   std::vector<double> m_viewRegionY;
 
   // The field map object
-  ComponentFieldMap* m_component = nullptr;
+  ComponentFieldMap* m_cmp = nullptr;
 
   // Optional associated ViewDrift object
   ViewDrift* m_viewDrift = nullptr;
@@ -106,9 +107,17 @@ class ViewFEMesh : public ViewBase {
   // Disabled materials -> not shown in the mesh view
   std::map<int, bool> m_disabledMaterial;
 
+  std::vector<TGeoVolume*> m_volumes;
+  std::vector<TGeoMedium*> m_media;
+  std::unique_ptr<TGeoManager> m_geoManager;
+
   // Element plotting methods
-  void DrawElements();
+  void DrawElements2d();
+  void DrawElements3d();
   void DrawCST(ComponentCST* componentCST);
+
+  void DrawDriftLines2d();
+  void DrawDriftLines3d();
 
   bool GetPlotLimits();
 
@@ -130,6 +139,7 @@ class ViewFEMesh : public ViewBase {
   bool IsInPolygon(double x, double y, const std::vector<double>& px,
                    const std::vector<double>& py, bool& edge) const;
 
+  void Reset();
 };
 }  // namespace Garfield
 #endif

@@ -142,6 +142,7 @@ target_sources(
           Source/SolidTube.cc
           Source/SolidWire.cc
           Source/TetrahedralTree.cc
+          Source/TGeoTet.cc
           Source/Track.cc
           Source/TrackBichsel.cc
           Source/TrackElectron.cc

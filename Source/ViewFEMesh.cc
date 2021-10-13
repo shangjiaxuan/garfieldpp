@@ -6,45 +6,80 @@
 #include <TH1F.h>
 #include <TPolyLine.h>
 #include <TGraph.h>
+#include <TGeoSphere.h>
+#include <TPolyLine3D.h>
 
 #include "Garfield/ComponentCST.hh"
 #include "Garfield/ComponentFieldMap.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Plotting.hh"
 #include "Garfield/Random.hh"
+#include "Garfield/TGeoTet.hh"
 #include "Garfield/ViewFEMesh.hh"
 
 namespace Garfield {
 
 ViewFEMesh::ViewFEMesh() : ViewBase("ViewFEMesh") {}
 
+ViewFEMesh::~ViewFEMesh() {
+  Reset();
+}
+
+void ViewFEMesh::Reset() {
+  for (auto it = m_volumes.begin(), end = m_volumes.end(); it != end; ++it) {
+    if (*it) {
+      TGeoShape* shape = (*it)->GetShape();
+      if (shape) delete shape;
+      delete *it;
+    }
+  }
+  m_volumes.clear();
+  for (auto it = m_media.begin(), end = m_media.end(); it != end; ++it) {
+    if (*it) {
+      TGeoMaterial* material = (*it)->GetMaterial();
+      if (material) delete material;
+      delete *it;
+    }
+  }
+  m_media.clear();
+
+  m_geoManager.reset(nullptr);
+}
+ 
 void ViewFEMesh::SetComponent(ComponentFieldMap* cmp) {
   if (!cmp) {
     std::cerr << m_className << "::SetComponent: Null pointer.\n";
     return;
   }
 
-  m_component = cmp;
+  m_cmp = cmp;
 }
 
 // The plotting functionality here is ported from Garfield
 //  with some inclusion of code from ViewCell.cc
-bool ViewFEMesh::Plot() {
-  if (!m_component) {
+bool ViewFEMesh::Plot(const bool twod) {
+  if (!m_cmp) {
     std::cerr << m_className << "::Plot: Component is not defined.\n";
     return false;
   }
 
   double pmin = 0., pmax = 0.;
-  if (!m_component->GetVoltageRange(pmin, pmax)) {
+  if (!m_cmp->GetVoltageRange(pmin, pmax)) {
     std::cerr << m_className << "::Plot: Component is not ready.\n";
     return false;
   }
 
-  if (!GetPlotLimits()) return false;
-
   auto pad = GetCanvas();
   pad->cd();
+
+  if (!twod) {
+    DrawElements3d();
+    DrawDriftLines3d();
+    return true;
+  }
+
+  if (!GetPlotLimits()) return false;
+
   if (!RangeSet(pad)) {
     SetRange(pad, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
   }
@@ -72,43 +107,14 @@ bool ViewFEMesh::Plot() {
   }
 
   // Plot the mesh elements.
-  ComponentCST* componentCST = dynamic_cast<ComponentCST*>(m_component);
+  ComponentCST* componentCST = dynamic_cast<ComponentCST*>(m_cmp);
   if (componentCST) {
     std::cout << m_className << "::Plot: CST component. Calling DrawCST.\n";
     DrawCST(componentCST);
   } else {
-    DrawElements();
+    DrawElements2d();
   }
   
-  // If we have an associated ViewDrift object, plot the drift lines.
-  if (m_viewDrift) {
-    // Plot a 2D projection of the drift line.
-    for (const auto& dline : m_viewDrift->m_driftLines) {
-      TGraph gr;
-      if (dline.second == ViewDrift::Particle::Electron) {
-        gr.SetLineColor(kOrange - 3);
-      } else {
-        gr.SetLineColor(kRed + 1);
-      }
-      std::vector<float> xgr;
-      std::vector<float> ygr;
-      // Loop over the points.
-      for (const auto& point : dline.first) {
-        // Project this point onto the plane.
-        float xp = 0., yp = 0.;
-        ToPlane(point[0], point[1], point[2], xp, yp);
-        // Add this point if it is within the view.
-        if (InView(xp, yp)) {
-          xgr.push_back(xp);
-          ygr.push_back(yp);
-        }
-      }
-      if (!xgr.empty()) {
-        gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
-      }
-    }
-  }
-
   if (m_drawViewRegion && !m_viewRegionX.empty()) {
     TPolyLine poly;
     poly.SetLineColor(kSpring + 4);
@@ -151,9 +157,9 @@ bool ViewFEMesh::GetPlotLimits() {
   }
   if (!m_userBox) {
     // If not set by the user, get the bounding box of the component.
-    if (!m_component) return false;
-    if (!m_component->GetBoundingBox(m_xMinBox, m_yMinBox, m_zMinBox,
-                                     m_xMaxBox, m_yMaxBox, m_zMaxBox)) {
+    if (!m_cmp) return false;
+    if (!m_cmp->GetBoundingBox(m_xMinBox, m_yMinBox, m_zMinBox,
+                               m_xMaxBox, m_yMaxBox, m_zMaxBox)) {
       std::cerr << m_className << "::GetPlotLimits:\n"
                 << "    Bounding box of the component is not defined.\n"
                 << "    Please set the limits explicitly (SetArea).\n";
@@ -164,7 +170,7 @@ bool ViewFEMesh::GetPlotLimits() {
         std::isinf(m_zMinBox) || std::isinf(m_zMaxBox)) {
       double x0 = 0., y0 = 0., z0 = 0.;
       double x1 = 0., y1 = 0., z1 = 0.;
-      if (!m_component->GetElementaryCell(x0, y0, z0, x1, y1, z1)) {
+      if (!m_cmp->GetElementaryCell(x0, y0, z0, x1, y1, z1)) {
         std::cerr << m_className << "::GetPlotLimits:\n"
                   << "    Cell boundaries are not defined.\n"
                   << "    Please set the limits explicitly (SetArea).\n";
@@ -250,25 +256,22 @@ void ViewFEMesh::CreateDefaultAxes() {
 
 // Use ROOT plotting functions to draw the mesh elements on the canvas.
 // General methodology ported from Garfield
-void ViewFEMesh::DrawElements() {
+void ViewFEMesh::DrawElements2d() {
   // Get the map boundaries from the component.
-  double mapxmax = m_component->m_mapmax[0];
-  double mapxmin = m_component->m_mapmin[0];
-  double mapymax = m_component->m_mapmax[1];
-  double mapymin = m_component->m_mapmin[1];
-  double mapzmax = m_component->m_mapmax[2];
-  double mapzmin = m_component->m_mapmin[2];
+  double mapxmax = m_cmp->m_mapmax[0];
+  double mapxmin = m_cmp->m_mapmin[0];
+  double mapymax = m_cmp->m_mapmax[1];
+  double mapymin = m_cmp->m_mapmin[1];
+  double mapzmax = m_cmp->m_mapmax[2];
+  double mapzmin = m_cmp->m_mapmin[2];
 
   // Get the periodicities.
   double sx = mapxmax - mapxmin;
   double sy = mapymax - mapymin;
   double sz = mapzmax - mapzmin;
-  const bool perX =
-      m_component->m_periodic[0] || m_component->m_mirrorPeriodic[0];
-  const bool perY =
-      m_component->m_periodic[1] || m_component->m_mirrorPeriodic[1];
-  const bool perZ =
-      m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
+  const bool perX = m_cmp->m_periodic[0] || m_cmp->m_mirrorPeriodic[0];
+  const bool perY = m_cmp->m_periodic[1] || m_cmp->m_mirrorPeriodic[1];
+  const bool perZ = m_cmp->m_periodic[2] || m_cmp->m_mirrorPeriodic[2];
 
   // Get the plane information.
   const double fx = m_plane[0];
@@ -288,15 +291,15 @@ void ViewFEMesh::DrawElements() {
   const int nMaxZ = perZ ? int(m_zMaxBox / sz) + 1 : 0;
 
   bool cst = false;
-  if (dynamic_cast<ComponentCST*>(m_component)) cst = true;
+  if (dynamic_cast<ComponentCST*>(m_cmp)) cst = true;
 
   // Loop over all elements.
-  const auto nElements = m_component->GetNumberOfElements();
+  const auto nElements = m_cmp->GetNumberOfElements();
   for (size_t i = 0; i < nElements; ++i) {
     size_t mat = 0;
     bool driftmedium = false;
     std::vector<size_t> nodes;
-    if (!m_component->GetElement(i, mat, driftmedium, nodes)) continue;
+    if (!m_cmp->GetElement(i, mat, driftmedium, nodes)) continue;
     // Do not plot the drift medium.
     if (driftmedium && !m_plotMeshBorders) continue;
     // Do not create polygons for disabled materials.
@@ -323,13 +326,13 @@ void ViewFEMesh::DrawElements() {
     const size_t nNodes = nodes.size();
     for (size_t j = 0; j < nNodes; ++j) {
       double xn = 0., yn = 0., zn = 0.;
-      if (!m_component->GetNode(nodes[j], xn, yn, zn)) continue;
+      if (!m_cmp->GetNode(nodes[j], xn, yn, zn)) continue;
       vx0.push_back(xn);
       vy0.push_back(yn);
       vz0.push_back(zn);
     }
     if (vx0.size() != nNodes) {
-      std::cerr << m_className << "::DrawElements:\n"
+      std::cerr << m_className << "::DrawElements2d:\n"
                 << "    Error retrieving nodes of element " << i << ".\n";
       continue;
     }
@@ -341,7 +344,7 @@ void ViewFEMesh::DrawElements() {
     for (int nx = nMinX; nx <= nMaxX; nx++) {
       const double dx = sx * nx;
       // Determine the x-coordinates of the vertices.
-      if (m_component->m_mirrorPeriodic[0] && nx != 2 * (nx / 2)) {
+      if (m_cmp->m_mirrorPeriodic[0] && nx != 2 * (nx / 2)) {
         for (size_t j = 0; j < nNodes; ++j) {
           vx[j] = mapxmin + (mapxmax - vx0[j]) + dx;
         }
@@ -355,7 +358,7 @@ void ViewFEMesh::DrawElements() {
       for (int ny = nMinY; ny <= nMaxY; ny++) {
         const double dy = sy * ny;
         // Determine the y-coordinates of the vertices.
-        if (m_component->m_mirrorPeriodic[1] && ny != 2 * (ny / 2)) {
+        if (m_cmp->m_mirrorPeriodic[1] && ny != 2 * (ny / 2)) {
           for (size_t j = 0; j < nNodes; ++j) {
             vy[j] = mapymin + (mapymax - vy0[j]) + dy;
           }
@@ -369,7 +372,7 @@ void ViewFEMesh::DrawElements() {
         for (int nz = nMinZ; nz <= nMaxZ; nz++) {
           const double dz = sz * nz;
           // Determine the z-coordinates of the vertices.
-          if (m_component->m_mirrorPeriodic[2] && nz != 2 * (nz / 2)) {
+          if (m_cmp->m_mirrorPeriodic[2] && nz != 2 * (nz / 2)) {
             for (size_t j = 0; j < nNodes; ++j) {
               vz[j] = mapzmin + (mapzmax - vz0[j]) + dz;
             }
@@ -469,6 +472,193 @@ void ViewFEMesh::DrawElements() {
 
 }
 
+void ViewFEMesh::DrawElements3d() {
+
+  // Get the map boundaries from the component.
+  double mapxmax = m_cmp->m_mapmax[0];
+  double mapxmin = m_cmp->m_mapmin[0];
+  double mapymax = m_cmp->m_mapmax[1];
+  double mapymin = m_cmp->m_mapmin[1];
+  double mapzmax = m_cmp->m_mapmax[2];
+  double mapzmin = m_cmp->m_mapmin[2];
+
+  // Get the periodicities.
+  double sx = mapxmax - mapxmin;
+  double sy = mapymax - mapymin;
+  double sz = mapzmax - mapzmin;
+  const bool perX = m_cmp->m_periodic[0] || m_cmp->m_mirrorPeriodic[0];
+  const bool perY = m_cmp->m_periodic[1] || m_cmp->m_mirrorPeriodic[1];
+  const bool perZ = m_cmp->m_periodic[2] || m_cmp->m_mirrorPeriodic[2];
+
+  // Determine the number of periods present in the cell.
+  const int nMinX = perX ? int(m_xMinBox / sx) - 1 : 0;
+  const int nMaxX = perX ? int(m_xMaxBox / sx) + 1 : 0;
+  const int nMinY = perY ? int(m_yMinBox / sy) - 1 : 0;
+  const int nMaxY = perY ? int(m_yMaxBox / sy) + 1 : 0;
+  const int nMinZ = perZ ? int(m_zMinBox / sz) - 1 : 0;
+  const int nMaxZ = perZ ? int(m_zMaxBox / sz) + 1 : 0;
+
+  gGeoManager = nullptr;
+  m_geoManager.reset(new TGeoManager("ViewFEMeshGeoManager", ""));
+  TGeoMaterial* matVacuum = new TGeoMaterial("Vacuum", 0., 0., 0.);
+  TGeoMedium* medVacuum = new TGeoMedium("Vacuum", 1, matVacuum);
+  m_media.push_back(medVacuum);
+  // Use silicon as "default" material.
+  TGeoMaterial* matDefault = new TGeoMaterial("Default", 28.085, 14., 2.329);
+  TGeoMedium* medDefault = new TGeoMedium("Default", 1, matDefault);
+  const double hxw = 0.5 * (m_xMaxBox - m_xMinBox); 
+  const double hyw = 0.5 * (m_yMaxBox - m_yMinBox); 
+  const double hzw = 0.5 * (m_zMaxBox - m_zMinBox); 
+  TGeoVolume* top = m_geoManager->MakeBox("Top", medVacuum, hxw, hyw, hzw);
+  m_geoManager->SetTopVolume(top);
+  m_volumes.push_back(top);
+
+  // Loop over all elements.
+  const auto nElements = m_cmp->GetNumberOfElements();
+  for (size_t i = 0; i < nElements; ++i) {
+    // if (m_volumes.size() > 9990) break;
+    size_t mat = 0;
+    bool driftmedium = false;
+    std::vector<size_t> nodes;
+    if (!m_cmp->GetElement(i, mat, driftmedium, nodes)) continue;
+    // Do not plot the drift medium.
+    if (driftmedium && !m_plotMeshBorders) continue;
+    // Do not create polygons for disabled materials.
+    if (m_disabledMaterial[mat]) continue;
+    const short col = m_colorMap.count(mat) != 0 ? m_colorMap[mat] : 1;
+
+    // Get the vertex coordinates in the basic cell.
+    const size_t nNodes = nodes.size();
+    if (nNodes != 4) continue;
+    std::vector<std::array<double, 3> > v0;
+    for (size_t j = 0; j < nNodes; ++j) {
+      double xn = 0., yn = 0., zn = 0.;
+      if (!m_cmp->GetNode(nodes[j], xn, yn, zn)) break;
+      v0.push_back({xn, yn, zn});
+    }
+    if (v0.size() != nNodes) {
+      std::cerr << m_className << "::DrawElements3d:\n"
+                << "    Error retrieving nodes of element " << i << ".\n";
+      continue;
+    }
+    // Coordinates of vertices
+    std::array<std::array<double, 3>, 4> v;
+    // Loop over the periodicities in x.
+    for (int nx = nMinX; nx <= nMaxX; nx++) {
+      const double dx = sx * nx;
+      // Determine the x-coordinates of the vertices.
+      if (m_cmp->m_mirrorPeriodic[0] && nx != 2 * (nx / 2)) {
+        for (size_t j = 0; j < nNodes; ++j) {
+          v[j][0] = mapxmin + (mapxmax - v0[j][0]) + dx;
+        }
+      } else {
+        for (size_t j = 0; j < nNodes; ++j) {
+          v[j][0] = v0[j][0] + dx;
+        }
+      }
+
+      // Loop over the periodicities in y.
+      for (int ny = nMinY; ny <= nMaxY; ny++) {
+        const double dy = sy * ny;
+        // Determine the y-coordinates of the vertices.
+        if (m_cmp->m_mirrorPeriodic[1] && ny != 2 * (ny / 2)) {
+          for (size_t j = 0; j < nNodes; ++j) {
+            v[j][1] = mapymin + (mapymax - v0[j][1]) + dy;
+          }
+        } else {
+          for (size_t j = 0; j < nNodes; ++j) {
+            v[j][1] = v0[j][1] + dy;
+          }
+        }
+
+        // Loop over the periodicities in z.
+        for (int nz = nMinZ; nz <= nMaxZ; nz++) {
+          const double dz = sz * nz;
+          // Determine the z-coordinates of the vertices.
+          if (m_cmp->m_mirrorPeriodic[2] && nz != 2 * (nz / 2)) {
+            for (size_t j = 0; j < nNodes; ++j) {
+              v[j][2] = mapzmin + (mapzmax - v0[j][2]) + dz;
+            }
+          } else {
+            for (size_t j = 0; j < nNodes; ++j) {
+              v[j][2] = v0[j][2] + dz;
+            }
+          }
+          auto tet = new TGeoTet("Tet", v);
+          std::string vname = "Tet" + std::to_string(m_volumes.size());
+          TGeoVolume* vol = new TGeoVolume(vname.c_str(), tet, medDefault); 
+          vol->SetLineColor(col);
+          vol->SetTransparency(70.);
+          m_volumes.push_back(vol);
+          top->AddNodeOverlap(vol, 1, gGeoIdentity);
+        }
+      }
+    }
+  }
+  m_geoManager->CloseGeometry();
+  top->SetTransparency(100.);
+  m_geoManager->SetTopVisible();
+  m_geoManager->SetMaxVisNodes(m_volumes.size() + 1);
+  m_geoManager->GetTopNode()->Draw("e");
+}
+
+void ViewFEMesh::DrawDriftLines2d() {
+ 
+  if (!m_viewDrift) return;
+  // Plot a 2D projection of the drift line.
+  for (const auto& driftLine : m_viewDrift->m_driftLines) {
+    TGraph gr;
+    if (driftLine.second == ViewDrift::Particle::Electron) {
+      gr.SetLineColor(m_viewDrift->m_colElectron);
+    } else if (driftLine.second == ViewDrift::Particle::Hole) {
+      gr.SetLineColor(m_viewDrift->m_colHole);
+    } else {
+      gr.SetLineColor(m_viewDrift->m_colIon);
+    }
+    std::vector<float> xgr;
+    std::vector<float> ygr;
+    // Loop over the points.
+    for (const auto& point : driftLine.first) {
+      // Project this point onto the plane.
+      float xp = 0., yp = 0.;
+      ToPlane(point[0], point[1], point[2], xp, yp);
+      // Add this point if it is within the view.
+      if (InView(xp, yp)) {
+        xgr.push_back(xp);
+        ygr.push_back(yp);
+      }
+    }
+    if (!xgr.empty()) {
+      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "lsame");
+    }
+  }
+
+}
+
+void ViewFEMesh::DrawDriftLines3d() {
+
+  if (!m_viewDrift) return;
+  for (const auto& driftLine : m_viewDrift->m_driftLines) {
+    std::vector<float> points;
+    for (const auto& p : driftLine.first) {
+      points.push_back(p[0]);
+      points.push_back(p[1]);
+      points.push_back(p[2]);
+    }
+    const int nP = driftLine.first.size();
+    TPolyLine3D pl(nP, points.data());
+    if (driftLine.second == ViewDrift::Particle::Electron) {
+      pl.SetLineColor(m_viewDrift->m_colElectron);
+    } else if (driftLine.second == ViewDrift::Particle::Hole) {
+      pl.SetLineColor(m_viewDrift->m_colHole);
+    } else {
+      pl.SetLineColor(m_viewDrift->m_colIon);
+    }
+    pl.SetLineWidth(1);
+    pl.DrawPolyLine(nP, points.data(), "same");
+  }
+}
+
 void ViewFEMesh::DrawCST(ComponentCST* cst) {
   /*The method is based on ViewFEMesh::Draw, thus the first part is copied from
    * there.
@@ -489,23 +679,20 @@ void ViewFEMesh::DrawCST(ComponentCST* cst) {
   };
 
   // Get the map boundaries from the component
-  double mapxmax = m_component->m_mapmax[0];
-  double mapxmin = m_component->m_mapmin[0];
-  double mapymax = m_component->m_mapmax[1];
-  double mapymin = m_component->m_mapmin[1];
-  double mapzmax = m_component->m_mapmax[2];
-  double mapzmin = m_component->m_mapmin[2];
+  double mapxmax = m_cmp->m_mapmax[0];
+  double mapxmin = m_cmp->m_mapmin[0];
+  double mapymax = m_cmp->m_mapmax[1];
+  double mapymin = m_cmp->m_mapmin[1];
+  double mapzmax = m_cmp->m_mapmax[2];
+  double mapzmin = m_cmp->m_mapmin[2];
 
   // Get the periodicities.
   double sx = mapxmax - mapxmin;
   double sy = mapymax - mapymin;
   double sz = mapzmax - mapzmin;
-  const bool perX =
-      m_component->m_periodic[0] || m_component->m_mirrorPeriodic[0];
-  const bool perY =
-      m_component->m_periodic[1] || m_component->m_mirrorPeriodic[1];
-  const bool perZ =
-      m_component->m_periodic[2] || m_component->m_mirrorPeriodic[2];
+  const bool perX = m_cmp->m_periodic[0] || m_cmp->m_mirrorPeriodic[0];
+  const bool perY = m_cmp->m_periodic[1] || m_cmp->m_mirrorPeriodic[1];
+  const bool perZ = m_cmp->m_periodic[2] || m_cmp->m_mirrorPeriodic[2];
 
   // Determine the number of periods present in the cell.
   const int nMinX = perX ? int(m_xMinBox / sx) - 1 : 0;

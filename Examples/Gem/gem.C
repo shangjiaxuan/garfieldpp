@@ -130,7 +130,11 @@ int main(int argc, char * argv[]) {
       meshView->SetColor(2, kYellow + 3);
       meshView->EnableAxes();
       meshView->SetViewDrift(&driftView);
-      meshView->Plot();
+      constexpr bool twod = false;
+      if (!twod) {
+        meshView->SetArea(-0.5 * pitch, -0.5 * pitch, -0.02, 0.5 * pitch, 0.5 * pitch, 0.02);
+      }
+      meshView->Plot(twod);
     } else {
       driftView.SetPlane(0, -1, 0, 0, 0, 0);
       driftView.SetArea(-2 * pitch, -0.02, 2 * pitch, 0.02);
