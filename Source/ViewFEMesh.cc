@@ -114,7 +114,9 @@ bool ViewFEMesh::Plot(const bool twod) {
   } else {
     DrawElements2d();
   }
-  
+ 
+  DrawDriftLines2d();
+ 
   if (m_drawViewRegion && !m_viewRegionX.empty()) {
     TPolyLine poly;
     poly.SetLineColor(kSpring + 4);
