@@ -229,12 +229,7 @@ void ViewGeometry::Plot2d() {
   canvas->cd();
   canvas->SetTitle("Geometry");
 
-  bool empty = false;
-  if (!gPad ||
-      (gPad->GetListOfPrimitives()->GetSize() == 0 && gPad->GetX1() == 0 &&
-       gPad->GetX2() == 1 && gPad->GetY1() == 0 && gPad->GetY2() == 1)) {
-    empty = true;
-  }
+  bool empty = !RangeSet(gPad);
   const double bm = canvas->GetBottomMargin();
   const double lm = canvas->GetLeftMargin();
   const double rm = canvas->GetRightMargin();
