@@ -130,7 +130,7 @@ int main(int argc, char * argv[]) {
       meshView->SetColor(2, kYellow + 3);
       meshView->EnableAxes();
       meshView->SetViewDrift(&driftView);
-      constexpr bool twod = false;
+      constexpr bool twod = true;
       if (!twod) {
         meshView->SetArea(-0.5 * pitch, -0.5 * pitch, -0.02, 0.5 * pitch, 0.5 * pitch, 0.02);
       }

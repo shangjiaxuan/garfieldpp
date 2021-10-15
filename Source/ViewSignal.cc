@@ -65,6 +65,7 @@ void ViewSignal::PlotSignal(const std::string& label, const bool total,
     ylabel = m_sensor->IsIntegrated(label) ? "signal [fC]" : "signal [fC / ns]";
   }
   unsigned int nPlots = same ? 1 : 0;
+  if (!RangeSet(gPad)) nPlots = 0;
   if (total) {
     const auto hname = FindUnusedHistogramName("hSignal_");
     m_hSignal.reset(new TH1D(hname.c_str(), "", nBins, t0, t1));

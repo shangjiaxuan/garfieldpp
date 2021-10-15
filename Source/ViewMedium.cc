@@ -442,17 +442,17 @@ void ViewMedium::ResetX(const Axis xaxis) {
     }
   }
 
-  constexpr unsigned int nX = 1000;
+  constexpr size_t nX = 1000;
   m_xPlot.assign(nX, 0.);
   if (logx) {
     m_xPlot[0] = xmin;
     const double r = pow(xmax / xmin, 1. / (nX - 1));
-    for (unsigned int i = 1; i < nX; ++i) {
+    for (size_t i = 1; i < nX; ++i) {
       m_xPlot[i] = m_xPlot[i - 1] * r;
     }
   } else {
     const double dx = (xmax - xmin) / (nX - 1);
-    for (unsigned int i = 0; i < nX; ++i) {
+    for (size_t i = 0; i < nX; ++i) {
       m_xPlot[i] = xmin + i * dx;
     }
   }
@@ -478,16 +478,16 @@ void ViewMedium::PlotDiffusion(const Axis xaxis, const Charge charge,
       ResetY();
     }
   } 
-  const unsigned int nX = m_xPlot.size();
+  const size_t nX = m_xPlot.size();
   std::array<std::vector<double>, 2> ypl;
-  for (unsigned int i = 0; i < 2; ++i) ypl[i].assign(nX, 0.);
+  for (size_t i = 0; i < 2; ++i) ypl[i].assign(nX, 0.);
 
   double ex = m_efield;
   double ctheta = cos(m_angle);
   double stheta = sin(m_angle);
   double bx = m_bfield * ctheta;
   double by = m_bfield * stheta; 
-  for (unsigned int i = 0; i < nX; ++i) {
+  for (size_t i = 0; i < nX; ++i) {
     if (xaxis == Axis::E) {
       ex = m_xPlot[i];
     } else if (xaxis == Axis::B) {
@@ -517,7 +517,7 @@ void ViewMedium::PlotDiffusion(const Axis xaxis, const Charge charge,
   if (GetGrid(grid, ie, ib, ia, xaxis)) {
     const auto nPoints = xaxis == Axis::E ? grid[0].size() : 
                          xaxis == Axis::B ? grid[1].size() : grid[2].size();
-    for (unsigned int j = 0; j < nPoints; ++j) {
+    for (size_t j = 0; j < nPoints; ++j) {
       double x = 0., y = 0.;
       if (xaxis == Axis::E) {
         ie = j;
@@ -562,7 +562,7 @@ void ViewMedium::PlotDiffusion(const Axis xaxis, const Charge charge,
 
   const std::array<Parameter, 2> pars = {Parameter::LongitudinalDiffusion,
                                          Parameter::TransverseDiffusion};
-  for (unsigned int i = 0; i < 2; ++i) {
+  for (size_t i = 0; i < 2; ++i) {
     if (!NonZero(ypl[i])) continue;
     m_yPlot.push_back(std::move(ypl[i]));
     m_par.push_back(pars[i]);
@@ -592,16 +592,16 @@ void ViewMedium::PlotVelocity(const Axis xaxis, const Charge charge,
       ResetY();
     }
   } 
-  const unsigned int nX = m_xPlot.size();
+  const size_t nX = m_xPlot.size();
   std::array<std::vector<double>, 3> ypl;
-  for (unsigned int i = 0; i < 3; ++i) ypl[i].assign(nX, 0.);
+  for (size_t i = 0; i < 3; ++i) ypl[i].assign(nX, 0.);
 
   double e0 = m_efield;
   double b0 = m_bfield;
   double ctheta = cos(m_angle);
   double stheta = sin(m_angle);
   
-  for (unsigned int i = 0; i < nX; ++i) {
+  for (size_t i = 0; i < nX; ++i) {
     if (xaxis == Axis::E) {
       e0 = m_xPlot[i];
     } else if (xaxis == Axis::B) {
@@ -640,7 +640,7 @@ void ViewMedium::PlotVelocity(const Axis xaxis, const Charge charge,
   if (GetGrid(grid, ie, ib, ia, xaxis)) {
     const auto nPoints = xaxis == Axis::E ? grid[0].size() : 
                          xaxis == Axis::B ? grid[1].size() : grid[2].size();
-    for (unsigned int j = 0; j < nPoints; ++j) {
+    for (size_t j = 0; j < nPoints; ++j) {
       double x = 0., y = 0.;
       if (xaxis == Axis::E) {
         ie = j;
@@ -690,7 +690,7 @@ void ViewMedium::PlotVelocity(const Axis xaxis, const Charge charge,
   const std::array<Parameter, 3> pars = {Parameter::VelocityE, 
                                          Parameter::VelocityB,
                                          Parameter::VelocityExB};
-  for (unsigned int i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < 3; ++i) {
     if (!NonZero(ypl[i])) continue;
     m_yPlot.push_back(std::move(ypl[i]));
     m_par.push_back(pars[i]);
@@ -721,14 +721,14 @@ void ViewMedium::Plot(const Axis xaxis, const Charge charge,
     }
   } 
 
-  const unsigned int nX = m_xPlot.size();
+  const size_t nX = m_xPlot.size();
   std::vector<double> ypl(nX, 0.);  
   double ex = m_efield;
   double ctheta = cos(m_angle);
   double stheta = sin(m_angle);
   double bx = m_bfield * ctheta;
   double by = m_bfield * stheta;
-  for (unsigned int i = 0; i < nX; ++i) {
+  for (size_t i = 0; i < nX; ++i) {
     if (xaxis == Axis::E) {
       ex = m_xPlot[i];
     } else if (xaxis == Axis::B) {
@@ -765,7 +765,7 @@ void ViewMedium::Plot(const Axis xaxis, const Charge charge,
   if (GetGrid(grid, ie, ib, ia, xaxis)) {
     const auto nPoints = xaxis == Axis::E ? grid[0].size() : 
                          xaxis == Axis::B ? grid[1].size() : grid[2].size();
-    for (unsigned int j = 0; j < nPoints; ++j) {
+    for (size_t j = 0; j < nPoints; ++j) {
       double x = 0., y = 0.;
       if (xaxis == Axis::E) {
         ie = j;
@@ -831,14 +831,14 @@ void ViewMedium::PlotLorentzAngle(const Axis xaxis, const Charge charge,
     if (m_par[0] != Parameter::LorentzAngle) ResetY();
   } 
 
-  const unsigned int nX = m_xPlot.size();
+  const size_t nX = m_xPlot.size();
   std::vector<double> ypl(nX, 0.);  
   double ex = m_efield;
   double ctheta = cos(m_angle);
   double stheta = sin(m_angle);
   double bx = m_bfield * ctheta;
   double by = m_bfield * stheta;
-  for (unsigned int i = 0; i < nX; ++i) {
+  for (size_t i = 0; i < nX; ++i) {
     if (xaxis == Axis::E) {
       ex = m_xPlot[i];
     } else if (xaxis == Axis::B) {
@@ -861,7 +861,7 @@ void ViewMedium::PlotLorentzAngle(const Axis xaxis, const Charge charge,
   if (GetGrid(grid, ie, ib, ia, xaxis)) {
     const auto nPoints = xaxis == Axis::E ? grid[0].size() : 
                          xaxis == Axis::B ? grid[1].size() : grid[2].size();
-    for (unsigned int j = 0; j < nPoints; ++j) {
+    for (size_t j = 0; j < nPoints; ++j) {
       double x = 0., y = 0.;
       if (xaxis == Axis::E) {
         ie = j;

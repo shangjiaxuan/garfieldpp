@@ -80,8 +80,8 @@ TPad* ViewBase::GetCanvas() {
   return m_pad;
 }
 
-bool ViewBase::RangeSet(TPad* pad) {
-
+bool ViewBase::RangeSet(TVirtualPad* pad) {
+  if (!pad) return false;
   if (pad->GetListOfPrimitives()->GetSize() == 0 && 
       pad->GetX1() == 0 && pad->GetX2() == 1 && 
       pad->GetY1() == 0 && pad->GetY2() == 1) {
@@ -90,7 +90,7 @@ bool ViewBase::RangeSet(TPad* pad) {
   return true;
 }
 
-void ViewBase::SetRange(TPad* pad, const double x0, const double y0,
+void ViewBase::SetRange(TVirtualPad* pad, const double x0, const double y0,
                         const double x1, const double y1) {
   if (!pad) return;
   const double bm = pad->GetBottomMargin();
