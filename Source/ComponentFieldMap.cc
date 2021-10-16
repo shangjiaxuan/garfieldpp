@@ -289,11 +289,7 @@ void ComponentFieldMap::Field13(const std::array<double, 10>& v,
 int ComponentFieldMap::FindElement5(const double x, const double y,
                                     double const z, double& t1, double& t2,
                                     double& t3, double& t4, double jac[4][4],
-                                    double& det) {
-  // Check if bounding boxes of elements have been computed
-  if (!m_cacheElemBoundingBoxes) {
-    m_cacheElemBoundingBoxes = true;
-  }
+                                    double& det) const {
 
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
@@ -307,22 +303,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
 
   // Initial values.
   t1 = t2 = t3 = t4 = 0;
-
-  // Check previously used element
-  if (m_lastElement > -1 && !m_checkMultipleElement) {
-    const Element& element = m_elements[m_lastElement];
-    if (element.degenerate) {
-      if (Coordinates3(x, y, z, t1, t2, t3, t4, jac, det, element) == 0) {
-        if (t1 >= 0 && t1 <= +1 && t2 >= 0 && t2 <= +1 && t3 >= 0 && t3 <= +1) {
-          return m_lastElement;
-        }
-      }
-    } else {
-      if (Coordinates5(x, y, z, t1, t2, t3, t4, jac, det, element) == 0) {
-        if (t1 >= -1 && t1 <= +1 && t2 >= -1 && t2 <= +1) return m_lastElement;
-      }
-    }
-  }
 
   // Verify the count of volumes that contain the point.
   int nfound = 0;
@@ -347,7 +327,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
       if (t1 < 0 || t1 > 1 || t2 < 0 || t2 > 1 || t3 < 0 || t3 > 1) continue;
       ++nfound;
       imap = idxToElemList;
-      m_lastElement = idxToElemList;
       if (m_debug) {
         std::cout << m_className << "::FindElement5:\n";
         std::cout << "    Found matching degenerate element " << idxToElemList
@@ -374,7 +353,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
       if (t1 < -1 || t1 > 1 || t2 < -1 || t2 > 1) continue;
       ++nfound;
       imap = idxToElemList;
-      m_lastElement = idxToElemList;
       if (m_debug) {
         std::cout << m_className << "::FindElement5:\n";
         std::cout << "    Found matching non-degenerate element "
@@ -404,7 +382,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
         std::cout << "    No element matching point (" << x << ", " << y
                   << ") found.\n";
       }
-      m_lastElement = -1;
       return -1;
     }
     if (nfound > 1) {
@@ -421,7 +398,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
     t3 = t3bak;
     t4 = t4bak;
     imap = imapbak;
-    m_lastElement = imap;
     return imap;
   }
 
@@ -436,7 +412,7 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
 int ComponentFieldMap::FindElement13(const double x, const double y,
                                      const double z, double& t1, double& t2,
                                      double& t3, double& t4, double jac[4][4],
-                                     double& det) {
+                                     double& det) const {
   // Backup
   double jacbak[4][4];
   double detbak = 1.;
@@ -445,17 +421,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
 
   // Initial values.
   t1 = t2 = t3 = t4 = 0.;
-
-  // Check previously used element
-  if (m_lastElement > -1 && !m_checkMultipleElement) {
-    const Element& element = m_elements[m_lastElement];
-    if (Coordinates13(x, y, z, t1, t2, t3, t4, jac, det, element) == 0) {
-      if (t1 >= 0 && t1 <= +1 && t2 >= 0 && t2 <= +1 && t3 >= 0 && t3 <= +1 &&
-          t4 >= 0 && t4 <= +1) {
-        return m_lastElement;
-      }
-    }
-  }
 
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
@@ -487,7 +452,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
     }
     ++nfound;
     imap = idxToElemList;
-    m_lastElement = idxToElemList;
     if (m_debug) {
       std::cout << m_className << "::FindElement13:\n";
       std::cout << "    Found matching element " << i << ".\n";
@@ -515,7 +479,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
         std::cout << "    No element matching point (" << x << ", " << y << ", "
                   << z << ") found.\n";
       }
-      m_lastElement = -1;
       return -1;
     }
     if (nfound > 1) {
@@ -532,7 +495,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
     t3 = t3bak;
     t4 = t4bak;
     imap = imapbak;
-    m_lastElement = imap;
     return imap;
   }
 
@@ -547,35 +509,19 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
 int ComponentFieldMap::FindElementCube(const double x, const double y,
                                        const double z, double& t1, double& t2,
                                        double& t3, TMatrixD*& jac,
-                                       std::vector<TMatrixD*>& dN) {
+                                       std::vector<TMatrixD*>& dN) const {
   int imap = -1;
-  if (m_lastElement >= 0) {
-    const Element& element = m_elements[m_lastElement];
+  const size_t nElements = m_elements.size();
+  for (size_t i = 0; i < nElements; ++i) {
+    const Element& element = m_elements[i];
     const Node& n3 = m_nodes[element.emap[3]];
-    if (x >= n3.x && y >= n3.y && z >= n3.z) {
-      const Node& n0 = m_nodes[element.emap[0]];
-      const Node& n2 = m_nodes[element.emap[2]];
-      const Node& n7 = m_nodes[element.emap[7]];
-      if (x < n0.x && y < n2.y && z < n7.z) {
-        imap = m_lastElement;
-      }
-    }
-  }
-
-  // Default element loop
-  if (imap == -1) {
-    const size_t nElements = m_elements.size();
-    for (size_t i = 0; i < nElements; ++i) {
-      const Element& element = m_elements[i];
-      const Node& n3 = m_nodes[element.emap[3]];
-      if (x < n3.x || y < n3.y || z < n3.z) continue;
-      const Node& n0 = m_nodes[element.emap[0]];
-      const Node& n2 = m_nodes[element.emap[2]];
-      const Node& n7 = m_nodes[element.emap[7]];
-      if (x < n0.x && y < n2.y && z < n7.z) {
-        imap = i;
-        break;
-      }
+    if (x < n3.x || y < n3.y || z < n3.z) continue;
+    const Node& n0 = m_nodes[element.emap[0]];
+    const Node& n2 = m_nodes[element.emap[2]];
+    const Node& n7 = m_nodes[element.emap[7]];
+    if (x < n0.x && y < n2.y && z < n7.z) {
+      imap = i;
+      break;
     }
   }
 
@@ -1646,7 +1592,6 @@ void ComponentFieldMap::Reset() {
 
   m_octree.reset(nullptr);
   m_cacheElemBoundingBoxes = false;
-  m_lastElement = -1;
 }
 
 void ComponentFieldMap::Prepare() {
