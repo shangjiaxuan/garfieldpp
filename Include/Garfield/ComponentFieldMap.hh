@@ -75,7 +75,6 @@ class ComponentFieldMap : public Component {
   // Options
   void EnableCheckMapIndices(const bool on = true) {
     m_checkMultipleElement = on;
-    if (on) m_lastElement = -1;
   }
   /// Option to eliminate mesh elements in conductors (default: on).
   void EnableDeleteBackgroundElements(const bool on = true) {
@@ -214,15 +213,15 @@ class ComponentFieldMap : public Component {
   /// Find the element for a point in curved quadratic quadrilaterals.
   int FindElement5(const double x, const double y, const double z, double& t1,
                    double& t2, double& t3, double& t4, double jac[4][4],
-                   double& det);
+                   double& det) const;
   /// Find the element for a point in curved quadratic tetrahedra.
   int FindElement13(const double x, const double y, const double z, double& t1,
                     double& t2, double& t3, double& t4, double jac[4][4],
-                    double& det);
+                    double& det) const;
   /// Find the element for a point in a cube.
   int FindElementCube(const double x, const double y, const double z,
                       double& t1, double& t2, double& t3, TMatrixD*& jac,
-                      std::vector<TMatrixD*>& dN);
+                      std::vector<TMatrixD*>& dN) const;
 
   /// Move (xpos, ypos, zpos) to field map coordinates.
   void MapCoordinates(double& xpos, double& ypos, double& zpos, bool& xmirrored,
@@ -234,8 +233,8 @@ class ComponentFieldMap : public Component {
                    bool& zmirrored, double& rcoordinate,
                    double& rotation) const;
 
-  int ReadInteger(char* token, int def, bool& error);
-  double ReadDouble(char* token, double def, bool& error);
+  static int ReadInteger(char* token, int def, bool& error);
+  static double ReadDouble(char* token, double def, bool& error);
 
   virtual double GetElementVolume(const unsigned int i) = 0;
   virtual void GetAspectRatio(const unsigned int i, double& dmin,
@@ -263,9 +262,6 @@ class ComponentFieldMap : public Component {
 
   /// Flag to check if bounding boxes of elements are cached
   bool m_cacheElemBoundingBoxes = false;
-
-  /// Keep track of the last element found.
-  int m_lastElement = -1;
 
   /// Calculate local coordinates for curved quadratic triangles.
   int Coordinates3(double x, double y, double z, double& t1, double& t2,
