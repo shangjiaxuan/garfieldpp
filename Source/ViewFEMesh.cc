@@ -73,6 +73,11 @@ bool ViewFEMesh::Plot(const bool twod) {
   pad->cd();
 
   if (!twod) {
+    if (!m_cmp->m_is3d) {
+      std::cerr << m_className << "::Plot:\n"
+                << "    Cannot plot 2D mesh elements in 3D.\n";
+      return false;
+    }
     DrawElements3d();
     DrawDriftLines3d();
     return true;
