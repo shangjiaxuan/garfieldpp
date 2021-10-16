@@ -527,8 +527,8 @@ int ComponentFieldMap::FindElementCube(const double x, const double y,
 
   if (imap < 0) {
     if (m_debug) {
-      std::cout << m_className << "::FindElementCube:\n";
-      std::cout << "    Point (" << x << "," << y << "," << z
+      std::cout << m_className << "::FindElementCube:\n"
+                << "    Point (" << x << "," << y << "," << z
                 << ") not in the mesh, it is background or PEC.\n";
       const Node& first0 = m_nodes[m_elements.front().emap[0]];
       const Node& first2 = m_nodes[m_elements.front().emap[2]];
@@ -808,8 +808,8 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
                                     double& t3, double& t4, double jac[4][4],
                                     double& det, const Element& element) const {
   if (m_debug) {
-    std::cout << m_className << "::Coordinates3:\n";
-    std::cout << "   Point (" << x << ", " << y << ", " << z << ")\n";
+    std::cout << m_className << "::Coordinates3:\n"
+              << "    Point (" << x << ", " << y << ", " << z << ")\n";
   }
 
   // Provisional values
@@ -826,8 +826,8 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
   const double d3 =
       (n2.x - n0.x) * (n1.y - n0.y) - (n1.x - n0.x) * (n2.y - n0.y);
   if (d1 == 0 || d2 == 0 || d3 == 0) {
-    std::cerr << m_className << "::Coordinates3:\n";
-    std::cerr << "    Calculation of linear coordinates failed; abandoned.\n";
+    std::cerr << m_className << "::Coordinates3:\n"
+              << "    Calculation of linear coordinates failed; abandoned.\n";
     return 1;
   }
   t1 = ((x - n1.x) * (n2.y - n1.y) - (y - n1.y) * (n2.x - n1.x)) / d1;
@@ -953,8 +953,8 @@ int ComponentFieldMap::Coordinates4(const double x, const double y,
                                     const Element& element) const {
   // Debugging
   if (m_debug) {
-    std::cout << m_className << "::Coordinates4:\n";
-    std::cout << "   Point (" << x << ", " << y << ", " << z << ")\n";
+    std::cout << m_className << "::Coordinates4:\n"
+              << "   Point (" << x << ", " << y << ", " << z << ")\n";
   }
 
   // Failure flag
@@ -1328,8 +1328,8 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
                                      double& det,
                                      const Element& element) const {
   if (m_debug) {
-    std::cout << m_className << "::Coordinates13:\n";
-    std::cout << "   Point (" << x << ", " << y << ", " << z << ")\n";
+    std::cout << m_className << "::Coordinates13:\n"
+              << "    Point (" << x << ", " << y << ", " << z << ")\n";
   }
 
   // Provisional values
@@ -1343,9 +1343,9 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
   if (t1 < -f || t2 < -f || t3 < -f || t4 < -f || t1 > 1 + f || t2 > 1 + f ||
       t3 > 1 + f || t4 > 1 + f) {
     if (m_debug) {
-      std::cout << m_className << "::Coordinates13:\n";
-      std::cout << "    Linear isoparametric coordinates more than\n";
-      std::cout << "    f (" << f << ") out of range.\n";
+      std::cout << m_className << "::Coordinates13:\n"
+                << "    Linear isoparametric coordinates more than\n"
+                << "    f (" << f << ") out of range.\n";
     }
     return 0;
   }

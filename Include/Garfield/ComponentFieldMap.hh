@@ -233,8 +233,8 @@ class ComponentFieldMap : public Component {
                    bool& zmirrored, double& rcoordinate,
                    double& rotation) const;
 
-  int ReadInteger(char* token, int def, bool& error);
-  double ReadDouble(char* token, double def, bool& error);
+  static int ReadInteger(char* token, int def, bool& error);
+  static double ReadDouble(char* token, double def, bool& error);
 
   virtual double GetElementVolume(const unsigned int i) = 0;
   virtual void GetAspectRatio(const unsigned int i, double& dmin,
