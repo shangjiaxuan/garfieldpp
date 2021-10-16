@@ -293,19 +293,20 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
   Vec v0 = {0., 0., 0.};
   if (!GetVelocity(x0, particle, v0, flag)) {
     flag = StatusCalculationAbandoned;
-    std::cerr << m_className << "::DriftLine:\n"
-              << "    Cannot retrieve drift velocity.\n";
+    std::cerr << m_className << "::DriftLine: "
+              << "Cannot retrieve drift velocity.\n";
     return false;
   } else if (flag != 0) {
-    std::cerr << m_className << "::DriftLine:\n"
-              << "    No valid field at initial position.\n";
+    std::cerr << m_className << "::DriftLine: "
+              << "No valid field at initial position.\n";
+    std::cerr << PrintVec(x0) << "\n";
     return false;
   }
 
   const double speed0 = Mag(v0);
   if (speed0 < Small) {
-    std::cerr << m_className << "::DriftLine:\n"
-              << "    Zero velocity at initial position.\n";
+    std::cerr << m_className << "::DriftLine: "
+              << "Zero velocity at initial position.\n";
     return false;
   }
 
@@ -1522,8 +1523,8 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
   int stat = 0;
   m_sensor->ElectricField(xi, yi, zi, ex, ey, ez, medium, stat);
   if (!medium || stat != 0) {
-    std::cerr << m_className << "::FieldLine:\n"
-              << "    No valid field at initial position.\n";
+    std::cerr << m_className << "::FieldLine: "
+              << "No valid field at initial position.\n";
     return false;
   }
   Vec x0 = {xi, yi, zi};

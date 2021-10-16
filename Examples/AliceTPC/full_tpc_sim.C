@@ -157,6 +157,7 @@ int main(int argc, char * argv[]) {
       z0 += RndmGaussian() * sigma;
       sensor.EnableComponent(0, true);
       sensor.EnableComponent(1, false);
+      if (x0 < xmin || x0 > xmax) continue;
       drift.DriftElectron(x0, 1.2, z0, 0.);
       double x1 = 0., y1 = gap, z1 = 0., t1 = 0.;
       int status = 0;
@@ -170,7 +171,10 @@ int main(int argc, char * argv[]) {
         for (int j = 0; j < nIons; ++j) {
           constexpr double r = 0.01;
           const double angle = RndmGaussian(0, 1.4);
-          drift.DriftIon(x1 + r * sin(angle), gap + r * cos(angle), 0, 0);
+          const double xi = x1 + r * sin(angle);
+          const double yi = gap + r * cos(angle);
+          if (xi < xmin || xi > xmax) continue;
+          drift.DriftIon(xi, yi, 0, 0);
         }
       }
     }
