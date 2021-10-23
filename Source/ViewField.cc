@@ -105,6 +105,12 @@ void ViewField::SetWeightingFieldRange(const double wmin, const double wmax) {
   m_useAutoRange = false;
 }
 
+void ViewField::SetMagneticFieldRange(const double bmin, const double bmax) {
+  m_bmin = std::min(bmin, bmax);
+  m_bmax = std::max(bmin, bmax);
+  m_useAutoRange = false;
+}
+
 void ViewField::SetNumberOfContours(const unsigned int n) {
   if (n > 0) m_nContours = n;
 }
@@ -162,12 +168,29 @@ void ViewField::PlotProfileWeightingField(const std::string& label,
 
 
 ViewField::Parameter ViewField::GetPar(const std::string& option,
-                                       std::string& title) const {
+                                       std::string& title, bool& bfield) const {
 
+  bfield = false;
   std::string opt;
   std::transform(option.begin(), option.end(), 
                  std::back_inserter(opt), toupper);
-  if (opt == "V" || opt == "P" || opt == "PHI" || 
+  if (opt == "BMAG") {
+    title = "field";
+    bfield = true;
+    return Parameter::Bmag;
+  } else if (opt == "BX") {
+    title = "field (x-component)";
+    bfield = true;
+    return Parameter::Bx;
+  } else if (opt == "BY") {
+    title = "field (y-component)";
+    bfield = true;
+    return Parameter::By;
+  } else if (opt == "BZ") {
+    title = "field (z-component)";
+    bfield = true;
+    return Parameter::Bz;
+  } else if (opt == "V" || opt == "P" || opt == "PHI" || 
       opt.find("VOLT") != std::string::npos ||
       opt.find("POT") != std::string::npos) {
     title = "potential";
@@ -175,7 +198,7 @@ ViewField::Parameter ViewField::GetPar(const std::string& option,
   } else if (opt == "E" || opt == "FIELD" || opt == "NORM" ||
              opt.find("MAG") != std::string::npos) {
     title = "field";
-    return Parameter::Magnitude;
+    return Parameter::Emag;
   } else if (opt.find("X") != std::string::npos) {
     title = "field (x-component)";
     return Parameter::Ex;
@@ -205,14 +228,16 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
 
   // Determine the quantity to be plotted.
   std::string title;
-  const Parameter par = GetPar(option, title);
+  bool bfield = false;
+  const Parameter par = GetPar(option, title, bfield);
 
-  auto eval = [this, par, wfield, electrode](double* u, double* /*p*/) {
+  auto eval = [this, par, wfield, bfield, electrode](double* u, double* /*p*/) {
     // Transform to global coordinates.
     const double x = m_proj[0][0] * u[0] + m_proj[1][0] * u[1] + m_proj[2][0];
     const double y = m_proj[0][1] * u[0] + m_proj[1][1] * u[1] + m_proj[2][1];
     const double z = m_proj[0][2] * u[0] + m_proj[1][2] * u[1] + m_proj[2][2];
-    return wfield ? Wfield(x, y, z, par, electrode) : Field(x, y, z, par);
+    return wfield ? Wfield(x, y, z, par, electrode) : 
+           bfield ? Bfield(x, y, z, par) : Efield(x, y, z, par);
   };
   const std::string fname = FindUnusedFunctionName("f2D");
   TF2 f2(fname.c_str(), eval, m_xMinPlot, m_xMaxPlot, m_yMinPlot, m_yMaxPlot, 0);
@@ -238,6 +263,19 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
     } else {
       zmin = m_wmin;
       zmax = m_wmax;
+    }
+  } else if (bfield) {
+    if (contour) {
+      title = "Contours of the magnetic " + title;
+    } else {
+      title = "Magnetic " + title;
+    }
+    if (m_useAutoRange) {
+      SampleRange(m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot, 
+                  &f2, zmin, zmax);
+    } else {
+      zmin = m_bmin;
+      zmax = m_bmax;
     }
   } else {
     if (contour) {
@@ -335,7 +373,8 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
 
   // Determine the quantity to be plotted.
   std::string title;
-  const Parameter par = GetPar(option, title);
+  bool bfield = false;
+  const Parameter par = GetPar(option, title, bfield);
 
   double t0 = 0.;
   double t1 = 1.;
@@ -359,7 +398,7 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
     dz /= t1; 
   }
 
-  auto eval = [this, par, wfield, electrode, dir, 
+  auto eval = [this, par, wfield, bfield, electrode, dir, 
                x0, y0, z0, dx, dy, dz](double* u, double* /*p*/) {
     // Get the position.
     const double t = u[0];
@@ -371,7 +410,8 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
       y += t * dy;
       z += t * dz;
     }
-    return wfield ? Wfield(x, y, z, par, electrode) : Field(x, y, z, par);
+    return wfield ? Wfield(x, y, z, par, electrode) : 
+           bfield ? Bfield(x, y, z, par) : Efield(x, y, z, par);
   };
 
   const std::string fname = FindUnusedFunctionName("fProfile");
@@ -395,6 +435,14 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
         fmin = m_wmin;
         fmax = m_wmax;
       }
+    }
+  } else if (bfield) {
+    title = "magnetic " + title;
+    if (m_useAutoRange) {
+      SampleRange(&f1, fmin, fmax);
+    } else {
+      fmin = m_bmin;
+      fmax = m_bmax;
     }
   } else {
     title = "electric " + title;
@@ -435,7 +483,17 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
   } else if (!normalised) {
     labels = ";distance [cm];";
   }
-  if (par == Parameter::Potential) {
+  if (bfield) {
+    labels += "#it{B}";
+    if (par == Parameter::Bx) {
+      labels += "_{x}";
+    } else if (par == Parameter::By) {
+      labels += "_{y}";
+    } else if (par == Parameter::Bz) {
+      labels += "_{z}";
+    }
+    labels += " [T]";
+  } else if (par == Parameter::Potential) {
     labels += "#phi";
     if (wfield) {
       labels += "_w";
@@ -446,8 +504,8 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
     labels += "#it{E}";
     if (wfield) {
       labels += "_{w";
-      if (par != Parameter::Magnitude) labels += ",";
-    } else if (par != Parameter::Magnitude) {
+      if (par != Parameter::Emag) labels += ",";
+    } else if (par != Parameter::Emag) {
       labels += "_{";
     }
     if (par == Parameter::Ex) {
@@ -457,7 +515,7 @@ void ViewField::DrawProfile(const double x0, const double y0, const double z0,
     } else if (par == Parameter::Ez) {
       labels += "z";
     }
-    if (wfield || par != Parameter::Magnitude) labels += "}";
+    if (wfield || par != Parameter::Emag) labels += "}";
     if (wfield) {
       labels += " [1/cm]";
     } else {
@@ -505,8 +563,8 @@ bool ViewField::SetPlotLimits() {
   return ok;
 }
 
-double ViewField::Field(const double x, const double y, const double z,
-                        const Parameter par) const {
+double ViewField::Efield(const double x, const double y, const double z,
+                         const Parameter par) const {
 
   // Compute the field.
   double ex = 0., ey = 0., ez = 0., volt = 0.;
@@ -521,7 +579,7 @@ double ViewField::Field(const double x, const double y, const double z,
   switch (par) {
     case Parameter::Potential:
       return volt;
-    case Parameter::Magnitude:
+    case Parameter::Emag:
       return sqrt(ex * ex + ey * ey + ez * ez);
     case Parameter::Ex:
       return ex;
@@ -557,7 +615,7 @@ double ViewField::Wfield(const double x, const double y, const double z,
   }
 
   switch (par) {
-    case Parameter::Magnitude:
+    case Parameter::Emag:
       return sqrt(ex * ex + ey * ey + ez * ez);
     case Parameter::Ex:
       return ex;
@@ -570,6 +628,33 @@ double ViewField::Wfield(const double x, const double y, const double z,
   }
   return 0.;
 } 
+
+double ViewField::Bfield(const double x, const double y, const double z,
+                         const Parameter par) const {
+
+  // Compute the field.
+  double bx = 0., by = 0., bz = 0.;
+  int status = 0;
+  if (!m_sensor) {
+    m_component->MagneticField(x, y, z, bx, by, bz, status);
+  } else {
+    m_sensor->MagneticField(x, y, z, bx, by, bz, status);
+  }
+  if (m_useStatus && status != 0) return 0.;
+  switch (par) {
+    case Parameter::Bmag:
+      return sqrt(bx * bx + by * by + bz * bz);
+    case Parameter::Bx:
+      return bx;
+    case Parameter::By:
+      return by;
+    case Parameter::Bz:
+      return bz;
+    default:
+      break;
+  }
+  return 0.;
+}
 
 void ViewField::PlotFieldLines(const std::vector<double>& x0,
                                const std::vector<double>& y0,
