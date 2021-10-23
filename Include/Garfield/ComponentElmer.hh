@@ -1,5 +1,3 @@
-// Copied and modified ComponentAnsys123.hh
-
 #ifndef G_COMPONENT_ELMER_H
 #define G_COMPONENT_ELMER_H
 
@@ -52,13 +50,6 @@ class ComponentElmer : public ComponentFieldMap {
   /// Import a list of voltages to be used as weighting field.
   bool SetWeightingField(std::string prnsol, std::string label);
 
- protected:
-  // Verify periodicities
-  void UpdatePeriodicity() override { UpdatePeriodicityCommon(); }
-
-  double GetElementVolume(const unsigned int i) override;
-  void GetAspectRatio(const unsigned int i, double& dmin,
-                      double& dmax) override;
 };
 }
 #endif

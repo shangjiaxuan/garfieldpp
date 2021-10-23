@@ -66,13 +66,6 @@ public:
   void SetTimeInterval(const double mint, const double maxt,
                        const double stept);
 
-protected:
-  void UpdatePeriodicity() override { UpdatePeriodicityCommon(); }
-
-  double GetElementVolume(const unsigned int i) override;
-  void GetAspectRatio(const unsigned int i, double &dmin,
-                      double &dmax) override;
-
 private:
   double m_unit = 100.;
   bool m_timeset = false;

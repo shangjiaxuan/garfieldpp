@@ -122,7 +122,7 @@ Medium* ComponentFieldMap::GetMedium(const unsigned int imat) const {
 }
 
 bool ComponentFieldMap::GetElement(const size_t i, double& vol,
-                                   double& dmin, double& dmax) {
+                                   double& dmin, double& dmax) const {
   if (i >= m_elements.size()) {
     std::cerr << m_className << "::GetElement: Index out of range.\n";
     return false;
@@ -131,6 +131,91 @@ bool ComponentFieldMap::GetElement(const size_t i, double& vol,
   vol = GetElementVolume(i);
   GetAspectRatio(i, dmin, dmax);
   return true;
+}
+
+double ComponentFieldMap::GetElementVolume(const size_t i) const {
+  if (i >= m_elements.size()) return 0.;
+
+  const Element& element = m_elements[i];
+  if (m_elementType == ElementType::CurvedTetrahedron) {
+    const Node& n0 = m_nodes[element.emap[0]];
+    const Node& n1 = m_nodes[element.emap[1]];
+    const Node& n2 = m_nodes[element.emap[2]];
+    const Node& n3 = m_nodes[element.emap[3]];
+
+    // Uses formula V = |a (dot) b x c|/6
+    // with a => "3", b => "1", c => "2" and origin "0"
+    const double vol =
+        fabs((n3.x - n0.x) * ((n1.y - n0.y) * (n2.z - n0.z) - 
+                              (n2.y - n0.y) * (n1.z - n0.z)) +
+             (n3.y - n0.y) * ((n1.z - n0.z) * (n2.x - n0.x) - 
+                              (n2.z - n0.z) * (n1.x - n0.x)) +
+             (n3.z - n0.z) * ((n1.x - n0.x) * (n2.y - n0.y) -
+                              (n3.x - n0.x) * (n1.y - n0.y))) /
+        6.;
+    return  vol;
+  } else if (m_elementType == ElementType::Serendipity) {
+    const Node& n0 = m_nodes[element.emap[0]];
+    const Node& n1 = m_nodes[element.emap[1]];
+    const Node& n2 = m_nodes[element.emap[2]];
+    const Node& n3 = m_nodes[element.emap[3]];
+    const double surf = 0.5 * 
+      (fabs((n1.x - n0.x) * (n2.y - n0.y) - (n2.x - n0.x) * (n1.y - n0.y)) +
+       fabs((n3.x - n0.x) * (n2.y - n0.y) - (n2.x - n0.x) * (n3.y - n0.y)));
+    return surf;
+  }
+  return 0.;
+}
+
+void ComponentFieldMap::GetAspectRatio(const size_t i, double& dmin,
+                                       double& dmax) const {
+  if (i >= m_elements.size()) {
+    dmin = dmax = 0.;
+    return;
+  }
+
+  const Element& element = m_elements[i];
+  if (m_elementType == ElementType::CurvedTetrahedron) {
+    const int np = 4;
+    // Loop over all pairs of vertices.
+    for (int j = 0; j < np - 1; ++j) {
+      const Node& nj = m_nodes[element.emap[j]];
+      for (int k = j + 1; k < np; ++k) {
+        const Node& nk = m_nodes[element.emap[k]];
+        // Compute distance.
+        const double dx = nj.x - nk.x;
+        const double dy = nj.y - nk.y;
+        const double dz = nj.z - nk.z;
+        const double dist = sqrt(dx * dx + dy * dy + dz * dz);
+        if (k == 1) {
+          dmin = dmax = dist;
+        } else {
+          if (dist < dmin) dmin = dist;
+          if (dist > dmax) dmax = dist;
+        }
+      }
+    }
+  } else if (m_elementType == ElementType::Serendipity) {
+    const int np = 8;
+    // Loop over all pairs of vertices.
+    for (int j = 0; j < np - 1; ++j) {
+      const Node& nj = m_nodes[element.emap[j]];
+      for (int k = j + 1; k < np; ++k) {
+        const Node& nk = m_nodes[element.emap[k]];
+        // Compute distance.
+        const double dx = nj.x - nk.x;
+        const double dy = nj.y - nk.y;
+        const double dist = sqrt(dx * dx + dy * dy);
+        if (k == 1) {
+          dmin = dmax = dist;
+        } else {
+          if (dist < dmin) dmin = dist;
+          if (dist > dmax) dmax = dist;
+        }
+      }
+    }
+  }
+
 }
 
 bool ComponentFieldMap::GetElement(const size_t i, size_t& mat, bool& drift,

@@ -1153,13 +1153,8 @@ int ComponentCST::Index2Element(const unsigned int i, const unsigned int j,
   return i + j * (m_nx - 1) + k * (m_nx - 1) * (m_ny - 1);
 }
 
-void ComponentCST::UpdatePeriodicity() {
-  UpdatePeriodicity2d();
-  UpdatePeriodicityCommon();
-}
-
-void ComponentCST::GetAspectRatio(const unsigned int element, double& dmin,
-                                  double& dmax) {
+void ComponentCST::GetAspectRatio(const size_t element, double& dmin,
+                                  double& dmax) const {
   if (element >= m_nElements) {
     dmin = dmax = 0.;
     return;
@@ -1173,7 +1168,7 @@ void ComponentCST::GetAspectRatio(const unsigned int element, double& dmin,
   dmax = std::max({dx, dy, dz});
 }
 
-double ComponentCST::GetElementVolume(const unsigned int element) {
+double ComponentCST::GetElementVolume(const size_t element) const {
   if (element >= m_nElements) return 0.;
   unsigned int i, j, k;
   Element2Index(element, i, j, k);

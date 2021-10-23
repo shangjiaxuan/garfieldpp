@@ -44,12 +44,6 @@ class ComponentAnsys121 : public ComponentFieldMap {
   /// Set the limits of the active region along z.
   void SetRangeZ(const double zmin, const double zmax);
 
- protected:
-  void UpdatePeriodicity() override;
-
-  double GetElementVolume(const unsigned int i) override;
-  void GetAspectRatio(const unsigned int i, double& dmin,
-                      double& dmax) override;
 };
 }
 
