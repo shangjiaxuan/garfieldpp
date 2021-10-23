@@ -112,10 +112,10 @@ bool ViewFEMesh::Plot(const bool twod) {
   }
 
   // Plot the mesh elements.
-  ComponentCST* componentCST = dynamic_cast<ComponentCST*>(m_cmp);
-  if (componentCST) {
+  auto cst = dynamic_cast<ComponentCST*>(m_cmp);
+  if (cst) {
     std::cout << m_className << "::Plot: CST component. Calling DrawCST.\n";
-    DrawCST(componentCST);
+    DrawCST(cst);
   } else {
     DrawElements2d();
   }
@@ -310,8 +310,9 @@ void ViewFEMesh::DrawElements2d() {
     // Do not plot the drift medium.
     if (driftmedium && !m_plotMeshBorders) continue;
     // Do not create polygons for disabled materials.
-    if (m_disabledMaterial[mat]) continue;
-
+    if (m_disabledMaterial.count(mat) > 0 && m_disabledMaterial[mat]) {
+      continue;
+    }
     TGraph gr;
     const short col = m_colorMap.count(mat) != 0 ? m_colorMap[mat] : 1;
     gr.SetLineColor(col);
@@ -325,7 +326,6 @@ void ViewFEMesh::DrawElements2d() {
     if (m_plotMeshBorders || !m_fillMesh) opt += "l";
     if (m_fillMesh) opt += "f";
     opt += "same";
-
     // Get the vertex coordinates in the basic cell.
     std::vector<double> vx0;
     std::vector<double> vy0;
@@ -523,7 +523,6 @@ void ViewFEMesh::DrawElements3d() {
   // Loop over all elements.
   const auto nElements = m_cmp->GetNumberOfElements();
   for (size_t i = 0; i < nElements; ++i) {
-    // if (m_volumes.size() > 9990) break;
     size_t mat = 0;
     bool driftmedium = false;
     std::vector<size_t> nodes;
@@ -531,7 +530,9 @@ void ViewFEMesh::DrawElements3d() {
     // Do not plot the drift medium.
     if (driftmedium && !m_plotMeshBorders) continue;
     // Do not create polygons for disabled materials.
-    if (m_disabledMaterial[mat]) continue;
+    if (m_disabledMaterial.count(mat) > 0 && m_disabledMaterial[mat]) {
+      continue;
+    }
     const short col = m_colorMap.count(mat) != 0 ? m_colorMap[mat] : 1;
 
     // Get the vertex coordinates in the basic cell.

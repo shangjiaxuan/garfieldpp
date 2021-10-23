@@ -142,8 +142,12 @@ bool ComponentFieldMap::GetElement(const size_t i, size_t& mat, bool& drift,
   const auto& element = m_elements[i];
   mat = element.matmap;
   drift = m_materials[mat].driftmedium;
-  nodes.resize(4);
-  for (size_t j = 0; j < 4; ++j) nodes[j] = element.emap[j];
+  size_t nNodes = 4;
+  if (m_elementType == ElementType::Serendipity && element.degenerate) {
+    nNodes = 3;
+  }
+  nodes.resize(nNodes);
+  for (size_t j = 0; j < nNodes; ++j) nodes[j] = element.emap[j];
   return true; 
 }
 

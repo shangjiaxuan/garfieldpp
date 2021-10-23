@@ -19,6 +19,7 @@ namespace Garfield {
 
 ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap("Elmer2D") {
   m_is3d = false;
+  m_elementType = ElementType::Serendipity;
 
   // Default bounding box
   m_minBoundingBox[2] = -50;

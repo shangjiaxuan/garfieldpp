@@ -9,6 +9,7 @@ namespace Garfield {
 
 ComponentAnsys121::ComponentAnsys121() : ComponentFieldMap("Ansys121") {
   m_is3d = false;
+  m_elementType = ElementType::Serendipity;
   // Default bounding box
   m_minBoundingBox[2] = -50;
   m_maxBoundingBox[2] = 50;

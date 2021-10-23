@@ -98,6 +98,13 @@ class ComponentFieldMap : public Component {
  protected:
   bool m_is3d = true;
 
+  enum class ElementType {
+    Unknown = 0,
+    Serendipity = 5,
+    CurvedTetrahedron = 13
+  };
+  ElementType m_elementType = ElementType::CurvedTetrahedron;
+
   // Elements
   struct Element {
     // Nodes
