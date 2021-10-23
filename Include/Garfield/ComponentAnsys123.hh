@@ -36,13 +36,6 @@ class ComponentAnsys123 : public ComponentFieldMap {
 
   bool SetWeightingField(std::string prnsol, std::string label);
 
- protected:
-  // Verify periodicities
-  void UpdatePeriodicity() override { UpdatePeriodicityCommon(); }
-
-  double GetElementVolume(const unsigned int i) override;
-  void GetAspectRatio(const unsigned int i, double& dmin,
-                      double& dmax) override;
 };
 }
 #endif

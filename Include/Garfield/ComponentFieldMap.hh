@@ -65,7 +65,8 @@ class ComponentFieldMap : public Component {
   /// Return the number of mesh elements.
   virtual size_t GetNumberOfElements() const { return m_elements.size(); } 
   /// Return the volume and aspect ratio of a mesh element.
-  bool GetElement(const size_t i, double& vol, double& dmin, double& dmax);
+  bool GetElement(const size_t i, double& vol, 
+                  double& dmin, double& dmax) const;
   /// Return the material and node indices of a mesh element.
   virtual bool GetElement(const size_t i, size_t& mat, bool& drift, 
                           std::vector<size_t>& nodes) const;
@@ -97,6 +98,13 @@ class ComponentFieldMap : public Component {
 
  protected:
   bool m_is3d = true;
+
+  enum class ElementType {
+    Unknown = 0,
+    Serendipity = 5,
+    CurvedTetrahedron = 13
+  };
+  ElementType m_elementType = ElementType::CurvedTetrahedron;
 
   // Elements
   struct Element {
@@ -180,6 +188,10 @@ class ComponentFieldMap : public Component {
   void Prepare();
 
   // Periodicities
+  void UpdatePeriodicity() override {
+    if (!m_is3d) UpdatePeriodicity2d();
+    UpdatePeriodicityCommon(); 
+  }
   void UpdatePeriodicity2d();
   void UpdatePeriodicityCommon();
 
@@ -236,9 +248,9 @@ class ComponentFieldMap : public Component {
   static int ReadInteger(char* token, int def, bool& error);
   static double ReadDouble(char* token, double def, bool& error);
 
-  virtual double GetElementVolume(const unsigned int i) = 0;
-  virtual void GetAspectRatio(const unsigned int i, double& dmin,
-                              double& dmax) = 0;
+  virtual double GetElementVolume(const size_t i) const;
+  virtual void GetAspectRatio(const size_t i, 
+                              double& dmin, double& dmax) const;
 
   size_t GetWeightingFieldIndex(const std::string& label) const;
   size_t GetOrCreateWeightingFieldIndex(const std::string& label);

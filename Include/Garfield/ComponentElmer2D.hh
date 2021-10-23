@@ -54,13 +54,6 @@ class ComponentElmer2D : public ComponentFieldMap {
 
   void SetRangeZ(const double zmin, const double zmax);
 
- protected:
-  // Verify periodicities
-  void UpdatePeriodicity() override;
-
-  double GetElementVolume(const unsigned int i) override;
-  void GetAspectRatio(const unsigned int i, double& dmin,
-                      double& dmax) override;
 };
 }
 #endif
