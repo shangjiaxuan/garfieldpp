@@ -39,6 +39,8 @@ class ComponentUser : public Component {
   bool GetBoundingBox(double& xmin, double& ymin, double& zmin,
                       double& xmax, double& ymax, double& zmax) override;
 
+  bool HasMagneticField() const override;
+
   /// Set the function to be called for calculating the electric field.
   void SetElectricField(
     std::function<void(const double, const double, const double,

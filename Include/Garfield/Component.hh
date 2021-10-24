@@ -287,6 +287,9 @@ class Component {
   /// Switch off debugging messages.
   void DisableDebugging() { m_debug = false; }
 
+  /// Does the component have a non-zero magnetic field?
+  virtual bool HasMagneticField() const;
+
   /// Does the component have maps of the Townsend coefficient?
   virtual bool HasTownsendMap() const { return false; }
   /// Does the component have attachment maps?

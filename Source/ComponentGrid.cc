@@ -175,6 +175,10 @@ void ComponentGrid::MagneticField(const double x, const double y,
   }
 }
 
+bool ComponentGrid::HasMagneticField() const {
+  return m_bfields.empty() ? Component::HasMagneticField() : true;
+}
+
 Medium* ComponentGrid::GetMedium(const double x, const double y,
                                  const double z) {
   // Make sure the field map has been loaded.
