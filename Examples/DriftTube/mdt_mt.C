@@ -133,6 +133,7 @@ int main(int argc, char * argv[]) {
       DriftLineRKF drift;
       drift.SetSensor(&sensor);
       drift.SetGainFluctuationsPolya(0., 20000.);
+      // drift.EnableIonTail();
       if (plotDrift) drift.EnablePlotting(&driftView);
       const double xe = electrons[k][0];
       const double ye = electrons[k][1];

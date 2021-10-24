@@ -90,6 +90,7 @@ int main(int argc, char * argv[]) {
   DriftLineRKF drift;
   drift.SetSensor(&sensor);
   drift.SetGainFluctuationsPolya(0., 20000.);
+  // drift.EnableIonTail();
  
   TCanvas* cD = nullptr;
   ViewCell cellView;
