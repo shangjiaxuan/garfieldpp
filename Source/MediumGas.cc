@@ -163,6 +163,9 @@ bool MediumGas::SetComposition(const std::string& gas1, const double f1,
       m_gas[m_nComponents] = gasname;
       m_fraction[m_nComponents] = fractions[i];
       ++m_nComponents;
+    } else {
+      std::cerr << m_className << "::SetComposition:\n"
+                << "    Unknown identifier '" << gases[i] << "'.\n";
     }
   }
 
@@ -2737,8 +2740,7 @@ bool MediumGas::AdjustTownsendCoefficient() {
   return true;
 }
 
-bool MediumGas::GetGasInfo(const std::string& gasname, double& a,
-                           double& z) const {
+bool MediumGas::GetGasInfo(const std::string& gasname, double& a, double& z) {
   if (gasname == "CF4") {
     a = 12.0107 + 4 * 18.9984032;
     z = 6 + 4 * 9;
@@ -2903,7 +2905,7 @@ bool MediumGas::GetGasInfo(const std::string& gasname, double& a,
   return true;
 }
 
-std::string MediumGas::GetGasName(const int gasnumber, const int version) const {
+std::string MediumGas::GetGasName(const int gasnumber, const int version) {
 
   switch (gasnumber) {
     case 1:
@@ -3032,7 +3034,7 @@ std::string MediumGas::GetGasName(const int gasnumber, const int version) const 
   return "";
 }
 
-std::string MediumGas::GetGasName(std::string input) const {
+std::string MediumGas::GetGasName(std::string input) {
   // Convert to upper-case.
   std::transform(input.begin(), input.end(), input.begin(), toupper);
 
@@ -3234,13 +3236,10 @@ std::string MediumGas::GetGasName(std::string input) const {
              input == "SILICANE" || input == "MONOSILANE" || input == "SIH4") {
     return "SiH4";
   }
-
-  std::cerr << m_className << "::GetGasName:\n"
-            << "    Gas " << input << " is not recognized.\n";
   return "";
 }
 
-int MediumGas::GetGasNumberGasFile(const std::string& input) const {
+int MediumGas::GetGasNumberGasFile(const std::string& input) {
 
   if (input.empty()) return 0;
 
@@ -3384,9 +3383,6 @@ int MediumGas::GetGasNumberGasFile(const std::string& input) const {
     // Silane
     return 60;
   }
-
-  std::cerr << m_className << "::GetGasNumberGasFile:\n"
-            << "    Gas " << input << " not found.\n";
   return 0;
 }
 

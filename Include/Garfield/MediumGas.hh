@@ -215,10 +215,10 @@ class MediumGas : public Medium {
                   std::vector<double>& percentages) const;
   void GetGasBits(std::bitset<20>& gasok) const;
  
-  bool GetGasInfo(const std::string& gasname, double& a, double& z) const;
-  std::string GetGasName(const int gasnumber, const int version) const;
-  std::string GetGasName(std::string input) const;
-  int GetGasNumberGasFile(const std::string& input) const;
+  static bool GetGasInfo(const std::string& gasname, double& a, double& z);
+  static std::string GetGasName(const int gasnumber, const int version);
+  static std::string GetGasName(std::string input);
+  static int GetGasNumberGasFile(const std::string& input);
 };
 }
 
