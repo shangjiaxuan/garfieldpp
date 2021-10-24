@@ -355,6 +355,15 @@ void Sensor::EnableMagneticField(const unsigned int i, const bool on) {
   std::get<2>(m_components[i]) = on;
 }
 
+bool Sensor::HasMagneticField() const {
+
+  for (const auto& cmp : m_components) {
+   if (!std::get<1>(cmp) || !std::get<2>(cmp)) continue;
+   if (std::get<0>(cmp)->HasMagneticField()) return true;
+  }
+  return false;
+}
+
 void Sensor::AddElectrode(Component* cmp, const std::string& label) {
   if (!cmp) {
     std::cerr << m_className << "::AddElectrode: Null pointer.\n";

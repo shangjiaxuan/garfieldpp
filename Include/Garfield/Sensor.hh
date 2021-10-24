@@ -31,6 +31,8 @@ class Sensor {
   void EnableComponent(const unsigned int i, const bool on);
   /// Activate/deactivate use of the magnetic field of a given component.
   void EnableMagneticField(const unsigned int i, const bool on);
+  /// Does the sensor have a non-zero magnetic field?
+  bool HasMagneticField() const;
 
   /// Add an electrode.
   void AddElectrode(Component* comp, const std::string& label);
