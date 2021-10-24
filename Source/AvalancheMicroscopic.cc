@@ -227,12 +227,10 @@ void AvalancheMicroscopic::SetTimeWindow(const double t0, const double t1) {
   m_hasTimeWindow = true;
 }
 
-void AvalancheMicroscopic::GetElectronEndpoint(const unsigned int i, double& x0,
-                                               double& y0, double& z0,
-                                               double& t0, double& e0,
-                                               double& x1, double& y1,
-                                               double& z1, double& t1,
-                                               double& e1, int& status) const {
+void AvalancheMicroscopic::GetElectronEndpoint(const size_t i, 
+    double& x0, double& y0, double& z0, double& t0, double& e0,
+    double& x1, double& y1, double& z1, double& t1, double& e1, 
+    int& status) const {
   if (i >= m_endpointsElectrons.size()) {
     std::cerr << m_className << "::GetElectronEndpoint: Index out of range.\n";
     x0 = y0 = z0 = t0 = e0 = 0.;
@@ -254,9 +252,9 @@ void AvalancheMicroscopic::GetElectronEndpoint(const unsigned int i, double& x0,
   status = m_endpointsElectrons[i].status;
 }
 
-void AvalancheMicroscopic::GetElectronEndpoint(
-    const unsigned int i, double& x0, double& y0, double& z0, double& t0,
-    double& e0, double& x1, double& y1, double& z1, double& t1, double& e1,
+void AvalancheMicroscopic::GetElectronEndpoint(const size_t i, 
+    double& x0, double& y0, double& z0, double& t0, double& e0, 
+    double& x1, double& y1, double& z1, double& t1, double& e1,
     double& dx1, double& dy1, double& dz1, int& status) const {
   if (i >= m_endpointsElectrons.size()) {
     std::cerr << m_className << "::GetElectronEndpoint: Index out of range.\n";
@@ -283,11 +281,10 @@ void AvalancheMicroscopic::GetElectronEndpoint(
   status = m_endpointsElectrons[i].status;
 }
 
-void AvalancheMicroscopic::GetHoleEndpoint(const unsigned int i, double& x0,
-                                           double& y0, double& z0, double& t0,
-                                           double& e0, double& x1, double& y1,
-                                           double& z1, double& t1, double& e1,
-                                           int& status) const {
+void AvalancheMicroscopic::GetHoleEndpoint(const size_t i, 
+    double& x0, double& y0, double& z0, double& t0, double& e0, 
+    double& x1, double& y1, double& z1, double& t1, double& e1,
+    int& status) const {
   if (i >= m_endpointsHoles.size()) {
     std::cerr << m_className << "::GetHoleEndpoint: Index out of range.\n";
     x0 = y0 = z0 = t0 = e0 = 0.;
@@ -309,11 +306,11 @@ void AvalancheMicroscopic::GetHoleEndpoint(const unsigned int i, double& x0,
   status = m_endpointsHoles[i].status;
 }
 
-unsigned int AvalancheMicroscopic::GetNumberOfElectronDriftLinePoints(
-    const unsigned int i) const {
+size_t AvalancheMicroscopic::GetNumberOfElectronDriftLinePoints(
+    const size_t i) const {
   if (i >= m_endpointsElectrons.size()) {
-    std::cerr << m_className << "::GetNumberOfElectronDriftLinePoints:\n";
-    std::cerr << "    Endpoint index (" << i << ") out of range.\n";
+    std::cerr << m_className << "::GetNumberOfElectronDriftLinePoints: "
+              << "Index out of range.\n";
     return 0;
   }
 
@@ -322,11 +319,11 @@ unsigned int AvalancheMicroscopic::GetNumberOfElectronDriftLinePoints(
   return m_endpointsElectrons[i].driftLine.size() + 2;
 }
 
-unsigned int AvalancheMicroscopic::GetNumberOfHoleDriftLinePoints(
-    const unsigned int i) const {
+size_t AvalancheMicroscopic::GetNumberOfHoleDriftLinePoints(
+    const size_t i) const {
   if (i >= m_endpointsHoles.size()) {
-    std::cerr << m_className << "::GetNumberOfHoleDriftLinePoints:\n";
-    std::cerr << "    Endpoint index (" << i << ") out of range.\n";
+    std::cerr << m_className << "::GetNumberOfHoleDriftLinePoints: "
+              << "Index out of range.\n";
     return 0;
   }
 
@@ -400,11 +397,9 @@ void AvalancheMicroscopic::GetHoleDriftLinePoint(double& x, double& y,
   t = m_endpointsHoles[ih].driftLine[ip - 1].t;
 }
 
-void AvalancheMicroscopic::GetPhoton(const unsigned int i, double& e,
-                                     double& x0, double& y0, double& z0,
-                                     double& t0, double& x1, double& y1,
-                                     double& z1, double& t1,
-                                     int& status) const {
+void AvalancheMicroscopic::GetPhoton(const size_t i, double& e,
+    double& x0, double& y0, double& z0, double& t0, 
+    double& x1, double& y1, double& z1, double& t1, int& status) const {
   if (i >= m_photons.size()) {
     std::cerr << m_className << "::GetPhoton: Index out of range.\n";
     return;
@@ -507,6 +502,10 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
     std::cerr << hdr << "Sensor is not defined.\n";
     return false;
   }
+
+  // Do we need to consider the magnetic field?
+  const bool useBfield = m_useBfieldAuto ? m_sensor->HasMagneticField() : 
+                         m_useBfield;
 
   // Loop over the initial set of electrons/holes.
   for (auto& p : stack) {
@@ -641,7 +640,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
       // Ratio of transverse electric field component and magnetic field.
       double ezovb = 0.;
       std::array<std::array<double, 3>, 3> rot;
-      if (m_useBfield) {
+      if (useBfield) {
         m_sensor->MagneticField(x, y, z, bx, by, bz, status);
         const double scale = hole ? Tesla2Internal : -Tesla2Internal;
         bx *= scale;
@@ -720,7 +719,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
         double a1 = 0., a2 = 0.;
         // Initial velocity.
         double vx = 0., vy = 0., vz = 0.;
-        if (m_useBfield) {
+        if (useBfield) {
           // Calculate the velocity vector in the local frame.
           const double vmag = c1 * sqrt(en);
           ToLocal(rot, vmag * kx, vmag * ky, vmag * kz, vx, vy, vz);
@@ -761,7 +760,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
           const double r = RndmUniformPos();
           dt += -log(r) * fInv;
           // Calculate the energy after the proposed step.
-          if (m_useBfield) {
+          if (useBfield) {
             en1 = en + (a1 + a2 * dt) * dt;
             if (omega > Small) {
               cphi = cos(omega * dt);
@@ -814,7 +813,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
         // and the proposed new position.
         double kx1 = 0., ky1 = 0., kz1 = 0.;
         double dx = 0., dy = 0., dz = 0.;
-        if (m_useBfield) {
+        if (useBfield) {
           // Calculate the new velocity.
           double vx1 = vx + 2. * c2 * ex * dt;
           double vy1 = vy * cphi + vz * sphi + ezovb;
@@ -954,7 +953,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
         t = t1;
 
         // If switched on, get the magnetic field at the new location.
-        if (m_useBfield) {
+        if (useBfield) {
           m_sensor->MagneticField(x, y, z, bx, by, bz, status);
           const double scale = hole ? Tesla2Internal : -Tesla2Internal;
           bx *= scale;

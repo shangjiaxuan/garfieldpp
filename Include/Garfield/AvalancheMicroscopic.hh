@@ -114,8 +114,11 @@ class AvalancheMicroscopic {
   /// Retrieve the currently set size limit.
   int GetAvalancheSizeLimit() const { return m_sizeCut; }
 
-  /// Enable magnetic field in stepping algorithm (default: off).
-  void EnableMagneticField(const bool on = true) { m_useBfield = on; }
+  /// Switch on/off using the magnetic field in the stepping algorithm.
+  void EnableMagneticField(const bool on = true) { 
+    m_useBfieldAuto = false;
+    m_useBfield = on; 
+  }
 
   /// Set number of collisions to be skipped for plotting
   void SetCollisionSteps(const unsigned int n) { m_nCollSkip = n; }
@@ -138,7 +141,7 @@ class AvalancheMicroscopic {
 
   /** Return the number of electron trajectories in the last
    * simulated avalanche (including captured electrons). */
-  unsigned int GetNumberOfElectronEndpoints() const {
+  size_t GetNumberOfElectronEndpoints() const {
     return m_endpointsElectrons.size();
   }
   /** Return the coordinates and time of start and end point of a given
@@ -149,35 +152,32 @@ class AvalancheMicroscopic {
    * \param e0,e1 initial and final energy
    * \param status status code (see GarfieldConstants.hh)
    */
-  void GetElectronEndpoint(const unsigned int i, double& x0, double& y0,
+  void GetElectronEndpoint(const size_t i, double& x0, double& y0,
                            double& z0, double& t0, double& e0, double& x1,
                            double& y1, double& z1, double& t1, double& e1,
                            int& status) const;
-  void GetElectronEndpoint(const unsigned int i, double& x0, double& y0,
+  void GetElectronEndpoint(const size_t i, double& x0, double& y0,
                            double& z0, double& t0, double& e0, double& x1,
                            double& y1, double& z1, double& t1, double& e1,
                            double& dx1, double& dy1, double& dz1,
                            int& status) const;
-  unsigned int GetNumberOfElectronDriftLinePoints(
-      const unsigned int i = 0) const;
-  unsigned int GetNumberOfHoleDriftLinePoints(const unsigned int i = 0) const;
+  size_t GetNumberOfElectronDriftLinePoints(const size_t i = 0) const;
+  size_t GetNumberOfHoleDriftLinePoints(const size_t i = 0) const;
   void GetElectronDriftLinePoint(double& x, double& y, double& z, double& t,
                                  const int ip,
                                  const unsigned int iel = 0) const;
   void GetHoleDriftLinePoint(double& x, double& y, double& z, double& t,
                              const int ip, const unsigned int iel = 0) const;
 
-  unsigned int GetNumberOfHoleEndpoints() const {
-    return m_endpointsHoles.size();
-  }
-  void GetHoleEndpoint(const unsigned int i, double& x0, double& y0, double& z0,
+  size_t GetNumberOfHoleEndpoints() const { return m_endpointsHoles.size(); }
+  void GetHoleEndpoint(const size_t i, double& x0, double& y0, double& z0,
                        double& t0, double& e0, double& x1, double& y1,
                        double& z1, double& t1, double& e1, int& status) const;
 
-  unsigned int GetNumberOfPhotons() const { return m_photons.size(); }
+  size_t GetNumberOfPhotons() const { return m_photons.size(); }
   // Status codes:
   //   -2: photon absorbed by gas molecule
-  void GetPhoton(const unsigned int i, double& e, double& x0, double& y0,
+  void GetPhoton(const size_t i, double& e, double& x0, double& y0,
                  double& z0, double& t0, double& x1, double& y1, double& z1,
                  double& t1, int& status) const;
 
@@ -294,6 +294,7 @@ class AvalancheMicroscopic {
   bool m_usePhotons = false;
   bool m_useBandStructure = true;
   bool m_useNullCollisionSteps = false;
+  bool m_useBfieldAuto = true;
   bool m_useBfield = false;
 
   // Transport cuts

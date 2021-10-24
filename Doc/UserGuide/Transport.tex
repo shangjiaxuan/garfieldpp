@@ -463,8 +463,8 @@ void GetAvalancheSize(int& ne, int& ni);
 Information about the ``history'' of each avalanche electron can be 
 retrieved by
 \begin{lstlisting}
-unsigned int GetNumberOfElectronEndpoints() const;
-void GetElectronEndpoint(const unsigned int i, 
+size_t GetNumberOfElectronEndpoints() const;
+void GetElectronEndpoint(const size_t i, 
                          double& x0, double& y0, double& z0, double& t0, double& e0,
                          double& x1, double& y1, double& z1, double& t1, double& e1,
                          int& status); 
@@ -516,12 +516,14 @@ aval.EnableElectronEnergyHistogramming(&hEnergy);
 After each collision, 
 the histogram is filled with the current electron energy. 
 
-The effect of magnetic fields can be included 
-in the stepping algorithm using the function
+If the sensor has a non-zero magnetic field, \texttt{AvalancheMicroscopic} 
+will by default use a more complicated stepping algorithm which takes
+the effect of the $B$ field on the electron trajectory into account.
+In order to explicitly switch using magnetic fields on or off 
+one can use the function
 \begin{lstlisting}
-void EnableMagneticField();
+void EnableMagneticField(const bool on);
 \end{lstlisting}
-By default, magnetic fields are not taken into account in the calculation.
 
 Using 
 \begin{lstlisting}
