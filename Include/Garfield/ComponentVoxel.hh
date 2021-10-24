@@ -34,6 +34,8 @@ class ComponentVoxel : public Component {
   void MagneticField(const double x, const double y, const double z, double& bx,
                      double& by, double& bz, int& status) override;
 
+  bool HasMagneticField() const override;
+
   /// Interpolate between field values at the element centres.
   void EnableInterpolation(const bool on = true) { m_interpolate = on; }
 

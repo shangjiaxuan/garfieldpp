@@ -46,6 +46,8 @@ class ComponentGrid : public Component {
   bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
                          double& xmax, double& ymax, double& zmax) override;
 
+  bool HasMagneticField() const override;
+
   /** Define the grid.
    * \param nx,ny,nz number of nodes along \f$x, y, z\f$.
    * \param xmin,xmax range along \f$x\f$.

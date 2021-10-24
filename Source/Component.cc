@@ -3,6 +3,7 @@
 
 #include "Garfield/Component.hh"
 #include "Garfield/FundamentalConstants.hh"
+#include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Numerics.hh"
 
 namespace Garfield {
@@ -131,6 +132,11 @@ bool Component::CrossedPlane(
     double& /*xc*/, double& /*yc*/, double& /*zc*/) {
   return false;
 } 
+
+bool Component::HasMagneticField() const {
+  return fabs(m_b0[0]) > Small || fabs(m_b0[1]) > Small || 
+         fabs(m_b0[2]) > Small;
+}
 
 double Component::IntegrateFluxCircle(const double xc, const double yc,
                                       const double r, const unsigned int nI) {

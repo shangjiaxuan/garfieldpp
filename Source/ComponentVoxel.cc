@@ -144,6 +144,10 @@ void ComponentVoxel::MagneticField(const double x, const double y,
   }
 }
 
+bool ComponentVoxel::HasMagneticField() const {
+  return m_hasBfield ? true : Component::HasMagneticField();
+}
+
 Medium* ComponentVoxel::GetMedium(const double x, const double y,
                                   const double z) {
   // Make sure the field map has been loaded.
