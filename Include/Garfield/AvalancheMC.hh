@@ -75,9 +75,6 @@ class AvalancheMC {
   /// Retrieve the drift velocity from the component.
   void EnableVelocityMap(const bool on = true) { m_useVelocityMap = on; }
 
-  /// Enable use of magnetic field in stepping algorithm.
-  void EnableMagneticField(const bool on = true) { m_useBfield = on; }
-
   /** Set a maximum avalanche size (ignore further multiplication
       once this size has been reached). */
   void EnableAvalancheSizeLimit(const unsigned int size) { m_sizeCut = size; }
@@ -115,25 +112,21 @@ class AvalancheMC {
   }
 
   /// Return the number of points along the last simulated drift line.
-  unsigned int GetNumberOfDriftLinePoints() const { return m_drift.size(); }
+  size_t GetNumberOfDriftLinePoints() const { return m_drift.size(); }
   /// Return the coordinates and time of a point along the last drift line.
-  void GetDriftLinePoint(const unsigned int i, double& x, double& y, double& z,
+  void GetDriftLinePoint(const size_t i, double& x, double& y, double& z,
                          double& t) const;
 
   /** Return the number of electron trajectories in the last
    * simulated avalanche (including captured electrons). */
-  unsigned int GetNumberOfElectronEndpoints() const {
+  size_t GetNumberOfElectronEndpoints() const {
     return m_endpointsElectrons.size();
   }
   /** Return the number of hole trajectories in the last
    * simulated avalanche (including captured holes). */
-  unsigned int GetNumberOfHoleEndpoints() const {
-    return m_endpointsHoles.size();
-  }
+  size_t GetNumberOfHoleEndpoints() const { return m_endpointsHoles.size(); }
   /// Return the number of ion trajectories.
-  unsigned int GetNumberOfIonEndpoints() const {
-    return m_endpointsIons.size();
-  }
+  size_t GetNumberOfIonEndpoints() const { return m_endpointsIons.size(); }
 
   /** Return the coordinates and time of start and end point of a given
    * electron drift line.
@@ -142,13 +135,13 @@ class AvalancheMC {
    * \param x1,y1,z1,t1 coordinates and time of the end point
    * \param status status code (see GarfieldConstants.hh)
    */
-  void GetElectronEndpoint(const unsigned int i, double& x0, double& y0,
+  void GetElectronEndpoint(const size_t i, double& x0, double& y0,
                            double& z0, double& t0, double& x1, double& y1,
                            double& z1, double& t1, int& status) const;
-  void GetHoleEndpoint(const unsigned int i, double& x0, double& y0, double& z0,
+  void GetHoleEndpoint(const size_t i, double& x0, double& y0, double& z0,
                        double& t0, double& x1, double& y1, double& z1,
                        double& t1, int& status) const;
-  void GetIonEndpoint(const unsigned int i, double& x0, double& y0, double& z0,
+  void GetIonEndpoint(const size_t i, double& x0, double& y0, double& z0,
                       double& t0, double& x1, double& y1, double& z1,
                       double& t1, int& status) const;
 
@@ -252,7 +245,6 @@ class AvalancheMC {
   bool m_doRKF = false;
   bool m_useDiffusion = true;
   bool m_useAttachment = true;
-  bool m_useBfield = false;
   /// Scaling factor for electron signals.
   double m_scaleE = 1.;
   /// Scaling factor for hole signals.

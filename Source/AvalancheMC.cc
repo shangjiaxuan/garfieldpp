@@ -130,7 +130,7 @@ void AvalancheMC::SetTimeWindow(const double t0, const double t1) {
   m_hasTimeWindow = true;
 }
 
-void AvalancheMC::GetDriftLinePoint(const unsigned int i, double& x, double& y,
+void AvalancheMC::GetDriftLinePoint(const size_t i, double& x, double& y,
                                     double& z, double& t) const {
   if (i >= m_drift.size()) {
     std::cerr << m_className << "::GetDriftLinePoint: Index out of range.\n";
@@ -143,7 +143,7 @@ void AvalancheMC::GetDriftLinePoint(const unsigned int i, double& x, double& y,
   t = m_drift[i].t;
 }
 
-void AvalancheMC::GetHoleEndpoint(const unsigned int i, double& x0, double& y0,
+void AvalancheMC::GetHoleEndpoint(const size_t i, double& x0, double& y0,
                                   double& z0, double& t0, double& x1,
                                   double& y1, double& z1, double& t1,
                                   int& status) const {
@@ -163,7 +163,7 @@ void AvalancheMC::GetHoleEndpoint(const unsigned int i, double& x0, double& y0,
   status = m_endpointsHoles[i].status;
 }
 
-void AvalancheMC::GetIonEndpoint(const unsigned int i, double& x0, double& y0,
+void AvalancheMC::GetIonEndpoint(const size_t i, double& x0, double& y0,
                                  double& z0, double& t0, double& x1, double& y1,
                                  double& z1, double& t1, int& status) const {
   if (i >= m_endpointsIons.size()) {
@@ -182,7 +182,7 @@ void AvalancheMC::GetIonEndpoint(const unsigned int i, double& x0, double& y0,
   status = m_endpointsIons[i].status;
 }
 
-void AvalancheMC::GetElectronEndpoint(const unsigned int i, double& x0,
+void AvalancheMC::GetElectronEndpoint(const size_t i, double& x0,
                                       double& y0, double& z0, double& t0,
                                       double& x1, double& y1, double& z1,
                                       double& t1, int& status) const {
@@ -675,18 +675,16 @@ int AvalancheMC::GetField(const std::array<double, 3>& x,
                           Medium*& medium) const {
   e.fill(0.);
   b.fill(0.);
-  // Get the electric field.
   int status = 0;
+  // Get the magnetic field.
+  m_sensor->MagneticField(x[0], x[1], x[2], b[0], b[1], b[2], status);
+  // Get the electric field.
   m_sensor->ElectricField(x[0], x[1], x[2], e[0], e[1], e[2], medium, status);
   // Make sure the point is inside a drift medium.
   if (status != 0 || !medium) return StatusLeftDriftMedium;
   // Make sure the point is inside the drift area.
   if (!m_sensor->IsInArea(x[0], x[1], x[2])) return StatusLeftDriftArea;
 
-  // Get the magnetic field, if requested.
-  if (m_useBfield) {
-    m_sensor->MagneticField(x[0], x[1], x[2], b[0], b[1], b[2], status);
-  }
   return 0;
 }
 

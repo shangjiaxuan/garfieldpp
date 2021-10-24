@@ -255,7 +255,7 @@ is integrated in a stochastic manner:
   a step of length \(\Delta{s} = v_{\text{d}}\Delta{t}\) 
   in the direction of the
   drift velocity \(\mathbf{v}_{\text{d}}\) 
-  at the local field is calculated (with either the 
+  at the local electric and magnetic field is calculated (with either the 
   time step \(\Delta{t}\) or the distance \(\Delta{s}\) 
   being specified by the user);
   \item
@@ -284,7 +284,7 @@ with a mean equal to a multiple of the ``collision time''
 \begin{equation*}
   \tau = \frac{m v_{d}}{q E}.
 \end{equation*}
-The third method is activated by default.
+The third method is activated by default. 
 
 Instead of making simple straight-line steps (using the drift velocity 
 vector at the starting point of a step), the end point of a step 
@@ -330,8 +330,8 @@ bool DriftIon(const double x0, const double y0, const double z0, const double t0
 \end{description}
 The trajectory can be retrieved using
 \begin{lstlisting} 
-unsigned int GetNumberOfDriftLinePoints() const;
-void GetDriftLinePoint(const int i, double& x, double& y, double& z, double& t);
+size_t GetNumberOfDriftLinePoints() const;
+void GetDriftLinePoint(const size_t i, double& x, double& y, double& z, double& t);
 \end{lstlisting}
 
 The calculation of an avalanche initiated by an electron, 
@@ -353,8 +353,8 @@ avalanche should be simulated.
 The starting and endpoints of electrons in the avalanche can be 
 retrieved using
 \begin{lstlisting}
-unsigned int GetNumberOfElectronEndpoints() const;
-void GetElectronEndpoint(const unsigned int i, 
+size_t GetNumberOfElectronEndpoints() const;
+void GetElectronEndpoint(const size_t i, 
                          double& x0, double& y0, double& z0, double& t0,
                          double& x1, double& y1, double& z1, double& t1, int& status) const;
 \end{lstlisting}
@@ -365,14 +365,6 @@ void GetElectronEndpoint(const unsigned int i,
   \item[status] status code indicating why the tracking of the electron was stopped.  
 \end{description}
 Analogous functions are available for holes and ions.
-
-The functions
-\begin{lstlisting}
-void EnableMagneticField();
-\end{lstlisting}
-instructs the class to consider not only the electric but also the magnetic field
-in the evaluation of the transport parameters.  
-By default, magnetic fields are not taken into account.
 
 For debugging purposes, attachment and diffusion can be switched off using
 \begin{lstlisting}
