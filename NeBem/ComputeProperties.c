@@ -3590,7 +3590,7 @@ int CreateWtFldFastVolPF(int IdWtField) {
   }  // WtFldNbPtSkip
 
   // stringify the integer
-  char stringIdWtField[5];
+  char stringIdWtField[16];
   sprintf(stringIdWtField, "%d", IdWtField);
 
   char WtFldFastVolPFFile[256];
