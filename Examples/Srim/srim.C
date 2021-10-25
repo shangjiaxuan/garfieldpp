@@ -4,8 +4,6 @@
 #include <TH1F.h>
 #include <TCanvas.h>
 
-#include "Garfield/SolidBox.hh"
-#include "Garfield/GeometrySimple.hh"
 #include "Garfield/MediumMagboltz.hh"
 #include "Garfield/ComponentConstant.hh"
 #include "Garfield/Sensor.hh"
@@ -37,21 +35,18 @@ void track() {
 
   // Define the medium.
   MediumMagboltz gas;
-  gas.SetComposition("ar", 70., "co2", 30.);
+  gas.SetComposition("ar");
   // Set temperature [K] and pressure [Torr].
   gas.SetPressure(760.0);
   gas.SetTemperature(293.15);
 
-  // Define the geometry.
-  constexpr double width = 10.;
-  constexpr double length = 0.0150;
-  SolidBox box(0.5 * length, 0, 0, 0.5 * length, 0.5 * width, 0.5 * width);
-  GeometrySimple geo;
-  geo.AddSolid(&box, &gas);
-
   // Make a component (with constant electric field).
   ComponentConstant cmp;
-  cmp.SetGeometry(&geo);
+  // Define the active area and medium.
+  constexpr double width = 10.;
+  constexpr double length = 1.5;
+  cmp.SetArea(0., -0.5 * width, -0.5 * width, length, 0.5 * width, 0.5 * width);
+  cmp.SetMedium(&gas);
   cmp.SetElectricField(1000., 0., 0.);
   
   // Make a sensor.
@@ -63,7 +58,7 @@ void track() {
   // Connect the track to a sensor.
   tr.SetSensor(&sensor);
   // Read SRIM output from file.
-  const std::string file = "alpha_ArCO2_70_30.txt";
+  const std::string file = "Alpha_in_Ar.txt";
   if (!tr.ReadFile(file)) {
     std::cerr << "Reading SRIM file failed.\n";
     return;
@@ -73,9 +68,8 @@ void track() {
   // Set the W value and Fano factor of the gas.
   tr.SetWorkFunction(30.0);
   tr.SetFanoFactor(0.3);
-  // Set A and Z of the gas (not sure what's the correct mixing law).
-  const double za = 0.7 * (18. / 40.) + 0.3 * (22. / 44.);
-  tr.SetAtomicMassNumbers(22. / za, 22);
+  // Set A and Z of the gas.
+  tr.SetAtomicMassNumbers(40, 18);
   // Specify how many electrons we want to be grouped to a cluster.
   tr.SetTargetClusterSize(500);
   // tr.SetClustersMaximum(1000);
@@ -88,9 +82,9 @@ void track() {
   tr.Print();
 
   // Setup histograms.
-  TH1F* hX = new TH1F("hX", "x-end", 100, 0, 0.01);
-  TH1F* hY = new TH1F("hY", "y-end", 100, -0.01, 0.01);
-  TH1F* hZ = new TH1F("hZ", "z-end", 100, -0.01, 0.01);
+  TH1F* hX = new TH1F("hX", "x-end", 100, 0, 1.);
+  TH1F* hY = new TH1F("hY", "y-end", 100, -0.5, 0.5);
+  TH1F* hZ = new TH1F("hZ", "z-end", 100, -0.5, 0.5);
   TH1F* hNe = new TH1F("hNe", "Electrons", 100, 48000, 50000);
 
   // Generate tracks.
