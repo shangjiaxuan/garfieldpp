@@ -1,7 +1,11 @@
-C  PROGRAM MAGBOLTZ 2   VERSION 11.12     AUGUST   2021  
+C  PROGRAM MAGBOLTZ 2   VERSION 11.13    NOVEMBER  2021
 C --------------------------------------------------------------------
 C  COPYRIGHT 2021   STEPHEN FRANCIS BIAGI
 C  ---------------------------------------
+C VERSION 11.13    FIXED BUG THAT NOW ALLOWS THE ATTACHMENT RATES FOR
+C                  EACH NEGATIVE ION TO BE OUTPUT FOR THE FOLLOWING
+C                  FILES: CH4,O2,NO,SF6,CS2,C2H2F4,O3
+C----------------------------------------------------------------------
 C VERSION 11.12    UPDATED C3F8(2021) FROM VERSION C3F8(2002)
 C 
 C                  REMOVED FICTIONAL IONISATION RATE FOR ATTACHING GASES
@@ -436,7 +440,7 @@ C GAS60 :  SIH4  (2005)    SILANE ANISOTROPIC                      4*
 C  GAS61-80 :DUMMY ROUTINES
 C------------------------------------------------------------------
 C
-C      PROGRAM MAGBOLTZ 2                                                
+C      PROGRAM MAGBOLTZ 2
       SUBROUTINE MAGBOLTZ
       IMPLICIT REAL*8 (A-H,O-Z)
       IMPLICIT INTEGER*8 (I-N)
@@ -523,8 +527,8 @@ C      GO TO 1
       CALL OUTPUT2T
 C      GO TO 1
       RETURN
-C  99  STOP                 
-  99  RETURN
+C  99  STOP
+  99  RETURN 
     6 CALL SETUP(LAST)                                                
       IF(LAST.EQ.1) GO TO 999
       IF(EFINAL.GT.0.0D0) GO TO 13
@@ -599,9 +603,9 @@ C      GO TO 1
       ENDIF
       CALL OUTPUT2 
 C      GO TO 1
-      RETURN 
-C  999 STOP                 
-  999 RETURN
+      RETURN
+C  999 STOP
+  999 RETURN                
       END
       SUBROUTINE ANGCUT(PSCT1,ANGC,PSCT2)        
       IMPLICIT REAL*8 (A-H,O-Z)
@@ -2693,7 +2697,7 @@ C   METRES PER PICOSECOND
       COMMON/DECOR/NCOLM,NCORLN,NCORST    
       CHARACTER*25 NAMEG                                  
       WRITE(6,1)
-    1 FORMAT(2(/),10X,'PROGRAM MAGBOLTZ 2 VERSION 11.12',/)          
+    1 FORMAT(2(/),10X,'PROGRAM MAGBOLTZ 2 VERSION 11.13',/)
       WRITE(6,10) NGAS                                                  
    10 FORMAT(10X,'MONTE CARLO SOLUTION FOR MIXTURE OF ',I2,' GASES.',/,
      /5X,'------------------------------------------------------')  
@@ -9857,9 +9861,9 @@ C CALC TIME LEFT TO ARRIVE AT PLANE
       COMMON/SCRIP/DSCRPT(960)                             
       CHARACTER*25 NAMEG,NAME1,NAME2,NAME3,NAME4,NAME5,NAME6
       CHARACTER*50 DSCRPT,SCRP1(300),SCRP2(300),SCRP3(300),SCRP4(300),
-     /SCRP5(300),SCRP6(300)                            
+     /SCRP5(300),SCRP6(300) 
       CHARACTER*50 DSCRPTN,SCRPN1(10),SCRPN2(10),SCRPN3(10),SCRPN4(10),
-     /SCRPN5(10),SCRPN6(10) 
+     /SCRPN5(10),SCRPN6(10)                           
       DIMENSION Q1(6,4000),Q2(6,4000),Q3(6,4000),Q4(6,4000),
      /Q5(6,4000),Q6(6,4000)
       DIMENSION E1(6),E2(6),E3(6),E4(6),E5(6),E6(6),EI1(250),EI2(250),
@@ -11585,7 +11589,7 @@ C   METRES PER PICOSECOND
       COMMON/DECOR/NCOLM,NCORLN,NCORST                          
       CHARACTER*25 NAMEG                                  
       WRITE(6,1)
-    1 FORMAT(2(/),10X,'PROGRAM MAGBOLTZ 2 VERSION 11.12',/)          
+    1 FORMAT(2(/),10X,'PROGRAM MAGBOLTZ 2 VERSION 11.13',/)
       WRITE(6,10) NGAS                                                  
    10 FORMAT(10X,'MONTE CARLO SOLUTION FOR MIXTURE OF ',I2,' GASES.',/,
      /5X,'------------------------------------------------------')  
@@ -31577,7 +31581,7 @@ C SAVE COMPUTE TIME
   911 CONTINUE
 C      IF(EFINAL.GT.1000.) NIN=51
       RETURN                                                            
-      END 
+      END
       SUBROUTINE GAS8(Q,QIN,NIN,E,EIN,NAME,VIRIAL,EOBY  
      /,PEQEL,PEQIN,PENFRA,KEL,KIN,QION,PEQION,EION,NION,QATT,NATT,
      /QNULL,NNULL,SCLN,NC0,EC0,WKLM,EFL,NG1,EG1,NG2,EG2,SCRPT,SCRPTN)
@@ -32006,6 +32010,7 @@ C ATTACHMENT CROSS-SECTION OF RAWAT ET AL : JOURNAL OF PHYSICS:
 C CONFERENCE SERIES 80(2007)012018 NOW USED INSTEAD OF SHARP AND DOWELL
 C DE-ATTACHMENT FOR PART OF ATTACHMENT TO H- ION ASSUMED DUE TO 
 C HIGH COLLISIONAL ENERGY FORMATION.
+C ASSUME 98% DEATTACHMENT THEREFORE SCALE ATTACHMENT BY 0.02
 C --------------------------------------------------------------------- 
 C  FIT TO METHANE DRIFT VELOCITY OF HADDAD AND SCHMIDT AT LOW FIELD 
 C  AND HUNTER AND KLINE AND YOSHIDA AT HIGH FIELD.
@@ -32042,7 +32047,7 @@ C  ARRAY SIZE
       NASIZE=4000
 C 
       NION=9
-      NATT=1
+      NATT=2
       NIN=34
       NNULL=0
 C
@@ -32245,45 +32250,46 @@ C
       SCRPT(9)=' IONISATION     2(+)               ELOSS= 27.0    '
       SCRPT(10)=' IONISATION   H2  +                ELOSS= 27.9    '
       SCRPT(11)=' IONISATION CARBON K-SHELL         ELOSS=285.0    '
-      SCRPT(12)=' ATTACHMENT (CH2- ION  ONLY)                      '
-      SCRPT(13)='                                                  ' 
+      SCRPT(12)=' ATTACHMENT            CH2-                       '
+      SCRPT(13)=' ATTACHMENT DEATTACHMENT  H- SCALED BY 0.02       '
       SCRPT(14)='                                                  ' 
-      SCRPT(15)=' VIBRATION V4 SUPERELASTIC         ELOSS=-0.162513'
-      SCRPT(16)=' VIBRATION V4                      ELOSS= 0.162513'
-      SCRPT(17)=' VIBRATION V2 SUPERELASTIC         ELOSS=-0.190109'
-      SCRPT(18)=' VIBRATION V2                      ELOSS= 0.190109'
-      SCRPT(19)=' VIBRATION V1                      ELOSS= 0.361597'
-      SCRPT(20)=' VIBRATION V3                      ELOSS= 0.374369'
-      SCRPT(21)=' VIBRATION  HARMONICS NV1+NV3      ELOSS=  0.544  '
-      SCRPT(22)=' VIBRATION  HARMONICS NV2+NV3      ELOSS=  0.736  '
-      SCRPT(23)=' EXCITATION TRIPLET  DISSOCIATION  ELOSS=  7.5    '
-      SCRPT(24)=' ATTACHMENT - DEATTACHMENT         ELOSS=  7.8    '
-      SCRPT(25)=' EXCITATION TRIPLET  DISSOCIATION  ELOSS=  8.5    '  
-      SCRPT(26)=' EXCITATION SINGLET  DISSOCIATION  ELOSS=  8.75   '
-      SCRPT(27)=' EXCITATION SINGLET  DISSOCIATION  ELOSS=  9.25   '
-      SCRPT(28)=' EXCITATION SINGLET  DISSOCIATION  ELOSS=  9.75   '
-      SCRPT(29)=' EXCITATION TRIPLET  DISSOCIATION  ELOSS= 10.0    '
-      SCRPT(30)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 10.25   '
-      SCRPT(31)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 10.75   '
-      SCRPT(32)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 11.25   '
-      SCRPT(33)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 11.75   '
-      SCRPT(34)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 12.25   '
-      SCRPT(35)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 12.75   '
-      SCRPT(36)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 13.25   '
-      SCRPT(37)=' EXCITATION A2D TO GROUND STATE.   ELOSS= 13.4    '
-      SCRPT(38)=' EXCITATION B2PI TO GROUND STATE   ELOSS= 13.7    '
-      SCRPT(39)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 13.75   '
-      SCRPT(40)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 14.25   '
-      SCRPT(41)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 14.75   '
-      SCRPT(42)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 15.25   '
-      SCRPT(43)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 15.75   '
-      SCRPT(44)=' EXC. OF POSITIVE ION LEVELS       ELOSS= 16.0    '
-      SCRPT(45)=' EXCITATION  H(ALPHA)              ELOSS= 16.14   '
-      SCRPT(46)=' EXCITATION  H(BETA)               ELOSS= 16.8    '
-      SCRPT(47)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 20.25   '
-      SCRPT(48)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 22.0    '
-      SCRPT(49)=' BREMSSTRAHLUNG FROM CARBON ATOM                  '
-      SCRPT(50)=' BREMSSTRAHLUNG FROM HYDROGEN ATOM                '
+      SCRPT(15)='                                                  ' 
+      SCRPT(16)=' VIBRATION V4 SUPERELASTIC         ELOSS=-0.162513'
+      SCRPT(17)=' VIBRATION V4                      ELOSS= 0.162513'
+      SCRPT(18)=' VIBRATION V2 SUPERELASTIC         ELOSS=-0.190109'
+      SCRPT(19)=' VIBRATION V2                      ELOSS= 0.190109'
+      SCRPT(20)=' VIBRATION V1                      ELOSS= 0.361597'
+      SCRPT(21)=' VIBRATION V3                      ELOSS= 0.374369'
+      SCRPT(22)=' VIBRATION  HARMONICS NV1+NV3      ELOSS=  0.544  '
+      SCRPT(23)=' VIBRATION  HARMONICS NV2+NV3      ELOSS=  0.736  '
+      SCRPT(24)=' EXCITATION TRIPLET  DISSOCIATION  ELOSS=  7.5    '
+      SCRPT(25)=' ATTACHMENT - DEATTACHMENT         ELOSS=  7.8    '
+      SCRPT(26)=' EXCITATION TRIPLET  DISSOCIATION  ELOSS=  8.5    '  
+      SCRPT(27)=' EXCITATION SINGLET  DISSOCIATION  ELOSS=  8.75   '
+      SCRPT(28)=' EXCITATION SINGLET  DISSOCIATION  ELOSS=  9.25   '
+      SCRPT(29)=' EXCITATION SINGLET  DISSOCIATION  ELOSS=  9.75   '
+      SCRPT(30)=' EXCITATION TRIPLET  DISSOCIATION  ELOSS= 10.0    '
+      SCRPT(31)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 10.25   '
+      SCRPT(32)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 10.75   '
+      SCRPT(33)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 11.25   '
+      SCRPT(34)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 11.75   '
+      SCRPT(35)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 12.25   '
+      SCRPT(36)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 12.75   '
+      SCRPT(37)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 13.25   '
+      SCRPT(38)=' EXCITATION A2D TO GROUND STATE.   ELOSS= 13.4    '
+      SCRPT(39)=' EXCITATION B2PI TO GROUND STATE   ELOSS= 13.7    '
+      SCRPT(40)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 13.75   '
+      SCRPT(41)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 14.25   '
+      SCRPT(42)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 14.75   '
+      SCRPT(43)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 15.25   '
+      SCRPT(44)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 15.75   '
+      SCRPT(45)=' EXC. OF POSITIVE ION LEVELS       ELOSS= 16.0    '
+      SCRPT(46)=' EXCITATION  H(ALPHA)              ELOSS= 16.14   '
+      SCRPT(47)=' EXCITATION  H(BETA)               ELOSS= 16.8    '
+      SCRPT(48)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 20.25   '
+      SCRPT(49)=' EXCITATION SINGLET  DISSOCIATION  ELOSS= 22.0    '
+      SCRPT(50)=' BREMSSTRAHLUNG FROM CARBON ATOM                  '
+      SCRPT(51)=' BREMSSTRAHLUNG FROM HYDROGEN ATOM                '
 C CALC LEVEL POPULATIONS
       APOPV4=DEGV4*DEXP(EIN(1)/AKT)
       APOPV2=DEGV2*DEXP(EIN(3)/AKT)
@@ -32519,19 +32525,29 @@ C COORECT IONISATION FOR SPLIT INTO K-SHELL
       DO 196 L=1,8
   196 QION(L,I)=QION(L,I)*FAC
 C                                      
-C ATTACHMENT                                               
+C ATTACHMENT  TO CH2-                                      
   200 Q(4,I)=0.0
       QATT(1,I)=0.0                                     
-      IF(EN.LT.XATT(1)) GO TO 250                                       
-      IF(EN.GT.XATT(NATT1)) GO TO 250                                   
+      IF(EN.LT.XATT(1)) GO TO 230                                       
+      IF(EN.GT.XATT(NATT1)) GO TO 230                                   
       DO 210 J=2,NATT1                                                  
       IF(EN.LE.XATT(J)) GO TO 220                                       
   210 CONTINUE                                                          
       J=NATT1                                                           
   220 A=(YATT(J)-YATT(J-1))/(XATT(J)-XATT(J-1))                         
       B=(XATT(J-1)*YATT(J)-XATT(J)*YATT(J-1))/(XATT(J-1)-XATT(J))       
-      Q(4,I)=(A*EN+B)*1.D-16
-      QATT(1,I)=Q(4,I) 
+      QATT(1,I)=(A*EN+B)*1.D-16
+C ATTACHMENT TO H-  (SCALED BY 0.02 TO ALLOW FOR DEATTACHMENT)
+  230 QATT(2,I)=0.0
+      IF(EN.LT.XDET(1)) GO TO 250
+      IF(EN.GT.XDET(NDET)) GO TO 250
+      DO 235 J=2,NDET
+      IF(EN.LE.XDET(J)) GO TO 240
+  235 CONTINUE
+      J=NDET
+  240 A=(YDET(J)-YDET(J-1))/(XDET(J)-XDET(J-1))
+      B=(XDET(J-1)*YDET(J)-XDET(J)*YDET(J-1))/(XDET(J-1)-XDET(J))
+      QATT(2,I)=(A*EN+B)*1.D-16*0.02
 C COUNTING IONISATION                                           
   250 Q(5,I)=0.0     
 C     PEQEL(5,I)=0.5
@@ -43742,7 +43758,7 @@ C      NANISO=0
 C----------------------------------------------------------------------
 C
       NION=8
-      NATT=1
+      NATT=2
       NIN=148 
       NNULL=0
 C
@@ -44049,157 +44065,158 @@ C
       SCRPT(8)=' DISSOC ION  O++ + O               ELOSS= 68.0    '
       SCRPT(9)=' DISSOC ION  O++ + O+              ELOSS= 90.0    '
       SCRPT(10)=' IONISATION K-SHELL                ELOSS=532.0    '
-      SCRPT(11)=' ATTACHMENT 2+3 BODY                              '
-      SCRPT(12)='                                                  '
+      SCRPT(11)=' ATTACHMENT 2-BODY                                '
+      SCRPT(12)=' ATTACHMENT 3-BODY                                '
       SCRPT(13)='                                                  '
-      SCRPT(14)=' ROTATION 3-1                    ELOSS= -0.0017830'
-      SCRPT(15)=' ROTATION 5-3                    ELOSS= -0.0032094'
-      SCRPT(16)=' ROTATION 7-5                    ELOSS= -0.0046358'
-      SCRPT(17)=' ROTATION 9-7                    ELOSS= -0.0060622'
-      SCRPT(18)=' ROTATION 11-9                   ELOSS= -0.0074886'
-      SCRPT(19)=' ROTATION 13-11                  ELOSS= -0.0089150'
-      SCRPT(20)=' ROTATION 15-13                  ELOSS= -0.0103414'
-      SCRPT(21)=' ROTATION 17-15                  ELOSS= -0.0117678'
-      SCRPT(22)=' ROTATION 19-17                  ELOSS= -0.0131942'
-      SCRPT(23)=' ROTATION 21-19                  ELOSS= -0.0146206'
-      SCRPT(24)=' ROTATION 23-21                  ELOSS= -0.0160470'
-      SCRPT(25)=' ROTATION 25-23                  ELOSS= -0.0174734'
-      SCRPT(26)=' ROTATION 27-25                  ELOSS= -0.0188998'
-      SCRPT(27)=' ROTATION 29-27                  ELOSS= -0.0203262'
-      SCRPT(28)=' ROTATION 31-29                  ELOSS= -0.0217526'
-      SCRPT(29)=' ROTATION 33-31                  ELOSS= -0.0231790'
-      SCRPT(30)=' ROTATION 35-33                  ELOSS= -0.0246054'
-      SCRPT(31)=' ROTATION 37-35                  ELOSS= -0.0260318'
-      SCRPT(32)=' ROTATION 39-37                  ELOSS= -0.0274582'
-      SCRPT(33)=' ROTATION 41-39                  ELOSS= -0.0288846'
-      SCRPT(34)=' ROTATION 43-41                  ELOSS= -0.0303110'
-      SCRPT(35)=' ROTATION 45-43                  ELOSS= -0.0317374'
-      SCRPT(36)=' ROTATION 47-45                  ELOSS= -0.0331638'
-      SCRPT(37)=' ROTATION 49-47                  ELOSS= -0.0345902'
-      SCRPT(38)=' ROTATION 1-3                    ELOSS=  0.0017830'
-      SCRPT(39)=' ROTATION 3-5                    ELOSS=  0.0032094'
-      SCRPT(40)=' ROTATION 5-7                    ELOSS=  0.0046358'
-      SCRPT(41)=' ROTATION 7-9                    ELOSS=  0.0060622'
-      SCRPT(42)=' ROTATION 9-11                   ELOSS=  0.0074886'
-      SCRPT(43)=' ROTATION 11-13                  ELOSS=  0.0089150'
-      SCRPT(44)=' ROTATION 13-15                  ELOSS=  0.0103414'
-      SCRPT(45)=' ROTATION 15-17                  ELOSS=  0.0117678'
-      SCRPT(46)=' ROTATION 17-19                  ELOSS=  0.0131942'
-      SCRPT(47)=' ROTATION 19-21                  ELOSS=  0.0146206'
-      SCRPT(48)=' ROTATION 21-23                  ELOSS=  0.0160470'
-      SCRPT(49)=' ROTATION 23-25                  ELOSS=  0.0174734'
-      SCRPT(50)=' ROTATION 25-27                  ELOSS=  0.0188998'
-      SCRPT(51)=' ROTATION 27-29                  ELOSS=  0.0203262'
-      SCRPT(52)=' ROTATION 29-31                  ELOSS=  0.0217526'
-      SCRPT(53)=' ROTATION 31-33                  ELOSS=  0.0231790'
-      SCRPT(54)=' ROTATION 33-35                  ELOSS=  0.0246054'
-      SCRPT(55)=' ROTATION 35-37                  ELOSS=  0.0260318'
-      SCRPT(56)=' ROTATION 37-39                  ELOSS=  0.0274582'
-      SCRPT(57)=' ROTATION 39-41                  ELOSS=  0.0288846'
-      SCRPT(58)=' ROTATION 41-43                  ELOSS=  0.0303110'
-      SCRPT(59)=' ROTATION 43-45                  ELOSS=  0.0317374'
-      SCRPT(60)=' ROTATION 45-47                  ELOSS=  0.0331638'
-      SCRPT(61)=' ROTATION 47-49                  ELOSS=  0.0345902'
-      SCRPT(62)=' VIB V1                            ELOSS= -0.193  '
-      SCRPT(63)=' VIB V1                            ELOSS=  0.193  '
-      SCRPT(64)=' VIB 2V1                           ELOSS=  0.385  '
-      SCRPT(65)=' VIB 3V1                           ELOSS=  0.568  '
-      SCRPT(66)=' VIB 4V1                           ELOSS=  0.749  '
-      SCRPT(67)=' VIB 5V1                           ELOSS=  0.929  '
-      SCRPT(68)=' A1(DEL)G VIB SUMMED               ELOSS=  0.977  '
-      SCRPT(69)=' VIB 6V1                           ELOSS=  1.108  '
-      SCRPT(70)=' VIB 7V1                           ELOSS=  1.282  '
-      SCRPT(71)=' VIB 8V1                           ELOSS=  1.458  '
-      SCRPT(72)=' B1(SIG)G VIB SUMMED               ELOSS=  1.627  '
-      SCRPT(73)=' VIB 9V1                           ELOSS=  1.629  '
-      SCRPT(74)=' VIB 10V1                          ELOSS=  1.798  '
-      SCRPT(75)=' VIB 11V1                          ELOSS=  1.965  '
-      SCRPT(76)=' VIB 12V1                          ELOSS=  2.127  '
-      SCRPT(77)=' VIB 13V1                          ELOSS=  2.283  '
-      SCRPT(78)=' VIB 14V1                          ELOSS=  2.430  '
-      SCRPT(79)=' VIB 15V1                          ELOSS=  2.585  '
-      SCRPT(80)=' VIB 16V1                          ELOSS=  2.739  '
-      SCRPT(81)=' VIB 17V1                          ELOSS=  2.883  '
-      SCRPT(82)=' VIB 18V1                          ELOSS=  3.023  '
-      SCRPT(83)=' VIB 19V1                          ELOSS=  3.168  '
-      SCRPT(84)=' VIB 20V1                          ELOSS=  3.316  '
-      SCRPT(85)=' VIB SUM 21V1-30V1                 ELOSS=  3.46   '
-      SCRPT(86)=' C1SIG + A!3DEL + A3SIG            ELOSS=  5.50   '
-      SCRPT(87)=' C1SIG + A!3DEL + A3SIG            ELOSS=  6.00   '
-      SCRPT(88)=' C1SIG + A!3DEL + A3SIG            ELOSS=  6.50   '
-      SCRPT(89)=' B3SIG SUMMED V=7-20 F=.000262     EL0SS=  6.98   '
-      SCRPT(90)=' DISSOCIATION  S-R  F=0.000408     ELOSS=  7.08   '
-      SCRPT(91)=' DISSOCIATION  S-R  F=0.000623     ELOSS=  7.25   '
-      SCRPT(92)=' DISSOCIATION  S-R  F=0.001016     ELOSS=  7.35   '
-      SCRPT(93)=' DISSOCIATION  S-R  F=0.001562     ELOSS=  7.45   '
-      SCRPT(94)=' DISSOCIATION  S-R  F=0.002312     ELOSS=  7.55   '
-      SCRPT(95)=' DISSOCIATION  S-R  F=0.003234     ELOSS=  7.65   '
-      SCRPT(96)=' DISSOCIATION  S-R  F=0.004362     ELOSS=  7.75   '
-      SCRPT(97)=' DISSOCIATION  S-R  F=0.005573     ELOSS=  7.85   '
-      SCRPT(98)=' DISSOCIATION  S-R  F=0.006930     ELOSS=  7.95   '
-      SCRPT(99)=' DISSOCIATION  S-R  F=0.008342     ELOSS=  8.05   '
-      SCRPT(100)=' DISSOCIATION  S-R  F=0.009692     ELOSS=  8.15   '
-      SCRPT(101)=' DISSOCIATION  S-R NON-DIPOLE      ELOSS=  8.20   '
-      SCRPT(102)=' DISSOCIATION  S-R  F=0.010816     ELOSS=  8.25   '
-      SCRPT(103)=' DISSOCIATION  S-R  F=0.011839     ELOSS=  8.35   '
-      SCRPT(104)=' DISSOCIATION  S-R  F=0.012580     ELOSS=  8.45   '
-      SCRPT(105)=' DISSOCIATION  S-R  F=0.013160     ELOSS=  8.55   '
-      SCRPT(106)=' DISSOCIATION  S-R  F=0.013432     ELOSS=  8.65   '
-      SCRPT(107)=' DISSOCIATION  S-R  F=0.013571     ELOSS=  8.75   '
-      SCRPT(108)=' DISSOCIATION  S-R  F=0.013425     ELOSS=  8.85   '
-      SCRPT(109)=' DISSOCIATION  S-R  F=0.012948     ELOSS=  8.95   '
-      SCRPT(110)=' DISSOCIATION  S-R  F=0.010892     ELOSS=  9.05   '
-      SCRPT(111)=' DISSOCIATION  S-R  F=0.006688     ELOSS=  9.15   '
-      SCRPT(112)=' DISSOCIATION  S-R  F=0.002784     ELOSS=  9.25   '
-      SCRPT(113)=' DISSOCIATION  S-R  F=0.001767     ELOSS=  9.35   '
-      SCRPT(114)=' DISSOCIATION  S-R  F=0.000633     ELOSS=  9.45   '
-      SCRPT(115)=' DISSOCIATION  S-R  F=0.000438     ELOSS=  9.55   '
-      SCRPT(116)=' DISSOCIATION  S-R  F=0.000465     ELOSS=  9.675  '
-      SCRPT(117)=' DISSOC E3SIGMA V=0 F=0.008432     ELOSS=  9.972  '
-      SCRPT(118)=' DISSOC E3SIGMA V=1 F=0.007598     ELOSS= 10.288  '
-      SCRPT(119)=' DISSOC E3SIGMA V=2 F=0.000829     ELOSS= 10.570  '
-      SCRPT(120)=' DISSOC TRIPLET SUM BELOW IP       ELOSS= 10.60   '
-      SCRPT(121)=' DISSOC             F=0.000644     ELOSS= 10.665  '
-      SCRPT(122)=' DISSOC             F=0.001460     ELOSS= 10.760  '
-      SCRPT(123)=' DISSOC             F=0.000818     ELOSS= 10.915  '
-      SCRPT(124)=' DISSOC             F=0.000736     ELOSS= 11.05   '
-      SCRPT(125)=' DISSOC             F=0.000598     ELOSS= 11.25   '
-      SCRPT(126)=' DISSOC             F=0.001482     ELOSS= 11.46   '
-      SCRPT(127)=' DISSOC             F=0.000425     ELOSS= 11.56   '
-      SCRPT(128)=' DISSOC             F=0.001669     ELOSS= 11.65   '
-      SCRPT(129)=' DISSOC             F=0.001766     ELOSS= 11.83   '
-      SCRPT(130)=' DISSOC             F=0.001613     ELOSS= 11.98   '
-      SCRPT(131)=' DISSOC             F=0.001746     ELOSS= 12.20   '
-      SCRPT(132)=' DISSOC             F=0.003329     ELOSS= 12.40   '
-      SCRPT(133)=' DISSOC             F=0.006264     ELOSS= 12.60   '
-      SCRPT(134)=' DISSOC             F=0.013580     ELOSS= 12.80   '
-      SCRPT(135)=' DISSOC             F=0.011373     ELOSS= 13.00   '
-      SCRPT(136)=' DISSOC TRIPLET SUM ABOVE IP       ELOSS= 13.1    '
-      SCRPT(137)=' DISSOC             F=0.006052     ELOSS= 13.20   '
-      SCRPT(138)=' DISSOC             F=0.006051     ELOSS= 13.40   '
-      SCRPT(139)=' DISSOC             F=0.004993     ELOSS= 13.60   '
-      SCRPT(140)=' DISSOC             F=0.005045     ELOSS= 13.80   '
-      SCRPT(141)=' DISSOC             F=0.004962     ELOSS= 14.00   '
-      SCRPT(142)=' DISSOC             F=0.006520     ELOSS= 14.20   '
-      SCRPT(143)=' DISSOC             F=0.008432     ELOSS= 14.40   '
-      SCRPT(144)=' DISSOC             F=0.011304     ELOSS= 14.60   '
-      SCRPT(145)=' DISSOC             F=0.015172     ELOSS= 14.80   '
-      SCRPT(146)=' DISSOC             F=0.022139     ELOSS= 15.00   '
-      SCRPT(147)=' DISSOC             F=0.032682     ELOSS= 15.20   '
-      SCRPT(148)=' DISSOC             F=0.039457     ELOSS= 15.40   '
-      SCRPT(149)=' DISSOC             F=0.029498     ELOSS= 15.60   '
-      SCRPT(150)=' DISSOC             F=0.018923     ELOSS= 15.80   '
-      SCRPT(151)=' DISSOC             F=0.017762     ELOSS= 16.00   '
-      SCRPT(152)=' DISSOC             F=0.015115     ELOSS= 16.20   '
-      SCRPT(153)=' DISSOC             F=0.013220     ELOSS= 16.40   '
-      SCRPT(154)=' DISSOC             F=0.009540     ELOSS= 16.60   '
-      SCRPT(155)=' DISSOC             F=0.005854     ELOSS= 16.80   '
-      SCRPT(156)=' DISSOC             F=0.008733     ELOSS= 17.00   '
-      SCRPT(157)=' DISSOC             F=0.007914     ELOSS= 17.20   '
-      SCRPT(158)=' DISSOC             F=0.008002     ELOSS= 17.40   '
-      SCRPT(159)=' DISSOC             F=0.006519     ELOSS= 17.60   '
-      SCRPT(160)=' DISSOC             F=0.003528     ELOSS= 17.80   '
-      SCRPT(161)=' DISSOC             F=0.001469     ELOSS= 18.00   '
+      SCRPT(14)='                                                  '
+      SCRPT(15)=' ROTATION 3-1                    ELOSS= -0.0017830'
+      SCRPT(16)=' ROTATION 5-3                    ELOSS= -0.0032094'
+      SCRPT(17)=' ROTATION 7-5                    ELOSS= -0.0046358'
+      SCRPT(18)=' ROTATION 9-7                    ELOSS= -0.0060622'
+      SCRPT(19)=' ROTATION 11-9                   ELOSS= -0.0074886'
+      SCRPT(20)=' ROTATION 13-11                  ELOSS= -0.0089150'
+      SCRPT(21)=' ROTATION 15-13                  ELOSS= -0.0103414'
+      SCRPT(22)=' ROTATION 17-15                  ELOSS= -0.0117678'
+      SCRPT(23)=' ROTATION 19-17                  ELOSS= -0.0131942'
+      SCRPT(24)=' ROTATION 21-19                  ELOSS= -0.0146206'
+      SCRPT(25)=' ROTATION 23-21                  ELOSS= -0.0160470'
+      SCRPT(26)=' ROTATION 25-23                  ELOSS= -0.0174734'
+      SCRPT(27)=' ROTATION 27-25                  ELOSS= -0.0188998'
+      SCRPT(28)=' ROTATION 29-27                  ELOSS= -0.0203262'
+      SCRPT(29)=' ROTATION 31-29                  ELOSS= -0.0217526'
+      SCRPT(30)=' ROTATION 33-31                  ELOSS= -0.0231790'
+      SCRPT(31)=' ROTATION 35-33                  ELOSS= -0.0246054'
+      SCRPT(32)=' ROTATION 37-35                  ELOSS= -0.0260318'
+      SCRPT(33)=' ROTATION 39-37                  ELOSS= -0.0274582'
+      SCRPT(34)=' ROTATION 41-39                  ELOSS= -0.0288846'
+      SCRPT(35)=' ROTATION 43-41                  ELOSS= -0.0303110'
+      SCRPT(36)=' ROTATION 45-43                  ELOSS= -0.0317374'
+      SCRPT(37)=' ROTATION 47-45                  ELOSS= -0.0331638'
+      SCRPT(38)=' ROTATION 49-47                  ELOSS= -0.0345902'
+      SCRPT(39)=' ROTATION 1-3                    ELOSS=  0.0017830'
+      SCRPT(40)=' ROTATION 3-5                    ELOSS=  0.0032094'
+      SCRPT(41)=' ROTATION 5-7                    ELOSS=  0.0046358'
+      SCRPT(42)=' ROTATION 7-9                    ELOSS=  0.0060622'
+      SCRPT(43)=' ROTATION 9-11                   ELOSS=  0.0074886'
+      SCRPT(44)=' ROTATION 11-13                  ELOSS=  0.0089150'
+      SCRPT(45)=' ROTATION 13-15                  ELOSS=  0.0103414'
+      SCRPT(46)=' ROTATION 15-17                  ELOSS=  0.0117678'
+      SCRPT(47)=' ROTATION 17-19                  ELOSS=  0.0131942'
+      SCRPT(48)=' ROTATION 19-21                  ELOSS=  0.0146206'
+      SCRPT(49)=' ROTATION 21-23                  ELOSS=  0.0160470'
+      SCRPT(50)=' ROTATION 23-25                  ELOSS=  0.0174734'
+      SCRPT(51)=' ROTATION 25-27                  ELOSS=  0.0188998'
+      SCRPT(52)=' ROTATION 27-29                  ELOSS=  0.0203262'
+      SCRPT(53)=' ROTATION 29-31                  ELOSS=  0.0217526'
+      SCRPT(54)=' ROTATION 31-33                  ELOSS=  0.0231790'
+      SCRPT(55)=' ROTATION 33-35                  ELOSS=  0.0246054'
+      SCRPT(56)=' ROTATION 35-37                  ELOSS=  0.0260318'
+      SCRPT(57)=' ROTATION 37-39                  ELOSS=  0.0274582'
+      SCRPT(58)=' ROTATION 39-41                  ELOSS=  0.0288846'
+      SCRPT(59)=' ROTATION 41-43                  ELOSS=  0.0303110'
+      SCRPT(60)=' ROTATION 43-45                  ELOSS=  0.0317374'
+      SCRPT(61)=' ROTATION 45-47                  ELOSS=  0.0331638'
+      SCRPT(62)=' ROTATION 47-49                  ELOSS=  0.0345902'
+      SCRPT(63)=' VIB V1                            ELOSS= -0.193  '
+      SCRPT(64)=' VIB V1                            ELOSS=  0.193  '
+      SCRPT(65)=' VIB 2V1                           ELOSS=  0.385  '
+      SCRPT(66)=' VIB 3V1                           ELOSS=  0.568  '
+      SCRPT(67)=' VIB 4V1                           ELOSS=  0.749  '
+      SCRPT(68)=' VIB 5V1                           ELOSS=  0.929  '
+      SCRPT(69)=' A1(DEL)G VIB SUMMED               ELOSS=  0.977  '
+      SCRPT(70)=' VIB 6V1                           ELOSS=  1.108  '
+      SCRPT(71)=' VIB 7V1                           ELOSS=  1.282  '
+      SCRPT(72)=' VIB 8V1                           ELOSS=  1.458  '
+      SCRPT(73)=' B1(SIG)G VIB SUMMED               ELOSS=  1.627  '
+      SCRPT(74)=' VIB 9V1                           ELOSS=  1.629  '
+      SCRPT(75)=' VIB 10V1                          ELOSS=  1.798  '
+      SCRPT(76)=' VIB 11V1                          ELOSS=  1.965  '
+      SCRPT(77)=' VIB 12V1                          ELOSS=  2.127  '
+      SCRPT(78)=' VIB 13V1                          ELOSS=  2.283  '
+      SCRPT(79)=' VIB 14V1                          ELOSS=  2.430  '
+      SCRPT(80)=' VIB 15V1                          ELOSS=  2.585  '
+      SCRPT(81)=' VIB 16V1                          ELOSS=  2.739  '
+      SCRPT(82)=' VIB 17V1                          ELOSS=  2.883  '
+      SCRPT(83)=' VIB 18V1                          ELOSS=  3.023  '
+      SCRPT(84)=' VIB 19V1                          ELOSS=  3.168  '
+      SCRPT(85)=' VIB 20V1                          ELOSS=  3.316  '
+      SCRPT(86)=' VIB SUM 21V1-30V1                 ELOSS=  3.46   '
+      SCRPT(87)=' C1SIG + A!3DEL + A3SIG            ELOSS=  5.50   '
+      SCRPT(88)=' C1SIG + A!3DEL + A3SIG            ELOSS=  6.00   '
+      SCRPT(89)=' C1SIG + A!3DEL + A3SIG            ELOSS=  6.50   '
+      SCRPT(90)=' B3SIG SUMMED V=7-20 F=.000262     EL0SS=  6.98   '
+      SCRPT(91)=' DISSOCIATION  S-R  F=0.000408     ELOSS=  7.08   '
+      SCRPT(92)=' DISSOCIATION  S-R  F=0.000623     ELOSS=  7.25   '
+      SCRPT(93)=' DISSOCIATION  S-R  F=0.001016     ELOSS=  7.35   '
+      SCRPT(94)=' DISSOCIATION  S-R  F=0.001562     ELOSS=  7.45   '
+      SCRPT(95)=' DISSOCIATION  S-R  F=0.002312     ELOSS=  7.55   '
+      SCRPT(96)=' DISSOCIATION  S-R  F=0.003234     ELOSS=  7.65   '
+      SCRPT(97)=' DISSOCIATION  S-R  F=0.004362     ELOSS=  7.75   '
+      SCRPT(98)=' DISSOCIATION  S-R  F=0.005573     ELOSS=  7.85   '
+      SCRPT(99)=' DISSOCIATION  S-R  F=0.006930     ELOSS=  7.95   '
+      SCRPT(100)=' DISSOCIATION  S-R  F=0.008342     ELOSS=  8.05   '
+      SCRPT(101)=' DISSOCIATION  S-R  F=0.009692     ELOSS=  8.15   '
+      SCRPT(102)=' DISSOCIATION  S-R NON-DIPOLE      ELOSS=  8.20   '
+      SCRPT(103)=' DISSOCIATION  S-R  F=0.010816     ELOSS=  8.25   '
+      SCRPT(104)=' DISSOCIATION  S-R  F=0.011839     ELOSS=  8.35   '
+      SCRPT(105)=' DISSOCIATION  S-R  F=0.012580     ELOSS=  8.45   '
+      SCRPT(106)=' DISSOCIATION  S-R  F=0.013160     ELOSS=  8.55   '
+      SCRPT(107)=' DISSOCIATION  S-R  F=0.013432     ELOSS=  8.65   '
+      SCRPT(108)=' DISSOCIATION  S-R  F=0.013571     ELOSS=  8.75   '
+      SCRPT(109)=' DISSOCIATION  S-R  F=0.013425     ELOSS=  8.85   '
+      SCRPT(110)=' DISSOCIATION  S-R  F=0.012948     ELOSS=  8.95   '
+      SCRPT(111)=' DISSOCIATION  S-R  F=0.010892     ELOSS=  9.05   '
+      SCRPT(112)=' DISSOCIATION  S-R  F=0.006688     ELOSS=  9.15   '
+      SCRPT(113)=' DISSOCIATION  S-R  F=0.002784     ELOSS=  9.25   '
+      SCRPT(114)=' DISSOCIATION  S-R  F=0.001767     ELOSS=  9.35   '
+      SCRPT(115)=' DISSOCIATION  S-R  F=0.000633     ELOSS=  9.45   '
+      SCRPT(116)=' DISSOCIATION  S-R  F=0.000438     ELOSS=  9.55   '
+      SCRPT(117)=' DISSOCIATION  S-R  F=0.000465     ELOSS=  9.675  '
+      SCRPT(118)=' DISSOC E3SIGMA V=0 F=0.008432     ELOSS=  9.972  '
+      SCRPT(119)=' DISSOC E3SIGMA V=1 F=0.007598     ELOSS= 10.288  '
+      SCRPT(120)=' DISSOC E3SIGMA V=2 F=0.000829     ELOSS= 10.570  '
+      SCRPT(121)=' DISSOC TRIPLET SUM BELOW IP       ELOSS= 10.60   '
+      SCRPT(122)=' DISSOC             F=0.000644     ELOSS= 10.665  '
+      SCRPT(123)=' DISSOC             F=0.001460     ELOSS= 10.760  '
+      SCRPT(124)=' DISSOC             F=0.000818     ELOSS= 10.915  '
+      SCRPT(125)=' DISSOC             F=0.000736     ELOSS= 11.05   '
+      SCRPT(126)=' DISSOC             F=0.000598     ELOSS= 11.25   '
+      SCRPT(127)=' DISSOC             F=0.001482     ELOSS= 11.46   '
+      SCRPT(128)=' DISSOC             F=0.000425     ELOSS= 11.56   '
+      SCRPT(129)=' DISSOC             F=0.001669     ELOSS= 11.65   '
+      SCRPT(130)=' DISSOC             F=0.001766     ELOSS= 11.83   '
+      SCRPT(131)=' DISSOC             F=0.001613     ELOSS= 11.98   '
+      SCRPT(132)=' DISSOC             F=0.001746     ELOSS= 12.20   '
+      SCRPT(133)=' DISSOC             F=0.003329     ELOSS= 12.40   '
+      SCRPT(134)=' DISSOC             F=0.006264     ELOSS= 12.60   '
+      SCRPT(135)=' DISSOC             F=0.013580     ELOSS= 12.80   '
+      SCRPT(136)=' DISSOC             F=0.011373     ELOSS= 13.00   '
+      SCRPT(137)=' DISSOC TRIPLET SUM ABOVE IP       ELOSS= 13.1    '
+      SCRPT(138)=' DISSOC             F=0.006052     ELOSS= 13.20   '
+      SCRPT(139)=' DISSOC             F=0.006051     ELOSS= 13.40   '
+      SCRPT(140)=' DISSOC             F=0.004993     ELOSS= 13.60   '
+      SCRPT(141)=' DISSOC             F=0.005045     ELOSS= 13.80   '
+      SCRPT(142)=' DISSOC             F=0.004962     ELOSS= 14.00   '
+      SCRPT(143)=' DISSOC             F=0.006520     ELOSS= 14.20   '
+      SCRPT(144)=' DISSOC             F=0.008432     ELOSS= 14.40   '
+      SCRPT(145)=' DISSOC             F=0.011304     ELOSS= 14.60   '
+      SCRPT(146)=' DISSOC             F=0.015172     ELOSS= 14.80   '
+      SCRPT(147)=' DISSOC             F=0.022139     ELOSS= 15.00   '
+      SCRPT(148)=' DISSOC             F=0.032682     ELOSS= 15.20   '
+      SCRPT(149)=' DISSOC             F=0.039457     ELOSS= 15.40   '
+      SCRPT(150)=' DISSOC             F=0.029498     ELOSS= 15.60   '
+      SCRPT(151)=' DISSOC             F=0.018923     ELOSS= 15.80   '
+      SCRPT(152)=' DISSOC             F=0.017762     ELOSS= 16.00   '
+      SCRPT(153)=' DISSOC             F=0.015115     ELOSS= 16.20   '
+      SCRPT(154)=' DISSOC             F=0.013220     ELOSS= 16.40   '
+      SCRPT(155)=' DISSOC             F=0.009540     ELOSS= 16.60   '
+      SCRPT(156)=' DISSOC             F=0.005854     ELOSS= 16.80   '
+      SCRPT(157)=' DISSOC             F=0.008733     ELOSS= 17.00   '
+      SCRPT(158)=' DISSOC             F=0.007914     ELOSS= 17.20   '
+      SCRPT(159)=' DISSOC             F=0.008002     ELOSS= 17.40   '
+      SCRPT(160)=' DISSOC             F=0.006519     ELOSS= 17.60   '
+      SCRPT(161)=' DISSOC             F=0.003528     ELOSS= 17.80   '
+      SCRPT(162)=' DISSOC             F=0.001469     ELOSS= 18.00   '
 C CALCULATE DENSITY CORRECTION FOR THREE BODY ATTACHMENT CROSS-SECTION  
       FAC=273.15*TORR/((TEMPC+273.15)*760.0)                            
 C FIRST VIBRATIONAL LEVEL POPULATION
@@ -44384,6 +44401,7 @@ C OFFSET FOR ENERGY SCALE
 C SCALE BY 1/E**3 ABOVE XATT(NATT1)
   230 SINGLE=YATT(NATT1)*(XATT(NATT1)/EN)**3*1.D-16    
 C
+  250 THREEB=0.0                                                    
 C  
 C  THREE BODY ATTACHMENT    
 C ***************************************************************
@@ -44394,8 +44412,6 @@ C    SCALING FACTOR NORMALLY PROPORTIONAL TO OXYGEN FRACTION
 C    IN RARE GAS MIXTURES
 C 
 C***********************************************************  
-C              
-  250 THREEB=0.0                                                    
       IF(EN.LT.X3ATT(1)) GO TO 300                                      
       IF(EN.GT.X3ATT(N3ATT)) GO TO 300                                  
       DO 260 J=2,N3ATT                                                  
@@ -44405,8 +44421,9 @@ C
   270 A=(Y3ATT(J)-Y3ATT(J-1))/(X3ATT(J)-X3ATT(J-1))
       B=(X3ATT(J-1)*Y3ATT(J)-X3ATT(J)*Y3ATT(J-1))/(X3ATT(J-1)-X3ATT(J))
       THREEB=FAC*(A*EN+B)*1.D-16*T3B  
-  300 Q(4,I)=SINGLE+THREEB   
-      QATT(1,I)=Q(4,I)  
+  300 QATT(1,I)=SINGLE
+      QATT(2,I)=THREEB 
+      Q(4,I)=0.0  
       Q(5,I)=0.0                                                        
       Q(6,I)=0.0
 C SET ZERO
@@ -48708,7 +48725,7 @@ C SAVE COMPUTE TIME
 C     IF(EFINAL.GT.1000.) NIN=128
 C                                                                       
       RETURN                                                            
-      END                                                               
+      END 
       SUBROUTINE GAS17(Q,QIN,NIN,E,EIN,NAME,VIRIAL,EOBY 
      /,PEQEL,PEQIN,PENFRA,KEL,KIN,QION,PEQION,EION,NION,QATT,NATT,
      /QNULL,NNULL,SCLN,NC0,EC0,WKLM,EFL,NG1,EG1,NG2,EG2,SCRPT,SCRPTN)   
@@ -48795,7 +48812,7 @@ C     WRITE(6,100) FAC
 C 101 FORMAT(' 3BODY ATTACHMENT INCLUDED DENSITY SCALING FACTOR =',F7.4)
 C 
       NION=1
-      NATT=1
+      NATT=2
       NIN=4 
       NNULL=0
 C
@@ -48825,13 +48842,14 @@ C
       SCRPT(1)='                              '
       SCRPT(2)=' ELASTIC       NITRIC OXIDE   '
       SCRPT(3)=' IONISATION    ELOSS=  9.2644 '
-      SCRPT(4)=' ATTACHMENT 2+3 BODY          '
-      SCRPT(5)='                              '
+      SCRPT(4)=' ATTACHMENT 2-BODY            '
+      SCRPT(5)=' ATTACHMENT 3-BODY            '
       SCRPT(6)='                              '
-      SCRPT(7)=' ROT           ELOSS=  0.100  ' 
-      SCRPT(8)=' VIB V1        ELOSS=  0.2326 '
-      SCRPT(9)=' VIB SUM       ELOSS=  0.600  '
-      SCRPT(10)=' EXC           ELOSS=  6.10   '                        
+      SCRPT(7)='                              '
+      SCRPT(8)=' ROT           ELOSS=  0.100  ' 
+      SCRPT(9)=' VIB V1        ELOSS=  0.2326 '
+      SCRPT(10)=' VIB SUM       ELOSS=  0.600  '
+      SCRPT(11)=' EXC           ELOSS=  6.10   '                        
       EN=-ESTEP/2.0                                      
       DO 1000 I=1,NSTEP                                              
       EN=EN+ESTEP                                                       
@@ -48851,8 +48869,8 @@ C
   120 A=(YION(J)-YION(J-1))/(XION(J)-XION(J-1))                         
       B=(XION(J-1)*YION(J)-XION(J)*YION(J-1))/(XION(J-1)-XION(J))       
       Q(3,I)=(A*EN+B)*1.D-16                                            
-  200 Q(4,I)=0.0
-      QATT(1,I)=Q(4,I)                                                
+C ATTACHMENT 2-BODY
+  200 QATT(1,I)=0.0
       SINGLE=0.0
       IF(EN.LT.XATT(1)) GO TO 250                                       
       IF(EN.GT.XATT(NATT1)) GO TO 250                                  
@@ -48862,8 +48880,11 @@ C
       J=NATT1                                                           
   220 A=(YATT(J)-YATT(J-1))/(XATT(J)-XATT(J-1))                         
       B=(XATT(J-1)*YATT(J)-XATT(J)*YATT(J-1))/(XATT(J-1)-XATT(J))       
-      SINGLE=(A*EN+B)*1.D-18                                            
-  250 THREEB=0.0
+      SINGLE=(A*EN+B)*1.D-18 
+      QATT(1,I)=SINGLE  
+C ATTACHMENT 3-BODY                      
+  250 QATT(2,I)=0.0
+      THREEB=0.0
       IF(EN.LT.XAT3(1)) GO TO 300
       IF(EN.GT.XAT3(NAT3)) GO TO 300
       DO 260 J=2,NAT3
@@ -48873,9 +48894,9 @@ C
   270 A=(YAT3(J)-YAT3(J-1))/(XAT3(J)-XAT3(J-1))                         
       B=(XAT3(J-1)*YAT3(J)-XAT3(J)*YAT3(J-1))/(XAT3(J-1)-XAT3(J))       
       THREEB=FAC*(A*EN+B)*1.D-16                                        
-      Q(4,I)=SINGLE+THREEB
-      QATT(1,I)=Q(4,I)
-  300 Q(5,I)=0.0                                                        
+      QATT(2,I)=THREEB
+  300 Q(4,I)=0.0
+      Q(5,I)=0.0                                                        
       Q(6,I)=0.0                                                        
 C                                                                       
       QIN(1,I)=0.0                                                      
@@ -63639,7 +63660,7 @@ C  SAVE COMPUTE TIME
       IF(EFINAL.LE.EIN(2)) NIN=1                                        
       IF(EFINAL.LE.EIN(1)) NIN=0                                        
       RETURN                                                            
-      END 
+      END
       SUBROUTINE GAS30(Q,QIN,NIN,E,EIN,NAME,VIRIAL,EOBY  
      /,PEQEL,PEQIN,PENFRA,KEL,KIN,QION,PEQION,EION,NION,QATT,NATT,
      /QNULL,NNULL,SCLN,NC0,EC0,WKLM,EFL,NG1,EG1,NG2,EG2,SCRPT,SCRPTN)
@@ -64138,7 +64159,7 @@ C  ARRAY SIZE
       NASIZE=4000
 C 
       NION=12
-      NATT=1
+      NATT=7
       NIN=35
       NNULL=0
 C
@@ -64399,46 +64420,52 @@ C
       SCRPT(12)=' IONISATION SULFUR L1 SHELL        ELOSS=  230.9  '
       SCRPT(13)=' IONISATION SULFUR  K SHELL        ELOSS= 2472.0  '
       SCRPT(14)=' IONISATION FLUORINE K SHELL       ELOSS=  685.4  '
-      SCRPT(15)=' ATTACHMENT    (VALID FOR T=300KELVIN)            '
-      SCRPT(16)='                                                  '
-      SCRPT(17)='                                                  '
-      SCRPT(18)=' VIBRATION V4 SUPERELASTIC         ELOSS=-0.076253' 
-      SCRPT(19)=' VIBRATION V4 ANISOTROPIC          ELOSS= 0.076253'
-      SCRPT(20)=' VIBRATION V1 SUPERELASTIC         ELOSS=-0.096032'
-      SCRPT(21)=' VIBRATION V1 ISOTROPIC            ELOSS= 0.096032'
-      SCRPT(22)=' VIBRATION V3 SUPERELASTIC         ELOSS=-0.11754 '
-      SCRPT(23)=' VIBRATION V3 ANISOTROPIC          ELOSS= 0.11754 '
-      SCRPT(24)=' VIBRATION 2V1                     ELOSS= 0.192064'
-      SCRPT(25)=' VIBRATION 3V1                     ELOSS= 0.288096'
-      SCRPT(26)=' VIBRATION 4V1                     ELOSS= 0.384128'
-      SCRPT(27)=' VIBRATION 5V1 + HIGHER HARMONICS  ELOSS= 0.48016 '
-      SCRPT(28)=' EXC. TRIPLET  DISSOCIATION        ELOSS=  9.6    '
-      SCRPT(29)=' EXC. SINGLET  DISSOC.   F=0.0443  ELOSS= 10.0    '
-      SCRPT(30)=' EXC. SINGLET  DISSOC.   F=0.0642  ELOSS= 10.5    '  
-      SCRPT(31)=' EXC. TRIPLET  DISSOCIATION        ELOSS= 10.9    '
-      SCRPT(32)=' EXC. SINGLET  DISSOC.   F=0.1839  ELOSS= 11.0    '
-      SCRPT(33)=' EXC. SINGLET  DISSOC.   F=0.1073  ELOSS= 11.5    '
-      SCRPT(34)=' EXC. SINGLET  DISSOC.   F=0.0880  ELOSS= 12.0    '
-      SCRPT(35)=' EXC. SINGLET  DISSOC.   F=0.0304  ELOSS= 12.5    '
-      SCRPT(36)=' EXC. ION PAIR F- + SF5+ F=0.0648  ELOSS= 13.0    '
-      SCRPT(37)=' EXC. SINGLET  DISSOC.   F=0.1067  ELOSS= 13.5    '
-      SCRPT(38)=' EXC. SINGLET  DISSOC.   F=0.1047  ELOSS= 14.0    '
-      SCRPT(39)=' EXC. TRIPLET  DISSOCIATION        ELOSS= 14.4    '
-      SCRPT(40)=' EXC. SINGLET  DISSOC.   F=0.1211  ELOSS= 14.5    '
-      SCRPT(41)=' EXC. SINGLET  DISSOC.   F=0.2225  ELOSS= 15.0    '
-      SCRPT(42)=' EXC. SINGLET  DISSOC.   F=0.2731  ELOSS= 15.5    '
-      SCRPT(43)=' EXC. SINGLET  DISSOC.   F=0.1514  ELOSS= 16.0    '
-      SCRPT(44)=' EXC. SINGLET  DISSOC.   F=0.1831  ELOSS= 16.5    '
-      SCRPT(45)=' EXC. SINGLET  DISSOC.   F=0.1678  ELOSS= 17.0    '
-      SCRPT(46)=' EXC. SINGLET  DISSOC.   F=0.1098  ELOSS= 17.5    '
-      SCRPT(47)=' EXC. SINGLET  DISSOC.   F=0.0623  ELOSS= 18.0    '
-      SCRPT(48)=' EXC. SINGLET  DISSOC.   F=0.0361  ELOSS= 18.5    '
-      SCRPT(49)=' EXC. SINGLET  DISSOC.   F=0.0107  ELOSS= 19.0    '
-      SCRPT(50)=' EXC. SINGLET  DISSOC.   F=0.0129  ELOSS= 19.5    '
-      SCRPT(51)=' EXC. SINGLET  DISSOC.   F=0.0053  ELOSS= 20.0    '
-      SCRPT(52)=' EXC. SINGLET  DISSOC.   F=0.0290  ELOSS= 23.0    '
-      SCRPT(53)=' BREMSSTRAHLUNG FROM SULFUR ATOM                  '
-      SCRPT(54)=' BREMSSTRAHLUNG FROM FLUORINE ATOM                '
+      SCRPT(15)=' ATTACHMENT   T=300K                SF6-          '
+      SCRPT(16)=' ATTACHMENT   T=300K                SF5-          '
+      SCRPT(17)=' ATTACHMENT   T=300K                SF4-          '
+      SCRPT(18)=' ATTACHMENT   T=300K                SF3-          '
+      SCRPT(19)=' ATTACHMENT   T=300K                SF2-          '
+      SCRPT(20)=' ATTACHMENT   T=300K                 F2-          '
+      SCRPT(21)=' ATTACHMENT   T=300K                 F-           '
+      SCRPT(22)='                                                  '
+      SCRPT(23)='                                                  '
+      SCRPT(24)=' VIBRATION V4 SUPERELASTIC         ELOSS=-0.076253' 
+      SCRPT(25)=' VIBRATION V4 ANISOTROPIC          ELOSS= 0.076253'
+      SCRPT(26)=' VIBRATION V1 SUPERELASTIC         ELOSS=-0.096032'
+      SCRPT(27)=' VIBRATION V1 ISOTROPIC            ELOSS= 0.096032'
+      SCRPT(28)=' VIBRATION V3 SUPERELASTIC         ELOSS=-0.11754 '
+      SCRPT(29)=' VIBRATION V3 ANISOTROPIC          ELOSS= 0.11754 '
+      SCRPT(30)=' VIBRATION 2V1                     ELOSS= 0.192064'
+      SCRPT(31)=' VIBRATION 3V1                     ELOSS= 0.288096'
+      SCRPT(32)=' VIBRATION 4V1                     ELOSS= 0.384128'
+      SCRPT(33)=' VIBRATION 5V1 + HIGHER HARMONICS  ELOSS= 0.48016 '
+      SCRPT(34)=' EXC. TRIPLET  DISSOCIATION        ELOSS=  9.6    '
+      SCRPT(35)=' EXC. SINGLET  DISSOC.   F=0.0443  ELOSS= 10.0    '
+      SCRPT(36)=' EXC. SINGLET  DISSOC.   F=0.0642  ELOSS= 10.5    '  
+      SCRPT(37)=' EXC. TRIPLET  DISSOCIATION        ELOSS= 10.9    '
+      SCRPT(38)=' EXC. SINGLET  DISSOC.   F=0.1839  ELOSS= 11.0    '
+      SCRPT(39)=' EXC. SINGLET  DISSOC.   F=0.1073  ELOSS= 11.5    '
+      SCRPT(40)=' EXC. SINGLET  DISSOC.   F=0.0880  ELOSS= 12.0    '
+      SCRPT(41)=' EXC. SINGLET  DISSOC.   F=0.0304  ELOSS= 12.5    '
+      SCRPT(42)=' EXC. ION PAIR F- + SF5+ F=0.0648  ELOSS= 13.0    '
+      SCRPT(43)=' EXC. SINGLET  DISSOC.   F=0.1067  ELOSS= 13.5    '
+      SCRPT(44)=' EXC. SINGLET  DISSOC.   F=0.1047  ELOSS= 14.0    '
+      SCRPT(45)=' EXC. TRIPLET  DISSOCIATION        ELOSS= 14.4    '
+      SCRPT(46)=' EXC. SINGLET  DISSOC.   F=0.1211  ELOSS= 14.5    '
+      SCRPT(47)=' EXC. SINGLET  DISSOC.   F=0.2225  ELOSS= 15.0    '
+      SCRPT(48)=' EXC. SINGLET  DISSOC.   F=0.2731  ELOSS= 15.5    '
+      SCRPT(49)=' EXC. SINGLET  DISSOC.   F=0.1514  ELOSS= 16.0    '
+      SCRPT(50)=' EXC. SINGLET  DISSOC.   F=0.1831  ELOSS= 16.5    '
+      SCRPT(51)=' EXC. SINGLET  DISSOC.   F=0.1678  ELOSS= 17.0    '
+      SCRPT(52)=' EXC. SINGLET  DISSOC.   F=0.1098  ELOSS= 17.5    '
+      SCRPT(53)=' EXC. SINGLET  DISSOC.   F=0.0623  ELOSS= 18.0    '
+      SCRPT(54)=' EXC. SINGLET  DISSOC.   F=0.0361  ELOSS= 18.5    '
+      SCRPT(55)=' EXC. SINGLET  DISSOC.   F=0.0107  ELOSS= 19.0    '
+      SCRPT(56)=' EXC. SINGLET  DISSOC.   F=0.0129  ELOSS= 19.5    '
+      SCRPT(57)=' EXC. SINGLET  DISSOC.   F=0.0053  ELOSS= 20.0    '
+      SCRPT(58)=' EXC. SINGLET  DISSOC.   F=0.0290  ELOSS= 23.0    '
+      SCRPT(59)=' BREMSSTRAHLUNG FROM SULFUR ATOM                  '
+      SCRPT(60)=' BREMSSTRAHLUNG FROM FLUORINE ATOM                '
 C CALC LEVEL POPULATIONS
       APOPV4=DEGV4*DEXP(EIN(1)/AKT)
       APOPV1=DEGV1*DEXP(EIN(3)/AKT)
@@ -64723,8 +64750,13 @@ C CORECTION TO IONISATION DUE TO SPLIT INTO K AND L SHELLS
   155 CONTINUE
 C                                      
 C ATTACHMENT (USE LOG INTERPOLATION FOR SF6- AND LINEAR FOR OTHER IONS)      
-  200 Q(4,I)=0.0
-      QATT(1,I)=Q(4,I)                                                  
+  200 QATT(1,I)=0.0 
+      QATT(2,I)=0.0
+      QATT(3,I)=0.0
+      QATT(4,I)=0.0
+      QATT(5,I)=0.0
+      QATT(6,I)=0.0
+      QATT(7,I)=0.0
       IF(EN.LE.0.0) GO TO 250                                       
       IF(EN.GE.XATT(NATT1)) GO TO 250                                   
       DO 210 J=2,NATT1                                                  
@@ -64776,10 +64808,16 @@ C LINEAR
       QAT5=(A5*EN+B5)*1.D-18
       QAT6=(A6*EN+B6)*1.D-18
       QAT7=(A7*EN+B7)*1.D-18
-      Q(4,I)=QAT1+QAT2+QAT3+QAT4+QAT5+QAT6+QAT7
-      QATT(1,I)=Q(4,I)
+      QATT(1,I)=QAT1
+      QATT(2,I)=QAT2
+      QATT(3,I)=QAT3
+      QATT(4,I)=QAT4
+      QATT(5,I)=QAT5
+      QATT(6,I)=QAT6
+      QATT(7,I)=QAT7
 C                                                               
-  250 Q(5,I)=0.0     
+  250 Q(4,I)=0.0
+      Q(5,I)=0.0     
       Q(6,I)=0.0                                                        
 C V4 SUPERELASTIC  
       QIN(1,I)=0.0
@@ -76393,7 +76431,7 @@ C  SAVE COMPUTE TIME
       IF(EFINAL.LE.EIN(2)) NIN=1                                        
       IF(EFINAL.LE.EIN(1)) NIN=0                                        
       RETURN                                                            
-      END                                                               
+      END
       SUBROUTINE GAS39(Q,QIN,NIN,E,EIN,NAME,VIRIAL,EOBY   
      /,PEQEL,PEQIN,PENFRA,KEL,KIN,QION,PEQION,EION,NION,QATT,NATT,
      /QNULL,NNULL,SCLN,NC0,EC0,WKLM,EFL,NG1,EG1,NG2,EG2,SCRPT,SCRPTN)
@@ -76479,7 +76517,7 @@ C ---------------------------------------------------------------
       NAME=' CS2  -2001--- '
 C                      
       NION=1
-      NATT=1
+      NATT=2
       NIN=6
       NNULL=0
 C
@@ -76510,15 +76548,16 @@ C
       SCRPT(1)='                              '
       SCRPT(2)=' ELASTIC       CS2            '
       SCRPT(3)=' IONISATION    ELOSS= 10.07   '
-      SCRPT(4)=' ATTACHMENT  (ASSUMED 2 BODY) '
-      SCRPT(5)='                              '
+      SCRPT(4)=' ATTACHMENT 3-BODY AT 40TORR  '
+      SCRPT(5)=' ATTACHMENT 2-BODY            '
       SCRPT(6)='                              '
-      SCRPT(7)=' VIB V2        ELOSS= -0.049  '
-      SCRPT(8)=' VIB V2        ELOSS=  0.049  '
-      SCRPT(9)=' VIB V1        ELOSS= -0.081  '
-      SCRPT(10)=' VIB V1        ELOSS=  0.081  '
-      SCRPT(11)=' VIB V3        ELOSS=  0.190  '
-      SCRPT(12)=' EXC           ELOSS=  6.20   ' 
+      SCRPT(7)='                              '
+      SCRPT(8)=' VIB V2        ELOSS= -0.049  '
+      SCRPT(9)=' VIB V2        ELOSS=  0.049  '
+      SCRPT(10)=' VIB V1        ELOSS= -0.081  '
+      SCRPT(11)=' VIB V1        ELOSS=  0.081  '
+      SCRPT(12)=' VIB V3        ELOSS=  0.190  '
+      SCRPT(13)=' EXC           ELOSS=  6.20   ' 
       APOPV2=DEXP(EIN(1)/AKT)
       APOPV1=DEXP(EIN(3)/AKT)
       EN=-ESTEP/2.0                                      
@@ -76541,8 +76580,7 @@ C
       B=(XION(J-1)*YION(J)-XION(J)*YION(J-1))/(XION(J-1)-XION(J))       
       Q(3,I)=(A*EN+B)*1.D-16                                            
 C                                                                       
-  200 Q(4,I)=0.0 
-      QATT(1,I)=Q(4,I)
+  200 QATT(1,I)=0.0 
       IF(EN.LT.XAT1(1)) GO TO 250                                       
       IF(EN.GT.XAT1(NATT1)) GO TO 250                                   
       DO 210 J=2,NATT1                                                  
@@ -76551,9 +76589,8 @@ C
       J=NATT1                                                          
   220 A=(YAT1(J)-YAT1(J-1))/(XAT1(J)-XAT1(J-1))                         
       B=(XAT1(J-1)*YAT1(J)-XAT1(J)*YAT1(J-1))/(XAT1(J-1)-XAT1(J))
-      Q(4,I)=(A*EN+B)*1.D-16*1.3
-      QATT(1,I)=Q(4,I)                                        
-  250 CONTINUE                                                          
+      QATT(1,I)=(A*EN+B)*1.D-16*1.3
+  250 QATT(2,I)=0.0                                                    
       IF(EN.LT.XATT(1)) GO TO 300                                       
       IF(EN.GT.XATT(NATT2)) GO TO 300                                   
       DO 260 J=2,NATT2                                                  
@@ -76562,9 +76599,9 @@ C
       J=NATT2                                                           
   270 A=(YATT(J)-YATT(J-1))/(XATT(J)-XATT(J-1))                         
       B=(XATT(J-1)*YATT(J)-XATT(J)*YATT(J-1))/(XATT(J-1)-XATT(J))       
-      Q(4,I)=Q(4,I)+(A*EN+B)*1.D-19             
-      QATT(1,I)=Q(4,I)                        
-  300 Q(5,I)=0.0                                                        
+      QATT(2,I)=(A*EN+B)*1.D-19             
+  300 Q(4,I)=0.0
+      Q(5,I)=0.0                                                        
       Q(6,I)=0.0
 C			
 C SUPERELASTIC V2 BENDING MODE 
@@ -76640,7 +76677,8 @@ C EXCITATION (DISOCIATION)
       B=(XEXC(J-1)*YEXC(J)-XEXC(J)*YEXC(J-1))/(XEXC(J-1)-XEXC(J))       
       QIN(6,I)=(A*EN+B)*1.D-16                                          
   900 CONTINUE                                                          
-C                                                                       
+C     
+      Q(4,I)=QATT(1,I)+QATT(2,I)                        
       Q(1,I)=Q(2,I)+Q(3,I)+Q(4,I)+QIN(1,I)+QIN(2,I)+QIN(3,I)+QIN(4,I)+ 
      /QIN(5,I)+QIN(6,I)                           
  9000 CONTINUE                                                          
@@ -77686,7 +77724,7 @@ C  SAVE COMPUTE TIME
       IF(EFINAL.LE.EIN(2)) NIN=1                                        
       IF(EFINAL.LE.EIN(1)) NIN=0                                        
       RETURN                                                            
-      END 
+      END
       SUBROUTINE GAS43(Q,QIN,NIN,E,EIN,NAME,VIRIAL,EOBY   
      /,PEQEL,PEQIN,PENFRA,KEL,KIN,QION,PEQION,EION,NION,QATT,NATT,
      /QNULL,NNULL,SCLN,NC0,EC0,WKLM,EFL,NG1,EG1,NG2,EG2,SCRPT,SCRPTN)
@@ -77817,7 +77855,7 @@ C --------------------------------------------------------------------
       NAME=' C2H2F4 2010   '                                            
 C               
       NION=1
-      NATT=1
+      NATT=2
       NIN=9
       NNULL=0
 C
@@ -77874,18 +77912,19 @@ C**********************************************************************
       SCRPT(1)='                              '
       SCRPT(2)=' ELASTIC  ISOTROPIC  C2H2F4   '
       SCRPT(3)=' IONISATION    ELOSS= 14.48   '
-      SCRPT(4)=' ATTACHMENT (2 AND 3 BODY)    '
-      SCRPT(5)='                              ' 
-      SCRPT(6)='                              '
-      SCRPT(7)=' VIB V11       ELOSS= -0.065  '
-      SCRPT(8)=' VIB V2        ELOSS= -0.1001 '
-      SCRPT(9)=' VIB V1        ELOSS= -0.1523 '
-      SCRPT(10)=' VIB V11       ELOSS=  0.065  '
-      SCRPT(11)=' VIB V2        ELOSS=  0.1001 '
-      SCRPT(12)=' VIB V1        ELOSS=  0.1523 '
-      SCRPT(13)=' VIB C-H + 2V1 ELOSS=  0.35   '
-      SCRPT(14)=' VIB HARMONIC  ELOSS=  0.50   '
-      SCRPT(15)=' EXC DISS0CTN  ELOSS= 11.8    '
+      SCRPT(4)=' ATTACHMENT 3-BODY            '
+      SCRPT(5)=' ATTACHMENT 2-BODY            '
+      SCRPT(6)='                              ' 
+      SCRPT(7)='                              '
+      SCRPT(8)=' VIB V11       ELOSS= -0.065  '
+      SCRPT(9)=' VIB V2        ELOSS= -0.1001 '
+      SCRPT(10)=' VIB V1        ELOSS= -0.1523 '
+      SCRPT(11)=' VIB V11       ELOSS=  0.065  '
+      SCRPT(12)=' VIB V2        ELOSS=  0.1001 '
+      SCRPT(13)=' VIB V1        ELOSS=  0.1523 '
+      SCRPT(14)=' VIB C-H + 2V1 ELOSS=  0.35   '
+      SCRPT(15)=' VIB HARMONIC  ELOSS=  0.50   '
+      SCRPT(16)=' EXC DISS0CTN  ELOSS= 11.8    '
 C CALCULATE DENSITY SCALING FOR 3-BODY ATTACHMENT 
       FAC=(273.15+20.0)*TORR/((TEMPC+273.15)*760.0)
 C                       
@@ -77945,8 +77984,7 @@ C
       B=(XION(J-1)*YION(J)-XION(J)*YION(J-1))/(XION(J-1)-XION(J))       
       Q(3,I)=(A*EN+B)*1.D-16                                            
 C  TWO BODY ATTACHMENT                                       
-  200 Q(4,I)=0.0    
-      QATT(1,I)=Q(4,I)
+  200 QATT(2,I)=0.0    
       IF(EN.LT.XATT(1)) GO TO 230                                       
       IF(EN.GT.XATT(NATT1)) GO TO 230                                   
       DO 210 J=2,NATT1                                                  
@@ -77955,10 +77993,9 @@ C  TWO BODY ATTACHMENT
       J=NATT1                                                           
   220 A=(YATT(J)-YATT(J-1))/(XATT(J)-XATT(J-1))                         
       B=(XATT(J-1)*YATT(J)-XATT(J)*YATT(J-1))/(XATT(J-1)-XATT(J))       
-      Q(4,I)=(A*EN+B)*1.D-16
-      QATT(1,I)=Q(4,I)           
+      QATT(2,I)=(A*EN+B)*1.D-16
 C THREE BODY ATTACHMENT USE LOG INTERPOLATION
-  230 THREEB=0.0
+  230 QATT(1,I)=0.0
       IF(EN.LT.X3ATT(1)) GO TO 255
       IF(EN.GT.X3ATT(N3ATT)) GO TO 255
       DO 240 J=2,N3ATT
@@ -77971,9 +78008,10 @@ C THREE BODY ATTACHMENT USE LOG INTERPOLATION
       X2=DLOG(X3ATT(J))
       A=(Y2-Y1)/(X2-X1)
       B=(X1*Y2-X2*Y1)/(X1-X2)
-      THREEB=DEXP(A*DLOG(EN)+B)*1.D-16*FAC
-  255 Q(4,I)=Q(4,I)+THREEB
-      QATT(1,I)=Q(4,I)                                    
+      QATT(1,I)=DEXP(A*DLOG(EN)+B)*1.D-16*FAC
+  255 CONTINUE
+C
+      Q(4,I)=0.0                                   
       Q(5,I)=0.0                                                        
       Q(6,I)=0.0
 C           
@@ -88004,7 +88042,7 @@ C PRESSURE DEPENDENT ATTACHMENT X-SEC
 C TABLE IN UNITS OF 10**-16 FOR P=760 TORR AND T=25 CELSIUS   
       DATA YATT2/.00044,.00132,.00352,.0167,.0308,.0493,.0462,.0378,
      /.0180,.0088,  
-     /.0220,.00044/
+     /.0022,.00044/
 C ---------------------------------------------------------------------      
 C      
       NANISO=2
@@ -88970,7 +89008,7 @@ C  SAVE COMPUTE TIME
  9901 CONTINUE 
       IF(NIN.LT.6) NIN=6
       RETURN 
-      END                  
+      END
       SUBROUTINE GAS53(Q,QIN,NIN,E,EIN,NAME,VIRIAL,EOBY
      /,PEQEL,PEQIN,PENFRA,KEL,KIN,QION,PEQION,EION,NION,QATT,NATT,
      /QNULL,NNULL,SCLN,NC0,EC0,WKLM,EFL,NG1,EG1,NG2,EG2,SCRPT,SCRPTN)  
@@ -89092,7 +89130,7 @@ C
       NAME=' OZONE  2002   '
 C               
       NION=1
-      NATT=1
+      NATT=2
       NIN=11
       NNULL=0
 C 
@@ -89135,20 +89173,21 @@ C SET OPAL AND BEATY ENERGY SPLITTING TO EION
       SCRPT(1)='                              '
       SCRPT(2)=' ELASTIC        OZONE         '
       SCRPT(3)=' IONISATION    ELOSS= 12.75   '
-      SCRPT(4)=' DISOCIATIVE ATTACHMENT       '
-      SCRPT(5)='                              '
+      SCRPT(4)=' DISOCIATIVE ATTACHMENT  O -  '
+      SCRPT(5)=' DISOCIATIVE ATTACHMENT  O2 - '
       SCRPT(6)='                              '
-      SCRPT(7)=' ROT           ELOSS= -0.005  '
-      SCRPT(8)=' ROT           ELOSS=  0.005  '
-      SCRPT(9)=' VIB2  BEND    ELOSS= -0.0869 '
-      SCRPT(10)=' VIB2 BEND     ELOSS=  0.0869 '
-      SCRPT(11)=' VIB3+VIB1     ELOSS=  0.1292 '
-      SCRPT(12)=' V12+V23       ELOSS=  0.2161 '
-      SCRPT(13)=' V13+2V1+2V3   ELOSS=  0.2660 '
-      SCRPT(14)=' SUM HIGH VIB  ELOSS=  0.380  '
-      SCRPT(15)=' EXC CHAPPUIS  ELOSS=  1.50   '
-      SCRPT(16)=' EXC HARTLEY   ELOSS=  4.85   '
-      SCRPT(17)=' EXC           ELOSS=  9.00   '
+      SCRPT(7)='                              '
+      SCRPT(8)=' ROT           ELOSS= -0.005  '
+      SCRPT(9)=' ROT           ELOSS=  0.005  '
+      SCRPT(10)=' VIB2  BEND    ELOSS= -0.0869 '
+      SCRPT(11)=' VIB2 BEND     ELOSS=  0.0869 '
+      SCRPT(12)=' VIB3+VIB1     ELOSS=  0.1292 '
+      SCRPT(13)=' V12+V23       ELOSS=  0.2161 '
+      SCRPT(14)=' V13+2V1+2V3   ELOSS=  0.2660 '
+      SCRPT(15)=' SUM HIGH VIB  ELOSS=  0.380  '
+      SCRPT(16)=' EXC CHAPPUIS  ELOSS=  1.50   '
+      SCRPT(17)=' EXC HARTLEY   ELOSS=  4.85   '
+      SCRPT(18)=' EXC           ELOSS=  9.00   '
       EN=-ESTEP/2.0                                      
       DO 9000 I=1,NSTEP                                              
       EN=EN+ESTEP   
@@ -89176,8 +89215,8 @@ C USE LOG INTERPOLATION
       B=(XION(J-1)*YION(J)-XION(J)*YION(J-1))/(XION(J-1)-XION(J))       
       Q(3,I)=(A*EN+B)*1.D-16                                            
 C   SUM OF DISOCIATIVE ATTACHMENTS TO O- AND O2-                                    
-  200 Q(4,I)=0.0                                         
-      QATT(1,I)=Q(4,I)              
+  200 QATT(1,I)=0.0
+      QATT(2,I)=0.0                                         
       IF(EN.LT.XATT(1)) GO TO 300                                       
       IF(EN.GT.XATT(NATT1)) GO TO 300                                  
       DO 210 J=2,NATT1                                                 
@@ -89188,9 +89227,10 @@ C   SUM OF DISOCIATIVE ATTACHMENTS TO O- AND O2-
       B1=(XATT(J-1)*YAT1(J)-XATT(J)*YAT1(J-1))/(XATT(J-1)-XATT(J)) 
       A2=(YAT2(J)-YAT2(J-1))/(XATT(J)-XATT(J-1))                        
       B2=(XATT(J-1)*YAT2(J)-XATT(J)*YAT2(J-1))/(XATT(J-1)-XATT(J)) 
-      Q(4,I)=((A1+A2)*EN+B1+B2)*1.D-16   
-      QATT(1,I)=Q(4,I)                               
-  300 Q(5,I)=0.0                                                        
+      QATT(1,I)=(A1*EN+B1)*1.D-16
+      QATT(2,I)=(A2*EN+B2)*1.D-16                               
+  300 Q(4,I)=0.0
+      Q(5,I)=0.0                                                        
       Q(6,I)=0.0
 C           
 C SUPERELASTIC EFFECTIVE ROTATION
