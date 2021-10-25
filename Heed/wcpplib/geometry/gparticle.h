@@ -132,7 +132,7 @@ class stvpoint {
     tid.down_absref(&dir);
   }
   /// Copy constructor.
-  stvpoint(const stvpoint& fp) = default;
+  stvpoint(const stvpoint&) = default;
   void print(std::ostream& file, int l) const;
   absvol* volume() { return tid.G_lavol(); }
 };
