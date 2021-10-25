@@ -141,17 +141,17 @@ private:
 
   int m_N = 0; ///< amount of layers
 
-  double m_upperBoundIntigration = 30;
+  double m_upperBoundIntegration = 30;
 
-  std::vector<double> m_eps; ///< list of irelative permitivities or layers
+  std::vector<double> m_eps; ///< relative permittivity of each layer
   std::vector<double> m_epsHolder;
-  std::vector<double> m_d; ///< list of thickness of layers
+  std::vector<double> m_d; ///< thickness of each layer
   std::vector<double> m_dHolder;
   std::vector<double> m_z; ///< list of indices of conducting layers
 
   std::vector<int> m_sigmaIndex; ///< list of indices of conducting layers
 
-  TF2 m_hIntegrant;
+  TF2 m_hIntegrand;
 
   TF1 m_wpStripIntegral; ///< Weighting potential integrant for strips
   TF2 m_wpPixelIntegral; ///< Weighting potential integrant for pixels
@@ -228,13 +228,13 @@ private:
 
   // build function h needed for the integrant of the weighting potential of a
   // stip and pixel
-  void setHIntegrant();
+  void setHIntegrand();
 
   // build integrant of weighting potential of a strip
-  void setwpPixelIntegrant();
+  void setwpPixelIntegrand();
 
   // build integrant of weighting potential of a pixel
-  void setwpStripIntegrant();
+  void setwpStripIntegrand();
 
   // weighting field of a plane in layer with index "indexLayer"
   double constWEFieldLayer(const int indexLayer) {

@@ -3,6 +3,7 @@
 #include <TF1.h>
 #include <TF2.h>
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -65,9 +66,9 @@ void ComponentParallelPlate::Setup(const int N, std::vector<double> eps,
   if (m_debug)
     std::cout << m_className
               << "Setup:: Computing weighting potential functions.\n";
-  setHIntegrant();
-  setwpStripIntegrant();
-  setwpPixelIntegrant();
+  setHIntegrand();
+  setwpStripIntegrand();
+  setwpPixelIntegrand();
 
   std::cout << m_className << "Setup:: Geometry with N = " << N
             << " layers set.\n";
@@ -108,8 +109,8 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode &el,
     int im;
     double epsm;
     getLayer(z, im, epsm);
-    double upLim = m_upperBoundIntigration;
-    if (z == 0 || m_upperBoundIntigration / z > 200) {
+    double upLim = m_upperBoundIntegration;
+    if (z == 0 || m_upperBoundIntegration / z > 200) {
       upLim = 200;
     } else {
       upLim *= 1 / z;
@@ -122,8 +123,8 @@ double ComponentParallelPlate::IntegratePromptPotential(const Electrode &el,
     int im;
     double epsm;
     getLayer(z, im, epsm);
-    double upLim = m_upperBoundIntigration;
-    if (z == 0 || m_upperBoundIntigration / z > 200) {
+    double upLim = m_upperBoundIntegration;
+    if (z == 0 || m_upperBoundIntegration / z > 200) {
       upLim = 200;
     } else {
       upLim *= 1 / z;
@@ -360,10 +361,10 @@ Medium *ComponentParallelPlate::GetMedium(const double x, const double y,
 
 bool ComponentParallelPlate::Nsigma(
     int N, std::vector<std::vector<int>> &sigmaMatrix) {
-  int nColomb = N - 1;
+  int nCol = N - 1;
   int nRow = pow(2, N - 1);
   // array to store binary number
-  std::vector<int> binaryNum(nColomb, 0);
+  std::vector<int> binaryNum(nCol, 0);
 
   for (int i = 0; i < nRow; i++) {
     if (decToBinary(i, binaryNum)) {
@@ -379,15 +380,15 @@ bool ComponentParallelPlate::Nsigma(
 bool ComponentParallelPlate::Ntheta(
     int N, std::vector<std::vector<int>> &thetaMatrix,
     std::vector<std::vector<int>> &sigmaMatrix) {
-  int nColomb = N - 1;
+  int nCol = N - 1;
   int nRow = pow(2, N - 1);
 
-  std::vector<int> thetaRow(nColomb, 1);
-  std::vector<int> thetaRowReset(nColomb, 1);
+  std::vector<int> thetaRow(nCol, 1);
+  std::vector<int> thetaRowReset(nCol, 1);
 
   for (int i = 0; i < nRow; i++) {
-    for (int j = 0; j < nColomb; j++) {
-      for (int l = j; l < nColomb; l++)
+    for (int j = 0; j < nCol; j++) {
+      for (int l = j; l < nCol; l++)
         thetaRow[j] *= sigmaMatrix[i][l];
     }
     thetaMatrix.push_back(thetaRow);
@@ -419,23 +420,23 @@ void ComponentParallelPlate::constructGeometryMatrices(const int N) {
 void ComponentParallelPlate::constructGeometryFunction(const int N) {
 
   int nRow = N;
-  int nColomb = pow(2, N - 1);
+  int nCol = pow(2, N - 1);
   // reset
   m_cMatrix.clear();
   m_vMatrix.clear();
   m_gMatrix.clear();
   m_wMatrix.clear();
 
-  std::vector<double> cHold(nColomb, 1);
-  std::vector<double> vHold(nColomb, 0);
-  std::vector<double> gHold(nColomb, 1);
-  std::vector<double> wHold(nColomb, 0);
+  std::vector<double> cHold(nCol, 1);
+  std::vector<double> vHold(nCol, 0);
+  std::vector<double> gHold(nCol, 1);
+  std::vector<double> wHold(nCol, 0);
 
   for (int n = 1; n <= nRow; n++) {
     int ix1 = 0;
     int ix2 = 0;
 
-    for (int i = 0; i < nColomb; i++) {
+    for (int i = 0; i < nCol; i++) {
       // cyclic permutation over the rows of sigma
       if (ix1 == pow(2, n - 1))
         ix1 = 0;
@@ -477,7 +478,7 @@ void ComponentParallelPlate::constructGeometryFunction(const int N) {
   }
 }
 
-void ComponentParallelPlate::setHIntegrant() {
+void ComponentParallelPlate::setHIntegrand() {
   auto hFunction = [=](double *k, double * /*p*/) {
     double kk = k[0];
     double z = k[1];
@@ -500,15 +501,15 @@ void ComponentParallelPlate::setHIntegrant() {
     }
     return h * m_eps[0] / (m_eps[m_N - 1] * hNorm);
   };
-  TF2 *hF = new TF2("hFunction", hFunction, 0, m_upperBoundIntigration, 0,
+  TF2 *hF = new TF2("hFunction", hFunction, 0, m_upperBoundIntegration, 0,
                     m_z.back(), 0);
 
-  hF->Copy(m_hIntegrant);
+  hF->Copy(m_hIntegrand);
 
   delete hF;
 }
 
-void ComponentParallelPlate::setwpPixelIntegrant() {
+void ComponentParallelPlate::setwpPixelIntegrand() {
   auto intFunction = [=](double *k, double *p) {
     double kx = k[0];
     double ky = k[1];
@@ -524,23 +525,23 @@ void ComponentParallelPlate::setwpPixelIntegrant() {
     double z = p[6];
 
     double sol = cos(kx * (x - x0)) * sin(kx * wx / 2) * cos(ky * (y - y0)) *
-                 sin(ky * wy / 2) * m_hIntegrant.Eval(K, z) / (kx * ky);
+                 sin(ky * wy / 2) * m_hIntegrand.Eval(K, z) / (kx * ky);
 
     return 4 * sol / (Pi * Pi);
   };
 
-  TF2 *wpPixelIntegrant =
-      new TF2("wpPixelIntegrant", intFunction, 0, m_upperBoundIntigration, 0,
-              m_upperBoundIntigration, 7);
-  wpPixelIntegrant->SetNpx(
+  TF2 *wpPixelIntegrand =
+      new TF2("wpPixelIntegrand", intFunction, 0, m_upperBoundIntegration, 0,
+              m_upperBoundIntegration, 7);
+  wpPixelIntegrand->SetNpx(
       10000); // increasing number of points the function is evaluated on
-  wpPixelIntegrant->SetNpy(10000);
-  wpPixelIntegrant->Copy(m_wpPixelIntegral);
+  wpPixelIntegrand->SetNpy(10000);
+  wpPixelIntegrand->Copy(m_wpPixelIntegral);
 
-  delete wpPixelIntegrant;
+  delete wpPixelIntegrand;
 }
 
-void ComponentParallelPlate::setwpStripIntegrant() {
+void ComponentParallelPlate::setwpStripIntegrand() {
   auto intFunction = [=](double *k, double *p) {
     double kk = k[0];
     double x = p[0];
@@ -548,16 +549,16 @@ void ComponentParallelPlate::setwpStripIntegrant() {
     double wx = p[2];
     double z = p[3];
     double sol =
-        cos(kk * (x - x0)) * sin(kk * wx / 2) * m_hIntegrant.Eval(kk, z) / kk;
+        cos(kk * (x - x0)) * sin(kk * wx / 2) * m_hIntegrand.Eval(kk, z) / kk;
     return 2 * sol / Pi;
   };
-  TF1 *wpStripIntegrant =
-      new TF1("wpStripIntegrant", intFunction, 0, m_upperBoundIntigration, 4);
-  wpStripIntegrant->SetNpx(
+  TF1 *wpStripIntegrand =
+      new TF1("wpStripIntegrand", intFunction, 0, m_upperBoundIntegration, 4);
+  wpStripIntegrand->SetNpx(
       1000); // increasing number of points the function is evaluated on
-  wpStripIntegrant->Copy(m_wpStripIntegral);
+  wpStripIntegrand->Copy(m_wpStripIntegral);
 
-  delete wpStripIntegrant;
+  delete wpStripIntegrand;
 }
 
 bool ComponentParallelPlate::decToBinary(int n, std::vector<int> &binaryNum) {
