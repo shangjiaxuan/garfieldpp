@@ -470,10 +470,10 @@ void ComponentParallelPlate::constructGeometryFunction(const int N) {
     m_wMatrix.push_back(wHold);
 
     // reset
-    std::for_each(cHold.begin(), cHold.end(), [](double &n) { n = 1; });
-    std::for_each(vHold.begin(), vHold.end(), [](double &n) { n = 0; });
-    std::for_each(gHold.begin(), gHold.end(), [](double &n) { n = 1; });
-    std::for_each(wHold.begin(), wHold.end(), [](double &n) { n = 0; });
+    std::fill(cHold.begin(), cHold.end(), 1);
+    std::fill(vHold.begin(), vHold.end(), 0);
+    std::fill(gHold.begin(), gHold.end(), 1);
+    std::fill(wHold.begin(), wHold.end(), 0);
   }
 }
 
