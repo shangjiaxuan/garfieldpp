@@ -13,6 +13,6 @@ add_executable(trim trim.C)
 target_link_libraries(trim Garfield::Garfield)
 
 # ---Copy all files locally to the build directory------------------------------
-foreach(_file alpha_ArCO2_70_30.txt EXYZ.txt)
+foreach(_file Alpha_in_Ar.txt EXYZ.txt)
   configure_file(${_file} ${CMAKE_CURRENT_BINARY_DIR}/${_file} COPYONLY)
 endforeach()
