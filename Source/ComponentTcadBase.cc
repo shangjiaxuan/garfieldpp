@@ -935,7 +935,8 @@ bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
   const size_t nVertices = m_vertices.size();
   std::vector<unsigned int> fillCount(nVertices, 0);
 
-  std::array<double, N> zeroVector{};
+  std::array<double, N> zeroVector;
+  zeroVector.fill(0.);
   // Read the file line by line.
   std::string line;
   while (std::getline(datafile, line)) {
@@ -1246,7 +1247,8 @@ bool ComponentTcadBase<N>::LoadWeightingField(
     return false;
   }
   const size_t nVertices = m_vertices.size();
-  const std::array<double, N> zeroVector{};
+  std::array<double, N> zeroVector;
+  zeroVector.fill(0.);
   bool ok = true;
   // Read the file line by line.
   std::string line;
