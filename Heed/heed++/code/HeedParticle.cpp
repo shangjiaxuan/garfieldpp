@@ -37,7 +37,7 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
   m_edep = 0.;
   // Get the step.
   if (m_currpos.prange <= 0.0) return;
-  const double step = m_currpos.prange / cm;
+  const double stp = m_currpos.prange / cm;
   const vec dir = unit_vec(m_currpos.pt - m_prevpos.pt);
   const double range = (m_currpos.pt - m_prevpos.pt).length();
   if (m_print_listing) Iprint3n(mcout, m_prevpos.pt, dir, range);
@@ -70,7 +70,7 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
       if (m_print_listing) Iprintn(mcout, ns);
       if (etcs->quan[na][ns] <= 0.0) continue;
       // Sample the number of collisions for this shell.
-      const long qt = pois(etcs->quan[na][ns] * step);
+      const long qt = pois(etcs->quan[na][ns] * stp);
       if (m_print_listing) Iprintn(mcout, qt);
       if (qt <= 0) continue;
       for (long nt = 0; nt < qt; ++nt) {

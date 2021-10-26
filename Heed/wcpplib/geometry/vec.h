@@ -116,9 +116,9 @@ class absref_transmit {
         qaref_pointer(fqaref_pointer),
         aref_pointer(faref_pointer) {}
   /// Copy constructor.
-  absref_transmit(const absref_transmit& f) = default; 
+  absref_transmit(const absref_transmit&) = default; 
   /// Assignment operator.
-  absref_transmit& operator=(const absref_transmit& f) = default;
+  absref_transmit& operator=(const absref_transmit&) = default;
   /// Destructor.
   virtual ~absref_transmit() {}
 

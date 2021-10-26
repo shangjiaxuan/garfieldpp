@@ -77,7 +77,7 @@ class particle_def {
     particle_def::get_logbook().push_back(this);
   }
   /// Assignment operator.
-  particle_def& operator=(const particle_def& f) = default;
+  particle_def& operator=(const particle_def&) = default;
 
   /// Destructor.
   ~particle_def() { particle_def::get_logbook().remove(this); }

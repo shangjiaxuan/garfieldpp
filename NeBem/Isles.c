@@ -2218,18 +2218,13 @@ ISLESGLOBAL int ExactRingPF(double a, Point3D localPt, double *potential,
   // K implies first kind, according to GSL (and Wikipedia) convention
   gsl_mode_t mode = GSL_PREC_DOUBLE;
   double K1, K2;
-  double err1 = 0.0;
-  double err2 = 0.0;
-
   // Following are the routines with debugging information
   if (dbgFn) {
     gsl_sf_result rK1, rK2;
-    int status = gsl_sf_ellint_Kcomp_e(u, mode, &rK1);
-    status = gsl_sf_ellint_Ecomp_e(u, mode, &rK2);
+    gsl_sf_ellint_Kcomp_e(u, mode, &rK1);
+    gsl_sf_ellint_Ecomp_e(u, mode, &rK2);
     K1 = rK1.val;
     K2 = rK2.val;
-    err1 = rK1.err;
-    err2 = rK2.err;
   } else {  // If debugging information is not necessary
     K1 = gsl_sf_ellint_Kcomp(u, mode);
     K2 = gsl_sf_ellint_Ecomp(u, mode);

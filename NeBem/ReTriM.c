@@ -2668,9 +2668,8 @@ int InitChargingUp(void) {
                 EleIntsctd = -1;   // intersected primitive & element
             int nearestprim = -1;  // absurd value
             double dist = 1.0e6, mindist = 1.0e6;  // absurdly high numbers
-            for (int prim = 1; prim <= NbPrimitives;
-                 ++prim)  // check all primitives
-            {
+            // check all primitives
+            for (int prim = 1; prim <= NbPrimitives; ++prim) { 
               if (InterfaceType[prim] != 4)
                 continue;  // primitive not a dielectric
 
@@ -2763,9 +2762,8 @@ int InitChargingUp(void) {
                   fflush(stdout);
                 }
 
-                if (fabs(denom) <
-                    tol * norm1 * norm2)  // line parallel to the plane
-                {
+                if (fabs(denom) < tol * norm1 * norm2) { 
+                  // line parallel to the plane
                   if (fabs(a * xlbend + b * ylbend + c * zlbend + d) <=
                       1.0e-16) {  // CHECK: was == 0.0 in original code
                     intersect = 1;
@@ -3762,7 +3760,7 @@ int InitChargingUp(void) {
               {
                 int nvert;
                 Point3D polynode[4];
-                int nearestele;
+                int nearestele = 1;
                 double distele = 1.0e6,
                        mindistele = 1.0e6;  // absurdly high value
 
