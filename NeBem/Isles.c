@@ -2221,8 +2221,8 @@ ISLESGLOBAL int ExactRingPF(double a, Point3D localPt, double *potential,
   // Following are the routines with debugging information
   if (dbgFn) {
     gsl_sf_result rK1, rK2;
-    int status = gsl_sf_ellint_Kcomp_e(u, mode, &rK1);
-    status = gsl_sf_ellint_Ecomp_e(u, mode, &rK2);
+    gsl_sf_ellint_Kcomp_e(u, mode, &rK1);
+    gsl_sf_ellint_Ecomp_e(u, mode, &rK2);
     K1 = rK1.val;
     K2 = rK2.val;
   } else {  // If debugging information is not necessary
