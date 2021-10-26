@@ -3011,7 +3011,7 @@ int InitChargingUp(void) {
               {
                 int nvert;
                 Point3D polynode[4];
-                int nearestele;
+                int nearestele = ElementBgn[nearestprim];
                 double distele = 1.0e6,
                        mindistele = 1.0e6;  // absurdly high value
 
@@ -3760,7 +3760,7 @@ int InitChargingUp(void) {
               {
                 int nvert;
                 Point3D polynode[4];
-                int nearestele = 1;
+                int nearestele = ElementBgn[nearestprim];
                 double distele = 1.0e6,
                        mindistele = 1.0e6;  // absurdly high value
 
