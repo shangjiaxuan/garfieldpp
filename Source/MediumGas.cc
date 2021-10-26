@@ -27,7 +27,9 @@ std::string FmtFloat(const double x, const unsigned int width = 15,
 
 std::string FmtInt(const int n, const unsigned int width) {
   char buffer[256];
-  std::snprintf(buffer, width + 1, "%*d", width, n);
+  if (std::snprintf(buffer, width + 1, "%*d", width, n) < 0.) {
+    std::cout << "    Warning: error formatting integer number " << n << "\n";
+  }
   return std::string(buffer);
 }
 

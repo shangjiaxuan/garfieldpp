@@ -129,6 +129,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
     newNode.x = xnode * funit;
     newNode.y = ynode * funit;
     newNode.z = znode * funit;
+    newNode.v = 0.;
     m_nodes.push_back(std::move(newNode));
   }
 
