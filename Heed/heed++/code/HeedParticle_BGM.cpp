@@ -39,7 +39,7 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
   m_edep = 0.;
   // Get the step.
   if (m_currpos.prange <= 0.0) return;
-  const double step = m_currpos.prange / cm;
+  const double stp = m_currpos.prange / cm;
   const vec dir = unit_vec(m_currpos.pt - m_prevpos.pt);
   // This approximation ignores curvature
   const double range = (m_currpos.pt - m_prevpos.pt).length();
@@ -100,7 +100,7 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
       const double y2 = etcs->etcs_bgm[n2].quan[na][ns];
       const double mean_pois = f1 * y1 + f2 * y2;
       if (mean_pois <= 0.) continue;
-      const long qt = pois(mean_pois * step);
+      const long qt = pois(mean_pois * stp);
       if (m_print_listing) Iprintn(mcout, qt);
       if (qt <= 0) continue;
       for (long nt = 0; nt < qt; nt++) {
