@@ -2599,11 +2599,8 @@ bool MediumGas::EnablePenningTransfer(const double r, const double lambda,
   unsigned int nLevelsFound = 0;
   for (auto& exc : m_excLevels) {
     if (exc.energy < minIonPot) continue;
-    // Try to extract the gas name from the label. 
-    // TODO: test if this works for all gases and excitation levels.
-    const auto pos = exc.label.find('-');
-    if (pos == std::string::npos) continue;
-    if (GetGasName(exc.label.substr(0, pos)) != gasname) continue;
+    // Skip excitation levels of other components in the mixture.
+    if (exc.label.find(gasname) != 0) continue;
     exc.prob = r;
     exc.rms = lambda;
     ++nLevelsFound; 
