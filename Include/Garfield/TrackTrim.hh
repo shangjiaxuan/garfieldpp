@@ -33,6 +33,8 @@ class TrackTrim : public Track {
   /// Get the Fano factor.
   double GetFanoFactor() const { return m_fano; }
 
+  void SetParticle(const std::string& part) override;
+
   bool NewTrack(const double x0, const double y0, const double z0,
                 const double t0, const double dx0, const double dy0,
                 const double dz0) override;
