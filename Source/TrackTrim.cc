@@ -25,7 +25,14 @@ std::vector<std::string> tokenize(const std::string& line) {
 
 namespace Garfield {
 
-TrackTrim::TrackTrim() : Track() { m_className = "TrackTrim"; }
+TrackTrim::TrackTrim() : Track() { 
+  m_className = "TrackTrim";
+  m_q = 1.;
+}
+
+void TrackTrim::SetParticle(const std::string& /*particle*/) {
+  std::cerr << m_className << "::SetParticle: Not applicable.\n";
+}
 
 bool TrackTrim::ReadFile(const std::string& filename, 
                          const unsigned int nIons, const unsigned int nSkip) {
@@ -33,6 +40,7 @@ bool TrackTrim::ReadFile(const std::string& filename,
   // TRMREE - Reads the TRIM EXYZ file.
 
   // Reset.
+  m_ekin = 0.;
   m_ions.clear();
   m_ion = 0;
   m_clusters.clear();
@@ -50,6 +58,7 @@ bool TrackTrim::ReadFile(const std::string& filename,
   unsigned int nRead = 0;
   unsigned int ionNumber = 0;
   bool header = true;
+  double mass = 0.;
   std::vector<float> x;
   std::vector<float> y;
   std::vector<float> z;
@@ -67,6 +76,7 @@ bool TrackTrim::ReadFile(const std::string& filename,
         auto words = tokenize(line);
         if (words.size() >= 3) {
           m_particleName = words[0];
+          mass = std::stod(words[1]);
           auto pos = words[2].find("keV");
           if (pos != std::string::npos) {
             m_ekin = 1.e3 * std::stod(words[2].substr(0, pos));
@@ -111,6 +121,12 @@ bool TrackTrim::ReadFile(const std::string& filename,
   AddIon(x, y, z, dedx, ekin);
   std::cout << m_className << "::ReadFile: Read energy vs position for " 
             << m_ions.size() << " ions.\n";
+  if (m_ekin > 0. && mass > 0.) {
+    std::cout << "    Initial kinetic energy set to " 
+              << m_ekin * 1.e-3 << " keV.\n";
+    m_mass = AtomicMassUnitElectronVolt * mass;
+    SetKineticEnergy(m_ekin);
+  }
   return true;
 }
 
@@ -140,7 +156,7 @@ void TrackTrim::AddIon(const std::vector<float>& x,
     }
     path.push_back({x[i], y[i], z[i], eloss, ekin[i]});
   }
-  m_ions.push_back(path);
+  m_ions.push_back(std::move(path));
 }
 
 void TrackTrim::Print() {
@@ -225,12 +241,23 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
   // Pool of unused energy
   double epool = 0.0;
 
+  const double ekin0 = GetKineticEnergy();
   const auto& path = m_ions[m_ion];
   const size_t nPoints = path.size();
+  double xo = path[0][0];
+  double yo = path[0][1];
+  double zo = path[0][2];
   for (size_t i = 1; i < nPoints; ++i) {
-    const double x = path[i][0];
-    const double y = path[i][1];
-    const double z = path[i][2];
+    // Skip points with kinetic energy below the initial one set by the user.
+    if (path[i][4] > ekin0) {
+      xo = path[i][0];
+      yo = path[i][1];
+      zo = path[i][2];
+      continue;
+    }
+    const double x = path[i][0] - xo;
+    const double y = path[i][1] - yo;
+    const double z = path[i][2] - zo;
     Cluster cluster;
     cluster.x = x0 + cphi * ctheta * x - sphi * y - cphi * stheta * z;
     cluster.y = y0 + sphi * ctheta * x + cphi * y - sphi * stheta * z;
