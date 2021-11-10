@@ -3767,11 +3767,7 @@ void MediumMagboltz::GetExcitationIonisationLevels() {
           (descr[0] == 'E' && descr[1] == 'X')) {
         // Excitation
         ExcLevel exc;
-        if (descr[0] == ' ') {
-          exc.label = m_gas[i] + descr;
-        } else {
-          exc.label = m_gas[i] + " " + descr;
-        }
+        exc.label = m_gas[i] + descr;
         exc.energy = eIn[j] / r;
         exc.prob = 0.;
         exc.rms = 0.;
