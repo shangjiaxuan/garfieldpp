@@ -520,8 +520,8 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
   // Get the "edges" (lines connecting two vertices).
   size_t nEdges = 0;
   // Temporary arrays for storing edge points.
-  std::vector<unsigned > edgeP1;
-  std::vector<unsigned > edgeP2;
+  std::vector<unsigned int> edgeP1;
+  std::vector<unsigned int> edgeP2;
   while (std::getline(gridfile, line)) {
     ++iLine;
     ltrim(line);
@@ -961,8 +961,9 @@ bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
     data.str(line);
     data >> dataset;
     data.clear();
-    if (m_debug) {
-      std::cout << "    Found dataset " << dataset << ".\n";
+    if (m_debug && dataset != "[") {
+      std::cout << m_className << "::LoadData: Found dataset " 
+                << dataset << ".\n";
     }
     if (dataset == "ElectrostaticPotential") {
       m_epot.assign(nVertices, 0.);
@@ -1130,7 +1131,11 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
               << "    Unknown region " << name << ".\n";
     return false;
   }
-
+  if (m_debug) {
+    std::cout << m_className << "::ReadDataset:\n"
+              << "    Reading dataset " << dataset << " for region " 
+              << name << ".\n";
+  }
   // Get the number of values.
   std::getline(datafile, line);
   if (!ExtractFromBrackets(line)) {
@@ -1143,16 +1148,25 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
   data.str(line);
   data >> nValues;
   if (isVector) nValues /= N;
+  if (m_debug) std::cout << "    Expecting " << nValues << " values.\n";
   // Mark the vertices belonging to this region.
   const size_t nVertices = m_vertices.size();
   std::vector<bool> isInRegion(nVertices, false);
-  const size_t nElements = m_elements.size();
-  for (size_t j = 0; j < nElements; ++j) {
-    if (m_elements[j].region != index) continue;
-    const unsigned int nV = ElementVertices(m_elements[j]);
+  size_t nVerticesInRegion = 0;
+  size_t nElementsInRegion = 0;
+  for (const auto& element : m_elements) {
+    if (element.region != index) continue;
+    ++nElementsInRegion;
+    const unsigned int nV = ElementVertices(element);
     for (unsigned int k = 0; k < nV; ++k) {
-      isInRegion[m_elements[j].vertex[k]] = true;
+      if (isInRegion[element.vertex[k]]) continue;
+      isInRegion[element.vertex[k]] = true;
+      ++nVerticesInRegion;
     }
+  }
+  if (m_debug) {
+    std::cout << "    Region has " << nElementsInRegion << " elements and "
+              << nVerticesInRegion << " vertices.\n";
   }
   unsigned int ivertex = 0;
   for (int j = 0; j < nValues; ++j) {
