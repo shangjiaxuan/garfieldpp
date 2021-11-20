@@ -152,16 +152,16 @@ class ComponentFieldMap : public Component {
 
   // Bounding box
   bool m_hasBoundingBox = false;
-  std::array<double, 3> m_minBoundingBox;
-  std::array<double, 3> m_maxBoundingBox;
+  std::array<double, 3> m_minBoundingBox = {{0., 0., 0.}};
+  std::array<double, 3> m_maxBoundingBox = {{0., 0., 0.}};
 
   // Ranges and periodicities
-  std::array<double, 3> m_mapmin;
-  std::array<double, 3> m_mapmax;
-  std::array<double, 3> m_mapamin;
-  std::array<double, 3> m_mapamax;
-  std::array<double, 3> m_mapna;
-  std::array<double, 3> m_cells;
+  std::array<double, 3> m_mapmin = {{0., 0., 0.}};
+  std::array<double, 3> m_mapmax = {{0., 0., 0.}};
+  std::array<double, 3> m_mapamin = {{0., 0., 0.}};
+  std::array<double, 3> m_mapamax = {{0., 0., 0.}};
+  std::array<double, 3> m_mapna = {{0., 0., 0.}};
+  std::array<double, 3> m_cells = {{0., 0., 0.}};
 
   double m_mapvmin = 0.;
   double m_mapvmax = 0.;

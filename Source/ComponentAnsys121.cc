@@ -108,10 +108,9 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
       } else if (strncmp(token, "RSVX", 4) == 0) {
         itype = 2;
       } else {
-        std::cerr << m_className << "::Initialise:\n";
-        std::cerr << "    Found unknown material property flag " << token
-                  << "\n";
-        std::cerr << "    on material properties file " << mplist << " (line "
+        std::cerr << m_className << "::Initialise:\n"
+                  << "    Unknown material property flag " << token << "\n"
+                  << "    in material properties file " << mplist << " (line "
                   << il << ").\n";
         ok = false;
       }
@@ -148,10 +147,9 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
       } else if (strcmp(token, "RSVX") == 0) {
         itype = 2;
       } else {
-        std::cerr << m_className << "::Initialise:\n";
-        std::cerr << "    Found unknown material property flag " << token
-                  << "\n";
-        std::cerr << "    on material properties file " << mplist << " (line "
+        std::cerr << m_className << "::Initialise:\n"
+                  << "    Unknown material property flag " << token << "\n"
+                  << "    in material properties file " << mplist << " (line "
                   << il << ").\n";
         ok = false;
       }
@@ -359,6 +357,13 @@ bool ComponentAnsys121::Initialise(std::string elist, std::string nlist,
   }
   // Close the file
   felist.close();
+
+  if (m_elements.empty()) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Found no valid elements in file " << elist << ".\n";
+    return false;
+  } 
+
   // Tell how many lines read
   std::cout << m_className << "::Initialise:\n"
             << "    Read " << m_elements.size() << " elements from file "
