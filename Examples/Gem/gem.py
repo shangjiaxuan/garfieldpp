@@ -47,8 +47,7 @@ gas.LoadIonMobility(path + '/share/Garfield/Data/IonMobility_Ar+_Ar.txt')
  
 nMaterials = fm.GetNumberOfMaterials()
 for i in range(nMaterials):
-  eps = fm.GetPermittivity(i)
-  if eps == 1.: fm.SetMedium(i, gas)
+  if fm.GetPermittivity(i) == 1.: fm.SetMedium(i, gas)
 fm.PrintMaterials()
 
 # Assemble the sensor.

@@ -47,7 +47,7 @@ void ComponentFieldMap::PrintMaterials() {
   }
 }
 
-void ComponentFieldMap::DriftMedium(const unsigned int imat) {
+void ComponentFieldMap::DriftMedium(const size_t imat) {
   // Do not proceed if not properly initialised.
   if (!m_ready) PrintNotReady("DriftMedium");
 
@@ -61,7 +61,7 @@ void ComponentFieldMap::DriftMedium(const unsigned int imat) {
   m_materials[imat].driftmedium = true;
 }
 
-void ComponentFieldMap::NotDriftMedium(const unsigned int imat) {
+void ComponentFieldMap::NotDriftMedium(const size_t imat) {
   // Do not proceed if not properly initialised.
   if (!m_ready) PrintNotReady("NotDriftMedium");
 
@@ -75,25 +75,23 @@ void ComponentFieldMap::NotDriftMedium(const unsigned int imat) {
   m_materials[imat].driftmedium = false;
 }
 
-double ComponentFieldMap::GetPermittivity(const unsigned int imat) const {
+double ComponentFieldMap::GetPermittivity(const size_t imat) const {
   if (imat >= m_materials.size()) {
     std::cerr << m_className << "::GetPermittivity: Index out of range.\n";
     return -1.;
   }
-
   return m_materials[imat].eps;
 }
 
-double ComponentFieldMap::GetConductivity(const unsigned int imat) const {
+double ComponentFieldMap::GetConductivity(const size_t imat) const {
   if (imat >= m_materials.size()) {
     std::cerr << m_className << "::GetConductivity: Index out of range.\n";
     return -1.;
   }
-
   return m_materials[imat].ohm;
 }
 
-void ComponentFieldMap::SetMedium(const unsigned int imat, Medium* m) {
+void ComponentFieldMap::SetMedium(const size_t imat, Medium* m) {
   if (imat >= m_materials.size()) {
     std::cerr << m_className << "::SetMedium: Index out of range.\n";
     return;
@@ -112,12 +110,11 @@ void ComponentFieldMap::SetMedium(const unsigned int imat, Medium* m) {
   m_materials[imat].medium = m;
 }
 
-Medium* ComponentFieldMap::GetMedium(const unsigned int imat) const {
+Medium* ComponentFieldMap::GetMedium(const size_t imat) const {
   if (imat >= m_materials.size()) {
     std::cerr << m_className << "::GetMedium: Index out of range.\n";
     return nullptr;
   }
-
   return m_materials[imat].medium;
 }
 

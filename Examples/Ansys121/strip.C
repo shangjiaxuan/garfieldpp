@@ -27,7 +27,6 @@ int main(int argc, char * argv[]) {
   fieldView.SetArea(-0.01, 0., 0.01, 0.02);
   fieldView.PlotContour();
 
-
   ViewFEMesh meshView;
   constexpr bool plotMesh = true;
   if (plotMesh) {

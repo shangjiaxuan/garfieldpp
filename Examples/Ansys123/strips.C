@@ -1,0 +1,42 @@
+#include <iostream>
+
+#include <TApplication.h>
+
+#include "Garfield/MediumMagboltz.hh"
+#include "Garfield/ComponentAnsys123.hh"
+#include "Garfield/ViewField.hh"
+
+using namespace Garfield;
+
+int main(int argc, char * argv[]) {
+
+  TApplication app("app", &argc, argv);
+
+  MediumMagboltz gas;
+  gas.SetComposition("ar");
+
+  // Load the main field map.
+  ComponentAnsys123 fm;
+  const std::string path = "fieldmaps/strips/";
+  fm.Initialise(path + "ELIST.lis", path + "NLIST.lis", path + "MPLIST.lis",
+                path + "field.lis", "mm");
+
+  // Associate the gas with the corresponding field map material. 
+  const size_t nMaterials = fm.GetNumberOfMaterials();
+  for (size_t i = 0; i < nMaterials; ++i) {
+    if (fm.GetPermittivity(i) == 1.) fm.SetMedium(i, &gas);
+  }
+  fm.PrintMaterials();
+
+  // Load the weighting field maps.
+  fm.SetWeightingField(path + "weight1.lis", "strip1");
+  fm.SetWeightingField(path + "weight2.lis", "strip2");
+  fm.SetWeightingField(path + "weight3.lis", "strip3");
+ 
+  ViewField fieldView;
+  fieldView.SetComponent(&fm);
+  fieldView.SetPlaneXZ();
+  fieldView.PlotContourWeightingField("strip1", "v");
+
+  app.Run();
+}
