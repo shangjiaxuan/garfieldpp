@@ -214,6 +214,6 @@ int main(int argc, char * argv[]) {
 
   if (plotVelocity || plotSignal || plotDrift || 
       plotField || plotWeightingField) {
-    app.Run(kTRUE);
+    app.Run();
   }
 }
