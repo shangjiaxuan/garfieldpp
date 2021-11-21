@@ -47,19 +47,19 @@ class ComponentFieldMap : public Component {
   /// List all currently defined materials
   void PrintMaterials();
   /// Flag a field map material as a drift medium.
-  void DriftMedium(const unsigned int imat);
+  void DriftMedium(const size_t imat);
   /// Flag a field map materials as a non-drift medium.
-  void NotDriftMedium(const unsigned int imat);
+  void NotDriftMedium(const size_t imat);
   /// Return the number of materials in the field map.
   size_t GetNumberOfMaterials() const { return m_materials.size(); }
   /// Return the permittivity of a field map material.
-  double GetPermittivity(const unsigned int imat) const;
+  double GetPermittivity(const size_t imat) const;
   /// Return the conductivity of a field map material.
-  double GetConductivity(const unsigned int imat) const;
+  double GetConductivity(const size_t imat) const;
   /// Associate a field map material with a Medium class.
-  void SetMedium(const unsigned int imat, Medium* medium);
+  void SetMedium(const size_t imat, Medium* medium);
   /// Return the Medium associated to a field map material.
-  Medium* GetMedium(const unsigned int i) const;
+  Medium* GetMedium(const size_t imat) const;
   using Component::GetMedium;
 
   /// Return the number of mesh elements.

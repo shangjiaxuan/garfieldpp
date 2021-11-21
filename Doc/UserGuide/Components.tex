@@ -305,7 +305,7 @@ the materials in the map need to be associated with \texttt{Medium} classes.
 // Get the number of materials in the map.
 size_t GetNumberOfMaterials();
 // Associate a material with a Medium class.
-void SetMedium(const unsigned int imat, Medium* medium);
+void SetMedium(const size_t imat, Medium* medium);
 \end{lstlisting}
 \begin{description}
 \item[imat]
@@ -319,8 +319,8 @@ relative dielectric constant \(\varepsilon\) and the
 conductivity \(\sigma\). 
 These parameters are accessible through the functions
 \begin{lstlisting}
-double GetPermittivity(const unsigned int imat);
-double GetConductivity(const unsigned int imat);
+double GetPermittivity(const size_t imat);
+double GetConductivity(const size_t imat);
 \end{lstlisting}
 
 By default, mesh elements in conductors, \ie materials 
@@ -385,7 +385,7 @@ Analogous functions are available for \(y\) and \(z\).
 In order to assess the quality of the mesh, 
 one can retrieve the dimensions of each mesh element using
 \begin{lstlisting}
-bool GetElement(const unsigned int i, double& vol, double& dmin, double& dmax);
+bool GetElement(const size_t i, double& vol, double& dmin, double& dmax);
 \end{lstlisting}
 \begin{description}
 \item[i] index of the element
@@ -400,10 +400,10 @@ ComponentAnsys123* fm = new ComponentAnsys123();
 ...
 TH1F* hAspectRatio = new TH1F("hAspectRatio"; "Aspect Ratio", 100, 0., 50.);
 TH1F* hSize = new TH1F("hSize", "Element Size", 100, 0., 30.);
-const unsigned int nel = fm->GetNumberOfElements();
+const size_t nel = fm->GetNumberOfElements();
 // Loop over the elements.
 double volume, dmin, dmax;
-for (unsigned int i = 0; i < nel; ++i) {
+for (size_t i = 0; i < nel; ++i) {
   fm->GetElement(i, volume, dmin, dmax);
   if (dmin > 0.) hAspectRatio->Fill(dmax / dmin);
   hSize->Fill(volume);

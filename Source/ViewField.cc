@@ -715,8 +715,8 @@ void ViewField::PlotFieldLines(const std::vector<double>& x0,
     sensor.AddComponent(m_component);
     drift.SetSensor(&sensor);
   }
-  const double lx = 0.1 * fabs(m_xMaxPlot - m_xMinPlot);
-  const double ly = 0.1 * fabs(m_yMaxPlot - m_yMinPlot);
+  const double lx = 0.01 * fabs(m_xMaxPlot - m_xMinPlot);
+  const double ly = 0.01 * fabs(m_yMaxPlot - m_yMinPlot);
   drift.SetMaximumStepSize(std::min(lx, ly));
   for (size_t i = 0; i < nLines; ++i) {
     std::vector<std::array<float, 3> > xl;
