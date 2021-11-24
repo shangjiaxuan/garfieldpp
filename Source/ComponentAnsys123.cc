@@ -458,9 +458,10 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
     // Skip blank lines and headers
     if (!token || strcmp(token, " ") == 0 || strcmp(token, "\n") == 0 ||
         int(token[0]) == 10 || int(token[0]) == 13 ||
-        strcmp(token, "LIST") == 0 || strcmp(token, "NODE") == 0)
+        strcmp(token, "LIST") == 0 || strcmp(token, "NODE") == 0 ||
+        strcmp(token, "SORT") == 0)
       continue;
-    // Read the element
+    // Read the node.
     int inode = ReadInteger(token, -1, readerror);
     token = strtok(NULL, " ");
     double xnode = ReadDouble(token, -1, readerror);
