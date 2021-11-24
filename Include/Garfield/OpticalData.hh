@@ -11,36 +11,39 @@ namespace Garfield {
 class OpticalData {
  public:
   /// Constructor
-  OpticalData();
+  OpticalData() = default;
   /// Destructor
-  ~OpticalData() {}
+  ~OpticalData() = default;
 
   /// Check whether optical data have been implemented for a given gas.
-  bool IsAvailable(const std::string& material) const;
+  static bool IsAvailable(const std::string& material);
   /// Photo-absorption cross-section and ionisation yield at a given energy.
-  bool GetPhotoabsorptionCrossSection(const std::string& material,
-                                      const double e, double& cs, double& eta);
-
-  void EnableDebugging(const bool on = true) { m_debug = on; }
+  static bool PhotoabsorptionCrossSection(const std::string& material,
+                                          const double energy, double& cs, 
+                                          double& eta);
+  /// Photo-absorption cross-section at a given energy.
+  static double PhotoabsorptionCrossSection(const std::string& material,
+                                            const double energy);
+  /// Photo-ionisation yield at a given energy.
+  static double PhotoionisationYield(const std::string& material,
+                                     const double energy);
 
  private:
   static constexpr double OscToPacs = 8.067283e-18;
   static constexpr double Mbarn = 1.e-18;
 
-  bool m_debug = false;
+  static bool PhotoAbsorptionCsNeon(const double e, double& cs, double& eta);
+  static bool PhotoAbsorptionCsArgon(const double e, double& cs, double& eta);
 
-  bool PhotoAbsorptionCsNeon(const double e, double& cs, double& eta);
-  bool PhotoAbsorptionCsArgon(const double e, double& cs, double& eta);
+  static bool PhotoAbsorptionCsCO2(const double e, double& cs, double& eta);
 
-  bool PhotoAbsorptionCsCO2(const double e, double& cs, double& eta);
+  static bool PhotoAbsorptionCsMethane(const double e, double& cs, double& eta);
+  static bool PhotoAbsorptionCsEthane(const double e, double& cs, double& eta);
+  static bool PhotoAbsorptionCsButane(const double e, double& cs, double& eta);
+  static bool PhotoAbsorptionCsAcetylene(const double e, double& cs, double& eta);
+  static bool PhotoAbsorptionCsCF4(const double e, double& cs, double& eta);
 
-  bool PhotoAbsorptionCsMethane(const double e, double& cs, double& eta);
-  bool PhotoAbsorptionCsEthane(const double e, double& cs, double& eta);
-  bool PhotoAbsorptionCsButane(const double e, double& cs, double& eta);
-  bool PhotoAbsorptionCsAcetylene(const double e, double& cs, double& eta);
-  bool PhotoAbsorptionCsCF4(const double e, double& cs, double& eta);
-
-  bool PhotoAbsorptionCsNitrogen(const double e, double& cs, double& eta);
+  static bool PhotoAbsorptionCsNitrogen(const double e, double& cs, double& eta);
 };
 }
 

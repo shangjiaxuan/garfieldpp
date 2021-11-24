@@ -35,18 +35,16 @@ float Interpolate(const std::array<float, SIZE>& xs,
 
 namespace Garfield {
 
-OpticalData::OpticalData() {}
-
-bool OpticalData::IsAvailable(const std::string& material) const {
+bool OpticalData::IsAvailable(const std::string& material) {
   std::array<std::string, 9> materials = {
       {"Ne", "Ar", "CO2", "CH4", "C2H6", "nC4H10", "C2H2", "CF4", "N2"}};
   auto result = std::find(materials.begin(), materials.end(), material);
   return result != materials.end();
 }
 
-bool OpticalData::GetPhotoabsorptionCrossSection(const std::string& material,
-                                                 const double e, double& cs,
-                                                 double& eta) {
+bool OpticalData::PhotoabsorptionCrossSection(const std::string& material,
+                                              const double e, double& cs,
+                                              double& eta) {
   cs = eta = 0.;
   if (material == "Ne") return PhotoAbsorptionCsNeon(e, cs, eta);
   if (material == "Ar") return PhotoAbsorptionCsArgon(e, cs, eta);
@@ -58,6 +56,20 @@ bool OpticalData::GetPhotoabsorptionCrossSection(const std::string& material,
   if (material == "CF4") return PhotoAbsorptionCsCF4(e, cs, eta);
   if (material == "N2") return PhotoAbsorptionCsNitrogen(e, cs, eta);
   return false;
+}
+
+double OpticalData::PhotoabsorptionCrossSection(const std::string& material,
+                                                const double e) {
+  double cs = 0., eta = 0.;
+  if (!PhotoabsorptionCrossSection(material, e, cs, eta)) return 0.;
+  return cs;
+}
+
+double OpticalData::PhotoionisationYield(const std::string& material,
+                                         const double e) {
+  double cs = 0., eta = 0.;
+  if (!PhotoabsorptionCrossSection(material, e, cs, eta)) return 0.;
+  return eta;
 }
 
 bool OpticalData::PhotoAbsorptionCsNeon(const double e, double& cs,

@@ -7,21 +7,8 @@
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Random.hh"
 #include "Garfield/Sensor.hh"
+#include "Garfield/Utilities.hh"
 #include "Garfield/TrackTrim.hh"
-
-namespace {
-
-std::vector<std::string> tokenize(const std::string& line) {
-
-  std::vector<std::string> words;
-  std::istringstream ss(line);
-	for (std::string word; ss >> word;) {
-		words.push_back(word);
-  }
-	return words;
-}
-
-}
 
 namespace Garfield {
 
