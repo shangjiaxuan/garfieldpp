@@ -357,10 +357,14 @@ class MediumMagboltz : public MediumGas {
   void ComputeDeexcitationTable(const bool verbose);
   void AddPenningDeexcitation(Deexcitation& dxc, const double rate,
                               const double pPenning) {
-    dxc.p.push_back(rate * pPenning);
     dxc.p.push_back(rate * (1. - pPenning));
-    dxc.type.push_back(DxcTypeCollIon);
     dxc.type.push_back(DxcTypeCollNonIon);
+    dxc.final.push_back(-1);
+    if (pPenning > 0.) { 
+      dxc.p.push_back(rate * pPenning);
+      dxc.type.push_back(DxcTypeCollIon);
+      dxc.final.push_back(-1);
+    }
   }
   double RateConstantWK(const double energy, const double osc,
                         const double pacs, const int igas1,

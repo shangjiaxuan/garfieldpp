@@ -3393,9 +3393,8 @@ bool MediumGas::GetPhotoAbsorptionCrossSection(const double e, double& sigma,
     return false;
   }
 
-  OpticalData optData;
-  if (!optData.IsAvailable(m_gas[i])) return false;
+  if (!OpticalData::IsAvailable(m_gas[i])) return false;
   double eta = 0.;
-  return optData.GetPhotoabsorptionCrossSection(m_gas[i], e, sigma, eta);
+  return OpticalData::PhotoabsorptionCrossSection(m_gas[i], e, sigma, eta);
 }
 }
