@@ -8,6 +8,9 @@
 #include <map>
 #include <numeric>
 
+#include <TCanvas.h>
+#include <TGraph.h>
+#include <TH1F.h>
 #include <TMath.h>
 
 #include "Garfield/FundamentalConstants.hh"
@@ -17,6 +20,7 @@
 #include "Garfield/OpticalData.hh"
 #include "Garfield/Random.hh"
 #include "Garfield/Utilities.hh"
+#include "Garfield/ViewBase.hh"
 
 namespace {
 
@@ -1112,7 +1116,7 @@ unsigned int MediumMagboltz::GetNumberOfPhotonCollisions(
   return nElastic + nIonising + nInelastic;
 }
 
-int MediumMagboltz::GetGasNumberMagboltz(const std::string& input) const {
+int MediumMagboltz::GetGasNumberMagboltz(const std::string& input) {
 
   if (input.empty()) return 0;
 
@@ -1265,7 +1269,7 @@ int MediumMagboltz::GetGasNumberMagboltz(const std::string& input) const {
     return 60;
   }
 
-  std::cerr << m_className << "::GetGasNumberMagboltz:\n"
+  std::cerr << "MediumMagboltz::GetGasNumberMagboltz:\n"
             << "    Gas " << input << " is not defined.\n";
   return 0;
 }
@@ -1865,6 +1869,59 @@ bool MediumMagboltz::Mixer(const bool verbose) {
   SetupGreenSawada();
 
   return true;
+}
+
+void MediumMagboltz::PlotElectronCrossSections() {
+
+  if (m_isChanged) {
+    if (!Mixer()) {
+      PrintErrorMixer(m_className + "::PlotElectronCrossSections");
+      return;
+    }
+    m_isChanged = false;
+  }
+  std::array<float, Magboltz::nEnergySteps> en;
+  for (unsigned int k = 0; k < Magboltz::nEnergySteps; ++k) {
+    en[k] = (k + 0.5) * m_eStep;
+  } 
+  std::array<std::array<float, Magboltz::nEnergySteps>, 5> cs;
+  for (unsigned int i = 0; i < m_nComponents; ++i) {
+    for (size_t j = 0; j < 5; ++j) cs[j].fill(0.);
+    const double density = GetNumberDensity() * m_fraction[i];
+    const double scale = sqrt(0.5 * ElectronMass) / (density * SpeedOfLight);
+    for (unsigned int j = 0; j < m_nTerms; ++j) {
+      if (int(m_csType[j] / nCsTypes) != int(i)) continue;
+      int cstype = m_csType[j] % nCsTypes;
+      if (cstype >= ElectronCollisionTypeVirtual) continue;
+      // Group inelastic and superelastic collisions.
+      if (cstype == 5) cstype = 3;
+      for (unsigned int k = 0; k < Magboltz::nEnergySteps; ++k) {
+        double cf = m_cf[k][j];
+        if (j > 0) cf -= m_cf[k][j - 1]; 
+        cs[cstype][k] += cf * 1.e18 * scale;
+      }
+    }
+    const std::string name = ViewBase::FindUnusedCanvasName("cCs");
+    TCanvas* canvas = new TCanvas(name.c_str(), m_gas[i].c_str(), 800, 600);
+    canvas->cd();
+    canvas->SetLogx();
+    canvas->SetLogy();
+    canvas->SetGridx();
+    canvas->SetGridy();
+    canvas->DrawFrame(en[0], 0.01, en.back(), 100., 
+                      ";energy [eV];#sigma [Mbarn]");
+    TGraph gr(Magboltz::nEnergySteps);
+    gr.SetLineWidth(3);
+    const std::array<short, 5> cols = {kBlack, kCyan - 2, kRed + 2, 
+                                       kGreen + 3, kMagenta + 3}; 
+    for (size_t j = 0; j < 5; ++j) {
+      if (*std::max_element(cs[j].begin(), cs[j].end()) < 1.e-10) continue;
+      gr.SetLineColor(cols[j]);
+      gr.DrawGraph(Magboltz::nEnergySteps, en.data(), cs[j].data(), "lsame");
+    }
+    canvas->Update();
+  }
+
 }
 
 void MediumMagboltz::SetupGreenSawada() {

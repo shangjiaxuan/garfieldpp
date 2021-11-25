@@ -171,6 +171,8 @@ class MediumMagboltz : public MediumGas {
   void GenerateGasTable(const int numCollisions = 10,
                         const bool verbose = true);
 
+  void PlotElectronCrossSections();
+
  private:
   static constexpr int nEnergyStepsLog = 1000;
   static constexpr int nEnergyStepsGamma = 5000;
@@ -345,7 +347,7 @@ class MediumMagboltz : public MediumGas {
   // 3: excitation
   std::array<unsigned int, nCsTypesGamma> m_nPhotonCollisions;
 
-  int GetGasNumberMagboltz(const std::string& input) const;
+  static int GetGasNumberMagboltz(const std::string& input);
   bool Mixer(const bool verbose = false);
   void SetupGreenSawada();
   void SetScatteringParameters(const int model, const double parIn, double& cut,
