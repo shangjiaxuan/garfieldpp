@@ -966,61 +966,61 @@ bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
                 << dataset << ".\n";
     }
     if (dataset == "ElectrostaticPotential") {
-      m_epot.assign(nVertices, 0.);
+      if (m_epot.empty()) m_epot.assign(nVertices, 0.);
       if (!ReadDataset(datafile, dataset)) {
         m_epot.clear();
         return false;
       }
     } else if (dataset == "ElectricField") {
-      m_efield.assign(nVertices, zeroVector);
+      if (m_efield.empty()) m_efield.assign(nVertices, zeroVector);
       if (!ReadDataset(datafile, dataset)) {
         m_efield.clear();
         return false;
       }
     } else if (dataset == "eDriftVelocity") {
-      m_eVelocity.assign(nVertices, zeroVector);
+      if (m_eVelocity.empty()) m_eVelocity.assign(nVertices, zeroVector);
       if (!ReadDataset(datafile, dataset)) {
         m_eVelocity.clear();
         return false;
       }
     } else if (dataset == "hDriftVelocity") {
-      m_hVelocity.assign(nVertices, zeroVector);
+      if (m_hVelocity.empty()) m_hVelocity.assign(nVertices, zeroVector);
       if (!ReadDataset(datafile, dataset)) {
         m_hVelocity.clear();
         return false;
       }
     } else if (dataset == "eMobility") {
-      m_eMobility.assign(nVertices, 0.);
+      if (m_eMobility.empty()) m_eMobility.assign(nVertices, 0.);
       if (!ReadDataset(datafile, dataset)) {
         m_eMobility.clear();
         return false;
       }
     } else if (dataset == "hMobility") {
-      m_hMobility.assign(nVertices, 0.);
+      if (m_hMobility.empty()) m_hMobility.assign(nVertices, 0.);
       if (!ReadDataset(datafile, dataset)) {
         m_hMobility.clear();
         return false;
       }
     } else if (dataset == "eAlphaAvalanche") {
-      m_eAlpha.assign(nVertices, 0.);
+      if (m_eAlpha.empty()) m_eAlpha.assign(nVertices, 0.);
       if (!ReadDataset(datafile, dataset)) {
         m_eAlpha.clear();
         return false;
       }
     } else if (dataset == "hAlphaAvalanche") {
-      m_hAlpha.assign(nVertices, 0.);
+      if (m_hAlpha.empty()) m_hAlpha.assign(nVertices, 0.);
       if (!ReadDataset(datafile, dataset)) {
         m_hAlpha.clear();
         return false;
       }
     } else if (dataset == "eLifetime") {
-      m_eLifetime.assign(nVertices, 0.);
+      if (m_eLifetime.empty()) m_eLifetime.assign(nVertices, 0.);
       if (!ReadDataset(datafile, dataset)) {
         m_eLifetime.clear();
         return false;
       }
     } else if (dataset == "hLifetime") {
-      m_hLifetime.assign(nVertices, 0.);
+      if (m_hLifetime.empty()) m_hLifetime.assign(nVertices, 0.);
       if (!ReadDataset(datafile, dataset)) {
         m_hLifetime.clear();
         return false;
