@@ -353,7 +353,6 @@ class MediumMagboltz : public MediumGas {
   void SetupGreenSawada();
   void SetScatteringParameters(const int model, const double parIn, double& cut,
                                double& parOut) const;
-  void ComputeAngularCut(const double parIn, double& cut, double& parOut) const;
 
   void GetExcitationIonisationLevels();
 
