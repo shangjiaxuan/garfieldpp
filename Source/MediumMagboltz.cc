@@ -41,6 +41,32 @@ std::string GetDescription(const unsigned int i1, const unsigned int i2,
   return std::string(scrpt[i1][i2],
                      scrpt[i1][i2] + Garfield::Magboltz::nCharDescr);
 }
+
+void SetScatteringParameters(const int model, const double parIn, double& cut,
+                             double& parOut) {
+  cut = 1.;
+  parOut = 0.5;
+  if (model <= 0) return;
+
+  if (model >= 2) {
+    parOut = parIn;
+    return;
+  }
+
+  // Set cuts on angular distribution and
+  // renormalise forward scattering probability.
+  if (parIn <= 1.) {
+    parOut = parIn;
+    return;
+  }
+
+  const double cns = parIn - 0.5;
+  const double thetac = asin(2. * sqrt(cns - cns * cns));
+  const double fac = (1. - cos(thetac)) / pow(sin(thetac), 2.);
+  parOut = cns * fac + 0.5;
+  cut = thetac * 2. / Garfield::Pi;
+}
+
 }
 
 namespace Garfield {
@@ -206,7 +232,7 @@ bool MediumMagboltz::EnablePenningTransfer(const double r,
   m_rPenning.fill(0.);
   m_lambdaPenning.fill(0.);
 
-  // Make sure that the collision rate table is updated.
+  // Make sure that the collision rate table is up to date.
   if (!Update()) return false;
   unsigned int nLevelsFound = 0;
   for (unsigned int i = 0; i < m_nTerms; ++i) {
@@ -260,7 +286,7 @@ bool MediumMagboltz::EnablePenningTransfer(const double r, const double lambda,
     }
   }
 
-  // Make sure that the collision rate table is updated.
+  // Make sure that the collision rate table is up to date.
   if (!Update()) return false;
   unsigned int nLevelsFound = 0;
   for (unsigned int i = 0; i < m_nTerms; ++i) {
@@ -372,7 +398,7 @@ void MediumMagboltz::SetExcitationScaling(const double r, std::string gasname) {
     return;
   }
 
-  // Make sure that the collision rate table is updated.
+  // Force re-calculation of the collision rate table.
   m_isChanged = true;
 }
 
@@ -1912,33 +1938,6 @@ void MediumMagboltz::SetupGreenSawada() {
       }
     }
   }
-}
-
-void MediumMagboltz::SetScatteringParameters(const int model,
-                                             const double parIn, double& cut,
-                                             double& parOut) const {
-  cut = 1.;
-  parOut = 0.5;
-  if (model <= 0) return;
-
-  if (model >= 2) {
-    parOut = parIn;
-    return;
-  }
-
-  // Set cuts on angular distribution and
-  // renormalise forward scattering probability.
-
-  if (parIn <= 1.) {
-    parOut = parIn;
-    return;
-  }
-
-  const double cns = parIn - 0.5;
-  const double thetac = asin(2. * sqrt(cns - cns * cns));
-  const double fac = (1. - cos(thetac)) / pow(sin(thetac), 2.);
-  parOut = cns * fac + 0.5;
-  cut = thetac * 2. / Pi;
 }
 
 void MediumMagboltz::ComputeDeexcitationTable(const bool verbose) {

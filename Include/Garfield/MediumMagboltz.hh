@@ -351,8 +351,6 @@ class MediumMagboltz : public MediumGas {
   bool Update(const bool verbose = false);
   bool Mixer(const bool verbose = false);
   void SetupGreenSawada();
-  void SetScatteringParameters(const int model, const double parIn, double& cut,
-                               double& parOut) const;
 
   void GetExcitationIonisationLevels();
 
