@@ -97,10 +97,6 @@ void ViewMedium::SetRangeY(const double ymin, const double ymax,
   m_logY = logscale;
 }
 
-void ViewMedium::PlotElectronCrossSections() {
-  std::cerr << m_className << "::PlotElectronCrossSections: Not implemented.\n";
-}
-
 void ViewMedium::Draw() {
 
   if (m_yPlot.empty()) return;

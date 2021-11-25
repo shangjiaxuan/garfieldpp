@@ -98,7 +98,6 @@ class ViewMedium : public ViewBase {
   void PlotElectronLorentzAngle(const char xaxis, const bool same = false) {
     PlotLorentzAngle(GetAxis(xaxis), Charge::Electron, same);
   }
-  void PlotElectronCrossSections();
 
   /// Set the (ROOT) colours to be used in the plots.
   void SetColours(const std::vector<short>& cols) { m_colours = cols; }
