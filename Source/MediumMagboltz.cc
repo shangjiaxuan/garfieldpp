@@ -30,10 +30,6 @@ bool IsComment(const std::string& line) {
   return false;
 }
 
-void PrintErrorMixer(const std::string& fcn) {
-  std::cerr << fcn << ": Error calculating the collision rates table.\n";
-}
-
 std::string GetDescription(const unsigned int index,
                            char scrpt[][Garfield::Magboltz::nCharDescr]) {
   return std::string(scrpt[index],
@@ -211,13 +207,7 @@ bool MediumMagboltz::EnablePenningTransfer(const double r,
   m_lambdaPenning.fill(0.);
 
   // Make sure that the collision rate table is updated.
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::EnablePenningTransfer");
-      return false;
-    }
-    m_isChanged = false;
-  }
+  if (!Update()) return false;
   unsigned int nLevelsFound = 0;
   for (unsigned int i = 0; i < m_nTerms; ++i) {
     if (m_csType[i] % nCsTypes == ElectronCollisionTypeExcitation) {
@@ -271,13 +261,7 @@ bool MediumMagboltz::EnablePenningTransfer(const double r, const double lambda,
   }
 
   // Make sure that the collision rate table is updated.
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::EnablePenningTransfer");
-      return false;
-    }
-    m_isChanged = false;
-  }
+  if (!Update()) return false;
   unsigned int nLevelsFound = 0;
   for (unsigned int i = 0; i < m_nTerms; ++i) {
     if (int(m_csType[i] / nCsTypes) != iGas) continue;
@@ -399,12 +383,7 @@ bool MediumMagboltz::Initialise(const bool verbose) {
     }
     return true;
   }
-  if (!Mixer(verbose)) {
-    PrintErrorMixer(m_className + "::Initialise");
-    return false;
-  }
-  m_isChanged = false;
-  return true;
+  return Update(verbose);
 }
 
 void MediumMagboltz::PrintGas() {
@@ -492,13 +471,7 @@ void MediumMagboltz::PrintGas() {
 
 double MediumMagboltz::GetElectronNullCollisionRate(const int band) {
   // If necessary, update the collision rates table.
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::GetElectronNullCollisionRate");
-      return 0.;
-    }
-    m_isChanged = false;
-  }
+  if (!Update()) return 0.;
 
   if (m_debug && band > 0) {
     std::cerr << m_className << "::GetElectronNullCollisionRate: Band > 0.\n";
@@ -522,13 +495,7 @@ double MediumMagboltz::GetElectronCollisionRate(const double e,
   }
 
   // If necessary, update the collision rates table.
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::GetElectronCollisionRate");
-      return 0.;
-    }
-    m_isChanged = false;
-  }
+  if (!Update()) return 0.;
 
   if (m_debug && band > 0) {
     std::cerr << m_className << "::GetElectronCollisionRate: Band > 0.\n";
@@ -610,13 +577,7 @@ bool MediumMagboltz::GetElectronCollision(
   }
 
   // If necessary, update the collision rates table.
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::GetElectronCollision");
-      return false;
-    }
-    m_isChanged = false;
-  }
+  if (!Update()) return false;
 
   if (m_debug && band > 0) {
     std::cerr << m_className << "::GetElectronCollision: Band > 0.\n";
@@ -863,13 +824,7 @@ double MediumMagboltz::GetPhotonCollisionRate(const double e) {
     SetMaxPhotonEnergy(1.05 * e);
   }
 
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::GetPhotonCollisionRate");
-      return 0.;
-    }
-    m_isChanged = false;
-  }
+  if (!Update()) return 0.;
 
   const int iE =
       std::min(std::max(int(e / m_eStepGamma), 0), nEnergyStepsGamma - 1);
@@ -902,13 +857,7 @@ bool MediumMagboltz::GetPhotonCollision(const double e, int& type, int& level,
     SetMaxPhotonEnergy(1.05 * e);
   }
 
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::GetPhotonCollision");
-      return false;
-    }
-    m_isChanged = false;
-  }
+  if (!Update()) return false;
 
   // Energy interval
   const int iE =
@@ -1007,26 +956,13 @@ unsigned int MediumMagboltz::GetNumberOfElectronCollisions(
 }
 
 unsigned int MediumMagboltz::GetNumberOfLevels() {
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::GetNumberOfLevels");
-      return 0;
-    }
-    m_isChanged = false;
-  }
-
+  if (!Update()) return 0;
   return m_nTerms;
 }
 
 bool MediumMagboltz::GetLevel(const unsigned int i, int& ngas, int& type,
                               std::string& descr, double& e) {
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::GetLevel");
-      return false;
-    }
-    m_isChanged = false;
-  }
+  if (!Update()) return false;
 
   if (i >= m_nTerms) {
     std::cerr << m_className << "::GetLevel: Index out of range.\n";
@@ -1274,9 +1210,22 @@ int MediumMagboltz::GetGasNumberMagboltz(const std::string& input) {
   return 0;
 }
 
-bool MediumMagboltz::Mixer(const bool verbose) {
+bool MediumMagboltz::Update(const bool verbose) {
 
   std::lock_guard<std::mutex> guard(m_mutex);
+  if (!m_isChanged) return true;
+  if (!Mixer(verbose)) {
+    std::cerr << m_className 
+              << "::Update: Error calculating the collision rates table.\n";
+    return false;
+  }
+  m_isChanged = false;
+  return true;
+}
+
+
+bool MediumMagboltz::Mixer(const bool verbose) {
+
   // Set constants and parameters in Magboltz common blocks.
   Magboltz::cnsts_.echarg = ElementaryCharge * 1.e-15;
   Magboltz::cnsts_.emass = ElectronMassGramme;
@@ -1873,13 +1822,8 @@ bool MediumMagboltz::Mixer(const bool verbose) {
 
 void MediumMagboltz::PlotElectronCrossSections() {
 
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::PlotElectronCrossSections");
-      return;
-    }
-    m_isChanged = false;
-  }
+  if (!Update()) return;
+
   std::array<float, Magboltz::nEnergySteps> en;
   for (unsigned int k = 0; k < Magboltz::nEnergySteps; ++k) {
     en[k] = (k + 0.5) * m_eStep;
@@ -2442,13 +2386,7 @@ void MediumMagboltz::ComputeDeexcitation(int iLevel, int& fLevel) {
   }
 
   // Make sure that the tables are updated.
-  if (m_isChanged) {
-    if (!Mixer()) {
-      PrintErrorMixer(m_className + "::ComputeDeexcitation");
-      return;
-    }
-    m_isChanged = false;
-  }
+  if (!Update()) return;
 
   if (iLevel < 0 || iLevel >= (int)m_nTerms) {
     std::cerr << m_className << "::ComputeDeexcitation: Index out of range.\n";

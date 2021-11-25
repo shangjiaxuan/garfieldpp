@@ -348,6 +348,7 @@ class MediumMagboltz : public MediumGas {
   std::array<unsigned int, nCsTypesGamma> m_nPhotonCollisions;
 
   static int GetGasNumberMagboltz(const std::string& input);
+  bool Update(const bool verbose = false);
   bool Mixer(const bool verbose = false);
   void SetupGreenSawada();
   void SetScatteringParameters(const int model, const double parIn, double& cut,
