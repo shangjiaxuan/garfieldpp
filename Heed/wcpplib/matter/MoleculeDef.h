@@ -41,10 +41,6 @@ std::ostream& operator<<(std::ostream& file, const VanDerWaals& f);
 /// Only the basic information: the name, the notation,
 /// the mean charge and atomic weight and the parameters of mixture class.
 ///
-/// The principle of definitions of matters is the same as for atoms:
-/// a dictionary or a database. See details there. But the logbook is different,
-/// of course.
-///
 /// 1998-2004 I. Smirnov
 
 class MoleculeDef : public AtomMixDef {
@@ -71,7 +67,7 @@ class MoleculeDef : public AtomMixDef {
   double A_total() const { return A_totalh; }
   long tqatom() const { return tqatomh; }
   const std::shared_ptr<VanDerWaals>& vdw() const { return m_vdw; }
-  MoleculeDef();
+  MoleculeDef() = default;
   MoleculeDef(const std::string& fname, const std::string& fnotation,
               long fqatom, const std::vector<std::string>& fatom_not,
               const std::vector<long>& fqatom_ps,
@@ -88,24 +84,28 @@ class MoleculeDef : public AtomMixDef {
               const std::string& fatom_not2, long fqatom_ps2,
               const std::string& fatom_not3, long fqatom_ps3,
               std::shared_ptr<VanDerWaals> fvdw = {});
-  ~MoleculeDef();
+  ~MoleculeDef() = default;
 
   void print(std::ostream& file, int l) const;
-  static void printall(std::ostream& file);
-  /// Check that there is no molecule with the same name in the container
-  void verify();
-  static std::list<MoleculeDef*>& get_logbook();
-  /// Initialize the logbook at the first request
-  /// and keep it as internal static variable.
-  static const std::list<MoleculeDef*>& get_const_logbook();
-  /// Return the address of the molecule with this name.
-  /// If there is no molecule with this notation, the function returns NULL
-  /// but does not terminate the program as that for AtomDef. Be careful.
-  static MoleculeDef* get_MoleculeDef(const std::string& fnotation);
+
 
   MoleculeDef* copy() const { return new MoleculeDef(*this); }
 };
 std::ostream& operator<<(std::ostream& file, const MoleculeDef& f);
+
+class MoleculeDefs {
+
+public:
+  static const std::list<MoleculeDef>& getMolecules();
+  /// Return the address of the molecule with this name.
+  /// If there is no molecule with this notation, the function returns NULL
+  /// but does not terminate the program as that for AtomDef. Be careful.
+  static const MoleculeDef* get_MoleculeDef(const std::string& fnotation);
+  static void printMolecules(std::ostream& file);
+private:
+  static std::list<MoleculeDef> molecules;
+};
+
 }
 
 #endif

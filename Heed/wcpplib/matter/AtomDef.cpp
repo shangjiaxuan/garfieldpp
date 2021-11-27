@@ -11,60 +11,15 @@ using CLHEP::gram;
 using CLHEP::mole;
 using CLHEP::Avogadro;
 
-void AtomDef::print(std::ostream& file, int l) const {
-  if (l > 0) file << (*this);
-}
-
-void AtomDef::printall(std::ostream& file) {
-  Ifile << "AtomDef::printall:\n";
-  for (auto atom : AtomDef::get_logbook()) file << atom;
-}
-
-AtomDef::AtomDef() {
-  AtomDef::get_logbook().push_back(this);
-}
-
 AtomDef::AtomDef(const std::string& fnameh, const std::string& fnotationh,
                  int fZh, double fAh)
     : nameh(fnameh), notationh(fnotationh), Zh(fZh), Ah(fAh) {
   mfunname("AtomDef::AtomDef(...)");
   check_econd21(fZh, < 1 ||, > max_poss_atom_z, mcerr);
-  verify();
-  AtomDef::get_logbook().push_back(this);
 }
 
-double AtomDef::get_A(int fZ) {
-  mfunnamep("double AtomDef::get_A(int fZ)");
-  for (auto atom : AtomDef::get_logbook()) {
-    if (atom->Z() == fZ) return atom->A();
-  }
-  funnw.ehdr(mcerr);
-  mcerr << "Atom is not found, Z=" << fZ << '\n';
-  spexit(mcerr);
-  return 0.0;
-}
-
-AtomDef* AtomDef::get_AtomDef(int fZ) {
-  mfunnamep("AtomDef* AtomDef::get_AtomDef(int fZ)");
-  for (auto atom : AtomDef::get_logbook()) {
-    if (atom->Z() == fZ) return atom;
-  }
-  funnw.ehdr(mcerr);
-  mcerr << "Atom is not found, Z=" << fZ << '\n';
-  spexit(mcerr);
-  return nullptr;
-}
-
-void AtomDef::verify() {
-  mfunnamep("void AtomDef::verify()");
-  if (nameh == "none" && notationh == "none") return;
-  for (auto atom : AtomDef::get_logbook()) {
-    if (atom->nameh != nameh && atom->notationh != notationh) continue;
-    funnw.ehdr(mcerr);
-    mcerr << "cannot initialize two atoms with the same name or notation\n";
-    mcerr << "name=" << nameh << " notation=" << notationh << '\n';
-    spexit(mcerr);
-  }
+void AtomDef::print(std::ostream& file, int l) const {
+  if (l > 0) file << (*this);
 }
 
 std::ostream& operator<<(std::ostream& file, const AtomDef& f) {
@@ -75,23 +30,114 @@ std::ostream& operator<<(std::ostream& file, const AtomDef& f) {
   return file;
 }
 
-std::list<AtomDef*>& AtomDef::get_logbook() {
-  static std::list<AtomDef*> logbook;
-  return logbook;
+std::list<AtomDef> AtomDefs::atoms;
+
+void AtomDefs::addAtom(const std::string& name, const std::string& notation,
+                       int z, double a) {
+  AtomDefs::atoms.push_back(AtomDef(name, notation, z, a));
 }
 
-const std::list<AtomDef*>& AtomDef::get_const_logbook() {
-  return AtomDef::get_logbook();
+const std::list<AtomDef>& AtomDefs::getAtoms() {
+  if (!atoms.empty()) return atoms;
+  addAtom("Hydrogen", "H", 1, 1.0);
+  // addAtom("Hydrogen", "H", 1, 1.00794 * gram/mole));
+  addAtom("Helium", "He", 2, 4.002602 * gram / mole);
+  addAtom("Lithium", "Li", 3, 6.941 * gram / mole);
+  addAtom("Beryllium", "Be", 4, 9.012182 * gram / mole);
+  addAtom("Boron", "B", 5, 10.811 * gram / mole);
+  addAtom("Carbon", "C", 6, 12.011 * gram / mole);
+  addAtom("Nitrogen", "N", 7, 14.00674 * gram / mole);
+  addAtom("Oxygen", "O", 8, 15.9994 * gram / mole);
+  addAtom("Fluorine", "F", 9, 18.9984032 * gram / mole);
+  addAtom("Neon", "Ne", 10, 20.1797 * gram / mole);
+  addAtom("Sodium", "Na", 11, 22.989768 * gram / mole);
+  addAtom("Magnesium", "Mg", 12, 24.3050 * gram / mole);
+  addAtom("Aluminium", "Al", 13, 26.981539 * gram / mole);
+  addAtom("Silicon", "Si", 14, 28.0855 * gram / mole);
+  addAtom("Phosphorus", "P", 15, 30.973762 * gram / mole);
+  addAtom("Sulfur", "S", 16, 32.066 * gram / mole);
+  addAtom("Chlorine", "Cl", 17, 35.066 * gram / mole);
+  addAtom("Argon", "Ar", 18, 39.948 * gram / mole);
+  addAtom("Argon_without_K", "Ar_without_K", 16,
+                          39.948 * gram / mole);
+  addAtom("Potassium", "K", 19, 39.098 * gram / mole);
+  addAtom("Calcium", "Ca", 20, 40.08 * gram / mole);
+  addAtom("Scandium", "Sc", 21, 44.9559 * gram / mole);
+  addAtom("Titanium", "Ti", 22, 47.867 * gram / mole);
+  addAtom("Vanadium", "V", 23, 50.9414 * gram / mole);
+  addAtom("Chromium", "Cr", 24, 51.996 * gram / mole);
+  addAtom("Manganese", "Mn", 25, 54.9380 * gram / mole);
+  addAtom("Iron", "Fe", 26, 55.845 * gram / mole);
+  addAtom("Cobalt", "Co", 27, 58.9332 * gram / mole);
+  addAtom("Nickel", "Ni", 28, 58.70 * gram / mole);
+  addAtom("Copper", "Cu", 29, 63.546 * gram / mole);
+  addAtom("Zinc", "Zn", 30, 65.38 * gram / mole);
+  addAtom("Gallium", "Ga", 31, 69.72 * gram / mole);
+  addAtom("Germanium", "Ge", 32, 72.59 * gram / mole);
+  addAtom("Arsenic", "As", 33, 74.9216 * gram / mole);
+  addAtom("Selenium", "Se", 34, 78.96 * gram / mole);
+  addAtom("Bromine", "Br", 35, 79.904 * gram / mole);
+  addAtom("Krypton", "Kr", 36, 83.80 * gram / mole);
+  addAtom("Rubidium", "Rb", 37, 85.4673 * gram / mole);
+  addAtom("Strontium", "Sr", 38, 87.62 * gram / mole);
+  addAtom("Yttrium", "Y", 39, 88.9059 * gram / mole);
+  addAtom("Zirconium", "Zr", 40, 91.22 * gram / mole);
+  addAtom("Niobium", "Nb", 41, 92.9064 * gram / mole);
+  addAtom("Molybdenum", "Mo", 42, 95.94 * gram / mole);
+  addAtom("Technetium", "Tc", 43, 98 * gram / mole);
+  addAtom("Ruthenium", "Ru", 44, 101.07 * gram / mole);
+  addAtom("Rhodium", "Rh", 45, 102.9055 * gram / mole);
+  addAtom("Palladium", "Pd", 46, 106.4 * gram / mole);
+  addAtom("Silver", "Ag", 47, 107.868 * gram / mole);
+  addAtom("Cadmium", "Cd", 48, 112.411 * gram / mole);
+  addAtom("Indium", "In", 49, 114.818 * gram / mole);
+  addAtom("Tin", "Sn", 50, 118.710 * gram / mole);
+  addAtom("Antimony", "Sb", 51, 121.760 * gram / mole);
+  addAtom("Tellurium", "Te", 52, 127.60 * gram / mole);
+  addAtom("Iodine", "I", 53, 126.9045 * gram / mole);
+  addAtom("Xenon", "Xe", 54, 131.293 * gram / mole);
+  addAtom("Caesium", "Cs", 55, 132.9054519 * gram / mole);
+  addAtom("Tungsten", "W", 74, 183.85 * gram / mole);
+  addAtom("Mercury", "Hg", 80, 200.59 * gram / mole);
+  addAtom("Bismuth", "Bi", 83, 208.9804 * gram / mole);
+  addAtom("Uranium", "U", 92, 238.0289 * gram / mole);
+  addAtom("Plutonium", "Pu", 94, 244.0 * gram / mole);
+  return atoms;
 }
 
-AtomDef* AtomDef::get_AtomDef(const std::string& fnotation) {
-  for (auto atom : AtomDef::get_logbook()) {
-    if (atom->notation() == fnotation) return atom;
+void AtomDefs::printAtoms(std::ostream& file) {
+  Ifile << "AtomDefs::printAtoms:\n";
+  for (const auto& atom : getAtoms()) file << atom;
+}
+
+const AtomDef* AtomDefs::get_AtomDef(const std::string& fnotation) {
+  for (const auto& atom : getAtoms()) {
+    if (atom.notation() == fnotation) return &atom;
   }
   return nullptr;
 }
 
-AtomDef::~AtomDef() { AtomDef::get_logbook().remove(this); }
+double AtomDefs::get_A(int fZ) {
+  mfunnamep("double AtomDef::get_A(int fZ)");
+  for (const auto& atom : getAtoms()) {
+    if (atom.Z() == fZ) return atom.A();
+  }
+  funnw.ehdr(mcerr);
+  mcerr << "Atom is not found, Z=" << fZ << '\n';
+  spexit(mcerr);
+  return 0.0;
+}
+
+const AtomDef* AtomDefs::get_AtomDef(int fZ) {
+  mfunnamep("AtomDef* AtomDef::get_AtomDef(int fZ)");
+  for (const auto& atom : getAtoms()) {
+    if (atom.Z() == fZ) return &atom;
+  }
+  funnw.ehdr(mcerr);
+  mcerr << "Atom is not found, Z=" << fZ << '\n';
+  spexit(mcerr);
+  return nullptr;
+}
 
 AtomMixDef::AtomMixDef(unsigned long fqatom,
                        const std::vector<std::string>& fatom_not,
@@ -106,7 +152,7 @@ AtomMixDef::AtomMixDef(unsigned long fqatom,
   check_econd12(fqatom, >, fweight_quan.size(), mcerr);
 
   for (long n = 0; n < qatomh; ++n) {
-    AtomDef* ad = AtomDef::get_AtomDef(fatom_not[n]);
+    auto ad = AtomDefs::get_AtomDef(fatom_not[n]);
     if (!ad) {
       funnw.ehdr(mcerr);
       mcerr << "cannot find atom with notation " << fatom_not[n]
@@ -162,7 +208,7 @@ AtomMixDef::AtomMixDef(unsigned long fqatom,
   check_econd12(fqatom, >, fweight_quan.size(), mcerr);
 
   for (long n = 0; n < qatomh; ++n) {
-    AtomDef* ad = AtomDef::get_AtomDef(fatom_not[n]);
+    auto ad = AtomDefs::get_AtomDef(fatom_not[n]);
     if (!ad) {
       funnw.ehdr(mcerr);
       mcerr << "cannot find atom with notation " << fatom_not[n]
@@ -212,7 +258,7 @@ AtomMixDef::AtomMixDef(const std::string& fatom_not)
       weight_quanh(1, 1.),
       weight_massh(1, 1.) {
   mfunnamep("AtomMixDef::AtomMixDef(...)");
-  AtomDef* ad = AtomDef::get_AtomDef(fatom_not);
+  auto ad = AtomDefs::get_AtomDef(fatom_not);
   if (!ad) {
     funnw.ehdr(mcerr);
     mcerr << "cannot find atom with notation " << fatom_not
@@ -244,7 +290,7 @@ AtomMixDef::AtomMixDef(const std::string& fatom_not1, double fweight_quan1,
   fatom_not[1] = fatom_not2;
 
   for (long n = 0; n < qatomh; ++n) {
-    AtomDef* ad = AtomDef::get_AtomDef(fatom_not[n]);
+    auto ad = AtomDefs::get_AtomDef(fatom_not[n]);
     if (!ad) {
       funnw.ehdr(mcerr);
       mcerr << "cannot find atom with notation " << fatom_not[n]
@@ -304,7 +350,7 @@ AtomMixDef::AtomMixDef(const std::string& fatom_not1, double fweight_quan1,
   fatom_not[2] = fatom_not3;
 
   for (long n = 0; n < qatomh; ++n) {
-    AtomDef* ad = AtomDef::get_AtomDef(fatom_not[n]);
+    auto ad = AtomDefs::get_AtomDef(fatom_not[n]);
     if (!ad) {
       funnw.ehdr(mcerr);
       mcerr << "cannot find atom with notation " << fatom_not[n]
@@ -366,7 +412,7 @@ AtomMixDef::AtomMixDef(const std::string& fatom_not1, double fweight_quan1,
   fatom_not[3] = fatom_not4;
 
   for (long k = 0; k < qatomh; k++) {
-    AtomDef* ad = AtomDef::get_AtomDef(fatom_not[k]);
+    auto ad = AtomDefs::get_AtomDef(fatom_not[k]);
     if (!ad) {
       funnw.ehdr(mcerr);
       mcerr << "cannot find atom with notation " << fatom_not[k]

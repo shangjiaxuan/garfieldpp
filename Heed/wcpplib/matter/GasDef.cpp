@@ -23,7 +23,7 @@ GasDef::GasDef(const std::string& fname, const std::string& fnotation,
 
   // Finding pointers to all molec. by notations
   for (long k = 0; k < fqmolec; ++k) {
-    MoleculeDef* amd = MoleculeDef::get_MoleculeDef(fmolec_not[k]);
+    auto amd = MoleculeDefs::get_MoleculeDef(fmolec_not[k]);
     check_econd11a(amd, == NULL,
                    "No molecule with such notation: " << fmolec_not[k] << '\n',
                    mcerr)
@@ -113,9 +113,9 @@ GasDef::GasDef(const std::string& fname, const std::string& fnotation,
                double fpressure, double ftemperature, int /*s1*/, int /*s2*/) {
   // s1 and s2 are to distinguish the constructor
   mfunname("GasDef::GasDef(...many molecules... Waals)");
-  std::vector<MoleculeDef*> amolec(fqmolec);
+  std::vector<const MoleculeDef*> amolec(fqmolec);
   for (long n = 0; n < fqmolec; ++n) {
-    amolec[n] = MoleculeDef::get_MoleculeDef(fmolec_not[n]);
+    amolec[n] = MoleculeDefs::get_MoleculeDef(fmolec_not[n]);
     check_econd11a(amolec[n], == NULL,
                    "No molecule with such notation: " << fmolec_not[n] << '\n',
                    mcerr)

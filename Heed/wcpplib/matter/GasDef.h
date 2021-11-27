@@ -39,16 +39,16 @@ class GasDef : public MatterDef {
   double pressureh = 0.;
   /// Number of different molecules
   long qmolech = 0;
-  std::vector<MoleculeDef*> molech;
+  std::vector<const MoleculeDef*> molech;
   std::vector<double> weight_quan_molech;  // sum is 1
   std::vector<double> weight_mass_molech;  // sum is 1
  public:
   double pressure() const { return pressureh; }
   long qmolec() const { return qmolech; }
-  const std::vector<MoleculeDef*>& molec() const {
+  const std::vector<const MoleculeDef*>& molec() const {
     return molech;
   }
-  MoleculeDef* molec(long n) const { return molech[n]; }
+  const MoleculeDef* molec(long n) const { return molech[n]; }
   const std::vector<double>& weight_quan_molec() const {
     return weight_quan_molech;
   }
