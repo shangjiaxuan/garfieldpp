@@ -50,7 +50,6 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matrix/multiply.cpp
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matter/AtomDef.cpp
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matter/GasDef.cpp
-          ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matter/GasLib.cpp
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matter/MatterDef.cpp
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matter/MoleculeDef.cpp
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/particle/eparticle.cpp
