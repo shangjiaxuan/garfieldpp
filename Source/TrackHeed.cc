@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "wcpplib/clhep_units/WPhysicalConstants.h"
-#include "wcpplib/matter/GasLib.h"
 #include "wcpplib/matter/MatterDef.h"
 
 #include "heed++/code/ElElasticScat.h"
@@ -52,6 +51,10 @@ TrackHeed::TrackHeed() : Track() {
   m_conductionIons.reserve(1000);
 
   m_fieldMap.reset(new Heed::HeedFieldMap());
+  // Heed::createAtoms();
+std::cout << "===> ATOMS: " << Heed::AtomDefs::getAtoms().size() << "\n";
+  // Heed::createMolecules();
+std::cout << "===> MOLECUES: " << Heed::MoleculeDefs::getMolecules().size() << "\n";
 }
 
 TrackHeed::~TrackHeed() {}
@@ -1025,7 +1028,7 @@ bool TrackHeed::SetupGas(Medium* medium) {
     pacsfile.close();
   }
 
-  const std::string gasname = FindUnusedMaterialName(medium->GetName());
+  const std::string gasname = medium->GetName();
   m_gas.reset(new Heed::GasDef(gasname, gasname, nComponents, notations,
                                fractions, pressure, temperature, -1.));
 
@@ -1099,7 +1102,7 @@ bool TrackHeed::SetupMaterial(Medium* medium) {
     }
     pacsfile.close();
   }
-  const std::string materialName = FindUnusedMaterialName(medium->GetName());
+  const std::string materialName = medium->GetName();
   m_material.reset(new Heed::MatterDef(materialName, materialName, nComponents,
                                        notations, fractions, density,
                                        temperature));
@@ -1151,16 +1154,6 @@ double TrackHeed::GetPhotoAbsorptionCrossSection(const double en) const {
   }
   // Convert Mbarn to cm-2.
   return cs * 1.e-18;
-}
-
-std::string TrackHeed::FindUnusedMaterialName(const std::string& namein) {
-  std::string nameout = namein;
-  unsigned int counter = 0;
-  while (Heed::MatterDef::get_MatterDef(nameout)) {
-    nameout = namein + "_" + std::to_string(counter);
-    ++counter;
-  }
-  return nameout;
 }
 
 void TrackHeed::ClearParticleBank() {

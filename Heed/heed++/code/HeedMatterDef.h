@@ -72,9 +72,6 @@ class HeedMatterDef {
   HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
                 const std::vector<MolecPhotoAbsCS*>& fampacs,
                 double fW = 0.0, double fF = standard_factor_Fano);
-  HeedMatterDef(EnergyMesh* fenergy_mesh, const std::string& gas_notation,
-                const std::vector<MolecPhotoAbsCS*>& fampacs,
-                double fW = 0.0, double fF = standard_factor_Fano);
   // Replace permeability (epsi1 and epsi2) by the numbers
   // calculated by another program and written to a file (only for debug)
   void replace_epsi12(const std::string& file_name);

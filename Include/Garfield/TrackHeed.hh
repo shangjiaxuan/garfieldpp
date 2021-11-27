@@ -289,7 +289,6 @@ class TrackHeed : public Track {
   bool SetupGas(Medium* medium);
   bool SetupMaterial(Medium* medium);
   bool SetupDelta(const std::string& databasePath);
-  std::string FindUnusedMaterialName(const std::string& namein);
   void ClearParticleBank();
   bool IsInside(const double x, const double y, const double z);
   bool UpdateBoundingBox(bool& update);

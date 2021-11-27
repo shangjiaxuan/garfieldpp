@@ -9,10 +9,6 @@ namespace Heed {
 
 void MatterDef::calc_I_eff() { I_effh = Z_mean() * 12.0 * CLHEP::eV; }
 
-MatterDef::MatterDef() : nameh("none"), notationh("none") {
-  MatterDef::get_logbook().push_back(this);
-}
-
 MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
                      long fqatom, const std::vector<std::string>& fatom_not,
                      const std::vector<double>& fweight_quan, double fdensity,
@@ -24,8 +20,6 @@ MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
       densityh(fdensity) {
   mfunname("MatterDef::MatterDef(...many atoms...)");
   calc_I_eff();
-  verify();
-  MatterDef::get_logbook().push_back(this);
 }
 
 MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
@@ -38,8 +32,6 @@ MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
       densityh(fdensity) {
   mfunname("MatterDef::MatterDef(...1 atom...)");
   calc_I_eff();
-  verify();
-  MatterDef::get_logbook().push_back(this);
 }
 
 MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
@@ -53,8 +45,6 @@ MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
       densityh(fdensity) {
   mfunname("MatterDef::MatterDef(...2 atoms...)");
   calc_I_eff();
-  verify();
-  MatterDef::get_logbook().push_back(this);
 }
 
 MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
@@ -70,58 +60,10 @@ MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
       densityh(fdensity) {
   mfunname("MatterDef::MatterDef(...2 atoms...)");
   calc_I_eff();
-  verify();
-  MatterDef::get_logbook().push_back(this);
-}
-
-void MatterDef::verify() {
-  mfunnamep("void MatterDef::verify(void)");
-  if (nameh == "none" && notationh == "none") return;
-  for (auto matter : MatterDef::get_logbook()) {
-    if (matter->nameh != nameh && matter->notationh != notationh) continue;
-    funnw.ehdr(mcerr);
-    mcerr << "cannot initialize two matters with the same name or notation\n";
-    mcerr << "name=" << nameh << " notation=" << notationh << '\n';
-    spexit(mcerr);
-  }
-}
-
-void MatterDef::verify(const std::string& fname, const std::string& fnotation) {
-  mfunnamep("void MatterDef::verify(const std::string& const std::string&)");
-  for (auto matter : MatterDef::get_logbook()) {
-    if (matter->nameh != fname && matter->notationh != fnotation) continue;
-    funnw.ehdr(mcerr);
-    mcerr << "cannot initialize two matters with the same name or notation\n";
-    mcerr << "name=" << fname << " notation=" << fnotation << '\n';
-    spexit(mcerr);
-  }
 }
 
 void MatterDef::print(std::ostream& file, int l) const {
   if (l > 0) file << (*this);
-}
-
-void MatterDef::printall(std::ostream& file) {
-  Ifile << "MatterDef::printall:\n";
-  for (auto matter : MatterDef::get_logbook()) {
-    matter->print(file, 1);
-  }
-}
-
-std::list<MatterDef*>& MatterDef::get_logbook() {
-  static std::list<MatterDef*> logbook;
-  return logbook;
-}
-
-const std::list<MatterDef*>& MatterDef::get_const_logbook() {
-  return MatterDef::get_logbook();
-}
-
-MatterDef* MatterDef::get_MatterDef(const std::string& fnotation) {
-  for (auto matter : MatterDef::get_logbook()) {
-    if (matter->notation() == fnotation) return matter;
-  }
-  return nullptr;
 }
 
 std::ostream& operator<<(std::ostream& file, const MatterDef& f) {
@@ -137,5 +79,4 @@ std::ostream& operator<<(std::ostream& file, const MatterDef& f) {
   return file;
 }
 
-MatterDef::~MatterDef() { MatterDef::get_logbook().remove(this); }
 }

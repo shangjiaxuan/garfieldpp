@@ -100,7 +100,6 @@ GasDef::GasDef(const std::string& fname, const std::string& fnotation,
     const double rydberg = k_Boltzmann * Avogadro;
     fdensity = sa * fpressure / (rydberg * ftemperature * sw);
   }
-  verify(fname, fnotation);
   {
     *((MatterDef*)this) = MatterDef(fname, fnotation, qat, fatom_not, weight_qa,
                                     fdensity, ftemperature);
