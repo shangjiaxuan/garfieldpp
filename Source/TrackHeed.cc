@@ -816,7 +816,7 @@ void TrackHeed::SetParticleUser(const double m, const double z) {
   m_particleName = "exotic";
 }
 
-bool TrackHeed::Initialise(Medium* medium) {
+bool TrackHeed::Initialise(Medium* medium, const bool verbose) {
   // Make sure the path to the Heed database is known.
   std::string databasePath;
   char* dbPath = std::getenv("HEED_DATABASE");
@@ -844,6 +844,10 @@ bool TrackHeed::Initialise(Medium* medium) {
   }
   if (databasePath[databasePath.size() - 1] != '/') {
     databasePath.append("/");
+  }
+  if (m_debug || verbose) {
+    std::cout << m_className << "::Initialise:\n"
+              << "    Database path: " << databasePath << "\n";
   }
 
   // Check once more that the medium exists.
@@ -874,7 +878,7 @@ bool TrackHeed::Initialise(Medium* medium) {
   }
   if (!SetupDelta(databasePath)) return false;
 
-  if (m_debug) {
+  if (m_debug || verbose) {
     const double nc = m_transferCs->quanC;
     const double dedx = m_transferCs->meanC * 1.e3;
     const double dedx1 = m_transferCs->meanC1 * 1.e3;

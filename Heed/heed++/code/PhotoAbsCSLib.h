@@ -15,7 +15,6 @@ class PhotoAbsCSLib {
 
  public:
   static AtomPhotoAbsCS* getAPACS(const std::string& name); 
-  static bool verbose;
  private:
   static std::map<std::string, ExAtomPhotoAbsCS> apacs;
   static std::map<std::string, SimpleAtomPhotoAbsCS> hpacs;

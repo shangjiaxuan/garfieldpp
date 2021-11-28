@@ -13,7 +13,7 @@ std::string getDataBasePath() {
   // First try if the environment variable HEED_DATABASE is defined.
   char* heed_database = std::getenv("HEED_DATABASE");
   if (heed_database) {
-    path = std::string(heed_database) + "/";
+    path = std::string(heed_database);
   } else {
     // If HEED_DATABASE is not defined, try GARFIELD_INSTALL.
     char* garfield_install = std::getenv("GARFIELD_INSTALL");
@@ -82,7 +82,6 @@ using CLHEP::mole;
 
 std::map<std::string, ExAtomPhotoAbsCS> PhotoAbsCSLib::apacs;
 std::map<std::string, SimpleAtomPhotoAbsCS> PhotoAbsCSLib::hpacs;
-bool PhotoAbsCSLib::verbose = false;
 
 AtomPhotoAbsCS* PhotoAbsCSLib::getAPACS(const std::string& name) {
   if (apacs.empty()) initialise();
@@ -108,14 +107,12 @@ void PhotoAbsCSLib::initialise() {
   //     SimpleTablePhotoAbsCS("Hydrogen_for_CH4", 1, 12.65e-6,
   //                           dbpath + "H_for_CH4.dat");
 
-  const std::string dbpath = getDataBasePath();
+  std::string dbpath = getDataBasePath();
   if (dbpath.empty()) {
     std::cerr << "Heed::PhotoAbsCsLib::initialise:\n"
               << "    Could not retrieve database path.\n";
-  } else if (verbose) {
-    std::cout << "Heed::PhotoAbsCSLib::initialise:\n"
-              << "    Database path: " << dbpath << "\n";
   }
+  if (dbpath[dbpath.size() - 1] != '/') dbpath.append("/");
 
   const std::string pacs_table_dir = dbpath + "henke/";
 

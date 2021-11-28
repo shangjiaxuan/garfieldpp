@@ -94,7 +94,7 @@ class TrackHeed : public Track {
   double GetPhotoAbsorptionCrossSection(const double e) const;
 
   /// Compute the differential cross-section for a given medium.
-  bool Initialise(Medium* medium);
+  bool Initialise(Medium* medium, const bool verbose = false);
 
   /** Simulate a delta electron.
     * \param x0,y0,z0 initial position of the delta electron
