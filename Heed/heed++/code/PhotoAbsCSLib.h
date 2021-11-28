@@ -1,6 +1,8 @@
 #ifndef PHOTOABSCSLIB_H
 #define PHOTOABSCSLIB_H
 
+#include <map>
+
 #include "heed++/code/PhotoAbsCS.h"
 
 namespace Heed {
@@ -9,57 +11,16 @@ namespace Heed {
 /// and molecules.
 /// 2004, I. Smirnov
 
-extern SimpleAtomPhotoAbsCS Hydrogen_PACS;
-extern SimpleAtomPhotoAbsCS Hydrogen_for_H2_PACS;
-extern SimpleAtomPhotoAbsCS Hydrogen_for_CH4_PACS;
-extern SimpleAtomPhotoAbsCS Hydrogen_for_NH4_PACS;
-// extern ExAtomPhotoAbsCS Hydrogen_for_H2_PACS;
-// extern ExAtomPhotoAbsCS Hydrogen_for_CH4_PACS;
-// extern ExAtomPhotoAbsCS Hydrogen_for_NH4_PACS;
-extern ExAtomPhotoAbsCS Helium_PACS;
-extern ExAtomPhotoAbsCS Lithium_PACS;
-extern ExAtomPhotoAbsCS Beryllium_PACS;
-extern ExAtomPhotoAbsCS Boron_PACS;
-extern ExAtomPhotoAbsCS Carbon_PACS;
-extern ExAtomPhotoAbsCS Carbon_for_CH4_PACS;
-extern ExAtomPhotoAbsCS Carbon_for_C2H4_PACS;
-extern ExAtomPhotoAbsCS Carbon_for_C2H6_PACS;
-extern ExAtomPhotoAbsCS Carbon_for_C4H10_PACS;
-extern ExAtomPhotoAbsCS Carbon_for_Methylal_PACS;
-extern ExAtomPhotoAbsCS Carbon_for_CF4_PACS;
-extern ExAtomPhotoAbsCS Carbon_for_CO2_PACS;
-extern ExAtomPhotoAbsCS Diamond_PACS;
-extern ExAtomPhotoAbsCS Nitrogen_PACS;
-extern ExAtomPhotoAbsCS Oxygen_PACS;
-extern ExAtomPhotoAbsCS Oxygen_for_CO2_PACS;
-extern ExAtomPhotoAbsCS Fluorine_PACS;
-extern ExAtomPhotoAbsCS Neon_PACS;
-extern ExAtomPhotoAbsCS Sodium_PACS;
-extern ExAtomPhotoAbsCS Magnesium_PACS;
-extern ExAtomPhotoAbsCS Aluminium_PACS;
-extern ExAtomPhotoAbsCS Silicon_PACS;
-extern ExAtomPhotoAbsCS Silicon_crystal_PACS;
-extern ExAtomPhotoAbsCS Silicon_G4_PACS;
-extern ExAtomPhotoAbsCS Phosphorus_PACS;
-extern ExAtomPhotoAbsCS Sulfur_PACS;
-extern ExAtomPhotoAbsCS Chlorine_PACS;
-extern ExAtomPhotoAbsCS Argon_PACS;
-extern ExAtomPhotoAbsCS Gallium_PACS;
-extern ExAtomPhotoAbsCS Gallium_for_GaAs_PACS;
-extern ExAtomPhotoAbsCS Germanium_PACS;
-extern ExAtomPhotoAbsCS Germanium_crystal_PACS;
-extern ExAtomPhotoAbsCS Arsenic_PACS;
-extern ExAtomPhotoAbsCS Arsenic_for_GaAs_PACS;
-extern ExAtomPhotoAbsCS Bromine_PACS;
-extern ExAtomPhotoAbsCS Krypton_PACS;
-extern ExAtomPhotoAbsCS Cadmium_PACS;
-extern ExAtomPhotoAbsCS Cadmium_for_CdTe_PACS;
-extern ExAtomPhotoAbsCS Tellurium_PACS;
-extern ExAtomPhotoAbsCS Tellurium_for_CdTe_PACS;
-extern ExAtomPhotoAbsCS Xenon_PACS;
-extern ExAtomPhotoAbsCS Caesium_PACS;
-extern ExAtomPhotoAbsCS Mercury_PACS;
-extern ExAtomPhotoAbsCS Uranium_PACS;
+class PhotoAbsCSLib {
+
+ public:
+  static AtomPhotoAbsCS* getAPACS(const std::string& name); 
+
+ private:
+  static std::map<std::string, ExAtomPhotoAbsCS> apacs;
+  static std::map<std::string, SimpleAtomPhotoAbsCS> hpacs;
+  static void initialise();
+};
 
 extern MolecPhotoAbsCS H2_MPACS;
 extern MolecPhotoAbsCS He_MPACS;

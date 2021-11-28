@@ -51,10 +51,6 @@ TrackHeed::TrackHeed() : Track() {
   m_conductionIons.reserve(1000);
 
   m_fieldMap.reset(new Heed::HeedFieldMap());
-  // Heed::createAtoms();
-std::cout << "===> ATOMS: " << Heed::AtomDefs::getAtoms().size() << "\n";
-  // Heed::createMolecules();
-std::cout << "===> MOLECUES: " << Heed::MoleculeDefs::getMolecules().size() << "\n";
 }
 
 TrackHeed::~TrackHeed() {}
@@ -1058,24 +1054,27 @@ bool TrackHeed::SetupMaterial(Medium* medium) {
     double frac;
     medium->GetComponent(i, materialName, frac);
     if (materialName == "C") {
+      // TODO!!
+      // ???????
       if (medium->GetName() == "Diamond") {
-        atPacs[i] = &Heed::Diamond_PACS;
+        atPacs[i] = Heed::PhotoAbsCSLib::getAPACS("Diamond");
       } else if (materialName == "Diamond") {
-        atPacs[i] = &Heed::Carbon_PACS;
+        atPacs[i] = Heed::PhotoAbsCSLib::getAPACS("C");
       }
     } else if (materialName == "Si") {
-      atPacs[i] = &Heed::Silicon_crystal_PACS;
+      atPacs[i] = Heed::PhotoAbsCSLib::getAPACS("Si crystal");
       // atPacs[i] = &Heed::Silicon_G4_PACS;
     } else if (materialName == "Ga") {
-      atPacs[i] = &Heed::Gallium_for_GaAs_PACS;
+      atPacs[i] = Heed::PhotoAbsCSLib::getAPACS("Ga for GaAs");
     } else if (materialName == "Ge") {
-      atPacs[i] = &Heed::Germanium_PACS;
+      // TODO!! Ge crystal?
+      atPacs[i] = Heed::PhotoAbsCSLib::getAPACS("Ge");
     } else if (materialName == "As") {
-      atPacs[i] = &Heed::Arsenic_for_GaAs_PACS;
+      atPacs[i] = Heed::PhotoAbsCSLib::getAPACS("As for GaAs");
     } else if (materialName == "Cd") {
-      atPacs[i] = &Heed::Cadmium_for_CdTe_PACS;
+      atPacs[i] = Heed::PhotoAbsCSLib::getAPACS("Cd for CdTe");
     } else if (materialName == "Te") {
-      atPacs[i] = &Heed::Tellurium_for_CdTe_PACS;
+      atPacs[i] = Heed::PhotoAbsCSLib::getAPACS("Te for CdTe");
     } else {
       std::cerr << m_className << "::SetupMaterial:\n";
       std::cerr << "    Photoabsorption cross-section data for " << materialName
