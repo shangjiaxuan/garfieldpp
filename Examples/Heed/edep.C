@@ -49,11 +49,10 @@ int main(int argc, char * argv[]) {
   track.SetSensor(&sensor);
   track.SetParticle("pi");
   track.SetMomentum(120.e9);
-
+  constexpr bool verbose = true;
+  track.Initialise(&gas, verbose); 
   const int nEvents = 10000;
-  track.EnableDebugging();
   for (int i = 0; i < nEvents; ++i) {
-    if (i == 1) track.DisableDebugging();
     if (i % 1000 == 0) std::cout << i << "/" << nEvents << "\n";
     // Initial position and direction 
     double x0 = 0., y0 = 0., z0 = 0., t0 = 0.;
