@@ -2,10 +2,6 @@
 #define PHOTOABSCSLIB_H
 
 #include "heed++/code/PhotoAbsCS.h"
-#ifdef NOT_INCLUDE_GASLIB_IN_PACSLIB
-#else
-#include "wcpplib/matter/GasLib.h"
-#endif
 
 namespace Heed {
 
