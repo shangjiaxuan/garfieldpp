@@ -52,15 +52,15 @@ class AtomDefs {
 
   /// Return the address of atom with this name if it is registered in system,
   /// or NULL otherwise
-  static const AtomDef* get_AtomDef(const std::string& fnotation);
+  static const AtomDef* getAtom(const std::string& fnotation);
   /// Return the atomic number corresponding to a given Z.
   /// If the atom is not registered, the current version
-  /// terminates the program through spexit(). Be careful!
-  static double get_A(int fZ);
+  /// terminates the program. Be careful!
+  static double getA(int fZ);
   /// Return the address of atom corresponding to a given Z.
   /// If the atom is not registered, the current version
-  /// terminates the program through spexit(). Be careful!
-  static const AtomDef* get_AtomDef(int fZ);
+  /// terminates the program. Be careful!
+  static const AtomDef* getAtom(int fZ);
 
   /// Print all registered atoms.
   static void printAtoms(std::ostream& file);

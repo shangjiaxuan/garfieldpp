@@ -110,15 +110,15 @@ void AtomDefs::printAtoms(std::ostream& file) {
   for (const auto& atom : getAtoms()) file << atom;
 }
 
-const AtomDef* AtomDefs::get_AtomDef(const std::string& fnotation) {
+const AtomDef* AtomDefs::getAtom(const std::string& fnotation) {
   for (const auto& atom : getAtoms()) {
     if (atom.notation() == fnotation) return &atom;
   }
   return nullptr;
 }
 
-double AtomDefs::get_A(int fZ) {
-  mfunnamep("double AtomDef::get_A(int fZ)");
+double AtomDefs::getA(int fZ) {
+  mfunnamep("double AtomDefs::getA(int fZ)");
   for (const auto& atom : getAtoms()) {
     if (atom.Z() == fZ) return atom.A();
   }
@@ -128,8 +128,8 @@ double AtomDefs::get_A(int fZ) {
   return 0.0;
 }
 
-const AtomDef* AtomDefs::get_AtomDef(int fZ) {
-  mfunnamep("AtomDef* AtomDef::get_AtomDef(int fZ)");
+const AtomDef* AtomDefs::getAtom(int fZ) {
+  mfunnamep("AtomDef* AtomDefs::getAtom(int fZ)");
   for (const auto& atom : getAtoms()) {
     if (atom.Z() == fZ) return &atom;
   }
@@ -152,7 +152,7 @@ AtomMixDef::AtomMixDef(unsigned long fqatom,
   check_econd12(fqatom, >, fweight_quan.size(), mcerr);
 
   for (long n = 0; n < qatomh; ++n) {
-    auto ad = AtomDefs::get_AtomDef(fatom_not[n]);
+    auto ad = AtomDefs::getAtom(fatom_not[n]);
     if (!ad) {
       funnw.ehdr(mcerr);
       mcerr << "cannot find atom with notation " << fatom_not[n]
@@ -208,7 +208,7 @@ AtomMixDef::AtomMixDef(unsigned long fqatom,
   check_econd12(fqatom, >, fweight_quan.size(), mcerr);
 
   for (long n = 0; n < qatomh; ++n) {
-    auto ad = AtomDefs::get_AtomDef(fatom_not[n]);
+    auto ad = AtomDefs::getAtom(fatom_not[n]);
     if (!ad) {
       funnw.ehdr(mcerr);
       mcerr << "cannot find atom with notation " << fatom_not[n]
@@ -258,7 +258,7 @@ AtomMixDef::AtomMixDef(const std::string& fatom_not)
       weight_quanh(1, 1.),
       weight_massh(1, 1.) {
   mfunnamep("AtomMixDef::AtomMixDef(...)");
-  auto ad = AtomDefs::get_AtomDef(fatom_not);
+  auto ad = AtomDefs::getAtom(fatom_not);
   if (!ad) {
     funnw.ehdr(mcerr);
     mcerr << "cannot find atom with notation " << fatom_not
@@ -290,7 +290,7 @@ AtomMixDef::AtomMixDef(const std::string& fatom_not1, double fweight_quan1,
   fatom_not[1] = fatom_not2;
 
   for (long n = 0; n < qatomh; ++n) {
-    auto ad = AtomDefs::get_AtomDef(fatom_not[n]);
+    auto ad = AtomDefs::getAtom(fatom_not[n]);
     if (!ad) {
       funnw.ehdr(mcerr);
       mcerr << "cannot find atom with notation " << fatom_not[n]
@@ -350,7 +350,7 @@ AtomMixDef::AtomMixDef(const std::string& fatom_not1, double fweight_quan1,
   fatom_not[2] = fatom_not3;
 
   for (long n = 0; n < qatomh; ++n) {
-    auto ad = AtomDefs::get_AtomDef(fatom_not[n]);
+    auto ad = AtomDefs::getAtom(fatom_not[n]);
     if (!ad) {
       funnw.ehdr(mcerr);
       mcerr << "cannot find atom with notation " << fatom_not[n]
@@ -412,7 +412,7 @@ AtomMixDef::AtomMixDef(const std::string& fatom_not1, double fweight_quan1,
   fatom_not[3] = fatom_not4;
 
   for (long k = 0; k < qatomh; k++) {
-    auto ad = AtomDefs::get_AtomDef(fatom_not[k]);
+    auto ad = AtomDefs::getAtom(fatom_not[k]);
     if (!ad) {
       funnw.ehdr(mcerr);
       mcerr << "cannot find atom with notation " << fatom_not[k]

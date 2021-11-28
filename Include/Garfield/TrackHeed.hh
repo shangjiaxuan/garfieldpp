@@ -14,8 +14,6 @@ class HeedCondElectron;
 class HeedMatterDef;
 class GasDef;
 class MatterDef;
-class AtomPhotoAbsCS;
-class MolecPhotoAbsCS;
 class EnergyMesh;
 class EnTransfCS;
 class ElElasticScat;

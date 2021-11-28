@@ -52,7 +52,7 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, MatterDef* amatter,
 }
 
 HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
-                             const std::vector<MolecPhotoAbsCS*>& fampacs, 
+                             std::vector<MolecPhotoAbsCS>& fampacs, 
                              double fW, double fF)
     : matter(agas), W(fW), F(fF), energy_mesh(fenergy_mesh) {
   mfunname("HeedMatterDef::HeedMatterDef(...)");
@@ -63,12 +63,12 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
   const long qmol = agas->qmolec();
   long nat = 0;
   for (long nmol = 0; nmol < qmol; ++nmol) {
-    check_econd12(agas->molec(nmol)->tqatom(), !=, fampacs[nmol]->get_qatom(),
+    check_econd12(agas->molec(nmol)->tqatom(), !=, fampacs[nmol].get_qatom(),
                   mcerr);
     // number of different atoms in mol
     const long qa = agas->molec(nmol)->qatom();
     for (long na = 0; na < qa; ++na) {
-      apacs[nat] = fampacs[nmol]->get_atom(na);
+      apacs[nat] = fampacs[nmol].get_atom(na);
       check_econd12(apacs[nat]->get_Z(), !=, agas->molec(nmol)->atom(na)->Z(),
                     mcerr);
       nat++;
@@ -79,14 +79,14 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
     double u = 0.0;
     double d = 0.0;
     for (long n = 0; n < qmol; ++n) {
-      const double w = agas->weight_quan_molec(n) * fampacs[n]->get_total_Z();
-      u += w * fampacs[n]->get_F();
+      const double w = agas->weight_quan_molec(n) * fampacs[n].get_total_Z();
+      u += w * fampacs[n].get_F();
       d += w;
     }
     F = u / d;
 #else
     for (long n = 0; n < qmol; ++n) {
-      F += agas->weight_quan_molec(n) * fampacs[n]->get_F();
+      F += agas->weight_quan_molec(n) * fampacs[n].get_F();
     }
 #endif
   }
@@ -96,14 +96,14 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
     double u = 0.0;
     double d = 0.0;
     for (long n = 0; n < qmol; ++n) {
-      const double w = agas->weight_quan_molec(n) * fampacs[n]->get_total_Z();
-      u += w * fampacs[n]->get_W();
+      const double w = agas->weight_quan_molec(n) * fampacs[n].get_total_Z();
+      u += w * fampacs[n].get_W();
       d += w;
     }
     W = u / d;
 #else
     for (long n = 0; n < qmol; ++n) {
-      W += agas->weight_quan_molec(n) * fampacs[n]->get_W();
+      W += agas->weight_quan_molec(n) * fampacs[n].get_W();
     }
 #endif
   }
