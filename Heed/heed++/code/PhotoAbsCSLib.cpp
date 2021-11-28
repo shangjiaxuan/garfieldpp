@@ -93,7 +93,7 @@ AtomPhotoAbsCS* PhotoAbsCSLib::getAPACS(const std::string& name) {
 }
 
 void PhotoAbsCSLib::initialise() {
-
+  if (!hpacs.empty() || !apacs.empty()) return;
   // Hydrogen.
   hpacs.emplace("H", 
       SimpleAtomPhotoAbsCS(1, std::make_shared<HydrogenPhotoAbsCS>()));
