@@ -50,7 +50,6 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matrix/multiply.cpp
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matter/AtomDef.cpp
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matter/GasDef.cpp
-          ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matter/GasLib.cpp
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matter/MatterDef.cpp
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/matter/MoleculeDef.cpp
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/particle/eparticle.cpp
@@ -67,9 +66,7 @@ target_sources(
           ${CMAKE_CURRENT_LIST_DIR}/wcpplib/util/FunNameStack.cpp
           ${CMAKE_CURRENT_LIST_DIR}/HeedFieldMap.cpp)
 
-# -DNOT_INCLUDE_GASLIB_IN_PACSLIB is used in Heed/heed++/code/PhotoAbsCS.c
-target_compile_definitions(Garfield PRIVATE NOT_INCLUDE_GASLIB_IN_PACSLIB
-                                            GARFIELD_HEED_INTERFACE FUNNAMESTACK)
+target_compile_definitions(Garfield PRIVATE GARFIELD_HEED_INTERFACE FUNNAMESTACK)
 # garfield_set_all_default_properties(${libname}) # Sets the API version of the library
 # set_property( TARGET ${libname} PROPERTY SOVERSION ${lib_apiver} ) set_property( TARGET
 # ${libname} PROPERTY CXX_STANDARD 11) set_property( TARGET ${libname} PROPERTY

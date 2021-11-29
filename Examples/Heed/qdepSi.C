@@ -43,6 +43,7 @@ int main(int argc, char * argv[]) {
   track.SetSensor(&sensor);
   track.SetParticle("pion");
   track.SetBetaGamma(10.);
+  track.Initialise(&si, true);
   const unsigned int nTracks = 10000;
   for (unsigned int i = 0; i < nTracks; ++i) {
     if (i % 1000 == 0) std::cout << "Track " << i << "\n";

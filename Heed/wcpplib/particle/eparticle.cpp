@@ -7,7 +7,7 @@ namespace Heed {
 eparticle::eparticle(manip_absvol* primvol, const point& pt, const vec& vel,
                      vfloat ftime, particle_def* fpardef, HeedFieldMap* fieldmap)
     : mparticle(primvol, pt, vel, ftime, fpardef->mass), 
-      particle_type(fpardef), m_fieldMap(fieldmap) {
+      m_pardef(fpardef), m_fieldMap(fieldmap) {
 }
 
 int eparticle::force(const point& pt, vec& f, vec& f_perp, vfloat& mrange) {
@@ -18,15 +18,19 @@ int eparticle::force(const point& pt, vec& f, vec& f_perp, vfloat& mrange) {
     return 1;
   }
   m_fieldMap->field_map(pt, efield, hfield, mrange);
-  f = pardef->charge * efield;
-  f_perp = pardef->charge * hfield;
+  f = m_pardef->charge * efield;
+  f_perp = m_pardef->charge * hfield;
   return 1;
 }
 
 void eparticle::print(std::ostream& file, int l) const {
   if (l < 0) return;
   Ifile << "eparticle: particle is ";
-  print_notation(file);
+  if (!m_pardef) {
+    file << "none";
+  } else {
+    file << m_pardef->notation;
+  }
   file << '\n';
   mparticle::print(file, l);
 }

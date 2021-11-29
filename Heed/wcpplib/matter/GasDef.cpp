@@ -8,8 +8,6 @@ namespace Heed {
 using CLHEP::Avogadro;
 using CLHEP::k_Boltzmann;
 
-GasDef::GasDef() : MatterDef() {}
-
 GasDef::GasDef(const std::string& fname, const std::string& fnotation,
                long fqmolec, const std::vector<std::string>& fmolec_not,
                const std::vector<double>& fweight_quan_molec, double fpressure,
@@ -23,7 +21,7 @@ GasDef::GasDef(const std::string& fname, const std::string& fnotation,
 
   // Finding pointers to all molec. by notations
   for (long k = 0; k < fqmolec; ++k) {
-    MoleculeDef* amd = MoleculeDef::get_MoleculeDef(fmolec_not[k]);
+    auto amd = MoleculeDefs::getMolecule(fmolec_not[k]);
     check_econd11a(amd, == NULL,
                    "No molecule with such notation: " << fmolec_not[k] << '\n',
                    mcerr)
@@ -78,7 +76,7 @@ GasDef::GasDef(const std::string& fname, const std::string& fnotation,
       for (i = 0; i < qat; i++) {
         if (molech[k]->atom(n)->notation() == fatom_not[i]) {
           weight_qa[i] += fweight_quan_molec[k] * molech[k]->weight_quan(n);
-          goto mark2;
+          continue;
         }
       }
       */
@@ -87,7 +85,6 @@ GasDef::GasDef(const std::string& fname, const std::string& fnotation,
       // mcout << "qat=" << qat << " fatom_not[qat]=" << fatom_not[qat]
       //      << " weight_qa[qat]=" << weight_qa[qat] << '\n';
       ++qat;
-      // mark2: ;
     }
   }
   if (fdensity < 0.0) {
@@ -100,7 +97,6 @@ GasDef::GasDef(const std::string& fname, const std::string& fnotation,
     const double rydberg = k_Boltzmann * Avogadro;
     fdensity = sa * fpressure / (rydberg * ftemperature * sw);
   }
-  verify(fname, fnotation);
   {
     *((MatterDef*)this) = MatterDef(fname, fnotation, qat, fatom_not, weight_qa,
                                     fdensity, ftemperature);
@@ -113,9 +109,9 @@ GasDef::GasDef(const std::string& fname, const std::string& fnotation,
                double fpressure, double ftemperature, int /*s1*/, int /*s2*/) {
   // s1 and s2 are to distinguish the constructor
   mfunname("GasDef::GasDef(...many molecules... Waals)");
-  std::vector<MoleculeDef*> amolec(fqmolec);
+  std::vector<const MoleculeDef*> amolec(fqmolec);
   for (long n = 0; n < fqmolec; ++n) {
-    amolec[n] = MoleculeDef::get_MoleculeDef(fmolec_not[n]);
+    amolec[n] = MoleculeDefs::getMolecule(fmolec_not[n]);
     check_econd11a(amolec[n], == NULL,
                    "No molecule with such notation: " << fmolec_not[n] << '\n',
                    mcerr)
@@ -166,100 +162,60 @@ GasDef::GasDef(const std::string& fname, const std::string& fnotation,
 
 GasDef::GasDef(const std::string& fname, const std::string& fnotation,
                const std::string& fmolec_not, double fpressure,
-               double ftemperature, double fdensity) {
-  mfunname("GasDef::GasDef(...1 molecule...)");
-  std::vector<std::string> fmolec_noth(1, fmolec_not);
-  std::vector<double> fweight_quan_molec(1, 1.0);
-  {
-    *this = GasDef(fname, fnotation, 1, fmolec_noth, fweight_quan_molec,
-                   fpressure, ftemperature, fdensity);
-  }
+               double ftemperature, double fdensity) :
+    GasDef(fname, fnotation, 1, {fmolec_not}, {1.},
+           fpressure, ftemperature, fdensity) {
+
 }
 
 GasDef::GasDef(const std::string& fname, const std::string& fnotation,
                const std::string& fmolec_not, double fpressure,
-               double ftemperature, int s1, int s2) {
-  mfunname("GasDef::GasDef(...1 molecule...)");
-  std::vector<std::string> fmolec_noth(1, fmolec_not);
-  std::vector<double> fweight_volume_molec(1, 1.0);
-  {
-    *this = GasDef(fname, fnotation, 1, fmolec_noth, fweight_volume_molec,
-                   fpressure, ftemperature, s1, s2);
-  }
+               double ftemperature, int s1, int s2) :
+    GasDef(fname, fnotation, 1, {fmolec_not}, {1.},
+           fpressure, ftemperature, s1, s2) {
+
 }
 
 GasDef::GasDef(const std::string& fname, const std::string& fnotation,
                const std::string& fmolec_not1, double fweight_quan_molec1,
                const std::string& fmolec_not2, double fweight_quan_molec2,
-               double fpressure, double ftemperature, double fdensity) {
-  mfunname("GasDef::GasDef(...2 molecules...)");
-  std::vector<std::string> fmolec_noth(2);
-  std::vector<double> fweight_quan_molec(2, 0.0);
-  fmolec_noth[0] = fmolec_not1;
-  fmolec_noth[1] = fmolec_not2;
-  fweight_quan_molec[0] = fweight_quan_molec1;
-  fweight_quan_molec[1] = fweight_quan_molec2;
-  {
-    *this = GasDef(fname, fnotation, 2, fmolec_noth, fweight_quan_molec,
-                   fpressure, ftemperature, fdensity);
-  }
+               double fpressure, double ftemperature, double fdensity) :
+    GasDef(fname, fnotation, 2, {fmolec_not1, fmolec_not2}, 
+           {fweight_quan_molec1, fweight_quan_molec2},
+           fpressure, ftemperature, fdensity) {
+
 }
 
 GasDef::GasDef(const std::string& fname, const std::string& fnotation,
                const std::string& fmolec_not1, double fweight_volume_molec1,
                const std::string& fmolec_not2, double fweight_volume_molec2,
-               double fpressure, double ftemperature, int s1, int s2) {
-  mfunname("GasDef::GasDef(...2 molecules...)");
-  std::vector<std::string> fmolec_noth(2);
-  std::vector<double> fweight_volume_molec(2, 0.0);
-  fmolec_noth[0] = fmolec_not1;
-  fmolec_noth[1] = fmolec_not2;
-  fweight_volume_molec[0] = fweight_volume_molec1;
-  fweight_volume_molec[1] = fweight_volume_molec2;
-  {
-    *this = GasDef(fname, fnotation, 2, fmolec_noth, fweight_volume_molec,
-                   fpressure, ftemperature, s1, s2);
-  }
+               double fpressure, double ftemperature, int s1, int s2) :
+    GasDef(fname, fnotation, 2, {fmolec_not1, fmolec_not2}, 
+           {fweight_volume_molec1, fweight_volume_molec2},
+           fpressure, ftemperature, s1, s2) {
+
 }
 
 GasDef::GasDef(const std::string& fname, const std::string& fnotation,
                const std::string& fmolec_not1, double fweight_quan_molec1,
                const std::string& fmolec_not2, double fweight_quan_molec2,
                const std::string& fmolec_not3, double fweight_quan_molec3,
-               double fpressure, double ftemperature, double fdensity) {
-  mfunname("GasDef::GasDef(...3 molecules...)");
-  std::vector<std::string> fmolec_noth(3);
-  std::vector<double> fweight_quan_molec(3, 0.0);
-  fmolec_noth[0] = fmolec_not1;
-  fmolec_noth[1] = fmolec_not2;
-  fmolec_noth[2] = fmolec_not3;
-  fweight_quan_molec[0] = fweight_quan_molec1;
-  fweight_quan_molec[1] = fweight_quan_molec2;
-  fweight_quan_molec[2] = fweight_quan_molec3;
-  {
-    *this = GasDef(fname, fnotation, 3, fmolec_noth, fweight_quan_molec,
-                   fpressure, ftemperature, fdensity);
-  }
+               double fpressure, double ftemperature, double fdensity) :
+    GasDef(fname, fnotation, 3, {fmolec_not1, fmolec_not2, fmolec_not3},
+           {fweight_quan_molec1, fweight_quan_molec2, fweight_quan_molec3},
+           fpressure, ftemperature, fdensity) {
+
 }
 
 GasDef::GasDef(const std::string& fname, const std::string& fnotation,
                const std::string& fmolec_not1, double fweight_volume_molec1,
                const std::string& fmolec_not2, double fweight_volume_molec2,
                const std::string& fmolec_not3, double fweight_volume_molec3,
-               double fpressure, double ftemperature, int s1, int s2) {
-  mfunname("GasDef::GasDef(...3 molecules...)");
-  std::vector<std::string> fmolec_noth(3);
-  std::vector<double> fweight_volume_molec(3, 0.0);
-  fmolec_noth[0] = fmolec_not1;
-  fmolec_noth[1] = fmolec_not2;
-  fmolec_noth[2] = fmolec_not3;
-  fweight_volume_molec[0] = fweight_volume_molec1;
-  fweight_volume_molec[1] = fweight_volume_molec2;
-  fweight_volume_molec[2] = fweight_volume_molec3;
-  {
-    *this = GasDef(fname, fnotation, 3, fmolec_noth, fweight_volume_molec,
-                   fpressure, ftemperature, s1, s2);
-  }
+               double fpressure, double ftemperature, int s1, int s2) :
+    GasDef(fname, fnotation, 3, {fmolec_not1, fmolec_not2, fmolec_not3}, 
+           {fweight_volume_molec1, fweight_volume_molec2, fweight_volume_molec3},
+           fpressure, ftemperature, s1, s2) { 
+
 }
 
 GasDef::GasDef(const std::string& fname, const std::string& fnotation,

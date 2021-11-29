@@ -9,13 +9,12 @@
 
 namespace Heed {
 class gparticle;
+class particle_def;
 class HeedParticle;
 class HeedCondElectron;
 class HeedMatterDef;
 class GasDef;
 class MatterDef;
-class AtomPhotoAbsCS;
-class MolecPhotoAbsCS;
 class EnergyMesh;
 class EnTransfCS;
 class ElElasticScat;
@@ -96,7 +95,7 @@ class TrackHeed : public Track {
   double GetPhotoAbsorptionCrossSection(const double e) const;
 
   /// Compute the differential cross-section for a given medium.
-  bool Initialise(Medium* medium);
+  bool Initialise(Medium* medium, const bool verbose = false);
 
   /** Simulate a delta electron.
     * \param x0,y0,z0 initial position of the delta electron
@@ -247,6 +246,8 @@ class TrackHeed : public Track {
   std::vector<Heed::HeedCondElectron> m_conductionElectrons;
   std::vector<Heed::HeedCondElectron> m_conductionIons;
 
+  // Particle properties
+  std::unique_ptr<Heed::particle_def> m_particle_def; 
   // Material properties
   std::unique_ptr<Heed::HeedMatterDef> m_matter;
   std::unique_ptr<Heed::GasDef> m_gas;
@@ -289,7 +290,6 @@ class TrackHeed : public Track {
   bool SetupGas(Medium* medium);
   bool SetupMaterial(Medium* medium);
   bool SetupDelta(const std::string& databasePath);
-  std::string FindUnusedMaterialName(const std::string& namein);
   void ClearParticleBank();
   bool IsInside(const double x, const double y, const double z);
   bool UpdateBoundingBox(bool& update);
