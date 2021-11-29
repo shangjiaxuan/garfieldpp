@@ -15,78 +15,52 @@ using CLHEP::eplus;
 using CLHEP::MeV;
 using CLHEP::GeV;
 
-spin_def::spin_def(float ftotal, float fprojection)
-    : total(ftotal), projection(fprojection) {
-  mfunname("spin_def::spin_def(float ftotal, float fprojection)");
-  check_econd11(total, < 0, mcerr);
-  check_econd12(total, <, projection, mcerr);
-}
-
-std::ostream& operator<<(std::ostream& file, const spin_def& f) {
-  Ifile << "spin_def: total=" << f.total << " projection=" << f.projection;
-  return file;
-}
-
 particle_def electron_def("electron", "e-", electron_mass_c2 / c_squared,
-                          electron_charge, 1, 0, 0.5, spin_def(0.0, 0.0));
+                          electron_charge, 0.5);
 particle_def positron_def("positron", "e+", electron_def);
 
 particle_def muon_minus_def("muon_minus", "mu-", 105.658367 * MeV / c_squared,
-                            electron_charge, 1, 0, 0.5, spin_def(0.0, 0.0));
+                            electron_charge, 0.5);
 particle_def muon_plus_def("muon_plus", "mu+", muon_minus_def);
 
-particle_def proton_def("proton", "p+", proton_mass_c2 / c_squared, eplus, 0, 1,
-                        0.5, spin_def(0.5, 0.5));
+particle_def proton_def("proton", "p+", proton_mass_c2 / c_squared, eplus, 0.5);
 particle_def anti_proton_def("", "p-", proton_def);
-particle_def neutron_def("neutron", "n", neutron_mass_c2 / c_squared, 0, 0, 1,
-                         0.5, spin_def(0.5, -0.5));
+particle_def neutron_def("neutron", "n", neutron_mass_c2 / c_squared, 0, 0.5);
 particle_def anti_neutron_def("", "", neutron_def);
 
-particle_def P11_def("P11", "P11", 1440.0 * MeV / c_squared, 1 * eplus, 0, 1,
-                     0.5, spin_def(0.5, 0.5));
-particle_def D13_def("D13", "D13", 1520.0 * MeV / c_squared, 1 * eplus, 0, 1,
-                     1.5, spin_def(0.5, 0.5));
-particle_def S11_def("S11", "S11", 1535.0 * MeV / c_squared, 1 * eplus, 0, 1,
-                     0.5, spin_def(0.5, 0.5));
+particle_def P11_def("P11", "P11", 1440.0 * MeV / c_squared, 1 * eplus, 0.5); 
+particle_def D13_def("D13", "D13", 1520.0 * MeV / c_squared, 1 * eplus, 1.5); 
+particle_def S11_def("S11", "S11", 1535.0 * MeV / c_squared, 1 * eplus, 0.5); 
 
 // light unflavored mesons
 particle_def pi_plus_meson_def("pi_plus_meson", "pi+",
-                               139.56755 * MeV / c_squared, eplus, 0, 0, 0.0,
-                               spin_def(1.0, 1.0));
+                               139.56755 * MeV / c_squared, eplus, 0.0);
 particle_def pi_minus_meson_def("pi_minus_meson", "pi-",
-                                139.56755 * MeV / c_squared, -eplus, 0, 0, 0.0,
-                                spin_def(1.0, -1.0));
+                                139.56755 * MeV / c_squared, -eplus, 0.0);
 particle_def pi_0_meson_def("pi_0_meson", "pi0", 134.9734 * MeV / c_squared, 0,
-                            0, 0, 0.0, spin_def(1.0, 0.0));
+                            0.0);
 particle_def eta_meson_def("eta_meson_def", "eta", 548.8 * MeV / c_squared, 0,
-                           0, 0, 1.0, spin_def(0.0, 0.0));
+                           1.0);
 particle_def K_plus_meson_def("K_plus_meson_def", "K+",
-                              493.677 * MeV / c_squared, 1, 0, 0, 0.0,
-                              spin_def(0.5, -0.5));
+                              493.677 * MeV / c_squared, 1, 0.0);
 particle_def K_minus_meson_def("K_minus_meson_def", "K-", K_plus_meson_def);
 
 particle_def deuteron_def("deuteron", "dtr", 1875.613 * MeV / c_squared, eplus,
-                          0, 2, 0.0, spin_def(0.0, 0.0));
+                          0.0);
 particle_def alpha_particle_def("alpha_particle", "alpha",
-                                3727.417 * MeV / c_squared, 2 * eplus, 0, 4,
-                                0.0, spin_def(0.0, 0.0));
+                                3727.417 * MeV / c_squared, 2 * eplus, 0.);
 
 particle_def user_particle_def("user_particle", "X",
-                               139.56755 * MeV / c_squared, eplus, 0, 0, 0.0,
-                               spin_def(0.0, 0.0));
+                               139.56755 * MeV / c_squared, eplus, 0.0);
 
 particle_def::particle_def(const std::string& fname,
                            const std::string& fnotation, double fmass,
-                           double fcharge, int flepton_n, int fbaryon_n,
-                           float fspin, const spin_def& fisospin) {
+                           double fcharge, float fspin) {
   name = fname;
   notation = fnotation;
   mass = fmass;
   charge = fcharge;
-  baryon_n = fbaryon_n;
-  lepton_n = flepton_n;
   spin = fspin;
-  isospin = fisospin;
   verify();
   particle_def::get_logbook().push_back(this);
 }
@@ -106,8 +80,7 @@ particle_def::particle_def(const std::string& fname,
 particle_def particle_def::anti_particle(const particle_def& p) {
   std::string aname = "anti-" + p.name;
   std::string anot = "anti-" + p.notation;
-  return particle_def(aname, anot, p.mass, -p.charge, -p.lepton_n, -p.baryon_n,
-                      -p.spin, p.isospin);
+  return particle_def(aname, anot, p.mass, -p.charge, -p.spin);
 }
 std::list<particle_def*>& particle_def::get_logbook() {
   static std::list<particle_def*> logbook;
@@ -147,8 +120,7 @@ std::ostream& operator<<(std::ostream& file, const particle_def& f) {
         << " mass/(GeV/c_squared)=" << f.mass / (GeV / c_squared)
         << " charge=" << f.charge << " charge/eplus=" << f.charge / eplus
         << '\n';
-  Ifile << "lepton_n=" << f.lepton_n << " baryon_n=" << f.baryon_n << '\n';
-  Ifile << "spin=" << f.spin << " isospin=" << f.isospin << '\n';
+  Ifile << "spin=" << f.spin << '\n';
   return file;
 }
 

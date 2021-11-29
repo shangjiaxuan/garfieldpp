@@ -6,17 +6,6 @@
 
 namespace Heed {
 
-/// Helper class for definition of spin.
-
-class spin_def {
- public:
-  float total = 0.;
-  float projection = 0.;
-  spin_def() = default;
-  spin_def(float ftotal, float fprojection);
-};
-std::ostream& operator<<(std::ostream& file, const spin_def& f);
-
 /// Definition of particles. Only the basic information: the name, the notation,
 /// the mass, the charge, and other auxiliary data.
 ///
@@ -46,33 +35,21 @@ class particle_def {
   std::string notation = "none";
   double mass = 0.;
   double charge = 0.;
-  // The following is not yet used in programs
-  int lepton_n = 0;
-  int baryon_n = 0;
   float spin = 0.;
-  spin_def isospin;
   /// Default constructor.
   particle_def() {
     particle_def::get_logbook().push_back(this);
   }
   /// Constructor.
   particle_def(const std::string& fname, const std::string& fnotation,
-               double fmass, double fcharge, int flepton_n, int fbarion_n,
-               float fspin, const spin_def& fisospin);
-  /// Constructor.
-  particle_def(const std::string& fname, const std::string& fnotation,
-               double fmass, double fcharge, int flepton_n, int fbarion_n,
-               float fspin, float fisospin_total, float fisospin_proj) 
-      : particle_def(fname, fnotation, fmass, fcharge, flepton_n, fbarion_n,
-                     fspin, spin_def(fisospin_total, fisospin_proj)) {}
+               double fmass, double fcharge, float fspin);
   /// Constructor to create an anti-particle.
   particle_def(const std::string& fname, const std::string& fnotation,
                particle_def& p);
   /// Copy constructor.
   particle_def(const particle_def& f) 
       : name(f.name), notation(f.notation), mass(f.mass), charge(f.charge), 
-        lepton_n(f.lepton_n), baryon_n(f.baryon_n), 
-        spin(f.spin), isospin(f.isospin) {
+        spin(f.spin) {
     verify();
     particle_def::get_logbook().push_back(this);
   }
