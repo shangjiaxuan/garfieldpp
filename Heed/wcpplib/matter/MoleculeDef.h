@@ -88,7 +88,6 @@ class MoleculeDef : public AtomMixDef {
 
   void print(std::ostream& file, int l) const;
 
-
   MoleculeDef* copy() const { return new MoleculeDef(*this); }
 };
 std::ostream& operator<<(std::ostream& file, const MoleculeDef& f);
@@ -100,7 +99,7 @@ public:
   /// Return the address of the molecule with this name.
   /// If there is no molecule with this notation, the function returns NULL
   /// but does not terminate the program as that for AtomDef. Be careful.
-  static const MoleculeDef* get_MoleculeDef(const std::string& fnotation);
+  static const MoleculeDef* getMolecule(const std::string& fnotation);
   static void printMolecules(std::ostream& file);
 private:
   static std::list<MoleculeDef> molecules;

@@ -186,7 +186,7 @@ void MoleculeDefs::printMolecules(std::ostream& file) {
   }
 }
 
-const MoleculeDef* MoleculeDefs::get_MoleculeDef(const std::string& fnotation) {
+const MoleculeDef* MoleculeDefs::getMolecule(const std::string& fnotation) {
   for (const auto& molecule : getMolecules()) {
     if (molecule.notation() == fnotation) return &molecule;
   }
