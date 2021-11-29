@@ -39,7 +39,7 @@ By default, this installs the documentation into `<installdir>/share/doc/HSFTEMP
 
 You can run the examples from the build directory (if WITH_EXAMPLES has been turned on) but you need to setup a running environment defining some variables, in particular for the HEED database.
 
-In the following lines we use the `Gem` example:
+In the following lines we use the `Gem` example (assuming that the build folder is our current working directory):
 ```
 source setupGarfield.sh
 cd Examples/Gem
