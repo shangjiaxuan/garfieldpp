@@ -54,12 +54,10 @@ class AtomDefs {
   /// or NULL otherwise
   static const AtomDef* getAtom(const std::string& fnotation);
   /// Return the atomic number corresponding to a given Z.
-  /// If the atom is not registered, the current version
-  /// terminates the program. Be careful!
+  /// If the atom is not registered, the program is terminated. Be careful!
   static double getA(int fZ);
   /// Return the address of atom corresponding to a given Z.
-  /// If the atom is not registered, the current version
-  /// terminates the program. Be careful!
+  /// If the atom is not registered, the program is terminated. Be carefule!
   static const AtomDef* getAtom(int fZ);
 
   /// Print all registered atoms.

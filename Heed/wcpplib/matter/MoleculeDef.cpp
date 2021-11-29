@@ -83,37 +83,18 @@ MoleculeDef::MoleculeDef(const std::string& fname, const std::string& fnotation,
 // one atom in molecule
 MoleculeDef::MoleculeDef(const std::string& fname, const std::string& fnotation,
                          const std::string& fatom_not, long fqatom_ps,
-                         std::shared_ptr<VanDerWaals> fvdw)
-    : AtomMixDef(fatom_not),
-      nameh(fname),
-      notationh(fnotation),
-      qatom_psh(1, fqatom_ps),
-      tqatomh(fqatom_ps) {
-  mfunname("MoleculeDef::MoleculeDef(...)");
-  m_vdw = std::move(fvdw);
-  Z_totalh = atom(0)->Z() * fqatom_ps;
-  A_totalh = atom(0)->A() * fqatom_ps;
+                         std::shared_ptr<VanDerWaals> fvdw) :
+    MoleculeDef(fname, fnotation, 1, {fatom_not}, {fqatom_ps}, fvdw) { 
 }
 
 // two atoms
 MoleculeDef::MoleculeDef(const std::string& fname, const std::string& fnotation,
                          const std::string& fatom_not1, long fqatom_ps1,
                          const std::string& fatom_not2, long fqatom_ps2,
-                         std::shared_ptr<VanDerWaals> fvdw)
-    : AtomMixDef(fatom_not1, fqatom_ps1, fatom_not2, fqatom_ps2),
-      nameh(fname),
-      notationh(fnotation),
-      qatom_psh(2) {
-  mfunname("MoleculeDef::MoleculeDef(...)");
-  m_vdw = std::move(fvdw);
-  qatom_psh[0] = fqatom_ps1;
-  qatom_psh[1] = fqatom_ps2;
-  for (long n = 0; n < qatom(); n++) {
-    check_econd11(qatom_psh[n], <= 0, mcerr);
-    Z_totalh += qatom_psh[n] * atom(n)->Z();
-    A_totalh += qatom_psh[n] * atom(n)->A();
-    tqatomh += qatom_psh[n];
-  }
+                         std::shared_ptr<VanDerWaals> fvdw) : 
+    MoleculeDef(fname, fnotation, 2, {fatom_not1, fatom_not2}, 
+                {fqatom_ps1, fqatom_ps2}, fvdw) {
+
 }
 
 // three atoms
@@ -121,23 +102,10 @@ MoleculeDef::MoleculeDef(const std::string& fname, const std::string& fnotation,
                          const std::string& fatom_not1, long fqatom_ps1,
                          const std::string& fatom_not2, long fqatom_ps2,
                          const std::string& fatom_not3, long fqatom_ps3,
-                         std::shared_ptr<VanDerWaals> fvdw)
-    : AtomMixDef(fatom_not1, fqatom_ps1, fatom_not2, fqatom_ps2, fatom_not3,
-                 fqatom_ps3),
-      nameh(fname),
-      notationh(fnotation),
-      qatom_psh(3) {
-  mfunname("MoleculeDef::MoleculeDef(...)");
-  m_vdw = std::move(fvdw);
-  qatom_psh[0] = fqatom_ps1;
-  qatom_psh[1] = fqatom_ps2;
-  qatom_psh[2] = fqatom_ps3;
-  for (long n = 0; n < qatom(); n++) {
-    check_econd11(qatom_psh[n], <= 0, mcerr);
-    Z_totalh += qatom_psh[n] * atom(n)->Z();
-    A_totalh += qatom_psh[n] * atom(n)->A();
-    tqatomh += qatom_psh[n];
-  }
+                         std::shared_ptr<VanDerWaals> fvdw) :
+    MoleculeDef(fname, fnotation, 2, {fatom_not1, fatom_not2, fatom_not3}, 
+                {fqatom_ps1, fqatom_ps2, fqatom_ps3}, fvdw) {
+
 }
 
 void MoleculeDef::print(std::ostream& file, int l) const {
