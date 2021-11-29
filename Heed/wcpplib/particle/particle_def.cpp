@@ -55,14 +55,9 @@ particle_def user_particle_def("user_particle", "X",
 
 particle_def::particle_def(const std::string& fname,
                            const std::string& fnotation, double fmass,
-                           double fcharge, float fspin) {
-  name = fname;
-  notation = fnotation;
-  mass = fmass;
-  charge = fcharge;
-  spin = fspin;
-  verify();
-  particle_def::get_logbook().push_back(this);
+                           double fcharge, float fspin) : 
+    name(fname), notation(fnotation), mass(fmass), 
+    charge(fcharge), spin(fspin) {
 }
 
 particle_def::particle_def(const std::string& fname,
@@ -73,30 +68,12 @@ particle_def::particle_def(const std::string& fname,
   // strcpy(name,fname);
   if (!(fname == "" || fname == " ")) name = fname;
   if (!(fnotation == "" || fnotation == " ")) notation = fnotation;
-  verify();
-  particle_def::get_logbook().push_back(this);
 }
 
 particle_def particle_def::anti_particle(const particle_def& p) {
   std::string aname = "anti-" + p.name;
   std::string anot = "anti-" + p.notation;
   return particle_def(aname, anot, p.mass, -p.charge, -p.spin);
-}
-std::list<particle_def*>& particle_def::get_logbook() {
-  static std::list<particle_def*> logbook;
-  return logbook;
-}
-
-const std::list<particle_def*>& particle_def::get_const_logbook() {
-  return particle_def::get_logbook();
-}
-
-particle_def* particle_def::get_particle_def(const std::string& fnotation) {
-  for (auto particle : particle_def::get_logbook()) {
-    if (!particle) continue;
-    if (particle->notation == fnotation) return particle;
-  }
-  return nullptr;
 }
 
 void particle_def::set_mass(const double m) { mass = m * MeV / c_squared; }
@@ -105,12 +82,6 @@ void particle_def::set_charge(const double z) { charge = z * eplus; }
 
 void particle_def::print(std::ostream& file, int l) const {
   if (l > 0) file << (*this);
-}
-void particle_def::printall(std::ostream& file) {
-  Ifile << "particle_def::printall:\n";
-  for (auto particle : particle_def::get_logbook()) {
-    if (particle) file << particle;
-  }
 }
 
 std::ostream& operator<<(std::ostream& file, const particle_def& f) {

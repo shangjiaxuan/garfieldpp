@@ -37,9 +37,7 @@ class particle_def {
   double charge = 0.;
   float spin = 0.;
   /// Default constructor.
-  particle_def() {
-    particle_def::get_logbook().push_back(this);
-  }
+  particle_def() = default;
   /// Constructor.
   particle_def(const std::string& fname, const std::string& fnotation,
                double fmass, double fcharge, float fspin);
@@ -50,33 +48,19 @@ class particle_def {
   particle_def(const particle_def& f) 
       : name(f.name), notation(f.notation), mass(f.mass), charge(f.charge), 
         spin(f.spin) {
-    verify();
-    particle_def::get_logbook().push_back(this);
   }
   /// Assignment operator.
   particle_def& operator=(const particle_def&) = default;
 
   /// Destructor.
-  ~particle_def() { particle_def::get_logbook().remove(this); }
+  ~particle_def() = default;
 
   /// Function for making an anti-particle.
   particle_def anti_particle(const particle_def& p);
   void print(std::ostream& file, int l) const;
-  static void printall(std::ostream& file);
 
   void set_mass(const double m);
   void set_charge(const double z);
-
-  /// Initialize the logbook at the first request
-  /// and keep it as internal static variable.
-  static std::list<particle_def*>& get_logbook();
-  static const std::list<particle_def*>& get_const_logbook();
-
-  /// Return the address of particle with this name
-  /// if it is registered in system, or NULL otherwise.
-  static particle_def* get_particle_def(const std::string& fnotation);
-  /// Check that there is no particle with the same name in the container.
-  void verify() {}
 };
 std::ostream& operator<<(std::ostream& file, const particle_def& f);
 
