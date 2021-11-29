@@ -71,13 +71,13 @@ class GasDef : public MatterDef {
          const std::vector<double>& fweight_quan_molec, double fpressure,
          double ftemperature, double fdensity = -1.0);
   // for calculation of density assume Van der Waals
-  // for the components for which the parameters are defined:
+  // for the components for which the parameters are defined.
+  // s1 and s2 are to distinguish the constructor.
   GasDef(const std::string& fname, const std::string& fnotation, long fqmolec,
          const std::vector<std::string>& fmolec_not,
          const std::vector<double>& fweight_volume_molec, double fpressure,
-         double ftemperature, int s1,
-         int s2);  // s1 and s2 are to distinguish the constructor
-                   // for calculation of density assume ideal gas:
+         double ftemperature, int s1, int s2);  
+  // for calculation of density assume ideal gas:
   GasDef(const std::string& fname, const std::string& fnotation,
          const std::string& fmolec_not, double fpressure, double ftemperature,
          double fdensity = -1.0);

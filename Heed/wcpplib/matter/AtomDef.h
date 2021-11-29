@@ -22,7 +22,6 @@ class AtomDef {
   int Zh = 0;
   /// Atomic mass in internal units. Transfer to gram/mole if need.
   double Ah = 0.;
-  static constexpr int max_poss_atom_z = 100;
 
  public:
   /// Default constructor
@@ -57,7 +56,7 @@ class AtomDefs {
   /// If the atom is not registered, the program is terminated. Be careful!
   static double getA(int fZ);
   /// Return the address of atom corresponding to a given Z.
-  /// If the atom is not registered, the program is terminated. Be carefule!
+  /// If the atom is not registered, the program is terminated. Be careful!
   static const AtomDef* getAtom(int fZ);
 
   /// Print all registered atoms.
@@ -90,20 +89,12 @@ class AtomMixDef {
  public:
   /// Default constructor
   AtomMixDef() = default;
+  /// Constructor from list of atoms and weights.
   AtomMixDef(unsigned long fqatom, const std::vector<std::string>& fatom_not,
              const std::vector<double>& fweight_quan);
+  /// Constructor from list of atoms and number of atoms per molecule.
   AtomMixDef(unsigned long fqatom, const std::vector<std::string>& fatom_not,
              const std::vector<long>& fweight_quan);
-  AtomMixDef(const std::string& fatom_not);
-  AtomMixDef(const std::string& fatom_not1, double fweight_quan1,
-             const std::string& fatom_not2, double fweight_quan2);
-  AtomMixDef(const std::string& fatom_not1, double fweight_quan1,
-             const std::string& fatom_not2, double fweight_quan2,
-             const std::string& fatom_not3, double fweight_quan3);
-  AtomMixDef(const std::string& fatom_not1, double fweight_quan1,
-             const std::string& fatom_not2, double fweight_quan2,
-             const std::string& fatom_not3, double fweight_quan3,
-             const std::string& fatom_not4, double fweight_quan4);
   void print(std::ostream& file, int l) const;
   long qatom() const { return qatomh; }
   const std::vector<const AtomDef*>& atom() const { return atomh; }
