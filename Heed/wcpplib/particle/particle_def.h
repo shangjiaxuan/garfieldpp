@@ -9,23 +9,6 @@ namespace Heed {
 /// Definition of particles. Only the basic information: the name, the notation,
 /// the mass, the charge, and other auxiliary data.
 ///
-/// The organization is similar to AtomDef from directory matter, with
-/// the exception that the internal data are not declared as private.
-/// Of course, the user should not change them.
-///
-/// The principle of definitions of particles is dictionary or a database:
-/// the particles are not repeated,
-/// each particle is presented in the total system no more than one time.
-/// The system knows each particle presented in it.
-/// The particle characteristics can be obtained by literal notation.
-/// The system declines the secondary initialization.
-/// The copying is not declined.
-/// When the user program wants to refer to particle,
-/// it has to use either char* (string) notation, or pointer (or reference)
-/// to one of these objects.
-/// The user pogram can initialize the new particles.
-/// The standard particles are initialized right here, below.
-///
 /// 1999 - 2004,   I. Smirnov
 
 class particle_def {
