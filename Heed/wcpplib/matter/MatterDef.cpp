@@ -18,48 +18,35 @@ MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
       notationh(fnotation),
       temperatureh(ftemperature),
       densityh(fdensity) {
-  mfunname("MatterDef::MatterDef(...many atoms...)");
+  mfunname("MatterDef::MatterDef(...)");
   calc_I_eff();
 }
 
 MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
                      const std::string& fatom_not, double fdensity,
-                     double ftemperature)
-    : AtomMixDef(fatom_not),
-      nameh(fname),
-      notationh(fnotation),
-      temperatureh(ftemperature),
-      densityh(fdensity) {
-  mfunname("MatterDef::MatterDef(...1 atom...)");
-  calc_I_eff();
+                     double ftemperature) :
+    MatterDef(fname, fnotation, 1, {fatom_not}, {1.}, fdensity, ftemperature) {
+
 }
 
 MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
                      const std::string& fatom_not1, double fweight_quan1,
                      const std::string& fatom_not2, double fweight_quan2,
-                     double fdensity, double ftemperature)
-    : AtomMixDef(fatom_not1, fweight_quan1, fatom_not2, fweight_quan2),
-      nameh(fname),
-      notationh(fnotation),
-      temperatureh(ftemperature),
-      densityh(fdensity) {
-  mfunname("MatterDef::MatterDef(...2 atoms...)");
-  calc_I_eff();
+                     double fdensity, double ftemperature) :
+    MatterDef(fname, fnotation, 2, {fatom_not1, fatom_not2},
+              {fweight_quan1, fweight_quan2}, fdensity, ftemperature) {
+
 }
 
 MatterDef::MatterDef(const std::string& fname, const std::string& fnotation,
                      const std::string& fatom_not1, double fweight_quan1,
                      const std::string& fatom_not2, double fweight_quan2,
                      const std::string& fatom_not3, double fweight_quan3,
-                     double fdensity, double ftemperature)
-    : AtomMixDef(fatom_not1, fweight_quan1, fatom_not2, fweight_quan2,
-                 fatom_not3, fweight_quan3),
-      nameh(fname),
-      notationh(fnotation),
-      temperatureh(ftemperature),
-      densityh(fdensity) {
-  mfunname("MatterDef::MatterDef(...2 atoms...)");
-  calc_I_eff();
+                     double fdensity, double ftemperature) :
+    MatterDef(fname, fnotation, 3, {fatom_not1, fatom_not2, fatom_not3},
+              {fweight_quan1, fweight_quan2, fweight_quan3}, 
+              fdensity, ftemperature) {
+
 }
 
 void MatterDef::print(std::ostream& file, int l) const {
