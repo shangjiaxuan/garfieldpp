@@ -152,41 +152,4 @@ std::ostream& operator<<(std::ostream& file, const particle_def& f) {
   return file;
 }
 
-particle_type::particle_type(const char* name, int s) {
-  mfunname("particle_type::particle_type(const char* name, int s)");
-  for (auto particle : particle_def::get_logbook()) {
-    if (name == particle->notation) {
-      pardef = particle;
-      return;
-    }
-  }
-  for (auto particle : particle_def::get_logbook()) {
-    if (name == particle->name) {
-      pardef = particle;
-      return;
-    }
-  }
-  if (s == 0) {
-    mcerr << "this type of particle is absent, name=" << name << '\n';
-    spexit(mcerr);
-  }
-  pardef = nullptr;
-}
-
-void particle_type::print_notation(std::ostream& file) const {
-  if (!pardef) {
-    file << "none";
-  } else {
-    file << pardef->notation;
-  }
-}
-
-std::ostream& operator<<(std::ostream& file, const particle_type& f) {
-  if (!f.pardef) {
-    file << "type is not initialized";
-  } else {
-    file << (f.pardef->name);
-  }
-  return file;
-}
 }

@@ -18,6 +18,7 @@ using CLHEP::c_light;
 using CLHEP::c_squared;
 using CLHEP::cm;
 using CLHEP::MeV;
+using CLHEP::electron_mass_c2;
 
 HeedParticle::HeedParticle(manip_absvol* primvol, const point& pt,
                            const vec& vel, vfloat ftime, particle_def* fpardef,
@@ -55,7 +56,7 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
   const double mp = m_mass * c_squared;
   const double ep = mp + m_curr_ekin;
   // Electron mass.
-  const double mt = electron_def.mass * c_squared;
+  const double mt = electron_mass_c2;
   // Particle velocity.
   const double invSpeed = 1. / m_prevpos.speed;
   // Shorthand.
@@ -121,7 +122,11 @@ void HeedParticle::print(std::ostream& file, int l) const {
   if (l < 0) return;
   Ifile << "HeedParticle (l=" << l << "): particle_number=" 
         << m_particle_number << " type=";
-  print_notation(file);
+  if (!m_pardef) {
+    file << "none";
+  } else {
+    file << m_pardef->notation;
+  }
   file << std::endl;
   if (l == 1) return;
   mparticle::print(file, l - 1);

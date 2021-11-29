@@ -129,38 +129,6 @@ extern particle_def alpha_particle_def;
 // "exotic" particles with properties specified by user
 extern particle_def user_particle_def;
 
-/// Auxiliary class for definition of classes derived from particle.
-/// The derivation from particle is not possible by the standard way,
-/// since the system rejects the second particle with the same name.
-/// One cannot derive the class from pointer. But the pointer can be
-/// allocated as member of another little class, and from this class
-/// one can derive anything. This little class with pointer is
-/// class particle_type.
-/// This class is also convenient identity of particles by comparing the
-/// pointers.
-
-class particle_type {
- public:
-  particle_def* pardef = nullptr;
-  particle_type() = default;
-  particle_type(particle_def* f) : pardef(f) {}
-  particle_type(const char* name, int s = 0);
-  // name is notation or name.
-  // First the list of notations is checked,
-  // then the list of names is checked as well.
-  // s controls error handling
-  // If the name is absent in the particle list then
-  //   If s==0, the program is terminated
-  //   Otherwise the pardef is set to NULL
-  int operator==(const particle_type& f) {
-    return pardef == f.pardef ? 1 : 0;
-  }
-  int operator!=(const particle_type& f) {
-    return pardef != f.pardef ? 1 : 0;
-  }
-  void print_notation(std::ostream& file) const;
-};
-std::ostream& operator<<(std::ostream& file, const particle_type& f);
 }
 
 #endif
