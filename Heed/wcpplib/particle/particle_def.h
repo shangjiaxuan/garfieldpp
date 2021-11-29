@@ -70,17 +70,10 @@ extern particle_def muon_minus_def;
 extern particle_def muon_plus_def;
 extern particle_def proton_def;
 extern particle_def anti_proton_def;
-extern particle_def neutron_def;
-extern particle_def anti_neutron_def;
-extern particle_def P11_def;
-extern particle_def D13_def;
-extern particle_def S11_def;
 
 // light unflavored mesons
 extern particle_def pi_plus_meson_def;
-extern particle_def pi_0_meson_def;
 extern particle_def pi_minus_meson_def;
-extern particle_def eta_meson_def;
 extern particle_def K_plus_meson_def;
 extern particle_def K_minus_meson_def;
 

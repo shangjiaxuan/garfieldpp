@@ -25,27 +25,17 @@ particle_def muon_plus_def("muon_plus", "mu+", muon_minus_def);
 
 particle_def proton_def("proton", "p+", proton_mass_c2 / c_squared, eplus, 0.5);
 particle_def anti_proton_def("", "p-", proton_def);
-particle_def neutron_def("neutron", "n", neutron_mass_c2 / c_squared, 0, 0.5);
-particle_def anti_neutron_def("", "", neutron_def);
-
-particle_def P11_def("P11", "P11", 1440.0 * MeV / c_squared, 1 * eplus, 0.5); 
-particle_def D13_def("D13", "D13", 1520.0 * MeV / c_squared, 1 * eplus, 1.5); 
-particle_def S11_def("S11", "S11", 1535.0 * MeV / c_squared, 1 * eplus, 0.5); 
 
 // light unflavored mesons
-particle_def pi_plus_meson_def("pi_plus_meson", "pi+",
+particle_def pi_plus_meson_def("pi_plus", "pi+",
                                139.56755 * MeV / c_squared, eplus, 0.0);
-particle_def pi_minus_meson_def("pi_minus_meson", "pi-",
+particle_def pi_minus_meson_def("pi_minus", "pi-",
                                 139.56755 * MeV / c_squared, -eplus, 0.0);
-particle_def pi_0_meson_def("pi_0_meson", "pi0", 134.9734 * MeV / c_squared, 0,
-                            0.0);
-particle_def eta_meson_def("eta_meson_def", "eta", 548.8 * MeV / c_squared, 0,
-                           1.0);
-particle_def K_plus_meson_def("K_plus_meson_def", "K+",
+particle_def K_plus_meson_def("K_plus", "K+",
                               493.677 * MeV / c_squared, 1, 0.0);
-particle_def K_minus_meson_def("K_minus_meson_def", "K-", K_plus_meson_def);
+particle_def K_minus_meson_def("K_minus", "K-", K_plus_meson_def);
 
-particle_def deuteron_def("deuteron", "dtr", 1875.613 * MeV / c_squared, eplus,
+particle_def deuteron_def("deuteron", "d", 1875.613 * MeV / c_squared, eplus,
                           0.0);
 particle_def alpha_particle_def("alpha_particle", "alpha",
                                 3727.417 * MeV / c_squared, 2 * eplus, 0.);
