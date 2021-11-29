@@ -9,6 +9,7 @@
 
 namespace Heed {
 class gparticle;
+class particle_def;
 class HeedParticle;
 class HeedCondElectron;
 class HeedMatterDef;
@@ -245,6 +246,8 @@ class TrackHeed : public Track {
   std::vector<Heed::HeedCondElectron> m_conductionElectrons;
   std::vector<Heed::HeedCondElectron> m_conductionIons;
 
+  // Particle properties
+  std::unique_ptr<Heed::particle_def> m_particle_def; 
   // Material properties
   std::unique_ptr<Heed::HeedMatterDef> m_matter;
   std::unique_ptr<Heed::GasDef> m_gas;

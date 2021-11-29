@@ -183,9 +183,10 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
     particleType = &Heed::alpha_particle_def;
   } else if (m_particleName == "exotic") {
     // User defined particle
-    Heed::user_particle_def.set_mass(m_mass * 1.e-6);
-    Heed::user_particle_def.set_charge(m_q);
-    particleType = &Heed::user_particle_def;
+    m_particle_def.reset(new Heed::particle_def(Heed::pi_plus_meson_def));
+    m_particle_def->set_mass(m_mass * 1.e-6);
+    m_particle_def->set_charge(m_q);
+    particleType = m_particle_def.get();
   } else {
     // Not a predefined particle, use muon definition.
     if (m_q > 0.) {

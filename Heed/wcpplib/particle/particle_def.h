@@ -80,9 +80,6 @@ extern particle_def K_minus_meson_def;
 extern particle_def deuteron_def;
 extern particle_def alpha_particle_def;
 
-// "exotic" particles with properties specified by user
-extern particle_def user_particle_def;
-
 }
 
 #endif

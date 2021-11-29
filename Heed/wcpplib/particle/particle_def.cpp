@@ -40,9 +40,6 @@ particle_def deuteron_def("deuteron", "d", 1875.613 * MeV / c_squared, eplus,
 particle_def alpha_particle_def("alpha_particle", "alpha",
                                 3727.417 * MeV / c_squared, 2 * eplus, 0.);
 
-particle_def user_particle_def("user_particle", "X",
-                               139.56755 * MeV / c_squared, eplus, 0.0);
-
 particle_def::particle_def(const std::string& fname,
                            const std::string& fnotation, double fmass,
                            double fcharge, float fspin) : 
@@ -54,8 +51,6 @@ particle_def::particle_def(const std::string& fname,
                            const std::string& fnotation, particle_def& p) {
   // creates anti-particle through the call of anti_particle(p)
   *this = anti_particle(p);
-  // if(strlen(fname) > 0)
-  // strcpy(name,fname);
   if (!(fname == "" || fname == " ")) name = fname;
   if (!(fnotation == "" || fnotation == " ")) notation = fnotation;
 }
