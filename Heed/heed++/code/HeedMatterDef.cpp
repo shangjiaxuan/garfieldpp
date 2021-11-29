@@ -263,17 +263,13 @@ void HeedMatterDef::replace_epsi12(const std::string& file_name) {
   double emax = ener[qe - 1] + 0.5 * (ener[qe - 1] - ener[qe - 2]);
 
   qe = energy_mesh->get_q();
+  const auto interpolate = t_value_straight_point_ar<double, std::vector<double>,
+                                   PointCoorMesh<double, std::vector<double> > >;
   for (long ne = 0; ne < qe; ++ne) {
     double ec = energy_mesh->get_ec(ne);
     // pcmd: dimension q; eps1, eps2: dimension q - 1.
-    epsi1[ne] =
-        t_value_straight_point_ar<double, std::vector<double>,
-                                  PointCoorMesh<double, std::vector<double> > >(
-            pcmd, eps1, ec, 0, 1, emin, 1, emax);
-    epsi2[ne] =
-        t_value_straight_point_ar<double, std::vector<double>,
-                                  PointCoorMesh<double, std::vector<double> > >(
-            pcmd, eps2, ec, 1, 1, emin, 1, emax);
+    epsi1[ne] = interpolate(pcmd, eps1, ec, 0, 1, emin, 1, emax);
+    epsi2[ne] = interpolate(pcmd, eps2, ec, 1, 1, emin, 1, emax);
     // Iprint3n(mcout, ec, epsi1[ne], epsi2[ne]);
   }
 }
