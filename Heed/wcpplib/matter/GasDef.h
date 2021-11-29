@@ -7,15 +7,16 @@
 namespace Heed {
 
 /// Definition of a gas.
-/// haracteristic feature of the Gas class is that it consists of molecules.
+/// Characteristic feature of the Gas class is that it consists of molecules.
 /// Additional feature is that the density can be calculated by temperature
-/// and pressure. But this is not always, and therefore it is not characteristic
-/// feature. Then with only one this feature (consisting of molecules)
-/// we can describe as gas also some other substances, for example, the liquids.
+/// and pressure. But this is not always the case, and therefore it is not a
+/// characteristic feature. Then with only one this feature (consisting of 
+/// molecules) we can also describe other substances as a gas,
+/// for example, liquids.
 ///
 /// Only the basic information: the data of matter, plus the pressure.
-/// Note that the class AtomMixDef undirectly appear twice.
-/// It is the base class of matter and molecula. Therefore it is
+/// Note that the class AtomMixDef indirectly appears twice.
+/// It is the base class of matter and molecule. Therefore it is
 /// indirectly the base class of GasDef, and the base class
 /// of its external elements molech.
 ///
@@ -64,50 +65,52 @@ class GasDef : public MatterDef {
   /// Mean charge of molecules in this gas
   double Z_mean_molec() const;
 
-  GasDef();
-  // for calculation of density assume ideal gas:
+  /// Default constructor.
+  GasDef() = default;
+  /// Constructor from arbitrary number of molecules (ideal gas). 
   GasDef(const std::string& fname, const std::string& fnotation, long fqmolec,
          const std::vector<std::string>& fmolec_not,
          const std::vector<double>& fweight_quan_molec, double fpressure,
          double ftemperature, double fdensity = -1.0);
-  // for calculation of density assume Van der Waals
-  // for the components for which the parameters are defined.
-  // s1 and s2 are to distinguish the constructor.
+  /// Constructor from arbitrary number of molecules (using Van der Waals
+  /// correction for calculating the density).
+  /// s1 and s2 are to distinguish the constructor.
   GasDef(const std::string& fname, const std::string& fnotation, long fqmolec,
          const std::vector<std::string>& fmolec_not,
          const std::vector<double>& fweight_volume_molec, double fpressure,
          double ftemperature, int s1, int s2);  
-  // for calculation of density assume ideal gas:
+  /// Constructor from a single molecule (ideal gas).
   GasDef(const std::string& fname, const std::string& fnotation,
          const std::string& fmolec_not, double fpressure, double ftemperature,
          double fdensity = -1.0);
-  // for calculation of density assume Van der Waals gas:
+
+  /// Constructor from a single molecule (Van der Waals gas).
   GasDef(const std::string& fname, const std::string& fnotation,
          const std::string& fmolec_not, double fpressure, double ftemperature,
          int s1, int s2);
-  // for calculation of density assume ideal gas:
+  /// Constructor from two molecules (ideal gas).
   GasDef(const std::string& fname, const std::string& fnotation,
          const std::string& fmolec_not1, double fweight_quan_molec1,
          const std::string& fmolec_not2, double fweight_quan_molec2,
          double fpressure, double ftemperature, double fdensity = -1.0);
-  // for calculation of density assume Van der Waals gas:
+  /// Constructor from two molecules (Van der Waals gas).
   GasDef(const std::string& fname, const std::string& fnotation,
          const std::string& fmolec_not1, double fweight_volume_molec1,
          const std::string& fmolec_not2, double fweight_volume_molec2,
          double fpressure, double ftemperature, int s1, int s2);
-  // for calculation of density assume ideal gas:
+  /// Constructor from three molecules (ideal gas).
   GasDef(const std::string& fname, const std::string& fnotation,
          const std::string& fmolec_not1, double fweight_quan_molec1,
          const std::string& fmolec_not2, double fweight_quan_molec2,
          const std::string& fmolec_not3, double fweight_quan_molec3,
          double fpressure, double ftemperature, double fdensity = -1.0);
-  // for calculation of density assume Van der Waals gas:
+  /// Constructor from three molecules (Van der Waals gas).
   GasDef(const std::string& fname, const std::string& fnotation,
          const std::string& fmolec_not1, double fweight_volume_molec1,
          const std::string& fmolec_not2, double fweight_volume_molec2,
          const std::string& fmolec_not3, double fweight_volume_molec3,
          double fpressure, double ftemperature, int s1, int s2);
-  // for calculation of density assume ideal gas:
+  /// Constructor from another gas at different pressure and temperature.
   GasDef(const std::string& fname, const std::string& fnotation,
          const GasDef& gd, double fpressure, double ftemperature,
          double fdensity = -1.0);

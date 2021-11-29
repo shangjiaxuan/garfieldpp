@@ -42,6 +42,8 @@ class AtomDef {
 };
 std::ostream& operator<<(std::ostream& file, const AtomDef& f);
 
+/// Library of atoms.
+
 class AtomDefs {
 
  public:

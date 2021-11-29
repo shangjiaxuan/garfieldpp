@@ -8,8 +8,6 @@ namespace Heed {
 using CLHEP::Avogadro;
 using CLHEP::k_Boltzmann;
 
-GasDef::GasDef() : MatterDef() {}
-
 GasDef::GasDef(const std::string& fname, const std::string& fnotation,
                long fqmolec, const std::vector<std::string>& fmolec_not,
                const std::vector<double>& fweight_quan_molec, double fpressure,

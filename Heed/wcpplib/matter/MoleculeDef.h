@@ -92,6 +92,8 @@ class MoleculeDef : public AtomMixDef {
 };
 std::ostream& operator<<(std::ostream& file, const MoleculeDef& f);
 
+/// Library of molecules.
+
 class MoleculeDefs {
 
 public:
@@ -100,6 +102,7 @@ public:
   /// If there is no molecule with this notation, the function returns NULL
   /// but does not terminate the program as that for AtomDef. Be careful.
   static const MoleculeDef* getMolecule(const std::string& fnotation);
+  /// Print all registered molecules.
   static void printMolecules(std::ostream& file);
 private:
   static std::list<MoleculeDef> molecules;
