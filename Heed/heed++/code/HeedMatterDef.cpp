@@ -48,7 +48,7 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, MatterDef* amatter,
     W = coef_I_to_W * mean_I;
 #endif
   }
-  inite_HeedMatterDef();
+  initialize();
 }
 
 HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
@@ -107,11 +107,11 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
     }
 #endif
   }
-  inite_HeedMatterDef();
+  initialize();
 }
 
-void HeedMatterDef::inite_HeedMatterDef() {
-  mfunname("void HeedMatterDef::inite_HeedMatterDef()");
+void HeedMatterDef::initialize() {
+  mfunname("void HeedMatterDef::initialize()");
   const double amean = matter->A_mean() / (gram / mole);
   const double rho = matter->density() / (gram / cm3);
   eldens_cm_3 = matter->Z_mean() / amean * Avogadro * rho;
@@ -265,18 +265,15 @@ void HeedMatterDef::replace_epsi12(const std::string& file_name) {
   qe = energy_mesh->get_q();
   for (long ne = 0; ne < qe; ++ne) {
     double ec = energy_mesh->get_ec(ne);
+    // pcmd: dimension q; eps1, eps2: dimension q - 1.
     epsi1[ne] =
         t_value_straight_point_ar<double, std::vector<double>,
                                   PointCoorMesh<double, std::vector<double> > >(
-            pcmd,  // dimension q
-            eps1,  // dimension q-1
-            ec, 0, 1, emin, 1, emax);
+            pcmd, eps1, ec, 0, 1, emin, 1, emax);
     epsi2[ne] =
         t_value_straight_point_ar<double, std::vector<double>,
                                   PointCoorMesh<double, std::vector<double> > >(
-            pcmd,  // dimension q
-            eps2,  // dimension q-1
-            ec, 1, 1, emin, 1, emax);
+            pcmd, eps2, ec, 1, 1, emin, 1, emax);
     // Iprint3n(mcout, ec, epsi1[ne], epsi2[ne]);
   }
 }

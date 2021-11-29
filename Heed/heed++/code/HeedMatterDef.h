@@ -88,7 +88,7 @@ class HeedMatterDef {
 
  private:
   // Initialization after assignment of matter and apacs
-  void inite_HeedMatterDef();
+  void initialize();
 };
 }
 
