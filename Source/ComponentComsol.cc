@@ -389,9 +389,8 @@ bool ComponentComsol::SetWeightingField(const std::string &field,
   }
   KDTree kdtree(points);
 
-  const std::string hdr =
-      "% x                       y                        z                    "
-      "    V (V)";
+  const std::string hdr = "% x             y              z              es.normE (V/m)";
+  
   std::string line;
   do {
     if (!std::getline(ffield, line)) {
