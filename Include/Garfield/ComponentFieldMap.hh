@@ -72,6 +72,7 @@ class ComponentFieldMap : public Component {
                           std::vector<size_t>& nodes) const;
   virtual size_t GetNumberOfNodes() const { return m_nodes.size(); }
   virtual bool GetNode(const size_t i, double& x, double& y, double& z) const;
+  double GetPotential(const size_t i) const;
 
   // Options
   void EnableCheckMapIndices(const bool on = true) {

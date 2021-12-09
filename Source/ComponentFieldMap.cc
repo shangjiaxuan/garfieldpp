@@ -245,6 +245,11 @@ bool ComponentFieldMap::GetNode(const size_t i, double& x, double& y,
   return true;
 }
 
+double ComponentFieldMap::GetPotential(const size_t i) const {
+  if (i >= m_nodes.size()) return 0.;
+  return m_nodes[i].v;
+}
+
 bool ComponentFieldMap::SetDefaultDriftMedium() {
 
   // Find lowest epsilon and set drift medium flags.
