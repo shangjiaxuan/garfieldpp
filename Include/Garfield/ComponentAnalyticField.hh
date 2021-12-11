@@ -589,13 +589,13 @@ class ComponentAnalyticField : public Component {
 
   // Field due to point charges
   void Field3dA00(const double x, const double y, const double z, double& ex,
-                  double& ey, double& ez, double& volt);
+                  double& ey, double& ez, double& volt) const;
   void Field3dB2X(const double x, const double y, const double z, double& ex,
-                  double& ey, double& ez, double& volt);
+                  double& ey, double& ez, double& volt) const;
   void Field3dB2Y(const double x, const double y, const double z, double& ex,
-                  double& ey, double& ez, double& volt);
+                  double& ey, double& ez, double& volt) const;
   void Field3dD10(const double x, const double y, const double z, double& ex,
-                  double& ey, double& ez, double& volt);
+                  double& ey, double& ez, double& volt) const;
   // Evaluation of the weighting field
   bool Wfield(const double x, const double y, const double z,
               double& ex, double& ey, double& ez, 
@@ -728,8 +728,8 @@ class ComponentAnalyticField : public Component {
   void ConformalMap(const std::complex<double>& z, std::complex<double>& ww,
                     std::complex<double>& wd) const;
 
-  bool InTube(const double x0, const double y0, const double a,
-              const int n) const;
+  static bool InTube(const double x0, const double y0, const double a,
+                     const int n);
 
   bool SagDetailed(const Wire& wire, const std::vector<double>& xMap,
                    const std::vector<double>& yMap,
