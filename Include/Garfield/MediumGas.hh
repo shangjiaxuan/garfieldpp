@@ -46,7 +46,7 @@ class MediumGas : public Medium {
   double GetMassDensity() const override;
 
   /// Read table of gas properties (transport parameters) from file.
-  bool LoadGasFile(const std::string& filename);
+  bool LoadGasFile(const std::string& filename, const bool quiet = false);
   /// Save the present table of gas properties (transport parameters) to a file.
   bool WriteGasFile(const std::string& filename);
   /// Read table of gas properties from and merge with the existing dataset.
@@ -75,7 +75,7 @@ class MediumGas : public Medium {
   virtual void PrintGas();
 
   /// Read a table of ion mobilities as function of electric field from file.
-  bool LoadIonMobility(const std::string& filename);
+  bool LoadIonMobility(const std::string& filename, const bool quiet = false);
 
   /// Adjust the Townsend coefficient using the excitation and ionisation 
   /// rates stored in the gas table and the Penning transfer probabilities.

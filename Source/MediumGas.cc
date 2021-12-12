@@ -314,7 +314,8 @@ double MediumGas::GetAtomicNumber() const {
   return z;
 }
 
-bool MediumGas::LoadGasFile(const std::string& filename) {
+bool MediumGas::LoadGasFile(const std::string& filename, 
+                            const bool quiet) {
 
   // -----------------------------------------------------------------------
   //    GASGET
@@ -329,12 +330,15 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
               << "    Cannot open file " << filename << ".\n";
     return false;
   }
-  std::cout << m_className << "::LoadGasFile: Reading " << filename << ".\n";
+  if (!quiet || m_debug) {
+    std::cout << m_className << "::LoadGasFile:\n"
+              << "    Reading file " << filename << ".\n";
+  }
 
   ResetTables();
 
   // Start reading the data.
-  if (m_debug) std::cout << m_className << "::LoadGasFile: Reading header.\n";
+  if (m_debug) std::cout << "    Reading header.\n";
   int version = 12;
   // GASOK bits
   std::bitset<20> gasok;
@@ -346,7 +350,7 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
     gasfile.close();
     return false;
   }
-  std::cout << m_className << "::LoadGasFile: Version " << version << "\n";
+  if (!quiet) std::cout << "    Version " << version << ".\n";
 
   // Check the gas mixture.
   std::vector<std::string> gasnames;
@@ -367,23 +371,23 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
     m_fraction[i] = percentages[i] / 100.;
     GetGasInfo(m_gas[i], m_atWeight[i], m_atNum[i]);
   }
-  std::cout << m_className << "::LoadGasFile:\n"
-            << "    Gas composition set to " << m_name;
-  if (m_nComponents > 1) {
-    std::cout << " (" << m_fraction[0] * 100;
-    for (unsigned int i = 1; i < m_nComponents; ++i) {
-      std::cout << "/" << m_fraction[i] * 100;
+  if (!quiet) {
+    std::cout << "    Gas composition set to " << m_name;
+    if (m_nComponents > 1) {
+      std::cout << " (" << m_fraction[0] * 100;
+      for (unsigned int i = 1; i < m_nComponents; ++i) {
+        std::cout << "/" << m_fraction[i] * 100;
+      }
+      std::cout << ")";
     }
-    std::cout << ")";
+    std::cout << ".\n";
   }
-  std::cout << "\n";
 
   const int nE = m_eFields.size();
   const int nB = m_bFields.size();
   const int nA = m_bAngles.size();
   if (m_debug) {
-    std::cout << m_className << "::LoadGasFile:\n    " << nE
-              << " electric field(s), " << nB
+    std::cout << "    " << nE << " electric field(s), " << nB
               << " magnetic field(s), " << nA << " angle(s).\n";
   }
 
@@ -428,7 +432,7 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
 
   if (m_debug) {
     const std::string fmt = m_tab2d ? "3D" : "1D";
-    std::cout << m_className << "::LoadGasFile: Reading " << fmt << " table.\n";
+    std::cout << "    Reading " << fmt << " table.\n";
   }
 
   // Drift velocity along E, Bt and ExB
@@ -503,7 +507,7 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
   double tgas = 0.;
   // Moving on to the file footer
   gasfile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-  if (m_debug) std::cout << m_className << "::LoadGasFile: Reading footer.\n";
+  if (m_debug) std::cout << "    Reading footer.\n";
   ReadFooter(gasfile, extrapH, extrapL, interp, 
              m_eThrAlp, m_eThrAtt, m_iThrDis, ionDiffL, ionDiffT, pgas, tgas);
   gasfile.close();
@@ -576,7 +580,7 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
   if (ionDiffL > 0.) Init(nE, nB, nA, m_iDifL, ionDiffL);
   if (ionDiffT > 0.) Init(nE, nB, nA, m_iDifT, ionDiffT);
 
-  if (m_debug) std::cout << m_className << "::LoadGasFile: Done.\n";
+  if (m_debug) std::cout << "    Done.\n";
 
   return true;
 }
@@ -2217,7 +2221,8 @@ void MediumGas::PrintGas() {
   }
 }
 
-bool MediumGas::LoadIonMobility(const std::string& filename) {
+bool MediumGas::LoadIonMobility(const std::string& filename, 
+                                const bool quiet) {
   // Open the file.
   std::ifstream infile;
   infile.open(filename.c_str(), std::ios::in);
@@ -2287,10 +2292,10 @@ bool MediumGas::LoadIonMobility(const std::string& filename) {
     efields[j] = data[j].first * scaleField;
     mobilities[j] = data[j].second * scaleMobility;
   }
-
-  std::cout << m_className << "::LoadIonMobility:\n"
-            << "    Read " << ne << " values from file " << filename << "\n";
-
+  if (!quiet) {
+    std::cout << m_className << "::LoadIonMobility:\n"
+              << "    Read " << ne << " values from file " << filename << "\n";
+  }
   return SetIonMobility(efields, mobilities);
 }
 

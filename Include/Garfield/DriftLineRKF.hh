@@ -67,7 +67,8 @@ class DriftLineRKF {
   void SetGainFluctuationsFixed(const double gain = -1.);
   /// Sample the avalanche size from a Polya distribution with 
   /// shape parameter theta.
-  void SetGainFluctuationsPolya(const double theta, const double mean = -1.);
+  void SetGainFluctuationsPolya(const double theta, const double mean = -1.,
+                                const bool quiet = false);
 
   /// Retrieve the Townsend coefficient from the component.
   void EnableTownsendMap(const bool on = true) { m_useTownsendMap = on; }

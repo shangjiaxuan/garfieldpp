@@ -112,20 +112,23 @@ void DriftLineRKF::SetGainFluctuationsFixed(const double gain) {
 }
 
 void DriftLineRKF::SetGainFluctuationsPolya(const double theta, 
-                                            const double mean) {
+                                            const double mean,
+                                            const bool quiet) {
 
   if (theta < 0.) {
     std::cerr << m_className << "::SetGainFluctuationsPolya: "
               << "Shape parameter must be >= 0.\n";
     return;
   }  
-  if (mean > 1.) {
-    std::cout << m_className << "::SetGainFluctuationsPolya: "
-              << "Mean avalanche size set to " << mean << ".\n";
-  } else {
-    std::cout << m_className << "::SetGainFluctuationsPolya:\n    "
-              << "Mean avalanche size will be given by "
-              << "the integrated Townsend coefficient.\n";
+  if (!quiet) {
+    if (mean > 1.) {
+      std::cout << m_className << "::SetGainFluctuationsPolya: "
+                << "Mean avalanche size set to " << mean << ".\n";
+    } else {
+      std::cout << m_className << "::SetGainFluctuationsPolya:\n    "
+                << "Mean avalanche size will be given by "
+                << "the integrated Townsend coefficient.\n";
+    }
   }
   m_gain = mean;
   m_theta = theta;
