@@ -47,7 +47,12 @@ int main(int argc, char * argv[]) {
   // Make a gas medium.
   MediumMagboltz gas;
   gas.LoadGasFile("ar_93_co2_7_3bar.gas");
-  const std::string path = std::getenv("GARFIELD_INSTALL");
+  auto installdir = std::getenv("GARFIELD_INSTALL");
+  if (!installdir) {
+    std::cerr << "GARFIELD_INSTALL variable not set.\n";
+    return 1;
+  }
+  const std::string path = installdir;
   gas.LoadIonMobility(path + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
 
   // Make a component with analytic electric field.
