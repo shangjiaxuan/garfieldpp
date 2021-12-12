@@ -497,6 +497,22 @@ void ViewFEMesh::DrawElements3d() {
   const bool perY = m_cmp->m_periodic[1] || m_cmp->m_mirrorPeriodic[1];
   const bool perZ = m_cmp->m_periodic[2] || m_cmp->m_mirrorPeriodic[2];
 
+  // Set the plot limits.
+  if (m_userBox) {
+    if (std::isinf(m_xMinBox)) m_xMinBox = mapxmin;
+    if (std::isinf(m_yMinBox)) m_yMinBox = mapymin;
+    if (std::isinf(m_zMinBox)) m_zMinBox = mapzmin;
+    if (std::isinf(m_xMaxBox)) m_xMaxBox = mapxmax;
+    if (std::isinf(m_yMaxBox)) m_yMaxBox = mapymax;
+    if (std::isinf(m_zMaxBox)) m_zMaxBox = mapzmax;
+  } else {
+    m_xMinBox = mapxmin;
+    m_yMinBox = mapymin;
+    m_zMinBox = mapzmin;
+    m_xMaxBox = mapxmax;
+    m_yMaxBox = mapymax;
+    m_zMaxBox = mapzmax;
+  } 
   // Determine the number of periods present in the cell.
   const int nMinX = perX ? int(m_xMinBox / sx) - 1 : 0;
   const int nMaxX = perX ? int(m_xMaxBox / sx) + 1 : 0;
@@ -513,9 +529,9 @@ void ViewFEMesh::DrawElements3d() {
   // Use silicon as "default" material.
   TGeoMaterial* matDefault = new TGeoMaterial("Default", 28.085, 14., 2.329);
   TGeoMedium* medDefault = new TGeoMedium("Default", 1, matDefault);
-  const double hxw = 0.5 * (m_xMaxBox - m_xMinBox); 
-  const double hyw = 0.5 * (m_yMaxBox - m_yMinBox); 
-  const double hzw = 0.5 * (m_zMaxBox - m_zMinBox); 
+  const double hxw = std::max(std::abs(m_xMaxBox), std::abs(m_xMinBox));
+  const double hyw = std::max(std::abs(m_yMaxBox), std::abs(m_yMinBox));
+  const double hzw = std::max(std::abs(m_zMaxBox), std::abs(m_zMinBox));
   TGeoVolume* top = m_geoManager->MakeBox("Top", medVacuum, hxw, hyw, hzw);
   m_geoManager->SetTopVolume(top);
   m_volumes.push_back(top);
