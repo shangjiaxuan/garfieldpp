@@ -1229,6 +1229,8 @@ int MediumMagboltz::GetGasNumberMagboltz(const std::string& input) {
   } else if (input == "SiH4") {
     // Silane, SiH4
     return 60;
+  } else if (input == "CCl4") {
+    return 61;
   }
 
   std::cerr << "MediumMagboltz::GetGasNumberMagboltz:\n"

@@ -2900,6 +2900,9 @@ bool MediumGas::GetGasInfo(const std::string& gasname, double& a, double& z) {
   } else if (gasname == "SiH4") {
     a = 28.0855 + 4 * 1.00794;
     z = 14 + 4;
+  } else if (gasname == "CCl4") {
+    a = 12.0107 + 4 * 35.45;
+    z = 6 + 4 * 17;
   } else {
     a = 0.;
     z = 0.;
@@ -3032,6 +3035,8 @@ std::string MediumGas::GetGasName(const int gasnumber, const int version) {
       return "GeH4";
     case 60:
       return "SiH4";
+    case 61:
+      return "CCl4";
     default:
       break;
   }
@@ -3239,6 +3244,12 @@ std::string MediumGas::GetGasName(std::string input) {
              input == "SILICON HYDRIDE" || input == "SILICON-TETRAHYDRIDE" ||
              input == "SILICANE" || input == "MONOSILANE" || input == "SIH4") {
     return "SiH4";
+  } else if (input == "CCL4" || input == "CARBON TETRACHLORIDE" || 
+             input == "CARBON-TETRACHLORIDE" || input == "BENZIFORM" || 
+             input == "TETRACHLOROMETHANE" || input == "CARBON TET" ||
+             input == "HALON 104" || input == "HALON-104" ||
+             input == "FREON 10" || input == "FREON-10") {
+    return "CCl4";
   }
   return "";
 }
@@ -3386,6 +3397,8 @@ int MediumGas::GetGasNumberGasFile(const std::string& input) {
   } else if (input == "SiH4") {
     // Silane
     return 60;
+  } else if (input == "CCl4") {
+    return 61;
   }
   return 0;
 }
