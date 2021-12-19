@@ -349,8 +349,8 @@ the file name with a directory.
 If your mobility file is not located in your current working directory,
 then you have to specify a fully qualified file name.
 \begin{lstlisting}
-const std::string path = getenv("GARFIELD\_HOME");
-gas.LoadIonMobility(path + "/Data/IonMobility\_Ar+\_Ar.txt");
+const std::string path = std::getenv("GARFIELD_INSTALL");
+gas.LoadIonMobility(path + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
 \end{lstlisting}
 \paragraph{Associating the gas to a field map region}
 In order to track a particle through the detector we have to 
