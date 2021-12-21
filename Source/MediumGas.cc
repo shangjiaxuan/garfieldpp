@@ -3043,213 +3043,215 @@ std::string MediumGas::GetGasName(const int gasnumber, const int version) {
   return "";
 }
 
+const std::vector<std::string> MediumGas::GetAliases(const std::string& gas) {
+
+  if (gas == "CF4") {
+    return {"tetrafluoromethane", "Freon", "Freon-14"};
+  } else if (gas == "Ar") {
+    return {"argon"};
+  } else if (gas == "He") {
+    return {"helium", "He-4", "He 4", "He4", "4-He", "4 He", "4He", 
+            "helium-4", "helium 4", "helium4"};
+  } else if (gas == "He-3") {
+    return {"He3", "He 3", "3-He", "3 He", "3He",
+            "helium-3", "helium 3", "helium3"};
+  } else if (gas == "Ne") {
+    return {"neon"};
+  } else if (gas == "Kr") {
+    return {"krypton"};
+  } else if (gas == "Xe") {
+    return {"xenon"};
+  } else if (gas == "CH4") {
+    return {"methane"};
+  } else if (gas == "C2H6") {
+    return {"ethane"};
+  } else if (gas == "C3H8") {
+    return {"propane"};
+  } else  if (gas == "iC4H10") {
+    return {"isobutane", "iso", "iso-C4H10", "isoC4H10", "C4H10"};
+  } else if (gas == "CO2") {
+    return {"carbon-dioxide", "carbon dioxide", "carbondioxide"};
+  } else if (gas == "neoC5H12") {
+    return {"neopentane", "neo-pentane", "neo-C5H12", "C5H12", 
+            "dimethylpropane", "tetramethylmethane"};
+  } else if (gas == "H2O") {
+    return {"water", "water-vapour", "water vapour"};
+  } else if (gas == "O2") {
+    return {"oxygen"};
+  } else if (gas == "N2") {
+    return {"nitrogen"};
+  } else if (gas == "NO") {
+    return {"nitric-oxide", "nitric oxide",
+            "nitrogen-monoxide", "nitrogen monoxide"};
+  } else if (gas == "N2O") {
+    return {"nitrous-oxide", "nitrous oxide", "laughing-gas", "laughing gas",
+            "dinitrogen-monoxide", "dinitrogen monoxide",
+            "dinitrogen-oxide", "dinitrogen oxide"};
+  } else if (gas == "C2H4") {
+    return {"ethene", "ethylene"};
+  } else if (gas == "C2H2") {
+    return {"acetyl", "acetylene", "ethyne"};
+  } else if (gas == "H2") {
+    return {"hydrogen"};
+  } else if (gas == "paraH2") {
+    return {"para H2", "para-H2", "para hydrogen",
+            "para-hydrogen", "parahydrogen"};
+  } else if (gas == "D2") {
+    return {"deuterium"};
+  } else if (gas == "orthoD2") {
+    return {"ortho D2", "ortho-D2", "ortho deuterium",
+            "ortho-deuterium", "orthodeuterium"};
+  } else if (gas == "CO") {
+    return {"carbon-monoxide", "carbon monoxide"};
+  } else if (gas == "Methylal") {
+    return {"methylal-hot", "DMM", "dimethoxymethane", "Formal", "C3H8O2"};
+  } else if (gas == "DME") {
+    return {"dimethyl-ether", "dimethylether", "dimethyl ether", 
+            "methyl-ether", "methylether", "methyl ether", 
+            "wood-ether", "woodether", "wood ether",
+            "dimethyl oxide", "dimethyl-oxide", "Demeon",
+            "methoxymethane", "C4H10O2"};
+  } else if (gas == "Reid-Step") {
+    return {};
+  } else if (gas == "Maxwell-Model") {
+    return {};
+  } else if (gas == "Reid-Ramp") {
+    return {};
+  } else if (gas == "C2F6") {
+    return {"Freon-116", "Zyron-116", "Zyron-116-N5", "hexafluoroethane"};
+  } else if (gas == "SF6") {
+    return {"sulphur-hexafluoride", "sulfur-hexafluoride",
+            "sulphur hexafluoride", "sulfur hexafluoride"};
+  } else if (gas == "NH3") {
+    return {"ammonia", "azane", "R-717", "R717"};
+  } else if (gas == "C3H6") {
+    return {"propene", "propylene"};
+  } else if (gas == "cC3H6") {
+    return {"c-propane", "cyclo-propane", "cyclo propane", "cyclopropane",
+            "c-C3H6", "cyclo-C3H6"};
+  } else if (gas == "CH3OH") {
+    return {"methanol", "methyl-alcohol", "methyl alcohol", "wood alcohol",
+            "wood-alcohol"};
+  } else if (gas == "C2H5OH") {
+    return {"ethanol", "ethyl-alcohol", "ethyl alcohol", "grain alcohol",
+            "grain-alcohol"};
+  } else if (gas == "C3H7OH") {
+    return {"propanol", "2-propanol", "isopropyl", "iso-propanol",
+            "isopropanol", "isopropyl alcohol", "isopropyl-alcohol"};
+  } else if (gas == "nC3H7OH") {
+    return {"npropanol", "n-propanol", "1-propanol", "propyl alcohol",
+            "propyl-alcohol", "n-propyl alcohol", "nC3H7OH", "n-C3H7OH"};
+  } else if (gas == "Cs") {
+    return {"cesium", "caesium"};
+  } else if (gas == "F2") {
+    return {"fluor", "fluorine"};
+  } else if (gas == "CS2") {
+    return {"carbon-disulphide", "carbon-disulfide", 
+            "carbon disulphide", "carbon disulfide"};
+  } else if (gas == "COS") {
+    return {"carbonyl-sulphide", "carbonyl-sulfide", "carbonyl sulfide"};
+  } else if (gas == "CD4") {
+    return {"deut-methane", "deuterium-methane", "deuterated-methane",
+            "deuterated methane", "deuterium methane"};
+  } else if (gas == "BF3") {
+    return {"boron-trifluoride", "boron trifluoride"};
+  } else if (gas == "C2H2F4") {
+    return {"C2HF5", "C2F5H", "C2F4H2", "Freon 134", "Freon 134A",
+            "Freon-134", "Freon-134-A", "R-134a", "R134a", 
+            "Freon 125", "Freon-125", "Zyron 125", "Zyron-125", 
+            "tetrafluoroethane", "pentafluoroethane", "norflurane"};
+  } else if (gas == "TMA") {
+    return {"trimethylamine", "N(CH3)3", "N-(CH3)3"};
+  } else if (gas == "CHF3") {
+    return {"Freon-23", "trifluoromethane", "Fluoroform"};
+  } else if (gas == "CF3Br") {
+    return {"CBrF3", "trifluorobromomethane", "bromotrifluoromethane",
+            "Halon-1301", "Halon 1301", "Freon-13B1", "Freon 13BI"};
+  } else if (gas == "C3F8") {
+    return {"octafluoropropane", "R218", "R-218", "Freon 218", "Freon-218",
+            "perfluoropropane", "RC 218", "PFC 218",
+            "RC-218", "PFC-218", "Flutec PP30", "Genetron 218"};
+  } else if (gas == "O3") {
+    return {"ozone"};
+  } else if (gas == "Hg") {
+    return {"mercury", "Hg2"};
+  } else if (gas == "H2S") {
+    return {"hydrogen sulphide", "hydrogen-sulphide", 
+            "hydrogen sulfide", "hydrogen-sulfide", 
+            "sewer gas", "sewer-gas", "hepatic acid", "hepatic-acid",
+            "sulfur hydride", "sulfur-hydride",
+            "dihydrogen monosulfide", "dihydrogen-monosulfide", 
+            "dihydrogen monosulphide", "dihydrogen-monosulphide",
+            "sulphur hydride", "sulphur-hydride", "stink damp", "stink-damp", 
+            "sulfurated hydrogen", "sulfurated-hydrogen"};
+  } else if (gas == "nC4H10") {
+    return {"n-butane", "n-C4H10", "nbutane"};
+  } else if (gas == "nC5H12") {
+    return {"n-pentane", "n-C5H12", "npentane"};
+  } else if (gas == "N2 (Phelps)") {
+    return {"nitrogen-Phelps", "nitrogen Phelps", "N2-Phelps", "N2 Phelps"};
+  } else if (gas == "GeH4") {
+    return {"germane", "germanium-hydride", "germanium hydride",
+            "germanium tetrahydride", "germanium-tetrahydride",
+            "germanomethane", "monogermane"};
+  } else if (gas == "SiH4") {
+    return {"silane", "silicon-hydride", "silicon hydride",
+            "silicon-tetrahydride", "silicane", "monosilane"};
+  } else if (gas == "CCl4") {
+    return {"carbon tetrachloride", "carbon-tetrachloride",
+            "Benziform", "tetrachloromethane", "carbon tet",
+            "Halon 104", "Halon-104", "Freon 10", "Freon-10"};
+  }
+  return {};
+}
+
+void MediumGas::PrintGases() {
+
+  constexpr int version = 12;
+  std::cout << "MediumGas::PrintGases:\n"
+            << "Gas            Aliases\n" << std::string(80, '-') << "\n";
+  for (int i = 1; i <= 61; ++i) {
+    const std::string gas = i == 58 ? "N2 (Phelps)" : GetGasName(i, version);
+    if (gas.empty()) continue;
+    std::cout << std::setw(15) << std::left << gas;
+    const auto aliases = GetAliases(gas);
+    size_t count = 0;
+    for (auto it = aliases.cbegin(); it != aliases.cend(); ++it) {
+      const auto alias = (*it);
+      if (count + alias.size() > 63) {
+        std::cout << "\n" << std::string(15, ' ');
+        count = 0;
+      }
+      std::cout << alias;
+      count += alias.size();
+      if (std::next(it) != aliases.cend()) {
+        std::cout << ", ";
+        count += 2;
+      }
+    }
+    std::cout << "\n";
+  }
+}
+ 
 std::string MediumGas::GetGasName(std::string input) {
   // Convert to upper-case.
   std::transform(input.begin(), input.end(), input.begin(), toupper);
-
   if (input.empty()) return "";
 
-  if (input == "CF4" || input == "FREON" || input == "FREON-14" ||
-      input == "TETRAFLUOROMETHANE") {
-    return "CF4";
-  } else if (input == "AR" || input == "ARGON") {
-    return "Ar";
-  } else if (input == "HE" || input == "HELIUM" || input == "HE-4" ||
-             input == "HE 4" || input == "HE4" || input == "4-HE" || 
-             input == "4 HE" || input == "4HE" || input == "HELIUM-4" || 
-             input == "HELIUM 4" || input == "HELIUM4") {
-    return "He";
-  } else if (input == "HE-3" || input == "HE3" || input == "HELIUM-3" ||
-      input == "HELIUM 3" || input == "HELIUM3") {
-    return "He-3";
-  } else if (input == "NE" || input == "NEON") {
-    return "Ne";
-  } else if (input == "KR" || input == "KRYPTON") {
-    return "Kr";
-  } else if (input == "XE" || input == "XENON") {
-    return "Xe";
-  } else if (input == "CH4" || input == "METHANE") {
-    return "CH4";
-  } else if (input == "C2H6" || input == "ETHANE") {
-    return "C2H6";
-  } else if (input == "C3H8" || input == "PROPANE") {
-    return "C3H8";
-  } else  if (input == "C4H10" || input == "ISOBUTANE" || input == "ISO" ||
-              input == "IC4H10" || input == "ISO-C4H10" || input == "ISOC4H10") {
-    return "iC4H10";
-  } else if (input == "CO2" || input == "CARBON-DIOXIDE" ||
-      input == "CARBON DIOXIDE" || input == "CARBONDIOXIDE") {
-    return "CO2";
-  } else if (input == "NEOPENTANE" || input == "NEO-PENTANE" || 
-             input == "NEO-C5H12" || input == "NEOC5H12" || 
-             input == "DIMETHYLPROPANE" || input == "C5H12") {
-    return "neoC5H12";
-  } else if (input == "H2O" || input == "WATER" || input == "WATER-VAPOUR" ||
-      input == "WATER VAPOUR") {
-    return "H2O";
-  } else if (input == "O2" || input == "OXYGEN") {
-    return "O2";
-  } else if (input == "NI" || input == "NITRO" || input == "N2" ||
-      input == "NITROGEN") {
-    return "N2";
-  } else if (input == "NO" || input == "NITRIC-OXIDE" || input == "NITRIC OXIDE" ||
-      input == "NITROGEN-MONOXIDE" || input == "NITROGEN MONOXIDE") {
-    return "NO";
-  } else if (input == "N2O" || input == "NITROUS-OXIDE" || input == "NITROUS OXIDE" ||
-      input == "DINITROGEN-MONOXIDE" || input == "LAUGHING-GAS") {
-    return "N2O";
-  } else if (input == "C2H4" || input == "ETHENE" || input == "ETHYLENE") {
-    return "C2H4";
-  } else if (input == "C2H2" || input == "ACETYL" || input == "ACETYLENE" ||
-      input == "ETHYNE") {
-    return "C2H2";
-  } else if (input == "H2" || input == "HYDROGEN") {
-    return "H2";
-  } else if (input == "PARA H2" || input == "PARA-H2" ||
-             input == "PARAH2" || input == "PARA HYDROGEN" ||
-             input == "PARA-HYDROGEN" || input == "PARAHYDROGEN") {
-    return "paraH2";
-  } else if (input == "D2" || input == "DEUTERIUM") {
-    return "D2";
-  } else if (input == "ORTHO D2" || input == "ORTHO-D2" ||
-             input == "ORTHOD2" || input == "ORTHO DEUTERIUM" ||
-             input == "ORTHO-DEUTERIUM" || input == "ORTHODEUTERIUM") {
-    return "orthoD2";
-  } else if (input == "CO" || input == "CARBON-MONOXIDE" ||
-      input == "CARBON MONOXIDE") {
-    return "CO";
-  } else if (input == "METHYLAL" || input == "METHYLAL-HOT" || input == "DMM" ||
-      input == "DIMETHOXYMETHANE" || input == "FORMAL" || input == "C3H8O2") {
-    // Methylal (dimethoxymethane, CH3-O-CH2-O-CH3, "hot" version)
-    return "Methylal";
-  } else if (input == "DME" || input == "DIMETHYL-ETHER" || input == "DIMETHYLETHER" ||
-      input == "DIMETHYL ETHER" || input == "METHYL ETHER" ||
-      input == "METHYL-ETHER" || input == "METHYLETHER" ||
-      input == "WOOD-ETHER" || input == "WOODETHER" || input == "WOOD ETHER" ||
-      input == "DIMETHYL OXIDE" || input == "DIMETHYL-OXIDE" ||
-      input == "DEMEON" || input == "METHOXYMETHANE" || input == "C4H10O2") {
-    return "DME";
-  } else if (input == "REID-STEP") {
-    return "Reid-Step";
-  } else if (input == "MAXWELL-MODEL") {
-    return "Maxwell-Model";
-  } else if (input == "REID-RAMP") {
-    return "Reid-Ramp";
-  } else if (input == "C2F6" || input == "FREON-116" || input == "ZYRON-116" ||
-      input == "ZYRON-116-N5" || input == "HEXAFLUOROETHANE") {
-    return "C2F6";
-  } else if (input == "SF6" || input == "SULPHUR-HEXAFLUORIDE" ||
-      input == "SULFUR-HEXAFLUORIDE" || input == "SULPHUR HEXAFLUORIDE" ||
-      input == "SULFUR HEXAFLUORIDE") {
-    return "SF6";
-  } else if (input == "NH3" || input == "AMMONIA") {
-    return "NH3";
-  } else if (input == "C3H6" || input == "PROPENE" || input == "PROPYLENE") {
-    return "C3H6";
-  } else if (input == "C-PROPANE" || input == "CYCLO-PROPANE" ||
-      input == "CYCLO PROPANE" || input == "CYCLOPROPANE" ||
-      input == "C-C3H6" || input == "CC3H6" || input == "CYCLO-C3H6") {
-    return "cC3H6";
-  } else if (input == "METHANOL" || input == "METHYL-ALCOHOL" ||
-      input == "METHYL ALCOHOL" || input == "WOOD ALCOHOL" ||
-      input == "WOOD-ALCOHOL" || input == "CH3OH") {
-    return "CH3OH";
-  } else if (input == "ETHANOL" || input == "ETHYL-ALCOHOL" ||
-      input == "ETHYL ALCOHOL" || input == "GRAIN ALCOHOL" ||
-      input == "GRAIN-ALCOHOL" || input == "C2H5OH") {
-    return "C2H5OH";
-  } else if (input == "PROPANOL" || input == "2-PROPANOL" || input == "ISOPROPYL" ||
-      input == "ISO-PROPANOL" || input == "ISOPROPANOL" ||
-      input == "ISOPROPYL ALCOHOL" || input == "ISOPROPYL-ALCOHOL" ||
-      input == "C3H7OH") {
-    return "C3H7OH";
-  } else if (input == "NPROPANOL" || input == "N-PROPANOL" || 
-             input == "1-PROPANOL" || input == "PROPYL ALCOHOL" ||
-             input == "PROPYL-ALCOHOL" || input == "N-PROPYL ALCOHOL" ||
-             input == "NC3H7OH" || input == "N-C3H7OH") {
-    return "nC3H7OH"; 
-  } else if (input == "CS" || input == "CESIUM" || input == "CAESIUM") {
-    return "Cs";
-  } else if (input == "F2" || input == "FLUOR" || input == "FLUORINE") {
-    return "F2";
-  } else if (input == "CS2" || input == "CARBON-DISULPHIDE" ||
-      input == "CARBON-DISULFIDE" || input == "CARBON DISULPHIDE" ||
-      input == "CARBON DISULFIDE") {
-    return "CS2";
-  } else if (input == "COS" || input == "CARBONYL-SULPHIDE" ||
-      input == "CARBONYL-SULFIDE" || input == "CARBONYL SULFIDE") {
-    return "COS";
-  } else if (input == "DEUT-METHANE" || input == "DEUTERIUM-METHANE" ||
-      input == "DEUTERATED-METHANE" || input == "DEUTERATED METHANE" ||
-      input == "DEUTERIUM METHANE" || input == "CD4") {
-    return "CD4";
-  } else if (input == "BF3" || input == "BORON-TRIFLUORIDE" ||
-      input == "BORON TRIFLUORIDE") {
-    return "BF3";
-  } else if (input == "C2HF5" || input == "C2H2F4" || input == "C2F5H" ||
-      input == "C2F4H2" || input == "FREON 134" || input == "FREON 134A" ||
-      input == "FREON-134" || input == "FREON-134-A" || input == "FREON 125" ||
-      input == "ZYRON 125" || input == "FREON-125" || input == "ZYRON-125" ||
-      input == "TETRAFLUOROETHANE" || input == "PENTAFLUOROETHANE") {
-    // C2H2F4 (and C2HF5).
-    return "C2H2F4";
-  } else if (input == "TMA" || input == "TRIMETHYLAMINE" || input == "N(CH3)3" ||
-      input == "N-(CH3)3") {
-    return "TMA";
-  } else if (input == "CHF3" || input == "FREON-23" || input == "TRIFLUOROMETHANE" ||
-      input == "FLUOROFORM") {
-    return "CHF3";
-  } else if (input == "CF3BR" || input == "TRIFLUOROBROMOMETHANE" ||
-      input == "BROMOTRIFLUOROMETHANE" || input == "HALON-1301" ||
-      input == "HALON 1301" || input == "FREON-13B1" || input == "FREON 13BI") {
-    return "CF3Br";
-  } else if (input == "C3F8" || input == "OCTAFLUOROPROPANE" || input == "R218" ||
-      input == "R-218" || input == "FREON 218" || input == "FREON-218" ||
-      input == "PERFLUOROPROPANE" || input == "RC 218" || input == "PFC 218" ||
-      input == "RC-218" || input == "PFC-218" || input == "FLUTEC PP30" ||
-      input == "GENETRON 218") {
-    return "C3F8";
-  } else if (input == "OZONE" || input == "O3") {
-    return "O3";
-  } else if (input == "MERCURY" || input == "HG" || input == "HG2") {
-    return "Hg";
-  } else if (input == "H2S" || input == "HYDROGEN SULPHIDE" || input == "SEWER GAS" ||
-      input == "HYDROGEN-SULPHIDE" || input == "SEWER-GAS" ||
-      input == "HYDROGEN SULFIDE" || input == "HEPATIC ACID" ||
-      input == "HYDROGEN-SULFIDE" || input == "HEPATIC-ACID" ||
-      input == "SULFUR HYDRIDE" || input == "DIHYDROGEN MONOSULFIDE" ||
-      input == "SULFUR-HYDRIDE" || input == "DIHYDROGEN-MONOSULFIDE" ||
-      input == "DIHYDROGEN MONOSULPHIDE" || input == "SULPHUR HYDRIDE" ||
-      input == "DIHYDROGEN-MONOSULPHIDE" || input == "SULPHUR-HYDRIDE" ||
-      input == "STINK DAMP" || input == "SULFURATED HYDROGEN" ||
-      input == "STINK-DAMP" || input == "SULFURATED-HYDROGEN") {
-    return "H2S";
-  } else if (input == "N-BUTANE" || input == "N-C4H10" || input == "NBUTANE" ||
-      input == "NC4H10") {
-    return "nC4H10";
-  } else if (input == "N-PENTANE" || input == "N-C5H12" || input == "NPENTANE" ||
-      input == "NC5H12") {
-    return "nC5H12";
-  } else if (input == "NI-PHELPS" || input == "NI PHELPS" ||
-      input == "NITROGEN-PHELPS" || input == "NITROGEN PHELPHS" ||
-      input == "N2-PHELPS" || input == "N2 PHELPS" || input == "N2 (PHELPS)") {
-    // Nitrogen
-    return "N2 (Phelps)";
-  } else if (input == "GERMANE" || input == "GERM" || input == "GERMANIUM-HYDRIDE" ||
-      input == "GERMANIUM HYDRIDE" || input == "GERMANIUM TETRAHYDRIDE" ||
-      input == "GERMANIUM-TETRAHYDRIDE" || input == "GERMANOMETHANE" ||
-      input == "MONOGERMANE" || input == "GEH4") {
-    return "GeH4";
-  } else if (input == "SILANE" || input == "SIL" || input == "SILICON-HYDRIDE" ||
-             input == "SILICON HYDRIDE" || input == "SILICON-TETRAHYDRIDE" ||
-             input == "SILICANE" || input == "MONOSILANE" || input == "SIH4") {
-    return "SiH4";
-  } else if (input == "CCL4" || input == "CARBON TETRACHLORIDE" || 
-             input == "CARBON-TETRACHLORIDE" || input == "BENZIFORM" || 
-             input == "TETRACHLOROMETHANE" || input == "CARBON TET" ||
-             input == "HALON 104" || input == "HALON-104" ||
-             input == "FREON 10" || input == "FREON-10") {
-    return "CCl4";
+  // Loop over the available gases.
+  for (int i = 1; i <= 61; ++i) {
+    const std::string gas = i == 58 ? "N2 (Phelps)" : GetGasName(i, 12);
+    if (gas.empty()) continue;
+
+    std::string tmp = gas;
+    std::transform(tmp.begin(), tmp.end(), tmp.begin(), toupper);
+    if (tmp == input) return gas;
+    const auto aliases = GetAliases(gas);
+    for (const auto& alias : aliases) {
+      tmp = alias;
+      std::transform(tmp.begin(), tmp.end(), tmp.begin(), toupper);
+      if (tmp == input) return gas;
+    }
   }
   return "";
 }

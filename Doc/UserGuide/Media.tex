@@ -367,8 +367,13 @@ bool SetComposition(const std::string& gas1, const double f1 = 1.,
 \end{description}
 A valid gas mixture comprises at least one and at most six 
 different species. 
-A list of the presently available gases and their identifiers 
-can be found in the appendix. 
+By calling the function
+\begin{lstlisting}
+void PrintGases();
+\end{lstlisting}
+one can print out a list of the available gases and their identifiers.
+This list can also be found in the appendix. 
+ 
 The fractions have to be strictly positive and 
 may add up to any non-zero value; 
 internally they will be normalized to one.
