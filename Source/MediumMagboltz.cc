@@ -1814,8 +1814,8 @@ bool MediumMagboltz::Mixer(const bool verbose) {
 
   // Fill the photon collision rates table.
   if (!ComputePhotonCollisionTable(verbose)) {
-    std::cerr << m_className << "::Mixer:\n"
-              << "    Photon collision rates could not be calculated.\n";
+    // std::cerr << m_className << "::Mixer:\n"
+    //          << "    Photon collision rates could not be calculated.\n";
     if (m_useDeexcitation) {
       std::cerr << "    Deexcitation handling is switched off.\n";
       m_useDeexcitation = false;

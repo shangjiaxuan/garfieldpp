@@ -73,6 +73,8 @@ class MediumGas : public Medium {
 
   /// Print information about the present gas mixture and available data.
   virtual void PrintGas();
+  /// Print a list of all available gases.
+  static void PrintGases();
 
   /// Read a table of ion mobilities as function of electric field from file.
   bool LoadIonMobility(const std::string& filename, const bool quiet = false);
@@ -219,6 +221,7 @@ class MediumGas : public Medium {
   static std::string GetGasName(const int gasnumber, const int version);
   static std::string GetGasName(std::string input);
   static int GetGasNumberGasFile(const std::string& input);
+  static const std::vector<std::string> GetAliases(const std::string& gas);
 };
 }
 
