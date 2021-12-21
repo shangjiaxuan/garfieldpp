@@ -3068,7 +3068,7 @@ const std::vector<std::string> MediumGas::GetAliases(const std::string& gas) {
   } else if (gas == "C3H8") {
     return {"propane"};
   } else  if (gas == "iC4H10") {
-    return {"isobutane", "iso", "iso-C4H10", "isoC4H10", "C4H10"};
+    return {"isobutane", "iso-C4H10", "isoC4H10", "C4H10"};
   } else if (gas == "CO2") {
     return {"carbon-dioxide", "carbon dioxide", "carbondioxide"};
   } else if (gas == "neoC5H12") {
