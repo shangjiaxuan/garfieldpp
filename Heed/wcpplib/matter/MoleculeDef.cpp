@@ -224,6 +224,7 @@ const std::list<MoleculeDef>& MoleculeDefs::getMolecules() {
   molecules.emplace_back(MoleculeDef("H2S", "H2S", "H", 2, "S", 1));
   molecules.emplace_back(MoleculeDef("GeH4", "GeH4", "Ge", 1, "H", 4));
   molecules.emplace_back(MoleculeDef("SiH4", "SiH4", "Si", 1, "H", 4));
+  molecules.emplace_back(MoleculeDef("CCl4", "CCl4", "C", 1, "Cl", 4));
   return molecules;
 }
 
