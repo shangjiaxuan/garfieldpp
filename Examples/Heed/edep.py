@@ -40,6 +40,7 @@ track = ROOT.Garfield.TrackHeed()
 track.SetSensor(sensor)
 track.SetParticle("pi")
 track.SetMomentum(120.e9)
+track.Initialise(gas, True)
 
 nEvents = 10000
 for i in range(nEvents):
