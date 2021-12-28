@@ -13,25 +13,11 @@
 
 using namespace Garfield;
 
-void checkhwf() {
-  const double work = 30.;
-  const double fano = 0.3;
-  TH1F* hwf = new TH1F("hwf", "Heed work Fano", 200, 0, 200);
-  for (unsigned int i = 0; i < 10000000; ++i) {
-    double rnd = 1.e6 * (RndmHeedWF(1.e-6 * work, fano));
-    hwf->Fill(rnd);
-  }
-  TCanvas* chwf = new TCanvas("chwf", "Heed Work Fano", 100, 100, 800, 800);
-  chwf->cd();
-  hwf->Draw();
-  chwf->Update();
-  double mean = hwf->GetMean();
-  double rms = hwf->GetRMS();
-  const double r = rms / mean;
-  std::cout << "Histogram mean: " << mean << ", Fano: " << r * r << "\n";
-}
+int main(int argc, char *argv[]) {
 
-void track() {
+  // Application
+  TApplication app("app", &argc, argv);
+  plottingEngine.SetDefaultStyle();
 
   // Define the medium.
   MediumMagboltz gas;
@@ -61,7 +47,7 @@ void track() {
   const std::string file = "Alpha_in_Ar.txt";
   if (!tr.ReadFile(file)) {
     std::cerr << "Reading SRIM file failed.\n";
-    return;
+    return 0;
   }
   // Set the initial kinetic energy of the particle (in eV).
   tr.SetKineticEnergy(1.47e6);
@@ -82,10 +68,10 @@ void track() {
   tr.Print();
 
   // Setup histograms.
-  TH1F* hX = new TH1F("hX", "x-end", 100, 0, 1.);
-  TH1F* hY = new TH1F("hY", "y-end", 100, -0.5, 0.5);
-  TH1F* hZ = new TH1F("hZ", "z-end", 100, -0.5, 0.5);
-  TH1F* hNe = new TH1F("hNe", "Electrons", 100, 48000, 50000);
+  TH1F* hX = new TH1F("hX", "x-end;x [cm];entries", 100, 0, 1.);
+  TH1F* hY = new TH1F("hY", "y-end;y [cm];entries", 100, -0.5, 0.5);
+  TH1F* hZ = new TH1F("hZ", "z-end;z [cm];entries", 100, -0.5, 0.5);
+  TH1F* hNe = new TH1F("hNe", ";electrons;entries", 100, 48000, 50000);
 
   // Generate tracks.
   const unsigned int nTracks = 1000;
@@ -120,19 +106,6 @@ void track() {
   c->cd(3); hZ->Draw();
   c->cd(4); hNe->Draw();
   c->Update();
-
-}
-
-int main(int argc, char *argv[]) {
-
-  // Application
-  TApplication app("app", &argc, argv);
-  plottingEngine.SetDefaultStyle();
-
-  // Run a couple of tests
-  // checkhwf();
-  // Produce tracks.
-  track();
   std::cout << "Done.\n";
 
   // Start loop
