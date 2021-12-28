@@ -65,7 +65,7 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
   for (long nmol = 0; nmol < qmol; ++nmol) {
     check_econd12(agas->molec(nmol)->tqatom(), !=, fampacs[nmol].get_qatom(),
                   mcerr);
-    // number of different atoms in mol
+    // number of different atoms in molecule
     const long qa = agas->molec(nmol)->qatom();
     for (long na = 0; na < qa; ++na) {
       apacs[nat] = fampacs[nmol].get_atom(na);

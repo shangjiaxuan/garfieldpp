@@ -834,18 +834,19 @@ bool TrackHeed::Initialise(Medium* medium, const bool verbose) {
       if (dbPath) {
         databasePath = std::string(dbPath) + "/Heed/heed++/database";
       } else {
-        std::cerr << m_className << "::Initialise:\n"
-                  << "    Cannot retrieve database path "
-                  << "(environment variables HEED_DATABASE, GARFIELD_INSTALL "
-                  << "and GARFIELD_HOME are not defined).\n"
-                  << "    Cannot proceed.\n";
-        return false;
       }
     }
   }
-  if (databasePath[databasePath.size() - 1] != '/') {
-    databasePath.append("/");
+  if (databasePath.empty()) {
+    std::cerr << m_className << "::Initialise:\n"
+              << "    Cannot retrieve database path (none of the"
+              << " environment variables HEED_DATABASE, GARFIELD_INSTALL," 
+              << " GARFIELD_HOME is defined).\n"
+              << "    Cannot proceed.\n";
+    return false;
   }
+  if (databasePath.back() != '/') databasePath.append("/");
+
   if (m_debug || verbose) {
     std::cout << m_className << "::Initialise:\n"
               << "    Database path: " << databasePath << "\n";
@@ -923,6 +924,22 @@ bool TrackHeed::SetupGas(Medium* medium) {
     std::string gasname;
     double frac;
     medium->GetComponent(i, gasname, frac);
+    if (gasname == "paraH2" || gasname == "orthoD2" ||
+        gasname == "D2") {
+      gasname = "H2";
+    } else if (gasname == "He-3") {
+      gasname = "He";
+    } else if (gasname == "CD4") {
+      gasname = "CH4";
+    } else if (gasname == "iC4H10" || gasname == "nC4H10") {
+      gasname = "C4H10";
+    } else if (gasname == "neoC5H12" || gasname == "nC5H12") {
+      gasname = "C5H12";
+    } else if (gasname == "cC3H6") {
+      gasname = "C3H6";
+    } else if (gasname == "nC3H7OH") {
+      gasname = "C3H7OH";
+    }
     // Assemble the molecular photoabsorption cross-section.
     if (gasname == "CF4") {
       mpacs.emplace_back(makeMPACS("C for CF4", 1, "F", 4));
@@ -942,12 +959,11 @@ bool TrackHeed::SetupGas(Medium* medium) {
       mpacs.emplace_back(makeMPACS("C for C2H6", 2, "H for H2", 6, 25.0e-6));
     } else if (gasname == "C3H8") {
       mpacs.emplace_back(makeMPACS("C for CH4", 3, "H for H2", 8, 24.0e-6));
-    } else if (gasname == "iC4H10" || gasname == "nC4H10") {
+    } else if (gasname == "C4H10") {
       mpacs.emplace_back(makeMPACS("C for C4H10", 4, "H for H2", 10, 23.4e-6));
     } else if (gasname == "CO2") {
       mpacs.emplace_back(makeMPACS("C for CO2", 1, "O for CO2", 2, 33.0e-6));
-    } else if (gasname == "C5H12" ||gasname == "neoC5H12" || 
-               gasname == "nC5H12") {
+    } else if (gasname == "C5H12") {
       mpacs.emplace_back(makeMPACS("C for C4H10", 5, "H for H2", 12, 23.2e-6));
     } else if (gasname == "Water" || gasname == "H2O") {
       mpacs.emplace_back(makeMPACS("H for H2", 2, "O", 1, 29.6e-6));
@@ -1055,7 +1071,6 @@ bool TrackHeed::SetupGas(Medium* medium) {
 
   m_matter.reset(
       new Heed::HeedMatterDef(m_energyMesh.get(), m_gas.get(), mpacs, w, f));
-
   return true;
 }
 

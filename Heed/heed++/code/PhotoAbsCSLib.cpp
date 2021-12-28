@@ -168,7 +168,7 @@ void PhotoAbsCSLib::initialise() {
   apacs.emplace("C for C2H6", ExAtomPhotoAbsCS(6, shells,
                                                pacs_table_dir + "C.dat",
                                                "C_for_C2H6", 11.52e-06));
-  apacs.emplace("C_for_C4H10", ExAtomPhotoAbsCS(6, shells,
+  apacs.emplace("C for C4H10", ExAtomPhotoAbsCS(6, shells,
                                                 pacs_table_dir + "C.dat",
                                                 "C_for_C4H10", 10.55e-06));
   apacs.emplace("C for Methylal", ExAtomPhotoAbsCS(6, shells,
