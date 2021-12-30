@@ -231,10 +231,10 @@ bool MediumGas::SetComposition(const std::string& gas1, const double f1,
   return true;
 }
 
-void MediumGas::GetComposition(std::string& gas1, double& f1, std::string& gas2,
-                               double& f2, std::string& gas3, double& f3,
-                               std::string& gas4, double& f4, std::string& gas5,
-                               double& f5, std::string& gas6, double& f6) {
+void MediumGas::GetComposition(
+    std::string& gas1, double& f1, std::string& gas2, double& f2, 
+    std::string& gas3, double& f3, std::string& gas4, double& f4, 
+    std::string& gas5, double& f5, std::string& gas6, double& f6) const {
   gas1 = m_gas[0];
   gas2 = m_gas[1];
   gas3 = m_gas[2];
@@ -2638,6 +2638,48 @@ void MediumGas::DisablePenningTransfer() {
   AdjustTownsendCoefficient();
 }
 
+void MediumGas::GetIonisationLevel(const size_t level, std::string& label, 
+                                   double& energy) const {
+  if (level >= m_ionLevels.size()) {
+    std::cerr << m_className << "::GetIonisationLevel: Index out of range.\n";
+    return;
+  }
+  label = m_ionLevels[level].label;
+  energy = m_ionLevels[level].energy;
+} 
+
+void MediumGas::GetExcitationLevel(const size_t level, std::string& label, 
+                                   double& energy) const { 
+  if (level >= m_excLevels.size()) {
+    std::cerr << m_className << "::GetExcitationLevel: Index out of range.\n";
+    return;
+  }
+  label = m_excLevels[level].label;
+  energy = m_excLevels[level].energy;
+}
+
+bool MediumGas::GetElectronIonisationRate(const size_t level, 
+                                          const size_t ie, const size_t ib,
+                                          const size_t ia, double& f) const {
+  if (level >= m_ionLevels.size()) {
+    std::cerr << m_className << "::GetElectronIonisationRate:\n"
+              << "    Level index out of range.\n";
+    return false;
+  }
+  return GetEntry(ie, ib, ia, "ElectronIonisationRate", m_ionRates[level], f);
+}
+
+bool MediumGas::GetElectronExcitationRate(const size_t level, 
+                                          const size_t ie, const size_t ib,
+                                          const size_t ia, double& f) const {
+  if (level >= m_excLevels.size()) {
+    std::cerr << m_className << "::GetElectronExcitationRate:\n"
+              << "    Level index out of range.\n";
+    return false;
+  }
+  return GetEntry(ie, ib, ia, "ElectronExcitationRate", m_excRates[level], f);
+}
+
 bool MediumGas::DisablePenningTransfer(std::string gasname) {
 
   // Get the "standard" name of this gas.
@@ -3211,6 +3253,7 @@ void MediumGas::PrintGases() {
   std::cout << "MediumGas::PrintGases:\n"
             << "Gas            Aliases\n" << std::string(80, '-') << "\n";
   for (int i = 1; i <= 61; ++i) {
+    if (i == 47) continue;
     const std::string gas = i == 58 ? "N2 (Phelps)" : GetGasName(i, version);
     if (gas.empty()) continue;
     std::cout << std::setw(15) << std::left << gas;
