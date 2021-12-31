@@ -19,8 +19,6 @@ class MediumGas : public Medium {
   /// Destructor
   virtual ~MediumGas() {}
 
-  bool IsGas() const override { return true; }
-
   /// Set the gas mixture.
   bool SetComposition(const std::string& gas1, const double f1 = 1.,
                       const std::string& gas2 = "", const double f2 = 0.,
@@ -29,21 +27,12 @@ class MediumGas : public Medium {
                       const std::string& gas5 = "", const double f5 = 0.,
                       const std::string& gas6 = "", const double f6 = 0.);
   /// Retrieve the gas mixture.
-  void GetComposition(std::string& gas1, double& f1, std::string& gas2,
-                      double& f2, std::string& gas3, double& f3,
-                      std::string& gas4, double& f4, std::string& gas5,
-                      double& f5, std::string& gas6, double& f6);
-  void GetComponent(const unsigned int i, std::string& label,
-                    double& f) override;
-
-  void SetAtomicNumber(const double z) override;
-  double GetAtomicNumber() const override;
-  void SetAtomicWeight(const double a) override;
-  double GetAtomicWeight() const override;
-  void SetNumberDensity(const double n) override;
-  double GetNumberDensity() const override;
-  void SetMassDensity(const double rho) override;
-  double GetMassDensity() const override;
+  void GetComposition(std::string& gas1, double& f1, 
+                      std::string& gas2, double& f2, 
+                      std::string& gas3, double& f3,
+                      std::string& gas4, double& f4, 
+                      std::string& gas5, double& f5, 
+                      std::string& gas6, double& f6) const;
 
   /// Read table of gas properties (transport parameters) from file.
   bool LoadGasFile(const std::string& filename, const bool quiet = false);
@@ -82,6 +71,39 @@ class MediumGas : public Medium {
   /// Adjust the Townsend coefficient using the excitation and ionisation 
   /// rates stored in the gas table and the Penning transfer probabilities.
   bool AdjustTownsendCoefficient();
+
+  /// Return the number of ionisation levels in the table.
+  size_t GetNumberOfIonisationLevels() const { return m_ionLevels.size(); }
+  /// Return the number of excitation levels in the table.
+  size_t GetNumberOfExcitationLevels() const { return m_excLevels.size(); }
+  /// Return the identifier and threshold of an ionisation level.
+  void GetIonisationLevel(const size_t level, std::string& label, 
+                          double& energy) const; 
+  /// Return the identifier and energy of an excitation level.
+  void GetExcitationLevel(const size_t level, std::string& label, 
+                          double& energy) const; 
+  /// Get an entry in the table of ionisation rates.
+  bool GetElectronIonisationRate(const size_t level,
+                                 const size_t ie, const size_t ib,
+                                 const size_t ia, double& f) const;
+  /// Get an entry in the table of excitation rates.
+  bool GetElectronExcitationRate(const size_t level,
+                                 const size_t ie, const size_t ib,
+                                 const size_t ia, double& f) const;
+
+  bool IsGas() const override { return true; }
+
+  void GetComponent(const unsigned int i, std::string& label,
+                    double& f) override;
+
+  void SetAtomicNumber(const double z) override;
+  double GetAtomicNumber() const override;
+  void SetAtomicWeight(const double a) override;
+  double GetAtomicWeight() const override;
+  void SetNumberDensity(const double n) override;
+  double GetNumberDensity() const override;
+  void SetMassDensity(const double rho) override;
+  double GetMassDensity() const override;
 
   void ResetTables() override;
 
