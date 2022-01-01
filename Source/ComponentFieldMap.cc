@@ -8,6 +8,9 @@
 #include <iostream>
 #include <string>
 
+#include <TCanvas.h>
+#include <TH1F.h>
+
 #include "Garfield/FundamentalConstants.hh"
 
 namespace Garfield {
@@ -16,6 +19,132 @@ ComponentFieldMap::ComponentFieldMap(const std::string& name)
     : Component(name) {}
 
 ComponentFieldMap::~ComponentFieldMap() {}
+
+bool ComponentFieldMap::Check() {
+
+  // MAPCHK
+  // Ensure there are some mesh elements.
+  if (!m_ready) {
+    PrintNotReady("Check");
+    return false;
+  }
+  // Compute the range of volumes.
+  const size_t nElements = m_elements.size();
+  double vmin = 0., vmax = 0.;
+  for (size_t i = 0; i < nElements; ++i) {
+    const double v = GetElementVolume(i);
+    if (i == 0) {
+      vmin = vmax = v;
+    } else {
+      vmin = std::min(vmin, v);
+      vmax = std::max(vmax, v);
+    }
+  }
+  // Number of bins.
+  constexpr int nBins = 100;
+  double scale = 1.;
+  std::string unit = "cm";
+  if (m_is3d) {
+    if (vmax < 1.e-9) {
+      unit = "um";
+      scale = 1.e12;
+    } else if (vmax < 1.e-3) {
+      unit = "mm";
+      scale = 1.e3;
+    }
+  } else {
+    if (vmax < 1.e-6) {
+      unit = "um";
+      scale = 1.e8;
+    } else if (vmax < 1.e-2) {
+      unit = "mm";
+      scale = 1.e2;
+    }
+  } 
+  vmin *= scale;
+  vmax *= scale;
+  // Check we do have a range and round it.
+  vmin = std::max(0., vmin - 0.1 * (vmax - vmin));
+  vmax = vmax + 0.1 * (vmax - vmin);
+  if (vmin == vmax) {
+    vmin -= 1. + std::abs(vmin);
+    vmax += 1. + std::abs(vmax);
+  }
+  // CALL ROUND(SMIN,SMAX,NCHA,'LARGER,COARSER',STEP)
+  std::string title = m_is3d ? ";volume [" : ";surface [";
+  if (unit == "um") {
+    title += "#mum";
+  } else {
+   title += unit;
+  }
+  if (m_is3d) {
+    title += "^{3}];";
+  } else {
+    title += "^{2}];";
+  }
+  TH1F hElementVolume("hElementVolume", title.c_str(), nBins, vmin, vmax);
+
+  TH1F hAspectRatio("hAspectRatio", 
+                    ";largest / smallest vertex distance;", nBins, 0., 100.);
+
+  // Loop over all mesh elements.
+  size_t nZero = 0;
+  double rmin = 0., rmax = 0.;
+  for (size_t i = 0; i < nElements; ++i) {
+    double v = 0., dmin = 0., dmax = 0.;
+    if (!GetElement(i, v, dmin, dmax)) return false;
+    // Check for null-sizes.
+    if (dmin <= 0. && !m_elements[i].degenerate) {
+      std::cerr << m_className << "::Check:\n"
+                << "    Found element with zero-length vertex separation.\n";
+      return false;
+    }
+    const double r = dmax / dmin;
+    hAspectRatio.Fill(r);
+    if (v <= 0.) ++nZero;
+    v *= scale;
+    hElementVolume.Fill(v);
+    //  Update maxima and minima.
+    if (i == 0) {
+      vmin = vmax = v;
+      rmin = rmax = r;
+    } else { 
+      vmin = std::min(vmin, v);
+      vmax = std::max(vmax, v);
+      rmin = std::min(rmin, r);
+      rmax = std::max(rmax, r);
+    }
+  }
+  if (nZero > 0) {
+    std::cerr << m_className << "::Check:\n";
+    if (m_is3d) {
+      std::cerr << "    Found " << nZero << " element(s) with zero volume.\n";
+    } else {
+      std::cerr << "    Found " << nZero << " element(s) with zero surface.\n";
+    }
+  }
+  TCanvas* c1 = new TCanvas("cAspectRatio", "Aspect ratio", 600, 600);
+  c1->cd();
+  hAspectRatio.DrawCopy();
+  c1->Update();
+  TCanvas* c2 = new TCanvas("cElementVolume", "Element measure", 600, 600);
+  c2->cd();
+  hElementVolume.DrawCopy();
+  c2->Update();
+
+  // Printout.
+  std::cout << m_className << "::Check:\n"
+            << "                      Smallest     Largest\n";
+  std::printf("    Aspect ratios:  %15.8f  %15.8f\n", rmin, rmax);
+  if (m_is3d) {
+    std::printf("    Volumes [%s3]:  %15.8f  %15.8f\n", 
+                unit.c_str(), vmin, vmax);
+  } else {
+    std::printf("    Surfaces [%s2]: %15.8f  %15.8f\n", 
+                unit.c_str(), vmin, vmax);
+  }
+  return true;
+}
 
 void ComponentFieldMap::PrintMaterials() {
   // Do not proceed if not properly initialised.
