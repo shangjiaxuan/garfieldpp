@@ -65,6 +65,7 @@ int main(int argc, char * argv[]) {
     if (fm.GetPermittivity(i) == 1.) fm.SetMedium(i, &gas);
   }
   fm.PrintMaterials();
+  // fm.Check();
 
   // Create the sensor.
   Sensor sensor;

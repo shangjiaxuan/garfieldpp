@@ -22,27 +22,11 @@ class ComponentFieldMap : public Component {
   /// Destructor
   virtual ~ComponentFieldMap();
 
-  /// Calculate x, y, z, V and angular ranges.
-  virtual void SetRange();
+  /// Check element aspect ratio.
+  bool Check();
+
   /// Show x, y, z, V and angular ranges
   void PrintRange();
-
-  bool IsInBoundingBox(const double x, const double y, const double z) const {
-    return x >= m_minBoundingBox[0] && x <= m_maxBoundingBox[0] &&
-           y >= m_minBoundingBox[1] && y <= m_maxBoundingBox[1] &&
-           z >= m_minBoundingBox[2] && y <= m_maxBoundingBox[2];
-  }
-
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
-                      double& xmax, double& ymax, double& zmax) override;
-  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
-                         double& xmax, double& ymax, double& zmax) override;
-
-  bool GetVoltageRange(double& vmin, double& vmax) override {
-    vmin = m_mapvmin;
-    vmax = m_mapvmax;
-    return true;
-  }
 
   /// List all currently defined materials
   void PrintMaterials();
@@ -95,6 +79,22 @@ class ComponentFieldMap : public Component {
     m_printConvergenceWarnings = on;
   }
 
+  bool IsInBoundingBox(const double x, const double y, const double z) const {
+    return x >= m_minBoundingBox[0] && x <= m_maxBoundingBox[0] &&
+           y >= m_minBoundingBox[1] && y <= m_maxBoundingBox[1] &&
+           z >= m_minBoundingBox[2] && y <= m_maxBoundingBox[2];
+  }
+
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
+                      double& xmax, double& ymax, double& zmax) override;
+  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
+                         double& xmax, double& ymax, double& zmax) override;
+
+  bool GetVoltageRange(double& vmin, double& vmax) override {
+    vmin = m_mapvmin;
+    vmax = m_mapvmax;
+    return true;
+  }
   friend class ViewFEMesh;
 
  protected:
@@ -187,6 +187,9 @@ class ComponentFieldMap : public Component {
   void Reset() override;
 
   void Prepare();
+
+  // Calculate x, y, z, V and angular ranges.
+  virtual void SetRange();
 
   // Periodicities
   void UpdatePeriodicity() override {
