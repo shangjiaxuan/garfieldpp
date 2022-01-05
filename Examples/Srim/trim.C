@@ -47,8 +47,6 @@ int main(int argc, char *argv[]) {
     std::cerr << "Reading TRIM EXYZ file failed.\n";
     return 1;
   }
-  tr.SetWorkFunction(3.6);
-  tr.SetFanoFactor(0.11);
   tr.Print();
 
   // Plot the tracks.

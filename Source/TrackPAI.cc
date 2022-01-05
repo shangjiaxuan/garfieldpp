@@ -25,8 +25,8 @@ bool TrackPAI::NewTrack(const double x0, const double y0, const double z0,
   }
 
   // Get the medium at this location and check if it is "ionisable".
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(x0, y0, z0, medium)) {
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
     std::cerr << m_className << "::NewTrack: No medium at initial position.\n";
     return false;
   }
@@ -115,8 +115,8 @@ bool TrackPAI::GetCluster(double& xcls, double& ycls, double& zcls,
   m_t += d / m_speed;
 
   // Check the medium at this location.
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(m_x, m_y, m_z, medium)) {
+  Medium* medium = m_sensor->GetMedium(m_x, m_y, m_z);
+  if (!medium) {
     m_ready = false;
     return false;
   }

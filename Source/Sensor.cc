@@ -156,15 +156,13 @@ double Sensor::WeightingPotential(const double x, const double y,
   return v;
 }
 
-bool Sensor::GetMedium(const double x, const double y, const double z,
-                       Medium*& m) {
-  m = nullptr;
+Medium* Sensor::GetMedium(const double x, const double y, const double z) {
   for (const auto& cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
-    m = std::get<0>(cmp)->GetMedium(x, y, z);
-    if (m) return true;
+    Medium* medium = std::get<0>(cmp)->GetMedium(x, y, z);
+    if (medium) return medium;
   }
-  return false;
+  return nullptr;
 }
 
 bool Sensor::SetArea() {

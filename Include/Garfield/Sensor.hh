@@ -62,8 +62,7 @@ class Sensor {
                             const std::string& label);
 
   /// Get the medium at (x, y, z).
-  bool GetMedium(const double x, const double y, const double z,
-                 Medium*& medium);
+  Medium* GetMedium(const double x, const double y, const double z);
 
   /// Switch debugging messages on/off.
   void EnableDebugging(const bool on = true) { m_debug = on; }

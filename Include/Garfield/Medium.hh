@@ -63,7 +63,7 @@ class Medium {
   /// Get the mass density [g/cm3].
   virtual double GetMassDensity() const;
 
-  /// Switch electron/ion/hole on/off.
+  /// Switch electron/ion/hole transport on/off.
   virtual void EnableDrift(const bool on = true) { m_driftable = on; }
   /// Make the medium ionisable or non-ionisable.
   virtual void EnablePrimaryIonisation(const bool on = true) { 
@@ -80,11 +80,11 @@ class Medium {
   /// Set the W value (average energy to produce an electron/ion or e/h pair).
   void SetW(const double w) { m_w = w; }
   /// Get the W value.
-  double GetW() { return m_w; }
+  double GetW() const { return m_w; }
   /// Set the Fano factor.
   void SetFanoFactor(const double f) { m_fano = f; }
   /// Get the Fano factor.
-  double GetFanoFactor() { return m_fano; }
+  double GetFanoFactor() const { return m_fano; }
 
   // Transport parameters for electrons
   /// Drift velocity [cm / ns]

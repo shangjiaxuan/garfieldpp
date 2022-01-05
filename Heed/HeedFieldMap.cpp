@@ -55,9 +55,8 @@ bool HeedFieldMap::inside(const point& pt) {
   // Check if the point is inside the drift area.
   if (!m_sensor->IsInArea(x, y, z)) return false;
   // Check if the point is inside a medium.
-  Garfield::Medium* m = nullptr;
-  if (!m_sensor->GetMedium(x, y, z, m) || !m) return false;
-  return m->IsIonisable();
+  Garfield::Medium* medium = m_sensor->GetMedium(x, y, z);
+  return medium ? medium->IsIonisable() : false;
 }
 
 }

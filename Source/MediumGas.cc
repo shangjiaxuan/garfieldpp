@@ -123,7 +123,7 @@ MediumGas::MediumGas()
   m_gas[0] = "Ar";
   m_fraction[0] = 1.;
   m_name = m_gas[0];
-  GetGasInfo(m_gas[0], m_atWeight[0], m_atNum[0]);
+  GetGasInfo(m_gas[0], m_atWeight[0], m_atNum[0], m_w, m_fano);
 
   m_rPenningGas.fill(0.);
   m_lambdaPenningGas.fill(0.);
@@ -191,9 +191,14 @@ bool MediumGas::SetComposition(const std::string& gas1, const double f1,
     m_fraction[i] /= sum;
   }
 
-  // Set the atomic weight and number.
+  // Set the W value, Fano factor, and the atomic weight and number.
+  m_w = 0.;
+  m_fano = 0.; 
   for (unsigned int i = 0; i < m_nComponents; ++i) {
-    GetGasInfo(m_gas[i], m_atWeight[i], m_atNum[i]);
+    double w = 0., f = 0.;
+    GetGasInfo(m_gas[i], m_atWeight[i], m_atNum[i], w, f);
+    m_w += w * m_fraction[i];
+    m_fano += f * m_fraction[i];
   }
 
   // Print the composition.
@@ -364,12 +369,17 @@ bool MediumGas::LoadGasFile(const std::string& filename,
 
   m_name = "";
   m_nComponents = gasnames.size();
+  m_w = 0.;
+  m_fano = 0.;
   for (unsigned int i = 0; i < m_nComponents; ++i) {
     if (i > 0) m_name += "/";
     m_name += gasnames[i];
     m_gas[i] = gasnames[i];
     m_fraction[i] = percentages[i] / 100.;
-    GetGasInfo(m_gas[i], m_atWeight[i], m_atNum[i]);
+    double w = 0., f = 0.;
+    GetGasInfo(m_gas[i], m_atWeight[i], m_atNum[i], w, f);
+    m_w += w * m_fraction[i];
+    m_fano += f * m_fraction[i];
   }
   if (!quiet) {
     std::cout << "    Gas composition set to " << m_name;
@@ -2786,171 +2796,292 @@ bool MediumGas::AdjustTownsendCoefficient() {
   return true;
 }
 
-bool MediumGas::GetGasInfo(const std::string& gasname, double& a, double& z) {
+bool MediumGas::GetGasInfo(const std::string& gasname, double& a, double& z,
+                           double& w, double& f) {
+  // Unless indicated otherwise, the W values are taken from 
+  // ICRU report 31 (Table 5-IX), and the Fano factors are taken 
+  // from IAEA TECDOC 799.
+  // For gases for which no experimental data on the Fano factor 
+  // are available, the Fano factor is calculated using the 
+  // Krajcar-Bronic relation, F = 0.188 * W / I - 0.15 
   if (gasname == "CF4") {
     a = 12.0107 + 4 * 18.9984032;
     z = 6 + 4 * 9;
+    w = 34.3; // DOI: 10.1063/1.337792
+    f = 0.26; // Krajcar-Bronic relation
     return true;
   } else if (gasname == "Ar") {
     a = 39.948;
     z = 18;
+    w = 26.4;
+    f = 0.17;
   } else if (gasname == "He") {
     a = 4.002602;
     z = 2;
+    w = 41.3;
+    f = 0.17; 
   } else if (gasname == "He-3") {
     a = 3.01602931914;
     z = 2;
+    w = 41.3;
+    f = 0.17;
   } else if (gasname == "Ne") {
     a = 20.1797;
     z = 10;
+    w = 35.4;
+    f = 0.17;
   } else if (gasname == "Kr") {
     a = 37.798;
     z = 36;
+    w = 24.4;
+    f = 0.17;
   } else if (gasname == "Xe") {
     a = 131.293;
     z = 54;
+    w = 22.1;
+    f = 0.17;
   } else if (gasname == "CH4") {
     a = 12.0107 + 4 * 1.00794;
     z = 6 + 4;
+    w = 27.3;
+    f = 0.26;
   } else if (gasname == "C2H6") {
     a = 2 * 12.0107 + 6 * 1.00794;
     z = 2 * 6 + 6;
+    w = 25.0; 
+    f = 0.28; // DOI 10.1088/0022-3700/20/17/025
   } else if (gasname == "C3H8") {
     a = 3 * 12.0107 + 8 * 1.00794;
     z = 3 * 6 + 8;
+    w = 24.0;
+    f = 0.25;
   } else if (gasname == "iC4H10") {
     a = 4 * 12.0107 + 10 * 1.00794;
     z = 4 * 6 + 10;
+    w = 23.4;
+    f = 0.26; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "CO2") {
     a = 12.0107 + 2 * 15.9994;
     z = 6 + 2 * 8;
+    w = 33.0;
+    f = 0.32;
   } else if (gasname == "neoC5H12") {
     a = 5 * 12.0107 + 12 * 1.00794;
     z = 5 * 6 + 12;
+    w = 23.2;
+    f = 0.27; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "H2O") {
     a = 2 * 1.00794 + 15.9994;
     z = 2 + 8;
+    w = 29.6;
+    f = 0.25;
   } else if (gasname == "O2") {
     a = 2 * 15.9994;
     z = 2 * 8;
+    w = 30.8;
+    f = 0.37;
   } else if (gasname == "N2") {
     a = 2 * 14.0067;
     z = 2 * 7;
+    w = 34.8;
+    f = 0.28;
   } else if (gasname == "NO") {
     a = 14.0067 + 15.9994;
     z = 7 + 8;
+    w = 28.9; // ICRU 31, Table 5-V
+    f = 0.44; // Krajcar-Bronic relation
   } else if (gasname == "N2O") {
     a = 2 * 14.0067 + 15.9994;
     z = 2 * 7 + 8;
+    w = 32.6;
+    f = 0.33; // Krajcar-Bronic relation
   } else if (gasname == "C2H4") {
     a = 2 * 12.0107 + 4 * 1.00794;
     z = 2 * 6 + 4;
+    w = 25.8;
+    f = 0.31; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "C2H2") {
     a = 2 * 12.0107 + 2 * 1.00794;
     z = 2 * 6 + 2;
+    w = 25.8;
+    f = 0.27;
   } else if (gasname == "H2" || gasname == "paraH2") {
     a = 2 * 1.00794;
     z = 2;
+    w = 36.5;
+    f = 0.34;
   } else if (gasname == "D2" || gasname == "orthoD2") {
     a = 2 * 2.01410177785;
     z = 2;
+    w = 36.5;
+    f = 0.34;
   } else if (gasname == "CO") {
     a = 12.0107 + 15.9994;
     z = 6 + 8;
+    w = 34.5; // ICRU 31, Table 5-V
+    f = 0.31; // Krajcar-Bronic relation
   } else if (gasname == "Methylal") {
     a = 3 * 12.0107 + 8 * 1.00794 + 2 * 15.9994;
     z = 3 * 6 + 8 + 2 * 8;
+    w = 20.0; // rough estimate (twice the ionisation potential)
+    f = 0.23; // Krajcar-Bronic relation 
   } else if (gasname == "DME") {
     a = 4 * 12.0107 + 10 * 1.00794 + 2 * 15.9994;
     z = 4 * 6 + 10 + 2 * 8;
+    // DOI 10.1063/1.365787
+    w = 27.7;
+    f = 0.285;
   } else if (gasname == "Reid-Step" || gasname == "Maxwell-Model" ||
              gasname == "Reid-Ramp") {
     a = 1.;
     z = 1.;
+    w = 30.;
+    f = 0.2;
   } else if (gasname == "C2F6") {
     a = 2 * 12.0107 + 6 * 18.9984032;
     z = 2 * 6 + 6 * 9;
+    w = 34.5; // DOI: 10.1063/1.337792
+    f = 0.30; // Krajcar-Bronic relation
   } else if (gasname == "SF6") {
     a = 32.065 + 6 * 18.9984032;
     z = 16 + 6 * 9;
+    w = 35.8; // ICRU 31, Table 5-V
+    f = 0.28; // Krajcar-Bronic relation
   } else if (gasname == "NH3") {
     a = 14.0067 + 3 * 1.00794;
     z = 7 + 3;
+    w = 26.6;
+    f = 0.34; // Krajcar-Bronic relation
   } else if (gasname == "C3H6") {
     a = 3 * 12.0107 + 6 * 1.00794;
     z = 3 * 6 + 6;
+    w = 27.1; // ICRU 31, Table 5-V
+    f = 0.37; // Krajcar-Bronic relation
   } else if (gasname == "cC3H6") {
     a = 3 * 12.0107 + 6 * 1.00794;
     z = 3 * 6 + 6;
+    w = 25.9; // ICRU 31, Table 5-V
+    f = 0.34; // Krajcar-Bronic relation
   } else if (gasname == "CH3OH") {
     a = 12.0107 + 4 * 1.00794 + 15.9994;
     z = 6 + 4 + 8;
+    w = 24.7;
+    f = 0.37; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "C2H5OH") {
     a = 2 * 12.0107 + 6 * 1.00794 + 15.9994;
     z = 2 * 6 + 6 + 8;
+    w = 24.8;
+    f = 0.37; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "C3H7OH" || gasname == "nC3H7OH") {
     a = 3 * 12.0107 + 8 * 1.00794 + 15.9994;
     z = 3 * 6 + 8 * 8;
+    w = 21.;  // Magboltz
+    f = 0.37; // same value as for methanol and ethanol
   } else if (gasname == "Cs") {
     a = 132.9054519;
     z = 55;
+    w = 16.; // Dugan and Sovie (1964)
+    f = 0.6; // Krajcar-Bronic relation. Seems high.
   } else if (gasname == "F2") {
     a = 2 * 18.9984032;
     z = 2 * 9;
+    // Magboltz
+    w = 30.2;
+    f = 0.21;
   } else if (gasname == "CS2") {
     a = 12.0107 + 2 * 32.065;
     z = 6 + 2 * 16;
+    w = 26.0; // Myers
+    f = 0.34; // Krajcar-Bronic relation
   } else if (gasname == "COS") {
     a = 12.0107 + 15.9994 + 32.065;
     z = 6 + 8 + 16;
+    // Magboltz
+    w = 23.7;
+    f = 0.25;
   } else if (gasname == "CD4") {
     a = 12.0107 + 4 * 2.01410177785;
     z = 6 + 4;
+    w = 27.3;
+    f = 0.26;
   } else if (gasname == "BF3") {
     a = 10.811 + 3 * 18.9984032;
     z = 5 + 3 * 9;
+    w = 35.7; // ICRU 31, Table 5-V
+    f = 0.28; // Krajcar-Bronic relation
   } else if (gasname == "C2H2F4") {
     a = 2 * 12.0107 + 2 * 1.00794 + 4 * 18.9984032;
     z = 2 * 6 + 2 + 4 * 9;
+    // Magboltz
+    w = 30.7;
+    f = 0.25;
   } else if (gasname == "CHF3") {
     a = 12.0107 + 1.00794 + 3 * 18.9984032;
     z = 6 + 1 + 3 * 9;
+    // Magboltz
+    w = 26.6;
+    f = 0.21;
   } else if (gasname == "CF3Br") {
     a = 12.0107 + 3 * 18.9984032 + 79.904;
     z = 6 + 3 * 9 + 35;
+    // Magboltz
+    w = 22.4;
+    f = 0.22;
   } else if (gasname == "C3F8") {
     a = 3 * 12.0107 + 8 * 18.9984032;
     z = 3 * 6 + 8 * 9;
+    w = 34.4; // DOI: 10.1063/1.337792
+    f = 0.33; // Krajcar-Bronic relation
   } else if (gasname == "O3") {
     a = 3 * 15.9994;
     z = 3 * 8;
+    // Magboltz
+    w = 30.7;
+    f = 0.3;
   } else if (gasname == "Hg") {
     a = 2 * 200.59;
     z = 80;
+    w = 23.6;
+    f = 0.28; // Krajcar-Bronic relation
   } else if (gasname == "H2S") {
     a = 2 * 1.00794 + 32.065;
     z = 2 + 16;
+    w = 23.3; // ICRU 31, Table 5-V
+    f = 0.27; // Krajcar-Bronic relation
   } else if (gasname == "nC4H10") {
     a = 4 * 12.0107 + 10 * 1.00794;
     z = 4 * 6 + 10;
+    w = 23.4;
+    f = 0.26; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "nC5H12") {
     a = 5 * 12.0107 + 12 * 1.00794;
     z = 5 * 6 + 12;
+    w = 23.2;
+    f = 0.27; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "GeH4") {
     a = 72.64 + 4 * 1.00794;
     z = 32 + 4;
+    // Magboltz
+    w = 25.9;
+    f = 0.28;
   } else if (gasname == "SiH4") {
     a = 28.0855 + 4 * 1.00794;
     z = 14 + 4;
+    // Magboltz
+    w = 27.5;
+    f = 0.30;
   } else if (gasname == "CCl4") {
     a = 12.0107 + 4 * 35.45;
     z = 6 + 4 * 17;
+    w = 25.8; // ICRU 31, Table 5-V
+    f = 0.21; // Krajcar-Bronic relation 
   } else {
     a = 0.;
     z = 0.;
+    w = 0.;
+    f = 0.;
     return false;
   }
-
   return true;
 }
 

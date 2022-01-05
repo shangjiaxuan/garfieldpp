@@ -154,9 +154,17 @@ void TrackTrim::Print() {
   }
   std::cout << "    Projectile: " << m_particleName << ", "
             << m_ekin * 1.e-3 << " keV\n"
-            << "    Number of tracks: " << m_ions.size() << "\n"
-            << "    Work function: " << m_work << " eV\n"
-            << "    Fano factor: " << m_fano << "\n";
+            << "    Number of tracks: " << m_ions.size() << "\n";
+  if (m_work > 0.) {
+    std::cout << "    Work function: " << m_work << " eV\n";
+  } else {
+    std::cout << "    Work function: Automatic\n";
+  }
+  if (m_fset) {
+    std::cout << "    Fano factor: " << m_fano << "\n";
+  } else {
+    std::cout << "    Fano factor: Automatic\n";
+  }
 }
 
 bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
@@ -212,12 +220,19 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
   const double cphi = cos(phi);
   const double sphi = sin(phi);
 
-  // Make sure all necessary parameters have been set.
-  if (m_work < Small) {
-    std::cerr << m_className << "::NewTrack: Work function not set.\n";
-    return false;
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
+    std::cerr << m_className << "::NewTrack: No medium at initial point.\n";
   }
- 
+  double w = m_work > 0. ? m_work : medium->GetW();
+  // Warn if the W value is not defined.
+  if (w < Small) {
+    std::cerr << m_className << "::NewTrack: "
+              << "Work function at initial point is not defined.\n";
+  }
+  double fano = m_fset ? m_fano : medium->GetFanoFactor();
+  fano = std::max(fano, 0.);
+
   // Plot.
   if (m_viewer) PlotNewTrack(x0, y0, z0);
  
@@ -250,23 +265,22 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
     cluster.y = y0 + sphi * ctheta * x + cphi * y - sphi * stheta * z;
     cluster.z = z0 + stheta * x + ctheta * z;
     // Is this point inside an ionisable medium?
-    Medium* medium = nullptr;
-    if (!m_sensor->GetMedium(cluster.x, cluster.y, cluster.z, medium)) {
-      continue;
-    } 
+    medium = m_sensor->GetMedium(cluster.x, cluster.y, cluster.z);
     if (!medium || !medium->IsIonisable()) continue;
+    if (m_work < Small) w = medium->GetW();
+    if (w < Small) continue;
     cluster.t = t0;
     double eloss = path[i - 1][3];
-    if (m_fano < Small) {
+    if (fano < Small) {
       // No fluctuations.
-      cluster.electrons = int((eloss + epool) / m_work);
-      cluster.ec = m_work * cluster.electrons;
+      cluster.electrons = int((eloss + epool) / w);
+      cluster.ec = w * cluster.electrons;
     } else {
       double ec = eloss + epool;
       cluster.electrons = 0;
       cluster.ec = 0.0;
       while (true) {
-        const double er = RndmHeedWF(m_work, m_fano);
+        const double er = RndmHeedWF(w, fano);
         if (er > ec) break;
         cluster.electrons++;
         cluster.ec += er;
