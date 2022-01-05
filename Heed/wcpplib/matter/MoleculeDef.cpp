@@ -103,7 +103,7 @@ MoleculeDef::MoleculeDef(const std::string& fname, const std::string& fnotation,
                          const std::string& fatom_not2, long fqatom_ps2,
                          const std::string& fatom_not3, long fqatom_ps3,
                          std::shared_ptr<VanDerWaals> fvdw) :
-    MoleculeDef(fname, fnotation, 2, {fatom_not1, fatom_not2, fatom_not3}, 
+    MoleculeDef(fname, fnotation, 3, {fatom_not1, fatom_not2, fatom_not3}, 
                 {fqatom_ps1, fqatom_ps2, fqatom_ps3}, fvdw) {
 
 }
