@@ -40,8 +40,8 @@ bool TrackBichsel::NewTrack(const double x0, const double y0, const double z0,
   }
 
   // Make sure we are inside a medium.
-  Medium* medium;
-  if (!m_sensor->GetMedium(x0, y0, z0, medium)) {
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
     std::cerr << m_className << "::NewTrack:\n"
               << "    No medium at initial position.\n";
     m_isInMedium = false;
@@ -111,8 +111,8 @@ bool TrackBichsel::GetCluster(double& xcls, double& ycls, double& zcls,
   e = 0.;
   extra = 0.;
 
-  Medium* medium;
-  if (!m_sensor->GetMedium(m_x, m_y, m_z, medium)) {
+  Medium* medium = m_sensor->GetMedium(m_x, m_y, m_z);
+  if (!medium) {
     m_isInMedium = false;
     if (m_debug) {
       std::cout << m_className << "::GetCluster: Particle left the medium.\n";

@@ -93,8 +93,8 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
   if (!UpdateBoundingBox(update)) return false;
 
   // Make sure the initial position is inside an ionisable medium.
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(x0, y0, z0, medium)) {
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
     std::cerr << m_className << "::NewTrack:\n"
               << "    No medium at initial position.\n";
     return false;
@@ -509,8 +509,8 @@ void TrackHeed::TransportDeltaElectron(const double x0, const double y0,
   if (!UpdateBoundingBox(update)) return;
 
   // Make sure the initial position is inside an ionisable medium.
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(x0, y0, z0, medium)) {
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
     std::cerr << m_className << "::TransportDeltaElectron:\n"
               << "    No medium at initial position.\n";
     return;
@@ -631,8 +631,8 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
   if (!UpdateBoundingBox(update)) return;
 
   // Make sure the initial position is inside an ionisable medium.
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(x0, y0, z0, medium)) {
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
     std::cerr << m_className << "::TransportPhoton:\n"
               << "    No medium at initial position.\n";
     return;
@@ -1197,8 +1197,8 @@ bool TrackHeed::IsInside(const double x, const double y, const double z) {
   // Check if the point is inside the drift area.
   if (!m_sensor->IsInArea(x, y, z)) return false;
   // Check if the point is inside a medium.
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(x, y, z, medium)) return false;
+  Medium* medium = m_sensor->GetMedium(x, y, z);
+  if (!medium) return false;
   // Make sure the medium has not changed.
   if (medium->GetName() != m_mediumName ||
       fabs(medium->GetMassDensity() - m_mediumDensity) > 1.e-9 ||

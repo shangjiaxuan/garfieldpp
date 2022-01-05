@@ -510,8 +510,8 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
   // Loop over the initial set of electrons/holes.
   for (auto& p : stack) {
     // Make sure that the starting point is inside a medium.
-    Medium* medium = nullptr;
-    if (!m_sensor->GetMedium(p.x0, p.y0, p.z0, medium) || !medium) {
+    Medium* medium = m_sensor->GetMedium(p.x0, p.y0, p.z0);
+    if (!medium) {
       std::cerr << hdr << "No medium at initial position.\n";
       return false;
     } 
@@ -1282,8 +1282,8 @@ void AvalancheMicroscopic::TransportPhoton(const double x0, const double y0,
   }
 
   // Make sure that the starting point is inside a medium.
-  Medium* medium;
-  if (!m_sensor->GetMedium(x0, y0, z0, medium)) {
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
     std::cerr << m_className << "::TransportPhoton:\n"
               << "    No medium at initial position.\n";
     return;
@@ -1321,7 +1321,8 @@ void AvalancheMicroscopic::TransportPhoton(const double x0, const double y0,
   z += dt * dz;
 
   // Check if the photon is still inside a medium.
-  if (!m_sensor->GetMedium(x, y, z, medium) || medium->GetId() != id) {
+  medium = m_sensor->GetMedium(x, y, z);
+  if (!medium || medium->GetId() != id) {
     // Try to terminate the photon track close to the boundary
     // by means of iterative bisection.
     dx *= dt;
@@ -1345,7 +1346,8 @@ void AvalancheMicroscopic::TransportPhoton(const double x0, const double y0,
       yM = y + delta * dy;
       zM = z + delta * dz;
       // Check if the mid-point is inside the drift medium.
-      if (m_sensor->GetMedium(xM, yM, zM, medium) && medium->GetId() == id) {
+      medium = m_sensor->GetMedium(xM, yM, zM);
+      if (medium && medium->GetId() == id) {
         x = xM;
         y = yM;
         z = zM;

@@ -363,38 +363,40 @@ bool SetComposition(const std::string& gas1, const double f1 = 1.,
 \end{lstlisting}
 \begin{description}
   \item[gas1, \dots, gas6] identifier of the molecule/atom
-  \item[f1, \dots, f6] fraction of the respective molecule/atom   
+  \item[f1, \dots, f6] fraction of the respective molecule/atom
 \end{description}
 A valid gas mixture comprises at least one and at most six 
 different species. 
-By calling the function
+
+The function
 \begin{lstlisting}
 void PrintGases();
 \end{lstlisting}
-one can print out a list of the available gases and their identifiers.
-This list can also be found in the appendix. 
+prints out a list of the available gases and their identifiers 
+(see also Table~\ref{Tab:GasesMagboltz11}).
  
 The fractions have to be strictly positive and 
 may add up to any non-zero value; 
 internally they will be normalized to one.
+The fractions are number fractions (which are equivalent to volumetric fractions in an ideal gas).
 
 The gas density is specified in terms of pressure (Torr) 
-and temperature (K):
+and temperature (K)
 \begin{lstlisting}
 void SetPressure(const double p);
 void SetTemperature(const double t);
 \end{lstlisting}
-Note that the density is calculated using the ideal gas law. 
+and calculated using the ideal gas law. 
 
 In the following example the gas mixture is set 
 to Ar/CH\(_{4}\) (80/20) at 
 atmospheric pressure and 20\(^{\circ}\)\,C.
 \begin{lstlisting}
-MediumMagboltz* gas = new MediumMagboltz();
+MediumMagboltz gas;
 // Set the composition
-gas->SetComposition("ar", 80., "ch4", 20.);
-gas->SetTemperature(293.15);
-gas->SetPressure(760.);
+gas.SetComposition("ar", 80., "ch4", 20.);
+gas.SetTemperature(293.15);
+gas.SetPressure(760.);
 \end{lstlisting}
 
 The function
@@ -404,14 +406,16 @@ void PrintGas();
 prints information about the present transport parameter tables and 
 cross-section terms (if available). 
 
+%\subsection{$W$ values and Fano factors}
+
 \subsection{Ion transport}
 
-The \texttt{\$GARFIELD\_HOME/Data} directory includes a few files 
+The \texttt{\$GARFIELD\_INSTALL/share/Garfield/Data} directory includes a few files \\ 
 (\textit{e.~g.} \texttt{IonMobility\_Ar+\_Ar.txt} for Ar\(^{+}\) ions in argon) 
 containing ion mobility data (more precisely: a table of 
 reduced electric fields \(E/N\) and corresponding mobilities).
 The reduced electric fields are given in units of   
-Td\footnote{1\,Td = 10\(^{-17}\) V\,cm\(^{2}\)}) and the mobility values 
+Td\footnote{1\,Td = 10\(^{-17}\) V\,cm\(^{2}\)} (Townsend) and the mobility values 
 in cm\(^{2}\)\,V\(^{-1}\)\,s\(^{-1}\). 
 These mobility files can be imported using
 \begin{lstlisting}

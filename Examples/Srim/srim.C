@@ -51,11 +51,6 @@ int main(int argc, char *argv[]) {
   }
   // Set the initial kinetic energy of the particle (in eV).
   tr.SetKineticEnergy(1.47e6);
-  // Set the W value and Fano factor of the gas.
-  tr.SetWorkFunction(30.0);
-  tr.SetFanoFactor(0.3);
-  // Set A and Z of the gas.
-  tr.SetAtomicMassNumbers(40, 18);
   // Specify how many electrons we want to be grouped to a cluster.
   tr.SetTargetClusterSize(500);
   // tr.SetClustersMaximum(1000);
@@ -71,7 +66,7 @@ int main(int argc, char *argv[]) {
   TH1F* hX = new TH1F("hX", "x-end;x [cm];entries", 100, 0, 1.);
   TH1F* hY = new TH1F("hY", "y-end;y [cm];entries", 100, -0.5, 0.5);
   TH1F* hZ = new TH1F("hZ", "z-end;z [cm];entries", 100, -0.5, 0.5);
-  TH1F* hNe = new TH1F("hNe", ";electrons;entries", 100, 48000, 50000);
+  TH1F* hNe = new TH1F("hNe", ";electrons;entries", 100, 54000, 56000);
 
   // Generate tracks.
   const unsigned int nTracks = 1000;

@@ -41,17 +41,15 @@ bool TrackSimple::NewTrack(const double x0, const double y0, const double z0,
                            const double dz0) {
   // Check if a sensor has been defined
   if (!m_sensor) {
-    std::cerr << m_className << "::NewTrack:\n"
-              << "    Sensor is not defined.\n";
+    std::cerr << m_className << "::NewTrack: Sensor is not defined.\n";
     m_isReady = false;
     return false;
   }
 
   // Make sure we are inside a medium
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(x0, y0, z0, medium)) {
-    std::cerr << m_className << "::NewTrack:\n";
-    std::cerr << "    No medium at initial position.\n";
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
+    std::cerr << m_className << "::NewTrack: No medium at initial position.\n";
     m_isReady = false;
     return false;
   }
@@ -100,8 +98,8 @@ bool TrackSimple::GetCluster(double& xcls, double& ycls, double& zcls,
   n = 1;
   e = m_eloss * m_mfp;
 
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(m_x, m_y, m_z, medium)) {
+  Medium* medium = m_sensor->GetMedium(m_x, m_y, m_z);
+  if (!medium) {
     m_isReady = false;
     if (m_debug) {
       std::cout << m_className << "::GetCluster: Particle left the medium.\n";

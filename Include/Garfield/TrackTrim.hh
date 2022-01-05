@@ -29,7 +29,12 @@ class TrackTrim : public Track {
   /// Get the W value [eV].
   double GetWorkFunction() const { return m_work; }
   /// Set the Fano factor.
-  void SetFanoFactor(const double f) { m_fano = f; }
+  void SetFanoFactor(const double f) {
+    m_fano = f;
+    m_fset = true;
+  }
+  /// Use the default Fano factor.
+  void UnsetFanoFactor() { m_fset = false; }
   /// Get the Fano factor.
   double GetFanoFactor() const { return m_fano; }
 
@@ -42,9 +47,11 @@ class TrackTrim : public Track {
                   double& tcls, int& n, double& e, double& extra) override;
 
  protected:
-  /// Work function [eV].
+  /// Work function [eV] of the target.
   double m_work = -1.;
-  /// Fano factor [-].
+  /// Has the Fano factor been set?
+  bool m_fset = false;
+  /// Fano factor [-] of the target.
   double m_fano = -1.;
 
   /// Projectile energy [eV].
