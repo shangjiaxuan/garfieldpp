@@ -7,7 +7,7 @@ the use of analytic field calculation techniques,
 and the calculation of induced signals. 
  
 Microscopic transport of electrons and 
-the use of finite element field maps are dealt with in 
+the use of finite element field maps are introduced in 
 Sec.~\ref{Sec:ExampleGem}. 
 
 Section~\ref{Sec:ExampleSilicon} presents an example of 
@@ -46,7 +46,7 @@ with logarithmic spacing.
 \begin{lstlisting}
 gas.SetFieldGrid(100., 100.e3, 20, true);
 \end{lstlisting}
-Now we run \textsc{Magboltz} to generate the gas table for this grid. 
+Now we run \textsc{Magboltz} to generate a gas table for this grid. 
 As input parameter we have to specify the number of collisions 
 (in multiples of \(10^{7}\)) over which the electron is traced 
 by \textsc{Magboltz}.
@@ -107,7 +107,8 @@ Using
 cmp.AddReadout("s");
 \end{lstlisting}
 we tell \texttt{ComponentAnalyticField} to prepare the solution for the 
-weighting field of the wire (which we have given the label ``s'' before).
+weighting potential and weighting field of the wire 
+(which we have given the label ``s'' before).
  
 Finally we assemble a \texttt{Sensor} object which acts as an 
 interface to the transport classes discussed below.
@@ -214,6 +215,22 @@ signalView.SetSensor(&sensor);
 signalView.PlotSignal("s");
 \end{lstlisting}
 
+\subsubsection{Ion tail}
+So far we have only considered the electron contribution 
+to the induced signal. 
+If we want to include the contribution from the ions produced in 
+the avalanche we need to import a table of ion mobilities
+\begin{lstlisting}
+auto installdir = std::getenv("GARFIELD_INSTALL");
+const std::string path = installdir;
+gas.LoadIonMobility(path + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
+\end{lstlisting}
+and we need to call
+\begin{lstlisting}
+drift.EnableIonTail();
+\end{lstlisting}
+before simulating the drift lines.
+
 \subsection{GEM}\label{Sec:ExampleGem}
 In this example, we will simulate the drift of electrons and ions 
 in a standard GEM \cite{Sauli2016}, 
@@ -284,7 +301,7 @@ sensor.AddComponent(&fm);
 \end{lstlisting}
 Normally, particles are transported until they exit the mesh. 
 To speed up the calculation we restrict the drift region to 
-$-100,\textmu\text{m} < z < +250\,\textmu\text{m}$.
+$-100\upmu\text{m} < z < +250\upmu\text{m}$.
 \begin{lstlisting}
 sensor.SetArea(-5 * pitch, -5 * pitch, -0.01, 5 * pitch,  5 * pitch,  0.025);
 \end{lstlisting}

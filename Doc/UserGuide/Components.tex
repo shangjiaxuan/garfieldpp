@@ -22,6 +22,8 @@ Medium* GetMedium(const double& x, const double& y, const double& z);
 
 \begin{table} 
   \centering
+  \caption{Status flags for electric fields.}
+  \label{Tab:StatusFlagsField}
   \begin{tabular}{l l}
   \toprule
   value & meaning \\
@@ -33,15 +35,13 @@ Medium* GetMedium(const double& x, const double& y, const double& z);
    -6   & outside the mesh \\
   \bottomrule
   \end{tabular}
-  \caption{Status flags for electric fields.}
-  \label{Tab:StatusFlagsField}
 \end{table}
 
 \section{Defining the geometry}
 
 As mentioned above, the purpose of \texttt{Component} classes is to 
 provide, for a given location, the electric (and magnetic) field and a pointer to the 
-\texttt{Medium} (if available).
+\texttt{Medium} object (if available).
 For the latter task, it is obviously necessary to specify the geometry 
 of the device. 
 In case of field maps, the geometry is already defined in the field solver. 
@@ -157,8 +157,8 @@ geoView.SetPlaneXZ();
 geoView.Plot2d();
 \end{lstlisting} 
 
-ROOT geometries can be visualized by calling the \texttt{Draw()} function of
-\texttt{TGeoManager}. 
+%ROOT geometries can be visualized by calling the \texttt{Draw()} function of
+%\texttt{TGeoManager}. 
 
 The layout of an arrangement of wires, planes and tubes
 defined in \texttt{ComponentAnalyticField} 
@@ -297,7 +297,7 @@ bool Initialise(std::string elist, std::string nlist,
   \texttt{"mm"}/\texttt{"millimeter"} and 
   \texttt{"m"}/\texttt{"meter"}).
 \end{description}
-The return value is \texttt{true} if the map was successfully read. 
+The return value is \texttt{true} if the map was read successfully.
 
 In order to enable charge transport and ionization,
 the materials in the map need to be associated with \texttt{Medium} classes.
@@ -1310,11 +1310,16 @@ The quantity to be plotted is set using the parameter \texttt{option}
     \toprule
     Quantity & \texttt{option} \\
     \midrule
-    Potential & \texttt{"v"}, \texttt{"p"}, \texttt{"phi"} \\
-    Magnitude of the field ($\left|\mathbf{E}\right|$) & \texttt{"e"}, \texttt{"mag"}, \texttt{"norm"} \\
-    $x$-component of the field ($E_{x}$) & \texttt{"ex"} \\ 
-    $y$-component of the field ($E_{y}$) & \texttt{"ey"} \\ 
-    $z$-component of the field ($E_{z}$) & \texttt{"ez"} \\ 
+    Electrostatic potential & \texttt{"v"}, \texttt{"p"}, \texttt{"phi"} \\
+    Magnitude of the electric field ($\left|\mathbf{E}\right|$) & \texttt{"e"}, \texttt{"emag"}, \texttt{"norm"} \\
+    $x$-component of the electric field ($E_{x}$) & \texttt{"ex"} \\ 
+    $y$-component of the electric field ($E_{y}$) & \texttt{"ey"} \\ 
+    $z$-component of the electric field ($E_{z}$) & \texttt{"ez"} \\
+    \midrule 
+    Magnitude of the magnetic field ($\left|\mathbf{B}\right|$) & \texttt{"bmag"} \\
+    $x$-component of the magnetic field ($B_{x}$) & \texttt{"bx"} \\ 
+    $y$-component of the magnetic field ($B_{y}$) & \texttt{"by"} \\ 
+    $z$-component of the magnetic field ($B_{z}$) & \texttt{"bz"} \\ 
     \bottomrule
   \end{tabular}
 \end{table}

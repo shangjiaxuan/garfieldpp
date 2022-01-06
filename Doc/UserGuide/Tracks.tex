@@ -40,6 +40,8 @@ void SetBetaGamma(const double bg);
 
 \begin{table}
   \centering
+  \caption{Available charged particles.}
+  \label{Tab:ParticleNames}
   \begin{tabular}{l l . r}
     \toprule
     particle & & \multicolumn{1}{c}{mass [MeV/\(c^{2}\)]} & charge \\
@@ -57,8 +59,6 @@ void SetBetaGamma(const double bg);
     \(d\)       & \texttt{deuteron, d} & 1875.612793 & \(+1\) \\
   \bottomrule
   \end{tabular}
-  \caption{Available charged particles.}
-  \label{Tab:ParticleNames}
 \end{table}
 
 A track is initialized by means of
@@ -258,6 +258,8 @@ void SetModel(const int m);
 \end{description}
 \begin{table}
   \centering
+  \caption{Fluctuation models in \texttt{TrackSrim}.}
+  \label{Tab:SrimFluctuationModels}
   \begin{tabular}{l l}
     \toprule
     Model & Description \\
@@ -271,8 +273,6 @@ void SetModel(const int m);
       & each applied in their alleged domain of applicability \\
     \bottomrule
   \end{tabular}
-  \caption{Fluctuation models in SRIM.}
-  \label{Tab:SrimFluctuationModels}
 \end{table}
 The generation of Vavilov distributed random numbers is based on a 
 C++ implementation of the CERNLIB G115 procedures for the 
