@@ -1,5 +1,3 @@
-// Copied and modified ComponentAnsys123.hh
-
 #ifndef G_COMPONENT_ELMER_2D_H
 #define G_COMPONENT_ELMER_2D_H
 
@@ -7,7 +5,7 @@
 
 namespace Garfield {
 
-/// Component for importing field maps computed by Elmer.
+/// Component for importing two-dimensional field maps computed by Elmer.
 
 class ComponentElmer2D : public ComponentFieldMap {
  public:
@@ -19,20 +17,6 @@ class ComponentElmer2D : public ComponentFieldMap {
                  const std::string& volt, const std::string& unit);
   /// Destructor
   ~ComponentElmer2D() {}
-
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, Medium*& m, int& status) override;
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, double& v, Medium*& m,
-                     int& status) override;
-
-  void WeightingField(const double x, const double y, const double z,
-                      double& wx, double& wy, double& wz,
-                      const std::string& label) override;
-  double WeightingPotential(const double x, const double y, const double z,
-                            const std::string& label) override;
-
-  Medium* GetMedium(const double x, const double y, const double z) override;
 
   /** Import a field map from a set of files.
     * \param header name of the header file
