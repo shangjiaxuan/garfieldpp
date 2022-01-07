@@ -7,16 +7,16 @@ namespace Garfield {
 
 /// Component for importing two-dimensional field maps computed by Elmer.
 
-class ComponentElmer2D : public ComponentFieldMap {
+class ComponentElmer2d : public ComponentFieldMap {
  public:
   /// Default constructor
-  ComponentElmer2D();
+  ComponentElmer2d();
   /// Constructor with a set of field map files, see Initialise().
-  ComponentElmer2D(const std::string& header, const std::string& elist,
-                 const std::string& nlist, const std::string& mplist,
-                 const std::string& volt, const std::string& unit);
+  ComponentElmer2d(const std::string& header, const std::string& elist,
+                   const std::string& nlist, const std::string& mplist,
+                   const std::string& volt, const std::string& unit);
   /// Destructor
-  ~ComponentElmer2D() {}
+  ~ComponentElmer2d() {}
 
   /** Import a field map from a set of files.
     * \param header name of the header file

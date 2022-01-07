@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "Garfield/ComponentElmer2D.hh"
+#include "Garfield/ComponentElmer2d.hh"
 
 namespace {
 
@@ -17,7 +17,7 @@ void PrintErrorReadingFile(const std::string& hdr, const std::string& file,
 
 namespace Garfield {
 
-ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap("Elmer2D") {
+ComponentElmer2d::ComponentElmer2d() : ComponentFieldMap("Elmer2d") {
   m_is3d = false;
   m_elementType = ElementType::Serendipity;
 
@@ -26,18 +26,18 @@ ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap("Elmer2D") {
   m_maxBoundingBox[2] = 50;
 }
 
-ComponentElmer2D::ComponentElmer2D(const std::string& header,
+ComponentElmer2d::ComponentElmer2d(const std::string& header,
                                    const std::string& elist,
                                    const std::string& nlist,
                                    const std::string& mplist,
                                    const std::string& volt, 
                                    const std::string& unit)
-    : ComponentElmer2D() {
+    : ComponentElmer2d() {
 
   Initialise(header, elist, nlist, mplist, volt, unit);
 }
 
-bool ComponentElmer2D::Initialise(const std::string& header,
+bool ComponentElmer2d::Initialise(const std::string& header,
                                 const std::string& elist,
                                 const std::string& nlist,
                                 const std::string& mplist,
@@ -396,7 +396,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   return true;
 }
 
-bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
+bool ComponentElmer2d::SetWeightingField(std::string wvolt, std::string label) {
   const std::string hdr = m_className + "::SetWeightingField:";
   if (!m_ready) {
     PrintNotReady("SetWeightingField");
@@ -474,7 +474,7 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
   return true;
 }
 
-void ComponentElmer2D::SetRangeZ(const double zmin, const double zmax) {
+void ComponentElmer2d::SetRangeZ(const double zmin, const double zmax) {
   if (fabs(zmax - zmin) <= 0.) {
     std::cerr << m_className << "::SetRangeZ: Zero range is not permitted.\n";
     return;
