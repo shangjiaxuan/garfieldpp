@@ -31,11 +31,11 @@ void ComponentFieldMap::ElectricField(const double xin, const double yin,
                                       const double zin, double& ex, double& ey,
                                       double& ez, double& volt, Medium*& m,
                                       int& status) {
-  // Copy the coordinates
+  // Copy the coordinates.
   double x = xin, y = yin;
   double z = m_is3d ? zin : 0.;
 
-  // Map the coordinates onto field map coordinates
+  // Map the coordinates onto field map coordinates.
   bool xmirr, ymirr, zmirr;
   double rcoordinate, rotation;
   MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
@@ -61,7 +61,7 @@ void ComponentFieldMap::ElectricField(const double xin, const double yin,
     }
   }
 
-  // Find the element that contains this point
+  // Find the element that contains this point.
   double t1, t2, t3, t4, jac[4][4], det;
   int imap = -1;
   if (m_elementType == ElementType::Serendipity) {
@@ -69,11 +69,11 @@ void ComponentFieldMap::ElectricField(const double xin, const double yin,
   } else if (m_elementType == ElementType::CurvedTetrahedron) {
     imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
   }
-
+  // Stop if the point is not in the mesh.
   if (imap < 0) {
     if (m_debug) {
-      std::cerr << m_className << "::ElectricField: Point (" << x << ", " << y
-                << ", " << z << ") not in the mesh.\n";
+      std::cerr << m_className << "::ElectricField: (" << x << ", " << y
+                << ", " << z << ") is not in the mesh.\n";
     }
     status = -6;
     return;
@@ -111,18 +111,24 @@ void ComponentFieldMap::ElectricField(const double xin, const double yin,
     Field13(v, {t1, t2, t3, t4}, jac, det, ex, ey, ez);
   }
 
-  // Transform field to global coordinates
+  // Transform field to global coordinates.
   UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
 
   // Drift medium?
-  if (m_debug) {
-    std::cout << m_className << "::ElectricField:\n"
-              << "    Material " << element.matmap << ", drift flag "
-              << m_materials[element.matmap].driftmedium << ".\n";
+  if (element.matmap >= m_materials.size()) {
+    if (m_debug) std::cout << "    Out-of-range material number.\n";
+    status = -5;
+    return;
   }
-  m = m_materials[element.matmap].medium;
+
+  const auto& mat = m_materials[element.matmap];
+  if (m_debug) {
+    std::cout << "    Material " << element.matmap << ", drift flag "
+              << mat.driftmedium << ".\n";
+  }
+  m = mat.medium;
   status = -5;
-  if (m_materials[element.matmap].driftmedium) {
+  if (mat.driftmedium) {
     if (m && m->IsDriftable()) status = 0;
   }
 }
@@ -130,7 +136,7 @@ void ComponentFieldMap::ElectricField(const double xin, const double yin,
 void ComponentFieldMap::WeightingField(const double xin, const double yin,
                                        const double zin, double& wx, double& wy,
                                        double& wz, const std::string& label) {
-  // Initial values
+  // Initial values.
   wx = wy = wz = 0;
 
   // Do not proceed if not properly initialised.
@@ -161,7 +167,7 @@ void ComponentFieldMap::WeightingField(const double xin, const double yin,
   } else if (m_elementType == ElementType::CurvedTetrahedron) {
     imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
   }
-  // Check if the point is in the mesh.
+  // Stop if the point is not in the mesh.
   if (imap < 0) return;
 
   const Element& element = m_elements[imap];
@@ -192,7 +198,7 @@ void ComponentFieldMap::WeightingField(const double xin, const double yin,
     }
     Field13(v, {t1, t2, t3, t4}, jac, det, wx, wy, wz);
   }  
-  // Transform field to global coordinates
+  // Transform field to global coordinates.
   UnmapFields(wx, wy, wz, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
 }
 
@@ -298,18 +304,17 @@ Medium* ComponentFieldMap::GetMedium(const double xin, const double yin,
   }
   if (imap < 0) {
     if (m_debug) {
-      std::cerr << m_className << "::GetMedium:\n";
-      std::cerr << "    Point (" << x << ", " << y << ", " << z
-                << ") not in the mesh.\n";
+      std::cerr << m_className << "::GetMedium: (" << x << ", " << y 
+                << ", " << z << ") is not in the mesh.\n";
     }
     return nullptr;
   }
   const Element& element = m_elements[imap];
   if (element.matmap >= m_materials.size()) {
     if (m_debug) {
-      std::cerr << m_className << "::GetMedium:\n";
-      std::cerr << "    Point (" << x << ", " << y << ", " << z << ")"
-                << " has out of range material number " << imap << ".\n";
+      std::cerr << m_className << "::GetMedium: Element " << imap
+                << " has out-of-range material number " 
+                << element.matmap << ".\n";
     }
     return nullptr;
   }
