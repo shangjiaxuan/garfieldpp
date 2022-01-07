@@ -20,6 +20,316 @@ ComponentFieldMap::ComponentFieldMap(const std::string& name)
 
 ComponentFieldMap::~ComponentFieldMap() {}
 
+void ComponentFieldMap::ElectricField(const double x, const double y,
+                                      const double z, double& ex, double& ey,
+                                      double& ez, Medium*& m, int& status) {
+  double v = 0.;
+  ElectricField(x, y, z, ex, ey, ez, v, m, status);
+}
+
+void ComponentFieldMap::ElectricField(const double xin, const double yin,
+                                      const double zin, double& ex, double& ey,
+                                      double& ez, double& volt, Medium*& m,
+                                      int& status) {
+  // Copy the coordinates.
+  double x = xin, y = yin;
+  double z = m_is3d ? zin : 0.;
+
+  // Map the coordinates onto field map coordinates.
+  bool xmirr, ymirr, zmirr;
+  double rcoordinate, rotation;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  // Initial values
+  ex = ey = ez = volt = 0.;
+  status = 0;
+  m = nullptr;
+
+  // Do not proceed if not properly initialised.
+  if (!m_ready) {
+    status = -10;
+    PrintNotReady("ElectricField");
+    return;
+  }
+
+  if (m_warning) PrintWarning("ElectricField");
+
+  if (!m_is3d) {
+    if (zin < m_minBoundingBox[2] || zin > m_maxBoundingBox[2]) {
+      status = -5;
+      return;
+    }
+  }
+
+  // Find the element that contains this point.
+  double t1, t2, t3, t4, jac[4][4], det;
+  int imap = -1;
+  if (m_elementType == ElementType::Serendipity) {
+    imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
+  }
+  // Stop if the point is not in the mesh.
+  if (imap < 0) {
+    if (m_debug) {
+      std::cerr << m_className << "::ElectricField: (" << x << ", " << y
+                << ", " << z << ") is not in the mesh.\n";
+    }
+    status = -6;
+    return;
+  }
+
+  const Element& element = m_elements[imap];
+  if (m_elementType == ElementType::Serendipity) {
+    if (m_debug) {
+      PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 8);
+    }
+    if (element.degenerate) {
+      std::array<double, 6> v;
+      for (size_t i = 0; i < 6; ++i) {
+        v[i] = m_nodes[element.emap[i]].v;
+      }
+      volt = Potential3(v, {t1, t2, t3});
+      Field3(v, {t1, t2, t3}, jac, det, ex, ey);
+    } else {
+      std::array<double, 8> v;
+      for (size_t i = 0; i < 8; ++i) {
+        v[i] = m_nodes[element.emap[i]].v;
+      }
+      volt = Potential5(v, {t1, t2});
+      Field5(v, {t1, t2}, jac, det, ex, ey);
+    }
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    if (m_debug) {
+      PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 10);
+    }
+    std::array<double, 10> v;
+    for (size_t i = 0; i < 10; ++i) {
+      v[i] = m_nodes[element.emap[i]].v;
+    }
+    volt = Potential13(v, {t1, t2, t3, t4});
+    Field13(v, {t1, t2, t3, t4}, jac, det, ex, ey, ez);
+  }
+
+  // Transform field to global coordinates.
+  UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  // Drift medium?
+  if (element.matmap >= m_materials.size()) {
+    if (m_debug) std::cout << "    Out-of-range material number.\n";
+    status = -5;
+    return;
+  }
+
+  const auto& mat = m_materials[element.matmap];
+  if (m_debug) {
+    std::cout << "    Material " << element.matmap << ", drift flag "
+              << mat.driftmedium << ".\n";
+  }
+  m = mat.medium;
+  status = -5;
+  if (mat.driftmedium) {
+    if (m && m->IsDriftable()) status = 0;
+  }
+}
+
+void ComponentFieldMap::WeightingField(const double xin, const double yin,
+                                       const double zin, double& wx, double& wy,
+                                       double& wz, const std::string& label) {
+  // Initial values.
+  wx = wy = wz = 0;
+
+  // Do not proceed if not properly initialised.
+  if (!m_ready) return;
+
+  // Look for the label.
+  const size_t iw = GetWeightingFieldIndex(label);
+  // Do not proceed if the requested weighting field does not exist.
+  if (iw == m_wfields.size()) return;
+  // Check if the weighting field is properly initialised.
+  if (!m_wfieldsOk[iw]) return;
+
+  // Copy the coordinates.
+  double x = xin, y = yin, z = zin;
+
+  // Map the coordinates onto field map coordinates
+  bool xmirr, ymirr, zmirr;
+  double rcoordinate, rotation;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  if (m_warning) PrintWarning("WeightingField");
+
+  // Find the element that contains this point.
+  double t1, t2, t3, t4, jac[4][4], det;
+  int imap = -1;
+  if (m_elementType == ElementType::Serendipity) {
+    imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
+  }
+  // Stop if the point is not in the mesh.
+  if (imap < 0) return;
+
+  const Element& element = m_elements[imap];
+  if (m_elementType == ElementType::Serendipity) {
+    if (m_debug) {
+      PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 8, iw);
+    }
+    if (element.degenerate) {
+      std::array<double, 6> v;
+      for (size_t i = 0; i < 6; ++i) {
+        v[i] = m_nodes[element.emap[i]].w[iw];
+      }
+      Field3(v, {t1, t2, t3}, jac, det, wx, wy);
+    } else {
+      std::array<double, 8> v;
+      for (size_t i = 0; i < 8; ++i) {
+        v[i] = m_nodes[element.emap[i]].w[iw];
+      }
+      Field5(v, {t1, t2}, jac, det, wx, wy);
+    }
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    if (m_debug) {
+      PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 10, iw);
+    }
+    std::array<double, 10> v;
+    for (size_t i = 0; i < 10; ++i) {
+      v[i] = m_nodes[element.emap[i]].w[iw];
+    }
+    Field13(v, {t1, t2, t3, t4}, jac, det, wx, wy, wz);
+  }  
+  // Transform field to global coordinates.
+  UnmapFields(wx, wy, wz, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+}
+
+double ComponentFieldMap::WeightingPotential(const double xin, const double yin,
+                                             const double zin,
+                                             const std::string& label) {
+  // Do not proceed if not properly initialised.
+  if (!m_ready) return 0.;
+
+  // TODO! From ComponentComsol:
+  // if (!CheckInRange(xin, yin, zin)) return 0.;
+
+  // Look for the label.
+  const size_t iw = GetWeightingFieldIndex(label);
+  // Do not proceed if the requested weighting field does not exist.
+  if (iw == m_wfields.size()) return 0.;
+  // Check if the weighting field is properly initialised.
+  if (!m_wfieldsOk[iw]) return 0.;
+
+  // Copy the coordinates.
+  double x = xin, y = yin, z = zin;
+
+  // Map the coordinates onto field map coordinates.
+  bool xmirr, ymirr, zmirr;
+  double rcoordinate, rotation;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  if (m_warning) PrintWarning("WeightingPotential");
+
+  // Find the element that contains this point.
+  double t1, t2, t3, t4, jac[4][4], det;
+  int imap = -1;
+  if (m_elementType == ElementType::Serendipity) {
+    imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
+  }
+  if (imap < 0) return 0.;
+
+  const Element& element = m_elements[imap];
+  if (m_elementType == ElementType::Serendipity) {
+    if (m_debug) {
+      PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 8, 
+                   iw);
+    }
+    if (element.degenerate) {
+      std::array<double, 6> v;
+      for (size_t i = 0; i < 6; ++i) {
+        v[i] = m_nodes[element.emap[i]].w[iw];
+      }
+      return Potential3(v, {t1, t2, t3});
+    }
+    std::array<double, 8> v;
+    for (size_t i = 0; i < 8; ++i) {
+      v[i] = m_nodes[element.emap[i]].w[iw];
+    }
+    return Potential5(v, {t1, t2});
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    if (m_debug) {
+      PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
+                   iw);
+    }
+    std::array<double, 10> v;
+    for (size_t i = 0; i < 10; ++i) {
+      v[i] = m_nodes[element.emap[i]].w[iw];
+    }
+    return Potential13(v, {t1, t2, t3, t4});
+  }
+  return 0.;
+}
+
+Medium* ComponentFieldMap::GetMedium(const double xin, const double yin,
+                                     const double zin) {
+  // Copy the coordinates.
+  double x = xin, y = yin;
+  double z = m_is3d ? zin : 0.;
+
+  // Map the coordinates onto field map coordinates.
+  bool xmirr, ymirr, zmirr;
+  double rcoordinate, rotation;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  if (!m_is3d) {
+    if (zin < m_minBoundingBox[2] || z > m_maxBoundingBox[2]) {
+      return nullptr;
+    }
+  }
+
+  // Do not proceed if not properly initialised.
+  if (!m_ready) {
+    PrintNotReady("GetMedium");
+    return nullptr;
+  }
+  if (m_warning) PrintWarning("GetMedium");
+
+  // Find the element that contains this point.
+  double t1, t2, t3, t4, jac[4][4], det;
+  int imap = -1;
+  if (m_elementType == ElementType::Serendipity) {
+    imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
+  } else if (m_elementType == ElementType::CurvedTetrahedron) { 
+    imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
+  }
+  if (imap < 0) {
+    if (m_debug) {
+      std::cerr << m_className << "::GetMedium: (" << x << ", " << y 
+                << ", " << z << ") is not in the mesh.\n";
+    }
+    return nullptr;
+  }
+  const Element& element = m_elements[imap];
+  if (element.matmap >= m_materials.size()) {
+    if (m_debug) {
+      std::cerr << m_className << "::GetMedium: Element " << imap
+                << " has out-of-range material number " 
+                << element.matmap << ".\n";
+    }
+    return nullptr;
+  }
+  if (m_debug) {
+    if (m_elementType == ElementType::Serendipity) {
+      PrintElement("GetMedium", x, y, z, t1, t2, t3, t4, element, 8);
+    } else if (m_elementType == ElementType::CurvedTetrahedron) {
+      PrintElement("GetMedium", x, y, z, t1, t2, t3, t4, element, 10);
+    }
+  }
+
+  // Assign a medium.
+  return m_materials[element.matmap].medium;
+}
+
 bool ComponentFieldMap::Check() {
 
   // MAPCHK

@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-#include "Garfield/ComponentElmer2D.hh"
+#include "Garfield/ComponentElmer2d.hh"
 
 namespace {
 
@@ -17,7 +17,7 @@ void PrintErrorReadingFile(const std::string& hdr, const std::string& file,
 
 namespace Garfield {
 
-ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap("Elmer2D") {
+ComponentElmer2d::ComponentElmer2d() : ComponentFieldMap("Elmer2d") {
   m_is3d = false;
   m_elementType = ElementType::Serendipity;
 
@@ -26,18 +26,18 @@ ComponentElmer2D::ComponentElmer2D() : ComponentFieldMap("Elmer2D") {
   m_maxBoundingBox[2] = 50;
 }
 
-ComponentElmer2D::ComponentElmer2D(const std::string& header,
+ComponentElmer2d::ComponentElmer2d(const std::string& header,
                                    const std::string& elist,
                                    const std::string& nlist,
                                    const std::string& mplist,
                                    const std::string& volt, 
                                    const std::string& unit)
-    : ComponentElmer2D() {
+    : ComponentElmer2d() {
 
   Initialise(header, elist, nlist, mplist, volt, unit);
 }
 
-bool ComponentElmer2D::Initialise(const std::string& header,
+bool ComponentElmer2d::Initialise(const std::string& header,
                                 const std::string& elist,
                                 const std::string& nlist,
                                 const std::string& mplist,
@@ -396,7 +396,7 @@ bool ComponentElmer2D::Initialise(const std::string& header,
   return true;
 }
 
-bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
+bool ComponentElmer2d::SetWeightingField(std::string wvolt, std::string label) {
   const std::string hdr = m_className + "::SetWeightingField:";
   if (!m_ready) {
     PrintNotReady("SetWeightingField");
@@ -474,226 +474,7 @@ bool ComponentElmer2D::SetWeightingField(std::string wvolt, std::string label) {
   return true;
 }
 
-void ComponentElmer2D::ElectricField(const double x, const double y,
-                                   const double z, double& ex, double& ey,
-                                   double& ez, Medium*& m, int& status) {
-  double v = 0.;
-  ElectricField(x, y, z, ex, ey, ez, v, m, status);
-}
-
-void ComponentElmer2D::ElectricField(const double xin, const double yin,
-                                   const double zin, double& ex, double& ey,
-                                   double& ez, double& volt, Medium*& m,
-                                   int& status) {
-  // Copy the coordinates
-  double x = xin, y = yin, z = 0.;
-
-  // Map the coordinates onto field map coordinates
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  // Initial values
-  ex = ey = ez = volt = 0.;
-  status = 0;
-  m = nullptr;
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) {
-    status = -10;
-    PrintNotReady("ElectricField");
-    return;
-  }
-
-  if (m_warning) PrintWarning("ElectricField");
-
-  // Check that the input z-coordinate is within the established bounding box.
-  if (zin < m_minBoundingBox[2] || zin > m_maxBoundingBox[2]) {
-    status = -5;
-    return;
-  }
-
-  // Find the element that contains this point
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) {
-    if (m_debug) {
-      std::cout << m_className << "::ElectricField:\n    Point (" << x << ", "
-                << y << ", " << z << ") is not in the mesh.\n";
-    }
-    status = -6;
-    return;
-  }
-
-  const Element& element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 10);
-  }
-  std::array<double, 8> v;
-  for (size_t i = 0; i < 8; ++i) {
-    v[i] = m_nodes[element.emap[i]].v;
-  }
-  volt = Potential5(v, {t1, t2});
-  Field5(v, {t1, t2}, jac, det, ex, ey);
-
-  // Transform field to global coordinates.
-  UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  // Drift medium?
-  const Material& mat = m_materials[element.matmap];
-  if (m_debug) {
-    std::cout << m_className << "::ElectricField:\n    Material "
-              << element.matmap << ", drift flag " << mat.driftmedium << ".\n";
-  }
-  m = mat.medium;
-  status = -5;
-  if (mat.driftmedium && m && m->IsDriftable()) status = 0;
-}
-
-void ComponentElmer2D::WeightingField(const double xin, const double yin,
-                                    const double zin, double& wx, double& wy,
-                                    double& wz, const std::string& label) {
-  // Initial values
-  wx = wy = wz = 0;
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) return;
-
-  // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
-  // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return;
-  // Check if the weighting field is properly initialised.
-  if (!m_wfieldsOk[iw]) return;
-
-  // Copy the coordinates.
-  double x = xin, y = yin, z = 0.;
-
-  // Map the coordinates onto field map coordinates
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  if (m_warning) PrintWarning("WeightingField");
-
-  // Check that the input z-coordinate is within the established bounding box.
-  if (zin < m_minBoundingBox[2] || zin > m_maxBoundingBox[2]) {
-    return;
-  }
-
-  // Find the element that contains this point.
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
-  // Check if the point is in the mesh.
-  if (imap < 0) return;
-
-  const Element& element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 10, iw);
-  }
-  std::array<double, 8> v;
-  for (size_t i = 0; i < 8; ++i) {
-    v[i] = m_nodes[element.emap[i]].w[iw];
-  }
-  Field5(v, {t1, t2}, jac, det, wx, wy);
-
-  // Transform field to global coordinates
-  UnmapFields(wx, wy, wz, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-}
-
-double ComponentElmer2D::WeightingPotential(const double xin, const double yin,
-                                          const double zin,
-                                          const std::string& label) {
-  // Do not proceed if not properly initialised.
-  if (!m_ready) return 0.;
-
-  // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
-  // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return 0.;
-  // Check if the weighting field is properly initialised.
-  if (!m_wfieldsOk[iw]) return 0.;
-
-  // Copy the coordinates.
-  double x = xin, y = yin, z = 0.;
-
-  // Map the coordinates onto field map coordinates.
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  if (m_warning) PrintWarning("WeightingPotential");
-
-  // Check that the input z-coordinate is within the established bounding box.
-  if (zin < m_minBoundingBox[2] || zin > m_maxBoundingBox[2]) {
-    return 0.;
-  }
-
-  // Find the element that contains this point.
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) return 0.;
-
-  const Element& element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
-                 iw);
-  }
-  std::array<double, 8> v;
-  for (size_t i = 0; i < 8; ++i) {
-    v[i] = m_nodes[element.emap[i]].w[iw];
-  }
-  return Potential5(v, {t1, t2});
-}
-
-Medium* ComponentElmer2D::GetMedium(const double xin, const double yin,
-                                  const double zin) {
-  // Copy the coordinates
-  double x = xin, y = yin, z = 0.;
-
-  // Map the coordinates onto field map coordinates
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  if (zin < m_minBoundingBox[2] || z > m_maxBoundingBox[2]) {
-    return nullptr;
-  }
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) {
-    PrintNotReady("GetMedium");
-    return nullptr;
-  }
-  if (m_warning) PrintWarning("GetMedium");
-
-  // Find the element that contains this point.
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) {
-    if (m_debug) {
-      std::cout << m_className << "::GetMedium:\n    Point (" << x << ", " << y
-                << ", " << z << ") is not in the mesh.\n";
-    }
-    return nullptr;
-  }
-  const Element& element = m_elements[imap];
-  if (element.matmap >= m_materials.size()) {
-    if (m_debug) {
-      std::cerr << m_className << "::GetMedium:\n    Point (" << x << ", " << y
-                << ", " << z << ") has out of range material number " << imap
-                << ".\n";
-    }
-    return nullptr;
-  }
-
-  if (m_debug) PrintElement("GetMedium", x, y, z, t1, t2, t3, t4, element, 10);
-
-  return m_materials[element.matmap].medium;
-}
-
-
-void ComponentElmer2D::SetRangeZ(const double zmin, const double zmax) {
+void ComponentElmer2d::SetRangeZ(const double zmin, const double zmax) {
   if (fabs(zmax - zmin) <= 0.) {
     std::cerr << m_className << "::SetRangeZ: Zero range is not permitted.\n";
     return;

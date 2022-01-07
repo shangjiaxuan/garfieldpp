@@ -18,20 +18,6 @@ class ComponentElmer : public ComponentFieldMap {
   /// Destructor
   ~ComponentElmer() {}
 
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, Medium*& m, int& status) override;
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, double& v, Medium*& m,
-                     int& status) override;
-
-  void WeightingField(const double x, const double y, const double z,
-                      double& wx, double& wy, double& wz,
-                      const std::string& label) override;
-  double WeightingPotential(const double x, const double y, const double z,
-                            const std::string& label) override;
-
-  Medium* GetMedium(const double x, const double y, const double z) override;
-
   /** Import a field map from a set of files.
     * \param header name of the header file
                     (contains the number of elements and nodes).

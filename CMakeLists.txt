@@ -99,7 +99,7 @@ target_sources(
           Source/ComponentComsol.cc
           Source/ComponentConstant.cc
           Source/ComponentElmer.cc
-          Source/ComponentElmer2D.cc
+          Source/ComponentElmer2d.cc
           Source/ComponentFieldMap.cc
           Source/ComponentGrid.cc
           Source/ComponentNeBem2d.cc

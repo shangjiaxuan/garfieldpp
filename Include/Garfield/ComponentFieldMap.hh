@@ -79,6 +79,20 @@ class ComponentFieldMap : public Component {
     m_printConvergenceWarnings = on;
   }
 
+  Medium* GetMedium(const double x, const double y, const double z) override;
+  void ElectricField(const double x, const double y, const double z, double& ex,
+                     double& ey, double& ez, Medium*& m, int& status) override;
+  void ElectricField(const double x, const double y, const double z, double& ex,
+                     double& ey, double& ez, double& v, Medium*& m,
+                     int& status) override;
+
+  void WeightingField(const double x, const double y, const double z,
+                      double& wx, double& wy, double& wz,
+                      const std::string& label) override;
+
+  double WeightingPotential(const double x, const double y, const double z,
+                            const std::string& label) override;
+
   bool IsInBoundingBox(const double x, const double y, const double z) const {
     return x >= m_minBoundingBox[0] && x <= m_maxBoundingBox[0] &&
            y >= m_minBoundingBox[1] && y <= m_maxBoundingBox[1] &&
