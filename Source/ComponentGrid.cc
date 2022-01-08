@@ -155,6 +155,38 @@ void ComponentGrid::DelayedWeightingField(const double x, const double y,
   wz = f0 * wz0 + f1 * wz1;
 }
 
+double ComponentGrid::DelayedWeightingPotential(
+    const double x, const double y, const double z, const double t,
+    const std::string& /*label*/) {
+
+  if (m_wdtimes.empty()) return 0.;
+  // Outside the range of the available maps?
+  if (t < m_wdtimes.front() || t > m_wdtimes.back()) return 0.;
+
+  const double xx = x - m_wFieldOffset[0];
+  const double yy = y - m_wFieldOffset[1];
+  const double zz = z - m_wFieldOffset[2];
+
+  const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
+  const auto it0 = std::prev(it1);
+
+  const double dt = t - *it0;
+  const unsigned int i0 = it0 - m_wdtimes.cbegin();
+  double wp0 = 0., wx0 = 0., wy0 = 0., wz0 = 0.;
+  bool active = true;
+  if (!GetField(xx, yy, zz, m_wdfields[i0], wx0, wy0, wz0, wp0, active)) return 0.;
+
+  if (dt < Small || it1 == m_wdtimes.cend()) return wp0;
+
+  const unsigned int i1 = it1 - m_wdtimes.cbegin();
+  double wp1 = 0., wx1 = 0., wy1 = 0., wz1 = 0.;
+  if (!GetField(xx, yy, zz, m_wdfields[i1], wx1, wy1, wz1, wp1, active)) return 0.;
+
+  const double f1 = dt / (*it1 - *it0);
+  const double f0 = 1. - f1;
+  return f0 * wp0 + f1 * wp1;
+}
+
 void ComponentGrid::SetWeightingFieldOffset(const double x, const double y,
                                             const double z) {
   m_wFieldOffset = {x, y, z};

@@ -16,38 +16,6 @@ class ComponentGrid : public Component {
   /// Destructor
   ~ComponentGrid() {}
 
-  void Clear() override { Reset(); }
-
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, double& v, Medium*& m,
-                     int& status) override;
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, Medium*& m, int& status) override;
-
-  void WeightingField(const double x, const double y, const double z,
-                      double& wx, double& wy, double& wz,
-                      const std::string& label) override;
-  double WeightingPotential(const double x, const double y, const double z,
-                            const std::string& label) override;
-  void DelayedWeightingField(const double x, const double y, const double z,
-                             const double t, double& wx, double& wy, double& wz,
-                             const std::string& label) override;
-
-  void MagneticField(const double x, const double y, const double z, double& bx,
-                     double& by, double& bz, int& status) override;
-
-  Medium* GetMedium(const double x, const double y, const double z) override;
-
-  bool GetVoltageRange(double& vmin, double& vmax) override;
-  bool GetElectricFieldRange(double& exmin, double& exmax, double& eymin,
-                             double& eymax, double& ezmin, double& ezmax);
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
-                      double& xmax, double& ymax, double& zmax) override;
-  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
-                         double& xmax, double& ymax, double& zmax) override;
-
-  bool HasMagneticField() const override;
-
   /** Define the grid.
    * \param nx,ny,nz number of nodes along \f$x, y, z\f$.
    * \param xmin,xmax range along \f$x\f$.
@@ -149,14 +117,6 @@ class ComponentGrid : public Component {
                           const unsigned int col,
                           const double scaleX = 1.);
 
-  bool HasAttachmentMap() const override {
-    return !(m_eAttachment.empty() && m_hAttachment.empty());
-  } 
-  bool ElectronAttachment(const double x, const double y, const double z,
-                          double& att) override;
-  bool HoleAttachment(const double x, const double y, const double z,
-                      double& att) override;
-
   /** Import a map of electron drift velocities from a file.
    * \param fname name of the text file.
    * \param fmt format string ("XY", "XYZ", "IJ", "IJK").
@@ -172,6 +132,46 @@ class ComponentGrid : public Component {
                         const std::string& fmt,
                         const double scaleX = 1.,
                         const double scaleV = 1.e-9);
+
+  void Clear() override { Reset(); }
+  void ElectricField(const double x, const double y, const double z, double& ex,
+                     double& ey, double& ez, double& v, Medium*& m,
+                     int& status) override;
+  void ElectricField(const double x, const double y, const double z, double& ex,
+                     double& ey, double& ez, Medium*& m, int& status) override;
+  void WeightingField(const double x, const double y, const double z,
+                      double& wx, double& wy, double& wz,
+                      const std::string& label) override;
+  double WeightingPotential(const double x, const double y, const double z,
+                            const std::string& label) override;
+  void DelayedWeightingField(const double x, const double y, const double z,
+                             const double t, double& wx, double& wy, double& wz,
+                             const std::string& label) override;
+  double DelayedWeightingPotential(const double x, const double y,
+                                   const double z, const double t,
+                                   const std::string& label) override;
+  void MagneticField(const double x, const double y, const double z, double& bx,
+                     double& by, double& bz, int& status) override;
+
+  Medium* GetMedium(const double x, const double y, const double z) override;
+
+  bool GetVoltageRange(double& vmin, double& vmax) override;
+  bool GetElectricFieldRange(double& exmin, double& exmax, double& eymin,
+                             double& eymax, double& ezmin, double& ezmax);
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
+                      double& xmax, double& ymax, double& zmax) override;
+  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
+                         double& xmax, double& ymax, double& zmax) override;
+
+  bool HasMagneticField() const override;
+
+  bool HasAttachmentMap() const override {
+    return !(m_eAttachment.empty() && m_hAttachment.empty());
+  } 
+  bool ElectronAttachment(const double x, const double y, const double z,
+                          double& att) override;
+  bool HoleAttachment(const double x, const double y, const double z,
+                      double& att) override;
 
   bool HasVelocityMap() const override {
     return !(m_eVelocity.empty() && m_hVelocity.empty());
