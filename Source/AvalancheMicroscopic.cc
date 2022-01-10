@@ -496,7 +496,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
   // Reset the particle counters.
   m_nElectrons = m_nHoles = m_nIons = 0;
 
-  const std::string hdr = m_className + "::TransportElectron: ";
+  const std::string hdr = m_className + "::TransportElectrons: ";
   // Make sure that the sensor is defined.
   if (!m_sensor) {
     std::cerr << hdr << "Sensor is not defined.\n";
@@ -509,6 +509,11 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
 
   // Loop over the initial set of electrons/holes.
   for (auto& p : stack) {
+    // Make sure that the starting point is inside the active area.
+    if (!m_sensor->IsInArea(p.x0, p.y0, p.z0)) {
+      std::cerr << hdr << "No valid field at initial position.\n";
+      return false;
+    }
     // Make sure that the starting point is inside a medium.
     Medium* medium = m_sensor->GetMedium(p.x0, p.y0, p.z0);
     if (!medium) {
@@ -988,7 +993,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
           for (const auto& htype : m_distanceHistogramType) {
             if (htype != cstype) continue;
             if (m_debug) {
-              std::cout << m_className << "::TransportElectron: Collision type "
+              std::cout << hdr << "Collision type "
                         << cstype << ". Fill distance histogram.\n";
               getchar();
             }
@@ -1278,6 +1283,13 @@ void AvalancheMicroscopic::TransportPhoton(const double x0, const double y0,
   // Make sure that the sensor is defined.
   if (!m_sensor) {
     std::cerr << m_className << "::TransportPhoton: Sensor is not defined.\n";
+    return;
+  }
+
+  // Make sure that the starting point is inside the active area.
+  if (!m_sensor->IsInArea(x0, y0, z0)) {
+    std::cerr << m_className << "::TransportPhoton:\n"
+              << "    No valid field at initial position.\n";
     return;
   }
 
