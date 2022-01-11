@@ -42,6 +42,71 @@ double StepVavilov(const double rkappa) {
   return xlmin;
 }
 
+void StepBfield(const double dt, const double q, const double m,
+    const double vmag, double bx, double by, double bz,
+    double& xdir, double& ydir, double& zdir, double& x, double& y, double& z) {
+
+  double bmag = sqrt(bx * bx + by * by + bz * bz);
+  if (bmag < Garfield::Small) {
+    x = vmag * dt * xdir;
+    y = vmag * dt * ydir;
+    z = vmag * dt * zdir;
+    return;
+  }
+  std::array<std::array<double, 3>, 3> rot = {{{1, 0, 0}, {0, 1, 0}, {0, 0,      1}}};
+
+  bx /= bmag;
+  by /= bmag;
+  bz /= bmag;
+  const double bt = by * by + bz * bz;
+  if (bt > Garfield::Small) {
+    const double btInv = 1. / bt;
+    rot[0][0] = bx;
+    rot[0][1] = by;
+    rot[0][2] = bz;
+    rot[1][0] = -by;
+    rot[2][0] = -bz;
+    rot[1][1] = (bx * by * by + bz * bz) * btInv;
+    rot[2][2] = (bx * bz * bz + by * by) * btInv;
+    rot[1][2] = rot[2][1] = (bx - 1.) * by * bz * btInv;
+  } else if (bx < 0.) {
+    // B field is anti-parallel to x.
+    rot[0][0] = -1.;
+    rot[1][1] = -1.;
+  }
+  bmag *= Garfield::Tesla2Internal;
+  const double omega = q * Garfield::OmegaCyclotronOverB * bmag * 
+                       (Garfield::ElectronMass / m);
+  const double cphi = cos(omega * dt);
+  const double sphi = sin(omega * dt);
+
+  // Rotate the initial direction vector to the local frame.
+  std::array<double, 3> v0;
+  v0[0] = rot[0][0] * xdir + rot[0][1] * ydir + rot[0][2] * zdir;
+  v0[1] = rot[1][0] * xdir + rot[1][1] * ydir + rot[1][2] * zdir;
+  v0[2] = rot[2][0] * xdir + rot[2][1] * ydir + rot[2][2] * zdir;
+
+  // Calculate the new direction in the local frame. 
+  std::array<double, 3> v1;
+  v1[0] = v0[0];
+  v1[1] = v0[1] * cphi + v0[2] * sphi;
+  v1[2] = v0[2] * cphi - v0[1] * sphi;
+
+  // Rotate the direction vector back to the global frame.
+  xdir = rot[0][0] * v1[0] + rot[1][0] * v1[1] + rot[2][0] * v1[2];
+  ydir = rot[0][1] * v1[0] + rot[1][1] * v1[1] + rot[2][1] * v1[2];
+  zdir = rot[0][2] * v1[0] + rot[1][2] * v1[1] + rot[2][2] * v1[2];
+
+  // Calculate the new position in the local frame...
+  const double u = vmag * v0[0] * dt;
+  const double v = (vmag / omega) * (v0[1] * sphi + v0[2] * (1. - cphi));
+  const double w = (vmag / omega) * (v0[2] * sphi - v0[2] * (1. - cphi));
+  // .... and in the global frame.
+  x = rot[0][0] * u + rot[1][0] * v + rot[2][0] * w; 
+  y = rot[0][1] * u + rot[1][1] * v + rot[2][1] * w;
+  z = rot[0][2] * u + rot[1][2] * v + rot[2][2] * w;
+}
+
 double Interpolate(const double x, const std::vector<double>& xtab,
                    const std::vector<double>& ytab) {
   if (x < xtab[0]) {
@@ -781,10 +846,10 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
     if (!m_useTransStraggle) strlat = 0;
 
     if (m_debug) {
-      std::cout << hdr << "\n    Energy = " << e
-                << " MeV,\n    dEdx em, hd = " << dedxem << ", " << dedxhd
-                << " MeV/cm,\n    e-/cm = " << 1.e6 * dedxem / w
-                << ".\n    Straggling long/lat: " << strlon << ", " << strlat
+      std::cout << "    Energy = " << e << " MeV, dEdx em, hd = " 
+                << dedxem << ", " << dedxhd << " MeV/cm,\n"
+                << "    e-/cm = " << 1.e6 * dedxem / w << ".\n"
+                << "    Straggling long/lat: " << strlon << ", " << strlat
                 << " cm\n";
     }
     // Find the step size for which we get approximately the target # clusters.
@@ -809,12 +874,12 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
       deem = e * deem / (dehd + deem);
       dehd = e - deem;
       finish = true;
-      if (m_debug) std::cout << hdr << "Finish raised. Track length reached.\n";
+      if (m_debug) std::cout << "    Finish raised. Track length reached.\n";
     } else {
       stpmax = tracklength - dsum;
     }
     if (m_debug) {
-      std::cout << hdr << "Maximum step size set to " << stpmax << " cm.\n";
+      std::cout << "    Maximum step size set to " << stpmax << " cm.\n";
     }
     // Ensure that this is larger than the minimum modelable step size.
     double stpmin;
@@ -827,18 +892,18 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
     double eloss;
     if (stpmin > stpmax) {
       // No way to find a suitable step size: use fixed energy loss.
-      if (m_debug) std::cout << hdr << "stpmin > stpmax. Deposit all energy.\n";
+      if (m_debug) std::cout << "    stpmin > stpmax. Deposit all energy.\n";
       eloss = deem;
       if (e - eloss - dehd < 0) eloss = e - dehd;
       finish = true;
-      if (m_debug) std::cout << hdr << "Finish raised. Single deposit.\n";
+      if (m_debug) std::cout << "    Finish raised. Single deposit.\n";
     } else if (step < stpmin) {
       // If needed enlarge the step size
-      if (m_debug) std::cout << hdr << "Enlarging step size.\n";
+      if (m_debug) std::cout << "    Enlarging step size.\n";
       step = stpmin;
       PreciseLoss(step, e, deem, dehd);
       if (deem + dehd > e) {
-        if (m_debug) std::cout << hdr << "Excess loss. Recomputing stpmax.\n";
+        if (m_debug) std::cout << "    Excess loss. Recomputing stpmax.\n";
         EstimateRange(e, step, stpmax);
         step = stpmax;
         PreciseLoss(step, e, deem, dehd);
@@ -850,20 +915,20 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
       }
     } else {
       // Draw an actual energy loss for such a step.
-      if (m_debug) std::cout << hdr << "Using existing step size.\n";
+      if (m_debug) std::cout << "    Using existing step size.\n";
       eloss = RndmEnergyLoss(e, deem, step, edens);
     }
     // Ensure we are neither below 0 nor above the total energy.
     if (eloss < 0) {
-      if (m_debug) std::cout << hdr << "Truncating negative energy loss.\n";
+      if (m_debug) std::cout << "    Truncating negative energy loss.\n";
       eloss = 0;
     } else if (eloss > e - dehd) {
-      if (m_debug) std::cout << hdr << "Excess energy loss, using mean.\n";
+      if (m_debug) std::cout << "    Excess energy loss, using mean.\n";
       eloss = deem;
       if (e - eloss - dehd < 0) {
         eloss = e - dehd;
         finish = true;
-        if (m_debug) std::cout << hdr << "Finish raised. Using mean energy.\n";
+        if (m_debug) std::cout << "    Finish raised. Using mean energy.\n";
       }
     }
     if (m_debug) {
@@ -953,6 +1018,28 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
       if (m_debug) std::cout << hdr << "Energy exhausted.\n";
       break;
     }
+    // Update the time.
+    const double rk = 1.e6 * e / m_mion;
+    const double gamma = 1. + rk;
+    const double beta2 = rk > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rk;
+    const double vmag = sqrt(beta2) * SpeedOfLight; 
+    if (vmag > 0.) t += step / vmag;
+    // Update the position.
+    if (m_sensor->HasMagneticField()) {
+      double bx = 0., by = 0., bz = 0.;
+      int status = 0;
+      m_sensor->MagneticField(x, y, z, bx, by, bz, status);
+      double dx = 0., dy = 0., dz = 0.;
+      StepBfield(step / vmag, m_qion, m_mion, vmag, bx, by, bz,
+                 xdir, ydir, zdir, dx, dy, dz);
+      x += dx; 
+      y += dy; 
+      z += dz; 
+    } else {
+      x += step * xdir;
+      y += step * ydir;
+      z += step * zdir;
+    }
     // Draw scattering distances
     const double scale = sqrt(step / prange);
     const double sigt1 = RndmGaussian(0., scale * strlat);
@@ -977,35 +1064,14 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
       phi = atan2(xdir, zdir);
       theta = atan2(ydir, sqrt(xdir * xdir + zdir * zdir));
     }
-
     // Update the position.
     const double cp = cos(phi);
     const double ct = cos(theta);
     const double sp = sin(phi);
     const double st = sin(theta);
-    x += step * xdir + cp * sigt1 - sp * st * sigt2 + sp * ct * sigl;
-    y += step * ydir + ct * sigt2 + st * sigl;
-    z += step * zdir - sp * sigt1 - cp * st * sigt2 + cp * ct * sigl;
-    // Update the time.
-    const double rk = 1.e6 * e / m_mion;
-    const double gamma = 1. + rk;
-    const double beta2 = rk > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rk;
-    const double vmag = sqrt(beta2) * SpeedOfLight; 
-    if (vmag > 0.) t += step / vmag;
-    // (Do not) update direction
-    if (false) {
-      xdir = step * xdir + cp * sigt1 - sp * st * sigt2 + sp * ct * sigl;
-      ydir = step * ydir + ct * sigt2 + st * sigl;
-      zdir = step * zdir - sp * sigt1 - cp * st * sigt2 + cp * ct * sigl;
-      double dnorm = sqrt(xdir * xdir + ydir * ydir + zdir * zdir);
-      if (dnorm <= 0) {
-        std::cerr << hdr << "Zero step length; clustering abandoned.\n";
-        return false;
-      }
-      xdir = xdir / dnorm;
-      ydir = ydir / dnorm;
-      zdir = zdir / dnorm;
-    }
+    x += +cp * sigt1 - sp * st * sigt2 + sp * ct * sigl;
+    y += +ct * sigt2 + st * sigl;
+    z += -sp * sigt1 - cp * st * sigt2 + cp * ct * sigl;
     // Next cluster
     iter++;
   }
