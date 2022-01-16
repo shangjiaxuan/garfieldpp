@@ -12,6 +12,9 @@ target_link_libraries(srim Garfield::Garfield)
 add_executable(trim trim.C)
 target_link_libraries(trim Garfield::Garfield)
 
+add_executable(srimbfield srimbfield.C)
+target_link_libraries(srimbfield Garfield::Garfield)
+
 add_executable(trimsignal trimsignal.C)
 target_link_libraries(trimsignal Garfield::Garfield)
 
