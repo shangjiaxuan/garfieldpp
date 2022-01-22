@@ -935,8 +935,8 @@ bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
   const size_t nVertices = m_vertices.size();
   std::vector<unsigned int> fillCount(nVertices, 0);
 
-  std::array<double, N> zeroVector;
-  zeroVector.fill(0.);
+  std::array<double, N> zeroes;
+  zeroes.fill(0.);
   // Read the file line by line.
   std::string line;
   while (std::getline(datafile, line)) {
@@ -972,19 +972,19 @@ bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
         return false;
       }
     } else if (dataset == "ElectricField") {
-      if (m_efield.empty()) m_efield.assign(nVertices, zeroVector);
+      if (m_efield.empty()) m_efield.assign(nVertices, zeroes);
       if (!ReadDataset(datafile, dataset)) {
         m_efield.clear();
         return false;
       }
     } else if (dataset == "eDriftVelocity") {
-      if (m_eVelocity.empty()) m_eVelocity.assign(nVertices, zeroVector);
+      if (m_eVelocity.empty()) m_eVelocity.assign(nVertices, zeroes);
       if (!ReadDataset(datafile, dataset)) {
         m_eVelocity.clear();
         return false;
       }
     } else if (dataset == "hDriftVelocity") {
-      if (m_hVelocity.empty()) m_hVelocity.assign(nVertices, zeroVector);
+      if (m_hVelocity.empty()) m_hVelocity.assign(nVertices, zeroes);
       if (!ReadDataset(datafile, dataset)) {
         m_hVelocity.clear();
         return false;
@@ -1261,8 +1261,8 @@ bool ComponentTcadBase<N>::LoadWeightingField(
     return false;
   }
   const size_t nVertices = m_vertices.size();
-  std::array<double, N> zeroVector;
-  zeroVector.fill(0.);
+  std::array<double, N> zeroes;
+  zeroes.fill(0.);
   bool ok = true;
   // Read the file line by line.
   std::string line;
@@ -1292,10 +1292,10 @@ bool ComponentTcadBase<N>::LoadWeightingField(
     }
     bool field = false;
     if (dataset == "ElectricField") {
-      wf.assign(nVertices, zeroVector);
+      if (wf.empty()) wf.assign(nVertices, zeroes);
       field = true;
     } else {
-      wp.assign(nVertices, 0.);
+      if (wp.empty()) wp.assign(nVertices, 0.);
     }
     std::getline(datafile, line);
     std::getline(datafile, line);
