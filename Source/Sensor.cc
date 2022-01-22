@@ -1671,86 +1671,64 @@ void Sensor::FFT(std::vector<double>& data, const bool inverse, const int nn) {
   }
 }
 
-void Sensor::ExportSignal(const std::string& label, const std::string& name, const bool chargeCariers) {
+void Sensor::ExportSignal(const std::string& label, 
+                          const std::string& name, const bool chargeCarriers) {
+  const double scale = ElementaryCharge / (m_nEvents * m_tStep);
   for (const auto& electrode : m_electrodes) {
-    if (electrode.label == label) {
-      std::ofstream myfile;
-      std::string filename = name + ".csv";
-      myfile.open(filename);
-        if (!electrode.integrated) {
-            myfile << "The cumulative induced charge.\n";
-            if(chargeCariers){
-                myfile << "Time [ns],Total Prompt [fC/ns],Total Delayed [fC/ns],Total Signal [fC/ns],Electron Prompt [fC/ns],Electron Delayed [fC/ns],Electron Signal [fC/ns],Ion Prompt [fC/ns],Ion Delayed [fC/ns],Ion Signal [fC/ns];\n";
-            }else{
-                myfile << "Time [ns],Total Prompt [fC/ns],Total Delayed [fC/ns],Total Signal [fC/ns];\n";
-            }
-        }else{
-            myfile << "The induced signal.\n";
-            if(chargeCariers){
-                myfile << "Time [ns],Total Prompt [fC],Total Delayed [fC],Total Charge [fC],Electron Prompt [fC],Electron Delayed [fC],Electron Charge [fC],Ion Prompt [fC],Ion Delayed [fC],Ion Charge [fC];\n";
-            }else{
-                myfile << "Time [ns],Total Prompt [fC],Total Delayed [fC],Total Charge [fC];\n";
-            }
-        }
-      const int N = (int)m_nTimeBins;
-      for (int i = 0; i < N; i++) {
-          if(chargeCariers){
-              myfile << std::setprecision(std::numeric_limits<long double>::digits10 +
-                                          1)
-                     << m_tStart + i * m_tStep << ","
-                     << ElementaryCharge *
-                            (electrode.signal[i] - electrode.delayedSignal[i]) /
-                            (m_nEvents * m_tStep)
-                     << ","
-                     << ElementaryCharge * electrode.delayedSignal[i] /
-                            (m_nEvents * m_tStep)
-                     << ","
-                     << ElementaryCharge * electrode.signal[i] / (m_nEvents * m_tStep)
-                     << ","
-              << ElementaryCharge *
-                     (electrode.electronSignal[i] - electrode.delayedElectronSignal[i]) /
-                     (m_nEvents * m_tStep)
-              << ","
-              << ElementaryCharge * electrode.delayedElectronSignal[i] /
-                     (m_nEvents * m_tStep)
-              << ","
-              << ElementaryCharge * electrode.electronSignal[i] / (m_nEvents * m_tStep)
-              << ","
-              << ElementaryCharge *
-                     (electrode.ionSignal[i] - electrode.delayedIonSignal[i]) /
-                     (m_nEvents * m_tStep)
-              << ","
-              << ElementaryCharge * electrode.delayedIonSignal[i] /
-                     (m_nEvents * m_tStep)
-              << ","
-              << ElementaryCharge * electrode.ionSignal[i] / (m_nEvents * m_tStep)
-              << ","
-                     << "\n";
-          }else{
-        myfile << std::setprecision(std::numeric_limits<long double>::digits10 +
-                                    1)
-               << m_tStart + i * m_tStep << ","
-               << ElementaryCharge *
-                      (electrode.signal[i] - electrode.delayedSignal[i]) /
-                      (m_nEvents * m_tStep)
-               << ","
-               << ElementaryCharge * electrode.delayedSignal[i] /
-                      (m_nEvents * m_tStep)
-               << ","
-               << ElementaryCharge * electrode.signal[i] / (m_nEvents * m_tStep)
-               << ","
-               << "\n";
-          }
-      }
-      myfile.close();
-      std::cerr << m_className << "::ExportSignal: File '" << name
-                << ".csv' exported.\n";
+    if (electrode.label != label) continue;
+
+    const std::string quantity = electrode.integrated ? "Charge" : "Signal";
+    const std::string unit = electrode.integrated ? " [fC]" : " [fC/ns]";
+    std::ofstream myfile;
+    std::string filename = name + ".csv";
+    myfile.open(filename);
+    if (!electrode.integrated) {
+      myfile << "The cumulative induced charge.\n";
+    } else {
+      myfile << "The induced signal.\n";
     }
+    myfile << "Time [ns]"
+           << ",Total Prompt" << unit 
+           << ",Total Delayed" << unit 
+           << ", Total " << quantity << unit;
+    if (chargeCarriers) {
+      myfile << ",Electron Prompt" << unit 
+             << ",Electron Delayed" << unit 
+             << ",Electron " << quantity << unit 
+             << ",Ion Prompt" << unit 
+             << ",Ion Delayed" << unit 
+             << ",Ion " << quantity << unit;
+    }
+    myfile << "\n";
+    myfile << std::setprecision(std::numeric_limits<long double>::digits10 + 1);
+    for (unsigned int i = 0; i < m_nTimeBins; i++) {
+      myfile << m_tStart + i * m_tStep 
+             << "," << scale * (electrode.signal[i] - 
+                                electrode.delayedSignal[i])
+             << "," << scale * electrode.delayedSignal[i] 
+             << "," << scale * electrode.signal[i];
+      if (!chargeCarriers) {
+        myfile << "\n";
+        continue;
+      }
+      myfile << "," << scale * (electrode.electronSignal[i] - 
+                                electrode.delayedElectronSignal[i])
+             << "," << scale * electrode.delayedElectronSignal[i]
+             << "," << scale * electrode.electronSignal[i]
+             << "," << scale * (electrode.ionSignal[i] - 
+                                electrode.delayedIonSignal[i])
+             << "," << scale * electrode.delayedIonSignal[i]
+             << "," << scale * electrode.ionSignal[i]
+             << "\n";
+    }
+    myfile.close();
+    std::cout << m_className << "::ExportSignal: File '" << name
+              << ".csv' exported.\n";
+   
   }
-  return;
 }
 
-double Sensor::GetTotalInducedCharge(const std::string label) {
+double Sensor::GetTotalInducedCharge(const std::string& label) {
   for (const auto& electrode : m_electrodes) {
     if (electrode.label != label) continue;
     if (!electrode.integrated || m_nEvents == 0) return 0.;

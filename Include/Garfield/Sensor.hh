@@ -259,7 +259,7 @@ class Sensor {
                            const double xp, const double yp, const double zp,
                            const unsigned int nI, const int isign = 0);
   // TODO!
-  double GetTotalInducedCharge(const std::string label);
+  double GetTotalInducedCharge(const std::string& label);
  private:
   std::string m_className = "Sensor";
   /// Mutex.
