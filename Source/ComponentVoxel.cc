@@ -123,7 +123,7 @@ void ComponentVoxel::DelayedWeightingField(
 
 double ComponentVoxel::DelayedWeightingPotential(
     const double x, const double y, const double z, const double t,
-    const std::string& label) {
+    const std::string& /*label*/) {
 
   if (m_wdtimes.empty()) return 0.;
   // Outside the range of the available maps?
