@@ -59,6 +59,10 @@ public:
                   const std::string &unit = "m");
   /// Import the time-independent weighting field maps.
   bool SetWeightingField(const std::string &file, const std::string &label);
+    
+  /// Import the  weighting potential maps.
+  bool SetWeightingPotential(const std::string &file,
+                                      const std::string &label);
   /// Import the time-dependent weighting field maps.
   bool SetDelayedWeightingPotential(const std::string &file,
                                     const std::string &label);
