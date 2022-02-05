@@ -148,8 +148,8 @@ void ViewField::PlotProfile(const double x0, const double y0, const double z0,
 
 void ViewField::PlotWeightingField(const std::string& label,
                                    const std::string& option,
-                                   const std::string& drawopt) {
-  Draw2d(option, false, true, label, drawopt);
+                                   const std::string& drawopt, const double t) {
+  Draw2d(option, false, true, label, drawopt, t);
 }
 
 void ViewField::PlotContourWeightingField(const std::string& label,
@@ -214,9 +214,9 @@ ViewField::Parameter ViewField::GetPar(const std::string& option,
   return Parameter::Potential;
 }
 
-void ViewField::Draw2d(const std::string& option, const bool contour, 
+void ViewField::Draw2d(const std::string& option, const bool contour,
                        const bool wfield, const std::string& electrode,
-                       const std::string& drawopt) {
+                       const std::string& drawopt, const double t) {
   if (!m_sensor && !m_component) {
     std::cerr << m_className << "::Draw2d:\n"
               << "    Neither sensor nor component are defined.\n";
@@ -231,13 +231,13 @@ void ViewField::Draw2d(const std::string& option, const bool contour,
   bool bfield = false;
   const Parameter par = GetPar(option, title, bfield);
 
-  auto eval = [this, par, wfield, bfield, electrode](double* u, double* /*p*/) {
-    // Transform to global coordinates.
-    const double x = m_proj[0][0] * u[0] + m_proj[1][0] * u[1] + m_proj[2][0];
-    const double y = m_proj[0][1] * u[0] + m_proj[1][1] * u[1] + m_proj[2][1];
-    const double z = m_proj[0][2] * u[0] + m_proj[1][2] * u[1] + m_proj[2][2];
-    return wfield ? Wfield(x, y, z, par, electrode) : 
-           bfield ? Bfield(x, y, z, par) : Efield(x, y, z, par);
+  auto eval = [this, par, wfield, bfield, electrode, t](double* u, double* /*p*/) {
+      // Transform to global coordinates.
+      const double x = m_proj[0][0] * u[0] + m_proj[1][0] * u[1] + m_proj[2][0];
+      const double y = m_proj[0][1] * u[0] + m_proj[1][1] * u[1] + m_proj[2][1];
+      const double z = m_proj[0][2] * u[0] + m_proj[1][2] * u[1] + m_proj[2][2];
+      return wfield ? Wfield(x, y, z, par, electrode, t) :
+             bfield ? Bfield(x, y, z, par) : Efield(x, y, z, par);
   };
   const std::string fname = FindUnusedFunctionName("f2D");
   TF2 f2(fname.c_str(), eval, m_xMinPlot, m_xMaxPlot, m_yMinPlot, m_yMaxPlot, 0);
@@ -594,15 +594,17 @@ double ViewField::Efield(const double x, const double y, const double z,
 }
 
 double ViewField::Wfield(const double x, const double y, const double z,
-                         const Parameter par, 
-                         const std::string& electrode) const {
+                         const Parameter par,
+                         const std::string& electrode, const double t) const {
 
   if (par == Parameter::Potential) {
     double v = 0.;
     if (m_sensor) {
       v = m_sensor->WeightingPotential(x, y, z, electrode);
+        if( t != 0.) v += m_sensor->DelayedWeightingPotential(x, y, z, t, electrode);
     } else {
       v = m_component->WeightingPotential(x, y, z, electrode);
+        if( t != 0.) v += m_component->DelayedWeightingPotential(x, y, z, t, electrode);
     }
     return std::max(0., v);
   }

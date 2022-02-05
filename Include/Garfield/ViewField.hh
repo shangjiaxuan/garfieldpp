@@ -78,13 +78,14 @@ class ViewField : public ViewBase {
     **/
   void PlotContourWeightingField(const std::string& label,
                                  const std::string& option);
-  /** Make a 2D plot of the weighting potential or field.
-    * \param label identifier of the electrode
-    * \param option quantity to be plotted (see PlotContour)
-    * \param drawopt option string passed to TF2::Draw
-    **/
-  void PlotWeightingField(const std::string& label, const std::string& option,
-                          const std::string& drawopt);
+    /** Make a 2D plot of the weighting potential or field.
+      * \param label identifier of the electrode
+      * \param option quantity to be plotted (see PlotContour)
+      * \param drawopt option string passed to TF2::Draw
+      *\param t time slice of dynamic weighting potential [ns].
+      **/
+    void PlotWeightingField(const std::string& label, const std::string& option,
+                            const std::string& drawopt, const double t = 0.);
 
   /** Make a 1D plot of the weighting potential or field along a line.
     * \param label identifier of the electrode
@@ -173,7 +174,7 @@ class ViewField : public ViewBase {
   bool SetPlotLimits();
   void Draw2d(const std::string& option, const bool contour,
               const bool wfield, const std::string& electrode,
-              const std::string& drawopt);
+              const std::string& drawopt, const double t = 0.);
   void DrawProfile(const double x0, const double y0, const double z0,
                    const double x1, const double y1, const double z1,
                    const std::string& option, const bool wfield,
@@ -183,7 +184,7 @@ class ViewField : public ViewBase {
   double Efield(const double x, const double y, const double z,
                 const Parameter par) const;
   double Wfield(const double x, const double y, const double z,
-                const Parameter par, const std::string& electrode) const;
+                const Parameter par, const std::string& electrode, const double t = 0.) const;
   double Bfield(const double x, const double y, const double z,
                 const Parameter par) const;
 
