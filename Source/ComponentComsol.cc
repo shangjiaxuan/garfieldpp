@@ -770,7 +770,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
     return false;
   }
 
-  if (!GetTimeInterval(field))
+  if (!m_timeset && !GetTimeInterval(field))
     return false;
 
   if (!m_timeset) {
