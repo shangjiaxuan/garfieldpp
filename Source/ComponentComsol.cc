@@ -671,7 +671,7 @@ Medium *ComponentComsol::GetMedium(const double xin, const double yin,
 bool ComponentComsol::SetWeightingPotential(const std::string &field,
                                                    const std::string &label) {
   if (!m_ready) {
-    std::cerr << m_className << "::SetWeightingField:\n"
+    std::cerr << m_className << "::SetWeightingPotential:\n"
               << "    No valid field map is present.\n"
               << "    Weighting fields cannot be added.\n";
     return false;
@@ -687,7 +687,7 @@ bool ComponentComsol::SetWeightingPotential(const std::string &field,
   const size_t iw = GetOrCreateWeightingFieldIndex(label);
 
   if (iw + 1 != m_wfields.size()) {
-    std::cout << m_className << "::SetWeightingField:\n"
+    std::cout << m_className << "::SetWeightingPotential:\n"
               << "    Replacing existing weighting field " << label << ".\n";
   }
 
@@ -709,7 +709,7 @@ bool ComponentComsol::SetWeightingPotential(const std::string &field,
   const unsigned int nPrint =
       std::pow(10, static_cast<unsigned int>(
                        std::max(std::floor(std::log10(nNodes)) - 1, 1.)));
-  std::cout << m_className << "::SetWeightingField:\n"
+  std::cout << m_className << "::SetWeightingPotential:\n"
             << "    Reading weighting potentials for " << label << ".\n";
   PrintProgress(0.);
 
@@ -737,7 +737,7 @@ bool ComponentComsol::SetWeightingPotential(const std::string &field,
     if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance)
       continue;
     if (res.empty()) {
-      std::cerr << m_className << "::SetDelayedWeightingField:\n"
+      std::cerr << m_className << "::SetWeightingPotential:\n"
                 << "    Could not find a matching mesh node for point (" << x
                 << ", " << y << ", " << z << ")\n.";
       ffield.close();
@@ -756,7 +756,7 @@ bool ComponentComsol::SetWeightingPotential(const std::string &field,
 
   PrintProgress(1.);
   std::cout << std::endl
-            << m_className << "::SetWeightingField: Done.\n";
+            << m_className << "::SetWeightingPotential: Done.\n";
   ffield.close();
   return true;
 }
@@ -764,7 +764,7 @@ bool ComponentComsol::SetWeightingPotential(const std::string &field,
 bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
                                                    const std::string &label) {
   if (!m_ready) {
-    std::cerr << m_className << "::SetDelayedWeightingField:\n"
+    std::cerr << m_className << "::SetDelayedWeightingPotential:\n"
               << "    No valid field map is present.\n"
               << "    Weighting fields cannot be added.\n";
     return false;
@@ -774,7 +774,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
     return false;
 
   if (!m_timeset) {
-    std::cerr << m_className << "::SetDelayedWeightingField:\n"
+    std::cerr << m_className << "::SetDelayedWeightingPotential:\n"
               << "    No valid times slices of potential set.\n"
               << "    Please add the time slices.\n";
     return false;
@@ -792,7 +792,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
   const size_t iw = GetOrCreateWeightingFieldIndex(label);
 
   if (iw + 1 != m_wfields.size()) {
-    std::cout << m_className << "::SetDelayedWeightingField:\n"
+    std::cout << m_className << "::SetDelayedWeightingPotential:\n"
               << "    Replacing existing weighting field " << label << ".\n";
   }
 
@@ -814,7 +814,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
   const unsigned int nPrint =
       std::pow(10, static_cast<unsigned int>(
                        std::max(std::floor(std::log10(nNodes)) - 1, 1.)));
-  std::cout << m_className << "::SetDelayedWeightingField:\n"
+  std::cout << m_className << "::SetDelayedWeightingPotential:\n"
             << "    Reading weighting potentials for " << label << ".\n";
   PrintProgress(0.);
 
@@ -842,7 +842,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
     if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance)
       continue;
     if (res.empty()) {
-      std::cerr << m_className << "::SetDelayedWeightingField:\n"
+      std::cerr << m_className << "::SetDelayedWeightingPotential:\n"
                 << "    Could not find a matching mesh node for point (" << x
                 << ", " << y << ", " << z << ")\n.";
       ffield.close();
@@ -868,7 +868,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
 
   PrintProgress(1.);
   std::cout << std::endl
-            << m_className << "::SetDelayedWeightingField: Done.\n";
+            << m_className << "::SetDelayedWeightingPotential: Done.\n";
   ffield.close();
   return true;
 }
