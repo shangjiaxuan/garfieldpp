@@ -156,6 +156,19 @@ double Sensor::WeightingPotential(const double x, const double y,
   return v;
 }
 
+double Sensor::DelayedWeightingPotential(const double x, const double y, 
+                                         const double z, const double t, 
+                                         const std::string& label) {
+  double v = 0.;
+  // Add up contributions from all components.
+  for (const auto& electrode : m_electrodes) {
+    if (electrode.label == label) {
+      v += std::max(electrode.comp->DelayedWeightingPotential(x, y, z, t, label), 0.);
+    }
+  }
+  return v;
+}
+
 Medium* Sensor::GetMedium(const double x, const double y, const double z) {
   for (const auto& cmp : m_components) {
     if (!std::get<1>(cmp)) continue;

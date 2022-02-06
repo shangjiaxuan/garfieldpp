@@ -60,6 +60,10 @@ class Sensor {
   /// Get the weighting potential at (x, y, z).
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label);
+    
+    /// Get the delayed weighting potential at (x, y, z).
+    double DelayedWeightingPotential(const double x, const double y, const double z,
+                                const double t, const std::string& label);
 
   /// Get the medium at (x, y, z).
   Medium* GetMedium(const double x, const double y, const double z);
