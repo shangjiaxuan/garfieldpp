@@ -24,14 +24,6 @@ class ComponentTcadBase : public Component {
   /// Destructor
   virtual ~ComponentTcadBase() {}
 
-  void WeightingField(const double x, const double y, const double z,
-                      double& wx, double& wy, double& wz,
-                      const std::string& label) override;
-  double WeightingPotential(const double x, const double y, const double z,
-                            const std::string& label) override;
-
-  bool GetVoltageRange(double& vmin, double& vmax) override;
-  
   /** Import mesh and field map from files.
     * \param gridfilename name of the .grd file containing the mesh 
     * \param datafilename name of the .dat file containing the nodal solution
@@ -57,6 +49,10 @@ class ComponentTcadBase : public Component {
   /// yet, a new one will be added to the list. 
   bool SetWeightingFieldShift(const std::string& label, 
                               const double x, const double y, const double z);
+  /// Import time-dependent weighting fields and potentials.
+  bool SetWeightingField(const std::string& datfile1,
+                         const std::string& datfile2, const double dv,
+                         const double t, const std::string& label);
 
   /// List all currently defined regions.
   void PrintRegions() const;
@@ -78,13 +74,6 @@ class ComponentTcadBase : public Component {
   
   /// Switch use of the imported velocity map on/off.
   void EnableVelocityMap(const bool on);
-  bool HasVelocityMap() const override { 
-    return m_useVelocityMap && !(m_eVelocity.empty() && m_hVelocity.empty());
-  }
-  bool ElectronVelocity(const double x, const double y, const double z,
-                        double& vx, double& vy, double& vz) override;
-  bool HoleVelocity(const double x, const double y, const double z, 
-                    double& vx, double& vy, double& vz) override;
 
   /// Get the number of donor states found in the map.
   size_t GetNumberOfDonors() { return m_donors.size(); }
@@ -105,11 +94,43 @@ class ComponentTcadBase : public Component {
 
   /// Switch use of the imported impact ionisation map on/off.
   void EnableAlphaMap(const bool on) { m_useAlphaMap = on; }
+
+  /// Switch use of the imported trapping map on/off.
+  void EnableAttachmentMap(const bool on) { m_useAttachmentMap = on; }
+
+  /// Get the electron mobility at a given point in the mesh.
+  bool GetElectronMobility(const double x, const double y, const double z, 
+                           double& mob);
+  /// Get the hole mobility at a given point in the mesh.
+  bool GetHoleMobility(const double x, const double y, const double z, 
+                       double& mob);
+
+  void WeightingField(const double x, const double y, const double z,
+                      double& wx, double& wy, double& wz,
+                      const std::string& label) override;
+  double WeightingPotential(const double x, const double y, const double z,
+                            const std::string& label) override;
+  void DelayedWeightingField(const double x, const double y,
+                             const double z, const double t, double& wx,
+                             double& wy, double& wz,
+                             const std::string& label) override;
+  double DelayedWeightingPotential(const double x, const double y,
+                                   const double z, const double t,
+                                   const std::string& label) override;
+
+  bool GetVoltageRange(double& vmin, double& vmax) override;
+  
+  bool HasVelocityMap() const override { 
+    return m_useVelocityMap && !(m_eVelocity.empty() && m_hVelocity.empty());
+  }
+  bool ElectronVelocity(const double x, const double y, const double z,
+                        double& vx, double& vy, double& vz) override;
+  bool HoleVelocity(const double x, const double y, const double z, 
+                    double& vx, double& vy, double& vz) override;
+
   bool HasTownsendMap() const override {
     return m_useAlphaMap && !(m_eAlpha.empty() && m_hAlpha.empty());
   }
-  /// Switch use of the imported trapping map on/off.
-  void EnableAttachmentMap(const bool on) { m_useAttachmentMap = on; }
   bool HasAttachmentMap() const override {
     return (m_useAttachmentMap && !(m_acceptors.empty() && m_donors.empty()));
   }
@@ -128,11 +149,6 @@ class ComponentTcadBase : public Component {
   bool HoleTownsend(const double x, const double y, const double z,
                     double& alpha) override;
   
-  // Mobilities
-  bool GetElectronMobility(const double x, const double y, const double z, 
-                           double& mob);
-  bool GetHoleMobility(const double x, const double y, const double z, 
-                       double& mob);
  protected:
   // Max. number of vertices per element
   static constexpr size_t nMaxVertices = 4;
@@ -188,7 +204,14 @@ class ComponentTcadBase : public Component {
   // Weighting field labels and offsets.
   std::vector<std::string> m_wlabel;
   std::vector<std::array<double, 3> > m_wshift;
- 
+
+  // Delayed weighting field and potential.
+  std::vector<std::vector<std::array<double, N> > > m_dwf;
+  std::vector<std::vector<double> > m_dwp; 
+  // Times corresponding to the delayed weighting fields/potentials.
+  std::vector<double> m_dwtf;
+  std::vector<double> m_dwtp;
+
   // Velocities [cm / ns]
   std::vector<std::array<double, N> > m_eVelocity; 
   std::vector<std::array<double, N> > m_hVelocity;
@@ -265,6 +288,9 @@ class ComponentTcadBase : public Component {
   bool LoadWeightingField(const std::string& datafilename,
                           std::vector<std::array<double, N> >& wf,
                           std::vector<double>& wp);
+
+  bool GetOffset(const std::string& label, 
+                 double& dx, double& dy, double& dz) const;
 };
 }
 #endif

@@ -46,46 +46,113 @@ namespace Garfield {
 
 template<size_t N>
 void ComponentTcadBase<N>::WeightingField(
-    const double xin, const double yin, const double zin, 
+    const double x, const double y, const double z, 
     double& wx, double& wy, double& wz, const std::string& label) {
   wx = wy = wz = 0.;
   if (m_wfield.empty()) {
     std::cerr << m_className << "::WeightingField: Not available.\n";
     return;
   }
-  const size_t n = m_wlabel.size();
-  for (size_t i = 0; i < n; ++i) {
-    if (label == m_wlabel[i]) {
-      const double x = xin - m_wshift[i][0];
-      const double y = yin - m_wshift[i][1];
-      const double z = zin - m_wshift[i][2];
-      Interpolate(x, y, z, m_wfield, wx, wy, wz);
-      return;
-    }
-  }
+  double dx = 0., dy = 0., dz = 0.;
+  if (!GetOffset(label, dx, dy, dz)) return;
+  Interpolate(x - dx, y - dy, z - dz, m_wfield, wx, wy, wz);
 }
 
 template<size_t N>
 double ComponentTcadBase<N>::WeightingPotential(
-    const double xin, const double yin, const double zin, 
+    const double x, const double y, const double z, 
     const std::string& label) {
 
   if (m_wpot.empty()) {
     std::cerr << m_className << "::WeightingPotential: Not available.\n";
     return 0.;
   }
-  const size_t n = m_wlabel.size();
-  for (size_t i = 0; i < n; ++i) {
-    if (label == m_wlabel[i]) {
-      const double x = xin - m_wshift[i][0];
-      const double y = yin - m_wshift[i][1];
-      const double z = zin - m_wshift[i][2];
-      double v = 0.;
-      Interpolate(x, y, z, m_wpot, v);
-      return v;
-    }
+  double dx = 0., dy = 0., dz = 0.;
+  if (!GetOffset(label, dx, dy, dz)) return 0.;
+  double v = 0.;
+  Interpolate(x - dx, y - dy, z - dz, m_wpot, v);
+  return v;
+}
+
+template<size_t N>
+void ComponentTcadBase<N>::DelayedWeightingField(
+    const double x, const double y, const double z, const double t, 
+    double& wx, double& wy, double& wz, const std::string& label) {
+  wx = wy = wz = 0.;
+  if (m_dwf.empty()) {
+    std::cerr << m_className << "::DelayedWeightingField: Not available.\n";
+    return;
   }
-  return 0.;
+  if (m_dwtf.empty()) return;
+  if (t < m_dwtf.front() || t > m_dwtf.back()) return;
+
+  double dx = 0., dy = 0., dz = 0.;
+  if (!GetOffset(label, dx, dy, dz)) return;
+
+  const auto it1 = std::upper_bound(m_dwtf.cbegin(), m_dwtf.cend(), t);
+  const auto it0 = std::prev(it1);
+  const double dt = t - *it0;
+  const auto i0 = std::distance(m_dwtf.cbegin(), it0);
+  double wx0 = 0., wy0 = 0., wz0 = 0.;
+  Interpolate(x - dx, y - dy, z - dz, m_dwf[i0], wx0, wy0, wz0);
+  if (dt < Small || it1 == m_dwtf.cend()) {
+    wx = wx0;
+    wy = wy0;
+    wz = wz0;
+    return;
+  }
+  const auto i1 = std::distance(m_dwtf.cbegin(), it1);
+  double wx1 = 0., wy1 = 0., wz1 = 0.;
+  Interpolate(x - dx, y - dy, z - dz, m_dwf[i1], wx1, wy1, wz1);
+  const double f1 = dt / (*it1 - *it0);
+  const double f0 = 1. - f1;
+  wx = f0 * wx0 + f1 * wx1;
+  wy = f0 * wy0 + f1 * wy1;
+  wz = f0 * wz0 + f1 * wz1;
+}
+
+template<size_t N>
+double ComponentTcadBase<N>::DelayedWeightingPotential(
+    const double x, const double y, const double z, const double t,
+    const std::string& label) {
+
+  if (m_dwp.empty()) {
+    std::cerr << m_className << "::DelayedWeightingPotential: Not available.\n";
+    return 0.;
+  }
+  if (m_dwtp.empty()) return 0.;
+  if (t < m_dwtp.front() || t > m_dwtp.back()) return 0.;
+
+  double dx = 0., dy = 0., dz = 0.;
+  if (!GetOffset(label, dx, dy, dz)) return 0.;
+
+  const auto it1 = std::upper_bound(m_dwtp.cbegin(), m_dwtp.cend(), t);
+  const auto it0 = std::prev(it1);
+  const double dt = t - *it0;
+  const auto i0 = std::distance(m_dwtp.cbegin(), it0);
+  double v0 = 0.;
+  Interpolate(x - dx, y - dy, z - dz, m_dwp[i0], v0);
+  if (dt < Small || it1 == m_dwtp.cend()) return v0;
+
+  const auto i1 = std::distance(m_dwtp.cbegin(), it1);
+  double v1 = 0.;
+  Interpolate(x - dx, y - dy, z - dz, m_dwp[i1], v1);
+  const double f1 = dt / (*it1 - *it0);
+  const double f0 = 1. - f1;
+  return f0 * v0 + f1 * v1;
+} 
+
+template<size_t N>
+bool ComponentTcadBase<N>::GetOffset(
+    const std::string& label, double& dx, double& dy, double& dz) const {
+  
+  const auto it = std::find(m_wlabel.cbegin(), m_wlabel.cend(), label);
+  if (it == m_wlabel.end()) return false;
+  const auto i = std::distance(m_wlabel.begin(), it);
+  dx = m_wshift[i][0]; 
+  dy = m_wshift[i][1];
+  dz = m_wshift[i][2];
+  return true;
 }
 
 template<size_t N>
@@ -346,6 +413,88 @@ bool ComponentTcadBase<N>::SetWeightingField(const std::string& datfile1,
   m_wlabel.push_back(label);
   m_wshift.push_back({0., 0., 0.});
   return true;
+}
+
+template<size_t N>
+bool ComponentTcadBase<N>::SetWeightingField(
+    const std::string& datfile1, const std::string& datfile2,
+    const double dv, const double t, const std::string& label) {
+
+  if (!m_ready) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Mesh is not available. Call Initialise first.\n";
+    return false;
+  }
+  if (dv < Small) {
+     std::cerr << m_className << "::SetWeightingField:\n"
+               << "    Voltage difference must be > 0.\n";
+     return false;
+  }
+  const double s = 1. / dv;
+ 
+  // TODO: label.
+
+  // Load the first map.
+  std::vector<std::array<double, N> > wf1;
+  std::vector<double> wp1;
+  if (!LoadWeightingField(datfile1, wf1, wp1)) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not import data from " << datfile1 << ".\n";
+    return false;
+  }
+  // Load the second map.
+  std::vector<std::array<double, N> > wf2;
+  std::vector<double> wp2;
+  if (!LoadWeightingField(datfile2, wf2, wp2)) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not import data from " << datfile2 << ".\n";
+    return false;
+  }
+  const size_t nVertices = m_vertices.size();
+  bool foundField = false;
+  if (wf1.size() != nVertices || wf2.size() != nVertices) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not load electric field values.\n";
+  } else {
+    foundField = true;
+    std::vector<std::array<double, N> > wf; 
+    wf.resize(nVertices);
+    for (size_t i = 0; i < nVertices; ++i) {
+      for (size_t j = 0; j < N; ++j) {
+        wf[i][j] = (wf2[i][j] - wf1[i][j]) * s;
+      } 
+    }
+    if (m_dwtf.empty() || t > m_dwtf.back()) {
+      m_dwtf.push_back(t);
+      m_dwf.push_back(std::move(wf));
+    } else {
+      const auto it = std::upper_bound(m_dwtf.begin(), m_dwtf.end(), t);
+      const auto n = std::distance(m_dwtf.begin(), it);
+      m_dwtf.insert(it, t);
+      m_dwf.insert(m_dwf.begin() + n, std::move(wf));
+    }
+  }
+  bool foundPotential = false;
+  if (wp1.size() != nVertices || wp2.size() != nVertices) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Could not load electrostatic potentials.\n";
+  } else {
+    foundPotential = true;
+    std::vector<double> wp(nVertices, 0.);
+    for (size_t i = 0; i < nVertices; ++i) {
+      wp[i] = (wp2[i] - wp1[i]) * s; 
+    }
+    if (m_dwtp.empty() || t > m_dwtp.back()) {
+      m_dwtp.push_back(t);
+      m_dwp.push_back(std::move(wp));
+    } else {
+      const auto it = std::upper_bound(m_dwtp.begin(), m_dwtp.end(), t);
+      const auto n = std::distance(m_dwtp.begin(), it);
+      m_dwtp.insert(it, t);
+      m_dwp.insert(m_dwp.begin() + n, std::move(wp));
+    }
+  }
+  return (foundField || foundPotential);
 }
 
 template<size_t N>
@@ -1598,6 +1747,10 @@ void ComponentTcadBase<N>::Cleanup() {
   m_wfield.clear();
   m_wlabel.clear();
   m_wshift.clear();
+  m_dwf.clear();
+  m_dwp.clear();
+  m_dwtp.clear();
+  m_dwtf.clear();
 
   // Other data.
   m_eVelocity.clear();

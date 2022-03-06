@@ -601,14 +601,18 @@ double ViewField::Wfield(const double x, const double y, const double z,
     double v = 0.;
     if (m_sensor) {
       v = m_sensor->WeightingPotential(x, y, z, electrode);
-        if( t != 0.) v += m_sensor->DelayedWeightingPotential(x, y, z, t, electrode);
+      if (t > 0.) {
+        v += m_sensor->DelayedWeightingPotential(x, y, z, t, electrode);
+      }
     } else {
       v = m_component->WeightingPotential(x, y, z, electrode);
-        if( t != 0.) v += m_component->DelayedWeightingPotential(x, y, z, t, electrode);
+      if (t > 0.) {
+        v += m_component->DelayedWeightingPotential(x, y, z, t, electrode);
+      }
     }
     return std::max(0., v);
   }
-
+  // TODO: delayed component.
   double ex = 0., ey = 0., ez = 0.;
   if (!m_sensor) {
     m_component->WeightingField(x, y, z, ex, ey, ez, electrode);
