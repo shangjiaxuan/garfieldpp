@@ -589,6 +589,23 @@ bool AvalancheMC::AvalancheElectronHole(const double x0, const double y0,
   return Avalanche(aval, true, true);
 }
 
+void AvalancheMC::AddElectron(const double x, const double y, const double z,
+                              const double t) {
+  AddEndPoint({x, y, z}, t, {x, y, z}, t, StatusAlive, Particle::Electron);
+  ++m_nElectrons;
+}
+
+void AvalancheMC::AddHole(const double x, const double y, const double z,
+                          const double t) {
+  AddEndPoint({x, y, z}, t, {x, y, z}, t, StatusAlive, Particle::Hole);
+  ++m_nHoles;
+}
+void AvalancheMC::AddIon(const double x, const double y, const double z,
+                         const double t) {
+  AddEndPoint({x, y, z}, t, {x, y, z}, t, StatusAlive, Particle::Ion);
+  ++m_nIons;
+}
+
 bool AvalancheMC::ResumeAvalanche(const bool electrons, const bool holes) {
 
   std::vector<DriftPoint> aval;

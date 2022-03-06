@@ -146,26 +146,35 @@ class AvalancheMC {
                       double& t1, int& status) const;
 
   /// Simulate the drift line of an electron from a given starting point.
-  bool DriftElectron(const double x0, const double y0, const double z0,
-                     const double t0);
+  bool DriftElectron(const double x, const double y, const double z,
+                     const double t);
   /// Simulate the drift line of a hole from a given starting point.
-  bool DriftHole(const double x0, const double y0, const double z0,
-                 const double t0);
+  bool DriftHole(const double x, const double y, const double z,
+                 const double t);
   /// Simulate the drift line of an ion from a given starting point.
-  bool DriftIon(const double x0, const double y0, const double z0,
-                const double t0);
+  bool DriftIon(const double x, const double y, const double z,
+                const double t);
   /** Simulate an avalanche initiated by an electron at a given starting point.
-   * \param x0,y0,z0,t0 coordinates and time of the initial electron
+   * \param x,y,z,t coordinates and time of the initial electron
    * \param hole simulate the hole component of the avalanche or not
    */
-  bool AvalancheElectron(const double x0, const double y0, const double z0,
-                         const double t0, const bool hole = false);
+  bool AvalancheElectron(const double x, const double y, const double z,
+                         const double t, const bool hole = false);
   /// Simulate an avalanche initiated by a hole at a given starting point.
-  bool AvalancheHole(const double x0, const double y0, const double z0,
-                     const double t0, const bool electron = false);
+  bool AvalancheHole(const double x, const double y, const double z,
+                     const double t, const bool electron = false);
   /// Simulate an avalanche initiated by an electron-hole pair.
-  bool AvalancheElectronHole(const double x0, const double y0, const double z0,
-                             const double t0);
+  bool AvalancheElectronHole(const double x, const double y, const double z,
+                             const double t);
+
+  /// Add an electron to the list of particles to be transported.
+  void AddElectron(const double x, const double y, const double z,
+                   const double t);
+  /// Add a hole to the list of particles to be transported.
+  void AddHole(const double x, const double y, const double z, const double t);
+  /// Add an ion to the list of particles to be transported.
+  void AddIon(const double x, const double y, const double z, const double t);
+  /// Resume the simulation from the current set of charge carriers.
   bool ResumeAvalanche(const bool electron = true, const bool hole = true);
 
   /// Switch debugging messages on/off (default: off).

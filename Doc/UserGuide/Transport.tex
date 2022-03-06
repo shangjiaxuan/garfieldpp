@@ -321,12 +321,12 @@ to diffusion-only steps based on the low-field mobility.
 
 Drift line calculations are started using 
 \begin{lstlisting}
-bool DriftElectron(const double x0, const double y0, const double z0, const double t0);
-bool DriftHole(const double x0, const double y0, const double z0, const double t0);
-bool DriftIon(const double x0, const double y0, const double z0, const double t0);
+bool DriftElectron(const double x, const double y, const double z, const double t);
+bool DriftHole(const double x, const double y, const double z, const double t);
+bool DriftIon(const double x, const double y, const double z, const double t);
 \end{lstlisting}
 \begin{description}
-  \item[x0, y0, z0, t0] initial position and time
+  \item[x, y, z, t] initial position and time
 \end{description}
 The trajectory can be retrieved using
 \begin{lstlisting} 
@@ -337,12 +337,12 @@ void GetDriftLinePoint(const size_t i, double& x, double& y, double& z, double& 
 The calculation of an avalanche initiated by an electron, 
 a hole or an electron-hole pair is done using
 \begin{lstlisting}
-bool AvalancheElectron(const double x0, const double y0, const double z0,
-                       const double t0, const bool hole = false);
-bool AvalancheHole(const double x0, const double y0, const double z0,
-                   const double t0, const bool electron = false);
-bool AvalancheElectronHole(const double x0, const double y0, const double z0, 
-                           const double t0);
+bool AvalancheElectron(const double x, const double y, const double z,
+                       const double t, const bool hole = false);
+bool AvalancheHole(const double x, const double y, const double z,
+                   const double t, const bool electron = false);
+bool AvalancheElectronHole(const double x, const double y, const double z, 
+                           const double t);
 \end{lstlisting}
 The flags \texttt{hole} and \texttt{electron} specify whether the  
 drift and multiplication of the holes/ions (electrons) created in the 
@@ -395,7 +395,14 @@ bool ResumeAvalanche(const bool electron = true, const bool hole = true);
   \item[electron,hole] flags to switch off the electron (hole) component of the avalanche
 \end{description}
 which instructs \texttt{AvalancheMC} to continue the avalanche simulation 
-from the most recent set of end points. 
+from the most recent set of end points.
+Before calling \texttt{ResumeAvalanche}, one can ``manually'' add 
+electrons, holes, or ions to the list of charge carriers to be transported. 
+\begin{lstlisting}
+void AddElectron(const double x, const double y, const double z, const double t); 
+void AddHole(const double x, const double y, const double z, const double t); 
+void AddIon(const double x, const double y, const double z, const double t); 
+\end{lstlisting} 
 
 The time window can be removed using
 \begin{lstlisting}
@@ -442,14 +449,14 @@ according to the type of collision.
 In Garfield++, the microscopic tracking method is implemented in the class 
 \texttt{AvalancheMicroscopic}. A calculation is started by means of
 \begin{lstlisting}
-void AvalancheElectron(const double x0, const double y0, const double z0,
-                       const double t0, const double e0,
-                       const double dx0 = 0., const double dy0 = 0., const double dz0 = 0.);
+void AvalancheElectron(const double x, const double y, const double z,
+                       const double t, const double e,
+                       const double dx = 0., const double dy = 0., const double dz = 0.);
 \end{lstlisting}
 \begin{description}
-  \item[x0, y0, z0, t0] initial position and time
-  \item[e0] initial energy (eV)
-  \item[dx0, dy0, dz0] initial direction 
+  \item[x, y, z, t] initial position and time
+  \item[e] initial energy (eV)
+  \item[dx, dy, dz] initial direction 
 \end{description}
 If the length of the direction vector is zero, 
 the initial direction is randomized.
@@ -479,8 +486,8 @@ A list of status codes is given in Table~\ref{Tab:DriftLineStatusCodes}.
 
 The function
 \begin{lstlisting}
-bool DriftElectron(const double x0, const double y0, const double z0, const double t0,
-                   const double e0, const double dx0, const double dy0, const double dz0);
+bool DriftElectron(const double x, const double y, const double z, const double t,
+                   const double e, const double dx, const double dy, const double dz);
 \end{lstlisting}
 traces only the initial electron but not the secondaries 
 produced along its drift path 
@@ -553,13 +560,12 @@ is below the ionization potential of the gas.
 The transport cut can be removed by setting the threshold to a negative value.
 By default, no cut is applied.
 
-In order to extract information from the avalanche on a collision-by-collision basis, 
-so-called ``user handles'' are available. 
+In order to extract information from the avalanche on a collision-by-collision basis, a number of callback functions (``user handles'') are available. 
 \begin{lstlisting}
- void SetUserHandleStep(void (*f)(double x, double y, double z,
-                                  double t, double e,
-                                  double dx, double dy, double dz,
-                                  bool hole));
+void SetUserHandleStep(void (*f)(double x, double y, double z,
+                                 double t, double e,
+                                 double dx, double dy, double dz,
+                                 bool hole));
 void UnsetUserHandleStep();
 void SetUserHandleCollision(void (*f)(double x, double y, double z, double     t,
                                       int type, int level, Medium* m,

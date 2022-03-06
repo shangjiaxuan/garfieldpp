@@ -449,23 +449,26 @@ void AvalancheMicroscopic::SetUserHandleIonisation(void (*f)(
   m_userHandleIonisation = f;
 }
 
-bool AvalancheMicroscopic::DriftElectron(const double x0, const double y0,
-                                         const double z0, const double t0,
-                                         const double e0, const double dx0,
-                                         const double dy0, const double dz0) {
+bool AvalancheMicroscopic::DriftElectron(
+    const double x, const double y, const double z, const double t,
+    const double e, const double dx, const double dy, const double dz) {
   std::vector<Electron> stack;
-  AddToStack(x0, y0, z0, t0, e0, dx0, dy0, dz0, 0, false, stack);
+  AddToStack(x, y, z, t, e, dx, dy, dz, 0, false, stack);
   return TransportElectrons(stack, false);
 }
 
-bool AvalancheMicroscopic::AvalancheElectron(const double x0, const double y0,
-                                             const double z0, const double t0,
-                                             const double e0, const double dx0,
-                                             const double dy0,
-                                             const double dz0) {
+bool AvalancheMicroscopic::AvalancheElectron(
+    const double x, const double y, const double z, const double t,
+    const double e, const double dx, const double dy, const double dz) {
   std::vector<Electron> stack;
-  AddToStack(x0, y0, z0, t0, e0, dx0, dy0, dz0, 0, false, stack);
+  AddToStack(x, y, z, t, e, dx, dy, dz, 0, false, stack);
   return TransportElectrons(stack, true);
+}
+
+void AvalancheMicroscopic::AddElectron(
+    const double x, const double y, const double z, const double t,
+    const double e, const double dx, const double dy, const double dz) {
+  AddToStack(x, y, z, t, e, dx, dy, dz, 0, false, m_endpointsElectrons);
 }
 
 bool AvalancheMicroscopic::ResumeAvalanche() {
@@ -554,7 +557,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
 
   // Numerical prefactors in equation of motion
   const double c1 = SpeedOfLight * sqrt(2. / ElectronMass);
-  const double c2 = c1 * c1 / 4.;
+  const double c2 = 0.25 * c1 * c1;
 
   std::vector<Electron> stackNew;
   stackNew.reserve(1000);
