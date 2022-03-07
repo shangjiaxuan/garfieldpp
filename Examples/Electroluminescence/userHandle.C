@@ -7,8 +7,6 @@
 #include <TFile.h>
 
 #include "Garfield/MediumMagboltz.hh"
-#include "Garfield/SolidBox.hh"
-#include "Garfield/GeometrySimple.hh"
 #include "Garfield/ComponentConstant.hh"
 #include "Garfield/Sensor.hh"
 #include "Garfield/AvalancheMicroscopic.hh"
@@ -72,5 +70,4 @@ int main(int argc, char * argv[]) {
   cZ.Update();
 
   app.Run(true);
-
 }
