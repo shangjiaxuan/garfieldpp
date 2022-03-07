@@ -5,5 +5,8 @@ if(NOT TARGET Garfield::Garfield)
 endif()
 
 # ---Build executable------------------------------------------------------------
-add_executable(signal signal.C)
-target_link_libraries(signal Garfield::Garfield)
+add_executable(planar planar.C)
+target_link_libraries(planar Garfield::Garfield)
+
+add_executable(planar_movie planar_movie.C)
+target_link_libraries(planar_movie Garfield::Garfield)

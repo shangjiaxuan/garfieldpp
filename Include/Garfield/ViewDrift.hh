@@ -26,11 +26,13 @@ class ViewDrift : public ViewBase {
   void Clear();
 
   /// Draw the drift lines.
-  void Plot(const bool twod = false, const bool axis = true);
+  void Plot(const bool twod = false, const bool axis = true,
+            const bool snapshot = false);
   /// Make a 2D plot of the drift lines in the current viewing plane.
-  void Plot2d(const bool axis);
+  void Plot2d(const bool axis = true, const bool snapshot = false);
   /// Make a 3D plot of the drift lines.
-  void Plot3d(const bool axis, const bool ogl);
+  void Plot3d(const bool axis = true, const bool ogl = true,
+              const bool snapshot = false);
 
   /// Draw markers (or not) at every collision along a track.
   void EnableClusterMarkers(const bool on = true) { m_drawClusters = on; }
@@ -124,6 +126,10 @@ class ViewDrift : public ViewBase {
 
   bool SetPlotLimits2d();
   bool SetPlotLimits3d();
+  void DrawMarkers2d(const std::vector<std::array<float, 3> >& points,
+                     const short col, const double size);
+  void DrawMarkers3d(const std::vector<std::array<float, 3> >& points,
+                     const short col, const double size);
 };
 }
 #endif

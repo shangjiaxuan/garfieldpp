@@ -9,8 +9,6 @@
 #include <TH1D.h>
 
 #include "Garfield/MediumSilicon.hh"
-#include "Garfield/SolidBox.hh"
-#include "Garfield/GeometrySimple.hh"
 #include "Garfield/ComponentConstant.hh"
 #include "Garfield/ComponentUser.hh"
 #include "Garfield/ComponentAnalyticField.hh"
@@ -45,18 +43,15 @@ int main(int argc, char * argv[]) {
     mediumView->PlotHoleVelocity('e', true);
   }
 
-  // Build the geometry.
-  // Thickness of silicon [cm]
+  // Sensor thickness [cm]
   constexpr double d = 100.e-4;
-  SolidBox box(0, 0.5 * d, 0, 2 * d, 0.5 * d, 2 * d);
-  GeometrySimple geo;
-  geo.AddSolid(&box, &si);
 
   // Make a component with constant drift field and weighting field.
   // Bias voltage [V]
   constexpr double vbias = -50.;
   ComponentConstant uniformField;
-  uniformField.SetGeometry(&geo);
+  uniformField.SetArea(-2 * d, 0., -2 * d, 2 * d, d, 2 * d);
+  uniformField.SetMedium(&si);
   uniformField.SetElectricField(0, vbias / d, 0);
   uniformField.SetWeightingField(0, -1. / d, 0, "pad");
 
@@ -69,15 +64,15 @@ int main(int argc, char * argv[]) {
     ey = (vbias - vdep) / d + 2 * y * vdep / (d * d);  
   };
   ComponentUser linearField;
-  linearField.SetGeometry(&geo);
-  
+  linearField.SetArea(-2 * d, 0., - 2 * d, 2 * d, d, 2 * d);
+  linearField.SetMedium(&si);
   linearField.SetElectricField(eLinear);
 
   // Make a component with analytic weighting field for a strip or pixel.
   constexpr double pitch = 55.e-4;
   constexpr double halfpitch = 0.5 * pitch;
   ComponentAnalyticField wField;
-  wField.SetGeometry(&geo);
+  wField.SetMedium(&si);
   wField.AddPlaneY(0, vbias, "back");
   wField.AddPlaneY(d, 0, "front");
   wField.AddStripOnPlaneY('z', d, -halfpitch, halfpitch, "strip");

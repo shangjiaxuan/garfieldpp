@@ -182,15 +182,15 @@ void ViewDrift::AddAttachment(const float x, const float y, const float z) {
   m_att.push_back(std::move(p));
 }
 
-void ViewDrift::Plot(const bool twod, const bool axis) {
+void ViewDrift::Plot(const bool twod, const bool axis, const bool snapshot) {
   if (twod) {
-    Plot2d(axis);
+    Plot2d(axis, snapshot);
   } else {
-    Plot3d(axis, false);
+    Plot3d(axis, false, snapshot);
   }
 }
 
-void ViewDrift::Plot2d(const bool axis) {
+void ViewDrift::Plot2d(const bool axis, const bool snapshot) {
   auto pad = GetCanvas();
   pad->cd();
   pad->SetTitle("Drift lines");
@@ -212,37 +212,43 @@ void ViewDrift::Plot2d(const bool axis) {
   } else if (!rangeSet) {
     SetRange(pad, m_xMinPlot, m_yMinPlot, m_xMaxPlot, m_yMaxPlot);
   } 
-
-  for (const auto& driftLine : m_driftLines) {
-    const short lw = 1;
-    if (driftLine.second == Particle::Electron) {
-      DrawLine(driftLine.first, m_colElectron, lw);
-    } else if (driftLine.second == Particle::Hole) {
-      DrawLine(driftLine.first, m_colHole, lw);
-    } else {
-      DrawLine(driftLine.first, m_colIon, lw);
+  if (snapshot) {
+    std::vector<std::array<float, 3> > electrons;
+    std::vector<std::array<float, 3> > holes;
+    std::vector<std::array<float, 3> > ions;
+    for (const auto& driftLine : m_driftLines) {
+      if (driftLine.second == Particle::Electron) {
+        electrons.push_back(driftLine.first.back());
+      } else if (driftLine.second == Particle::Hole) {
+        holes.push_back(driftLine.first.back());
+      } else {
+        ions.push_back(driftLine.first.back());
+      }
+    }
+    DrawMarkers2d(electrons, m_colElectron, m_markerSizeCollision);
+    DrawMarkers2d(holes, m_colHole, m_markerSizeCollision);
+    DrawMarkers2d(ions, m_colIon, m_markerSizeCollision);
+  } else {
+    for (const auto& driftLine : m_driftLines) {
+      const short lw = 1;
+      if (driftLine.second == Particle::Electron) {
+        DrawLine(driftLine.first, m_colElectron, lw);
+      } else if (driftLine.second == Particle::Hole) {
+        DrawLine(driftLine.first, m_colHole, lw);
+      } else {
+        DrawLine(driftLine.first, m_colIon, lw);
+      }
     }
   }
   gPad->Update();
 
-  TGraph gr;
-  gr.SetMarkerColor(m_colTrack);
-  gr.SetMarkerSize(m_markerSizeCluster);
   for (const auto& track : m_tracks) {
     DrawLine(track, m_colTrack, 2);
     if (!m_drawClusters) continue;
-    std::vector<float> xgr;
-    std::vector<float> ygr;
-    for (const auto& p : track) {
-      if (!InBox(p)) continue;
-      float xp = 0., yp = 0.;
-      ToPlane(p[0], p[1], p[2], xp, yp);
-      xgr.push_back(xp);
-      ygr.push_back(yp);
-    }
-    gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Psame");
+    DrawMarkers2d(track, m_colTrack, m_markerSizeCluster);
   }
 
+  TGraph gr;
   gr.SetLineColor(m_colPhoton);
   gr.SetLineStyle(2);
   for (const auto& photon : m_photons) {
@@ -255,58 +261,43 @@ void ViewDrift::Plot2d(const bool axis) {
     gr.DrawGraph(2, xgr.data(), ygr.data(), "Lsame"); 
   }
 
-  gr.SetMarkerSize(m_markerSizeCollision);
-  gr.SetMarkerStyle(20);
   if (!m_exc.empty()) {
-    gr.SetMarkerColor(m_colExcitation);
-    std::vector<float> xgr;
-    std::vector<float> ygr;
-    for (const auto& p : m_exc) {
-      if (!InBox(p)) continue;
-      float xp = 0., yp = 0.;
-      ToPlane(p[0], p[1], p[2], xp, yp);
-      xgr.push_back(xp);
-      ygr.push_back(yp); 
-    }
-    if (!xgr.empty()) {
-      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Psame");
-    }
+    DrawMarkers2d(m_exc, m_colExcitation, m_markerSizeCollision);
   } 
   if (!m_ion.empty()) {
-    gr.SetMarkerColor(m_colIonisation);
-    std::vector<float> xgr;
-    std::vector<float> ygr;
-    for (const auto& p : m_ion) {
-      if (!InBox(p)) continue;
-      float xp = 0., yp = 0.;
-      ToPlane(p[0], p[1], p[2], xp, yp);
-      xgr.push_back(xp);
-      ygr.push_back(yp); 
-    }
-    if (!xgr.empty()) {
-      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Psame");
-    }
+    DrawMarkers2d(m_ion, m_colIonisation, m_markerSizeCollision);
   }
   if (!m_att.empty()) {
-    gr.SetMarkerColor(m_colAttachment);
-    std::vector<float> xgr;
-    std::vector<float> ygr;
-    for (const auto& p : m_att) {
-      if (!InBox(p)) continue;
-      float xp = 0., yp = 0.;
-      ToPlane(p[0], p[1], p[2], xp, yp);
-      xgr.push_back(xp);
-      ygr.push_back(yp); 
-    }
-    if (!xgr.empty()) {
-      gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Psame");
-    }
+    DrawMarkers2d(m_att, m_colAttachment, m_markerSizeCollision);
   }
  
   gPad->Update();
 }
 
-void ViewDrift::Plot3d(const bool axis, const bool ogl) {
+void ViewDrift::DrawMarkers2d(
+    const std::vector<std::array<float, 3> >& points, const short col,
+    const double size) {
+  if (points.empty()) return;
+  TGraph gr;
+  gr.SetMarkerColor(col);
+  gr.SetMarkerSize(size);
+  gr.SetMarkerStyle(20);
+  std::vector<float> xgr;
+  std::vector<float> ygr;
+  for (const auto& p : points) {
+    if (!InBox(p)) continue;
+    float xp = 0., yp = 0.;
+    ToPlane(p[0], p[1], p[2], xp, yp);
+    xgr.push_back(xp);
+    ygr.push_back(yp); 
+  }
+  if (!xgr.empty()) {
+    gr.DrawGraph(xgr.size(), xgr.data(), ygr.data(), "Psame");
+  }
+}
+
+void ViewDrift::Plot3d(const bool axis, const bool ogl, 
+                       const bool snapshot) {
   auto pad = GetCanvas();
   pad->cd();
   pad->SetTitle("Drift lines");
@@ -322,26 +313,44 @@ void ViewDrift::Plot3d(const bool axis, const bool ogl) {
     pad->SetView(view);
     if (ogl) pad->GetViewer3D("ogl");
   }
-  for (const auto& driftLine : m_driftLines) {
-    std::vector<float> points;
-    for (const auto& p : driftLine.first) {
-      points.push_back(p[0]);
-      points.push_back(p[1]);
-      points.push_back(p[2]);
-    }
-    const int nP = driftLine.first.size();
-    TPolyLine3D pl(nP, points.data());
-    if (driftLine.second == Particle::Electron) {
-      pl.SetLineColor(m_colElectron);
-    } else if (driftLine.second == Particle::Hole) {
-      pl.SetLineColor(m_colHole);
-    } else {
-      pl.SetLineColor(m_colIon);
-    }
-    pl.SetLineWidth(1);
-    pl.DrawPolyLine(nP, points.data(), "same");
-  }
 
+  if (snapshot) {
+    std::vector<std::array<float, 3> > electrons;
+    std::vector<std::array<float, 3> > holes;
+    std::vector<std::array<float, 3> > ions;
+    for (const auto& driftLine : m_driftLines) {
+      if (driftLine.second == Particle::Electron) {
+        electrons.push_back(driftLine.first.back());
+      } else if (driftLine.second == Particle::Hole) {
+        holes.push_back(driftLine.first.back());
+      } else {
+        ions.push_back(driftLine.first.back());
+      }
+    }
+    DrawMarkers3d(electrons, m_colElectron, m_markerSizeCollision);
+    DrawMarkers3d(holes, m_colHole, m_markerSizeCollision);
+    DrawMarkers3d(ions, m_colIon, m_markerSizeCollision);
+  } else {
+    for (const auto& driftLine : m_driftLines) {
+      std::vector<float> points;
+      for (const auto& p : driftLine.first) {
+        points.push_back(p[0]);
+        points.push_back(p[1]);
+        points.push_back(p[2]);
+      }
+      const int nP = driftLine.first.size();
+      TPolyLine3D pl(nP, points.data());
+      if (driftLine.second == Particle::Electron) {
+        pl.SetLineColor(m_colElectron);
+      } else if (driftLine.second == Particle::Hole) {
+        pl.SetLineColor(m_colHole);
+      } else {
+        pl.SetLineColor(m_colIon);
+      }
+      pl.SetLineWidth(1);
+      pl.DrawPolyLine(nP, points.data(), "same");
+    }
+  }
   for (const auto& track : m_tracks) {
     std::vector<float> points;
     for (const auto& p : track) {
@@ -354,53 +363,19 @@ void ViewDrift::Plot3d(const bool axis, const bool ogl) {
     pl.SetLineColor(m_colTrack);
     pl.SetLineWidth(1);
     pl.DrawPolyLine(nP, points.data(), "same");
-    if (!m_drawClusters) continue;
-    TPolyMarker3D pm(nP, points.data());
-    pm.SetMarkerColor(m_colTrack);
-    pm.SetMarkerSize(m_markerSizeCluster);
-    pm.DrawPolyMarker(nP, points.data(), 20, "same");
+    if (m_drawClusters) {
+      DrawMarkers3d(track, m_colTrack, m_markerSizeCluster);
+    }
   }
 
   if (!m_exc.empty()) {
-    const size_t nP = m_exc.size();
-    std::vector<float> points;
-    for (size_t i = 0; i < nP; ++i) {
-      points.push_back(m_exc[i][0]);
-      points.push_back(m_exc[i][1]);
-      points.push_back(m_exc[i][2]);
-    }
-    TPolyMarker3D pm(nP, points.data());
-    pm.SetMarkerColor(m_colExcitation);
-    pm.SetMarkerSize(m_markerSizeCollision);
-    pm.DrawPolyMarker(nP, points.data(), 20, "same");
+    DrawMarkers3d(m_exc, m_colExcitation, m_markerSizeCollision);
   }
-
   if (!m_ion.empty()) {
-    const size_t nP = m_ion.size();
-    std::vector<float> points;
-    for (size_t i = 0; i < nP; ++i) {
-      points.push_back(m_ion[i][0]);
-      points.push_back(m_ion[i][1]);
-      points.push_back(m_ion[i][2]);
-    }
-    TPolyMarker3D pm(nP, points.data());
-    pm.SetMarkerColor(m_colIonisation);
-    pm.SetMarkerSize(m_markerSizeCollision);
-    pm.DrawPolyMarker(nP, points.data(), 20, "same");
+    DrawMarkers3d(m_ion, m_colIonisation, m_markerSizeCollision);
   }
-
   if (!m_att.empty()) {
-    const size_t nP = m_att.size();
-    std::vector<float> points;
-    for (size_t i = 0; i < nP; ++i) {
-      points.push_back(m_att[i][0]);
-      points.push_back(m_att[i][1]);
-      points.push_back(m_att[i][2]);
-    }
-    TPolyMarker3D pm(nP, points.data());
-    pm.SetMarkerColor(m_colAttachment);
-    pm.SetMarkerSize(m_markerSizeCollision);
-    pm.DrawPolyMarker(nP, points.data(), 20, "same");
+    DrawMarkers3d(m_att, m_colAttachment, m_markerSizeCollision);
   } 
   pad->Modified();
   pad->Update();
@@ -416,6 +391,23 @@ void ViewDrift::Plot3d(const bool axis, const bool ogl) {
     }
     pad->Update();
   }
+}
+
+void ViewDrift::DrawMarkers3d(
+    const std::vector<std::array<float, 3> >& points, const short col,
+    const double size) {
+
+  const size_t nP = points.size();
+  std::vector<float> xyz;
+  for (size_t i = 0; i < nP; ++i) {
+    xyz.push_back(points[i][0]);
+    xyz.push_back(points[i][1]);
+    xyz.push_back(points[i][2]);
+  }
+  TPolyMarker3D pm(nP, xyz.data());
+  pm.SetMarkerColor(col);
+  pm.SetMarkerSize(size);
+  pm.DrawPolyMarker(nP, xyz.data(), 20, "same");
 }
 
 bool ViewDrift::SetPlotLimits2d() {
