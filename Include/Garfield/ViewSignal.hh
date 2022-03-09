@@ -126,6 +126,9 @@ class ViewSignal : public ViewBase {
   short m_colElectrons = kOrange - 3;
   short m_colIons = kRed + 1;
   std::array<short, 3> m_colDelayed{{kCyan + 2, kYellow - 7, kRed - 9}};
+
+  void DrawHistogram(TH1D* h, const std::string& opt,
+                     const std::string& xlabel, const std::string& ylabel);
 };
 }  // namespace Garfield
 #endif
