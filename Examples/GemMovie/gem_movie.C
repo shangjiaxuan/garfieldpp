@@ -107,7 +107,8 @@ int main(int argc, char * argv[]) {
   std::vector<std::array<double, 5> > prev = {{x0, y0, z0, t0, e0}};
   double tmin = 0.;
   double dt = 0.1;
-  for (unsigned int i = 0; i < 207; ++i) {
+  const unsigned int nFrames = 207;
+  for (unsigned int i = 0; i < nFrames; ++i) {
     if (i % 10 == 0) std::cout << "Frame " << i << "\n"; 
     driftView.Clear();
     if (aval.GetNumberOfElectronEndpoints() > 0) {
@@ -156,9 +157,18 @@ int main(int argc, char * argv[]) {
     label.DrawLatexNDC(0.3, 0.88, text);
     canvas.Update();
     gSystem->ProcessEvents();
-    char filename[50];
-    sprintf(filename, "frames/frame_%03d.png", i);
-    canvas.SaveAs(filename);
+    constexpr bool gif = false;
+    if (!gif) {
+      char filename[50];
+      sprintf(filename, "frames/frame_%03d.png", i);
+      canvas.SaveAs(filename);
+    } else {
+      if (i == nFrames - 1) { 
+        canvas.Print("gem_movie.gif++");
+      } else {
+        canvas.Print("gem_movie.gif+3");
+      }
+    }
     tmin += dt;
     if (i == 99) {
       dt = 10.;

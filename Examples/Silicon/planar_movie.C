@@ -120,6 +120,7 @@ int main(int argc, char * argv[]) {
   }
   double t0 = 0.;
   double dt = 0.05;
+  const unsigned int nFrames = 120;
   for (unsigned int i = 0; i < 120; ++i) {
     driftView.Clear();
     drift.SetTimeWindow(t0, t0 + dt);
@@ -127,9 +128,18 @@ int main(int argc, char * argv[]) {
     driftView.Plot2d(true, true);
     signalView.PlotSignal(label);
     gSystem->ProcessEvents();
-    char filename[50];
-    sprintf(filename, "frames/frame_%03d.png", i);
-    canvas.SaveAs(filename);
+    constexpr bool gif = true;
+    if (!gif) {
+      char filename[50];
+      sprintf(filename, "frames/frame_%03d.png", i);
+      canvas.SaveAs(filename);
+    } else {
+      if (i == nFrames - 1) { 
+        canvas.Print("planar_movie.gif++");
+      } else {
+        canvas.Print("planar_movie.gif+3");
+      }
+    }
     t0 += dt;
   }
   std::cout << "Done.\n";
