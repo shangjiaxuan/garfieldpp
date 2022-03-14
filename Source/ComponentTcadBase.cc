@@ -432,7 +432,17 @@ bool ComponentTcadBase<N>::SetWeightingField(
   }
   const double s = 1. / dv;
  
-  // TODO: label.
+  if (m_wlabel.empty()) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Prompt component not present.\n"
+              << "    Import the map for t = 0 first.\n";
+    return false;
+  }
+  if (label != m_wlabel.front()) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Label does not match the existing prompt component.\n";
+    return false;
+  }
 
   // Load the first map.
   std::vector<std::array<double, N> > wf1;
