@@ -66,7 +66,7 @@ int main(int argc, char * argv[]) {
     std::string region;
     bool active;
     cmp.GetRegion(i, region, active);
-    if (region == "\"bulk\"") cmp.SetMedium(i, &si);
+    if (region.find("bulk") != std::string::npos) cmp.SetMedium(i, &si);
   }
 
   ComponentAnalyticField wfieldAnalytic;

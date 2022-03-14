@@ -31,7 +31,7 @@ class ComponentTcadBase : public Component {
   bool Initialise(const std::string& gridfilename,
                   const std::string& datafilename);
 
-  /** Import field maps defining the weighting field and potential.
+  /** Import field maps defining the prompt weighting field and potential.
     * \param datfile1 .dat file containing the field map at nominal bias.
     * \param datfile2 .dat file containing the field map for a configuration 
                       with the potential at the electrode to be read out
@@ -49,7 +49,7 @@ class ComponentTcadBase : public Component {
   /// yet, a new one will be added to the list. 
   bool SetWeightingFieldShift(const std::string& label, 
                               const double x, const double y, const double z);
-  /// Import time-dependent weighting fields and potentials.
+  /// Import time-dependent weighting fields and potentials at t > 0.
   bool SetWeightingField(const std::string& datfile1,
                          const std::string& datfile2, const double dv,
                          const double t, const std::string& label);

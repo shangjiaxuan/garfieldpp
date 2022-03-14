@@ -455,6 +455,9 @@ bool ComponentTcadBase<N>::SetWeightingField(
   if (wf1.size() != nVertices || wf2.size() != nVertices) {
     std::cerr << m_className << "::SetWeightingField:\n"
               << "    Could not load electric field values.\n";
+  } else if (m_wfield.size() != nVertices) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Prompt weighting field not present.\n"; 
   } else {
     foundField = true;
     std::vector<std::array<double, N> > wf; 
@@ -462,6 +465,8 @@ bool ComponentTcadBase<N>::SetWeightingField(
     for (size_t i = 0; i < nVertices; ++i) {
       for (size_t j = 0; j < N; ++j) {
         wf[i][j] = (wf2[i][j] - wf1[i][j]) * s;
+        // Subtract the prompt component.
+        wf[i][j] -= m_wfield[i][j];
       } 
     }
     if (m_dwtf.empty() || t > m_dwtf.back()) {
@@ -478,11 +483,16 @@ bool ComponentTcadBase<N>::SetWeightingField(
   if (wp1.size() != nVertices || wp2.size() != nVertices) {
     std::cerr << m_className << "::SetWeightingField:\n"
               << "    Could not load electrostatic potentials.\n";
+  } else if (m_wpot.size() != nVertices) {
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Prompt weighting potential not present.\n"; 
   } else {
     foundPotential = true;
     std::vector<double> wp(nVertices, 0.);
     for (size_t i = 0; i < nVertices; ++i) {
-      wp[i] = (wp2[i] - wp1[i]) * s; 
+      wp[i] = (wp2[i] - wp1[i]) * s;
+      // Subtract the prompt component.
+      wp[i] -= m_wpot[i]; 
     }
     if (m_dwtp.empty() || t > m_dwtp.back()) {
       m_dwtp.push_back(t);
