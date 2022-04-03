@@ -148,10 +148,16 @@ class TrackSrim : public Track {
   double DedxHD(const double e) const;
   bool PreciseLoss(const double step, const double estart, double& deem,
                    double& dehd) const;
-  bool EstimateRange(const double ekin, const double step, double& stpmax);
+  bool EstimateRange(const double ekin, const double step, 
+                     double& stpmax) const;
   bool SmallestStep(const double ekin, const double edens,
                     double de, double step, double& stpmin);
-
+  Medium* GetMedium(const std::array<double, 3>& x) const;
+  double Terminate(const std::array<double, 3>& x0,
+                   const std::array<double, 3>& v0, const double step0) const;
+  double TerminateBfield(const std::array<double, 3>& x0,
+                         const std::array<double, 3>& v0,
+                         const double dt0, const double vmag) const;
   double RndmEnergyLoss(const double ekin, const double de,
                         const double step, const double edens) const;
 };

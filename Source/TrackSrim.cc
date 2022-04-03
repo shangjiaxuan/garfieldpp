@@ -42,16 +42,14 @@ double StepVavilov(const double rkappa) {
   return xlmin;
 }
 
-void StepBfield(const double dt, const double q, const double m,
+std::array<double, 3> StepBfield(const double dt, const double qoverm,
     const double vmag, double bx, double by, double bz,
-    double& xdir, double& ydir, double& zdir, double& x, double& y, double& z) {
+    std::array<double, 3>& dir) {
 
   double bmag = sqrt(bx * bx + by * by + bz * bz);
   if (bmag < Garfield::Small) {
-    x = vmag * dt * xdir;
-    y = vmag * dt * ydir;
-    z = vmag * dt * zdir;
-    return;
+    const double step = vmag * dt;
+    return {step * dir[0], step * dir[1], step * dir[2]};
   }
   std::array<std::array<double, 3>, 3> rot = {{{1, 0, 0}, {0, 1, 0}, {0, 0,      1}}};
 
@@ -75,16 +73,16 @@ void StepBfield(const double dt, const double q, const double m,
     rot[1][1] = -1.;
   }
   bmag *= Garfield::Tesla2Internal;
-  const double omega = q * Garfield::OmegaCyclotronOverB * bmag * 
-                       (Garfield::ElectronMass / m);
+  const double omega = qoverm * Garfield::OmegaCyclotronOverB * bmag * 
+                       Garfield::ElectronMass;
   const double cphi = cos(omega * dt);
   const double sphi = sin(omega * dt);
 
   // Rotate the initial direction vector to the local frame.
   std::array<double, 3> v0;
-  v0[0] = rot[0][0] * xdir + rot[0][1] * ydir + rot[0][2] * zdir;
-  v0[1] = rot[1][0] * xdir + rot[1][1] * ydir + rot[1][2] * zdir;
-  v0[2] = rot[2][0] * xdir + rot[2][1] * ydir + rot[2][2] * zdir;
+  v0[0] = rot[0][0] * dir[0] + rot[0][1] * dir[1] + rot[0][2] * dir[2];
+  v0[1] = rot[1][0] * dir[0] + rot[1][1] * dir[1] + rot[1][2] * dir[2];
+  v0[2] = rot[2][0] * dir[0] + rot[2][1] * dir[1] + rot[2][2] * dir[2];
 
   // Calculate the new direction in the local frame. 
   std::array<double, 3> v1;
@@ -93,18 +91,20 @@ void StepBfield(const double dt, const double q, const double m,
   v1[2] = v0[2] * cphi - v0[1] * sphi;
 
   // Rotate the direction vector back to the global frame.
-  xdir = rot[0][0] * v1[0] + rot[1][0] * v1[1] + rot[2][0] * v1[2];
-  ydir = rot[0][1] * v1[0] + rot[1][1] * v1[1] + rot[2][1] * v1[2];
-  zdir = rot[0][2] * v1[0] + rot[1][2] * v1[1] + rot[2][2] * v1[2];
+  dir[0] = rot[0][0] * v1[0] + rot[1][0] * v1[1] + rot[2][0] * v1[2];
+  dir[1] = rot[0][1] * v1[0] + rot[1][1] * v1[1] + rot[2][1] * v1[2];
+  dir[2] = rot[0][2] * v1[0] + rot[1][2] * v1[1] + rot[2][2] * v1[2];
 
   // Calculate the new position in the local frame...
   const double u = vmag * v0[0] * dt;
   const double v = (vmag / omega) * (v0[1] * sphi + v0[2] * (1. - cphi));
   const double w = (vmag / omega) * (v0[2] * sphi - v0[2] * (1. - cphi));
   // .... and in the global frame.
-  x = rot[0][0] * u + rot[1][0] * v + rot[2][0] * w; 
-  y = rot[0][1] * u + rot[1][1] * v + rot[2][1] * w;
-  z = rot[0][2] * u + rot[1][2] * v + rot[2][2] * w;
+  std::array<double, 3> pos;
+  pos[0] = rot[0][0] * u + rot[1][0] * v + rot[2][0] * w; 
+  pos[1] = rot[0][1] * u + rot[1][1] * v + rot[2][1] * w;
+  pos[2] = rot[0][2] * u + rot[1][2] * v + rot[2][2] * w;
+  return pos;
 }
 
 double Interpolate(const double x, const std::vector<double>& xtab,
@@ -523,13 +523,8 @@ bool TrackSrim::PreciseLoss(const double step, const double estart,
                             double& deem, double& dehd) const {
   // SRMRKS
 
-  const std::string hdr = m_className + "::PreciseLoss: ";
   // Debugging
-  if (m_debug) {
-    std::cout << hdr << "\n"
-              << "    Initial energy: " << estart << " MeV\n"
-              << "    Step: " << step << " cm\n";
-  }
+  if (m_debug) printf("    Integrating energy losses over %g cm.\n", step);
   // Precision aimed for.
   const double eps = 1.0e-2;
   // Number of intervals.
@@ -575,10 +570,9 @@ bool TrackSrim::PreciseLoss(const double step, const double estart,
       e4 -= (de41 + de44) / 6. + (de42 + de43) / 3.;
     }
     if (m_debug) {
-      std::cout << hdr << "\n    Iteration " << iter << " has " << ndiv
-                << " division(s). Losses:\n";
-      printf("\tde4 = %12g, de2 = %12g MeV\n", estart - e2, estart - e4);
-      printf("\tem4 = %12g, hd4 = %12g MeV\n", deem, dehd);
+      printf("    Iteration %u has %d division(s). Losses:\n", iter, ndiv);
+      printf("      de4 = %12g, de2 = %12g MeV\n", estart - e2, estart - e4);
+      printf("      em4 = %12g, hd4 = %12g MeV\n", deem, dehd);
     }
     // Compare the two estimates
     if (fabs(e2 - e4) > eps * (fabs(e2) + fabs(e4) + fabs(estart))) {
@@ -591,15 +585,16 @@ bool TrackSrim::PreciseLoss(const double step, const double estart,
   }
 
   if (!converged) {
-    std::cerr << hdr << "No convergence achieved integrating energy loss.\n";
+    std::cerr << m_className << "::PreciseLoss: "
+              << "No convergence achieved integrating energy loss.\n";
   } else if (m_debug) {
-    std::cout << hdr << "Convergence at eps = " << eps << "\n";
+    std::cout << "    Convergence at eps = " << eps << ".\n";
   }
   return converged;
 }
 
 bool TrackSrim::EstimateRange(const double ekin, const double step,
-                              double& stpmax) {
+                              double& stpmax) const {
   // Find distance over which the ion just does not lose all its energy
   // ekin       : Kinetic energy [MeV]
   // step       : Step length as guessed [cm]
@@ -617,7 +612,7 @@ bool TrackSrim::EstimateRange(const double ekin, const double step,
   double de1 = deem + dehd;
   // Do nothing if this is ok
   if (de1 < ekin) {
-    if (m_debug) std::cout << hdr << "Initial step OK.\n";
+    if (m_debug) std::cout << "    Initial step OK.\n";
     return true;
   }
   // Find a smaller step for which the energy loss is less than EKIN.
@@ -641,16 +636,16 @@ bool TrackSrim::EstimateRange(const double ekin, const double step,
     stpmax = 0.5 * (st1 + st2);
     return false;
   }
-  if (m_debug)
-    printf("\tstep 1 = %g cm, de 1 = %g MeV\n\tstep 2 = %g cm, de 2 = %g MeV\n",
-           st1, de1 - ekin, st2, de2 - ekin);
-
+  if (m_debug) {
+    printf("    Step 1 = %g cm, dE 1 = %g MeV\n", st1, de1 - ekin);
+    printf("    Step 2 = %g cm, dE 2 = %g MeV\n", st2, de2 - ekin);
+  }
   // Now perform a bisection
   for (unsigned int iter = 0; iter < nMaxIter; ++iter) {
     // Avoid division by zero.
     if (de2 == de1) {
       if (m_debug) {
-        std::cerr << hdr << "Bisection failed due to equal energy loss for "
+        std::cerr << "    Bisection failed due to equal energy loss for "
                   << "two step sizes. Abandoned.\n";
       }
       stpmax = 0.5 * (st1 + st2);
@@ -668,9 +663,9 @@ bool TrackSrim::EstimateRange(const double ekin, const double step,
     PreciseLoss(st3, ekin, deem, dehd);
     const double de3 = deem + dehd;
     if (m_debug) {
-      std::printf("\tStep 1 = %g cm, dE 1 = %g MeV\n", st1, de1 - ekin);
-      std::printf("\tStep 2 = %g cm, dE 2 = %g MeV\n", st2, de2 - ekin);
-      std::printf("\tStep 3 = %g cm, dE 3 = %g MeV\n", st3, de3 - ekin);
+      std::printf("    Step 1 = %g cm, dE 1 = %g MeV\n", st1, de1 - ekin);
+      std::printf("    Step 2 = %g cm, dE 2 = %g MeV\n", st2, de2 - ekin);
+      std::printf("    Step 3 = %g cm, dE 3 = %g MeV\n", st3, de3 - ekin);
     }
     //  Update the estimates above and below.
     if (de3 > ekin) {
@@ -688,11 +683,19 @@ bool TrackSrim::EstimateRange(const double ekin, const double step,
     }
   }
   if (m_debug) {
-    std::cout << hdr << "Bisection did not converge in " << nMaxIter
+    std::cout << "    Bisection did not converge in " << nMaxIter
               << " steps. Abandoned.\n";
   }
   stpmax = st1 - (st2 - st1) * (de1 - ekin) / (de2 - de1);
   return false;
+}
+
+Medium* TrackSrim::GetMedium(const std::array<double, 3>& x) const {
+  Medium* medium = m_sensor->GetMedium(x[0], x[1], x[2]);
+  if (medium && medium->IsIonisable() && m_sensor->IsInArea(x[0], x[1], x[2])) {
+    return medium;
+  } 
+  return nullptr;
 }
 
 bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
@@ -708,27 +711,12 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
     return false;
   }
 
-  // Get the bounding box.
-  double xmin = 0., ymin = 0., zmin = 0.;
-  double xmax = 0., ymax = 0., zmax = 0.;
-  if (!m_sensor->GetArea(xmin, ymin, zmin, xmax, ymax, zmax)) {
-    std::cerr << hdr << "Drift area is not set.\n";
-    return false;
-  } else if (x0 < xmin || x0 > xmax || y0 < ymin || y0 > ymax || z0 < zmin ||
-             z0 > zmax) {
-    std::cerr << hdr << "Initial position outside bounding box.\n";
-    return false;
-  }
-
   // Make sure the initial position is inside an ionisable medium.
-  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  Medium* medium = GetMedium({x0, y0, z0});
   if (!medium) {
-    std::cerr << hdr << "No medium at initial position.\n";
+    std::cerr << hdr << "No valid medium at initial position.\n";
     return false;
-  } else if (!medium->IsIonisable()) {
-    std::cerr << hdr << "Medium at initial position is not ionisable.\n";
-    return false;
-  }
+  } 
   // Get the W value of the medium (unless it has been set explicitly
   // by the user).
   double w = m_work < Small ? medium->GetW() : m_work;
@@ -757,21 +745,19 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
 
   // Normalise and store the direction.
   const double normdir = sqrt(dx0 * dx0 + dy0 * dy0 + dz0 * dz0);
-  double xdir = dx0;
-  double ydir = dy0;
-  double zdir = dz0;
+  std::array<double, 3> v = {dx0, dy0, dz0};
   if (normdir < Small) {
     if (m_debug) {
       std::cout << hdr << "Direction vector has zero norm.\n"
                 << "    Initial direction is randomized.\n";
     }
     // Null vector. Sample the direction isotropically.
-    RndmDirection(xdir, ydir, zdir);
+    RndmDirection(v[0], v[1], v[2]);
   } else {
     // Normalise the direction vector.
-    xdir /= normdir;
-    ydir /= normdir;
-    zdir /= normdir;
+    v[0] /= normdir;
+    v[1] /= normdir;
+    v[2] /= normdir;
   }
 
   // Make sure all necessary parameters have been set.
@@ -820,12 +806,10 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
   m_clusters.clear();
 
   // Initial situation: starting position
-  double x = x0;
-  double y = y0;
-  double z = z0;
+  std::array<double, 3> x = {x0, y0, z0};
   double t = t0;
   // Store the energy [MeV].
-  double e = ekin0;
+  double ekin = ekin0;
   // Total distance covered
   double dsum = 0.0;
   // Pool of unused energy
@@ -834,142 +818,148 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
   // Loop generating clusters
   int iter = 0;
   while (iter < m_maxclusters || m_maxclusters < 0) {
-    // Work out what the energy loss per cm, straggling and projected range are
-    // at the start of the step.
-    const double dedxem = DedxEM(e) * m_rho;
-    const double dedxhd = DedxHD(e) * m_rho;
-    const double prange = Interpolate(e, m_ekin, m_range);
-    double strlon = Interpolate(e, m_ekin, m_longstraggle);
-    double strlat = Interpolate(e, m_ekin, m_transstraggle);
-
-    if (!m_useLongStraggle) strlon = 0;
-    if (!m_useTransStraggle) strlat = 0;
-
-    if (m_debug) {
-      std::cout << "    Energy = " << e << " MeV, dEdx em, hd = " 
-                << dedxem << ", " << dedxhd << " MeV/cm,\n"
-                << "    e-/cm = " << 1.e6 * dedxem / w << ".\n"
-                << "    Straggling long/lat: " << strlon << ", " << strlat
-                << " cm\n";
-    }
-    // Find the step size for which we get approximately the target # clusters.
-    double step;
+    if (m_debug) printf("    Iteration %d. Ekin = %g MeV.\n", iter, ekin);
+    // Work out the energy loss per cm at the start of the step.
+    const double dedxem = DedxEM(ekin) * m_rho;
+    const double dedxhd = DedxHD(ekin) * m_rho;
+    // Find the step size for which we get approximately the 
+    // requested number of clusters or cluster size.
+    double step = 0.;
+    double eloss = 0.;
     if (m_nsize > 0) {
       step = m_nsize * 1.e-6 * w / dedxem;
     } else {
       const double ncls = m_maxclusters > 0 ? 0.5 * m_maxclusters : 100;
       step = ekin0 / (ncls * (dedxem + dedxhd));
     }
-    // Truncate if this step exceeds the length.
+    if (m_debug) printf("    Estimated step size: %g cm\n", step);
     bool finish = false;
+    // Truncate if this step exceeds the length.
+    if (dsum + step > tracklength) {
+      step = tracklength - dsum;
+      if (m_debug) printf("    Truncating step to %g cm.\n", step);
+      finish = true;
+    }
     // Make an accurate integration of the energy loss over the step.
     double deem = 0., dehd = 0.;
-    PreciseLoss(step, e, deem, dehd);
-    // If the energy loss exceeds the particle energy, truncate step.
-    double stpmax;
-    if (deem + dehd > e) {
-      EstimateRange(e, step, stpmax);
+    PreciseLoss(step, ekin, deem, dehd);
+    double stpmax = tracklength - dsum;
+    // If the energy loss exceeds the particle energy, truncate the step.
+    if (deem + dehd > ekin) {
+      EstimateRange(ekin, step, stpmax);
       step = stpmax;
-      PreciseLoss(step, e, deem, dehd);
-      deem = e * deem / (dehd + deem);
-      dehd = e - deem;
+      PreciseLoss(step, ekin, deem, dehd);
+      deem = ekin * deem / (dehd + deem);
+      dehd = ekin - deem;
       finish = true;
-      if (m_debug) std::cout << "    Finish raised. Track length reached.\n";
-    } else {
-      stpmax = tracklength - dsum;
+      if (m_debug) std::cout << "    Track length reached.\n";
     }
     if (m_debug) {
       std::cout << "    Maximum step size set to " << stpmax << " cm.\n";
     }
     // Ensure that this is larger than the minimum modelable step size.
     double stpmin;
-    if (!SmallestStep(e, edens, deem, step, stpmin)) {
-      std::cerr << hdr << "Failure computing the minimum step size."
-                << "\n    Clustering abandoned.\n";
+    if (!SmallestStep(ekin, edens, deem, step, stpmin)) {
+      std::cerr << hdr << "Failure computing the minimum step size.\n"
+                << "    Clustering abandoned.\n";
       return false;
     }
-
-    double eloss;
     if (stpmin > stpmax) {
       // No way to find a suitable step size: use fixed energy loss.
-      if (m_debug) std::cout << "    stpmin > stpmax. Deposit all energy.\n";
-      eloss = deem;
-      if (e - eloss - dehd < 0) eloss = e - dehd;
+      if (m_debug) {
+        std::cout << "    Min. step > max. step; depositing all energy.\n";
+      }
+      if (deem + dehd > ekin) {
+        eloss = ekin - dehd;
+      } else {
+        eloss = deem;
+      }
       finish = true;
-      if (m_debug) std::cout << "    Finish raised. Single deposit.\n";
     } else if (step < stpmin) {
-      // If needed enlarge the step size
+      // If needed enlarge the step size.
       if (m_debug) std::cout << "    Enlarging step size.\n";
       step = stpmin;
-      PreciseLoss(step, e, deem, dehd);
-      if (deem + dehd > e) {
-        if (m_debug) std::cout << "    Excess loss. Recomputing stpmax.\n";
-        EstimateRange(e, step, stpmax);
+      PreciseLoss(step, ekin, deem, dehd);
+      if (deem + dehd > ekin) {
+        if (m_debug) std::cout << "    Excess loss. Recomputing max. step.\n";
+        EstimateRange(ekin, step, stpmax);
         step = stpmax;
-        PreciseLoss(step, e, deem, dehd);
-        deem = e * deem / (dehd + deem);
-        dehd = e - deem;
+        PreciseLoss(step, ekin, deem, dehd);
+        deem = ekin * deem / (dehd + deem);
+        dehd = ekin - deem;
         eloss = deem;
       } else {
-        eloss = RndmEnergyLoss(e, deem, step, edens);
+        eloss = RndmEnergyLoss(ekin, deem, step, edens);
       }
     } else {
       // Draw an actual energy loss for such a step.
-      if (m_debug) std::cout << "    Using existing step size.\n";
-      eloss = RndmEnergyLoss(e, deem, step, edens);
+      if (m_debug) std::cout << "    Step size ok.\n";
+      eloss = RndmEnergyLoss(ekin, deem, step, edens);
     }
     // Ensure we are neither below 0 nor above the total energy.
     if (eloss < 0) {
       if (m_debug) std::cout << "    Truncating negative energy loss.\n";
       eloss = 0;
-    } else if (eloss > e - dehd) {
+    } else if (eloss > ekin - dehd) {
       if (m_debug) std::cout << "    Excess energy loss, using mean.\n";
-      eloss = deem;
-      if (e - eloss - dehd < 0) {
-        eloss = e - dehd;
+      if (deem + dehd > ekin) {
+        eloss = ekin - dehd;
         finish = true;
-        if (m_debug) std::cout << "    Finish raised. Using mean energy.\n";
+      } else {
+        eloss = deem;
       }
     }
     if (m_debug) {
-      std::cout << hdr << "Step length = " << step << " cm.\n    "
-                << "Mean loss =   " << deem << " MeV.\n    "
-                << "Actual loss = " << eloss << " MeV.\n";
+      std::cout << "    Step length = " << step << " cm.\n"
+                << "    Mean loss =   " << deem << " MeV.\n"
+                << "    Actual loss = " << eloss << " MeV.\n";
     }
-
-    // Check that the cluster is in an ionisable medium and within bounding box
-    medium = m_sensor->GetMedium(x, y, z);
-    if (!medium) {
-      if (m_debug) {
-        std::cout << hdr << "No medium at position (" << x << "," << y << ","
-                  << z << ").\n";
-      }
-      break;
-    } else if (!medium->IsIonisable()) {
-      if (m_debug) {
-        std::cout << hdr << "Medium at (" << x << "," << y << "," << z
-                  << ") is not ionisable.\n";
-      }
-      break;
-    } else if (!m_sensor->IsInArea(x, y, z)) {
-      if (m_debug) {
-        std::cout << hdr << "Cluster at (" << x << "," << y << "," << z
-                  << ") outside bounding box.\n";
-      }
-      break;
+    // Get the particle velocity.
+    const double rk = 1.e6 * ekin / m_mion;
+    const double gamma = 1. + rk;
+    const double beta2 = rk > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rk;
+    const double vmag = sqrt(beta2) * SpeedOfLight; 
+    // Compute the timestep.
+    const double dt = vmag > 0. ? step / vmag : 0.;
+    // Compute the endpoint of this step.
+    std::array<double, 3> x1 = x;
+    std::array<double, 3> v1 = v;
+    if (m_sensor->HasMagneticField()) {
+      double bx = 0., by = 0., bz = 0.;
+      int status = 0;
+      m_sensor->MagneticField(x[0], x[1], x[2], bx, by, bz, status);
+      const double qoverm = m_qion / m_mion;
+      std::array<double, 3> d = StepBfield(dt, qoverm, vmag, bx, by, bz, v1);
+      x1[0] = x[0] + d[0];
+      x1[1] = x[1] + d[1]; 
+      x1[2] = x[2] + d[2]; 
+    } else {
+      x1[0] = x[0] + step * v[0];
+      x1[1] = x[1] + step * v[1];
+      x1[2] = x[2] + step * v[2];
     }
-    // Update the W value (unless it is set explicitly).
-    if (m_work < Small) w = medium->GetW();
-    if (w < Small) {
-      std::cerr << hdr << "W value in medium " << medium->GetName() 
-                << " is not defined.\n";
-      break;
+    // Is the endpoint in an ionisable medium and inside the active area?
+    if (!GetMedium(x1)) {
+      if (!m_sensor->HasMagneticField()) {
+        step = Terminate(x, v, step);
+      } else {
+        step = TerminateBfield(x, v, dt, vmag);
+      }
+      PreciseLoss(step, ekin, deem, dehd);
+      if (deem + dehd > ekin) {
+        if (m_debug) std::cout << "    Excess loss.\n";
+        deem = ekin * deem / (dehd + deem);
+        dehd = ekin - deem;
+      }
+      eloss = RndmEnergyLoss(ekin, deem, step, edens);
+      if (eloss > ekin - dehd) eloss = deem;
+      finish = true;
     }
     // Add a cluster.
     Cluster cluster;
-    cluster.x = x;
-    cluster.y = y;
-    cluster.z = z;
+    cluster.x = x[0];
+    cluster.y = x[1];
+    cluster.z = x[2];
     cluster.t = t;
     if (fano < Small) {
       // No fluctuations.
@@ -988,72 +978,61 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
         ecl -= ernd1;
       }
       if (m_debug) {
-        std::cout << hdr << "EM + pool: " << 1.e6 * (eloss + epool)
+        std::cout << "    EM + pool: " << 1.e6 * (eloss + epool)
                   << " eV, W: " << w
                   << " eV, E/w: " << (eloss + epool) / (1.e-6 * w)
                   << ", n: " << cluster.electrons << ".\n";
       }
     }
-    cluster.kinetic = e;
+    cluster.kinetic = ekin;
     epool += eloss - 1.e-6 * cluster.ec;
     if (m_debug) {
-      std::cout << hdr << "Cluster " << m_clusters.size() << "\n    at ("
+      std::cout << "    Adding cluster " << m_clusters.size() << " at ("
                 << cluster.x << ", " << cluster.y << ", " << cluster.z
-                << "),\n    e = " << cluster.ec
-                << ",\n    n = " << cluster.electrons
-                << ",\n    pool = " << epool << " MeV.\n";
+                << "), e = " << cluster.ec << ", n = " << cluster.electrons
+                << ".\n"
+                << "    Pool = " << epool << " MeV.\n";
     }
     m_clusters.push_back(std::move(cluster));
-    if (m_viewer) PlotCluster(x, y, z);
+    if (m_viewer) PlotCluster(x[0], x[1], x[2]);
 
     // Keep track of the length and energy
     dsum += step;
-    e -= eloss + dehd;
+    ekin -= eloss + dehd;
     if (finish) {
-      // Stop if the flag is raised
-      if (m_debug) std::cout << hdr << "Finishing flag raised.\n";
+      // Stop if the flag is raised.
+      if (m_debug) std::cout << "    Finishing flag raised.\n";
       break;
-    } else if (e < ekin0 * 1.e-9) {
-      // No energy left
-      if (m_debug) std::cout << hdr << "Energy exhausted.\n";
+    } else if (ekin < ekin0 * 1.e-9) {
+      // No energy left.
+      if (m_debug) std::cout << "    Energy exhausted.\n";
       break;
     }
-    // Update the time.
-    const double rk = 1.e6 * e / m_mion;
-    const double gamma = 1. + rk;
-    const double beta2 = rk > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rk;
-    const double vmag = sqrt(beta2) * SpeedOfLight; 
-    if (vmag > 0.) t += step / vmag;
-    // Update the position.
-    if (m_sensor->HasMagneticField()) {
-      double bx = 0., by = 0., bz = 0.;
-      int status = 0;
-      m_sensor->MagneticField(x, y, z, bx, by, bz, status);
-      double dx = 0., dy = 0., dz = 0.;
-      StepBfield(step / vmag, m_qion, m_mion, vmag, bx, by, bz,
-                 xdir, ydir, zdir, dx, dy, dz);
-      x += dx; 
-      y += dy; 
-      z += dz; 
-    } else {
-      x += step * xdir;
-      y += step * ydir;
-      z += step * zdir;
-    }
+    // Update time, position and direction.
+    t += dt;
+    x = x1;
+    v = v1;
+    // Get the projected range and straggling.
+    const double prange = Interpolate(ekin, m_ekin, m_range);
+    const double strlat = m_useTransStraggle ? 
+        Interpolate(ekin, m_ekin, m_transstraggle) : 0.;
+    const double strlon = m_useLongStraggle ? 
+        Interpolate(ekin, m_ekin, m_longstraggle) : 0.;
     // Draw scattering distances
     const double scale = sqrt(step / prange);
     const double sigt1 = RndmGaussian(0., scale * strlat);
     const double sigt2 = RndmGaussian(0., scale * strlat);
     const double sigl = RndmGaussian(0., scale * strlon);
-    if (m_debug)
-      std::cout << hdr << "sigma l, t1, t2: " << sigl << ", " << sigt1 << ", "
-                << sigt2 << "\n";
+    if (m_debug) {
+      printf("    Sigma longitudinal: %g cm\n", sigl);
+      printf("    Sigma transverse: %g, %g cm\n", sigt1, sigt2);
+    }
     // Rotation angles to bring z-axis in line
     double theta, phi;
-    if (xdir * xdir + zdir * zdir <= 0) {
-      if (ydir < 0) {
+    if (v[0] * v[0] + v[2] * v[2] <= 0) {
+      if (v[1] < 0) {
         theta = -HalfPi;
-      } else if (ydir > 0) {
+      } else if (v[1] > 0) {
         theta = +HalfPi;
       } else {
         std::cerr << hdr << "Zero step length; clustering abandoned.\n";
@@ -1061,17 +1040,26 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
       }
       phi = 0;
     } else {
-      phi = atan2(xdir, zdir);
-      theta = atan2(ydir, sqrt(xdir * xdir + zdir * zdir));
+      phi = atan2(v[0], v[2]);
+      theta = atan2(v[1], sqrt(v[0] * v[0] + v[2] * v[2]));
     }
     // Update the position.
     const double cp = cos(phi);
     const double ct = cos(theta);
     const double sp = sin(phi);
     const double st = sin(theta);
-    x += +cp * sigt1 - sp * st * sigt2 + sp * ct * sigl;
-    y += +ct * sigt2 + st * sigl;
-    z += -sp * sigt1 - cp * st * sigt2 + cp * ct * sigl;
+    x[0] += +cp * sigt1 - sp * st * sigt2 + sp * ct * sigl;
+    x[1] += +ct * sigt2 + st * sigl;
+    x[2] += -sp * sigt1 - cp * st * sigt2 + cp * ct * sigl;
+    medium = GetMedium(x);
+    if (!medium) break;
+    // Update the W value (unless it is set explicitly).
+    if (m_work < Small) w = medium->GetW();
+    if (w < Small) {
+      std::cerr << hdr << "W value in medium " << medium->GetName() 
+                << " is not defined.\n";
+      break;
+    }
     // Next cluster
     iter++;
   }
@@ -1080,6 +1068,52 @@ bool TrackSrim::NewTrack(const double x0, const double y0, const double z0,
   }
   return true;
   // finished generating
+}
+
+double TrackSrim::Terminate(const std::array<double, 3>& x0, 
+                            const std::array<double, 3>& v0,
+                            const double step0) const {
+  double step = 0.;
+  std::array<double, 3> x1 = x0;
+  double s = step0;
+  const double tol = std::max(1.e-6 * step0, 1.e-6); 
+  while (s > tol) {
+    s *= 0.5;
+    const std::array<double, 3> x2 = {x1[0] + s * v0[0], x1[1] + s * v0[1],
+                                      x1[2] + s * v0[2]};
+    if (GetMedium(x2)) {
+      x1 = x2;
+      step += s;
+    }
+  }
+  return step;
+}
+
+double TrackSrim::TerminateBfield(const std::array<double, 3>& x0,
+                                  const std::array<double, 3>& v0,
+                                  const double dt0, const double vmag) const {
+
+  const double qoverm = m_qion / m_mion;
+  double dt = 0.;
+  std::array<double, 3> x1 = x0;
+  std::array<double, 3> v1 = v0;
+  double s = dt0;
+  const double tol = std::max(1.e-6 * dt0, 1.e-6);
+  while (s > tol) {
+    s *= 0.5;
+    double bx = 0., by = 0., bz = 0.;
+    int status = 0;
+    m_sensor->MagneticField(x1[0], x1[1], x1[2], bx, by, bz, status);
+    std::array<double, 3> v2 = v1;
+    std::array<double, 3> d = StepBfield(s, qoverm, vmag, bx, by, bz, v2);
+    std::array<double, 3> x2 = {x1[0] + d[0], x1[1] + d[1], x1[2] + d[2]};
+    if (GetMedium(x2)) {
+      x1 = x2;
+      v1 = v2;
+      dt += s;
+    }
+  }
+  return dt * vmag;
 }
 
 bool TrackSrim::SmallestStep(const double ekin, const double edens,
@@ -1146,8 +1180,8 @@ bool TrackSrim::SmallestStep(const double ekin, const double edens,
       const double rklim = exponent < -expmax ? 0. : exp(exponent);
       stpmin = stpnow * (rklim / rkappa);
       if (m_debug) {
-        std::cout << hdr << "Landau distribution is imposed.\n    kappa_min = "
-                  << rklim << ", d_min = " << stpmin << " cm.\n";
+        std::cout << "    Landau distribution is imposed (kappa_min = "
+                  << rklim << ", d_min = " << stpmin << " cm).\n";
       }
     } else if (m_model == 2) {
       // Vavilov distribution, ensure we're in range.
@@ -1158,13 +1192,12 @@ bool TrackSrim::SmallestStep(const double ekin, const double edens,
       xinew = Xi(stpmin, beta2, edens);
       rknew = xinew / emax;
       if (m_debug) {
-        std::cout << hdr << "Vavilov distribution is imposed.\n    kappa_min = "
-                  << rklim << ", d_min = " << stpmin
-                  << " cm\n    kappa_new = " << rknew << ", xi_new = " << xinew
-                  << " MeV.\n";
+        std::cout << "    Vavilov distribution is imposed (kappa_min = "
+                  << rklim << ", d_min = " << stpmin << " cm, kappa_new = " 
+                  << rknew << ", xi_new = " << xinew << " MeV).\n";
       }
       if (stpmin > stpnow * 1.1) {
-        if (m_debug) std::cout << hdr << "Step size increase. New pass.\n";
+        if (m_debug) std::cout << "    Step size increase. New pass.\n";
         retry = true;
       }
     } else if (m_model == 3) {
@@ -1173,10 +1206,10 @@ bool TrackSrim::SmallestStep(const double ekin, const double edens,
       stpmin = stpnow * 16 * sigma2 / (denow * denow);
       if (m_debug) {
         const double sigmaMin2 = Xi(stpmin, beta2, edens) * emax * (1 - 0.5 * beta2);
-        std::cout << hdr << "Gaussian distribution is imposed.\n    "
-                  << "d_min = " << stpmin << " cm.\n    sigma/mu (old) = "
-                  << sqrt(sigma2) / de << ",\n    sigma/mu (min) = " 
-                  << sqrt(sigmaMin2) / (stpmin * denow / stpnow) << "\n";
+        std::cout << "    Gaussian distribution is imposed, d_min = " 
+                  << stpmin << " cm, sigma/mu (old) = "
+                  << sqrt(sigma2) / de << ", sigma/mu (min) = " 
+                  << sqrt(sigmaMin2) / (stpmin * denow / stpnow) << ".\n";
       }
     } else if (rkappa < 0.05) {
       // Combined model: for low kappa, use the Landau distribution.
@@ -1187,13 +1220,13 @@ bool TrackSrim::SmallestStep(const double ekin, const double edens,
       xinew = Xi(stpmin, beta2, edens);
       rknew = xinew / emax;
       if (m_debug) {
-        std::cout << hdr << "Landau distribution automatic.\n    kappa_min = " 
-                  << rklim << ", d_min = " << stpmin << " cm.\n";
+        std::cout << "    Landau distribution automatic (kappa_min = " 
+                  << rklim << ", d_min = " << stpmin << " cm).\n";
       }
       if (rknew > 0.05 || stpmin > stpnow * 1.1) {
         retry = true;
         if (m_debug) {
-          std::cout << hdr << "Model change or step increase. New pass.\n";
+          std::cout << "    Model change or step increase. New pass.\n";
         }
       }
     } else if (rkappa < 5) {
@@ -1205,14 +1238,14 @@ bool TrackSrim::SmallestStep(const double ekin, const double edens,
       xinew = Xi(stpmin, beta2, edens);
       rknew = xinew / emax;
       if (m_debug) {
-        std::cout << hdr << "Vavilov distribution automatic.\n    kappa_min = "
-                  << rklim << ", d_min = " << stpmin << " cm\n    kappa_new = " 
-                  << rknew << ", xi_new = " << xinew << " MeV.\n";
+        std::cout << "    Vavilov distribution automatic (kappa_min = "
+                  << rklim << ", d_min = " << stpmin << " cm, kappa_new = " 
+                  << rknew << ", xi_new = " << xinew << " MeV).\n";
       }
       if (rknew > 5 || stpmin > stpnow * 1.1) {
         retry = true;
         if (m_debug) {
-          std::cout << hdr << "Model change or step increase. New pass.\n";
+          std::cout << "    Model change or step increase. New pass.\n";
         }
       }
     } else {
@@ -1221,22 +1254,22 @@ bool TrackSrim::SmallestStep(const double ekin, const double edens,
       stpmin = stpnow * 16 * sigma2 / (denow * denow);
       if (m_debug) {
         const double sigmaMin2 = Xi(stpmin, beta2, edens) * emax * (1 - 0.5 * beta2);
-        std::cout << hdr << "Gaussian distribution automatic.\n    "
-                  << "d_min = " << stpmin << " cm.\n    sigma/mu (old) = "
-                  << sqrt(sigma2) / de << ",\n    sigma/mu (min) = " 
-                  << sqrt(sigmaMin2) / (stpmin * denow / stpnow) << "\n";
+        std::cout << "    Gaussian distribution automatic, d_min = " 
+                  << stpmin << " cm, sigma/mu (old) = "
+                  << sqrt(sigma2) / de << ", sigma/mu (min) = " 
+                  << sqrt(sigmaMin2) / (stpmin * denow / stpnow) << ".\n";
       }
     }
     // See whether we should do another pass.
     if (stpnow > stpmin) {
       if (m_debug) {
-        std::cout << hdr << "Step size ok, minimum: " << stpmin << " cm\n";
+        std::cout << "    Step size ok, minimum: " << stpmin << " cm\n";
       }
       break;
     }
     if (!retry) {
       if (m_debug) {
-        std::cerr << hdr << "Step size must be increased to " << stpmin
+        std::cerr << "    Step size must be increased to " << stpmin
                   << "cm.\n";
       }
       break;
@@ -1246,7 +1279,7 @@ bool TrackSrim::SmallestStep(const double ekin, const double edens,
     xi = xinew;
     denow *= stpmin / stpnow;
     stpnow = stpmin;
-    if (m_debug) std::cout << hdr << "Iteration " << iter << "\n";
+    if (m_debug) std::cout << "    Iteration " << iter << "\n";
     if (iter == nMaxIter - 1) {
       // Need interation, but ran out of tries
       std::cerr << hdr << "No convergence reached on step size.\n";
@@ -1305,26 +1338,26 @@ double TrackSrim::RndmEnergyLoss(const double ekin, const double de,
   double rndde = de;
   if (m_model <= 0 || m_model > 4) {
     // No fluctuations.
-    if (m_debug) std::cout << hdr << "Fixed energy loss.\n";
+    if (m_debug) std::cout << "    Fixed energy loss.\n";
   } else if (m_model == 1) {
     // Landau distribution
-    if (m_debug) std::cout << hdr << "Landau imposed.\n";
+    if (m_debug) std::cout << "    Landau imposed.\n";
     const double xlmean = -(log(rkappa) + beta2 + 1. - Gamma);
     rndde += xi * (RndmLandau() - xlmean);
   } else if (m_model == 2) {
     // Vavilov distribution, ensure we are in range.
-    if (m_debug) std::cout << hdr << "Vavilov imposed.\n";
+    if (m_debug) std::cout << "    Vavilov imposed.\n";
     if (rkappa > 0.01 && rkappa < 12) {
       const double xvav = RndmVavilov(rkappa, beta2);
       rndde += xi * (xvav + log(rkappa) + beta2 + (1 - Gamma));
     }
   } else if (m_model == 3) {
     // Gaussian model
-    if (m_debug) std::cout << hdr << "Gaussian imposed.\n";
+    if (m_debug) std::cout << "    Gaussian imposed.\n";
     rndde += RndmGaussian(0., sqrt(xi * emax * (1 - 0.5 * beta2)));
   } else if (rkappa < 0.05) {
     // Combined model: for low kappa, use the landau distribution.
-    if (m_debug) std::cout << hdr << "Landau automatic.\n";
+    if (m_debug) std::cout << "    Landau automatic.\n";
     const double xlmean = -(log(rkappa) + beta2 + (1 - Gamma));
     const double par[] = {0.50884,    1.26116, 0.0346688,  1.46314,
                           0.15088e-2, 1.00324, -0.13049e-3};
@@ -1339,17 +1372,17 @@ double TrackSrim::RndmEnergyLoss(const double ekin, const double de,
     rndde += xi * (xlan - xlmean);
   } else if (rkappa < 5) {
     // For medium kappa, use the Vavilov distribution.
-    if (m_debug) std::cout << hdr << "Vavilov fast automatic.\n";
+    if (m_debug) std::cout << "    Vavilov fast automatic.\n";
     const double xvav = RndmVavilov(rkappa, beta2);
     rndde += xi * (xvav + log(rkappa) + beta2 + (1 - Gamma));
   } else {
     // And for large kappa, use the Gaussian values.
-    if (m_debug) std::cout << hdr << "Gaussian automatic.\n";
+    if (m_debug) std::cout << "    Gaussian automatic.\n";
     rndde = RndmGaussian(de, sqrt(xi * emax * (1 - 0.5 * beta2)));
   }
   // Debugging output
   if (m_debug) {
-    std::cout << hdr << "Energy loss generated = " << rndde << " MeV.\n";
+    std::cout << "    Energy loss generated = " << rndde << " MeV.\n";
   }
   return rndde;
 }
