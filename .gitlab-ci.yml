@@ -76,6 +76,8 @@ build-fedora33:
 build-fedora35:
   stage: build
   image: rootproject/root:6.24.06-fedora35
+  before_script:
+    - yum install liburing -y
   script:
     - rm -rf build
     - mkdir build
