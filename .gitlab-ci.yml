@@ -82,7 +82,7 @@ build-fedora35:
     - rm -rf build
     - mkdir build
     - cd build
-    - cmake -DROOTSYS=/usr/lib ../
+    - cmake -DROOTSYS=/usr/lib64 ../
     - make -j4
     - make install
 
