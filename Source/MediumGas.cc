@@ -2233,14 +2233,27 @@ void MediumGas::PrintGas() {
 
 bool MediumGas::LoadIonMobility(const std::string& filename, 
                                 const bool quiet) {
+  return LoadMobility(filename, quiet, false);
+}
+
+bool MediumGas::LoadNegativeIonMobility(const std::string& filename,
+                                        const bool quiet) {
+  return LoadMobility(filename, quiet, true);
+}
+
+bool MediumGas::LoadMobility(const std::string& filename, 
+                             const bool quiet, const bool negative) {
   // Open the file.
   std::ifstream infile;
   infile.open(filename.c_str(), std::ios::in);
   // Make sure the file could actually be opened.
   if (!infile) {
-    std::cerr << m_className << "::LoadIonMobility:\n"
+    std::cerr << m_className << "::LoadMobility:\n"
               << "    Error opening file " << filename << ".\n";
     return false;
+  } else if (m_debug) {
+    std::cout << m_className << "::LoadMobility: Opened " << filename 
+              << " for reading.\n";
   }
 
   std::vector<std::pair<double, double> > data;
@@ -2259,7 +2272,7 @@ bool MediumGas::LoadIonMobility(const std::string& filename,
     double field = atof(token);
     token = strtok(NULL, " ,\t");
     if (!token) {
-      std::cerr << m_className << "::LoadIonMobility:\n"
+      std::cerr << m_className << "::LoadMobility:\n"
                 << "    Found E/N but no mobility before the end-of-line.\n"
                 << "    Skipping line " << i << ".\n";
       continue;
@@ -2271,7 +2284,7 @@ bool MediumGas::LoadIonMobility(const std::string& filename,
     // Make sure the values make sense.
     // Negative field values are not allowed.
     if (field < 0.) {
-      std::cerr << m_className << "::LoadIonMobility:\n"
+      std::cerr << m_className << "::LoadMobility:\n"
                 << "    Negative electric field (line " << i << ").\n";
       return false;
     }
@@ -2281,8 +2294,7 @@ bool MediumGas::LoadIonMobility(const std::string& filename,
   infile.close();
 
   if (data.empty()) {
-    std::cerr << m_className << "::LoadIonMobilities:\n"
-              << "    No valid data found.\n";
+    std::cerr << m_className << "::LoadMobility: No valid data found.\n";
     return false;
   }
   // Sort by electric field.
@@ -2303,10 +2315,10 @@ bool MediumGas::LoadIonMobility(const std::string& filename,
     mobilities[j] = data[j].second * scaleMobility;
   }
   if (!quiet) {
-    std::cout << m_className << "::LoadIonMobility:\n"
+    std::cout << m_className << "::LoadMobility:\n"
               << "    Read " << ne << " values from file " << filename << "\n";
   }
-  return SetIonMobility(efields, mobilities);
+  return SetIonMobility(efields, mobilities, negative);
 }
 
 void MediumGas::ResetTables() {

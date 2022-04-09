@@ -171,7 +171,7 @@ class Medium {
   virtual double HoleMobility();
 
   // Transport parameters for ions
-  /// Drift velocity [cm / ns]
+  /// Ion drift velocity [cm / ns]
   virtual bool IonVelocity(const double ex, const double ey, const double ez,
                            const double bx, const double by, const double bz,
                            double& vx, double& vy, double& vz);
@@ -185,6 +185,12 @@ class Medium {
                                const double by, const double bz, double& diss);
   /// Low-field mobility [cm2 V-1 ns-1]
   virtual double IonMobility();
+
+  /// Negative ion drift velocity [cm / ns]
+  virtual bool NegativeIonVelocity(
+    const double ex, const double ey, const double ez,
+    const double bx, const double by, const double bz,
+    double& vx, double& vy, double& vz);
 
   /// Set the range of fields to be covered by the transport tables.
   void SetFieldGrid(double emin, double emax, const size_t ne, bool logE,
@@ -358,7 +364,8 @@ class Medium {
   /// The mobilities will be interpolated at the electric fields 
   /// of the currently set grid.
   bool SetIonMobility(const std::vector<double>& fields,
-                      const std::vector<double>& mobilities);
+                      const std::vector<double>& mobilities,
+                      const bool negativeIons = false);
   /// Set an entry in the table of ion mobilities.
   bool SetIonMobility(const size_t ie, const size_t ib, 
                       const size_t ia, const double mu);
@@ -399,6 +406,17 @@ class Medium {
     return GetEntry(ie, ib, ia, "IonDissociation", m_iDis, diss);
   }
 
+  /// Set an entry in the table of negative ion mobilities.
+  bool SetNegativeIonMobility(const size_t ie, const size_t ib, 
+                              const size_t ia, const double mu) {
+    return SetEntry(ie, ib, ia, "NegativeIonMobility", m_nMob, mu);
+  }
+  /// Get an entry in the table of negative ion mobilities.
+  bool GetNegativeIonMobility(const size_t ie, const size_t ib, 
+                              const size_t ia, double& mu) {
+    return GetEntry(ie, ib, ia, "NegativeIonMobility", m_nMob, mu);
+  }
+
   /// Reset all tables of transport parameters.
   virtual void ResetTables();
 
@@ -435,6 +453,7 @@ class Medium {
     m_iDifT.clear();
   }
   void ResetIonDissociation() { m_iDis.clear(); }
+  void ResetNegativeIonMobility() { m_nMob.clear(); }
 
   /// Select the extrapolation method for fields below/above the table range.
   /// Possible options are "constant", "linear", and "exponential".
@@ -565,6 +584,8 @@ class Medium {
   std::vector<std::vector<std::vector<double> > > m_iDifL;
   std::vector<std::vector<std::vector<double> > > m_iDifT;
   std::vector<std::vector<std::vector<double> > > m_iDis;
+  // Negative ions
+  std::vector<std::vector<std::vector<double> > > m_nMob;
 
   // Thresholds for Townsend, attachment and dissociation coefficients.
   unsigned int m_eThrAlp = 0;
@@ -669,6 +690,7 @@ class Medium {
       const size_t nE, const size_t nB, const size_t nA, const size_t nT,
       std::vector<std::vector<std::vector<std::vector<double> > > >& tab,
       const double val);
+
 };
 }
 

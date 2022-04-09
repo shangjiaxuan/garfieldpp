@@ -65,8 +65,11 @@ class MediumGas : public Medium {
   /// Print a list of all available gases.
   static void PrintGases();
 
-  /// Read a table of ion mobilities as function of electric field from file.
+  /// Read a table of (positive) ion mobilities vs. electric field from file.
   bool LoadIonMobility(const std::string& filename, const bool quiet = false);
+  /// Read a table of negative ion mobilities vs. electric field from file.
+  bool LoadNegativeIonMobility(const std::string& filename, 
+                               const bool quiet = false);
 
   /// Adjust the Townsend coefficient using the excitation and ionisation 
   /// rates stored in the gas table and the Penning transfer probabilities.
@@ -204,6 +207,8 @@ class MediumGas : public Medium {
   unsigned int m_intpExc = 2;
   unsigned int m_intpIon = 2;
 
+  bool LoadMobility(const std::string& filename, const bool quiet,
+                    const bool negative);
   bool ReadHeader(std::ifstream& gasfile, int& version,
                   std::bitset<20>& gasok, bool& is3d, 
                   std::vector<double>& mixture,
@@ -245,6 +250,7 @@ class MediumGas : public Medium {
   static std::string GetGasName(std::string input);
   static int GetGasNumberGasFile(const std::string& input);
   static const std::vector<std::string> GetAliases(const std::string& gas);
+
 };
 }
 
