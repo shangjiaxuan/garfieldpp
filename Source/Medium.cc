@@ -645,6 +645,40 @@ double Medium::IonMobility() {
   return m_iMob.empty() ? -1. : m_iMob[0][0][0];
 }
 
+bool Medium::NegativeIonVelocity(
+    const double ex, const double ey, const double ez,
+    const double bx, const double by, const double bz,
+    double& vx, double& vy, double& vz) {
+  vx = vy = vz = 0.;
+  if (m_iMob.empty() && m_nMob.empty()) return false;
+
+  // Compute the magnitude of the electric field.
+  const double e = sqrt(ex * ex + ey * ey + ez * ez);
+  const double e0 = ScaleElectricField(e);
+  if (e < Small || e0 < Small) return true;
+  // Compute the magnitude of the electric field.
+  const double b = sqrt(bx * bx + by * by + bz * bz);
+
+  // Compute the angle between B field and E field.
+  const double ebang = m_tab2d ? GetAngle(ex, ey, ez, bx, by, bz, e, b) : 0.;
+  double mu = 0.;
+  if (m_nMob.empty()) {
+    if (!Interpolate(e0, b, ebang, m_iMob, mu, m_intpMob, m_extrMob)) mu = 0.;
+  } else {
+    if (!Interpolate(e0, b, ebang, m_nMob, mu, m_intpMob, m_extrMob)) mu = 0.;
+  }
+  constexpr double q = -1.;
+  mu *= q;
+  if (b < Small) {
+    vx = mu * ex;
+    vy = mu * ey;
+    vz = mu * ez;
+  } else {
+    Langevin(ex, ey, ez, bx, by, bz, mu, vx, vy, vz);
+  }
+  return true;
+}
+
 bool Medium::GetOpticalDataRange(double& emin, double& emax,
                                  const unsigned int i) {
   if (i >= m_nComponents) {
@@ -937,6 +971,8 @@ void Medium::ResetTables() {
   ResetIonMobility();
   ResetIonDiffusion();
   ResetIonDissociation();
+
+  ResetNegativeIonMobility();
 }
 
 void Medium::Clone(std::vector<std::vector<std::vector<double> > >& tab,
@@ -1061,28 +1097,43 @@ bool Medium::SetIonMobility(const size_t ie, const size_t ib,
 }
 
 bool Medium::SetIonMobility(const std::vector<double>& efields,
-                            const std::vector<double>& mobs) {
+                            const std::vector<double>& mobs,
+                            const bool negativeIons) {
   if (efields.size() != mobs.size()) {
     std::cerr << m_className << "::SetIonMobility:\n"
               << "    E-field and mobility arrays have different sizes.\n";
     return false;
   }
 
-  ResetIonMobility();
+  if (negativeIons) {
+    ResetNegativeIonMobility();
+  } else {
+    ResetIonMobility();
+  }
   const auto nE = m_eFields.size();
   const auto nB = m_bFields.size();
   const auto nA = m_bAngles.size();
-  Init(nE, nB, nA, m_iMob, 0.);
+  if (negativeIons) {
+    Init(nE, nB, nA, m_nMob, 0.);
+  } else {
+    Init(nE, nB, nA, m_iMob, 0.);
+  }
   for (size_t i = 0; i < nE; ++i) {
     const double e = m_eFields[i];
     const double mu = Interpolate1D(e, mobs, efields, m_intpMob, m_extrMob);
-    m_iMob[0][0][i] = mu;
+    if (negativeIons) {
+      m_nMob[0][0][i] = mu;
+    } else {
+      m_iMob[0][0][i] = mu;
+    }
   }
-
-  if (m_tab2d) {
-    for (size_t i = 0; i < nA; ++i) {
-      for (size_t j = 0; j < nB; ++j) {
-        for (size_t k = 0; k < nE; ++k) {
+  if (!m_tab2d) return true;
+  for (size_t i = 0; i < nA; ++i) {
+    for (size_t j = 0; j < nB; ++j) {
+      for (size_t k = 0; k < nE; ++k) {
+        if (negativeIons) {
+          m_nMob[i][j][k] = m_nMob[0][0][k];
+        } else {
           m_iMob[i][j][k] = m_iMob[0][0][k];
         }
       }

@@ -63,6 +63,8 @@ class DriftLineRKF {
   void EnableAvalanche(const bool on = true) { m_doAvalanche = on; }
   /// Enable/disable simulation of the ion tail (default: off).
   void EnableIonTail(const bool on = true) { m_doIonTail = on; }
+  /// Enable/disable simulation of the negative ion tail (default: off).
+  void EnableNegativeIonTail(const bool on = true) { m_doNegativeIonTail = on; }
   /// Do not randomize the avalanche size.
   void SetGainFluctuationsFixed(const double gain = -1.);
   /// Sample the avalanche size from a Polya distribution with 
@@ -186,6 +188,8 @@ class DriftLineRKF {
 
   // Flag whether to simulate the ion tail or not.
   bool m_doIonTail = false;
+  // Flag whether to simulate the negative ion tail or not.
+  bool m_doNegativeIonTail = false;
   // Avalanche size.
   double m_nE = 0., m_nI = 0.;
 
@@ -198,11 +202,14 @@ class DriftLineRKF {
                  std::vector<std::array<double, 3> >& xs, int& status);
   bool Avalanche(const Particle particle, 
                  const std::vector<std::array<double, 3> >& xs,
-                 std::vector<double>& ne, std::vector<double>& ni, 
-                 double& scale);
+                 std::vector<double>& ne, std::vector<double>& ni,
+                 std::vector<double>& nn, double& scale);
   bool AddIonTail(const std::vector<double>& te,
                   const std::vector<std::array<double, 3> >& xe,
                   const std::vector<double>& ni, const double scale);
+  bool AddNegativeIonTail(const std::vector<double>& te,
+                          const std::vector<std::array<double, 3> >& xe,
+                          const std::vector<double>& nn, const double scale);
   // Compute electric and magnetic field at a given position.
   int GetField(const std::array<double, 3>& x,
                double& ex, double& ey, double& ez,

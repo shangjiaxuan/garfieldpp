@@ -143,12 +143,16 @@ bool DriftLineRKF::DriftElectron(const double x0, const double y0,
   }
   std::vector<double> ne(m_t.size(), 1.);
   std::vector<double> ni(m_t.size(), 0.);
+  std::vector<double> nn(m_t.size(), 0.);
   double scale = 1.;
-  if (m_doAvalanche) Avalanche(Particle::Electron, m_x, ne, ni, scale);
+  if (m_doAvalanche) Avalanche(Particle::Electron, m_x, ne, ni, nn, scale);
   if (m_doSignal) {
     ComputeSignal(Particle::Electron, scale * m_scaleE, m_t, m_x, ne);
   }
-  if (m_doAvalanche && m_doIonTail) AddIonTail(m_t, m_x, ni, scale);
+  if (m_doAvalanche) {
+    if (m_doIonTail) AddIonTail(m_t, m_x, ni, scale);
+    if (m_doNegativeIonTail) AddNegativeIonTail(m_t, m_x, nn, scale);
+  }
   return true;
 }
 
@@ -158,11 +162,10 @@ bool DriftLineRKF::AddIonTail(const std::vector<double>& te,
                               const double scale) {
   // SIGETR, SIGIOR
   const size_t nPoints = te.size();
-  if (nPoints < 2) return false;
-  if (ni.size() != nPoints) return false;
+  if (nPoints < 2 || ni.size() != nPoints) return false;
   // Loop over the electron track.
   for (size_t i = 1; i < nPoints; ++i) {
-    // Skip points where there are no ions yet.
+    // Skip points at which there are no ions yet.
     if (scale * ni[i] < 1.) continue;
     // Skip also points with a negligible contribution.
     // if (scale * ni[i] < threshold * m_nI) continue;
@@ -182,6 +185,33 @@ bool DriftLineRKF::AddIonTail(const std::vector<double>& te,
     }
     // Compute the contribution of the drift line to the signal.
     ComputeSignal(Particle::Ion, scale * m_scaleI * ni[i], ti, xi, {});
+  }
+  return true;
+}
+
+bool DriftLineRKF::AddNegativeIonTail(
+    const std::vector<double>& te,
+    const std::vector<std::array<double, 3> >& xe,
+    const std::vector<double>& nn, const double scale) {
+  const size_t nPoints = te.size();
+  if (nPoints < 2 || nn.size() != nPoints) return false;
+  // Loop over the electron track.
+  for (size_t i = 1; i < nPoints; ++i) {
+    // Skip points at which there are no negative ions yet.
+    if (scale * nn[i] < Small) continue;
+    // Compute the negative ion drift line.
+    const auto& x0 = xe[i];
+    std::vector<double> tn;
+    std::vector<std::array<double, 3> > xn;
+    int stat = 0;
+    if (!DriftLine(x0[0], x0[1], x0[2], te[i], Particle::NegativeIon, 
+                   tn, xn, stat)) {
+      std::cerr << m_className << "::AddNegativeIonTail:\n"
+                << "    Unable to obtain a negative ion tail.\n";
+      return false;
+    }
+    // Compute the contribution of the drift line to the signal.
+    ComputeSignal(Particle::NegativeIon, scale * m_scaleI * nn[i], tn, xn, {});
   }
   return true;
 }
@@ -579,7 +609,8 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
 bool DriftLineRKF::Avalanche(const Particle particle,
                              const std::vector<Vec>& xs,
                              std::vector<double>& ne,
-                             std::vector<double>& ni, double& scale) {
+                             std::vector<double>& ni, 
+                             std::vector<double>& nn, double& scale) {
 
   // SIGETR
   const size_t nPoints = xs.size();
@@ -591,6 +622,7 @@ bool DriftLineRKF::Avalanche(const Particle particle,
 
   ne.assign(nPoints, 1.);
   ni.assign(nPoints, 0.);
+  nn.assign(nPoints, 0.);
   bool start = false;
   bool overflow = false;
   // Loop over the drift line.
@@ -630,7 +662,7 @@ bool DriftLineRKF::Avalanche(const Particle particle,
       start = true;
     }
     const double d = Mag(dx);
-    // Update the numbers of electrons and ions.
+    // Update the number of electrons.
     constexpr double expmax = 30.;
     const double logp = log(std::max(1., ne[i - 1]));
     if (logp + d * (alpsum - etasum) > expmax) {
@@ -639,12 +671,14 @@ bool DriftLineRKF::Avalanche(const Particle particle,
     } else { 
       ne[i] = ne[i - 1] * exp(d * (alpsum - etasum));
     }
+    // Update the number of ions.
     if (logp + d * alpsum > expmax) {
       overflow = true;
       ni[i] = exp(expmax);
     } else {
-      ni[i] = ne[i - 1] * (exp(d * alpsum) - 1); 
+      ni[i] = ne[i - 1] * (exp(d * alpsum) - 1);
     }
+    nn[i] = std::max(ne[i - 1] + ni[i] - ne[i], 0.);
   } 
   if (overflow) {
     std::cerr << m_className << "::Avalanche:\n    "
@@ -669,10 +703,13 @@ bool DriftLineRKF::Avalanche(const Particle particle,
     q1 *= GetLoss();
     scale = (q1 + 1.) / (qi + 1.); 
   }
-  if (m_debug) {
+  //if (m_debug) {
+  if (true) {
+    const double qn = std::accumulate(nn.begin(), nn.end(), 0.);
     std::cout << m_className << "::Avalanche:\n    "
               << "Final number of electrons: " << qe << "\n    "
-              << "Number of ions:            " << qi << "\n    "
+              << "Number of positive ions:   " << qi << "\n    "
+              << "Number of negative ions:   " << qn << "\n    "
               << "Charge scaling factor:     " << scale << "\n    "
               << "Avalanche development:\n Step      Electrons     Ions\n";
     for (unsigned int i = 0; i < nPoints; ++i) {
@@ -778,8 +815,10 @@ double DriftLineRKF::GetLoss(const double eps) {
   // Return straight away if there is only one point.
   if (nPoints < 2) return 1.;
   const Particle particle = m_particle;
-  if (particle == Particle::Ion) return 1.;
-  if (m_status == StatusCalculationAbandoned) return 1.;
+  if (particle == Particle::Ion || particle == Particle::NegativeIon ||
+      m_status == StatusCalculationAbandoned) {
+    return 1.;
+  }
 
   // First get a rough estimate of the result.
   double crude = 0.;
@@ -866,10 +905,8 @@ bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
     for (unsigned int i = 0; i < 3; ++i) v[i] *= -1;
     return ok;
   } else if (particle == Particle::NegativeIon) {
-    const bool ok = medium->IonVelocity(ex, ey, ez, bx, by, bz, 
-                                        v[0], v[1], v[2]);
-    for (unsigned int i = 0; i < 3; ++i) v[i] *= -1;
-    return ok;
+    return medium->NegativeIonVelocity(ex, ey, ez, bx, by, bz, 
+                                       v[0], v[1], v[2]);
   } 
   std::cerr << m_className << "::GetVelocity:\n"
             << "    Cannot retrieve drift velocity at " << PrintVec(x) << ".\n";
@@ -1201,6 +1238,10 @@ void DriftLineRKF::PrintDriftLine() const {
     std::cout << "    Particle: ion\n";
   } else if (m_particle == Particle::Hole) {
     std::cout << "    Particle: hole\n";
+  } else if (m_particle == Particle::Positron) {
+    std::cout << "    Particle: positive electron\n";
+  } else if (m_particle == Particle::NegativeIon) {
+    std::cout << "    Particle: negative ion\n";
   } else {
     std::cout << "    Particle: unknown\n";
   }
@@ -1446,7 +1487,10 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
 
   const auto nPoints = ts.size();
   if (nPoints < 2) return;
-  const double q0 = particle == Particle::Electron ? -1 * scale : scale;
+  double q0 = scale;
+  if (particle == Particle::Electron || particle == Particle::NegativeIon) {
+    q0 = -1. * scale;
+  }
   
   if (m_useWeightingPotential) {
     const bool aval = ne.size() == nPoints; 
