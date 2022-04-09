@@ -72,6 +72,18 @@ build-fedora33:
     - make -j4
     - make install
 
+# C++17
+build-fedora35:
+  stage: build
+  image: rootproject/root:6.24.06-fedora35
+  script:
+    - rm -rf build
+    - mkdir build
+    - cd build
+    - cmake -DROOTSYS=/usr/lib ../
+    - make -j4
+    - make install
+
 # run tests using the binary built before
 #test:
 #  stage: test
