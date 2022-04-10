@@ -259,6 +259,25 @@ bool AvalancheMC::DriftIon(const double x0, const double y0, const double z0,
   return DriftLine({x0, y0, z0}, t0, Particle::Ion, secondaries);
 }
 
+bool AvalancheMC::DriftNegativeIon(const double x0, const double y0, 
+                                   const double z0, const double t0) {
+  if (!m_sensor) {
+    std::cerr << m_className << "::DriftNegativeIon: Sensor is not defined.\n";
+    return false;
+  }
+
+  m_endpointsElectrons.clear();
+  m_endpointsHoles.clear();
+  m_endpointsIons.clear();
+
+  m_nElectrons = 0;
+  m_nHoles = 0;
+  m_nIons = 1;
+
+  std::vector<DriftPoint> secondaries;
+  return DriftLine({x0, y0, z0}, t0, Particle::NegativeIon, secondaries);
+}
+
 bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
                             const Particle particle,
                             std::vector<DriftPoint>& secondaries,
@@ -373,7 +392,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
           dt = m_dMc / vmag;
           break;
         case StepModel::CollisionTime:
-          if (particle == Particle::Ion) {
+          if (particle == Particle::Ion || particle == Particle::NegativeIon) {
             constexpr double c1 = AtomicMassUnitElectronVolt / 
               (SpeedOfLight * SpeedOfLight);
             dt = -m_nMc * (c1 * vmag / emag) * log(RndmUniformPos());
@@ -712,6 +731,8 @@ double AvalancheMC::GetMobility(const Particle particle, Medium* medium) const {
     return medium->HoleMobility();
   } else if (particle == Particle::Ion) {
     return medium->IonMobility();
+  } else if (particle == Particle::NegativeIon) {
+    return medium->NegativeIonMobility();
   }
   return -1.;
 }
@@ -723,7 +744,8 @@ bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium,
                               std::array<double, 3>& v) const {
   v.fill(0.);
   bool ok = false;
-  if (m_useVelocityMap && particle != Particle::Ion) {
+  if (m_useVelocityMap && 
+      particle != Particle::Ion && particle != Particle::NegativeIon) {
     // We assume there is only one component with a velocity map.
     const auto nComponents = m_sensor->GetNumberOfComponents();
     for (size_t i = 0; i < nComponents; ++i) {
@@ -744,14 +766,17 @@ bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium,
     }
   }
   if (particle == Particle::Electron) {
-    ok = medium->ElectronVelocity(e[0], e[1], e[2], b[0], b[1], b[2], v[0],
-                                  v[1], v[2]);
+    ok = medium->ElectronVelocity(e[0], e[1], e[2], b[0], b[1], b[2], 
+                                  v[0], v[1], v[2]);
   } else if (particle == Particle::Hole) {
-    ok = medium->HoleVelocity(e[0], e[1], e[2], b[0], b[1], b[2], v[0], v[1],
-                              v[2]);
+    ok = medium->HoleVelocity(e[0], e[1], e[2], b[0], b[1], b[2], 
+                              v[0], v[1], v[2]);
   } else if (particle == Particle::Ion) {
-    ok = medium->IonVelocity(e[0], e[1], e[2], b[0], b[1], b[2], v[0], v[1],
-                             v[2]);
+    ok = medium->IonVelocity(e[0], e[1], e[2], b[0], b[1], b[2], 
+                             v[0], v[1], v[2]);
+  } else if (particle == Particle::NegativeIon) {
+    ok = medium->NegativeIonVelocity(e[0], e[1], e[2], b[0], b[1], b[2], 
+                                     v[0], v[1], v[2]);
   }
   if (!ok) {
     PrintError("GetVelocity", "velocity", particle, x);
@@ -775,7 +800,7 @@ bool AvalancheMC::GetDiffusion(const Particle particle, Medium* medium,
     ok = medium->ElectronDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
   } else if (particle == Particle::Hole) {
     ok = medium->HoleDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
-  } else if (particle == Particle::Ion) {
+  } else if (particle == Particle::Ion || particle == Particle::NegativeIon) {
     ok = medium->IonDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
   }
   return ok;

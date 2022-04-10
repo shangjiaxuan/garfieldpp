@@ -154,6 +154,9 @@ class AvalancheMC {
   /// Simulate the drift line of an ion from a given starting point.
   bool DriftIon(const double x, const double y, const double z,
                 const double t);
+  /// Simulate the drift line of a negative ion from a given starting point.
+  bool DriftNegativeIon(const double x, const double y, const double z,
+                        const double t);
   /** Simulate an avalanche initiated by an electron at a given starting point.
    * \param x,y,z,t coordinates and time of the initial electron
    * \param hole simulate the hole component of the avalanche or not
@@ -185,7 +188,7 @@ class AvalancheMC {
 
   Sensor* m_sensor = nullptr;
 
-  enum class Particle { Electron = 0, Ion, Hole };
+  enum class Particle { Electron = 0, Ion, Hole, NegativeIon };
 
   struct DriftPoint {
     std::array<double, 3> x;  ///< Position.

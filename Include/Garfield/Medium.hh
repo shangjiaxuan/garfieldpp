@@ -183,7 +183,7 @@ class Medium {
   virtual bool IonDissociation(const double ex, const double ey,
                                const double ez, const double bx,
                                const double by, const double bz, double& diss);
-  /// Low-field mobility [cm2 V-1 ns-1]
+  /// Low-field ion mobility [cm2 V-1 ns-1]
   virtual double IonMobility();
 
   /// Negative ion drift velocity [cm / ns]
@@ -191,6 +191,8 @@ class Medium {
     const double ex, const double ey, const double ez,
     const double bx, const double by, const double bz,
     double& vx, double& vy, double& vz);
+  /// Low-field negative ion mobility [cm2 V-1 ns-1]
+  virtual double NegativeIonMobility();
 
   /// Set the range of fields to be covered by the transport tables.
   void SetFieldGrid(double emin, double emax, const size_t ne, bool logE,
