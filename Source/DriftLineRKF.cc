@@ -137,29 +137,38 @@ void DriftLineRKF::SetGainFluctuationsPolya(const double theta,
 
 bool DriftLineRKF::DriftElectron(const double x0, const double y0,
                                  const double z0, const double t0) {
-  m_particle = Particle::Electron;
-  if (!DriftLine(x0, y0, z0, t0, Particle::Electron, m_t, m_x, m_status)) {
-    return false;
-  }
-  std::vector<double> ne(m_t.size(), 1.);
-  std::vector<double> ni(m_t.size(), 0.);
-  std::vector<double> nn(m_t.size(), 0.);
+  std::vector<std::array<double, 3> > x;
+  std::vector<double> t;
+  int status = 0;
+  const bool ok = DriftLine({x0, y0, z0}, t0, Particle::Electron, 
+                            t, x, status);
+  std::vector<double> ne(t.size(), 1.);
+  std::vector<double> ni(t.size(), 0.);
+  std::vector<double> nn(t.size(), 0.);
   double scale = 1.;
-  if (m_doAvalanche) Avalanche(Particle::Electron, m_x, ne, ni, nn, scale);
-  if (m_doSignal) {
-    ComputeSignal(Particle::Electron, scale * m_scaleE, m_t, m_x, ne);
+  if (ok) {
+    if (m_doAvalanche) Avalanche(Particle::Electron, x, ne, ni, nn, scale);
+    if (m_doSignal) {
+      ComputeSignal(Particle::Electron, scale * m_scaleE, t, x, ne);
+    }
+    if (m_doAvalanche) {
+      if (m_doIonTail) AddIonTail(t, x, ni, scale);
+      if (m_doNegativeIonTail) AddNegativeIonTail(t, x, nn, scale);
+    }
   }
-  if (m_doAvalanche) {
-    if (m_doIonTail) AddIonTail(m_t, m_x, ni, scale);
-    if (m_doNegativeIonTail) AddNegativeIonTail(m_t, m_x, nn, scale);
-  }
-  return true;
+  m_nE = scale * ne.back();
+  m_nI = scale * std::accumulate(ni.begin(), ni.end(), 0.);
+  std::swap(m_x, x);
+  std::swap(m_t, t);
+  m_particle = Particle::Electron;
+  m_status = status;
+  return ok;
 }
 
 bool DriftLineRKF::AddIonTail(const std::vector<double>& te,
-                              const std::vector<std::array<double, 3> >& xe,
+                              const std::vector<Vec>& xe,
                               const std::vector<double>& ni,
-                              const double scale) {
+                              const double scale) const {
   // SIGETR, SIGIOR
   const size_t nPoints = te.size();
   if (nPoints < 2 || ni.size() != nPoints) return false;
@@ -170,17 +179,16 @@ bool DriftLineRKF::AddIonTail(const std::vector<double>& te,
     // Skip also points with a negligible contribution.
     // if (scale * ni[i] < threshold * m_nI) continue;
     // Compute the ion drift line.
-    const auto& x0 = xe[i];
     std::vector<double> ti;
-    std::vector<std::array<double, 3> > xi;
+    std::vector<Vec> xi;
     int stat = 0;
-    if (!DriftLine(x0[0], x0[1], x0[2], te[i], Particle::Ion, ti, xi, stat)) {
+    if (!DriftLine(xe[i], te[i], Particle::Ion, ti, xi, stat)) {
       std::cerr << m_className << "::AddIonTail:\n"
                 << "    Unable to obtain an ion tail; tail not added.\n";
       return false;
     }
     if (m_debug) {
-      std::cout << m_className << "::AddIonTail: Origin = " << PrintVec(x0)
+      std::cout << m_className << "::AddIonTail: Origin = " << PrintVec(xe[i])
                 << ", n = " << ti.size() << ", status = " << stat << "\n";
     }
     // Compute the contribution of the drift line to the signal.
@@ -190,9 +198,8 @@ bool DriftLineRKF::AddIonTail(const std::vector<double>& te,
 }
 
 bool DriftLineRKF::AddNegativeIonTail(
-    const std::vector<double>& te,
-    const std::vector<std::array<double, 3> >& xe,
-    const std::vector<double>& nn, const double scale) {
+    const std::vector<double>& te, const std::vector<Vec>& xe,
+    const std::vector<double>& nn, const double scale) const {
   const size_t nPoints = te.size();
   if (nPoints < 2 || nn.size() != nPoints) return false;
   // Loop over the electron track.
@@ -200,12 +207,10 @@ bool DriftLineRKF::AddNegativeIonTail(
     // Skip points at which there are no negative ions yet.
     if (scale * nn[i] < Small) continue;
     // Compute the negative ion drift line.
-    const auto& x0 = xe[i];
     std::vector<double> tn;
-    std::vector<std::array<double, 3> > xn;
+    std::vector<Vec> xn;
     int stat = 0;
-    if (!DriftLine(x0[0], x0[1], x0[2], te[i], Particle::NegativeIon, 
-                   tn, xn, stat)) {
+    if (!DriftLine(xe[i], te[i], Particle::NegativeIon, tn, xn, stat)) {
       std::cerr << m_className << "::AddNegativeIonTail:\n"
                 << "    Unable to obtain a negative ion tail.\n";
       return false;
@@ -218,54 +223,74 @@ bool DriftLineRKF::AddNegativeIonTail(
 
 bool DriftLineRKF::DriftPositron(const double x0, const double y0,
                                  const double z0, const double t0) {
-
+  std::vector<std::array<double, 3> > x;
+  std::vector<double> t;
+  int status = 0;
+  const bool ok = DriftLine({x0, y0, z0}, t0, Particle::Positron, 
+                            t, x, status);
+  if (ok && m_doSignal) {
+    ComputeSignal(Particle::Positron, m_scaleE, t, x, {});
+  }
+  std::swap(m_x, x);
+  std::swap(m_t, t);
   m_particle = Particle::Positron;
-  if (!DriftLine(x0, y0, z0, t0, Particle::Positron, m_t, m_x, m_status)) {
-    return false;
-  }
-  if (m_doSignal) {
-    ComputeSignal(Particle::Positron, m_scaleE, m_t, m_x, {});
-  }
-  return true;
+  m_status = status;
+  return ok;
 }
 
 bool DriftLineRKF::DriftHole(const double x0, const double y0, const double z0,
                              const double t0) {
-  m_particle = Particle::Hole;
-  if (!DriftLine(x0, y0, z0, t0, Particle::Hole, m_t, m_x, m_status)) {
-    return false;
+  std::vector<std::array<double, 3> > x;
+  std::vector<double> t;
+  int status = 0;
+  const bool ok = DriftLine({x0, y0, z0}, t0, Particle::Hole, t, x, status);
+  if (ok && m_doSignal) {
+    ComputeSignal(Particle::Hole, m_scaleH, t, x, {});
   }
-  if (m_doSignal) ComputeSignal(Particle::Hole, m_scaleH, m_t, m_x, {});
-  return true;
+  std::swap(m_x, x);
+  std::swap(m_t, t);
+  m_particle = Particle::Hole;
+  m_status = status;
+  return ok;
 }
 
 bool DriftLineRKF::DriftIon(const double x0, const double y0, const double z0,
                             const double t0) {
-  m_particle = Particle::Ion;
-  if (!DriftLine(x0, y0, z0, t0, Particle::Ion, m_t, m_x, m_status)) {
-    return false;
+  std::vector<std::array<double, 3> > x;
+  std::vector<double> t;
+  int status = 0;
+  const bool ok = DriftLine({x0, y0, z0}, t0, Particle::Ion, t, x, status);
+  if (ok && m_doSignal) {
+    ComputeSignal(Particle::Ion, m_scaleI, t, x, {});
   }
-  if (m_doSignal) ComputeSignal(Particle::Ion, m_scaleI, m_t, m_x, {});
-  return true;
+  std::swap(m_x, x);
+  std::swap(m_t, t);
+  m_particle = Particle::Ion;
+  m_status = status;
+  return ok;
 }
 
 bool DriftLineRKF::DriftNegativeIon(const double x0, const double y0,
                                     const double z0, const double t0) {
-
+  std::vector<std::array<double, 3> > x;
+  std::vector<double> t;
+  int status = 0;
+  const bool ok = DriftLine({x0, y0, z0}, t0, Particle::NegativeIon, 
+                            t, x, status);
+  if (ok && m_doSignal) {
+    ComputeSignal(Particle::NegativeIon, m_scaleI, t, x, {});
+  }
+  std::swap(m_x, x);
+  std::swap(m_t, t);
   m_particle = Particle::NegativeIon;
-  if (!DriftLine(x0, y0, z0, t0, Particle::NegativeIon, m_t, m_x, m_status)) {
-    return false;
-  }
-  if (m_doSignal) {
-    ComputeSignal(Particle::NegativeIon, m_scaleI, m_t, m_x, {});
-  }
-  return true;
+  m_status = status;
+  return ok;
 }
 
-bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
-                             const double ti, const Particle particle,
+bool DriftLineRKF::DriftLine(const Vec& xi, const double ti, 
+                             const Particle particle,
                              std::vector<double>& ts,
-                             std::vector<Vec>& xs, int& flag) {
+                             std::vector<Vec>& xs, int& flag) const {
 
   // -----------------------------------------------------------------------
   //    DLCALC - Subroutine doing the actual drift line calculations. 
@@ -319,20 +344,13 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
   // Set the charge of the drifting particle.
   const double charge = particle == Particle::Electron ? -1 : 1;
 
-  // Initialise the current position.
-  Vec x0 = {xi, yi, zi};
-
-  // Initialise the particle velocity.
-  Vec v0 = {0., 0., 0.};
-  if (!GetVelocity(x0, particle, v0, flag)) {
-    flag = StatusCalculationAbandoned;
-    std::cerr << m_className << "::DriftLine: "
-              << "Cannot retrieve drift velocity.\n";
-    return false;
-  } else if (flag != 0) {
-    std::cerr << m_className << "::DriftLine: "
-              << "No valid field at initial position.\n";
-    std::cerr << PrintVec(x0) << "\n";
+  // Initialise the current position and velocity.
+  Vec x0 = xi;
+  Vec v0 = GetVelocity(x0, particle, flag);
+  if (flag != 0) {
+    std::cerr << m_className << "::DriftLine:\n"
+              << "    Cannot retrieve drift velocity at initial position "
+              << PrintVec(x0) << ".\n";
     return false;
   }
 
@@ -352,6 +370,10 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
   ts.push_back(t0);
   xs.push_back(x0);
 
+  if (m_debug) {
+    std::cout << m_className << "::DriftLine:\n"
+              << "    Initial step size: " << h << " ns.\n";
+  }
   int initCycle = 3;
   bool ok = true;
   while (ok) {
@@ -360,15 +382,13 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     for (unsigned int i = 0; i < 3; ++i) {
       x1[i] += h * b10 * v0[i];
     }
-    Vec v1;
     int stat = 0;
-    if (!GetVelocity(x1, particle, v1, stat)) {
-      flag = StatusCalculationAbandoned;
+    const Vec v1 = GetVelocity(x1, particle, stat);
+    if (stat == StatusCalculationAbandoned) {
+      flag = stat;
       break;
     } else if (stat != 0) {
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: Point 1 outside.\n";
-      }
+      if (m_debug) std::cout << "    Point 1 outside.\n";
       if (!Terminate(x0, x1, particle, ts, xs)) {
         flag = StatusCalculationAbandoned;
       } else {
@@ -381,14 +401,12 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     for (unsigned int i = 0; i < 3; ++i) {
       x2[i] += h * (b20 * v0[i] + b21 * v1[i]);
     }
-    Vec v2;
-    if (!GetVelocity(x2, particle, v2, stat)) {
-      flag = StatusCalculationAbandoned;
+    const Vec v2 = GetVelocity(x2, particle, stat);
+    if (stat == StatusCalculationAbandoned) {
+      flag = stat;
       break;
     } else if (stat != 0) {
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: Point 2 outside.\n";
-      }
+      if (m_debug) std::cout << "    Point 2 outside.\n";
       if (!Terminate(x0, x2, particle, ts, xs)) {
         flag = StatusCalculationAbandoned;
       } else {
@@ -401,14 +419,12 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     for (unsigned int i = 0; i < 3; ++i) {
       x3[i] += h * (b30 * v0[i] + b31 * v1[i] + b32 * v2[i]);
     }
-    Vec v3;
-    if (!GetVelocity(x3, particle, v3, stat)) {
-      flag = StatusCalculationAbandoned;
+    const Vec v3 = GetVelocity(x3, particle, stat);
+    if (stat == StatusCalculationAbandoned) {
+      flag = stat;
       break;
     } else if (stat != 0) {
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: Point 3 outside.\n";
-      }
+      if (m_debug) std::cout << "    Point 3 outside.\n";
       if (!Terminate(x0, x3, particle, ts, xs)) {
         flag = StatusCalculationAbandoned;
       } else {
@@ -424,9 +440,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
                               x2[0], x2[1], x2[2], xw, yw, zw, true, rw) ||
         m_sensor->CrossedWire(x0[0], x0[1], x0[2], 
                               x3[0], x3[1], x3[2], xw, yw, zw, true, rw)) {
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: Crossed wire.\n";
-      }
+      if (m_debug) std::cout << "    Crossed wire.\n";
       if (DriftToWire(xw, yw, rw, particle, ts, xs, stat)) {
         flag = stat;
       } else if (h > Small) {
@@ -488,8 +502,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
       break;
     } else if (m_useStepSizeLimit && h * phi1mag > m_maxStepSize) {
       if (m_debug) {
-        std::cout << m_className << "::DriftLine: Step is considered too long. "
-                  << "H is reduced.\n";
+        std::cout << "    Step is considered too long. H is reduced.\n";
       }
       h = 0.5 * m_maxStepSize / phi1mag;
       continue;
@@ -499,8 +512,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
           h * fabs(phi1[1]) > 0.1 * fabs(ymax - ymin)) {
         h *= 0.5;
         if (m_debug) {
-          std::cout << m_className << "::DriftLine: Step is considered too long. "
-                    << "H is divided by two.\n";
+          std::cout << "    Step is considered too long. H is halved.\n";
         }
         continue;
       }
@@ -515,16 +527,14 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
         break;
       }
     }
-    if (m_debug) std::cout << m_className << "::DriftLine: Step size ok.\n";
+    if (m_debug) std::cout << "    Step size ok.\n";
     // Update the position and time.
     for (size_t i = 0; i < 3; ++i) x0[i] += h * phi1[i];
     t0 += h;
     if (!m_sensor->IsInside(x0[0], x0[1], x0[2])) {
       // The new position is not inside a valid drift medium.
       // Terminate the drift line.
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: Point outside. Terminate.\n";
-      }
+      if (m_debug) std::cout << "    New point is outside. Terminate.\n";
       if (!Terminate(xs.back(), x0, particle, ts, xs)) {
         flag = StatusCalculationAbandoned;
       }
@@ -539,14 +549,10 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
                         fabs(phi1[2] - phi2[2]);
     if (dphi > 0) {
       h = sqrt(h * m_accuracy / dphi);
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: Adapting H to " << h << ".\n";
-      }
+      if (m_debug) std::cout << "    Adapting H to " << h << ".\n";
     } else {
       h *= 2;
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: H increased by factor two.\n";
-      }
+      if (m_debug) std::cout << "    H increased by factor two.\n";
     }
     // Make sure that H is different from zero; this should always be ok.
     if (h < Small) {
@@ -556,12 +562,10 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     }
     // Check the initial step size.
     if (initCycle > 0 && h < 0.2 * hprev) {
-      if (m_debug) {
-        std::cout << m_className << "::DriftLine: Reinitialise step size.\n";
-      }
+      if (m_debug) std::cout << "    Reinitialise step size.\n";
       --initCycle;
       t0 = ti;
-      x0 = {xi, yi, zi};
+      x0 = xi;
       ts = {t0};
       xs = {x0};
       continue;
@@ -571,8 +575,7 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     if (h > 10 * hprev) {
       h = 10 * hprev;
       if (m_debug) {
-        std::cout << m_className << "::DriftLine: H restricted to 10 times "
-                  << "the previous value.\n";
+        std::cout << "    H restricted to 10 times the previous value.\n";
       }
     }
     // Stop in case H tends to become too small.
@@ -590,12 +593,12 @@ bool DriftLineRKF::DriftLine(const double xi, const double yi, const double zi,
     size_t id = 0;
     const size_t nPoints = xs.size();
     if (particle == Particle::Ion || particle == Particle::NegativeIon) {
-      m_view->NewIonDriftLine(nPoints, id, xi, yi, zi);
+      m_view->NewIonDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
     } else if (particle == Particle::Electron ||
                particle == Particle::Positron) {
-      m_view->NewElectronDriftLine(nPoints, id, xi, yi, zi);
+      m_view->NewElectronDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
     } else if (particle == Particle::Hole) {
-      m_view->NewHoleDriftLine(nPoints, id, xi, yi, zi);
+      m_view->NewHoleDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
     }
     for (size_t i = 0; i < nPoints; ++i) {
       const auto& x = xs[i];
@@ -610,7 +613,7 @@ bool DriftLineRKF::Avalanche(const Particle particle,
                              const std::vector<Vec>& xs,
                              std::vector<double>& ne,
                              std::vector<double>& ni, 
-                             std::vector<double>& nn, double& scale) {
+                             std::vector<double>& nn, double& scale) const {
 
   // SIGETR
   const size_t nPoints = xs.size();
@@ -637,14 +640,14 @@ bool DriftLineRKF::Avalanche(const Particle particle,
       const double f = 0.5 * (1. + tg[j]);
       Vec xj = xp;
       for (size_t k = 0; k < 3; ++k) xj[k] += f * dx[k];
-      double alp = 0.;
-      if (!GetAlpha(xj, particle, alp)) {
+      const double alp = GetAlpha(xj, particle);
+      if (alp < 0.) {
         std::cerr << m_className << "::Avalanche:\n    Cannot retrieve alpha at "
                   << "drift line point " << i  << ", segment " << j << ".\n";
         continue;
       }
-      double eta = 0.;
-      if (!GetEta(xj, particle, eta)) {
+      const double eta = GetEta(xj, particle);
+      if (eta < 0.) {
         std::cerr << m_className << "::Avalanche:\n    Cannot retrieve eta at "
                   << "drift line point " << i  << ", segment " << j << ".\n";
         continue;
@@ -691,7 +694,8 @@ bool DriftLineRKF::Avalanche(const Particle particle,
   scale = 1.;
   if (qi > 1. && 
       !(m_gainFluctuations == GainFluctuations::None && m_gain < 1.)) {
-    const double gain = m_gain > 1. ? m_gain : GetGain();
+    constexpr double eps = 1.e-4;
+    const double gain = m_gain > 1. ? m_gain : ComputeGain(xs, particle, eps);
     double q1 = gain;
     if (m_gainFluctuations == GainFluctuations::Polya) {
       for (unsigned int i = 0; i < 100; ++i) {
@@ -700,11 +704,10 @@ bool DriftLineRKF::Avalanche(const Particle particle,
       }
       q1 = std::max(q1, 1.);
     }
-    q1 *= GetLoss();
+    q1 *= ComputeLoss(xs, particle, eps);
     scale = (q1 + 1.) / (qi + 1.); 
   }
-  //if (m_debug) {
-  if (true) {
+  if (m_debug) {
     const double qn = std::accumulate(nn.begin(), nn.end(), 0.);
     std::cout << m_className << "::Avalanche:\n    "
               << "Final number of electrons: " << qe << "\n    "
@@ -716,12 +719,16 @@ bool DriftLineRKF::Avalanche(const Particle particle,
       std::printf("%6d %15.7f %15.7f\n", i, scale * ne[i], scale * ni[i]);
     }
   }
-  m_nE = scale * qe;
-  m_nI = scale * qi;
   return true;
 }
 
-double DriftLineRKF::GetArrivalTimeSpread(const double eps) {
+double DriftLineRKF::GetArrivalTimeSpread(const double eps) const {
+  return ComputeSigma(m_x, m_particle, eps);
+} 
+
+double DriftLineRKF::ComputeSigma(const std::vector<Vec>& x,
+                                  const Particle particle,
+                                  const double eps) const {
 
   // -----------------------------------------------------------------------
   //    DLCDF1 - Routine returning the integrated diffusion coefficient of
@@ -729,25 +736,22 @@ double DriftLineRKF::GetArrivalTimeSpread(const double eps) {
   //             Simpson integration.
   // -----------------------------------------------------------------------
 
-  const size_t nPoints = m_x.size();
+  const size_t nPoints = x.size();
   // Return straight away if there is only one point.
   if (nPoints < 2) return 0.;
-  const Particle particle = m_particle;
 
   // First get a rough estimate of the result.
   double crude = 0.;
   double varPrev = 0.;
   for (size_t i = 0; i < nPoints; ++i) {
     // Get the variance at this point.
-    double var = 0.;
-    if (!GetVar(m_x[i], particle, var)) {
-      std::cerr << m_className << "::GetArrivalTimeSpread:\n"
+    const double var = GetVar(x[i], particle);
+    if (var < 0.) {
+      std::cerr << m_className << "::ComputeSigma:\n"
               << "    Cannot retrieve variance at point " << i << ".\n";
       continue;
     }
-    if (i > 0) {
-      crude += 0.5 * Dist(m_x[i - 1], m_x[i]) * (var + varPrev);
-    }
+    if (i > 0) crude += 0.5 * Dist(x[i - 1], x[i]) * (var + varPrev);
     varPrev = var;
   }
   crude = sqrt(crude);
@@ -755,12 +759,19 @@ double DriftLineRKF::GetArrivalTimeSpread(const double eps) {
   const double tol = eps * crude; 
   double sum = 0.;
   for (size_t i = 0; i < nPoints - 1; ++i) {
-    sum += IntegrateDiffusion(m_x[i], m_x[i + 1], particle, tol);
+    sum += IntegrateDiffusion(x[i], x[i + 1], particle, tol);
   }
   return sqrt(sum);
 }
 
-double DriftLineRKF::GetGain(const double eps) {
+double DriftLineRKF::GetGain(const double eps) const {
+  if (m_status == StatusCalculationAbandoned) return 1.;
+  return ComputeGain(m_x, m_particle, eps);
+}
+
+double DriftLineRKF::ComputeGain(const std::vector<Vec>& x,
+                                 const Particle particle, 
+                                 const double eps) const {
 
   // -----------------------------------------------------------------------
   //    DLCTW1 - Routine returning the multiplication factor for the current
@@ -771,24 +782,22 @@ double DriftLineRKF::GetGain(const double eps) {
   const size_t nPoints = m_x.size();
   // Return straight away if there is only one point.
   if (nPoints < 2) return 1.;
-  const Particle particle = m_particle;
-  if (particle == Particle::Ion) return 1.;
-  if (m_status == StatusCalculationAbandoned) return 1.;
+  if (particle == Particle::Ion || particle == Particle::NegativeIon) {
+    return 1.;
+  }
 
   // First get a rough estimate of the result.
   double crude = 0.;
   double alphaPrev = 0.;
   for (size_t i = 0; i < nPoints; ++i) {
     // Get the Townsend coefficient at this point.
-    double alpha = 0.;
-    if (!GetAlpha(m_x[i], particle, alpha)) {
-      std::cerr << m_className << "::GetGain:\n"
+    const double alpha = GetAlpha(x[i], particle);
+    if (alpha < 0.) {
+      std::cerr << m_className << "::ComputeGain:\n"
                 << "    Cannot retrieve alpha at point " << i << ".\n";
       continue;
     }
-    if (i > 0) {
-      crude += 0.5 * Dist(m_x[i - 1], m_x[i]) * (alpha + alphaPrev);
-    }
+    if (i > 0) crude += 0.5 * Dist(x[i - 1], x[i]) * (alpha + alphaPrev);
     alphaPrev = alpha;
   }
   // Stop if the rough estimate is negligibly small.
@@ -798,12 +807,19 @@ double DriftLineRKF::GetGain(const double eps) {
   const double tol = eps * crude;
   double sum = 0.;
   for (size_t i = 0; i < nPoints - 1; ++i) {
-    sum += IntegrateAlpha(m_x[i], m_x[i + 1], particle, tol);
+    sum += IntegrateAlpha(x[i], x[i + 1], particle, tol);
   }
   return exp(sum);
 }
 
-double DriftLineRKF::GetLoss(const double eps) {
+double DriftLineRKF::GetLoss(const double eps) const {
+  if (m_status == StatusCalculationAbandoned) return 1.;
+  return ComputeLoss(m_x, m_particle, eps);
+}
+
+double DriftLineRKF::ComputeLoss(const std::vector<Vec>& x,
+                                 const Particle particle,
+                                 const double eps) const {
 
   // -----------------------------------------------------------------------
   //    DLCAT1 - Routine returning the attachment losses for the current
@@ -811,12 +827,10 @@ double DriftLineRKF::GetLoss(const double eps) {
   //             integration.
   // -----------------------------------------------------------------------
 
-  const size_t nPoints = m_x.size();
+  const size_t nPoints = x.size();
   // Return straight away if there is only one point.
   if (nPoints < 2) return 1.;
-  const Particle particle = m_particle;
-  if (particle == Particle::Ion || particle == Particle::NegativeIon ||
-      m_status == StatusCalculationAbandoned) {
+  if (particle == Particle::Ion || particle == Particle::NegativeIon) {
     return 1.;
   }
 
@@ -825,15 +839,13 @@ double DriftLineRKF::GetLoss(const double eps) {
   double etaPrev = 0.;
   for (size_t i = 0; i < nPoints; ++i) {
     // Get the attachment coefficient at this point.
-    double eta = 0.;
-    if (!GetEta(m_x[i], particle, eta)) {
-      std::cerr << m_className << "::GetLoss:\n"
+    const double eta = GetEta(x[i], particle);
+    if (eta < 0.) {
+      std::cerr << m_className << "::ComputeLoss:\n"
                 << "    Cannot retrieve eta at point " << i << ".\n";
       continue;
     }
-    if (i > 0) {
-      crude += 0.5 * Dist(m_x[i - 1], m_x[i]) * (eta + etaPrev);
-    }
+    if (i > 0) crude += 0.5 * Dist(x[i - 1], x[i]) * (eta + etaPrev);
     etaPrev = eta;
   }
 
@@ -841,7 +853,7 @@ double DriftLineRKF::GetLoss(const double eps) {
   const double tol = eps * crude;
   double sum = 0.;
   for (size_t i = 0; i < nPoints - 1; ++i) {
-    sum += IntegrateEta(m_x[i], m_x[i + 1], particle, tol);
+    sum += IntegrateEta(x[i], x[i + 1], particle, tol);
   }
   return exp(-sum);
 }
@@ -856,15 +868,15 @@ int DriftLineRKF::GetField(const std::array<double, 3>& x,
   return status;
 }
 
-bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
-                               const Particle particle,
-                               std::array<double, 3>& v, int& status) const {
-  v.fill(0.);
+Vec DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
+                              const Particle particle,
+                              int& status) const {
+  Vec v = {0., 0., 0.};
   status = 0;
   // Stop if we are outside the drift area.
   if (!m_sensor->IsInArea(x[0], x[1], x[2])) {
     status = StatusLeftDriftArea;
-    return true;
+    return v;
   } 
   if (m_useVelocityMap && 
       particle != Particle::Ion && particle != Particle::NegativeIon) {
@@ -884,7 +896,7 @@ bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
       if (particle == Particle::Positron) {
         for (unsigned int k = 0; k < 3; ++k) v[k] *= -1;
       }
-      return true;
+      return v;
     }
   }
   double ex = 0., ey = 0., ez = 0.;
@@ -892,25 +904,27 @@ bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
   Medium* medium = nullptr;
   // Stop if we are outside a valid drift medium.
   status = GetField(x, ex, ey, ez, bx, by, bz, medium);
-  if (status != 0) return true;
+  if (status != 0) return v;
+  bool ok = false;
   if (particle == Particle::Electron) {
-    return medium->ElectronVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
+    ok = medium->ElectronVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } else if (particle == Particle::Ion) {
-    return medium->IonVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
+    ok = medium->IonVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } else if (particle == Particle::Hole) {
-    return medium->HoleVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
+    ok = medium->HoleVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } else if (particle == Particle::Positron) {
-    const bool ok = medium->ElectronVelocity(ex, ey, ez, bx, by, bz, 
-                                             v[0], v[1], v[2]);
+    ok = medium->ElectronVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
     for (unsigned int i = 0; i < 3; ++i) v[i] *= -1;
-    return ok;
   } else if (particle == Particle::NegativeIon) {
-    return medium->NegativeIonVelocity(ex, ey, ez, bx, by, bz, 
-                                       v[0], v[1], v[2]);
+    ok = medium->NegativeIonVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } 
-  std::cerr << m_className << "::GetVelocity:\n"
-            << "    Cannot retrieve drift velocity at " << PrintVec(x) << ".\n";
-  return false;
+  if (!ok) {
+    std::cerr << m_className << "::GetVelocity:\n"
+              << "    Cannot retrieve drift velocity at " 
+              << PrintVec(x) << ".\n";
+    status = StatusCalculationAbandoned;
+  }
+  return v;
 }
 
 bool DriftLineRKF::GetDiffusion(const std::array<double, 3>& x,
@@ -931,32 +945,29 @@ bool DriftLineRKF::GetDiffusion(const std::array<double, 3>& x,
   return false;
 }
 
-bool DriftLineRKF::GetVar(const std::array<double, 3>& x,
-                          const Particle particle, double& var) const {
-  var = 0.;
+double DriftLineRKF::GetVar(const std::array<double, 3>& x,
+                            const Particle particle) const {
   // Get the drift velocity.
-  int stat;
-  Vec v;
-  if (!GetVelocity(x, particle, v, stat)) return false;
+  int stat = 0;
+  const Vec v = GetVelocity(x, particle, stat);
+  if (stat != 0) return -1.;
 
   const double speed = Mag(v);
   if (speed < Small) {
     std::cerr << m_className << "::GetVariance: Zero velocity.\n";
-    return false;
+    return -1.;
   }
   // Get the diffusion coefficients.
   double dl = 0., dt = 0.;
-  if (!GetDiffusion(x, particle, dl, dt)) return false;
+  if (!GetDiffusion(x, particle, dl, dt)) return -1.;
 
   const double sigma = dl / speed;
-  var = sigma * sigma;
-  return true;
+  return sigma * sigma;
 }
 
-bool DriftLineRKF::GetAlpha(const std::array<double, 3>& x,
-                            const Particle particle, double& alpha) const {
-
-  alpha = 0.;
+double DriftLineRKF::GetAlpha(const std::array<double, 3>& x,
+                              const Particle particle) const {
+  double alpha = 0.;
   if (m_useTownsendMap && (particle == Particle::Electron || 
       particle == Particle::Hole || particle == Particle::Positron)) {
     const auto nComponents = m_sensor->GetNumberOfComponents();
@@ -974,36 +985,37 @@ bool DriftLineRKF::GetAlpha(const std::array<double, 3>& x,
   double ex = 0., ey = 0., ez = 0.;
   double bx = 0., by = 0., bz = 0.;
   Medium* medium = nullptr;
-  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return false;
+  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return -1.;
 
   if (particle == Particle::Electron || particle == Particle::Positron) {
-    return medium->ElectronTownsend(ex, ey, ez, bx, by, bz, alpha);
+    medium->ElectronTownsend(ex, ey, ez, bx, by, bz, alpha);
   } else if (particle == Particle::Hole) {
-    return medium->HoleTownsend(ex, ey, ez, bx, by, bz, alpha);
+    medium->HoleTownsend(ex, ey, ez, bx, by, bz, alpha);
   }
-  return false;
+  return alpha;
 }
 
-bool DriftLineRKF::GetEta(const std::array<double, 3>& x,
-                          const Particle particle, double& eta) const {
+double DriftLineRKF::GetEta(const std::array<double, 3>& x,
+                            const Particle particle) const {
+
   double ex = 0., ey = 0., ez = 0.;
   double bx = 0., by = 0., bz = 0.;
   Medium* medium = nullptr;
-  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return false;
-
+  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return -1.;
+  double eta = 0.;
   if (particle == Particle::Electron) {
-    return medium->ElectronAttachment(ex, ey, ez, bx, by, bz, eta);
+    medium->ElectronAttachment(ex, ey, ez, bx, by, bz, eta);
   } else if (particle == Particle::Hole) {
-    return medium->HoleAttachment(ex, ey, ez, bx, by, bz, eta);
+    medium->HoleAttachment(ex, ey, ez, bx, by, bz, eta);
   }
-  return false;
+  return eta;
 }
 
 bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
                              const std::array<double, 3>& xx1,
                              const Particle particle,
                              std::vector<double>& ts,
-                             std::vector<Vec>& xs) {
+                             std::vector<Vec>& xs) const {
 
   // -----------------------------------------------------------------------
   //    DLCFMP - Terminates drift line calculation by making a last step
@@ -1013,15 +1025,11 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
   // -----------------------------------------------------------------------
 
   // Check the validity of the initial point.
-  Vec vv0 = {0., 0., 0.};
   int status = 0;
-  if (!GetVelocity(xx0, particle, vv0, status)) {
+  const Vec vv0 = GetVelocity(xx0, particle, status);
+  if (status != 0) {
     std::cerr << m_className << "::Terminate:\n"
-              << "    Cannot retrieve initial drift velocity.\n";
-    return false;
-  } else if (status != 0) {
-    std::cerr << m_className << "::Terminate:\n"
-              << "    No valid field at initial point. Program bug!\n";
+              << "    Cannot retrieve drift velocity at initial point.\n";
     return false;
   }
   double speed = Mag(vv0);
@@ -1065,8 +1073,8 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
   }
 
   // Compute drift velocity at the end of the step.
-  Vec v0;
-  if (!GetVelocity(x0, particle, v0, status) || status != 0) {
+  Vec v0 = GetVelocity(x0, particle, status);
+  if (status != 0) {
     std::cerr << m_className << "::Terminate:\n"
               << "    Warning: Unable to compute mean velocity at last step.\n";
   } else {
@@ -1077,14 +1085,13 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
   // Add the last point, just inside the drift area.
   ts.push_back(ts.back() + dt);
   xs.push_back(x0);
-  m_status = StatusLeftDriftMedium;
   return true;
 }
 
 bool DriftLineRKF::DriftToWire(const double xw, const double yw,
                                const double rw, const Particle particle,
                                std::vector<double>& ts, 
-                               std::vector<Vec>& xs, int& stat) {
+                               std::vector<Vec>& xs, int& stat) const {
 
   // -----------------------------------------------------------------------
   //   DLCWIR - Terminates drift line calculation by making some last steps
@@ -1103,24 +1110,20 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
   }
 
   // Get the initial drift velocity.
-  Vec v0;
   int status = 0;
-  if (!GetVelocity(x0, particle, v0, status)) {
+  Vec v0 = GetVelocity(x0, particle, status);
+  if (status != 0) {
     std::cerr << m_className << "::DriftToWire:\n"
               << "    Cannot retrieve initial drift velocity.\n";
     return false;
-  } else if (status != 0) {
-    std::cerr << m_className << "::DriftToWire:\n"
-              << "    No valid field at initial point. Program bug!\n";
-    return false;
-  }
+  } 
 
   // Estimate the time needed to reach the wire
   // assuming a straight-line trajectory and constant velocity.
   double dt = (Mag(xw - x0[0], yw - x0[1]) - rw) / Mag(v0[0], v0[1]);
   if (m_debug) {
-    std::cout << m_className << "::DriftToWire: "
-              << "Estimated time needed to reach the wire: " << dt << " ns.\n";
+    std::cout << "    Estimated time needed to reach the wire: " 
+              << dt << " ns.\n";
   }
 
   constexpr unsigned int nMaxSplit = 10;
@@ -1137,8 +1140,7 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
                          (x1[1] - x0[1]) * (yw - x0[1]);
     if (xinp0 < 0.) {
       if (m_debug) {
-        std::cerr << m_className << "::DriftToWire:\n"
-                  << "    Particle moves away from the wire. Quit.\n";
+        std::cerr << "    Particle moves away from the wire. Quit.\n";
       }
       return false;
     }
@@ -1148,10 +1150,10 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
     if (xinp1 < 0.) {
       if (Mag2(xw - x1[0], yw - x1[1]) <= r2) {
         onwire = true;
-        if (m_debug) std::cout << m_className << "::DriftToWire: Inside.\n";
+        if (m_debug) std::cout << "    Inside.\n";
       }
     } else {
-      if (m_debug) std::cout << m_className << "::DriftToWire: Wire crossed.\n";
+      if (m_debug) std::cout << "    Wire crossed.\n";
       onwire = true;
     }
     if (onwire) {
@@ -1162,27 +1164,19 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
       x1[2] = x0[2] + dt * v0[2];
     }
     // Calculate the drift velocity at the end point.
-    Vec v1;
-    if (!GetVelocity(x1, particle, v1, status)) {
+    Vec v1 = GetVelocity(x1, particle, status);
+    if (status != 0) {
       std::cerr << m_className << "::DriftToWire:\n"
                 << "    Cannot retrieve drift velocity at end point. Quit.\n";
       return false;
-    } else if (status != 0) {
-      std::cerr << m_className << "::DriftToWire:\n"
-                << "    End point is not in a valid drift medium. Quit.\n";
-      return false;
-    }
+    } 
     // Get a point halfway between for an accuracy check.
     const Vec xm = MidPoint(x0, x1);
     // Calculate the drift velocity at the mid point.
-    Vec vm;
-    if (!GetVelocity(xm, particle, vm, status)) {
+    Vec vm = GetVelocity(xm, particle, status);
+    if (status != 0) {
       std::cerr << m_className << "::DriftToWire:\n"
                 << "    Cannot retrieve drift velocity at mid point. Quit.\n";
-      return false;
-    } else if (status != 0) {
-      std::cerr << m_className << "::DriftToWire:\n"
-                << "    Mid point is not in a valid drift medium. Quit.\n";
       return false;
     }
     // Make sure the velocities are non-zero.
@@ -1201,9 +1195,7 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
     const double tol = 1.e-4 * (1. + fabs(t0));
     if (d * fabs(p0 - 2 * pm + p1) / 3. > tol && nSplit < nMaxSplit) {
       // Accuracy was not good enough so halve the step time.
-      if (m_debug) {
-        std::cout << m_className << "::DriftToWire: Reducing step size.\n";
-      }
+      if (m_debug) std::cout << "    Reducing step size.\n";
       dt *= 0.5;
       onwire = false;
       ++nSplit;
@@ -1288,21 +1280,16 @@ void DriftLineRKF::GetDriftLinePoint(const size_t i, double& x, double& y,
 double DriftLineRKF::IntegrateDiffusion(const std::array<double, 3>& xi,
                                         const std::array<double, 3>& xe,
                                         const Particle particle, 
-                                        const double tol) {
-  // Make sure the starting point is valid.
+                                        const double tol) const {
+  // Make sure the starting and end points are valid.
   Vec x0 = xi;
-  double var0 = 0.;
-  if (!GetVar(x0, particle, var0)) {
+  double var0 = GetVar(x0, particle);
+  Vec x1 = xe;
+  double var1 = GetVar(x1, particle);
+  if (var0 < 0. || var1 < 0.) {
     std::cerr << m_className << "::IntegrateDiffusion:\n"
               << "    Cannot retrieve variance at initial point.\n";
-  }
-
-  // Make sure the end point is valid.
-  Vec x1 = xe;
-  double var1 = 0.;
-  if (!GetVar(x1, particle, var1)) {
-    std::cerr << m_className << "::IntegrateDiffusion:\n"
-              << "    Cannot retrieve variance at end point.\n";
+    return 0.;
   }
 
   double integral = 0.;
@@ -1320,17 +1307,13 @@ double DriftLineRKF::IntegrateDiffusion(const std::array<double, 3>& xi,
       continue;
     }
     // Determine the variance at the end point of the step.
-    if (!GetVar(x1, particle, var1)) {
-      std::cerr << m_className << "::IntegrateDiffusion:\n"
-                << "    Cannot retrieve variance at end point.\n";
-      break;
-    }
+    var1 = GetVar(x1, particle);
     // Determine the variance at the mid point of the step.
     const Vec xm = MidPoint(x0, x1);
-    double varm = 0.;
-    if (!GetVar(xm, particle, varm)) {
+    const double varm = GetVar(xm, particle);
+    if (var1 < 0. || varm < 0.) {
       std::cerr << m_className << "::IntegrateDiffusion:\n"
-                << "    Cannot retrieve variance at mid point.\n";
+                << "    Cannot retrieve variance at mid or end point.\n";
       break;
     }
     // Compare first and second order estimates 
@@ -1353,22 +1336,18 @@ double DriftLineRKF::IntegrateDiffusion(const std::array<double, 3>& xi,
 
 double DriftLineRKF::IntegrateAlpha(const std::array<double, 3>& xi, 
                                     const std::array<double, 3>& xe,
-                                    const Particle particle, const double tol) {
+                                    const Particle particle, 
+                                    const double tol) const {
 
   // Determine the Townsend coefficient at the initial point.
   Vec x0 = xi;
-  double alpha0 = 0.;
-  if (!GetAlpha(x0, particle, alpha0)) {
-    std::cerr << m_className << "::IntegrateAlpha:\n"
-              << "    Cannot retrieve alpha at initial point.\n";
-    return 0.;
-  }
+  double alpha0 = GetAlpha(x0, particle);
   // Determine the Townsend coefficient at the end point.
   Vec x1 = xe;
-  double alpha1 = 0.;
-  if (!GetAlpha(x1, particle, alpha1)) {
+  double alpha1 = GetAlpha(x1, particle);
+  if (alpha0 < 0. || alpha1 < 0.) {
     std::cerr << m_className << "::IntegrateAlpha:\n"
-              << "    Cannot retrieve alpha at end point.\n";
+              << "    Cannot retrieve alpha at start point or end point.\n";
     return 0.;
   }
   double integral = 0.;
@@ -1386,17 +1365,13 @@ double DriftLineRKF::IntegrateAlpha(const std::array<double, 3>& xi,
       continue;
     }
     // Calculate the Townsend coefficient at the end point of the step.
-    if (!GetAlpha(x1, particle, alpha1)) {
-      std::cerr << m_className << "::IntegrateAlpha:\n"
-                << "    Cannot retrieve alpha at end point.\n";
-      break;
-    }
+    alpha1 = GetAlpha(x1, particle);
     // Calculate the Townsend coefficient at the mid point of the step.
     const Vec xm = MidPoint(x0, x1);
-    double alpham = 0.;
-    if (!GetAlpha(xm, particle, alpham)) {
+    const double alpham = GetAlpha(xm, particle);
+    if (alpha1 < 0. || alpham < 0.) {
       std::cerr << m_className << "::IntegrateAlpha:\n"
-                << "    Cannot retrieve alpha at mid point.\n";
+                << "    Cannot retrieve alpha at mid point or end point.\n";
       break;
     }
     // Compare first and second order estimates.
@@ -1418,21 +1393,17 @@ double DriftLineRKF::IntegrateAlpha(const std::array<double, 3>& xi,
 
 double DriftLineRKF::IntegrateEta(const std::array<double, 3>& xi, 
                                   const std::array<double, 3>& xe,
-                                  const Particle particle, const double tol) {
+                                  const Particle particle, 
+                                  const double tol) const {
   // Determine the attachment coefficient at the initial point.
   Vec x0 = xi;
-  double eta0 = 0.;
-  if (!GetEta(x0, particle, eta0)) {
-    std::cerr << m_className << "::IntegrateEta:\n"
-              << "    Cannot retrieve eta at initial point.\n";
-    return 0.;
-  }
+  double eta0 = GetEta(x0, particle);
   // Determine the attachment coefficient at the end point.
   Vec x1 = xe;
-  double eta1 = 0.;
-  if (!GetEta(x1, particle, eta1)) {
+  double eta1 = GetEta(x1, particle);
+  if (eta0 < 0. || eta1 < 0.) {
     std::cerr << m_className << "::IntegrateEta:\n"
-              << "    Cannot retrieve eta at end point.\n";
+              << "    Cannot retrieve eta at start point or end point.\n";
     return 0.;
   }
   double integral = 0.;
@@ -1450,17 +1421,13 @@ double DriftLineRKF::IntegrateEta(const std::array<double, 3>& xi,
       continue;
     }
     // Calculate the attachment coefficient at the end point of the step.
-    if (!GetEta(x1, particle, eta1)) {
-      std::cerr << m_className << "::IntegrateEta:\n"
-                << "    Cannot retrieve eta at end point.\n";
-      break;
-    }
+    eta1 = GetEta(x1, particle);
     // Calculate the attachment coefficient at the mid point of the step.
     const Vec xm = MidPoint(x0, x1);
-    double etam = 0.;
-    if (!GetEta(xm, particle, etam)) {
+    const double etam = GetEta(xm, particle);
+    if (eta1 < 0. || etam < 0.) {
       std::cerr << m_className << "::IntegrateEta:\n"
-                << "    Cannot retrieve eta at mid point.\n";
+                << "    Cannot retrieve eta at mid point or end point.\n";
       break;
     }
     // Compare first and second order estimates.
@@ -1508,8 +1475,8 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
   std::vector<std::array<double, 3> > vs;
   for (const auto& x : xs) {
     int stat = 0;
-    Vec v;
-    if (!GetVelocity(x, particle, v, stat)) {
+    Vec v = GetVelocity(x, particle, stat);
+    if (stat != 0) {
       std::cerr << m_className << "::ComputeSignal:\n"
                 << "    Cannot retrieve velocity at " << PrintVec(x) << "\n";
     }
@@ -1520,11 +1487,10 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
 
 bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
                              std::vector<std::array<float, 3> >& xl, 
-                             const bool electron) {
+                             const bool electron) const {
 
   xl.clear();
-
-  // Check if the sensor is defined.
+  // Is the sensor?
   if (!m_sensor) {
     std::cerr << m_className << "::FieldLine: Sensor is not defined.\n";
     return false;
@@ -1575,7 +1541,10 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
   // Initialise time step and previous time step.
   double h = m_accuracy / fmag0;
   double hprev = h;
-
+  if (m_debug) {
+    std::cout << m_className << "::FieldLine:\n"
+              << "    Initial step size: " << h << ".\n";
+  }
   // Set the initial point.
   xl.push_back({float(x0[0]), float(x0[1]), float(x0[2])});
 
@@ -1589,9 +1558,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
     }
     m_sensor->ElectricField(x1[0], x1[1], x1[2], ex, ey, ez, medium, stat);
     if (stat != 0) {
-      if (m_debug) {
-        std::cout << m_className << "::FieldLine: Point 1 outside.\n";
-      }
+      if (m_debug) std::cout << "    Point 1 outside.\n";
       Terminate(x0, x1, xl);
       return true;
     }
@@ -1604,9 +1571,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
     }
     m_sensor->ElectricField(x2[0], x2[1], x2[2], ex, ey, ez, medium, stat);
     if (stat != 0) {
-      if (m_debug) {
-        std::cout << m_className << "::FieldLine: Point 2 outside.\n";
-      }
+      if (m_debug) std::cout << "    Point 2 outside.\n";
       Terminate(x0, x2, xl);
       return true;
     }
@@ -1619,9 +1584,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
     }
     m_sensor->ElectricField(x3[0], x3[1], x3[2], ex, ey, ez, medium, stat);
     if (stat != 0) {
-      if (m_debug) {
-        std::cout << m_className << "::FieldLine: Point 3 outside.\n";
-      }
+      if (m_debug) std::cout << "    Point 3 outside.\n";
       Terminate(x0, x3, xl);
       return true;
     }
@@ -1661,8 +1624,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
       break;
     } else if (m_useStepSizeLimit && h * phi1mag > m_maxStepSize) {
       if (m_debug) {
-        std::cout << m_className << "::FieldLine: Step is considered too long. "
-                  << "H is reduced.\n";
+        std::cout << "    Step is considered too long. H is reduced.\n";
       }
       h = 0.5 * m_maxStepSize / phi1mag;
       continue;
@@ -1672,13 +1634,12 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
           h * fabs(phi1[1]) > 0.1 * fabs(ymax - ymin)) {
         h *= 0.5;
         if (m_debug) {
-          std::cout << m_className << "::FieldLine: Step is considered too long. "
-                    << "H is divided by two.\n";
+          std::cout << "    Step is considered too long. H is halved.\n";
         }
         continue;
       }
     }
-    if (m_debug) std::cout << m_className << "::FieldLine: Step size ok.\n";
+    if (m_debug) std::cout << "    Step size ok.\n";
     // Update the position.
     for (size_t i = 0; i < 3; ++i) x0[i] += h * phi1[i];
     // Check the new position.
@@ -1686,9 +1647,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
     if (stat != 0) {
       // The new position is not inside a valid drift medium.
       // Terminate the drift line.
-      if (m_debug) {
-        std::cout << m_className << "::FieldLine: Point outside. Terminate.\n";
-      }
+      if (m_debug) std::cout << "    Point outside. Terminate.\n";
       std::array<double, 3> xp = {xl.back()[0], xl.back()[1], xl.back()[2]};
       Terminate(xp, x0, xl);
       return true;
@@ -1701,14 +1660,10 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
                         fabs(phi1[2] - phi2[2]);
     if (dphi > 0) {
       h = sqrt(h * m_accuracy / dphi);
-      if (m_debug) {
-        std::cout << m_className << "::FieldLine: Adapting H to " << h << ".\n";
-      }
+      if (m_debug) std::cout << "    Adapting H to " << h << ".\n";
     } else {
       h *= 2;
-      if (m_debug) {
-        std::cout << m_className << "::FieldLine: H increased by factor two.\n";
-      }
+      if (m_debug) std::cout << "    H increased by factor two.\n";
     }
     // Make sure that H is different from zero; this should always be ok.
     if (h < Small) {
@@ -1717,9 +1672,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
     }
     // Check the initial step size.
     if (initCycle > 0 && h < 0.2 * hprev) {
-      if (m_debug) {
-        std::cout << m_className << "::FieldLine: Reinitialise step size.\n";
-      }
+      if (m_debug) std::cout << "    Reinitialise step size.\n";
       --initCycle;
       x0 = {xi, yi, zi};
       xl.clear();
@@ -1731,8 +1684,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
     if (h > 10 * hprev) {
       h = 10 * hprev;
       if (m_debug) {
-        std::cout << m_className << "::FieldLine: H restricted to 10 times "
-                  << "the previous value.\n";
+        std::cout << "    H restricted to 10 times the previous value.\n";
       }
     }
     // Stop in case H tends to become too small.
@@ -1749,7 +1701,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
 
 void DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
                              const std::array<double, 3>& xx1,
-                             std::vector<std::array<float, 3> >& xs) {
+                             std::vector<std::array<float, 3> >& xs) const {
 
   // Final point just inside the medium.
   Vec x0 = xx0;
@@ -1768,8 +1720,8 @@ void DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
     } 
     if (small) {
       if (m_debug) {
-        std::cout << m_className << "::Terminate:\n"
-                  << "    Bisection ended at cycle " << i << ".\n";
+        std::cout << m_className << "::Terminate: Bisection ends at cycle "
+                  << i << ".\n";
       }
       break; 
     }

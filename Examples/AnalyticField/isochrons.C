@@ -46,11 +46,11 @@ int main(int argc, char * argv[]) {
 
   ViewCell cellView;
   cellView.SetComponent(&cmp);
-  cellView.SetArea(xmin, ymin, xmax, ymax);
+  cellView.SetArea(xmin, ymin, -10., xmax, ymax, 10.);
 
   ViewIsochrons isoView;
   isoView.SetComponent(&cmp);
-  isoView.SetArea(xmin, ymin, xmax, ymax); 
+  isoView.SetArea(xmin, ymin, -10., xmax, ymax, 10.); 
 
   // Loop around the sense wire and make a list of 
   // starting points of the drift lines.
