@@ -107,11 +107,11 @@ class DriftLineRKF {
 
   /// Compute the sigma of the arrival time distribution for the current 
   /// drift line by integrating the longitudinal diffusion coefficient.
-  double GetArrivalTimeSpread(const double eps = 1.e-4);
+  double GetArrivalTimeSpread(const double eps = 1.e-4) const;
   /// Compute the multiplication factor for the current drift line.
-  double GetGain(const double eps = 1.e-4);
+  double GetGain(const double eps = 1.e-4) const ;
   /// Compute the attachment loss factor for the current drift line.
-  double GetLoss(const double eps = 1.e-4);
+  double GetLoss(const double eps = 1.e-4) const;
   double GetDriftTime() const { return m_t.empty() ? 0. : m_t.back(); }
 
   void GetAvalancheSize(double& ne, double& ni) const { ne = m_nE; ni = m_nI; }
@@ -123,10 +123,10 @@ class DriftLineRKF {
     */ 
   bool FieldLine(const double xi, const double yi, const double zi,
                  std::vector<std::array<float, 3> >& xl,
-                 const bool electron = true);
+                 const bool electron = true) const;
 
-  void EnableDebugging() { m_debug = true; }
-  void DisableDebugging() { m_debug = false; }
+  /// Switch debugging messages on/off (default: off).
+  void EnableDebugging(const bool on = true) { m_debug = on; }
 
  private:
   std::string m_className = "DriftLineRKF";
@@ -135,7 +135,7 @@ class DriftLineRKF {
   Sensor* m_sensor = nullptr;
 
   enum class Particle { Electron = 0, Ion, Hole, Positron, NegativeIon };
-  // Type of particle (of the most recent drift line).
+  // Particle type of the most recent drift line.
   Particle m_particle = Particle::Electron;
 
   // Maximum allowed step size.
@@ -183,7 +183,7 @@ class DriftLineRKF {
   GainFluctuations m_gainFluctuations = GainFluctuations::None; 
   // Polya shape parameter.
   double m_theta = 0.;
-  // Mean avalanche size (only used if < 1).
+  // Mean avalanche size (only used if > 1).
   double m_gain = -1.;
 
   // Flag whether to simulate the ion tail or not.
@@ -193,29 +193,30 @@ class DriftLineRKF {
   // Avalanche size.
   double m_nE = 0., m_nI = 0.;
 
+  // Debug flag.
   bool m_debug = false;
 
   // Calculate a drift line starting at a given position.
-  bool DriftLine(const double x0, const double y0, const double z0,
-                 const double t0, const Particle particle,
-                 std::vector<double>& ts, 
-                 std::vector<std::array<double, 3> >& xs, int& status);
+  bool DriftLine(const std::array<double, 3>& x0, const double t0, 
+                 const Particle particle, std::vector<double>& ts, 
+                 std::vector<std::array<double, 3> >& xs, int& status) const;
   bool Avalanche(const Particle particle, 
                  const std::vector<std::array<double, 3> >& xs,
                  std::vector<double>& ne, std::vector<double>& ni,
-                 std::vector<double>& nn, double& scale);
+                 std::vector<double>& nn, double& scale) const;
   bool AddIonTail(const std::vector<double>& te,
                   const std::vector<std::array<double, 3> >& xe,
-                  const std::vector<double>& ni, const double scale);
+                  const std::vector<double>& ni, const double scale) const;
   bool AddNegativeIonTail(const std::vector<double>& te,
                           const std::vector<std::array<double, 3> >& xe,
-                          const std::vector<double>& nn, const double scale);
+                          const std::vector<double>& nn, 
+                          const double scale) const;
   // Compute electric and magnetic field at a given position.
   int GetField(const std::array<double, 3>& x,
                double& ex, double& ey, double& ez,
                double& bx, double& by, double& bz,
                Medium*& medium) const;
-  // Calculate transport parameters for the respective particle type.
+  // Calculate transport parameters for a given point and particle type.
   bool GetVelocity(const std::array<double, 3>& x, const Particle particle,
                    std::array<double, 3>& v, int& status) const;
   bool GetDiffusion(const std::array<double, 3>& x, const Particle particle,
@@ -230,30 +231,36 @@ class DriftLineRKF {
   // Terminate a drift line at the edge of a boundary.
   bool Terminate(const std::array<double, 3>& xx0,
                  const std::array<double, 3>& xx1,
-                 const Particle particle, 
-                 std::vector<double>& ts, 
-                 std::vector<std::array<double, 3> >& xs);
+                 const Particle particle, std::vector<double>& ts, 
+                 std::vector<std::array<double, 3> >& xs) const;
 
   // Drift a particle to a wire
   bool DriftToWire(const double xw, const double yw, const double rw,
-                   const Particle particle, 
-                   std::vector<double>& ts,
-                   std::vector<std::array<double, 3> >& xs, int& stat);
-
+                   const Particle particle, std::vector<double>& ts,
+                   std::vector<std::array<double, 3> >& xs, int& stat) const;
+  // Compute the arrival time spread along a drift line.
+  double ComputeSigma(const std::vector<std::array<double, 3> >& x,
+                      const Particle particle, const double eps) const;
+  // Compute the gain factor along a drift line.
+  double ComputeGain(const std::vector<std::array<double, 3> >& x,
+                     const Particle particle, const double eps) const;
+  // Compute the loss factor along a drift line.
+  double ComputeLoss(const std::vector<std::array<double, 3> >& x,
+                     const Particle particle, const double eps) const;
   // Integrate the longitudinal diffusion over a step.
   double IntegrateDiffusion(const std::array<double, 3>& xi,
                             const std::array<double, 3>& xe,
-                            const Particle particle, const double tol);
+                            const Particle particle, const double tol) const;
   // Integrate the Townsend coefficient over a step.
   double IntegrateAlpha(const std::array<double, 3>& xi,
                         const std::array<double, 3>& xe, 
-                        const Particle particle, const double tol);
+                        const Particle particle, const double tol) const;
   // Integrate the attachment coefficient over a step.
   double IntegrateEta(const std::array<double, 3>& xi,
                       const std::array<double, 3>& xe, 
-                      const Particle particle, const double tol);
+                      const Particle particle, const double tol) const;
 
-  // Calculate the signal for the current drift line.
+  // Calculate the signal for a given drift line.
   void ComputeSignal(const Particle particle, const double scale,
                      const std::vector<double>& ts,
                      const std::vector<std::array<double, 3> >& xs,
@@ -262,7 +269,7 @@ class DriftLineRKF {
   // Terminate a field line.
   void Terminate(const std::array<double, 3>& xx0,
                  const std::array<double, 3>& xx1,
-                 std::vector<std::array<float, 3> >& xs);
+                 std::vector<std::array<float, 3> >& xs) const;
 };
 }
 
