@@ -679,6 +679,10 @@ bool Medium::NegativeIonVelocity(
   return true;
 }
 
+double Medium::NegativeIonMobility() {
+  return m_nMob.empty() ? IonMobility() : m_nMob[0][0][0];
+}
+
 bool Medium::GetOpticalDataRange(double& emin, double& emax,
                                  const unsigned int i) {
   if (i >= m_nComponents) {
