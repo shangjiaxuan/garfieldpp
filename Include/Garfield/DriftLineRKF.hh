@@ -200,13 +200,19 @@ class DriftLineRKF {
   bool DriftLine(const std::array<double, 3>& x0, const double t0, 
                  const Particle particle, std::vector<double>& ts, 
                  std::vector<std::array<double, 3> >& xs, int& status) const;
+  // Calculate the number of electrons and ions at each point along a 
+  // drift line.
   bool Avalanche(const Particle particle, 
                  const std::vector<std::array<double, 3> >& xs,
                  std::vector<double>& ne, std::vector<double>& ni,
                  std::vector<double>& nn, double& scale) const;
+  // Calculate drift lines and induced signals of the positive ions
+  // produced in an avalanche.
   bool AddIonTail(const std::vector<double>& te,
                   const std::vector<std::array<double, 3> >& xe,
                   const std::vector<double>& ni, const double scale) const;
+  // Calculate drift lines and induced signals of the negative ions
+  // produced by electron attachment.
   bool AddNegativeIonTail(const std::vector<double>& te,
                           const std::vector<std::array<double, 3> >& xe,
                           const std::vector<double>& nn, 
@@ -217,16 +223,17 @@ class DriftLineRKF {
                double& bx, double& by, double& bz,
                Medium*& medium) const;
   // Calculate transport parameters for a given point and particle type.
-  bool GetVelocity(const std::array<double, 3>& x, const Particle particle,
-                   std::array<double, 3>& v, int& status) const;
+  std::array<double, 3> GetVelocity(const std::array<double, 3>& x, 
+                                    const Particle particle,
+                                    int& status) const;
   bool GetDiffusion(const std::array<double, 3>& x, const Particle particle,
                     double& dl, double& dt) const;
-  bool GetVar(const std::array<double, 3>& x,
-              const Particle particle, double& var) const;
-  bool GetAlpha(const std::array<double, 3>& x,
-                const Particle particle, double& alpha) const;
-  bool GetEta(const std::array<double, 3>& x,
-              const Particle particle, double& eta) const;
+  double GetVar(const std::array<double, 3>& x,
+                const Particle particle) const;
+  double GetAlpha(const std::array<double, 3>& x,
+                  const Particle particle) const;
+  double GetEta(const std::array<double, 3>& x,
+                const Particle particle) const;
 
   // Terminate a drift line at the edge of a boundary.
   bool Terminate(const std::array<double, 3>& xx0,

@@ -346,16 +346,11 @@ bool DriftLineRKF::DriftLine(const Vec& xi, const double ti,
 
   // Initialise the current position and velocity.
   Vec x0 = xi;
-  Vec v0 = {0., 0., 0.};
-  if (!GetVelocity(x0, particle, v0, flag)) {
-    flag = StatusCalculationAbandoned;
-    std::cerr << m_className << "::DriftLine: "
-              << "Cannot retrieve drift velocity.\n";
-    return false;
-  } else if (flag != 0) {
-    std::cerr << m_className << "::DriftLine: "
-              << "No valid field at initial position.\n"
-              << "    " << PrintVec(x0) << "\n";
+  Vec v0 = GetVelocity(x0, particle, flag);
+  if (flag != 0) {
+    std::cerr << m_className << "::DriftLine:\n"
+              << "    Cannot retrieve drift velocity at initial position "
+              << PrintVec(x0) << ".\n";
     return false;
   }
 
@@ -387,10 +382,10 @@ bool DriftLineRKF::DriftLine(const Vec& xi, const double ti,
     for (unsigned int i = 0; i < 3; ++i) {
       x1[i] += h * b10 * v0[i];
     }
-    Vec v1;
     int stat = 0;
-    if (!GetVelocity(x1, particle, v1, stat)) {
-      flag = StatusCalculationAbandoned;
+    const Vec v1 = GetVelocity(x1, particle, stat);
+    if (stat == StatusCalculationAbandoned) {
+      flag = stat;
       break;
     } else if (stat != 0) {
       if (m_debug) std::cout << "    Point 1 outside.\n";
@@ -406,9 +401,9 @@ bool DriftLineRKF::DriftLine(const Vec& xi, const double ti,
     for (unsigned int i = 0; i < 3; ++i) {
       x2[i] += h * (b20 * v0[i] + b21 * v1[i]);
     }
-    Vec v2;
-    if (!GetVelocity(x2, particle, v2, stat)) {
-      flag = StatusCalculationAbandoned;
+    const Vec v2 = GetVelocity(x2, particle, stat);
+    if (stat == StatusCalculationAbandoned) {
+      flag = stat;
       break;
     } else if (stat != 0) {
       if (m_debug) std::cout << "    Point 2 outside.\n";
@@ -424,9 +419,9 @@ bool DriftLineRKF::DriftLine(const Vec& xi, const double ti,
     for (unsigned int i = 0; i < 3; ++i) {
       x3[i] += h * (b30 * v0[i] + b31 * v1[i] + b32 * v2[i]);
     }
-    Vec v3;
-    if (!GetVelocity(x3, particle, v3, stat)) {
-      flag = StatusCalculationAbandoned;
+    const Vec v3 = GetVelocity(x3, particle, stat);
+    if (stat == StatusCalculationAbandoned) {
+      flag = stat;
       break;
     } else if (stat != 0) {
       if (m_debug) std::cout << "    Point 3 outside.\n";
@@ -645,14 +640,14 @@ bool DriftLineRKF::Avalanche(const Particle particle,
       const double f = 0.5 * (1. + tg[j]);
       Vec xj = xp;
       for (size_t k = 0; k < 3; ++k) xj[k] += f * dx[k];
-      double alp = 0.;
-      if (!GetAlpha(xj, particle, alp)) {
+      const double alp = GetAlpha(xj, particle);
+      if (alp < 0.) {
         std::cerr << m_className << "::Avalanche:\n    Cannot retrieve alpha at "
                   << "drift line point " << i  << ", segment " << j << ".\n";
         continue;
       }
-      double eta = 0.;
-      if (!GetEta(xj, particle, eta)) {
+      const double eta = GetEta(xj, particle);
+      if (eta < 0.) {
         std::cerr << m_className << "::Avalanche:\n    Cannot retrieve eta at "
                   << "drift line point " << i  << ", segment " << j << ".\n";
         continue;
@@ -750,8 +745,8 @@ double DriftLineRKF::ComputeSigma(const std::vector<Vec>& x,
   double varPrev = 0.;
   for (size_t i = 0; i < nPoints; ++i) {
     // Get the variance at this point.
-    double var = 0.;
-    if (!GetVar(x[i], particle, var)) {
+    const double var = GetVar(x[i], particle);
+    if (var < 0.) {
       std::cerr << m_className << "::ComputeSigma:\n"
               << "    Cannot retrieve variance at point " << i << ".\n";
       continue;
@@ -796,8 +791,8 @@ double DriftLineRKF::ComputeGain(const std::vector<Vec>& x,
   double alphaPrev = 0.;
   for (size_t i = 0; i < nPoints; ++i) {
     // Get the Townsend coefficient at this point.
-    double alpha = 0.;
-    if (!GetAlpha(x[i], particle, alpha)) {
+    const double alpha = GetAlpha(x[i], particle);
+    if (alpha < 0.) {
       std::cerr << m_className << "::ComputeGain:\n"
                 << "    Cannot retrieve alpha at point " << i << ".\n";
       continue;
@@ -844,8 +839,8 @@ double DriftLineRKF::ComputeLoss(const std::vector<Vec>& x,
   double etaPrev = 0.;
   for (size_t i = 0; i < nPoints; ++i) {
     // Get the attachment coefficient at this point.
-    double eta = 0.;
-    if (!GetEta(x[i], particle, eta)) {
+    const double eta = GetEta(x[i], particle);
+    if (eta < 0.) {
       std::cerr << m_className << "::ComputeLoss:\n"
                 << "    Cannot retrieve eta at point " << i << ".\n";
       continue;
@@ -873,15 +868,15 @@ int DriftLineRKF::GetField(const std::array<double, 3>& x,
   return status;
 }
 
-bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
-                               const Particle particle,
-                               std::array<double, 3>& v, int& status) const {
-  v.fill(0.);
+Vec DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
+                              const Particle particle,
+                              int& status) const {
+  Vec v = {0., 0., 0.};
   status = 0;
   // Stop if we are outside the drift area.
   if (!m_sensor->IsInArea(x[0], x[1], x[2])) {
     status = StatusLeftDriftArea;
-    return true;
+    return v;
   } 
   if (m_useVelocityMap && 
       particle != Particle::Ion && particle != Particle::NegativeIon) {
@@ -901,7 +896,7 @@ bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
       if (particle == Particle::Positron) {
         for (unsigned int k = 0; k < 3; ++k) v[k] *= -1;
       }
-      return true;
+      return v;
     }
   }
   double ex = 0., ey = 0., ez = 0.;
@@ -909,25 +904,27 @@ bool DriftLineRKF::GetVelocity(const std::array<double, 3>& x,
   Medium* medium = nullptr;
   // Stop if we are outside a valid drift medium.
   status = GetField(x, ex, ey, ez, bx, by, bz, medium);
-  if (status != 0) return true;
+  if (status != 0) return v;
+  bool ok = false;
   if (particle == Particle::Electron) {
-    return medium->ElectronVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
+    ok = medium->ElectronVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } else if (particle == Particle::Ion) {
-    return medium->IonVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
+    ok = medium->IonVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } else if (particle == Particle::Hole) {
-    return medium->HoleVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
+    ok = medium->HoleVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } else if (particle == Particle::Positron) {
-    const bool ok = medium->ElectronVelocity(ex, ey, ez, bx, by, bz, 
-                                             v[0], v[1], v[2]);
+    ok = medium->ElectronVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
     for (unsigned int i = 0; i < 3; ++i) v[i] *= -1;
-    return ok;
   } else if (particle == Particle::NegativeIon) {
-    return medium->NegativeIonVelocity(ex, ey, ez, bx, by, bz, 
-                                       v[0], v[1], v[2]);
+    ok = medium->NegativeIonVelocity(ex, ey, ez, bx, by, bz, v[0], v[1], v[2]);
   } 
-  std::cerr << m_className << "::GetVelocity:\n"
-            << "    Cannot retrieve drift velocity at " << PrintVec(x) << ".\n";
-  return false;
+  if (!ok) {
+    std::cerr << m_className << "::GetVelocity:\n"
+              << "    Cannot retrieve drift velocity at " 
+              << PrintVec(x) << ".\n";
+    status = StatusCalculationAbandoned;
+  }
+  return v;
 }
 
 bool DriftLineRKF::GetDiffusion(const std::array<double, 3>& x,
@@ -948,32 +945,29 @@ bool DriftLineRKF::GetDiffusion(const std::array<double, 3>& x,
   return false;
 }
 
-bool DriftLineRKF::GetVar(const std::array<double, 3>& x,
-                          const Particle particle, double& var) const {
-  var = 0.;
+double DriftLineRKF::GetVar(const std::array<double, 3>& x,
+                            const Particle particle) const {
   // Get the drift velocity.
-  int stat;
-  Vec v;
-  if (!GetVelocity(x, particle, v, stat)) return false;
+  int stat = 0;
+  const Vec v = GetVelocity(x, particle, stat);
+  if (stat != 0) return -1.;
 
   const double speed = Mag(v);
   if (speed < Small) {
     std::cerr << m_className << "::GetVariance: Zero velocity.\n";
-    return false;
+    return -1.;
   }
   // Get the diffusion coefficients.
   double dl = 0., dt = 0.;
-  if (!GetDiffusion(x, particle, dl, dt)) return false;
+  if (!GetDiffusion(x, particle, dl, dt)) return -1.;
 
   const double sigma = dl / speed;
-  var = sigma * sigma;
-  return true;
+  return sigma * sigma;
 }
 
-bool DriftLineRKF::GetAlpha(const std::array<double, 3>& x,
-                            const Particle particle, double& alpha) const {
-
-  alpha = 0.;
+double DriftLineRKF::GetAlpha(const std::array<double, 3>& x,
+                              const Particle particle) const {
+  double alpha = 0.;
   if (m_useTownsendMap && (particle == Particle::Electron || 
       particle == Particle::Hole || particle == Particle::Positron)) {
     const auto nComponents = m_sensor->GetNumberOfComponents();
@@ -991,29 +985,30 @@ bool DriftLineRKF::GetAlpha(const std::array<double, 3>& x,
   double ex = 0., ey = 0., ez = 0.;
   double bx = 0., by = 0., bz = 0.;
   Medium* medium = nullptr;
-  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return false;
+  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return -1.;
 
   if (particle == Particle::Electron || particle == Particle::Positron) {
-    return medium->ElectronTownsend(ex, ey, ez, bx, by, bz, alpha);
+    medium->ElectronTownsend(ex, ey, ez, bx, by, bz, alpha);
   } else if (particle == Particle::Hole) {
-    return medium->HoleTownsend(ex, ey, ez, bx, by, bz, alpha);
+    medium->HoleTownsend(ex, ey, ez, bx, by, bz, alpha);
   }
-  return false;
+  return alpha;
 }
 
-bool DriftLineRKF::GetEta(const std::array<double, 3>& x,
-                          const Particle particle, double& eta) const {
+double DriftLineRKF::GetEta(const std::array<double, 3>& x,
+                            const Particle particle) const {
+
   double ex = 0., ey = 0., ez = 0.;
   double bx = 0., by = 0., bz = 0.;
   Medium* medium = nullptr;
-  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return false;
-
+  if (GetField(x, ex, ey, ez, bx, by, bz, medium) != 0) return -1.;
+  double eta = 0.;
   if (particle == Particle::Electron) {
-    return medium->ElectronAttachment(ex, ey, ez, bx, by, bz, eta);
+    medium->ElectronAttachment(ex, ey, ez, bx, by, bz, eta);
   } else if (particle == Particle::Hole) {
-    return medium->HoleAttachment(ex, ey, ez, bx, by, bz, eta);
+    medium->HoleAttachment(ex, ey, ez, bx, by, bz, eta);
   }
-  return false;
+  return eta;
 }
 
 bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
@@ -1030,15 +1025,11 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
   // -----------------------------------------------------------------------
 
   // Check the validity of the initial point.
-  Vec vv0 = {0., 0., 0.};
   int status = 0;
-  if (!GetVelocity(xx0, particle, vv0, status)) {
+  const Vec vv0 = GetVelocity(xx0, particle, status);
+  if (status != 0) {
     std::cerr << m_className << "::Terminate:\n"
-              << "    Cannot retrieve initial drift velocity.\n";
-    return false;
-  } else if (status != 0) {
-    std::cerr << m_className << "::Terminate:\n"
-              << "    No valid field at initial point. Program bug!\n";
+              << "    Cannot retrieve drift velocity at initial point.\n";
     return false;
   }
   double speed = Mag(vv0);
@@ -1082,8 +1073,8 @@ bool DriftLineRKF::Terminate(const std::array<double, 3>& xx0,
   }
 
   // Compute drift velocity at the end of the step.
-  Vec v0;
-  if (!GetVelocity(x0, particle, v0, status) || status != 0) {
+  Vec v0 = GetVelocity(x0, particle, status);
+  if (status != 0) {
     std::cerr << m_className << "::Terminate:\n"
               << "    Warning: Unable to compute mean velocity at last step.\n";
   } else {
@@ -1119,17 +1110,13 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
   }
 
   // Get the initial drift velocity.
-  Vec v0;
   int status = 0;
-  if (!GetVelocity(x0, particle, v0, status)) {
+  Vec v0 = GetVelocity(x0, particle, status);
+  if (status != 0) {
     std::cerr << m_className << "::DriftToWire:\n"
               << "    Cannot retrieve initial drift velocity.\n";
     return false;
-  } else if (status != 0) {
-    std::cerr << m_className << "::DriftToWire:\n"
-              << "    No valid field at initial point. Program bug!\n";
-    return false;
-  }
+  } 
 
   // Estimate the time needed to reach the wire
   // assuming a straight-line trajectory and constant velocity.
@@ -1177,27 +1164,19 @@ bool DriftLineRKF::DriftToWire(const double xw, const double yw,
       x1[2] = x0[2] + dt * v0[2];
     }
     // Calculate the drift velocity at the end point.
-    Vec v1;
-    if (!GetVelocity(x1, particle, v1, status)) {
+    Vec v1 = GetVelocity(x1, particle, status);
+    if (status != 0) {
       std::cerr << m_className << "::DriftToWire:\n"
                 << "    Cannot retrieve drift velocity at end point. Quit.\n";
       return false;
-    } else if (status != 0) {
-      std::cerr << m_className << "::DriftToWire:\n"
-                << "    End point is not in a valid drift medium. Quit.\n";
-      return false;
-    }
+    } 
     // Get a point halfway between for an accuracy check.
     const Vec xm = MidPoint(x0, x1);
     // Calculate the drift velocity at the mid point.
-    Vec vm;
-    if (!GetVelocity(xm, particle, vm, status)) {
+    Vec vm = GetVelocity(xm, particle, status);
+    if (status != 0) {
       std::cerr << m_className << "::DriftToWire:\n"
                 << "    Cannot retrieve drift velocity at mid point. Quit.\n";
-      return false;
-    } else if (status != 0) {
-      std::cerr << m_className << "::DriftToWire:\n"
-                << "    Mid point is not in a valid drift medium. Quit.\n";
       return false;
     }
     // Make sure the velocities are non-zero.
@@ -1302,20 +1281,15 @@ double DriftLineRKF::IntegrateDiffusion(const std::array<double, 3>& xi,
                                         const std::array<double, 3>& xe,
                                         const Particle particle, 
                                         const double tol) const {
-  // Make sure the starting point is valid.
+  // Make sure the starting and end points are valid.
   Vec x0 = xi;
-  double var0 = 0.;
-  if (!GetVar(x0, particle, var0)) {
+  double var0 = GetVar(x0, particle);
+  Vec x1 = xe;
+  double var1 = GetVar(x1, particle);
+  if (var0 < 0. || var1 < 0.) {
     std::cerr << m_className << "::IntegrateDiffusion:\n"
               << "    Cannot retrieve variance at initial point.\n";
-  }
-
-  // Make sure the end point is valid.
-  Vec x1 = xe;
-  double var1 = 0.;
-  if (!GetVar(x1, particle, var1)) {
-    std::cerr << m_className << "::IntegrateDiffusion:\n"
-              << "    Cannot retrieve variance at end point.\n";
+    return 0.;
   }
 
   double integral = 0.;
@@ -1333,17 +1307,13 @@ double DriftLineRKF::IntegrateDiffusion(const std::array<double, 3>& xi,
       continue;
     }
     // Determine the variance at the end point of the step.
-    if (!GetVar(x1, particle, var1)) {
-      std::cerr << m_className << "::IntegrateDiffusion:\n"
-                << "    Cannot retrieve variance at end point.\n";
-      break;
-    }
+    var1 = GetVar(x1, particle);
     // Determine the variance at the mid point of the step.
     const Vec xm = MidPoint(x0, x1);
-    double varm = 0.;
-    if (!GetVar(xm, particle, varm)) {
+    const double varm = GetVar(xm, particle);
+    if (var1 < 0. || varm < 0.) {
       std::cerr << m_className << "::IntegrateDiffusion:\n"
-                << "    Cannot retrieve variance at mid point.\n";
+                << "    Cannot retrieve variance at mid or end point.\n";
       break;
     }
     // Compare first and second order estimates 
@@ -1371,18 +1341,13 @@ double DriftLineRKF::IntegrateAlpha(const std::array<double, 3>& xi,
 
   // Determine the Townsend coefficient at the initial point.
   Vec x0 = xi;
-  double alpha0 = 0.;
-  if (!GetAlpha(x0, particle, alpha0)) {
-    std::cerr << m_className << "::IntegrateAlpha:\n"
-              << "    Cannot retrieve alpha at initial point.\n";
-    return 0.;
-  }
+  double alpha0 = GetAlpha(x0, particle);
   // Determine the Townsend coefficient at the end point.
   Vec x1 = xe;
-  double alpha1 = 0.;
-  if (!GetAlpha(x1, particle, alpha1)) {
+  double alpha1 = GetAlpha(x1, particle);
+  if (alpha0 < 0. || alpha1 < 0.) {
     std::cerr << m_className << "::IntegrateAlpha:\n"
-              << "    Cannot retrieve alpha at end point.\n";
+              << "    Cannot retrieve alpha at start point or end point.\n";
     return 0.;
   }
   double integral = 0.;
@@ -1400,17 +1365,13 @@ double DriftLineRKF::IntegrateAlpha(const std::array<double, 3>& xi,
       continue;
     }
     // Calculate the Townsend coefficient at the end point of the step.
-    if (!GetAlpha(x1, particle, alpha1)) {
-      std::cerr << m_className << "::IntegrateAlpha:\n"
-                << "    Cannot retrieve alpha at end point.\n";
-      break;
-    }
+    alpha1 = GetAlpha(x1, particle);
     // Calculate the Townsend coefficient at the mid point of the step.
     const Vec xm = MidPoint(x0, x1);
-    double alpham = 0.;
-    if (!GetAlpha(xm, particle, alpham)) {
+    const double alpham = GetAlpha(xm, particle);
+    if (alpha1 < 0. || alpham < 0.) {
       std::cerr << m_className << "::IntegrateAlpha:\n"
-                << "    Cannot retrieve alpha at mid point.\n";
+                << "    Cannot retrieve alpha at mid point or end point.\n";
       break;
     }
     // Compare first and second order estimates.
@@ -1436,18 +1397,13 @@ double DriftLineRKF::IntegrateEta(const std::array<double, 3>& xi,
                                   const double tol) const {
   // Determine the attachment coefficient at the initial point.
   Vec x0 = xi;
-  double eta0 = 0.;
-  if (!GetEta(x0, particle, eta0)) {
-    std::cerr << m_className << "::IntegrateEta:\n"
-              << "    Cannot retrieve eta at initial point.\n";
-    return 0.;
-  }
+  double eta0 = GetEta(x0, particle);
   // Determine the attachment coefficient at the end point.
   Vec x1 = xe;
-  double eta1 = 0.;
-  if (!GetEta(x1, particle, eta1)) {
+  double eta1 = GetEta(x1, particle);
+  if (eta0 < 0. || eta1 < 0.) {
     std::cerr << m_className << "::IntegrateEta:\n"
-              << "    Cannot retrieve eta at end point.\n";
+              << "    Cannot retrieve eta at start point or end point.\n";
     return 0.;
   }
   double integral = 0.;
@@ -1465,17 +1421,13 @@ double DriftLineRKF::IntegrateEta(const std::array<double, 3>& xi,
       continue;
     }
     // Calculate the attachment coefficient at the end point of the step.
-    if (!GetEta(x1, particle, eta1)) {
-      std::cerr << m_className << "::IntegrateEta:\n"
-                << "    Cannot retrieve eta at end point.\n";
-      break;
-    }
+    eta1 = GetEta(x1, particle);
     // Calculate the attachment coefficient at the mid point of the step.
     const Vec xm = MidPoint(x0, x1);
-    double etam = 0.;
-    if (!GetEta(xm, particle, etam)) {
+    const double etam = GetEta(xm, particle);
+    if (eta1 < 0. || etam < 0.) {
       std::cerr << m_className << "::IntegrateEta:\n"
-                << "    Cannot retrieve eta at mid point.\n";
+                << "    Cannot retrieve eta at mid point or end point.\n";
       break;
     }
     // Compare first and second order estimates.
@@ -1523,8 +1475,8 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
   std::vector<std::array<double, 3> > vs;
   for (const auto& x : xs) {
     int stat = 0;
-    Vec v;
-    if (!GetVelocity(x, particle, v, stat)) {
+    Vec v = GetVelocity(x, particle, stat);
+    if (stat != 0) {
       std::cerr << m_className << "::ComputeSignal:\n"
                 << "    Cannot retrieve velocity at " << PrintVec(x) << "\n";
     }
