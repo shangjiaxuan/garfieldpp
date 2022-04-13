@@ -30,6 +30,11 @@ class ComponentGrid : public Component {
   bool GetMesh(unsigned int& nx, unsigned int& ny, unsigned int& nz,
                double& xmin, double& xmax, double& ymin, double& ymax,
                double& zmin, double& zmax) const;
+  /// Use Cartesian coordinates (default).
+  void SetCartesianCoordinates() { m_coordinates = Coordinates::Cartesian; }
+  /// Use cylindrical coordinates.
+  void SetCylindricalCoordinates();
+
   /** Import electric field and potential values from a file.
    * The file is supposed to contain one line for each grid point starting with
    *   - either two or three floating point numbers,
@@ -46,6 +51,10 @@ class ComponentGrid : public Component {
    * Format types are:
    *  - "xy", "xyz": nodes are specified by their coordinates
    *  - "ij", "ijk": nodes are specified by their indices
+   * 
+   * If cylindrical coordinates are used, the first coordinate (x)
+   * corresponds to the radial distance and the second coordinate (y)
+   * corresponds to the azimuth (in radian).
    */
   bool LoadElectricField(const std::string& filename, const std::string& format,
                          const bool withPotential, const bool withFlag,
@@ -184,12 +193,19 @@ class ComponentGrid : public Component {
   enum class Format {
     Unknown,
     XY,
+    XZ,
     XYZ,
     IJ,
+    IK,
     IJK,
     YXZ
   };
-
+  enum class Coordinates {
+    Cartesian,
+    Cylindrical
+  };
+  Coordinates m_coordinates = Coordinates::Cartesian;
+ 
   Medium* m_medium = nullptr;
   struct Node {
     double fx, fy, fz;  ///< Field

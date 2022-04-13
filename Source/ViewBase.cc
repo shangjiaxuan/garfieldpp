@@ -250,6 +250,21 @@ void ViewBase::SetPlane(const double fx, const double fy, const double fz,
               << "    Inversion failed; reset to default.\n";
     SetPlaneXY();
   }
+  if (m_debug) {
+    std::cout << m_className << "::SetPlane:\n    PRMAT:\n";
+    for (size_t i = 0; i < 3; ++i) {
+      std::printf("  %10.5f  %10.5f  %10.5f\n", 
+                  m_prmat[i][0], m_prmat[i][1], m_prmat[i][2]);
+    }
+    std::cout << "    PROJ:\n";
+    for (size_t i = 0; i < 3; ++i) {
+      std::printf("  %10.5f  %10.5f  %10.5f\n", 
+                  m_proj[i][0], m_proj[i][1], m_proj[i][2]);
+    }
+    std::cout << "   PLANE:\n";
+    std::printf("  %10.5f  %10.5f  %10.5f  %10.5f\n", 
+                m_plane[0], m_plane[1], m_plane[2], m_plane[3]);
+  }       
 }
 
 void ViewBase::Rotate(const double theta) {
@@ -283,6 +298,18 @@ void ViewBase::SetPlaneXZ() {
 
 void ViewBase::SetPlaneYZ() {
   m_proj = {{{0, 1, 0}, {0, 0, 1}, {0, 0, 0}}};
+  m_plane = {1, 0, 0, 0};
+  UpdateProjectionMatrix();
+}
+
+void ViewBase::SetPlaneZX() {
+  m_proj = {{{0, 0, 1}, {1, 0, 0}, {0, 0, 0}}};
+  m_plane = {0, 1, 0, 0};
+  UpdateProjectionMatrix();
+}
+
+void ViewBase::SetPlaneZY() {
+  m_proj = {{{0, 0, 1}, {0, 1, 0}, {0, 0, 0}}};
   m_plane = {1, 0, 0, 0};
   UpdateProjectionMatrix();
 }
