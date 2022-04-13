@@ -63,6 +63,10 @@ class ViewBase {
   void SetPlaneXZ();
   /// Set the viewing plane to y-z. 
   void SetPlaneYZ();
+  /// Set the viewing plane to z-x. 
+  void SetPlaneZX();
+  /// Set the viewing plane to z-y. 
+  void SetPlaneZY();
 
   /// Switch on/off debugging output.
   void EnableDebugging(const bool on = true) { m_debug = on; }
