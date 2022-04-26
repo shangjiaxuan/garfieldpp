@@ -120,6 +120,11 @@ class Track {
   size_t m_plotId = 0;
   void PlotNewTrack(const double x0, const double y0, const double z0);
   void PlotCluster(const double x0, const double y0, const double z0);
+
+  static std::array<double, 3> StepBfield(const double dt, const double qoverm,
+      const double vmag, double bx, double by, double bz,
+      std::array<double, 3>& dir);
+
 };
 }
 

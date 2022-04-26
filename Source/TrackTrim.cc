@@ -10,6 +10,23 @@
 #include "Garfield/Utilities.hh"
 #include "Garfield/TrackTrim.hh"
 
+namespace {
+
+std::tuple<double, double> GetPhiTheta(const double x, const double y,
+                                       const double z) {
+  double phi = 0., theta = 0.;
+  const double t = sqrt(x * x + y * y);
+  if (t > 0.) {
+    phi = atan2(y, x);
+    theta = atan2(z, t);
+  } else {
+    theta = z < 0. ? -Garfield::HalfPi : Garfield::HalfPi;
+  }
+  return std::make_tuple(phi, theta);
+}
+
+}
+
 namespace Garfield {
 
 TrackTrim::TrackTrim() : Track() { 
@@ -110,7 +127,7 @@ bool TrackTrim::ReadFile(const std::string& filename,
             << m_ions.size() << " ions.\n";
   if (m_ekin > 0. && mass > 0.) {
     std::cout << "    Initial kinetic energy set to " 
-              << m_ekin * 1.e-3 << " keV.\n";
+              << m_ekin * 1.e-3 << " keV. Mass number: " << mass << ".\n";
     m_mass = AtomicMassUnitElectronVolt * mass;
     SetKineticEnergy(m_ekin);
   }
@@ -206,19 +223,12 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
     dy /= d0;
     dz /= d0;
   }
-  const double dt = sqrt(dx * dx + dy * dy);
-  double phi = 0.;
-  double theta = 0.; 
-  if (dt > 0.) {
-    phi = atan2(dy, dx);
-    theta = atan2(dz, dt);
-  } else {
-    theta = dz < 0. ? -HalfPi : HalfPi;
-  }
-  const double ctheta = cos(theta);
-  const double stheta = sin(theta);
-  const double cphi = cos(phi);
-  const double sphi = sin(phi);
+  double phi = 0., theta = 0.;
+  std::tie(phi, theta) = GetPhiTheta(dx, dy, dz); 
+  double ctheta = cos(theta);
+  double stheta = sin(theta);
+  double cphi = cos(phi);
+  double sphi = sin(phi);
 
   Medium* medium = m_sensor->GetMedium(x0, y0, z0);
   if (!medium) {
@@ -233,6 +243,9 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
   double fano = m_fset ? m_fano : medium->GetFanoFactor();
   fano = std::max(fano, 0.);
 
+  // Charge-over-mass ratio.
+  const double qoverm = m_mass > 0. ? m_q / m_mass : 0.;
+
   // Plot.
   if (m_viewer) PlotNewTrack(x0, y0, z0);
  
@@ -246,30 +259,61 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
   const double ekin0 = GetKineticEnergy();
   const auto& path = m_ions[m_ion];
   const size_t nPoints = path.size();
-  double xo = path[0][0];
-  double yo = path[0][1];
-  double zo = path[0][2];
+  double xp = x0;
+  double yp = y0;
+  double zp = z0;
+  double tp = t0;
   for (size_t i = 1; i < nPoints; ++i) {
     // Skip points with kinetic energy below the initial one set by the user.
-    if (path[i][4] > ekin0) {
-      xo = path[i][0];
-      yo = path[i][1];
-      zo = path[i][2];
-      continue;
-    }
-    const double x = path[i][0] - xo;
-    const double y = path[i][1] - yo;
-    const double z = path[i][2] - zo;
+    const double ekin = path[i][4];
+    if (ekin > ekin0) continue;
+    const double x = path[i][0] - path[i - 1][0];
+    const double y = path[i][1] - path[i - 1][1];
+    const double z = path[i][2] - path[i - 1][2];
+    dx = cphi * ctheta * x - sphi * y - cphi * stheta * z;
+    dy = sphi * ctheta * x + cphi * y - sphi * stheta * z;
+    dz = stheta * x + ctheta * z;
+    const double dmag = sqrt(x * x + y * y + z * z);
+    // Get the particle velocity.
+    const double rk = 1.e6 * ekin / m_mass;
+    const double gamma = 1. + rk;
+    const double beta2 = rk > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rk;
+    const double vmag = sqrt(beta2) * SpeedOfLight;
+    // Compute the timestep.
+    const double dt = vmag > 0. ? dmag / vmag : 0.;
     Cluster cluster;
-    cluster.x = x0 + cphi * ctheta * x - sphi * y - cphi * stheta * z;
-    cluster.y = y0 + sphi * ctheta * x + cphi * y - sphi * stheta * z;
-    cluster.z = z0 + stheta * x + ctheta * z;
+    if (m_sensor->HasMagneticField()) {
+      double bx = 0., by = 0., bz = 0.;
+      int status = 0;
+      m_sensor->MagneticField(xp, yp, zp, bx, by, bz, status);
+
+      // Direction vector.
+      std::array<double, 3> v = {dx / dmag, dy / dmag, dz / dmag};
+      std::array<double, 3> d = StepBfield(dt, qoverm, vmag, bx, by, bz, v);
+      cluster.x = xp + d[0];
+      cluster.y = yp + d[1];
+      cluster.z = zp + d[2];
+      // Update the rotation angles.
+      std::tie(phi, theta) = GetPhiTheta(v[0], v[1], v[2]); 
+      ctheta = cos(theta);
+      stheta = sin(theta);
+      cphi = cos(phi);
+      sphi = sin(phi);
+    } else {
+      cluster.x = xp + dx;
+      cluster.y = yp + dy;
+      cluster.z = zp + dz;
+    }
+    cluster.t = tp + dt;
+    xp = cluster.x;
+    yp = cluster.y;
+    zp = cluster.z;
+    tp = cluster.t;
     // Is this point inside an ionisable medium?
     medium = m_sensor->GetMedium(cluster.x, cluster.y, cluster.z);
     if (!medium || !medium->IsIonisable()) continue;
     if (m_work < Small) w = medium->GetW();
     if (w < Small) continue;
-    cluster.t = t0;
     double eloss = path[i - 1][3];
     if (fano < Small) {
       // No fluctuations.
