@@ -195,7 +195,7 @@ const std::list<MoleculeDef>& MoleculeDefs::getMolecules() {
   molecules.emplace_back(MoleculeDef("C4H10", "C4H10", "C", 4, "H", 10,
       std::make_shared<VanDerWaals>(40.0 * bar, 418.3 * kelvin)));
   molecules.emplace_back(MoleculeDef("C2H2F4", "C2H2F4", "C", 2, "F", 4, "H", 2));
-  molecules.emplace_back(MoleculeDef("Water", "Water", "H", 2, "O", 1,
+  molecules.emplace_back(MoleculeDef("H2O", "H2O", "H", 2, "O", 1,
       std::make_shared<VanDerWaals>(22.9e6 * hep_pascal, (273.15 + 374.15) * kelvin)));
   molecules.emplace_back(MoleculeDef("Methylal", "Methylal", "O", 2, "C", 3, "H", 8,
       std::make_shared<VanDerWaals>(39.5 * bar, 480.6 * kelvin)));
