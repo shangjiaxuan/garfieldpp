@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
   constexpr double d = 100.e-4;
   cmp.SetArea(-d, 0., -d, d, d, d);
   cmp.SetMedium(&si); 
+  // cmp.SetMagneticField(0., 0., 1.);
 
   // Make a sensor.
   Sensor sensor;
