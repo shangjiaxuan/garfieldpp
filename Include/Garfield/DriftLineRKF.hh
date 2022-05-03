@@ -162,7 +162,7 @@ class DriftLineRKF {
   // Averaging order used when projecting the signal on the time bins.
   unsigned int m_navg = 2;
   // Use weighting potential or weighting field for calculating the signal.
-  bool m_useWeightingPotential = false;
+  bool m_useWeightingPotential = true;
 
   // Scaling factor for electron signals.
   double m_scaleE = 1.;
