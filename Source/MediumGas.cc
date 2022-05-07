@@ -1835,8 +1835,7 @@ bool MediumGas::WriteGasFile(const std::string& filename) {
   const int version = 12;
   outfile << " Version   : " << version << "\n";
   outfile << " GASOK bits: " << okstr << "\n";
-  std::stringstream ids;
-  ids.str("");
+  std::stringstream ids("");
   for (unsigned int i = 0; i < m_nComponents; ++i) {
     ids << m_gas[i] << " " << 100. * m_fraction[i] << "%, ";
   }

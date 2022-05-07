@@ -783,8 +783,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
     if (line.empty()) continue;
     // Skip comments.
     if (IsComment(line)) continue;
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     if (fmt == Format::XY) {
       double x, y;
       data >> x >> y;
@@ -991,8 +990,7 @@ bool ComponentGrid::LoadData(
     double fy = 0.;
     double fz = 0.;
     double p = 0.;
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     if (fmt == Format::XY) {
       double x, y;
       data >> x >> y;
@@ -1709,8 +1707,7 @@ bool ComponentGrid::LoadData(
     unsigned int j = 0;
     unsigned int k = 0;
     double val = 0;
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     if (fmt == Format::XY) {
       double x, y;
       data >> x >> y;

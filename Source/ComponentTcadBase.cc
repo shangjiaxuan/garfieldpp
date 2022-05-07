@@ -584,8 +584,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
       return false;
     }
     line = line.substr(pEq + 1);
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     data >> nRegions;
     break;
   }
@@ -623,8 +622,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
                 << "    Could not read region names.\n";
       return false;
     }
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     for (size_t j = 0; j < nRegions; ++j) {
       data >> m_regions[j].name;
       data.clear();
@@ -660,8 +658,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
                 << "    Could not read number of vertices.\n";
       return false;
     }
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     data >> nVertices;
     m_vertices.resize(nVertices);
     // Get the coordinates of every vertex.
@@ -702,8 +699,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
                 << "    Could not read number of edges.\n";
       return false;
     }
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     data >> nEdges;
     edgeP1.resize(nEdges);
     edgeP2.resize(nEdges);
@@ -760,8 +756,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
                   << "    Could not read number of faces.\n";
         return false;
       }
-      std::istringstream data;
-      data.str(line);
+      std::istringstream data(line);
       data >> nFaces;
       faces.resize(nFaces);
       // Get the indices of the edges constituting this face.
@@ -805,8 +800,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
                 << "    Could not read number of elements.\n";
       return false;
     }
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     data >> nElements;
     data.clear();
     // Resize the list of elements.
@@ -1052,8 +1046,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
                 << "    Could not read region name.\n";
       return false;
     }
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     std::string name;
     data >> name;
     data.clear();
@@ -1124,8 +1117,7 @@ bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
     }
     line = line.substr(pEq + 1);
     std::string dataset;
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     data >> dataset;
     data.clear();
     if (m_debug && dataset != "[") {
@@ -1287,8 +1279,7 @@ bool ComponentTcadBase<N>::ReadDataset(std::ifstream& datafile,
     return false;
   }
   std::string name;
-  std::istringstream data;
-  data.str(line);
+  std::istringstream data(line);
   data >> name;
   data.clear();
   // Check if the region name matches one from the mesh file.
@@ -1449,8 +1440,7 @@ bool ComponentTcadBase<N>::LoadWeightingField(
     }
     line = line.substr(pEq + 1);
     std::string dataset;
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     data >> dataset;
     data.clear();
     if (dataset != "ElectrostaticPotential" && dataset != "ElectricField") {

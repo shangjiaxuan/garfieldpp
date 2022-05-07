@@ -507,8 +507,7 @@ bool ComponentComsol::SetWeightingPotential(const std::string& field,
 
     std::vector<double> pvect;
 
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     data >> x >> y >> z;
     x *= m_unit;
     y *= m_unit;
@@ -614,8 +613,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
 
     std::vector<double> pvect;
 
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     data >> x >> y >> z;
     x *= m_unit;
     y *= m_unit;

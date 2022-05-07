@@ -408,8 +408,7 @@ bool ComponentVoxel::LoadData(const std::string& filename, std::string format,
     double fz = 0.;
     double v = 0.;
     int region = 0;
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     if (fmt == 1) {
       // "XY"
       double x, y;
