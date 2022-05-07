@@ -80,9 +80,8 @@ bool ComponentComsol::Initialise(const std::string &mesh,
   }
   // Open the materials file.
   m_materials.clear();
-  std::ifstream fmplist;
-  fmplist.open(mplist.c_str(), std::ios::in);
-  if (fmplist.fail()) {
+  std::ifstream fmplist(mplist);
+  if (!fmplist) {
     PrintCouldNotOpen("Initialise", mplist);
     return false;
   }
@@ -120,9 +119,8 @@ bool ComponentComsol::Initialise(const std::string &mesh,
     return false;
 
   m_nodes.clear();
-  std::ifstream fmesh;
-  fmesh.open(mesh.c_str(), std::ios::in);
-  if (fmesh.fail()) {
+  std::ifstream fmesh(mesh);
+  if (!fmesh) {
     PrintCouldNotOpen("Initialise", mesh);
     return false;
   }
@@ -250,9 +248,8 @@ bool ComponentComsol::Initialise(const std::string &mesh,
     }
   }
 
-  std::ifstream ffield;
-  ffield.open(field.c_str(), std::ios::in);
-  if (ffield.fail()) {
+  std::ifstream ffield(field);
+  if (!ffield) {
     PrintCouldNotOpen("Initialise", field);
     return false;
   }
@@ -369,9 +366,8 @@ std::cerr << m_className << "::SetWeightingField:\n"
               << "    Called.\n";
 
   // Open the voltage list.
-  std::ifstream ffield;
-  ffield.open(field.c_str(), std::ios::in);
-  if (ffield.fail()) {
+  std::ifstream ffield(field);
+  if (!ffield) {
     PrintCouldNotOpen("SetWeightingField", field);
     return false;
   }
@@ -467,8 +463,11 @@ bool ComponentComsol::SetWeightingPotential(const std::string& field,
   double x, y, z;
 
   // Open the voltage list.
-  std::ifstream ffield;
-  ffield.open(field.c_str(), std::ios::in);
+  std::ifstream ffield(field);
+  if (!ffield) {
+    PrintCouldNotOpen("SetWeightingPotential", field);
+    return false;
+  }
 
   // Check if a weighting field with the same label already exists.
   const size_t iw = GetOrCreateWeightingFieldIndex(label);
@@ -571,8 +570,11 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
   double x, y, z;
 
   // Open the voltage list.
-  std::ifstream ffield;
-  ffield.open(field.c_str(), std::ios::in);
+  std::ifstream ffield(field);
+  if (!ffield) {
+    PrintCouldNotOpen("SetDelayedWeightingPotential", field);
+    return false;
+  }
 
   // Check if a weighting field with the same label already exists.
   const size_t iw = GetOrCreateWeightingFieldIndex(label);
@@ -746,11 +748,9 @@ bool ComponentComsol::GetTimeInterval(const std::string &field) {
               << "::GetTimeInterval: Overwriting time interval of weighting "
                  "potential.\n";
 
-  std::ifstream ffield;
-  ffield.open(field.c_str(), std::ios::in);
-
-  if (ffield.fail()) {
-    PrintCouldNotOpen("SetDelayedWeightingField", field);
+  std::ifstream ffield(field);
+  if (!ffield) {
+    PrintCouldNotOpen("GetTimeInterval", field);
     return false;
   }
 
