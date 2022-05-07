@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 #include <sstream>
+#include <vector>
 
 namespace Garfield {
 
