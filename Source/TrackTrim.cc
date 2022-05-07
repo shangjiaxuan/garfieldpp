@@ -50,9 +50,8 @@ bool TrackTrim::ReadFile(const std::string& filename,
   m_clusters.clear();
   m_cluster = 0;
 
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
-  if (infile.fail()) {
+  std::ifstream infile(filename);
+  if (!infile) {
     std::cerr << m_className << "::ReadFile:\n"
               << "    Unable to open the EXYZ file (" << filename << ").\n";
     return false;

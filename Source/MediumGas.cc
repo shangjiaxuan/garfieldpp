@@ -325,10 +325,8 @@ bool MediumGas::LoadGasFile(const std::string& filename,
   // -----------------------------------------------------------------------
   //    GASGET
   // -----------------------------------------------------------------------
-
-  std::ifstream gasfile;
   // Open the file.
-  gasfile.open(filename.c_str());
+  std::ifstream gasfile(filename);
   // Make sure the file could be opened.
   if (!gasfile.is_open()) {
     std::cerr << m_className << "::LoadGasFile:\n"
@@ -957,10 +955,8 @@ bool MediumGas::MergeGasFile(const std::string& filename,
   // -----------------------------------------------------------------------
 
   constexpr double eps = 1.e-3;
-
-  std::ifstream gasfile;
   // Open the file.
-  gasfile.open(filename.c_str());
+  std::ifstream gasfile(filename);
   // Make sure the file could be opened.
   if (!gasfile.is_open()) {
     std::cerr << m_className << "::MergeGasFile:\n"
@@ -1801,7 +1797,7 @@ bool MediumGas::WriteGasFile(const std::string& filename) {
   }
 
   std::ofstream outfile;
-  outfile.open(filename.c_str(), std::ios::out);
+  outfile.open(filename, std::ios::out);
   if (!outfile.is_open()) {
     std::cerr << m_className << "::WriteGasFile:\n"
               << "    Cannot open file " << filename << ".\n";
@@ -2244,8 +2240,7 @@ bool MediumGas::LoadNegativeIonMobility(const std::string& filename,
 bool MediumGas::LoadMobility(const std::string& filename, 
                              const bool quiet, const bool negative) {
   // Open the file.
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
+  std::ifstream infile(filename);
   // Make sure the file could actually be opened.
   if (!infile) {
     std::cerr << m_className << "::LoadMobility:\n"

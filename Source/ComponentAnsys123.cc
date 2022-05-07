@@ -21,9 +21,8 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   char line[size];
 
   // Open the material list.
-  std::ifstream fmplist;
-  fmplist.open(mplist.c_str(), std::ios::in);
-  if (fmplist.fail()) {
+  std::ifstream fmplist(mplist);
+  if (!fmplist) {
     PrintCouldNotOpen("Initialise", mplist);
     return false;
   }
@@ -197,9 +196,8 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   if (m_debug) PrintMaterials();
 
   // Open the element list
-  std::ifstream felist;
-  felist.open(elist.c_str(), std::ios::in);
-  if (felist.fail()) {
+  std::ifstream felist(elist);
+  if (!felist) {
     PrintCouldNotOpen("Initialise", elist);
     return false;
   }
@@ -416,9 +414,8 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   }
 
   // Open the node list
-  std::ifstream fnlist;
-  fnlist.open(nlist.c_str(), std::ios::in);
-  if (fnlist.fail()) {
+  std::ifstream fnlist(nlist);
+  if (!fnlist) {
     PrintCouldNotOpen("Initialise", nlist);
     return false;
   }
@@ -511,9 +508,8 @@ bool ComponentAnsys123::Initialise(std::string elist, std::string nlist,
   }
 
   // Open the voltage list
-  std::ifstream fprnsol;
-  fprnsol.open(prnsol.c_str(), std::ios::in);
-  if (fprnsol.fail()) {
+  std::ifstream fprnsol(prnsol);
+  if (!fprnsol) {
     PrintCouldNotOpen("Initialise", prnsol);
     return false;
   }
@@ -618,9 +614,8 @@ bool ComponentAnsys123::SetWeightingField(std::string prnsol,
   }
 
   // Open the voltage list.
-  std::ifstream fprnsol;
-  fprnsol.open(prnsol.c_str(), std::ios::in);
-  if (fprnsol.fail()) {
+  std::ifstream fprnsol(prnsol);
+  if (!fprnsol) {
     PrintCouldNotOpen("SetWeightingField", prnsol);
     return false;
   }
@@ -686,7 +681,7 @@ bool ComponentAnsys123::SetWeightingField(std::string prnsol,
     // Check the syntax.
     if (readerror) {
       std::cerr << m_className << "::SetWeightingField:\n";
-      std::cerr << "    Error reading file " << prnsol.c_str() << " (line "
+      std::cerr << "    Error reading file " << prnsol << " (line "
                 << il << ").\n";
       fprnsol.close();
       return false;
@@ -695,7 +690,7 @@ bool ComponentAnsys123::SetWeightingField(std::string prnsol,
     if (inode < 1 || inode > (int)m_nodes.size()) {
       std::cerr << m_className << "::SetWeightingField:\n";
       std::cerr << "    Node number " << inode << " out of range\n";
-      std::cerr << "    on potential file " << prnsol.c_str() << " (line " << il
+      std::cerr << "    on potential file " << prnsol << " (line " << il
                 << ").\n";
       ok = false;
     } else {

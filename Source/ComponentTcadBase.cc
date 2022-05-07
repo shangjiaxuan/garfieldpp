@@ -555,8 +555,7 @@ void ComponentTcadBase<N>::EnableVelocityMap(const bool on) {
 template<size_t N>
 bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
   // Open the file containing the mesh description.
-  std::ifstream gridfile;
-  gridfile.open(filename, std::ios::in);
+  std::ifstream gridfile(filename);
   if (!gridfile) {
     std::cerr << m_className << "::LoadGrid:\n"
               << "    Could not open file " << filename << ".\n";
@@ -1094,8 +1093,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
 template<size_t N>
 bool ComponentTcadBase<N>::LoadData(const std::string& filename) {
 
-  std::ifstream datafile;
-  datafile.open(filename, std::ios::in);
+  std::ifstream datafile(filename);
   if (!datafile) {
     std::cerr << m_className << "::LoadData:\n"
               << "    Could not open file " << filename << ".\n";
@@ -1422,8 +1420,7 @@ bool ComponentTcadBase<N>::LoadWeightingField(
     const std::string& filename,
     std::vector<std::array<double, N> >& wf, std::vector<double>& wp) {
 
-  std::ifstream datafile;
-  datafile.open(filename.c_str(), std::ios::in);
+  std::ifstream datafile(filename, std::ios::in);
   if (!datafile) {
     std::cerr << m_className << "::LoadWeightingField:\n"
               << "    Could not open file " << filename << ".\n";

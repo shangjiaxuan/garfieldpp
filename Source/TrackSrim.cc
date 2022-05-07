@@ -79,9 +79,8 @@ bool TrackSrim::ReadFile(const std::string& file) {
 
   const std::string hdr = m_className + "::ReadFile:\n    ";
   // Open the material list.
-  std::ifstream fsrim;
-  fsrim.open(file.c_str(), std::ios::in);
-  if (fsrim.fail()) {
+  std::ifstream fsrim(file);
+  if (!fsrim) {
     std::cerr << hdr << "Could not open SRIM file " << file
               << " for reading.\n    The file perhaps does not exist.\n";
     return false;

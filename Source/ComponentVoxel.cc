@@ -363,8 +363,7 @@ bool ComponentVoxel::LoadData(const std::string& filename, std::string format,
       m_nX,
       std::vector<std::vector<bool> >(m_nY, std::vector<bool>(m_nZ, false)));
 
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
+  std::ifstream infile(filename);
   if (!infile) {
     std::cerr << m_className << "::LoadData:\n"
               << "    Could not open file " << filename << ".\n";

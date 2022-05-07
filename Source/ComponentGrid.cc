@@ -434,7 +434,7 @@ bool ComponentGrid::SaveElectricField(Component* cmp,
     return false;
   }
   std::ofstream outfile;
-  outfile.open(filename.c_str(), std::ios::out);
+  outfile.open(filename, std::ios::out);
   if (!outfile) {
     std::cerr << m_className << "::SaveElectricField:\n"
               << "    Could not open file " << filename << ".\n";
@@ -524,7 +524,7 @@ bool ComponentGrid::SaveWeightingField(Component* cmp,
     return false;
   }
   std::ofstream outfile;
-  outfile.open(filename.c_str(), std::ios::out);
+  outfile.open(filename, std::ios::out);
   if (!outfile) {
     std::cerr << m_className << "::SaveWeightingField:\n"
               << "    Could not open file " << filename << ".\n";
@@ -611,8 +611,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   unsigned int nx = 0, ny = 0, nz = 0;
   bool cylindrical = (m_coordinates == Coordinates::Cylindrical);
   // Parse the comment lines in the file.
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
+  std::ifstream infile(filename);
   if (!infile) {
     std::cerr << m_className << "::LoadMesh:\n"
               << "    Could not open file " << filename << ".\n";
@@ -753,7 +752,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   }
 
   unsigned int nValues = 0;
-  infile.open(filename.c_str(), std::ios::in);
+  infile.open(filename, std::ios::in);
   if (!infile) {
     std::cerr << m_className << "::LoadMesh:\n"
               << "    Could not open file " << filename << ".\n";
@@ -966,8 +965,7 @@ bool ComponentGrid::LoadData(
       m_nX[0],
       std::vector<std::vector<bool> >(m_nX[1], std::vector<bool>(m_nX[2], false)));
 
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
+  std::ifstream infile(filename);
   if (!infile) {
     std::cerr << m_className << "::LoadData:\n"
               << "    Could not open file " << filename << ".\n";
@@ -1688,8 +1686,7 @@ bool ComponentGrid::LoadData(
       m_nX[0],
       std::vector<std::vector<bool> >(m_nX[1], std::vector<bool>(m_nX[2], false)));
 
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
+  std::ifstream infile(filename);
   if (!infile) {
     std::cerr << m_className << "::LoadData:\n"
               << "    Could not open file " << filename << ".\n";

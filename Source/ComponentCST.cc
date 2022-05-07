@@ -95,9 +95,8 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   const int size = 200;
   char line[size];
   // Open the material list
-  std::ifstream fmplist;
-  fmplist.open(mplist.c_str(), std::ios::in);
-  if (fmplist.fail()) {
+  std::ifstream fmplist(mplist);
+  if (!fmplist) {
     PrintCouldNotOpen("Initialise", mplist);
     return false;
   }
@@ -230,9 +229,8 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   }
 
   // Open the node list
-  std::ifstream fnlist;
-  fnlist.open(nlist.c_str(), std::ios::in);
-  if (fnlist.fail()) {
+  std::ifstream fnlist(nlist);
+  if (!fnlist) {
     PrintCouldNotOpen("Initialise", nlist);
     return false;
   }
@@ -345,9 +343,8 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
             << std::endl;
 
   // Open the element list
-  std::ifstream felist;
-  felist.open(elist.c_str(), std::ios::in);
-  if (felist.fail()) {
+  std::ifstream felist(elist);
+  if (!felist) {
     PrintCouldNotOpen("Initialise", elist);
     return false;
   }
@@ -412,9 +409,8 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
 
   // Open the voltage list
   m_potential.resize(m_nNodes);
-  std::ifstream fprnsol;
-  fprnsol.open(prnsol.c_str(), std::ios::in);
-  if (fprnsol.fail()) {
+  std::ifstream fprnsol(prnsol);
+  if (!fprnsol) {
     PrintCouldNotOpen("Initialise", prnsol);
     return false;
   }
@@ -593,7 +589,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
       exit(3);
     }
     std::string name = c;
-    st << "  Read material: " << name.c_str();
+    st << "  Read material: " << name;
     if (name.compare("gas") == 0) {
       st << " (considered as drift medium)";
       m_materials.at(index).driftmedium = true;
@@ -672,9 +668,8 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
   }
 
   // Open the voltage list
-  std::ifstream fprnsol;
-  fprnsol.open(prnsol.c_str(), std::ios::in);
-  if (fprnsol.fail()) {
+  std::ifstream fprnsol(prnsol);
+  if (!fprnsol) {
     PrintCouldNotOpen("SetWeightingField", prnsol);
     return false;
   }
@@ -705,7 +700,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
   if (isBinary) {
     std::cout << m_className << "::SetWeightingField:" << std::endl;
     std::cout << "    Reading weighting field from binary file:"
-              << prnsol.c_str() << std::endl;
+              << prnsol << std::endl;
     FILE* f = fopen(prnsol.c_str(), "rb");
     if (f == nullptr) {
       PrintCouldNotOpen("SetWeightingField", prnsol);
@@ -739,7 +734,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
     fprnsol.close();
   } else {
     std::cout << m_className << "::SetWeightingField:" << std::endl;
-    std::cout << "    Reading weighting field from text file:" << prnsol.c_str()
+    std::cout << "    Reading weighting field from text file:" << prnsol
               << std::endl;
     // Buffer for reading
     const int size = 100;
@@ -852,8 +847,7 @@ void ComponentCST::WeightingField(const double xin, const double yin,
   auto it = m_weightingFields.find(label);
   if (it == m_weightingFields.end()) {
     // Do not proceed if the requested weighting field does not exist.
-    std::cerr << "No weighting field named " << label.c_str() << " found!"
-              << std::endl;
+    std::cerr << "No weighting field named " << label << " found!\n";
     return;
   }
 
@@ -907,8 +901,7 @@ double ComponentCST::WeightingPotential(const double xin, const double yin,
   auto it = m_weightingFields.find(label);
   if (it == m_weightingFields.end()) {
     // Do not proceed if the requested weighting field does not exist.
-    std::cerr << "No weighting field named " << label.c_str() << " found!"
-              << std::endl;
+    std::cerr << "No weighting field named " << label << " found!\n";
     return 0.;
   }
 

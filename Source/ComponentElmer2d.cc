@@ -54,9 +54,8 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   char line[size];
 
   // Open the header.
-  std::ifstream fheader;
-  fheader.open(header.c_str(), std::ios::in);
-  if (fheader.fail()) {
+  std::ifstream fheader(header);
+  if (!fheader) {
     PrintCouldNotOpen("Initialise", header);
     return false;
   }
@@ -85,9 +84,8 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   fheader.close();
 
   // Open the nodes list.
-  std::ifstream fnodes;
-  fnodes.open(nlist.c_str(), std::ios::in);
-  if (fnodes.fail()) {
+  std::ifstream fnodes(nlist);
+  if (!fnodes) {
     PrintCouldNotOpen("Initialise", nlist);
     return false;
   }
@@ -137,9 +135,8 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   fnodes.close();
 
   // Open the potential file.
-  std::ifstream fvolt;
-  fvolt.open(volt.c_str(), std::ios::in);
-  if (fvolt.fail()) {
+  std::ifstream fvolt(volt);
+  if (!fvolt) {
     PrintCouldNotOpen("Initialise", volt);
     return false;
   }
@@ -186,9 +183,8 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   fvolt.close();
 
   // Open the materials file.
-  std::ifstream fmplist;
-  fmplist.open(mplist.c_str(), std::ios::in);
-  if (fmplist.fail()) {
+  std::ifstream fmplist(mplist);
+  if (!fmplist) {
     PrintCouldNotOpen("Initialise", mplist);
     return false;
   }
@@ -232,9 +228,8 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   if (!SetDefaultDriftMedium()) ok = false;
 
   // Open the elements file.
-  std::ifstream felems;
-  felems.open(elist.c_str(), std::ios::in);
-  if (felems.fail()) {
+  std::ifstream felems(elist);
+  if (!felems) {
     PrintCouldNotOpen("Initialise", elist);
     return false;
   }
@@ -405,9 +400,8 @@ bool ComponentElmer2d::SetWeightingField(std::string wvolt, std::string label) {
   }
 
   // Open the voltage list.
-  std::ifstream fwvolt;
-  fwvolt.open(wvolt.c_str(), std::ios::in);
-  if (fwvolt.fail()) {
+  std::ifstream fwvolt(wvolt);
+  if (!fwvolt) {
     PrintCouldNotOpen("SetWeightingField", wvolt);
     return false;
   }

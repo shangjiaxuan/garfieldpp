@@ -1573,8 +1573,7 @@ bool MediumSilicon::LoadOpticalData(const std::string& filename) {
   const std::string filepath = std::string(pPath) + "/Data/" + filename;
 
   // Open the file.
-  std::ifstream infile;
-  infile.open(filepath.c_str(), std::ios::in);
+  std::ifstream infile(filepath);
   // Make sure the file could actually be opened.
   if (!infile) {
     std::cerr << m_className << "::LoadOpticalData:\n"
