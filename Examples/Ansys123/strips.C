@@ -22,11 +22,7 @@ int main(int argc, char * argv[]) {
                 path + "field.lis", "mm");
 
   // Associate the gas with the corresponding field map material. 
-  const size_t nMaterials = fm.GetNumberOfMaterials();
-  for (size_t i = 0; i < nMaterials; ++i) {
-    if (fm.GetPermittivity(i) == 1.) fm.SetMedium(i, &gas);
-  }
-  fm.PrintMaterials();
+  fm.SetGas(&gas);
 
   // Load the weighting field maps.
   fm.SetWeightingField(path + "weight1.lis", "strip1");

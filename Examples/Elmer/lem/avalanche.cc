@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
       "gemcell/dielectrics.dat", "gemcell/gemcell.result", "cm");
   elm->EnablePeriodicityX();
   elm->EnableMirrorPeriodicityY();
-  elm->SetMedium(0, gas);
+  elm->SetGas(gas);
   // Import the weighting field for the readout electrode.
   // elm->SetWeightingField("gemcell/gemcell_WTlel.result", "wtlel");
 

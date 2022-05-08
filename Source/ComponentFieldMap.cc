@@ -530,23 +530,20 @@ double ComponentFieldMap::GetConductivity(const size_t imat) const {
   return m_materials[imat].ohm;
 }
 
-void ComponentFieldMap::SetMedium(const size_t imat, Medium* m) {
+void ComponentFieldMap::SetMedium(const size_t imat, Medium* medium) {
   if (imat >= m_materials.size()) {
     std::cerr << m_className << "::SetMedium: Index out of range.\n";
     return;
   }
-
-  if (!m) {
+  if (!medium) {
     std::cerr << m_className << "::SetMedium: Null pointer.\n";
     return;
   }
-
   if (m_debug) {
-    std::cout << m_className << "::SetMedium:\n    Associated material " << imat
-              << " with medium " << m->GetName() << ".\n";
+    std::cout << m_className << "::SetMedium: Associated material " << imat
+              << " with medium " << medium->GetName() << ".\n";
   }
-
-  m_materials[imat].medium = m;
+  m_materials[imat].medium = medium;
 }
 
 Medium* ComponentFieldMap::GetMedium(const size_t imat) const {
@@ -555,6 +552,25 @@ Medium* ComponentFieldMap::GetMedium(const size_t imat) const {
     return nullptr;
   }
   return m_materials[imat].medium;
+}
+
+void ComponentFieldMap::SetGas(Medium* medium) {
+  if (!medium) {
+    std::cerr << m_className << "::SetGas: Null pointer.\n";
+    return;
+  }
+  size_t nMatch = 0;
+  const size_t nMaterials = m_materials.size();
+  for (size_t i = 0; i < nMaterials; ++i) {
+    if (fabs(m_materials[i].eps - 1.) > 1.e-4) continue;
+    m_materials[i].medium = medium;
+    std::cout << m_className << "::SetGas: Associating material " << i
+              << " with " << medium->GetName() << ".\n";
+    ++nMatch;
+  }
+  if (nMatch == 0) {
+    std::cerr << m_className << "::SetGas: Found no material with eps = 1.\n";
+  }
 }
 
 bool ComponentFieldMap::GetElement(const size_t i, double& vol,
