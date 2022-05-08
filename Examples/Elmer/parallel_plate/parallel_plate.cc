@@ -43,7 +43,7 @@ int main(int argc, char * argv[]) {
     // Import an Elmer-created parallel plate field map.
     ComponentElmer * elm = new ComponentElmer("parallel_plate/mesh.header","parallel_plate/mesh.elements","parallel_plate/mesh.nodes",
     "parallel_plate/dielectrics.dat","parallel_plate/parallel_plate.result","cm");
-    elm->SetMedium(0, gas);
+    elm->SetGas(gas);
 
     // Set up a sensor object.
     Sensor* sensor = new Sensor();

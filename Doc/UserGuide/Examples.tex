@@ -377,13 +377,18 @@ The gas can be distinguished from the other materials
 (here: kapton and copper) by its dielectric constant, in our case
 $\varepsilon = 1$.
 \begin{lstlisting}
-const unsigned int nMaterials = fm->GetNumberOfMaterials();
-for (unsigned int i = 0; i < nMaterials; ++i) {
+const size_t nMaterials = fm.GetNumberOfMaterials();
+for (size_t i = 0; i < nMaterials; ++i) {
   const double eps = fm.GetPermittivity(i);
-  if (fabs(eps - 1.) < 1.e-3) fm.SetMedium(i, gas);
+  if (fabs(eps - 1.) < 1.e-3) fm.SetMedium(i, &gas);
 }
 // Print a list of the field map materials (for information).
 fm.PrintMaterials();
+\end{lstlisting}
+Instead of iterating over the materials and retrieving the relative 
+dielectric constant, we can also use the helper function \texttt{SetGas}.
+\begin{lstlisting}
+fm.SetGas(&gas);
 \end{lstlisting}
 
 \subsubsection{Electron transport}

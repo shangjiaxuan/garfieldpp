@@ -49,8 +49,8 @@ class ComponentGrid : public Component {
    *     or not (0).
    *
    * Format types are:
-   *  - "xy", "xyz": nodes are specified by their coordinates
-   *  - "ij", "ijk": nodes are specified by their indices
+   *  - "xy", "xz", "xyz": nodes are specified by their coordinates
+   *  - "ij", "ik", "ijk": nodes are specified by their indices
    * 
    * If cylindrical coordinates are used, the first coordinate (x)
    * corresponds to the radial distance and the second coordinate (y)
@@ -83,19 +83,19 @@ class ComponentGrid : public Component {
   /** Export the electric field and potential of a component to a text file.
    * \param cmp Component object for which to export the field/potential
    * \param filename name of the text file
-   * \param format "xy", "xyz", "ij" or "ijk", see @ref LoadElectricField
+   * \param fmt format string, see @ref LoadElectricField
    */
   bool SaveElectricField(Component* cmp, const std::string& filename,
-                         const std::string& format);
+                         const std::string& fmt);
   /** Export the weighting field and potential of a component to a text file.
    * \param cmp Component object for which to export the field/potential
    * \param id identifier of the weighting field
    * \param filename name of the text file
-   * \param format "xy", "xyz", "ij" or "ijk", see @ref LoadElectricField
+   * \param fmt format string, see @ref LoadElectricField
    */
   bool SaveWeightingField(Component* cmp, const std::string& id,
                           const std::string& filename,
-                          const std::string& format);
+                          const std::string& fmt);
 
   /// Return the field at a given node.
   bool GetElectricField(const unsigned int i, const unsigned int j,
@@ -112,7 +112,7 @@ class ComponentGrid : public Component {
 
   /** Import electron attachment coefficients from a file.
    * \param fname name of the text file.
-   * \param fmt format string ("XY", "XYZ", "IJ", "IJK").
+   * \param fmt format string, see @ref LoadElectricField.
    * \param col column in the file which has the attachment coefficient.
    * \param scaleX scaling factor to be applied to the coordinates.
    */ 
@@ -128,7 +128,7 @@ class ComponentGrid : public Component {
 
   /** Import a map of electron drift velocities from a file.
    * \param fname name of the text file.
-   * \param fmt format string ("XY", "XYZ", "IJ", "IJK").
+   * \param fmt format string, see @ref LoadElectricField
    * \param scaleX scaling factor to be applied to the coordinates.
    * \param scaleV scaling factor to be applied to the velocity components.
    */ 

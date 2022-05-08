@@ -25,10 +25,7 @@ int main(int argc, char * argv[]) {
   fm.PrintRange();
 
   // Associate the gas with the corresponding field map material. 
-  const size_t nMaterials = fm.GetNumberOfMaterials();
-  for (size_t i = 0; i < nMaterials; ++i) {
-    if (fm.GetPermittivity(i) == 1.) fm.SetMedium(i, &gas);
-  }
+  fm.SetGas(&gas);
   fm.PrintMaterials();
 
   // Get the pitch.

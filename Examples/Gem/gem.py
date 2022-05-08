@@ -45,9 +45,7 @@ gas.EnablePenningTransfer(rPenning, 0., "ar")
 # Load the ion mobilities.
 gas.LoadIonMobility(path + '/share/Garfield/Data/IonMobility_Ar+_Ar.txt')
  
-nMaterials = fm.GetNumberOfMaterials()
-for i in range(nMaterials):
-  if fm.GetPermittivity(i) == 1.: fm.SetMedium(i, gas)
+fm.SetGas(gas)
 fm.PrintMaterials()
 
 # Assemble the sensor.

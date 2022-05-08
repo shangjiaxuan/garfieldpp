@@ -36,7 +36,7 @@ class ComponentFieldMap : public Component {
   void NotDriftMedium(const size_t imat);
   /// Return the number of materials in the field map.
   size_t GetNumberOfMaterials() const { return m_materials.size(); }
-  /// Return the permittivity of a field map material.
+  /// Return the relative permittivity of a field map material.
   double GetPermittivity(const size_t imat) const;
   /// Return the conductivity of a field map material.
   double GetConductivity(const size_t imat) const;
@@ -45,7 +45,10 @@ class ComponentFieldMap : public Component {
   /// Return the Medium associated to a field map material.
   Medium* GetMedium(const size_t imat) const;
   using Component::GetMedium;
-
+  /// Associate all field map materials with a relative permittivity 
+  /// of unity to a given Medium class.
+  void SetGas(Medium* medium);
+ 
   /// Return the number of mesh elements.
   virtual size_t GetNumberOfElements() const { return m_elements.size(); } 
   /// Return the volume and aspect ratio of a mesh element.

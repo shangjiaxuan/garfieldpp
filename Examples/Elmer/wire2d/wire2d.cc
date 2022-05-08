@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
   ComponentElmer2d elm(
       "wire2d/mesh.header", "wire2d/mesh.elements", "wire2d/mesh.nodes",
       "wire2d/dielectrics.dat", "wire2d/wire2d.result", "cm");
-  elm.SetMedium(0, &gas);
+  elm.SetGas(&gas);
   elm.SetRangeZ(-5.,5.);
 
   // Set up a sensor object.

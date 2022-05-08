@@ -311,7 +311,7 @@ void SetMedium(const size_t imat, Medium* medium);
 \item[imat]
 index in the list of (field map) materials
 \item[medium]
-pointer to the \texttt{Medium} class to be associated with this material
+pointer to the \texttt{Medium} object to be associated with this material
 \end{description}
 
 The materials in the field map are characterized by the 
@@ -322,7 +322,13 @@ These parameters are accessible through the functions
 double GetPermittivity(const size_t imat);
 double GetConductivity(const size_t imat);
 \end{lstlisting}
-
+The function
+\begin{lstlisting}
+void SetGas(Medium* medium);
+\end{lstlisting}
+associates a given \texttt{Medium} object to all field map materials 
+with $\varepsilon = 1$.
+ 
 By default, mesh elements in conductors, \ie materials 
 with resistivity equal to zero, are eliminated. This feature can be 
 switched on or off using
@@ -631,8 +637,9 @@ bool LoadElectricField(const std::string& filename, const std::string& format,
   and potentials 
 \end{description}
 The file should contain one line for each grid point.
-The available formats are \texttt{XY}, \texttt{IJ}, \texttt{XYZ}, 
-and \texttt{IJK}, the first two for two-dimensional maps, and the 
+The available formats are \texttt{XY}, \texttt{XZ}, \texttt{IJ}, 
+\texttt{IK}, \texttt{XYZ} and \texttt{IJK}, the first four 
+for two-dimensional maps, and the 
 last two for three-dimensional maps.
 In case of \texttt{XY} (\texttt{XYZ}), the first two (three) columns  
 contain the $x$, $y$ (and $z$) coordinates of a given point in the 
@@ -700,6 +707,14 @@ bool LoadWeightingField(const std::string& filename, const std::string& format,
                         const double scaleX = 1., const double scaleE = 1.,
                         const double scaleP = 1.);
 \end{lstlisting}
+
+Calling 
+\begin{lstlisting}
+void SetCylindricalCoordinates();
+\end{lstlisting}
+switches to a cylindrical coordinate system instead of the default Cartesian coordinates.
+The first coordinate ("x") then corresponds to the radial distance 
+and the second coordinate ("y") corresponds to the azimuth (in radian).
 
 \begin{figure}
   \centering
