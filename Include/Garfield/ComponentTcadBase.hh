@@ -66,6 +66,8 @@ class ComponentTcadBase : public Component {
   void UnsetDriftRegion(const size_t ireg);
   /// Set the medium to be associated to a given region.
   void SetMedium(const size_t ireg, Medium* m);
+  /// Set the medium to be associated to all regions with a given material.
+  void SetMedium(const std::string& material, Medium* m);
 
   /// Get the number of elements in the mesh.
   size_t GetNumberOfElements() const { return m_elements.size(); }
@@ -155,10 +157,13 @@ class ComponentTcadBase : public Component {
 
   // Regions
   struct Region {
-    // Name of region (from Tcad)
+    // Name of the region (from Tcad)
     std::string name;
+    // Material of the region (from Tcad)
+    std::string material;
     // Flag indicating if the region is active (i. e. a drift medium)
     bool drift;
+    // Medium object associated to the region
     Medium* medium;
   };
   std::vector<Region> m_regions;
