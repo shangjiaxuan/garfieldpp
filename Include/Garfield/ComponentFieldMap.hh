@@ -40,7 +40,7 @@ class ComponentFieldMap : public Component {
   double GetPermittivity(const size_t imat) const;
   /// Return the conductivity of a field map material.
   double GetConductivity(const size_t imat) const;
-  /// Associate a field map material with a Medium class.
+  /// Associate a field map material with a Medium object.
   void SetMedium(const size_t imat, Medium* medium);
   /// Return the Medium associated to a field map material.
   Medium* GetMedium(const size_t imat) const;

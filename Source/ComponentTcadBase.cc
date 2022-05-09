@@ -1,6 +1,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 #include <map>
 #include <sstream>
 #include <string>
@@ -297,8 +298,11 @@ bool ComponentTcadBase<N>::Initialise(const std::string& gridfilename,
   std::cout << m_className << "::Initialise:\n"
             << "    Number of regions: " << nRegions << "\n";
   for (size_t i = 0; i < nRegions; ++i) {
-    std::cout << "      " << i << ": " << m_regions[i].name << ", "
-              << nElementsByRegion[i] << " elements\n";
+    std::cout << "      " << i << ": " << m_regions[i].name;
+    if (!m_regions[i].material.empty()) {
+      std::cout << " (" << m_regions[i].material << ")";
+    }
+    std::cout << ", " << nElementsByRegion[i] << " elements\n";
   }
 
   std::map<int, std::string> shapes = {
@@ -602,6 +606,7 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
   m_regions.resize(nRegions);
   for (size_t j = 0; j < nRegions; ++j) {
     m_regions[j].name = "";
+    m_regions[j].material = "";
     m_regions[j].drift = false;
     m_regions[j].medium = nullptr;
   }
@@ -642,6 +647,36 @@ bool ComponentTcadBase<N>::LoadGrid(const std::string& filename) {
     // Error reading from the file.
     PrintError(m_className + "::LoadGrid", filename, iLine);
     return false;
+  }
+
+  // Get the materials.
+  while (std::getline(gridfile, line)) {
+    ++iLine;
+    ltrim(line);
+    if (line.empty()) continue;
+    // Find entry 'materials'.
+    if (line.substr(0, 9) != "materials") continue;
+    // Get region names (given in brackets).
+    if (!ExtractFromSquareBrackets(line)) {
+      std::cerr << m_className << "::LoadGrid:\n"
+                << "    Could not read materials.\n";
+      return false;
+    }
+    std::istringstream data(line);
+    for (size_t j = 0; j < nRegions; ++j) {
+      data >> m_regions[j].material;
+      data.clear();
+    }
+    break;
+  }
+  if (gridfile.eof()) {
+    // Reached end of file.
+    std::cerr << m_className << "::LoadGrid:\n"
+              << "    Could not find entry 'materials' in file\n"
+              << "    " << filename << ".\n";
+  } else if (gridfile.fail()) {
+    // Error reading from the file.
+    PrintError(m_className + "::LoadGrid", filename, iLine);
   }
 
   // Get the vertices.
@@ -1553,16 +1588,18 @@ void ComponentTcadBase<N>::PrintRegions() const {
   const size_t nRegions = m_regions.size();
   std::cout << m_className << "::PrintRegions:\n"
             << "    Currently " << nRegions << " regions are defined.\n"
-            << "      Index  Name       Medium\n";
+            << " Index   Name               Material            Medium\n";
   for (size_t i = 0; i < nRegions; ++i) {
-    std::cout << "      " << i << "  " << m_regions[i].name;
+    std::cout << std::setw(8) << std::right << i << " " 
+              << std::setw(20) << std::left << m_regions[i].name << " "
+              << std::setw(18) << std::left << m_regions[i].material << " ";
     if (!m_regions[i].medium) {
-      std::cout << "      none  ";
+      std::cout << std::setw(18) << "none";
     } else {
-      std::cout << "      " << m_regions[i].medium->GetName();
+      std::cout << std::setw(18) << m_regions[i].medium->GetName();
     }
     if (m_regions[i].drift) {
-      std::cout << " (active region)\n";
+      std::cout << " (active)\n";
     } else {
       std::cout << "\n";
     }
@@ -1604,12 +1641,34 @@ void ComponentTcadBase<N>::SetMedium(const size_t i, Medium* medium) {
     std::cerr << m_className << "::SetMedium: Index out of range.\n";
     return;
   }
-
   if (!medium) {
     std::cerr << m_className << "::SetMedium: Null pointer.\n";
     return;
   }
   m_regions[i].medium = medium;
+}
+
+template<size_t N>
+void ComponentTcadBase<N>::SetMedium(const std::string& material, 
+                                     Medium* medium) {
+  if (!medium) {
+    std::cerr << m_className << "::SetMedium: Null pointer.\n";
+    return;
+  }
+  size_t nMatch = 0;
+  const auto nRegions = m_regions.size();
+  for (size_t i = 0; i < nRegions; ++i) {
+    if (material != m_regions[i].material) continue;
+    m_regions[i].medium = medium;
+    std::cout << m_className << "::SetMedium: Associating region " << i
+              << " (" << m_regions[i].name << ") with " 
+              << medium->GetName() << ".\n";
+    ++nMatch;
+  }
+  if (nMatch == 0) {
+    std::cerr << m_className << "::SetMedium: Found no region with material " 
+              << material << ".\n";
+  }
 }
 
 template<size_t N>
