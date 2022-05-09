@@ -99,8 +99,8 @@ int main(int argc, char * argv[]) {
   drift.EnableSignalCalculation();
 
   ViewSignal vSignal;
-  constexpr bool plotSignal = true;
   vSignal.SetSensor(&sensor);
+  constexpr bool plotSignal = true;
 
   ViewDrift vDrift;
   constexpr bool plotDrift = true;

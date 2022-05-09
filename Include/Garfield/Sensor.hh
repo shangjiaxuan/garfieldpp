@@ -2,6 +2,7 @@
 #define G_SENSOR_H
 
 #include <fstream>
+#include <functional>
 #include <mutex>
 #include <tuple>
 #include <utility>
@@ -145,7 +146,7 @@ class Sensor {
   double GetInducedCharge(const std::string& label);
 
   /// Set the function to be used for evaluating the transfer function.
-  void SetTransferFunction(double (*f)(double t));
+  void SetTransferFunction(std::function<double(double)>);
   /// Set the points to be used for interpolating the transfer function.
   void SetTransferFunction(const std::vector<double>& times,
                            const std::vector<double>& values);
@@ -297,7 +298,7 @@ class Sensor {
   unsigned int m_nAvgDelayedSignal = 0;
 
   // Transfer function
-  double (*m_fTransfer)(double t) = nullptr;
+  std::function<double(double)> m_fTransfer;
   Shaper* m_shaper = nullptr;
   std::vector<std::pair<double, double> > m_fTransferTab;
   bool m_cacheTransferFunction = true;

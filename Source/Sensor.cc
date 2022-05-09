@@ -1000,9 +1000,9 @@ double Sensor::GetInducedCharge(const std::string& label) {
   return charge / m_nEvents;
 }
 
-void Sensor::SetTransferFunction(double (*f)(double t)) {
+void Sensor::SetTransferFunction(std::function<double(double)> f) {
   if (!f) {
-    std::cerr << m_className << "::SetTransferFunction: Null pointer.\n";
+    std::cerr << m_className << "::SetTransferFunction: Empty function.\n";
     return;
   }
   m_fTransfer = f;
@@ -1075,7 +1075,7 @@ void Sensor::PrintTransferFunction() {
 
   std::cout << m_className << "::PrintTransferFunction:\n";
   if (m_fTransfer) {
-      std::cout << "    User-defined function.";
+    std::cout << "    User-defined function.";
   } else if (m_shaper) {
     std::string shaperType = "Unknown";
     if (m_shaper->IsUnipolar()) {
