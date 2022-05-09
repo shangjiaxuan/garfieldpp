@@ -153,9 +153,9 @@ can be convoluted with a so-called ``transfer function'' (often also referred
 to as delta response function). 
 The transfer function to be applied can be set using
 \begin{lstlisting}
-void Sensor::SetTransferFunction(double (*f)(double t));
+void Sensor::SetTransferFunction(std::function<double(double)> f);
 \end{lstlisting}
-where \texttt{f} is a function provided by the user, or using
+where \texttt{f} is a function provided by the user which takes a \texttt{double} as an argument and returns a \texttt{double}, or using
 \begin{lstlisting}
 void Sensor::SetTransferFunction(const std::vector<double>& times,
                                  const std::vector<double>& values);
