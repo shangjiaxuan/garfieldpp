@@ -27,19 +27,19 @@ int main(int argc, char * argv[]) {
   
   TCanvas cV("cV", "", 600, 600);
   view.SetCanvas(&cV);
-  view.PlotElectronVelocity('e');
+  view.PlotElectronVelocity();
 
   TCanvas cD("cD", "", 600, 600);
   view.SetCanvas(&cD);
-  view.PlotElectronDiffusion('e');
+  view.PlotElectronDiffusion();
 
   TCanvas cT("cT", "", 600, 600);
   view.SetCanvas(&cT);
-  view.PlotElectronTownsend('e');
+  view.PlotElectronTownsend();
 
   TCanvas cA("cA", "", 600, 600);
   view.SetCanvas(&cA);
-  view.PlotElectronAttachment('e');
+  view.PlotElectronAttachment();
 
   app.Run(true);
 
