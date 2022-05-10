@@ -55,47 +55,47 @@ class ViewMedium : public ViewBase {
     *   - 'a': angle between E and B.
     * \param same flag to keep existing plots (true) or not.
     */
-  void PlotElectronVelocity(const char xaxis, const bool same = false) {
+  void PlotElectronVelocity(const char xaxis = 'e', const bool same = false) {
     PlotVelocity(GetAxis(xaxis), Charge::Electron, same);
   }
   /// Plot the drift velocity components of holes in the medium.
-  void PlotHoleVelocity(const char xaxis, const bool same = false) {
+  void PlotHoleVelocity(const char xaxis = 'e', const bool same = false) {
     PlotVelocity(GetAxis(xaxis), Charge::Hole, same);
   }
   /// Plot the ion drift velocity in the gas.
-  void PlotIonVelocity(const char xaxis, const bool same = false) {
+  void PlotIonVelocity(const char xaxis = 'e', const bool same = false) {
     PlotVelocity(GetAxis(xaxis), Charge::Ion, same);
   }
   /// Plot the diffusion coefficients in the medium.
-  void PlotElectronDiffusion(const char xaxis, const bool same = false) {
+  void PlotElectronDiffusion(const char xaxis = 'e', const bool same = false) {
     PlotDiffusion(GetAxis(xaxis), Charge::Electron, same);
   }
   /// Plot the diffusion coefficients of holes in the medium.
-  void PlotHoleDiffusion(const char xaxis, const bool same = false) {
+  void PlotHoleDiffusion(const char xaxis = 'e', const bool same = false) {
     PlotDiffusion(GetAxis(xaxis), Charge::Hole, same);
   }
   /// Plot the diffusion coefficients of ions in the gas.
-  void PlotIonDiffusion(const char xaxis, const bool same = false) {
+  void PlotIonDiffusion(const char xaxis = 'e', const bool same = false) {
     PlotDiffusion(GetAxis(xaxis), Charge::Ion, same);
   }
   /// Plot the Townsend coefficient for electrons.
-  void PlotElectronTownsend(const char xaxis, const bool same = false) {
+  void PlotElectronTownsend(const char xaxis = 'e', const bool same = false) {
     Plot(GetAxis(xaxis), Charge::Electron, Parameter::Townsend, same);
   }
   /// Plot the Townsend coefficient for holes.
-  void PlotHoleTownsend(const char xaxis, const bool same = false) {
+  void PlotHoleTownsend(const char xaxis = 'e', const bool same = false) {
     Plot(GetAxis(xaxis), Charge::Hole, Parameter::Townsend, same);
   }
   /// Plot the attachment coefficient for electrons.
-  void PlotElectronAttachment(const char xaxis, const bool same = false) {
+  void PlotElectronAttachment(const char xaxis = 'e', const bool same = false) {
     Plot(GetAxis(xaxis), Charge::Electron, Parameter::Attachment, same);
   }
   /// Plot the attachment coefficient for holes.
-  void PlotHoleAttachment(const char xaxis, const bool same = false) {
+  void PlotHoleAttachment(const char xaxis = 'e', const bool same = false) {
     Plot(GetAxis(xaxis), Charge::Hole, Parameter::Attachment, same);
   }
   /// Plot the angle between drift velocity and field.
-  void PlotElectronLorentzAngle(const char xaxis, const bool same = false) {
+  void PlotElectronLorentzAngle(const char xaxis = 'e', const bool same = false) {
     PlotLorentzAngle(GetAxis(xaxis), Charge::Electron, same);
   }
 
