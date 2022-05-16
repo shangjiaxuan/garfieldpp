@@ -223,6 +223,8 @@ class ComponentAnalyticField : public Component {
   /// Setup the weighting field for a given group of wires or planes.
   void AddReadout(const std::string& label);
 
+  void SetNumberOfCellCopies(const unsigned int nfourier);
+
   /** Calculate multipole moments for a given wire.
     * \param iw Index of the wire.
     * \param order Order of the highest multipole moment.
@@ -406,7 +408,7 @@ class ComponentAnalyticField : public Component {
   std::vector<Wire> m_w;
 
   // Option for computation of dipole terms
-  bool m_dipole;
+  bool m_dipole = false;
   // Dipole angle and amplitude
   std::vector<double> m_cosph2;
   std::vector<double> m_sinph2;
@@ -419,8 +421,8 @@ class ComponentAnalyticField : public Component {
   std::complex<double> m_zmult;
   double m_p1, m_p2, m_c1;
   // Parameters for D3 type cells
-  // Conformal mapping in polygons
-  std::vector<std::complex<double> > wmap;
+  // Wire positions in conformal mapping
+  std::vector<std::complex<double> > m_zw;
   double m_kappa;
 
   // Reference potential
@@ -472,12 +474,10 @@ class ComponentAnalyticField : public Component {
   double m_cotube2 = 1.;
   double m_vttube = 0.;
 
-  // Capacitance matrix
-  std::vector<std::vector<double> > m_a;
-  // Signal matrix
-  std::vector<std::vector<std::complex<double> > > m_sigmat;
-  // Induced charges on planes
-  std::vector<std::vector<double> > m_qplane;
+  // Wire weighting charges.
+  std::vector<std::vector<std::vector<double> > > m_qwire;
+  // Plane weighting charges.
+  std::vector<std::vector<std::vector<double> > > m_qplane;
 
   // Point charges
   struct Charge3d {
@@ -545,19 +545,22 @@ class ComponentAnalyticField : public Component {
   bool SetupD20();
   bool SetupD30();
 
-  bool IprA00(const int mx, const int my);
-  bool IprB2X(const int my);
-  bool IprB2Y(const int mx);
-  bool IprC2X();
-  bool IprC2Y();
-  bool IprC30();
-  bool IprD10();
-  bool IprD30();
+  bool IprA00(const int mx, const int my,
+              std::vector<std::vector<std::complex<double> > >& mat);
+  bool IprB2X(const int my,
+              std::vector<std::vector<std::complex<double> > >& mat);
+  bool IprB2Y(const int mx,
+              std::vector<std::vector<std::complex<double> > >& mat);
+  bool IprC2X(std::vector<std::vector<std::complex<double> > >& mat);
+  bool IprC2Y(std::vector<std::vector<std::complex<double> > >& mat);
+  bool IprC30(std::vector<std::vector<std::complex<double> > >& mat);
+  bool IprD10(std::vector<std::vector<std::complex<double> > >& mat);
+  bool IprD30(std::vector<std::vector<std::complex<double> > >& mat);
 
   bool SetupDipoleTerms();
 
-  // Inversion of capacitance matrix
-  bool Charge();
+  // Inversion of the capacitance matrix
+  bool Charge(std::vector<std::vector<double> >& mat);
 
   // Evaluation of the electric field
   int Field(const double xin, const double yin, const double zin, double& ex,
@@ -600,48 +603,48 @@ class ComponentAnalyticField : public Component {
   bool Wfield(const double x, const double y, const double z,
               double& ex, double& ey, double& ez, 
               const std::string& label) const;
-  void WfieldWireA00(const double xpos, const double ypos, double& ex,
-                     double& ey, const int mx, const int my, 
-                     const int sw) const;
-  void WfieldWireB2X(const double xpos, const double ypos, double& ex,
-                     double& ey, const int my, const int sw) const;
-  void WfieldWireB2Y(const double xpos, const double ypos, double& ex,
-                     double& ey, const int mx, const int sw) const;
-  void WfieldWireC2X(const double xpos, const double ypos, double& ex,
-                     double& ey, const int sw) const;
-  void WfieldWireC2Y(const double xpos, const double ypos, double& ex,
-                     double& ey, const int sw) const;
-  void WfieldWireC30(const double xpos, const double ypos, double& ex,
-                     double& ey, const int sw) const;
-  void WfieldWireD10(const double xpos, const double ypos, double& ex,
-                     double& ey, const int sw) const;
-  void WfieldWireD30(const double xpos, const double ypos, double& ex,
-                     double& ey, const int sw) const;
-  void WfieldPlaneA00(const double xpos, const double ypos, double& ex,
-                      double& ey, const int mx, const int my,
-                      const int iplane) const;
-  void WfieldPlaneB2X(const double xpos, const double ypos, double& ex,
-                      double& ey, const int my, const int iplane) const;
-  void WfieldPlaneB2Y(const double xpos, const double ypos, double& ex,
-                      double& ey, const int mx, const int iplane) const;
-  void WfieldPlaneC2X(const double xpos, const double ypos, double& ex,
-                      double& ey, const int iplane) const;
-  void WfieldPlaneC2Y(const double xpos, const double ypos, double& ex,
-                      double& ey, const int iplane) const;
-  void WfieldPlaneC30(const double xpos, const double ypos, double& ex,
-                      double& ey, const int iplane) const;
-  void WfieldPlaneD10(const double xpos, const double ypos, double& ex,
-                      double& ey, const int iplane) const;
-  void WfieldPlaneD30(const double xpos, const double ypos, double& ex,
-                      double& ey, const int iplane) const;
-  void WfieldStripZ(const double xpos, const double ypos, double& ex,
-                    double& ey, const int ip, const Strip& strip) const;
-  void WfieldStripXy(const double xpos, const double ypos, const double zpos,
+  void WfieldWireA00(const double x, const double y, double& ex, double& ey,
+                     const int mx, const int my, 
+                     const std::vector<double>& qw) const;
+  void WfieldWireB2X(const double x, const double y, double& ex, double& ey,
+                     const int my, const std::vector<double>& qw) const;
+  void WfieldWireB2Y(const double x, const double y, double& ex, double& ey,
+                     const int mx, const std::vector<double>& qw) const;
+  void WfieldWireC2X(const double x, const double y, double& ex, double& ey,
+                     const std::vector<double>& qw) const;
+  void WfieldWireC2Y(const double x, const double y, double& ex, double& ey,
+                     const std::vector<double>& qw) const;
+  void WfieldWireC30(const double x, const double y, double& ex, double& ey,
+                     const std::vector<double>& qw) const;
+  void WfieldWireD10(const double x, const double y, double& ex, double& ey,
+                     const std::vector<double>& qw) const;
+  void WfieldWireD30(const double x, const double y, double& ex, double& ey,
+                     const std::vector<double>& qw) const;
+  void WfieldPlaneA00(const double x, const double y, double& ex, double& ey,
+                      const int mx, const int my,
+                      const std::vector<double>& qp) const;
+  void WfieldPlaneB2X(const double x, const double y, double& ex, double& ey,
+                      const int my, const std::vector<double>& qp) const;
+  void WfieldPlaneB2Y(const double x, const double ypos, double& ex, double& ey,
+                      const int mx, const std::vector<double>& qp) const;
+  void WfieldPlaneC2X(const double x, const double y, double& ex, double& ey,
+                      const std::vector<double>& qp) const;
+  void WfieldPlaneC2Y(const double x, const double y, double& ex, double& ey,
+                      const std::vector<double>& qp) const;
+  void WfieldPlaneC30(const double x, const double y, double& ex, double& ey,
+                      const std::vector<double>& qp) const;
+  void WfieldPlaneD10(const double x, const double y, double& ex, double& ey,
+                      const std::vector<double>& qp) const;
+  void WfieldPlaneD30(const double x, const double y, double& ex, double& ey,
+                      const std::vector<double>& qp) const;
+  void WfieldStripZ(const double x, const double y, double& ex, double& ey,
+                    const int ip, const Strip& strip) const;
+  void WfieldStripXy(const double x, const double y, const double z,
                      double& ex, double& ey, double& ez, 
                      const int ip, const Strip& strip) const;
   void WfieldStrip(const double x, const double y, const double g, 
                    const double w, double& fx, double& fy) const; 
-  void WfieldPixel(const double xpos, const double ypos, const double zpos,
+  void WfieldPixel(const double x, const double y, const double z,
                    double& ex, double& ey, double& ez,
                    const int ip, const Pixel& pixel) const;
 
@@ -649,27 +652,39 @@ class ComponentAnalyticField : public Component {
   double Wpot(const double x, const double y, const double z,
               const std::string& label) const;
   double WpotWireA00(const double x, const double y, 
-                     const int mx, const int my, const int sw) const;
+                     const int mx, const int my, 
+                     const std::vector<double>& qw) const;
   double WpotWireB2X(const double x, const double y, 
-                     const int my, const int sw) const;
+                     const int my, const std::vector<double>& qw) const;
   double WpotWireB2Y(const double x, const double y, 
-                     const int mx, const int sw) const;
-  double WpotWireC2X(const double x, const double y, const int sw) const;
-  double WpotWireC2Y(const double x, const double y, const int sw) const;
-  double WpotWireC30(const double x, const double y, const int sw) const;
-  double WpotWireD10(const double x, const double y, const int sw) const;
-  double WpotWireD30(const double x, const double y, const int sw) const;
+                     const int mx, const std::vector<double>& qw) const;
+  double WpotWireC2X(const double x, const double y, 
+                     const std::vector<double>& qw) const;
+  double WpotWireC2Y(const double x, const double y, 
+                     const std::vector<double>& qw) const;
+  double WpotWireC30(const double x, const double y, 
+                     const std::vector<double>& qw) const;
+  double WpotWireD10(const double x, const double y,
+                     const std::vector<double>& qw) const;
+  double WpotWireD30(const double x, const double y, 
+                     const std::vector<double>& qw) const;
   double WpotPlaneA00(const double x, const double y, 
-                      const int mx, const int my, const int ip) const;
+                      const int mx, const int my, 
+                      const std::vector<double>& qp) const;
   double WpotPlaneB2X(const double x, const double y, 
-                      const int my, const int ip) const;
+                      const int my, const std::vector<double>& qp) const;
   double WpotPlaneB2Y(const double x, const double y, 
-                      const int mx, const int ip) const;
-  double WpotPlaneC2X(const double x, const double y, const int ip) const;
-  double WpotPlaneC2Y(const double x, const double y, const int ip) const;
-  double WpotPlaneC30(const double x, const double y, const int ip) const;
-  double WpotPlaneD10(const double x, const double y, const int ip) const;
-  double WpotPlaneD30(const double x, const double y, const int ip) const;
+                      const int mx, const std::vector<double>& qp) const;
+  double WpotPlaneC2X(const double x, const double y, 
+                      const std::vector<double>& qp) const;
+  double WpotPlaneC2Y(const double x, const double y, 
+                      const std::vector<double>& qp) const;
+  double WpotPlaneC30(const double x, const double y, 
+                      const std::vector<double>& qp) const;
+  double WpotPlaneD10(const double x, const double y,
+                      const std::vector<double>& qp) const;
+  double WpotPlaneD30(const double x, const double y,
+                      const std::vector<double>& qp) const;
   double WpotStripZ(const double x, const double y,
                     const int ip, const Strip& strip) const;
   double WpotStripXy(const double x, const double y, const double z,
@@ -677,7 +692,7 @@ class ComponentAnalyticField : public Component {
   double WpotPixel(const double x, const double y, const double z,
                    const int ip, const Pixel& pixel) const;
   
-// Functions for calculating the electric field at a given wire position,
+  // Functions for calculating the electric field at a given wire position,
   // as if the wire itself were not there but with the presence
   // of its mirror images.
   void FieldAtWireA00(const double xpos, const double ypos, double& ex,
@@ -759,6 +774,8 @@ class ComponentAnalyticField : public Component {
              const std::vector<double>& yMap,
              const std::vector<std::vector<double> >& fxMap,
              const std::vector<std::vector<double> >& fyMap) const;
+  size_t SignalLayer(const int mx, const int my) const;
+
 };
 }  // namespace Garfield
 
