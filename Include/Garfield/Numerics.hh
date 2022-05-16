@@ -153,6 +153,7 @@ void cfinv(const int n, std::vector<std::vector<std::complex<double> > >& a,
 /// Replace square matrix A by its inverse.
 int cinv(const int n, std::vector<std::vector<std::complex<double> > >& a);
 
+void cfft(std::vector<std::complex<double> >& a, const int msign);
 }
 
 /// Legendre polynomials.

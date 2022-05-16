@@ -1151,6 +1151,34 @@ void AddPixelOnPlanePhi(const double phi,
 Valid strip directions are \texttt{'p'} ($\phi$) or \texttt{'z'} for 
 circular planes and \texttt{'r'} or \texttt{'z'} for $\phi$ planes.
 
+In periodic chambers, the electric field is identical in all copies of the 
+basic cell, but the weighting fields of the wires of one copy are as a rule 
+not the same as the weighting fields of the wires of another copy.
+\texttt{ComponentAnalyticField} will, by default, compute the 
+weighting fields and potentials by considering only the basic cell -- 
+suppressing all periodicities. This is a good approximation if the wires 
+that are read out are surrounded by many other wires in the basic cell.
+
+This behaviour can be controlled using the function
+\begin{lstlisting}
+void SetNumberOfCellCopies(const unsigned int nfourier);
+\end{lstlisting}
+The argument (\texttt{nfourier}) must be 0 or an integral power of 2.
+
+If the argument is 0,
+the weighting field and potential will be computed using the same 
+functions that are used for the electric field, \textit{i. e.} they 
+will exhibit the same periodicity. 
+This should be used if one is interested only in the signals induced in 
+the planes (and not in the wire signals) or 
+if all copies of the read-out wires are interconnected. 
+
+If the argument is non-zero, \texttt{SetNumberOfCellCopies} 
+sets the number of copies of the basic cell to be included in the 
+weighting field calculation. 
+Requesting a large number of copies is meaningful only in chambers 
+which contain equipotential planes - convergence is poor otherwise.
+
 \section{neBEM}
 The nearly exact Boundary Element Method (neBEM) solver discretizes
 the boundary of the domain in triangular and rectangular elements 
