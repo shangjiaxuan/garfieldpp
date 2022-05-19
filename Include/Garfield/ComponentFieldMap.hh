@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+
 #include "Component.hh"
 #include "TMatrixD.h"
 #include "TetrahedralTree.hh"
@@ -45,17 +46,17 @@ class ComponentFieldMap : public Component {
   /// Return the Medium associated to a field map material.
   Medium* GetMedium(const size_t imat) const;
   using Component::GetMedium;
-  /// Associate all field map materials with a relative permittivity 
+  /// Associate all field map materials with a relative permittivity
   /// of unity to a given Medium class.
   void SetGas(Medium* medium);
- 
+
   /// Return the number of mesh elements.
-  virtual size_t GetNumberOfElements() const { return m_elements.size(); } 
+  virtual size_t GetNumberOfElements() const { return m_elements.size(); }
   /// Return the volume and aspect ratio of a mesh element.
-  bool GetElement(const size_t i, double& vol, 
-                  double& dmin, double& dmax) const;
+  bool GetElement(const size_t i, double& vol, double& dmin,
+                  double& dmax) const;
   /// Return the material and node indices of a mesh element.
-  virtual bool GetElement(const size_t i, size_t& mat, bool& drift, 
+  virtual bool GetElement(const size_t i, size_t& mat, bool& drift,
                           std::vector<size_t>& nodes) const;
   virtual size_t GetNumberOfNodes() const { return m_nodes.size(); }
   virtual bool GetNode(const size_t i, double& x, double& y, double& z) const;
@@ -95,10 +96,10 @@ class ComponentFieldMap : public Component {
 
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
-    
-    double DelayedWeightingPotential(const double x, const double y,
-                                     const double z, const double t,
-                                     const std::string &label) override;
+
+  double DelayedWeightingPotential(const double x, const double y,
+                                   const double z, const double t,
+                                   const std::string& label) override;
 
   bool IsInBoundingBox(const double x, const double y, const double z) const {
     return x >= m_minBoundingBox[0] && x <= m_maxBoundingBox[0] &&
@@ -106,10 +107,10 @@ class ComponentFieldMap : public Component {
            z >= m_minBoundingBox[2] && y <= m_maxBoundingBox[2];
   }
 
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
-                      double& xmax, double& ymax, double& zmax) override;
-  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
-                         double& xmax, double& ymax, double& zmax) override;
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, double& xmax,
+                      double& ymax, double& zmax) override;
+  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, double& xmax,
+                         double& ymax, double& zmax) override;
 
   bool GetVoltageRange(double& vmin, double& vmax) override {
     vmin = m_mapvmin;
@@ -117,8 +118,6 @@ class ComponentFieldMap : public Component {
     return true;
   }
   friend class ViewFEMesh;
-    
- 
 
  protected:
   bool m_is3d = true;
@@ -205,7 +204,7 @@ class ComponentFieldMap : public Component {
 
   // Get the scaling factor for a given length unit.
   static double ScalingFactor(std::string unit);
- 
+
   // Reset the component.
   void Reset() override;
 
@@ -217,7 +216,7 @@ class ComponentFieldMap : public Component {
   // Periodicities
   void UpdatePeriodicity() override {
     if (!m_is3d) UpdatePeriodicity2d();
-    UpdatePeriodicityCommon(); 
+    UpdatePeriodicityCommon();
   }
   void UpdatePeriodicity2d();
   void UpdatePeriodicityCommon();
@@ -230,25 +229,22 @@ class ComponentFieldMap : public Component {
                            const std::array<double, 3>& t);
   /// Interpolate the field in a triangle.
   static void Field3(const std::array<double, 6>& v,
-                     const std::array<double, 3>& t,
-                     double jac[4][4], const double det,
-                     double& ex, double& ey);
+                     const std::array<double, 3>& t, double jac[4][4],
+                     const double det, double& ex, double& ey);
   /// Interpolate the potential in a curved quadrilateral.
   static double Potential5(const std::array<double, 8>& v,
                            const std::array<double, 2>& t);
   /// Interpolate the field in a curved quadrilateral.
   static void Field5(const std::array<double, 8>& v,
-                     const std::array<double, 2>& t,
-                     double jac[4][4], const double det,
-                     double& ex, double& ey);
+                     const std::array<double, 2>& t, double jac[4][4],
+                     const double det, double& ex, double& ey);
   /// Interpolate the potential in a curved quadratic tetrahedron.
   static double Potential13(const std::array<double, 10>& v,
                             const std::array<double, 4>& t);
   /// Interpolate the field in a curved quadratic tetrahedron.
   static void Field13(const std::array<double, 10>& v,
-                      const std::array<double, 4>& t,
-                      double jac[4][4], const double det,
-                      double& ex, double& ey, double& ez);
+                      const std::array<double, 4>& t, double jac[4][4],
+                      const double det, double& ex, double& ey, double& ez);
   /// Find the element for a point in curved quadratic quadrilaterals.
   int FindElement5(const double x, const double y, const double z, double& t1,
                    double& t2, double& t3, double& t4, double jac[4][4],
@@ -276,22 +272,22 @@ class ComponentFieldMap : public Component {
   static double ReadDouble(char* token, double def, bool& error);
 
   virtual double GetElementVolume(const size_t i) const;
-  virtual void GetAspectRatio(const size_t i, 
-                              double& dmin, double& dmax) const;
+  virtual void GetAspectRatio(const size_t i, double& dmin, double& dmax) const;
 
   size_t GetWeightingFieldIndex(const std::string& label) const;
   size_t GetOrCreateWeightingFieldIndex(const std::string& label);
 
   void PrintWarning(const std::string& header);
   void PrintNotReady(const std::string& header) const;
-  void PrintCouldNotOpen(const std::string& header, 
+  void PrintCouldNotOpen(const std::string& header,
                          const std::string& filename) const;
   void PrintElement(const std::string& header, const double x, const double y,
                     const double z, const double t1, const double t2,
                     const double t3, const double t4, const Element& element,
                     const unsigned int n, const int iw = -1) const;
-    /// Interpolation of potential between two time slices.
-    void TimeInterpolation(const double t, double& f0, double& f1, int& i0, int& i1);
+  /// Interpolation of potential between two time slices.
+  void TimeInterpolation(const double t, double& f0, double& f1, int& i0,
+                         int& i1);
 
  private:
   /// Scan for multiple elements that contain a point
@@ -350,6 +346,6 @@ class ComponentFieldMap : public Component {
   /// Initialize the tetrahedral tree.
   bool InitializeTetrahedralTree();
 };
-}
+}  // namespace Garfield
 
 #endif
