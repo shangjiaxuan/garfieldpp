@@ -301,26 +301,58 @@ double ComponentFieldMap::DelayedWeightingPotential(const double xin, const doub
     // Find the element that contains this point.
     double t1, t2, t3, t4, jac[4][4], det;
     
-    const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-    if (imap < 0) return 0.;
-    const Element &element = m_elements[imap];
-    if (m_debug) {
-      PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
-                   iw);
+    int imap = -1;
+    if (m_elementType == ElementType::Serendipity) {
+      imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
+    } else if (m_elementType == ElementType::CurvedTetrahedron) {
+      imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
     }
-      
+    if (imap < 0) return 0.;
+    
+    // Linear interpolation between time slices
     int i0; int i1;
     double f0; double f1;
       
     TimeInterpolation(t,f0, f1, i0, i1);
       
-    std::array<double, 10> v0, v1;
-    for (size_t i = 0; i < 10; ++i) {
-      v0[i] = m_nodes[element.emap[i]].dw[iw][i0];
-      v1[i] = m_nodes[element.emap[i]].dw[iw][i1];
+    // Get potential value
+    
+    double dp0 = 0; double dp1 = 0;
+    const Element &element = m_elements[imap];
+    if (m_elementType == ElementType::Serendipity) {
+      if (m_debug) {
+        PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 8,
+                     iw);
+      }
+      if (element.degenerate) {
+        std::array<double, 6> v0, v1;
+        for (size_t i = 0; i < 6; ++i) {
+            v0[i] = m_nodes[element.emap[i]].dw[iw][i0];
+            v1[i] = m_nodes[element.emap[i]].dw[iw][i1];
+        }
+          dp0 = Potential3(v0, {t1, t2, t3});
+          dp1 = Potential3(v1, {t1, t2, t3});
+      }
+        std::array<double, 8> v0, v1;
+      for (size_t i = 0; i < 8; ++i) {
+          v0[i] = m_nodes[element.emap[i]].dw[iw][i0];
+          v1[i] = m_nodes[element.emap[i]].dw[iw][i1];
+      }
+        dp0 = Potential5(v0, {t1, t2});
+        dp1 = Potential5(v1, {t1, t2});
+    } else if (m_elementType == ElementType::CurvedTetrahedron) {
+      if (m_debug) {
+        PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
+                     iw);
+      }
+        std::array<double, 10> v0, v1;
+        for (size_t i = 0; i < 10; ++i) {
+          v0[i] = m_nodes[element.emap[i]].dw[iw][i0];
+          v1[i] = m_nodes[element.emap[i]].dw[iw][i1];
+        }
+        dp0 = Potential13(v0, {t1, t2, t3, t4});
+        dp1 = Potential13(v1, {t1, t2, t3, t4});
     }
-    const double dp0 = Potential13(v0, {t1, t2, t3, t4});
-    const double dp1 = Potential13(v1, {t1, t2, t3, t4});
 
     return f0 * dp0 + f1 * dp1;
 }
