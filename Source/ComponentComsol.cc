@@ -477,7 +477,7 @@ bool ComponentComsol::SetWeightingPotential(const std::string& field,
               << "    Replacing existing weighting field " << label << ".\n";
   }
 
-  m_wfieldsOk[iw] = false; //????
+  m_wfieldsOk[iw] = false;
 
   // Build a k-d tree from the node coordinates.
 
@@ -531,6 +531,7 @@ bool ComponentComsol::SetWeightingPotential(const std::string& field,
     data >> p;
     const size_t k = res[0].idx;
     m_nodes[k].w[iw] = p;
+    m_wfieldsOk[iw] = true;
 
     if ((nLines + 1) % nPrint == 0) {
       PrintProgress(double(nLines + 1) / nNodes);
@@ -583,7 +584,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
               << "    Replacing existing weighting field " << label << ".\n";
   }
 
-  m_wfieldsOk[iw] = false; //????
+  m_wfieldsOk[iw] = false;
 
   // Build a k-d tree from the node coordinates.
 
@@ -643,6 +644,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
     const size_t k = res[0].idx;
     m_nodes[k].dw[iw] = pvect;
     m_nodes[k].w[iw] = p0;
+    m_wfieldsOk[iw] = true;
 
     if ((nLines + 1) % nPrint == 0) {
       PrintProgress(double(nLines + 1) / nNodes);
