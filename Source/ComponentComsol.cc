@@ -659,66 +659,6 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
   return true;
 }
 
-double ComponentComsol::DelayedWeightingPotential(const double xin,
-                                                  const double yin,
-                                                  const double zin,
-                                                  const double tin,
-                                                  const std::string& label) {
-  if (m_wdtimes.empty()) return 0.;
-  // Assume no weighting field for times outside the range of available maps.
-  if (tin < m_wdtimes.front()) return 0.;
-  double t = tin;
-  if (tin > m_wdtimes.back())
-    t = m_wdtimes.back();
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) return 0.;
-  // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
-  // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return 0.;
-  // Check if the weighting field is properly initialised.
-
-  // Copy the coordinates.
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates.
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  if (m_warning) PrintWarning("WeightingPotential");
-
-  // Find the element that contains this point.
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) return 0.;
-  const Element &element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
-                 iw);
-  }
-
-  const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
-  const auto it0 = std::prev(it1);
-
-  const double dt = t - *it0;
-  const unsigned int i0 = it0 - m_wdtimes.cbegin();
-  const unsigned int i1 = it1 - m_wdtimes.cbegin();
-  std::array<double, 10> v0, v1;
-  for (size_t i = 0; i < 10; ++i) {
-    v0[i] = m_nodes[element.emap[i]].dw[iw][i0];
-    v1[i] = m_nodes[element.emap[i]].dw[iw][i1];
-  }
-  const double dp0 = Potential13(v0, {t1, t2, t3, t4});
-  const double dp1 = Potential13(v1, {t1, t2, t3, t4});
-
-  const double f1 = dt / (*it1 - *it0);
-  const double f0 = 1. - f1;
-
-  return f0 * dp0 + f1 * dp1;
-}
-
 void ComponentComsol::SetTimeInterval(const double mint, const double maxt,
                                       const double stept) {
   std::cout << std::endl

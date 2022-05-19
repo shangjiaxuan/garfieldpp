@@ -95,6 +95,10 @@ class ComponentFieldMap : public Component {
 
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
+    
+    double DelayedWeightingPotential(const double x, const double y,
+                                     const double z, const double t,
+                                     const std::string &label) override;
 
   bool IsInBoundingBox(const double x, const double y, const double z) const {
     return x >= m_minBoundingBox[0] && x <= m_maxBoundingBox[0] &&
@@ -113,6 +117,8 @@ class ComponentFieldMap : public Component {
     return true;
   }
   friend class ViewFEMesh;
+    
+ 
 
  protected:
   bool m_is3d = true;
@@ -284,6 +290,8 @@ class ComponentFieldMap : public Component {
                     const double z, const double t1, const double t2,
                     const double t3, const double t4, const Element& element,
                     const unsigned int n, const int iw = -1) const;
+    /// Interpolation of potential between two time slices.
+    void TimeInterpolation(const double t, double& f0, double& f1, int& i0, int& i1);
 
  private:
   /// Scan for multiple elements that contain a point

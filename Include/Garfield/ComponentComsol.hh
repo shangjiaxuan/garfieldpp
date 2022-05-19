@@ -16,9 +16,6 @@ public:
   /// Destructor.
   ~ComponentComsol() {}
 
-  double DelayedWeightingPotential(const double x, const double y,
-                                   const double z, const double t,
-                                   const std::string &label) override;
 
   void SetImportRange(const double xmin, const double xmax, const double ymin,
                       const double ymax, const double zmin, const double zmax) {
