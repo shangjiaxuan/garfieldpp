@@ -546,7 +546,7 @@ bool ComponentComsol::SetWeightingPotential(const std::string& field,
   return true;
 }
 
-bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
+bool ComponentComsol::SetDynamicWeightingPotential(const std::string &field,
                                                    const std::string &label) {
   if (!m_ready) {
     std::cerr << m_className << "::SetDelayedWeightingPotential:\n"

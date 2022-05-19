@@ -47,7 +47,7 @@ public:
   bool SetWeightingPotential(const std::string &file,
                                       const std::string &label);
   /// Import the time-dependent weighting field maps.
-  bool SetDelayedWeightingPotential(const std::string &file,
+  bool SetDynamicWeightingPotential(const std::string &file,
                                     const std::string &label);
   /// Set the time interval of the time-dependent weighting field.
   void SetTimeInterval(const double mint, const double maxt,
