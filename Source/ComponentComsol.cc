@@ -1,3 +1,5 @@
+#include "Garfield/ComponentComsol.hh"
+
 #include <math.h>
 #include <stdlib.h>
 
@@ -6,22 +8,18 @@
 #include <map>
 #include <sstream>
 
-#include "Garfield/ComponentComsol.hh"
 #include "Garfield/KDTree.hh"
 
 namespace {
 
 bool ends_with(std::string s, std::string t) {
-  if (!s.empty() && s.back() == '\r')
-    s.pop_back();
+  if (!s.empty() && s.back() == '\r') s.pop_back();
   return s.size() >= t.size() && s.substr(s.size() - t.size(), t.size()) == t;
 }
 
 bool isComment(const std::string &line) {
-  if (line.empty())
-    return false;
-  if (line[0] == '%')
-    return true;
+  if (line.empty()) return false;
+  if (line[0] == '%') return true;
   return false;
 }
 
@@ -33,8 +31,7 @@ int readInt(std::string s) {
 }
 
 void PrintProgress(const double f) {
-  if (f < 0.)
-    return;
+  if (f < 0.) return;
   constexpr unsigned int width = 70;
   const unsigned int n = static_cast<unsigned int>(std::floor(width * f));
   std::string bar = "[";
@@ -49,7 +46,7 @@ void PrintProgress(const double f) {
   std::cout << bar << "\r" << std::flush;
 }
 
-} // namespace
+}  // namespace
 
 namespace Garfield {
 
@@ -115,8 +112,7 @@ bool ComponentComsol::Initialise(const std::string &mesh,
   fmplist.close();
 
   // Find lowest epsilon, check for eps = 0, set default drift medium.
-  if (!SetDefaultDriftMedium())
-    return false;
+  if (!SetDefaultDriftMedium()) return false;
 
   m_nodes.clear();
   std::ifstream fmesh(mesh);
@@ -156,8 +152,7 @@ bool ComponentComsol::Initialise(const std::string &mesh,
 
     if (m_range.set) {
       m_nodesHolder.push_back(std::move(newNode));
-      if (CheckInRange(newNode.x, newNode.y, newNode.z))
-        nInRange++;
+      if (CheckInRange(newNode.x, newNode.y, newNode.z)) nInRange++;
     } else {
       m_nodes.push_back(std::move(newNode));
     }
@@ -271,12 +266,12 @@ bool ComponentComsol::Initialise(const std::string &mesh,
            line.find(hdr2) == std::string::npos);
   std::istringstream sline(line);
   std::string token;
-  sline >> token; // %
-  sline >> token; // x
-  sline >> token; // y
-  sline >> token; // z
-  sline >> token; // V
-  sline >> token; // (V)
+  sline >> token;  // %
+  sline >> token;  // x
+  sline >> token;  // y
+  sline >> token;  // z
+  sline >> token;  // V
+  sline >> token;  // (V)
   m_wfields.clear();
   m_wfieldsOk.clear();
   while (sline >> token) {
@@ -284,7 +279,7 @@ bool ComponentComsol::Initialise(const std::string &mesh,
               << "    Reading data for weighting field " << token << ".\n";
     m_wfields.push_back(token);
     m_wfieldsOk.push_back(true);
-    sline >> token; // (V)
+    sline >> token;  // (V)
   }
   const size_t nWeightingFields = m_wfields.size();
 
@@ -326,20 +321,17 @@ bool ComponentComsol::Initialise(const std::string &mesh,
       ffield.close();
       return false;
     }
-    if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance)
-      continue;
+    if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance) continue;
     const size_t k = res[0].idx;
     used[k] = true;
     m_nodes[k].v = v;
     m_nodes[k].w = w;
-    if ((i + 1) % nPrint == 0)
-      PrintProgress(double(i + 1) / nNodes);
+    if ((i + 1) % nPrint == 0) PrintProgress(double(i + 1) / nNodes);
   }
   PrintProgress(1.);
   ffield.close();
   auto nMissing = std::count(used.begin(), used.end(), false);
-  if (m_range.set)
-    nMissing = nMissing - m_nodes.size() + nInRange;
+  if (m_range.set) nMissing = nMissing - m_nodes.size() + nInRange;
   if (nMissing > 0) {
     std::cerr << std::endl
               << m_className << "::Initialise:\n"
@@ -362,8 +354,8 @@ bool ComponentComsol::SetWeightingField(const std::string &field,
     return false;
   }
 
-std::cerr << m_className << "::SetWeightingField:\n"
-              << "    Called.\n";
+  std::cerr << m_className << "::SetWeightingField:\n"
+            << "    Called.\n";
 
   // Open the voltage list.
   std::ifstream ffield(field);
@@ -372,8 +364,9 @@ std::cerr << m_className << "::SetWeightingField:\n"
     return false;
   }
 
-std::cerr << m_className << "::SetWeightingField:\n"
-              << "    Check if a weighting field with the same label already exists.\n";
+  std::cerr
+      << m_className << "::SetWeightingField:\n"
+      << "    Check if a weighting field with the same label already exists.\n";
 
   // Check if a weighting field with the same label already exists.
   const size_t iw = GetOrCreateWeightingFieldIndex(label);
@@ -383,8 +376,8 @@ std::cerr << m_className << "::SetWeightingField:\n"
   }
   m_wfieldsOk[iw] = false;
 
-std::cerr << m_className << "::SetWeightingField:\n"
-              << "    Build a k-d tree from the node coordinates.\n";
+  std::cerr << m_className << "::SetWeightingField:\n"
+            << "    Build a k-d tree from the node coordinates.\n";
 
   // Build a k-d tree from the node coordinates.
   std::vector<std::vector<double>> points;
@@ -394,10 +387,11 @@ std::cerr << m_className << "::SetWeightingField:\n"
   }
   KDTree kdtree(points);
 
-  const std::string hdr = "% x             y              z              es.normE (V/m)";
-  
-std::cerr << m_className << "::SetWeightingField:\n"
-              << "    Run over lines.\n";
+  const std::string hdr =
+      "% x             y              z              es.normE (V/m)";
+
+  std::cerr << m_className << "::SetWeightingField:\n"
+            << "    Run over lines.\n";
 
   std::string line;
   do {
@@ -410,22 +404,20 @@ std::cerr << m_className << "::SetWeightingField:\n"
   } while (line.find(hdr) == std::string::npos);
   const int nNodes = m_nodes.size();
   for (int i = 0; i < nNodes; ++i) {
-std::cerr << m_className << "::SetWeightingField:\n"
-              << "    Save point "<<i<<" of "<<nNodes<<".\n";
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Save point " << i << " of " << nNodes << ".\n";
     double x, y, z, v;
     ffield >> x >> y >> z >> v;
     x *= m_unit;
     y *= m_unit;
     z *= m_unit;
-    if (!CheckInRange(x, y, z))
-      continue;
+    if (!CheckInRange(x, y, z)) continue;
     // Find the closest mesh node.
     const std::vector<double> pt = {x, y, z};
     std::vector<KDTreeResult> res;
     kdtree.n_nearest(pt, 1, res);
 
-    if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance)
-      continue;
+    if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance) continue;
     if (res.empty()) {
       std::cerr << m_className << "::SetWeightingField:\n"
                 << "    Could not find a matching mesh node for point (" << x
@@ -436,23 +428,23 @@ std::cerr << m_className << "::SetWeightingField:\n"
     const size_t k = res[0].idx;
     m_nodes[k].w[iw] = v;
 
-std::cerr << m_className << "::SetWeightingField:\n"
-              << "    Mesh node for point (" << x
-                << ", " << y << ", " << z << ")\n.";
+    std::cerr << m_className << "::SetWeightingField:\n"
+              << "    Mesh node for point (" << x << ", " << y << ", " << z
+              << ")\n.";
 
-std::cerr << m_className << "::SetWeightingField:\n"
+    std::cerr << m_className << "::SetWeightingField:\n"
               << "   Ew = " << v << ")\n.";
   }
   ffield.close();
 
-std::cerr << m_className << "::SetWeightingField:\n"
-              << "    Done.\n";
+  std::cerr << m_className << "::SetWeightingField:\n"
+            << "    Done.\n";
 
   return true;
 }
 
-bool ComponentComsol::SetWeightingPotential(const std::string& field,
-                                            const std::string& label) {
+bool ComponentComsol::SetWeightingPotential(const std::string &field,
+                                            const std::string &label) {
   if (!m_ready) {
     std::cerr << m_className << "::SetWeightingPotential:\n"
               << "    No valid field map is present.\n"
@@ -518,7 +510,7 @@ bool ComponentComsol::SetWeightingPotential(const std::string& field,
     kdtree.n_nearest(pt, 1, res);
     if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance) {
       continue;
-    } 
+    }
     if (res.empty()) {
       std::cerr << m_className << "::SetWeightingPotential:\n"
                 << "    Could not find a matching mesh node for point (" << x
@@ -540,13 +532,12 @@ bool ComponentComsol::SetWeightingPotential(const std::string& field,
   }
 
   PrintProgress(1.);
-  std::cout << std::endl
-            << m_className << "::SetWeightingPotential: Done.\n";
+  std::cout << std::endl << m_className << "::SetWeightingPotential: Done.\n";
   ffield.close();
   return true;
 }
 
-bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
+bool ComponentComsol::SetDynamicWeightingPotential(const std::string &field,
                                                    const std::string &label) {
   if (!m_ready) {
     std::cerr << m_className << "::SetDelayedWeightingPotential:\n"
@@ -555,8 +546,7 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
     return false;
   }
 
-  if (!m_timeset && !GetTimeInterval(field))
-    return false;
+  if (!m_timeset && !GetTimeInterval(field)) return false;
 
   if (!m_timeset) {
     std::cerr << m_className << "::SetDelayedWeightingPotential:\n"
@@ -659,66 +649,6 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string &field,
   return true;
 }
 
-double ComponentComsol::DelayedWeightingPotential(const double xin,
-                                                  const double yin,
-                                                  const double zin,
-                                                  const double tin,
-                                                  const std::string& label) {
-  if (m_wdtimes.empty()) return 0.;
-  // Assume no weighting field for times outside the range of available maps.
-  if (tin < m_wdtimes.front()) return 0.;
-  double t = tin;
-  if (tin > m_wdtimes.back())
-    t = m_wdtimes.back();
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) return 0.;
-  // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
-  // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return 0.;
-  // Check if the weighting field is properly initialised.
-
-  // Copy the coordinates.
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates.
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  if (m_warning) PrintWarning("WeightingPotential");
-
-  // Find the element that contains this point.
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) return 0.;
-  const Element &element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
-                 iw);
-  }
-
-  const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
-  const auto it0 = std::prev(it1);
-
-  const double dt = t - *it0;
-  const unsigned int i0 = it0 - m_wdtimes.cbegin();
-  const unsigned int i1 = it1 - m_wdtimes.cbegin();
-  std::array<double, 10> v0, v1;
-  for (size_t i = 0; i < 10; ++i) {
-    v0[i] = m_nodes[element.emap[i]].dw[iw][i0];
-    v1[i] = m_nodes[element.emap[i]].dw[iw][i1];
-  }
-  const double dp0 = Potential13(v0, {t1, t2, t3, t4});
-  const double dp1 = Potential13(v1, {t1, t2, t3, t4});
-
-  const double f1 = dt / (*it1 - *it0);
-  const double f0 = 1. - f1;
-
-  return f0 * dp0 + f1 * dp1;
-}
-
 void ComponentComsol::SetTimeInterval(const double mint, const double maxt,
                                       const double stept) {
   std::cout << std::endl
@@ -801,4 +731,4 @@ bool ComponentComsol::GetTimeInterval(const std::string &field) {
   return true;
 }
 
-} // namespace Garfield
+}  // namespace Garfield
