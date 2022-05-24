@@ -1053,14 +1053,11 @@ bool ComponentNeBem3d::Initialise() {
     std::vector<double> xp(np1, 0.);
     std::vector<double> yp(np1, 0.);
     std::vector<double> zp(np1, 0.);
-    double zm = 0.;
     for (unsigned int k = 0; k < np1; ++k) {
       xp[k] = rot[0][0] * xp1[k] + rot[0][1] * yp1[k] + rot[0][2] * zp1[k];
       yp[k] = rot[1][0] * xp1[k] + rot[1][1] * yp1[k] + rot[1][2] * zp1[k];
       zp[k] = rot[2][0] * xp1[k] + rot[2][1] * yp1[k] + rot[2][2] * zp1[k];
-      zm += zp[k];
     }
-    zm /= np1;
     // Store it.
     std::vector<Panel> newPanels;
     std::vector<int> vol1;
@@ -1096,14 +1093,11 @@ bool ComponentNeBem3d::Initialise() {
       xp.assign(np2, 0.);
       yp.assign(np2, 0.);
       zp.assign(np2, 0.);
-      zm = 0.;
       for (unsigned int k = 0; k < np2; ++k) {
         xp[k] = rot[0][0] * xp2[k] + rot[0][1] * yp2[k] + rot[0][2] * zp2[k];
         yp[k] = rot[1][0] * xp2[k] + rot[1][1] * yp2[k] + rot[1][2] * zp2[k];
         zp[k] = rot[2][0] * xp2[k] + rot[2][1] * yp2[k] + rot[2][2] * zp2[k];
-        zm += zp[k];
       }
-      zm /= np2;
       // Store it.
       Panel panel2 = panelsIn[j];
       panel2.xv = xp;

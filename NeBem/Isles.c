@@ -1686,7 +1686,6 @@ int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
   if (DebugISLES) printf("grad: %lg\n", grad);
 
   double Pot = 0., XFlux = 0., YFlux = 0., ZFlux = 0.;
-  double Area = 0.0;  // Total area of the element - useful for cross-check
   for (int i = 1; i <= nbxseg; ++i) {
     double xbgn = (i - 1) * dx;
     double zlimit_xbgn = zMax - grad * xbgn;
@@ -1740,7 +1739,6 @@ int ApproxTriSurf(double zMax, double X, double Y, double Z, int nbxseg,
       }
       if (DebugISLES) printf("type_subele: %d, area: %lg\n", type_subele, area);
 
-      Area += area;
       if (area <= MINDIST2) continue;
       double dist = sqrt((X - xi) * (X - xi) + Y * Y + (Z - zk) * (Z - zk));
       if (DebugISLES) printf("dist: %lg\n", dist);

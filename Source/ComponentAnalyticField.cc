@@ -5892,6 +5892,7 @@ void ComponentAnalyticField::Field3dD10(const double xin, const double yin,
       ex += charge.e * exsum;
       ey += charge.e * ersum * dy;
       ez += charge.e * ersum * dz;
+      volt += charge.e * vsum;
     }
   }
 
