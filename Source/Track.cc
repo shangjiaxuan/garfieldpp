@@ -247,9 +247,10 @@ std::array<double, 3> Track::StepBfield(const double dt,
   dir[2] = rot[0][2] * v1[0] + rot[1][2] * v1[1] + rot[2][2] * v1[2];
 
   // Calculate the new position in the local frame...
+  const double rho = vmag / omega;
   const double u = vmag * v0[0] * dt;
-  const double v = (vmag / omega) * (v0[1] * sphi + v0[2] * (1. - cphi));
-  const double w = (vmag / omega) * (v0[2] * sphi - v0[2] * (1. - cphi));
+  const double v = rho * (v0[1] * sphi + v0[2] * (1. - cphi));
+  const double w = rho * (v0[2] * sphi - v0[1] * (1. - cphi));
   // .... and in the global frame.
   std::array<double, 3> pos;
   pos[0] = rot[0][0] * u + rot[1][0] * v + rot[2][0] * w; 
