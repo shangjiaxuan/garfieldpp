@@ -274,7 +274,7 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
     dz = stheta * x + ctheta * z;
     const double dmag = sqrt(x * x + y * y + z * z);
     // Get the particle velocity.
-    const double rk = 1.e6 * ekin / m_mass;
+    const double rk = ekin / m_mass;
     const double gamma = 1. + rk;
     const double beta2 = rk > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rk;
     const double vmag = sqrt(beta2) * SpeedOfLight;
