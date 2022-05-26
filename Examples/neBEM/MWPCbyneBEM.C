@@ -17,8 +17,7 @@ int main(int argc, char * argv[]) {
 
   TApplication app("app", &argc, argv);
 
-  MediumMagboltz gas;
-  gas.SetComposition("He", 87.5, "CF4", 12.5);
+  MediumMagboltz gas("He", 87.5, "CF4", 12.5);
   MediumConductor Cu;
 
   // Geometry.

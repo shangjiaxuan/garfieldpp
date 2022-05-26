@@ -17,8 +17,7 @@ ROOT.TH1.StatOverflows(True)
 hElectrons = ROOT.TH1F("hElectrons", "Number of electrons", 200, 0, 200)
 hEdep = ROOT.TH1F("hEdep", "Energy Loss", 100, 0., 10.)
 
-gas = ROOT.Garfield.MediumMagboltz()
-gas.SetComposition("ar", 90., "co2", 10.)
+gas = ROOT.Garfield.MediumMagboltz("ar", 90., "co2", 10.)
 gas.SetTemperature(293.15)
 gas.SetPressure(760.)
 
@@ -44,7 +43,7 @@ track.Initialise(gas, True)
 
 nEvents = 10000
 for i in range(nEvents):
-  if i % 1000 == 0: print i, "/", nEvents
+  # if i % 1000 == 0: print i, "/", nEvents
   # Initial position and direction 
   x0 = 0.
   y0 = 0.

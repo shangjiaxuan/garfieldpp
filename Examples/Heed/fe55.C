@@ -35,8 +35,7 @@ int main(int argc, char * argv[]) {
   plottingEngine.SetDefaultStyle();
 
   // Make a gas medium.
-  MediumMagboltz gas;
-  gas.SetComposition("Ar", 70., "CO2", 30.);
+  MediumMagboltz gas("Ar", 70., "CO2", 30.);
   gas.SetTemperature(293.15);
   gas.SetPressure(AtmosphericPressure);
   

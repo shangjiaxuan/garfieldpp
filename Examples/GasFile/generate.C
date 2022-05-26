@@ -11,8 +11,7 @@ int main(int argc, char * argv[]) {
   const double temperature = 293.15;
  
   // Setup the gas.
-  MediumMagboltz gas;
-  gas.SetComposition("Ar", 93., "CO2", 7.);
+  MediumMagboltz gas("Ar", 93., "CO2", 7.);
   gas.SetTemperature(temperature);
   gas.SetPressure(pressure);
 

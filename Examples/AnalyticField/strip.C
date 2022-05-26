@@ -20,8 +20,7 @@ int main(int argc, char * argv[]) {
   TApplication app("app", &argc, argv);
   plottingEngine.SetDefaultStyle();
 
-  MediumMagboltz gas;
-  gas.SetComposition("ne", 90., "co2", 10.);
+  MediumMagboltz gas("ne", 90., "co2", 10.);
 
   // Define the cell layout.
   ComponentAnalyticField cmp;

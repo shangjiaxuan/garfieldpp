@@ -32,10 +32,9 @@ int main(int argc, char * argv[]) {
   TApplication app("app", &argc, argv);
 
   // Make a gas medium.
-  MediumMagboltz gas;
+  MediumMagboltz gas("xe");
   gas.SetTemperature(293.15);
   gas.SetPressure(760.);
-  gas.SetComposition("xe", 100.);
   if (!gas.Initialise()) return 1;
 
   // Make a component with constant drift field.

@@ -22,8 +22,7 @@ int main(int argc, char * argv[]) {
   TApplication app("app", &argc, argv);
 
   // Setup the gas.
-  MediumMagboltz gas;
-  gas.SetComposition("ar", 80., "co2", 20.);
+  MediumMagboltz gas("ar", 80., "co2", 20.);
   gas.SetTemperature(293.15);
   gas.SetPressure(760.);
   gas.Initialise(true);  

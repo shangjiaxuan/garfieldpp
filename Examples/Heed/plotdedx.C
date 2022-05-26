@@ -19,8 +19,7 @@ int main(int argc, char * argv[]) {
   plottingEngine.SetDefaultStyle();
 
   // Make a medium
-  MediumMagboltz gas;
-  gas.SetComposition("ar");
+  MediumMagboltz gas("ar");
 
   // Track class
   TrackHeed track;

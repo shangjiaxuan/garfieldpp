@@ -169,8 +169,7 @@ int main(int argc, char * argv[]) {
   SetDefaultStyle();
 
   // Setup the gas.
-  MediumMagboltz gas;
-  gas.SetComposition("ne", 85.72, "co2", 9.52, "n2", 4.76);
+  MediumMagboltz gas("ne", 85.72, "co2", 9.52, "n2", 4.76);
 
   // Setup the electric field 
   ComponentAnalyticField cmp;

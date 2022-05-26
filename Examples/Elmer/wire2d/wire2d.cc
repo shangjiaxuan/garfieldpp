@@ -36,14 +36,12 @@ int main(int argc, char* argv[]) {
   const double axis_y = 5;
   const double axis_z = 5;
 
-  // Define the medium.
-  MediumMagboltz gas;
-  // Set the temperature (K)
+  // Define the medium (Ar/CO2 70:30).
+  MediumMagboltz gas("ar", 70., "co2", 30.);
+  // Set the temperature (K).
   gas.SetTemperature(293.15);
-  // Set the pressure (Torr)
+  // Set the pressure (Torr).
   gas.SetPressure(740.);
-  // Specify the gas mixture (Ar/CO2 70:30)
-  gas.SetComposition("ar", 70., "co2", 30.);
 
   // Import an Elmer-created field map.
   ComponentElmer2d elm(

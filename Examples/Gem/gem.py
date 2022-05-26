@@ -33,8 +33,7 @@ fieldView.GetCanvas().SetLeftMargin(0.16)
 fieldView.PlotContour();
 
 # Setup the gas.
-gas = ROOT.Garfield.MediumMagboltz()
-gas.SetComposition("ar", 80., "co2", 20.)
+gas = ROOT.Garfield.MediumMagboltz("ar", 80., "co2", 20.)
 gas.SetTemperature(293.15)
 gas.SetPressure(760.)
 gas.Initialise(True)
@@ -68,7 +67,7 @@ if plotDrift:
 
 nEvents = 10
 for i in range(nEvents):
-  print i, '/', nEvents
+  # print i, '/', nEvents
   # Randomize the initial position. 
   x0 = -0.5 * pitch + ROOT.Garfield.RndmUniform() * pitch
   y0 = -0.5 * pitch + ROOT.Garfield.RndmUniform() * pitch

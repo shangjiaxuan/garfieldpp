@@ -14,8 +14,15 @@ namespace Garfield {
 
 class MediumMagboltz : public MediumGas {
  public:
-  /// Constructor
+  /// Default constructor.
   MediumMagboltz();
+  /// Constructor.
+  MediumMagboltz(const std::string& gas1, const double f1 = 1.,
+                 const std::string& gas2 = "", const double f2 = 0.,
+                 const std::string& gas3 = "", const double f3 = 0.,
+                 const std::string& gas4 = "", const double f4 = 0.,
+                 const std::string& gas5 = "", const double f5 = 0.,
+                 const std::string& gas6 = "", const double f6 = 0.);
   /// Destructor
   virtual ~MediumMagboltz() {}
 
