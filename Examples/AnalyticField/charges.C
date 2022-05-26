@@ -16,8 +16,7 @@ int main(int argc, char * argv[]) {
   TApplication app("app", &argc, argv);
 
   // Gas mixture.
-  MediumMagboltz gas;
-  gas.SetComposition("Ar", 80., "CO2", 20.);
+  MediumMagboltz gas("Ar", 80., "CO2", 20.);
 
   // Define the cell layout.
   constexpr double gap = 0.1;

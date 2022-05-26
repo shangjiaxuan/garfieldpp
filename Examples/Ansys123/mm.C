@@ -12,8 +12,7 @@ int main(int argc, char * argv[]) {
 
   TApplication app("app", &argc, argv);
 
-  MediumMagboltz gas;
-  gas.SetComposition("ar", 95., "cf4", 3., "ic4h10", 2.);
+  MediumMagboltz gas("ar", 95., "cf4", 3., "ic4h10", 2.);
 
   // Load the field map.
   ComponentAnsys123 fm;

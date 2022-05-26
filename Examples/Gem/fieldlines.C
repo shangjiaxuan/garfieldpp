@@ -21,8 +21,7 @@ int main(int argc, char * argv[]) {
   fm.PrintRange();
 
   // Setup the gas.
-  MediumMagboltz gas;
-  gas.SetComposition("ar", 80., "co2", 20.);
+  MediumMagboltz gas("ar", 80., "co2", 20.);
 
   // Associate the gas with the corresponding field map material. 
   fm.SetGas(&gas);

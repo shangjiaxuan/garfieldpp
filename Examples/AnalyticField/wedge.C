@@ -15,8 +15,7 @@ int main(int argc, char * argv[]) {
   TApplication app("app", &argc, argv);
 
   // Setup the gas.
-  MediumMagboltz gas;
-  gas.SetComposition("ne", 85.72, "co2", 9.52, "n2", 4.76);
+  MediumMagboltz gas("ne", 85.72, "co2", 9.52, "n2", 4.76);
 
   // Describe the cell layout.
   ComponentAnalyticField cmp;

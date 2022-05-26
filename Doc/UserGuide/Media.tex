@@ -377,6 +377,13 @@ gas.SetComposition("ar", 80., "ch4", 20.);
 gas.SetTemperature(293.15);
 gas.SetPressure(760.);
 \end{lstlisting}
+The gas composition can also be specified in the constructor of 
+\texttt{MediumMagboltz}.
+\begin{lstlisting}
+MediumMagboltz gas("ar", 80., "ch4", 20.);
+gas.SetTemperature(293.15);
+gas.SetPressure(760.);
+\end{lstlisting}
 
 The function
 \begin{lstlisting}

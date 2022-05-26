@@ -34,11 +34,10 @@ int main(int argc, char * argv[]) {
   constexpr double yGap = 0.7;                            
 
   // Make a gas medium.
-  MediumMagboltz gas;
+  MediumMagboltz gas("xe");
   // Set temperature [K] and pressure [Torr].
   gas.SetTemperature(293.15);
   gas.SetPressure(760.);
-  gas.SetComposition("xe", 100.);              
 
   // Make a component with analytic electric field.
   ComponentAnalyticField comp;

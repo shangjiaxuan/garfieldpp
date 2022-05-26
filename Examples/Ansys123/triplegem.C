@@ -20,8 +20,7 @@ using namespace Garfield;
 int main() {
 
   // Set up the gas.
-  MediumMagboltz gas;
-  gas.SetComposition("ar", 45., "co2", 15., "cf4", 40.);
+  MediumMagboltz gas("ar", 45., "co2", 15., "cf4", 40.);
   gas.SetTemperature(293.15);
   gas.SetPressure(760.);
   gas.SetMaxElectronEnergy(200.);

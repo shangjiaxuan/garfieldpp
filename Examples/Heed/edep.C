@@ -26,8 +26,7 @@ int main(int argc, char * argv[]) {
   TH1F hEdep("hEdep", "Energy Loss", 100, 0., 10.);
 
   // Make a medium
-  MediumMagboltz gas;
-  gas.SetComposition("ar", 90., "co2", 10.);
+  MediumMagboltz gas("ar", 90., "co2", 10.);
   gas.SetTemperature(293.15);
   gas.SetPressure(760.);
 

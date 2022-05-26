@@ -33,8 +33,7 @@ as well as the angle between \(\mathbf{E}\) and \(\mathbf{B}\)).
 In this example, we use a gas mixture of 93\% argon and 7\% 
 carbon dioxide at a pressure of 3\,atm and room temperature.
 \begin{lstlisting}
-MediumMagboltz gas;
-gas.SetComposition("ar", 93., "co2", 7.);
+MediumMagboltz gas("ar", 93., "co2", 7.);
 // Set temperature [K] and pressure [Torr].
 gas.SetPressure(3 * 760.);
 gas.SetTemperature(293.15);
@@ -308,8 +307,7 @@ sensor.SetArea(-5 * pitch, -5 * pitch, -0.01, 5 * pitch,  5 * pitch,  0.025);
 \subsubsection{Gas}
 We use a gas mixture of 80\% argon and 20\% CO\(_{2}\).
 \begin{lstlisting}
-MediumMagboltz gas;
-gas.SetComposition("ar", 80., "co2", 20.);
+MediumMagboltz gas("ar", 80., "co2", 20.);
 // Set temperature [K] and pressure [Torr].
 gas.SetTemperature(293.15);
 gas.SetPressure(760.);

@@ -127,6 +127,16 @@ MediumMagboltz::MediumMagboltz()
 
   m_scaleExc.fill(1.);
 }
+MediumMagboltz::MediumMagboltz(const std::string& gas1, const double f1,
+                               const std::string& gas2, const double f2,
+                               const std::string& gas3, const double f3,
+                               const std::string& gas4, const double f4,
+                               const std::string& gas5, const double f5,
+                               const std::string& gas6, const double f6) 
+    : MediumMagboltz() {
+  SetComposition(gas1, f1, gas2, f2, gas3, f3, 
+                 gas4, f4, gas5, f5, gas6, f6);
+}
 
 bool MediumMagboltz::SetMaxElectronEnergy(const double e) {
   if (e <= Small) {
