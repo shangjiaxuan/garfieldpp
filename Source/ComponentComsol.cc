@@ -66,7 +66,7 @@ bool ComponentComsol::Initialise(const std::string &mesh,
                                  const std::string &unit) {
   Reset();
 
-  std::vector<int> m_nodeIndices;
+  std::vector<int> nodeIndices;
 
   // Get the conversion factor to be applied to the coordinates.
   m_unit = ScalingFactor(unit);
@@ -158,8 +158,7 @@ bool ComponentComsol::Initialise(const std::string &mesh,
     }
   }
 
-  std::vector<Element> m_elementsHolder;
-  std::vector<bool> m_elementsIndices;
+  std::vector<Element> elementsHolder;
 
   do {
     if (!std::getline(fmesh, line)) {
@@ -190,7 +189,7 @@ bool ComponentComsol::Initialise(const std::string &mesh,
     for (int j = 0; j < 10; ++j) {
       fmesh >> newElement.emap[perm[j]];
     }
-    m_elementsHolder.push_back(std::move(newElement));
+      elementsHolder.push_back(std::move(newElement));
   }
 
   do {
@@ -201,7 +200,7 @@ bool ComponentComsol::Initialise(const std::string &mesh,
       return false;
     }
   } while (line.find("# Geometric entity indices") == std::string::npos);
-  for (auto &element : m_elementsHolder) {
+  for (auto &element : elementsHolder) {
     int domain;
     fmesh >> domain;
     element.matmap = domain2material.count(domain) ? domain2material[domain]
@@ -209,10 +208,10 @@ bool ComponentComsol::Initialise(const std::string &mesh,
   }
   fmesh.close();
 
-  for (auto &takeElement : m_elementsHolder) {
+  for (auto &takeElement : elementsHolder) {
     if (ElementInRange(takeElement)) {
       for (int j = 0; j < 10; j++) {
-        m_nodeIndices.push_back(takeElement.emap[j]);
+          nodeIndices.push_back(takeElement.emap[j]);
       }
       m_elements.push_back(std::move(takeElement));
     }
@@ -220,13 +219,13 @@ bool ComponentComsol::Initialise(const std::string &mesh,
 
   if (m_range.set) {
     std::vector<int> m_nodeMap(nNodes, -1);
-    // Rearange m_nodeIndices and delete duplicates
-    sort(m_nodeIndices.begin(), m_nodeIndices.end());
-    m_nodeIndices.erase(std::unique(m_nodeIndices.begin(), m_nodeIndices.end()),
-                        m_nodeIndices.end());
-    // Go over m_nodeIndices and add the corresponding m_nodesHolder node to
+    // Rearange nodeIndices and delete duplicates
+    sort(nodeIndices.begin(), nodeIndices.end());
+    nodeIndices.erase(std::unique(nodeIndices.begin(), nodeIndices.end()),
+                        nodeIndices.end());
+    // Go over nodeIndices and add the corresponding m_nodesHolder node to
     // m_nodes
-    for (int &i : m_nodeIndices) {
+    for (int &i : nodeIndices) {
       m_nodes.push_back(m_nodesHolder[i]);
       // Update m_nodeMap to get correct node idex.
       m_nodeMap[i] = m_nodes.size() - 1;
@@ -342,104 +341,6 @@ bool ComponentComsol::Initialise(const std::string &mesh,
   m_ready = true;
   Prepare();
   std::cout << std::endl << m_className << "::Initialise: Done.\n";
-  return true;
-}
-
-bool ComponentComsol::SetWeightingField(const std::string &field,
-                                        const std::string &label) {
-  if (!m_ready) {
-    std::cerr << m_className << "::SetWeightingField:\n"
-              << "    No valid field map is present.\n"
-              << "    Weighting fields cannot be added.\n";
-    return false;
-  }
-
-  std::cerr << m_className << "::SetWeightingField:\n"
-            << "    Called.\n";
-
-  // Open the voltage list.
-  std::ifstream ffield(field);
-  if (!ffield) {
-    PrintCouldNotOpen("SetWeightingField", field);
-    return false;
-  }
-
-  std::cerr
-      << m_className << "::SetWeightingField:\n"
-      << "    Check if a weighting field with the same label already exists.\n";
-
-  // Check if a weighting field with the same label already exists.
-  const size_t iw = GetOrCreateWeightingFieldIndex(label);
-  if (iw + 1 != m_wfields.size()) {
-    std::cout << m_className << "::SetWeightingField:\n"
-              << "    Replacing existing weighting field " << label << ".\n";
-  }
-  m_wfieldsOk[iw] = false;
-
-  std::cerr << m_className << "::SetWeightingField:\n"
-            << "    Build a k-d tree from the node coordinates.\n";
-
-  // Build a k-d tree from the node coordinates.
-  std::vector<std::vector<double>> points;
-  for (const auto &node : m_nodes) {
-    std::vector<double> point = {node.x, node.y, node.z};
-    points.push_back(std::move(point));
-  }
-  KDTree kdtree(points);
-
-  const std::string hdr =
-      "% x             y              z              es.normE (V/m)";
-
-  std::cerr << m_className << "::SetWeightingField:\n"
-            << "    Run over lines.\n";
-
-  std::string line;
-  do {
-    if (!std::getline(ffield, line)) {
-      std::cerr << m_className << "::SetWeightingField:\n"
-                << "    Error parsing " << field << ".\n";
-      ffield.close();
-      return false;
-    }
-  } while (line.find(hdr) == std::string::npos);
-  const int nNodes = m_nodes.size();
-  for (int i = 0; i < nNodes; ++i) {
-    std::cerr << m_className << "::SetWeightingField:\n"
-              << "    Save point " << i << " of " << nNodes << ".\n";
-    double x, y, z, v;
-    ffield >> x >> y >> z >> v;
-    x *= m_unit;
-    y *= m_unit;
-    z *= m_unit;
-    if (!CheckInRange(x, y, z)) continue;
-    // Find the closest mesh node.
-    const std::vector<double> pt = {x, y, z};
-    std::vector<KDTreeResult> res;
-    kdtree.n_nearest(pt, 1, res);
-
-    if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance) continue;
-    if (res.empty()) {
-      std::cerr << m_className << "::SetWeightingField:\n"
-                << "    Could not find a matching mesh node for point (" << x
-                << ", " << y << ", " << z << ")\n.";
-      ffield.close();
-      return false;
-    }
-    const size_t k = res[0].idx;
-    m_nodes[k].w[iw] = v;
-
-    std::cerr << m_className << "::SetWeightingField:\n"
-              << "    Mesh node for point (" << x << ", " << y << ", " << z
-              << ")\n.";
-
-    std::cerr << m_className << "::SetWeightingField:\n"
-              << "   Ew = " << v << ")\n.";
-  }
-  ffield.close();
-
-  std::cerr << m_className << "::SetWeightingField:\n"
-            << "    Done.\n";
-
   return true;
 }
 

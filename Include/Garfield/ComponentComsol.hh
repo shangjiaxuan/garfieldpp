@@ -39,8 +39,6 @@ class ComponentComsol : public ComponentFieldMap {
                   const std::string &mplist = "dielectrics.dat",
                   const std::string &field = "field.txt",
                   const std::string &unit = "m");
-  /// Import the time-independent weighting field maps.
-  bool SetWeightingField(const std::string &file, const std::string &label);
 
   /// Import the  weighting potential maps.
   bool SetWeightingPotential(const std::string &file, const std::string &label);
