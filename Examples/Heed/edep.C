@@ -24,6 +24,7 @@ int main(int argc, char * argv[]) {
   TH1::StatOverflows(true); 
   TH1F hElectrons("hElectrons", "Number of electrons", 200, 0, 200);
   TH1F hEdep("hEdep", "Energy Loss", 100, 0., 10.);
+  TH1F hClusterSize("hClusterSize", "Cluster size", 100, 0.5, 100.5);
 
   // Make a medium
   MediumMagboltz gas("ar", 90., "co2", 10.);
@@ -73,6 +74,7 @@ int main(int argc, char * argv[]) {
     while (track.GetCluster(xc, yc, zc, tc, nc, ec, extra)) {
       esum += ec;
       nsum += nc;
+      hClusterSize.Fill(nc);
     }
     hElectrons.Fill(nsum);
     hEdep.Fill(esum * 1.e-3);
@@ -87,6 +89,12 @@ int main(int argc, char * argv[]) {
   hEdep.GetXaxis()->SetTitle("energy loss [keV]");
   hEdep.Draw();
   c2.SaveAs("edep.pdf");
+
+  TCanvas c3;
+  hClusterSize.GetXaxis()->SetTitle("electrons / cluster");
+  hClusterSize.Draw();
+  c3.SetLogy();
+  c3.SaveAs("clusterSizeDistribution.pdf");
 
   app.Run(true); 
 
