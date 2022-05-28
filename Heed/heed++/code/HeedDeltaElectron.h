@@ -7,7 +7,6 @@
 namespace Heed {
 
 class PairProd;
-extern long last_particle_number;
 
 /// Definition of delta-electron which can be traced through the geometry.
 /// 2003, I. Smirnov

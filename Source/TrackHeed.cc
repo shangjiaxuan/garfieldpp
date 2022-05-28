@@ -56,13 +56,6 @@ Heed::MolecPhotoAbsCS makeMPACS(const std::string& atom1, const int n1,
 
 }
 
-// Global functions and variables required by Heed
-namespace Heed {
-
-// Particle id number for book-keeping
-long last_particle_number;
-}
-
 // Actual class implementation
 
 namespace Garfield {
@@ -289,7 +282,6 @@ bool TrackHeed::GetCluster(double& xcls, double& ycls, double& zcls,
       // Try the next element.
       continue;
     }
-
     // Get the location of the interaction (convert from mm to cm
     // and shift with respect to bounding box center).
     xcls = virtualPhoton->position().x * 0.1 + m_cX;
@@ -1188,7 +1180,7 @@ double TrackHeed::GetPhotoAbsorptionCrossSection(const double en) const {
 }
 
 void TrackHeed::ClearParticleBank() {
-  Heed::last_particle_number = 0;
+  Heed::gparticle::reset_counter();
   ClearBank(m_particleBank);
   m_bankIterator = m_particleBank.end();
 }

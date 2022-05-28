@@ -9,7 +9,6 @@
 //#define SFER_PHOTOEL  // make direction of photoelectron absolutely random
 
 namespace Heed {
-extern long last_particle_number;
 
 /// Definition of the photon which can be emitted at atomic relaxation cascades
 /// and traced through the geometry.
