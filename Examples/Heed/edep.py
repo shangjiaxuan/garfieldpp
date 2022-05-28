@@ -16,6 +16,7 @@ ROOT.Garfield.SetDefaultStyle()
 ROOT.TH1.StatOverflows(True)
 hElectrons = ROOT.TH1F("hElectrons", "Number of electrons", 200, 0, 200)
 hEdep = ROOT.TH1F("hEdep", "Energy Loss", 100, 0., 10.)
+hClusterSize = ROOT.TH1F("hClusterSize", "Cluster size", 100, 0.5, 100.5)
 
 gas = ROOT.Garfield.MediumMagboltz("ar", 90., "co2", 10.)
 gas.SetTemperature(293.15)
@@ -72,6 +73,7 @@ for i in range(nEvents):
   while track.GetCluster(xc, yc, zc, tc, nc, ec, extra):
     esum += ec.value
     nsum += nc.value
+    hClusterSize.Fill(nc.value)
   hElectrons.Fill(nsum)
   hEdep.Fill(esum * 1.e-3);
  
@@ -85,3 +87,8 @@ hEdep.GetXaxis().SetTitle("energy loss [keV]")
 hEdep.Draw()
 c2.SaveAs("edep.pdf")
 
+c3 = ROOT.TCanvas()
+hClusterSize.GetXaxis().SetTitle("electrons / cluster")
+hClusterSize.Draw()
+c3.SetLogy()
+c3.SaveAs("clusterSizeDistribution.pdf")
