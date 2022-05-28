@@ -6,7 +6,6 @@
 #include "HeedCluster.h"
 
 namespace Heed {
-extern long last_particle_number;
 
 /// Charged particle which can be traced through the geometry.
 ///

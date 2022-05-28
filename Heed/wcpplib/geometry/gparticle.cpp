@@ -37,6 +37,8 @@ void stvpoint::print(std::ostream& file, int l) const {
   file.flush();
 }
 
+std::atomic<long> gparticle::s_counter{0L};
+ 
 gparticle::gparticle(manip_absvol* primvol, const point& pt, const vec& vel,
                      vfloat ftime)
     : m_prevpos(),

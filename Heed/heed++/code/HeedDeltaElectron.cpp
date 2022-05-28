@@ -52,7 +52,7 @@ HeedDeltaElectron::HeedDeltaElectron(manip_absvol* primvol, const point& pt,
                                      bool fprint_listing)
     : eparticle(primvol, pt, vel, ftime, &electron_def, fieldmap),
       parent_particle_number(fparent_particle_number),
-      m_particle_number(last_particle_number++),
+      m_particle_number(s_counter++),
       m_print_listing(fprint_listing) {
   mfunname("HeedDeltaElectron::HeedDeltaElectron(...)");
 }

@@ -29,7 +29,7 @@ HeedParticle_BGM::HeedParticle_BGM(manip_absvol* primvol, const point& pt,
     : eparticle(primvol, pt, vel, ftime, fpardef, fieldmap),
       m_print_listing(fprint_listing),
       m_loss_only(floss_only),
-      m_particle_number(last_particle_number++) {}
+      m_particle_number(s_counter++) {}
 
 void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
   mfunname("void HeedParticle_BGM::physics()");
