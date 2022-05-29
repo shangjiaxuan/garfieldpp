@@ -9,7 +9,6 @@
 
 #define USE_ADJUSTED_W
 #define RANDOM_POIS
-#define DIRECT_LOW_IF_LITTLE
 
 namespace {
 
@@ -30,6 +29,19 @@ double interpolate(Heed::EnergyMesh* emesh, const double x,
   return y1 + (x - x1) * (y2 - y1) / (x2 - x1);
 }
 
+double sample_ctheta(const double sigma) {
+  double ctheta = 0.;
+  do {
+    double y = Heed::SRANLUX();
+    while (y == 1.) {
+      y = Heed::SRANLUX();
+    }
+    const double x = sigma * (-log(1.0 - y));
+    ctheta = 1. - x;
+  } while (ctheta <= -1.0);
+  return ctheta;
+}
+
 }
 
 namespace Heed {
@@ -44,6 +56,7 @@ using CLHEP::c_squared;
 
 bool HeedDeltaElectron::s_low_mult_scattering = true;
 bool HeedDeltaElectron::s_high_mult_scattering = true;
+bool HeedDeltaElectron::s_direct_low_if_little = true;
 
 HeedDeltaElectron::HeedDeltaElectron(manip_absvol* primvol, const point& pt,
                                      const vec& vel, vfloat ftime,
@@ -243,9 +256,7 @@ void HeedDeltaElectron::physics_after_new_speed(
   }
 #endif
   if (m_q_low_path_length > 0) {
-#ifdef DIRECT_LOW_IF_LITTLE
-    const long max_q_low_path_length_for_direct = 5;
-    if (m_q_low_path_length < max_q_low_path_length_for_direct) {
+    if (s_direct_low_if_little && m_q_low_path_length < 5) {
       // direct modeling
       if (m_print_listing) {
         mcout << "direct modeling of low scatterings\n";
@@ -255,15 +266,15 @@ void HeedDeltaElectron::physics_after_new_speed(
       const long n1r = findInterval(emesh, ek_restr);
       for (long nscat = 0; nscat < m_q_low_path_length; ++nscat) {
         if (m_print_listing) Iprintn(mcout, nscat);
-        double theta_rot =
+        const double theta =
             hdecs->low_angular_points_ran[n1r].ran(SRANLUX()) * degree;
-        if (m_print_listing) Iprintnf(mcout, theta_rot);
+        if (m_print_listing) Iprintnf(mcout, theta);
         vec dir = m_currpos.dir;
         basis temp(dir, "temp");
         vec vturn;
         vturn.random_round_vec();
-        vturn = vturn * sin(theta_rot);
-        vec new_dir(vturn.x, vturn.y, cos(theta_rot));
+        vturn = vturn * sin(theta);
+        vec new_dir(vturn.x, vturn.y, cos(theta));
         new_dir.down(&temp);
         m_currpos.dir = new_dir;
         if (m_print_listing) Iprint(mcout, new_dir);
@@ -271,54 +282,33 @@ void HeedDeltaElectron::physics_after_new_speed(
       m_currpos.dirloc = m_currpos.dir;
       m_currpos.tid.up_absref(&m_currpos.dirloc);
     } else {
-#endif
-      double sigma_ctheta = hdecs->get_sigma(ek_restr, m_q_low_path_length);
+      const double sigma = hdecs->get_sigma(ek_restr, m_q_low_path_length);
       // actually it is mean(1-cos(theta)) or
-      // sqrt( mean( square(1-cos(theta) ) ) ) depending on USE_MEAN_COEF
-
-      if (m_print_listing) Iprintnf(mcout, sigma_ctheta);
-      // Gauss (but actually exponential distribution fits better).
-      // double ctheta = 1.0 - fabs(rnorm_improved() * sigma_ctheta);
-      // Exponential:
-      double ctheta = 0.0;
-      {
+      // sqrt(mean(square(1-cos(theta)))) depending on USE_MEAN_COEF
+      if (m_print_listing) Iprintnf(mcout, sigma);
+      // Gauss:
+      // double ctheta = 1.0 - fabs(rnorm_improved() * sigma);
+      // Exponential distribution fits better:
 #ifdef USE_MEAN_COEF
+      const double ctheta = sample_ctheta(sigma);
 #else
-      double sq2 = sqrt(2.0);
+      const double ctheta = sample_ctheta(sigma / sqrt(2.));
 #endif
-        do {
-          double y = 0.0;
-          do {  // in order to avoid SRANLUX() = 1
-            y = SRANLUX();
-            if (m_print_listing) Iprintnf(mcout, y);
-          } while (y == 1.0);
-#ifdef USE_MEAN_COEF
-          double x = sigma_ctheta * (-log(1.0 - y));
-#else
-        double x = sigma_ctheta * 1.0 / sq2 * (-log(1.0 - y));
-#endif
-          ctheta = 1.0 - x;
-          if (m_print_listing) Iprint2nf(mcout, x, ctheta);
-        } while (ctheta <= -1.0);  // avoid absurd cos(theta)
-        check_econd21(ctheta, < -1.0 ||, > 1.0, mcerr);
-      }
       if (m_print_listing) Iprintnf(mcout, ctheta);
-      double theta_rot = acos(ctheta);
-      if (m_print_listing) Iprint2nf(mcout, theta_rot, theta_rot / degree);
+      const double theta = acos(ctheta);
+      if (m_print_listing) Iprint2nf(mcout, theta, theta / degree);
       vec dir = m_currpos.dir;
       basis temp(dir, "temp");
       vec vturn;
       vturn.random_round_vec();
-      vturn = vturn * sin(theta_rot);
-      vec new_dir(vturn.x, vturn.y, cos(theta_rot));
+      vturn = vturn * sin(theta);
+      vec new_dir(vturn.x, vturn.y, ctheta);
       new_dir.down(&temp);
       m_currpos.dir = new_dir;
       m_currpos.dirloc = m_currpos.dir;
       m_currpos.tid.up_absref(&m_currpos.dirloc);
     }
-#ifdef DIRECT_LOW_IF_LITTLE
   }
-#endif
   if (m_path_length) {
     if (m_print_listing) {
       mcout << "\nstarting to rotate by large angle" << std::endl;
@@ -326,14 +316,14 @@ void HeedDeltaElectron::physics_after_new_speed(
     }
     EnergyMesh* emesh = hdecs->hmd->energy_mesh;
     const long n1r = findInterval(emesh, ek_restr);
-    double theta_rot = hdecs->angular_points_ran[n1r].ran(SRANLUX()) * degree;
-    if (m_print_listing) Iprintnf(mcout, theta_rot);
+    const double theta = hdecs->angular_points_ran[n1r].ran(SRANLUX()) * degree;
+    if (m_print_listing) Iprintnf(mcout, theta);
     vec dir = m_currpos.dir;
     basis temp(dir, "temp");
     vec vturn;
     vturn.random_round_vec();
-    vturn = vturn * sin(theta_rot);
-    vec new_dir(vturn.x, vturn.y, cos(theta_rot));
+    vturn = vturn * sin(theta);
+    vec new_dir(vturn.x, vturn.y, cos(theta));
     new_dir.down(&temp);
     m_currpos.dir = new_dir;
     m_currpos.dirloc = m_currpos.dir;
@@ -396,20 +386,17 @@ void HeedDeltaElectron::ionisation(const double eloss, const double dedx,
 
 void HeedDeltaElectron::print(std::ostream& file, int l) const {
   if (l < 0) return;
-  Ifile << "HeedDeltaElectron (l=" << l
-        << "): particle_number=" << m_particle_number << "\n";
-  if (l == 1) return;
-  indn.n += 2;
-  Ifile << "s_low_mult_scattering=" << s_low_mult_scattering
-        << " s_high_mult_scattering=" << s_high_mult_scattering << '\n';
-  Ifile << "phys_mrange=" << m_phys_mrange << " stop_eloss=" << m_stop_eloss
-        << " mult_low_path_length=" << m_mult_low_path_length << '\n';
-  Ifile << "q_low_path_length=" << m_q_low_path_length
-        << " path_length=" << m_path_length
-        << " necessary_energy/eV=" << m_necessary_energy / eV << '\n';
-  Ifile << " parent_particle_number=" << parent_particle_number << '\n';
-
+  file << "HeedDeltaElectron: particle_number=" << m_particle_number << "\n";
+  if (l <= 1) return;
+  file << " s_low_mult_scattering=" << s_low_mult_scattering
+       << " s_high_mult_scattering=" << s_high_mult_scattering << '\n'
+       << " phys_mrange=" << m_phys_mrange 
+       << " stop_eloss=" << m_stop_eloss
+       << " mult_low_path_length=" << m_mult_low_path_length << '\n'
+       << " q_low_path_length=" << m_q_low_path_length
+       << " path_length=" << m_path_length
+       << " necessary_energy/eV=" << m_necessary_energy / eV << '\n'
+       << " parent_particle_number=" << parent_particle_number << '\n';
   mparticle::print(file, l - 1);
-  indn.n -= 2;
 }
 }

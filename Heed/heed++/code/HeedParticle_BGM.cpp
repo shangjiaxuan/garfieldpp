@@ -37,7 +37,6 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
     mcout << "HeedParticle_BGM::physics is started\n";
     Iprintn(mcout, m_currpos.prange);
   }
-  m_edep = 0.;
   // Get the step.
   if (m_currpos.prange <= 0.0) return;
   const double stp = m_currpos.prange / cm;
