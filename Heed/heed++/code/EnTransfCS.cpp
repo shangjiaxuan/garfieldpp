@@ -450,6 +450,9 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
     const double det_value = 1.0 / (gamma * gamma) - hmd->epsi1[ne] * beta2;
     length_y0[ne] = det_value > 0. ? beta / k0 * 1.0 / sqrt(det_value) : 0.;
   }
+  
+  // Prefactor of the Highland formula.
+  sigma_ms = sqrt(2.) * 13.6 / (beta * beta * gamma * particle_mass);
 
   if (!debug) return;
   std::ofstream dcsfile;

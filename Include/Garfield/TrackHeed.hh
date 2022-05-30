@@ -191,6 +191,9 @@ class TrackHeed : public Track {
     stepAngleCurved = m_stepAngleCurved;
   }
 
+  void EnableCoulombScattering(const bool on = true) { 
+    m_coulombScattering = on;
+  } 
   /// Switch simulation of delta electrons on.
   void EnableDeltaElectronTransport() { m_doDeltaTransport = true; }
   /// Switch simulation of delta electrons off.
@@ -239,6 +242,8 @@ class TrackHeed : public Track {
   };
   typedef SimplifiedParticle Photon;
   std::vector<Photon> m_photons;
+
+  bool m_coulombScattering = false;
 
   bool m_doDeltaTransport = true;
   typedef SimplifiedParticle DeltaElectron;

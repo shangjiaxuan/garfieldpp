@@ -3,6 +3,7 @@
 #include "wcpplib/clhep_units/WPhysicalConstants.h"
 #include "wcpplib/random/ranluxint.h"
 #include "wcpplib/random/pois.h"
+#include "wcpplib/random/rnorm.h"
 #include "wcpplib/math/kinem.h"
 #include "wcpplib/math/tline.h"
 #include "heed++/code/HeedParticle.h"
@@ -22,11 +23,14 @@ using CLHEP::electron_mass_c2;
 
 HeedParticle::HeedParticle(manip_absvol* primvol, const point& pt,
                            const vec& vel, vfloat ftime, particle_def* fpardef,
-                           HeedFieldMap* fieldmap, const bool floss_only,
+                           HeedFieldMap* fieldmap, 
+                           const bool fcoulomb_scattering,
+                           const bool floss_only,
                            const bool fprint_listing)
     : eparticle(primvol, pt, vel, ftime, fpardef, fieldmap),
-      m_print_listing(fprint_listing),
+      m_coulomb_scattering(fcoulomb_scattering),
       m_loss_only(floss_only),
+      m_print_listing(fprint_listing),
       m_particle_number(s_counter++) {}
 
 void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
@@ -35,7 +39,6 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
     mcout << "HeedParticle::physics is started\n";
     Iprintn(mcout, m_currpos.prange);
   }
-  m_edep = 0.;
   // Get the step.
   if (m_currpos.prange <= 0.0) return;
   const double stp = m_currpos.prange / cm;
@@ -112,24 +115,43 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
       }
     }
   }
+  if (m_coulomb_scattering) {
+    if (hmd->radiation_length > 0.) {
+      const double x = range / hmd->radiation_length;
+      const double sigma = etcs->sigma_ms * sqrt(x);
+      double theta = sigma * rnorm_improved();
+      turn(cos(theta), sin(theta));
+    }
+  }
   if (m_print_listing) {
     Iprintn(mcout, m_edep);
     mcout << "Exiting HeedParticle::physics\n";
   }
 }
 
+void HeedParticle::physics_mrange(double& fmrange) {
+  if (!m_coulomb_scattering) return;
+  // Get local volume and convert it to a cross-section object.
+  const absvol* av = m_currpos.volume();
+  auto etcs = dynamic_cast<const EnTransfCS*>(av);
+  if (!etcs) return;
+  if (etcs->quanC > 0.) {
+    // Make sure the step is smaller than the mean free path between 
+    // ionising collisions.
+    fmrange = std::min(fmrange, 0.1 / etcs->quanC);
+  }
+} 
+
 void HeedParticle::print(std::ostream& file, int l) const {
   if (l < 0) return;
-  Ifile << "HeedParticle (l=" << l << "): particle_number=" 
-        << m_particle_number << " type=";
+  file << "HeedParticle: particle_number=" << m_particle_number << " type=";
   if (!m_pardef) {
     file << "none";
   } else {
     file << m_pardef->notation;
   }
-  file << std::endl;
-  if (l == 1) return;
+  file << "\n  edep=" << m_edep << "\n";
+  if (l <= 1) return;
   mparticle::print(file, l - 1);
-  Iprintn(mcout, m_edep);
 }
 }
