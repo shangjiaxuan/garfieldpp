@@ -115,6 +115,12 @@ void HeedParticle::physics(std::vector<gparticle*>& secondaries) {
       }
     }
   }
+
+  if (m_edep >= m_curr_ekin) {
+    // Accumulated energy loss exceeds the particle's kinetic energy.
+    m_alive = false;
+  } 
+
   if (m_coulomb_scattering) {
     if (hmd->radiation_length > 0.) {
       const double x = range / hmd->radiation_length;

@@ -146,6 +146,11 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
       }
     }
   }
+  if (m_edep >= m_curr_ekin) {
+    // Accumulated energy loss exceeds the particle's kinetic energy.
+    m_alive = false;
+  }
+
   if (m_print_listing) {
     Iprintn(mcout, m_edep);
     mcout << "Exiting HeedParticle_BGM::physics\n";
