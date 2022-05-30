@@ -246,6 +246,9 @@ class gparticle {
   /// Determine next position.
   virtual stvpoint calc_step_to_bord();
 
+  /// Change the direction of the particle.
+  void turn(const double ctheta, const double stheta);
+
   /// Generate next position in new volume.
   stvpoint switch_new_vol();
 

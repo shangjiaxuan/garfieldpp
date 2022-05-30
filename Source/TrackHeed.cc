@@ -190,7 +190,7 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
   }
 
   Heed::HeedParticle particle(m_chamber.get(), p0, velocity, t0, particleType,
-                              m_fieldMap.get());
+                              m_fieldMap.get(), m_coulombScattering);
   // Set the step limits.
   particle.set_step_limits(m_maxStep * Heed::CLHEP::cm,
                            m_radStraight * Heed::CLHEP::cm,

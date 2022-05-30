@@ -247,8 +247,7 @@ void HeedDeltaElectron::physics_after_new_speed(
   if (m_print_listing) Iprintnf(mcout, m_q_low_path_length);
 #ifdef RANDOM_POIS
   if (m_q_low_path_length > 0.0) {
-    long random_q_low_path_length = pois(m_q_low_path_length);
-    m_q_low_path_length = long(random_q_low_path_length);
+    m_q_low_path_length = pois(m_q_low_path_length);
     if (m_print_listing) {
       mcout << "After pois:\n";
       Iprintnf(mcout, m_q_low_path_length);
@@ -269,18 +268,8 @@ void HeedDeltaElectron::physics_after_new_speed(
         const double theta =
             hdecs->low_angular_points_ran[n1r].ran(SRANLUX()) * degree;
         if (m_print_listing) Iprintnf(mcout, theta);
-        vec dir = m_currpos.dir;
-        basis temp(dir, "temp");
-        vec vturn;
-        vturn.random_round_vec();
-        vturn = vturn * sin(theta);
-        vec new_dir(vturn.x, vturn.y, cos(theta));
-        new_dir.down(&temp);
-        m_currpos.dir = new_dir;
-        if (m_print_listing) Iprint(mcout, new_dir);
+        turn(cos(theta), sin(theta));
       }
-      m_currpos.dirloc = m_currpos.dir;
-      m_currpos.tid.up_absref(&m_currpos.dirloc);
     } else {
       const double sigma = hdecs->get_sigma(ek_restr, m_q_low_path_length);
       // actually it is mean(1-cos(theta)) or
@@ -297,16 +286,7 @@ void HeedDeltaElectron::physics_after_new_speed(
       if (m_print_listing) Iprintnf(mcout, ctheta);
       const double theta = acos(ctheta);
       if (m_print_listing) Iprint2nf(mcout, theta, theta / degree);
-      vec dir = m_currpos.dir;
-      basis temp(dir, "temp");
-      vec vturn;
-      vturn.random_round_vec();
-      vturn = vturn * sin(theta);
-      vec new_dir(vturn.x, vturn.y, ctheta);
-      new_dir.down(&temp);
-      m_currpos.dir = new_dir;
-      m_currpos.dirloc = m_currpos.dir;
-      m_currpos.tid.up_absref(&m_currpos.dirloc);
+      turn(ctheta, sin(theta));
     }
   }
   if (m_path_length) {
@@ -318,16 +298,7 @@ void HeedDeltaElectron::physics_after_new_speed(
     const long n1r = findInterval(emesh, ek_restr);
     const double theta = hdecs->angular_points_ran[n1r].ran(SRANLUX()) * degree;
     if (m_print_listing) Iprintnf(mcout, theta);
-    vec dir = m_currpos.dir;
-    basis temp(dir, "temp");
-    vec vturn;
-    vturn.random_round_vec();
-    vturn = vturn * sin(theta);
-    vec new_dir(vturn.x, vturn.y, cos(theta));
-    new_dir.down(&temp);
-    m_currpos.dir = new_dir;
-    m_currpos.dirloc = m_currpos.dir;
-    m_currpos.tid.up_absref(&m_currpos.dirloc);
+    turn(cos(theta), sin(theta));
   }
   if (m_print_listing) Iprint2nf(mcout, m_currpos.dir, m_currpos.dirloc);
 }

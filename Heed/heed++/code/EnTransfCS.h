@@ -77,6 +77,9 @@ class EnTransfCS {
 #endif
 
   std::vector<double> length_y0;
+
+  // Prefactor (without thickness dependence) of the Highland formula.
+  double sigma_ms = 0.; 
 };
 }
 
