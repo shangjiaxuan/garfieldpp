@@ -751,9 +751,9 @@ bool ComponentAnalyticField::CrossedWire(
 }
 
 bool ComponentAnalyticField::InTrapRadius(const double qin, const double xin,
-                                            const double yin, const double zin,
-                                            double& xw, double& yw,
-                                            double& rw) {
+                                          const double yin, const double zin,
+                                          double& xw, double& yw,
+                                          double& rw) {
 
   double x0 = xin;
   double y0 = yin;
