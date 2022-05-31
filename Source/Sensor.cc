@@ -626,6 +626,13 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
           if (std::abs(current2) < 1e-16) current2 = 0.;
           electrode.delayedSignal[bin2] += current2;
           electrode.signal[bin2] += current2;
+            if(q<0){
+                electrode.electronSignal[bin2] += current2;
+                electrode.delayedElectronSignal[bin2] += current2;
+            }else{
+                electrode.ionSignal[bin2] += current2;
+                electrode.delayedIonSignal[bin2] += current2;
+            }
           // Linear interpolation if the current is calculated from the induced
           // charge of two non-subsequent bins.
           if (binHolder > 0 && binHolder + 1 < bin2) {
