@@ -277,6 +277,14 @@ class DriftLineRKF {
   void Terminate(const std::array<double, 3>& xx0,
                  const std::array<double, 3>& xx1,
                  std::vector<std::array<float, 3> >& xs) const;
+
+  static double Charge(const Particle particle) {
+    if (particle == Particle::Electron || 
+        particle == Particle::NegativeIon) {
+      return -1.;
+    }
+    return 1.;
+  }
 };
 }
 

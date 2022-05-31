@@ -342,7 +342,7 @@ bool DriftLineRKF::DriftLine(const Vec& xi, const double ti,
   bool bbox = m_sensor->GetArea(xmin, ymin, zmin, xmax, ymax, zmax);
 
   // Set the charge of the drifting particle.
-  const double charge = particle == Particle::Electron ? -1 : 1;
+  const double charge = Charge(particle);
 
   // Initialise the current position and velocity.
   Vec x0 = xi;
@@ -1454,10 +1454,7 @@ void DriftLineRKF::ComputeSignal(const Particle particle, const double scale,
 
   const auto nPoints = ts.size();
   if (nPoints < 2) return;
-  double q0 = scale;
-  if (particle == Particle::Electron || particle == Particle::NegativeIon) {
-    q0 = -1. * scale;
-  }
+  const double q0 = Charge(particle) * scale;
   
   if (m_useWeightingPotential) {
     const bool aval = ne.size() == nPoints; 
