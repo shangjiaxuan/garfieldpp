@@ -181,7 +181,7 @@ void ViewSignal::DrawHistogram(TH1D* h, const std::string& opt,
     }
 }
 
-void ViewSignal::PlotSignalTest(const std::string& label, const std::string setting, const bool same){
+void ViewSignal::PlotSignal(const std::string& label, const std::string setting, const bool same){
     
     const bool totalT = true;
     const bool totalP = false;

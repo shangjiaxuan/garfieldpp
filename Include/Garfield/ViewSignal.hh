@@ -40,13 +40,10 @@ class ViewSignal : public ViewBase {
     
     /** Plot the signal.
      * \param label Identifier (weighting field) of the signal to be plotted.
-     * \param total Flag whether to plot the total induced signal.
-     * \param electron Flag whether to plot the electron-induced signal.
-     * \param ion Flag whether to plot the ion/hole-induced signal.
-     * \param delayed Flag whether to plot the delayed signal component.
+     * \param setting String containing information about the components you want to plot. The syntax is the first letter of charge carrier signal you want to plot: "t" for total, "e" for electron and "i" for Ion/hole. This is followed by which signal components you want to be plotted: "T" for total, "P" for promt and "D" for delayed. Enabeling all posibilities will look like: "tTPDeTPDiTPD".
      * \param same Flag to keep existing plots on the canvas or not.
      */
-    void PlotSignalTest(const std::string& label, const std::string setting,const bool same = false);
+    void PlotSignal(const std::string& label, const std::string setting,const bool same = false);
 
   /** Retrieve the histogram for the total, prompt and delayed induced charge or
    * signal.. \param label Identifier (weighting field) of the signal to be
