@@ -5,6 +5,8 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <TMatrix.h>
+#include <TVector.h>
 
 #include "Component.hh"
 #include "TMatrixD.h"
@@ -97,8 +99,8 @@ class ComponentFieldMap : public Component {
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
 
-  double DelayedWeightingPotential(const double x, const double y,
-                                   const double z, const double t,
+  double DelayedWeightingPotential(double x, double y,
+                                   double z, const double t,
                                    const std::string& label) override;
 
   bool IsInBoundingBox(const double x, const double y, const double z) const {
@@ -117,6 +119,13 @@ class ComponentFieldMap : public Component {
     vmax = m_mapvmax;
     return true;
   }
+    
+  void CopyWeightingPotential(const std::string& label, const std::string& labelSource, const double xT, const double yT, const double zT, const double alpha, const double beta, const double gamma);
+    
+  size_t GetCopyWeightingPotential(const std::string& label);
+    
+ void FromCopyToSourceWeightingPotential(const size_t& iwc, double& x, double& y, double& z);
+
   friend class ViewFEMesh;
 
  protected:
@@ -170,7 +179,19 @@ class ComponentFieldMap : public Component {
   std::vector<std::string> m_wfields;
   std::vector<bool> m_wfieldsOk;
   std::vector<bool> m_dwfieldsOk;
+    
+    // Materials
+    struct WeightingFieldCopy {
+      // Name
+      std::string name;
+      // Source
+      size_t iSource;
+      TMatrix rotMatrix;
+      TVector transVector;
+    };
 
+  std::vector<WeightingFieldCopy> m_wfieldCopies;
+    
   std::vector<double> m_wdtimes;
 
   // Bounding box
@@ -345,6 +366,9 @@ class ComponentFieldMap : public Component {
 
   /// Initialize the tetrahedral tree.
   bool InitializeTetrahedralTree();
+    
+  /// Coordinate transformation matrix calculator
+  void CoordinateTransformMatrix(TMatrix& rotMatrix, TVector& transVector, const double x = 0, const double y = 0, const double z = 0, const double alpha = 0, const double beta = 0, const double gamma = 0);
 };
 }  // namespace Garfield
 

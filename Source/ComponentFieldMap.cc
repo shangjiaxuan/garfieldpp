@@ -4,6 +4,7 @@
 #include <TH1F.h>
 #include <math.h>
 #include <stdio.h>
+#include <TMath.h>
 
 #include <algorithm>
 #include <fstream>
@@ -201,8 +202,8 @@ void ComponentFieldMap::WeightingField(const double xin, const double yin,
   UnmapFields(wx, wy, wz, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
 }
 
-double ComponentFieldMap::WeightingPotential(const double xin, const double yin,
-                                             const double zin,
+double ComponentFieldMap::WeightingPotential(double xin, double yin,
+                                             double zin,
                                              const std::string& label) {
   // Do not proceed if not properly initialised.
   if (!m_ready) return 0.;
@@ -211,11 +212,22 @@ double ComponentFieldMap::WeightingPotential(const double xin, const double yin,
   // if (!CheckInRange(xin, yin, zin)) return 0.;
 
   // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
+  size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
   if (iw == m_wfields.size()) return 0.;
   // Check if the weighting field is properly initialised.
-  if (!m_wfieldsOk[iw]) return 0.;
+    if (iw == m_wfields.size()){
+        
+        const size_t iwc = GetCopyWeightingPotential(label);
+        // If there is a copy of the weighting potential proceed.
+        if(iwc == m_wfieldCopies.size()){
+            return 0.;
+        } else{
+            // If there is a copy perform a coordinate transform to take advantage of the symmetry of the system.
+            FromCopyToSourceWeightingPotential(iwc, xin, yin, zin);
+            iw = m_wfieldCopies[iwc].iSource;
+        }
+    }
 
   // Copy the coordinates.
   double x = xin, y = yin, z = zin;
@@ -269,9 +281,9 @@ double ComponentFieldMap::WeightingPotential(const double xin, const double yin,
   return 0.;
 }
 
-double ComponentFieldMap::DelayedWeightingPotential(const double xin,
-                                                    const double yin,
-                                                    const double zin,
+double ComponentFieldMap::DelayedWeightingPotential(double xin,
+                                                    double yin,
+                                                    double zin,
                                                     const double tin,
                                                     const std::string& label) {
   if (m_wdtimes.empty()) return 0.;
@@ -283,9 +295,20 @@ double ComponentFieldMap::DelayedWeightingPotential(const double xin,
   // Do not proceed if not properly initialised.
   if (!m_ready) return 0.;
   // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
+  size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return 0.;
+    if (iw == m_wfields.size()){
+        
+        const size_t iwc = GetCopyWeightingPotential(label);
+        // If there is a copy of the weighting potential proceed.
+        if(iwc == m_wfieldCopies.size()){
+            return 0.;
+        } else{
+            // If there is a copy perform a coordinate transform to take advantage of the symmetry of the system.
+            FromCopyToSourceWeightingPotential(iwc, xin, yin, zin);
+            iw = m_wfieldCopies[iwc].iSource;
+        }
+    }
   // Check if the weighting field is properly initialised.
 
   // Copy the coordinates.
@@ -2913,6 +2936,109 @@ void ComponentFieldMap::PrintElement(const std::string& header, const double x,
   }
 }
 
+void ComponentFieldMap::CoordinateTransformMatrix(TMatrix& rotMatrix, TVector& transVector, const double xT, const double yT, const double zT, const double xA, const double yA, const double zA){
+    
+    TMatrix Rx(3,3); // Rotation around the x-axis.
+    
+    Rx(0,0) = 1;
+    Rx(1,1) = TMath::Cos(xA);
+    Rx(1,2) = -TMath::Sin(xA);
+    Rx(2,1) = TMath::Sin(xA);
+    Rx(2,2) = TMath::Cos(xA);
+
+    TMatrix Ry(3,3); // Rotation around the y-axis.
+    
+    Ry(1,1) = 1;
+    Ry(0,0) = TMath::Cos(yA);
+    Ry(2,0) = -TMath::Sin(yA);
+    Ry(0,2) = TMath::Sin(yA);
+    Ry(2,2) = TMath::Cos(yA);
+    
+    TMatrix Rz(3,3); // Rotation around the z-axis.
+    
+    Rz(2,2) = 1;
+    Rz(0,0) = TMath::Cos(zA);
+    Rz(0,1) = -TMath::Sin(zA);
+    Rz(1,0) = TMath::Sin(zA);
+    Rz(1,1) = TMath::Cos(zA);
+    
+    rotMatrix = Rx*Ry*Rz; // Total rotation around the origin
+    
+    transVector(0) = xT;
+    transVector(1) = yT;
+    transVector(2) = zT;
+}
+
+void ComponentFieldMap::CopyWeightingPotential(const std::string& label, const std::string& labelSource, const double x, const double y, const double z, const double alpha, const double beta, const double gamma){
+    
+    
+    // Check if a weighting field with the same label already exists.
+    size_t nWeightingFieldCopies = m_wfieldCopies.size();
+    for (size_t i = 0; i < nWeightingFieldCopies; ++i) {
+        if (m_wfields[i] == label){
+            std::cout << m_className << "::CopyWeightingPotential:\n"
+                      << "    Electrode " << label << " already excists.\n";
+            return;
+        }
+    }
+    
+    // Check if a weighting field with the same label already exists.
+    size_t nWeightingFields = m_wfields.size();
+    for (size_t i = 0; i < nWeightingFields; ++i) {
+        if (m_wfieldCopies[i].name == label){
+            std::cout << m_className << "::CopyWeightingPotential:\n"
+                      << "    Copy of " << label << " already excists.\n";
+            return;
+        }
+    }
+    
+    size_t iws =-1;
+    for (size_t i = 0; i < nWeightingFields; ++i) {
+      if (m_wfields[i] == labelSource) iws = i;
+    }
+    
+    if(iws == (size_t) -1){
+        std::cout << m_className << "::CopyWeightingPotential:\n"
+                  << "    Source electrode " << labelSource << " does not excists.\n";
+        return;
+    }
+    
+    
+    WeightingFieldCopy newWeightingFieldCopy;
+    
+    newWeightingFieldCopy.name = label;
+    newWeightingFieldCopy.iSource = iws;
+    
+    TMatrix rot(3,3);
+    TVector trans(3);
+    
+    CoordinateTransformMatrix(rot,trans,-x,-y,-z,-alpha,-beta,-gamma);
+    
+    newWeightingFieldCopy.rotMatrix = rot;
+    newWeightingFieldCopy.transVector = trans;
+    
+    m_wfieldCopies.push_back(newWeightingFieldCopy);
+}
+
+size_t ComponentFieldMap::GetCopyWeightingPotential(const std::string& label){
+    // Check if a weighting field with the same label already exists.
+    size_t nWeightingFieldCopies = m_wfieldCopies.size();
+    for (size_t i = 0; i < nWeightingFieldCopies; ++i) {
+        if (m_wfieldCopies[i].name == label) return i;
+    }
+    return nWeightingFieldCopies;
+}
+
+void ComponentFieldMap::FromCopyToSourceWeightingPotential(const size_t& iwc, double& x, double& y, double& z){
+    
+    TVector pos(3);
+    pos(0) =x; pos(1) =y; pos(2) =z;
+    
+    pos = m_wfieldCopies[iwc].rotMatrix * pos + m_wfieldCopies[iwc].transVector;
+    
+    x = pos(0); y = pos(1); z = pos(2);
+}
+
 void ComponentFieldMap::TimeInterpolation(const double t, double& f0,
                                           double& f1, int& i0, int& i1) {
   const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
@@ -2925,4 +3051,5 @@ void ComponentFieldMap::TimeInterpolation(const double t, double& f0,
   f1 = dt / (*it1 - *it0);
   f0 = 1. - f1;
 }
+
 }  // namespace Garfield
