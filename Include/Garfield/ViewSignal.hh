@@ -37,13 +37,20 @@ class ViewSignal : public ViewBase {
   void PlotSignal(const std::string& label, const bool total = true,
                   const bool electron = false, const bool ion = false,
                   const bool delayed = false, const bool same = false);
-    
-    /** Plot the signal.
-     * \param label Identifier (weighting field) of the signal to be plotted.
-     * \param setting String containing information about the components you want to plot. The syntax is the first letter of charge carrier signal you want to plot: "t" for total, "e" for electron and "i" for Ion/hole. This is followed by which signal components you want to be plotted: "T" for total, "P" for promt and "D" for delayed. Enabeling all posibilities will look like: "tTPDeTPDiTPD".
-     * \param same Flag to keep existing plots on the canvas or not.
-     */
-    void PlotSignal(const std::string& label, const std::string setting,const bool same = false);
+
+  /** Plot the signal.
+   * \param label Identifier (weighting field) of the signal to be plotted.
+   * \param setting String containing information about the components you want
+   * to plot. The syntax is the first letter of charge carrier signal you want
+   * to plot: "t" for total, "e" for electron and "i" for Ion/hole. This is
+   * followed by which signal components you want to be plotted: "T" for total,
+   * "P" for promt and "D" for delayed. Enabeling all posibilities will look
+   * like: "tTPDeTPDiTPD". The total signal is always plotted. \param same Flag
+   * to keep existing plots on the canvas or not.
+   */
+
+  void PlotSignal(const std::string& label, const std::string setting,
+                  const bool same = false);
 
   /** Retrieve the histogram for the total, prompt and delayed induced charge or
    * signal.. \param label Identifier (weighting field) of the signal to be
@@ -64,7 +71,7 @@ class ViewSignal : public ViewBase {
     * \param h histogram to be returned
                ('t': total, 'e': electron-induced, 'i': ion/hole-induced).
     **/
-  
+
   TH1D* GetHistogram(const char h = 't') {
     return h == 'e' ? m_hSignalElectrons.get()
                     : h == 'i' ? m_hSignalIons.get() : m_hSignal.get();
@@ -117,8 +124,8 @@ class ViewSignal : public ViewBase {
   // Histograms.
   std::unique_ptr<TH1D> m_hSignal;
   std::unique_ptr<TH1D> m_hPromptSignal;
-    std::unique_ptr<TH1D> m_hPromptElectrons;
-    std::unique_ptr<TH1D> m_hPromptIons;
+  std::unique_ptr<TH1D> m_hPromptElectrons;
+  std::unique_ptr<TH1D> m_hPromptIons;
 
   std::unique_ptr<TH1D> m_hCharge;
   std::unique_ptr<TH1D> m_hPromptCharge;
@@ -134,13 +141,14 @@ class ViewSignal : public ViewBase {
   short m_colTotal = kBlue + 3;
   short m_colElectrons = kOrange - 3;
   short m_colIons = kRed + 1;
-  std::array<short, 6> m_colDelayed{{kCyan + 2, kYellow - 7, kRed - 9, kGreen+1, kYellow-4, kRed-9}};
-    
-    std::array<short, 3> m_colPrompt{{kAzure+10, kRed-4, kMagenta+2}};
+  std::array<short, 6> m_colDelayed{
+      {kCyan + 2, kYellow - 7, kRed - 9, kGreen + 1, kYellow - 4, kRed - 9}};
 
-  void DrawHistogram(TH1D* h, const std::string& opt,
-                     const std::string& xlabel, const std::string& ylabel);
-    
+  std::array<short, 3> m_colPrompt{{kAzure + 10, kRed - 4, kMagenta + 2}};
+
+  void DrawHistogram(TH1D* h, const std::string& opt, const std::string& xlabel,
+                     const std::string& ylabel);
+
   bool ComponentPlotting(std::string entry, std::string prefix);
 };
 }  // namespace Garfield

@@ -189,7 +189,7 @@ bool ComponentComsol::Initialise(const std::string &mesh,
     for (int j = 0; j < 10; ++j) {
       fmesh >> newElement.emap[perm[j]];
     }
-      elementsHolder.push_back(std::move(newElement));
+    elementsHolder.push_back(std::move(newElement));
   }
 
   do {
@@ -211,7 +211,7 @@ bool ComponentComsol::Initialise(const std::string &mesh,
   for (auto &takeElement : elementsHolder) {
     if (ElementInRange(takeElement)) {
       for (int j = 0; j < 10; j++) {
-          nodeIndices.push_back(takeElement.emap[j]);
+        nodeIndices.push_back(takeElement.emap[j]);
       }
       m_elements.push_back(std::move(takeElement));
     }
@@ -222,7 +222,7 @@ bool ComponentComsol::Initialise(const std::string &mesh,
     // Rearange nodeIndices and delete duplicates
     sort(nodeIndices.begin(), nodeIndices.end());
     nodeIndices.erase(std::unique(nodeIndices.begin(), nodeIndices.end()),
-                        nodeIndices.end());
+                      nodeIndices.end());
     // Go over nodeIndices and add the corresponding m_nodesHolder node to
     // m_nodes
     for (int &i : nodeIndices) {

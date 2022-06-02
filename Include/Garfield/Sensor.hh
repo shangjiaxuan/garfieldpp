@@ -61,10 +61,11 @@ class Sensor {
   /// Get the weighting potential at (x, y, z).
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label);
-    
-    /// Get the delayed weighting potential at (x, y, z).
-    double DelayedWeightingPotential(const double x, const double y, const double z,
-                                const double t, const std::string& label);
+
+  /// Get the delayed weighting potential at (x, y, z).
+  double DelayedWeightingPotential(const double x, const double y,
+                                   const double z, const double t,
+                                   const std::string& label);
 
   /// Get the medium at (x, y, z).
   Medium* GetMedium(const double x, const double y, const double z);
@@ -231,11 +232,12 @@ class Sensor {
   void AddSignal(const double q, const std::vector<double>& ts,
                  const std::vector<std::array<double, 3> >& xs,
                  const std::vector<std::array<double, 3> >& vs,
-                 const std::vector<double>& ns, const int navg, 
+                 const std::vector<double>& ns, const int navg,
                  const bool useWeightingPotential = false);
 
   /// Exporting induced signal to a csv file.
-  void ExportSignal(const std::string& label, const std::string& filename,const bool chargeCariers = false);
+  void ExportSignal(const std::string& label, const std::string& filename,
+                    const bool chargeCariers = false);
 
   /// Add the induced charge from a charge carrier drift between two points.
   void AddInducedCharge(const double q, const double x0, const double y0,
@@ -265,6 +267,7 @@ class Sensor {
                            const unsigned int nI, const int isign = 0);
   // TODO!
   double GetTotalInducedCharge(const std::string& label);
+
  private:
   std::string m_className = "Sensor";
   /// Mutex.

@@ -1,3 +1,5 @@
+#include "Garfield/Sensor.hh"
+
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -8,11 +10,10 @@
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Numerics.hh"
 #include "Garfield/Random.hh"
-#include "Garfield/Sensor.hh"
 
 namespace {
 
-double Interpolate(const std::vector<double>& y, const std::vector<double>& x,
+double Interpolate(const std::vector<double> &y, const std::vector<double> &x,
                    const double xx, const unsigned int order) {
   if (xx < x.front() || xx > x.back()) return 0.;
   if (order > 1) {
@@ -27,7 +28,7 @@ double Interpolate(const std::vector<double>& y, const std::vector<double>& x,
   return y[it0 - x.cbegin()] * (1. - f) + f * y[it1 - x.cbegin()];
 }
 
-double Trapezoid2(const std::vector<std::pair<double, double> >& f) {
+double Trapezoid2(const std::vector<std::pair<double, double>> &f) {
   const size_t n = f.size();
   if (n < 2) return -1.;
   double sum = 0.;
@@ -63,16 +64,16 @@ double Trapezoid2(const std::vector<std::pair<double, double> >& f) {
 namespace Garfield {
 
 void Sensor::ElectricField(const double x, const double y, const double z,
-                           double& ex, double& ey, double& ez, double& v,
-                           Medium*& medium, int& status) {
+                           double &ex, double &ey, double &ez, double &v,
+                           Medium *&medium, int &status) {
   ex = ey = ez = v = 0.;
   status = -10;
   medium = nullptr;
   double fx = 0., fy = 0., fz = 0., p = 0.;
-  Medium* med = nullptr;
+  Medium *med = nullptr;
   int stat = 0;
   // Add up electric field contributions from all components.
-  for (const auto& cmp : m_components) {
+  for (const auto &cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
     std::get<0>(cmp)->ElectricField(x, y, z, fx, fy, fz, p, med, stat);
     if (status != 0) {
@@ -89,16 +90,16 @@ void Sensor::ElectricField(const double x, const double y, const double z,
 }
 
 void Sensor::ElectricField(const double x, const double y, const double z,
-                           double& ex, double& ey, double& ez, Medium*& medium,
-                           int& status) {
+                           double &ex, double &ey, double &ez, Medium *&medium,
+                           int &status) {
   ex = ey = ez = 0.;
   status = -10;
   medium = nullptr;
   double fx = 0., fy = 0., fz = 0.;
-  Medium* med = nullptr;
+  Medium *med = nullptr;
   int stat = 0;
   // Add up electric field contributions from all components.
-  for (const auto& cmp : m_components) {
+  for (const auto &cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
     std::get<0>(cmp)->ElectricField(x, y, z, fx, fy, fz, med, stat);
     if (status != 0) {
@@ -114,11 +115,11 @@ void Sensor::ElectricField(const double x, const double y, const double z,
 }
 
 void Sensor::MagneticField(const double x, const double y, const double z,
-                           double& bx, double& by, double& bz, int& status) {
+                           double &bx, double &by, double &bz, int &status) {
   bx = by = bz = 0.;
   double fx = 0., fy = 0., fz = 0.;
   // Add up contributions.
-  for (const auto& cmp : m_components) {
+  for (const auto &cmp : m_components) {
     if (!std::get<2>(cmp)) continue;
     std::get<0>(cmp)->MagneticField(x, y, z, fx, fy, fz, status);
     if (status != 0) continue;
@@ -129,11 +130,11 @@ void Sensor::MagneticField(const double x, const double y, const double z,
 }
 
 void Sensor::WeightingField(const double x, const double y, const double z,
-                            double& wx, double& wy, double& wz,
-                            const std::string& label) {
+                            double &wx, double &wy, double &wz,
+                            const std::string &label) {
   wx = wy = wz = 0.;
   // Add up field contributions from all components.
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) {
       double fx = 0., fy = 0., fz = 0.;
       electrode.comp->WeightingField(x, y, z, fx, fy, fz, label);
@@ -145,10 +146,10 @@ void Sensor::WeightingField(const double x, const double y, const double z,
 }
 
 double Sensor::WeightingPotential(const double x, const double y,
-                                  const double z, const std::string& label) {
+                                  const double z, const std::string &label) {
   double v = 0.;
   // Add up contributions from all components.
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) {
       v += std::max(electrode.comp->WeightingPotential(x, y, z, label), 0.);
     }
@@ -156,23 +157,24 @@ double Sensor::WeightingPotential(const double x, const double y,
   return v;
 }
 
-double Sensor::DelayedWeightingPotential(const double x, const double y, 
-                                         const double z, const double t, 
-                                         const std::string& label) {
+double Sensor::DelayedWeightingPotential(const double x, const double y,
+                                         const double z, const double t,
+                                         const std::string &label) {
   double v = 0.;
   // Add up contributions from all components.
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) {
-      v += std::max(electrode.comp->DelayedWeightingPotential(x, y, z, t, label), 0.);
+      v += std::max(
+          electrode.comp->DelayedWeightingPotential(x, y, z, t, label), 0.);
     }
   }
   return v;
 }
 
-Medium* Sensor::GetMedium(const double x, const double y, const double z) {
-  for (const auto& cmp : m_components) {
+Medium *Sensor::GetMedium(const double x, const double y, const double z) {
+  for (const auto &cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
-    Medium* medium = std::get<0>(cmp)->GetMedium(x, y, z);
+    Medium *medium = std::get<0>(cmp)->GetMedium(x, y, z);
     if (medium) return medium;
   }
   return nullptr;
@@ -223,8 +225,8 @@ bool Sensor::SetArea(const double xmin, const double ymin, const double zmin,
   return true;
 }
 
-bool Sensor::GetArea(double& xmin, double& ymin, double& zmin, double& xmax,
-                     double& ymax, double& zmax) {
+bool Sensor::GetArea(double &xmin, double &ymin, double &zmin, double &xmax,
+                     double &ymax, double &zmax) {
   if (m_hasUserArea) {
     xmin = m_xMinUser;
     ymin = m_yMinUser;
@@ -273,19 +275,19 @@ bool Sensor::IsInArea(const double x, const double y, const double z) {
 
 bool Sensor::IsInside(const double x, const double y, const double z) {
   double ex = 0., ey = 0., ez = 0.;
-  Medium* medium = nullptr;
+  Medium *medium = nullptr;
   int status = 0;
   ElectricField(x, y, z, ex, ey, ez, medium, status);
   if (status != 0 || !medium) return false;
 
   return true;
 }
-   
+
 bool Sensor::CrossedWire(const double x0, const double y0, const double z0,
                          const double x1, const double y1, const double z1,
-                         double& xc, double& yc, double& zc,
-                         const bool centre, double& rc) {
-  for (const auto& cmp : m_components) {
+                         double &xc, double &yc, double &zc, const bool centre,
+                         double &rc) {
+  for (const auto &cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
     if (std::get<0>(cmp)->CrossedWire(x0, y0, z0, x1, y1, z1, xc, yc, zc,
                                       centre, rc)) {
@@ -296,8 +298,8 @@ bool Sensor::CrossedWire(const double x0, const double y0, const double z0,
 }
 
 bool Sensor::InTrapRadius(const double q0, const double x0, const double y0,
-                          double z0, double& xw, double& yw, double& rw) {
-  for (const auto& cmp : m_components) {
+                          double z0, double &xw, double &yw, double &rw) {
+  for (const auto &cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
     if (std::get<0>(cmp)->InTrapRadius(q0, x0, y0, z0, xw, yw, rw)) {
       return true;
@@ -308,8 +310,8 @@ bool Sensor::InTrapRadius(const double q0, const double x0, const double y0,
 
 bool Sensor::CrossedPlane(const double x0, const double y0, const double z0,
                           const double x1, const double y1, const double z1,
-                          double& xc, double& yc, double& zc) {
-  for (const auto& cmp : m_components) {
+                          double &xc, double &yc, double &zc) {
+  for (const auto &cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
     if (std::get<0>(cmp)->CrossedPlane(x0, y0, z0, x1, y1, z1, xc, yc, zc)) {
       return true;
@@ -325,7 +327,7 @@ double Sensor::IntegrateFluxLine(const double x0, const double y0,
                                  const double zp, const unsigned int nI,
                                  const int isign) {
   double q = 0.;
-  for (const auto& cmp : m_components) {
+  for (const auto &cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
     q += std::get<0>(cmp)->IntegrateFluxLine(x0, y0, z0, x1, y1, z1, xp, yp, zp,
                                              nI, isign);
@@ -333,7 +335,7 @@ double Sensor::IntegrateFluxLine(const double x0, const double y0,
   return q;
 }
 
-void Sensor::AddComponent(Component* cmp) {
+void Sensor::AddComponent(Component *cmp) {
   if (!cmp) {
     std::cerr << m_className << "::AddComponent: Null pointer.\n";
     return;
@@ -342,7 +344,7 @@ void Sensor::AddComponent(Component* cmp) {
   m_components.push_back(std::make_tuple(cmp, true, true));
 }
 
-Component* Sensor::GetComponent(const unsigned int i) {
+Component *Sensor::GetComponent(const unsigned int i) {
   if (i >= m_components.size()) {
     std::cerr << m_className << "::GetComponent: Index out of range.\n";
     return nullptr;
@@ -367,20 +369,19 @@ void Sensor::EnableMagneticField(const unsigned int i, const bool on) {
 }
 
 bool Sensor::HasMagneticField() const {
-
-  for (const auto& cmp : m_components) {
-   if (!std::get<1>(cmp) || !std::get<2>(cmp)) continue;
-   if (std::get<0>(cmp)->HasMagneticField()) return true;
+  for (const auto &cmp : m_components) {
+    if (!std::get<1>(cmp) || !std::get<2>(cmp)) continue;
+    if (std::get<0>(cmp)->HasMagneticField()) return true;
   }
   return false;
 }
 
-void Sensor::AddElectrode(Component* cmp, const std::string& label) {
+void Sensor::AddElectrode(Component *cmp, const std::string &label) {
   if (!cmp) {
     std::cerr << m_className << "::AddElectrode: Null pointer.\n";
     return;
   }
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) {
       std::cout << m_className << "::AddElectrode:\n"
                 << "    Warning: An electrode with label \"" << label
@@ -421,11 +422,11 @@ void Sensor::Clear() {
   m_fTransferFFT.clear();
 }
 
-bool Sensor::GetVoltageRange(double& vmin, double& vmax) {
+bool Sensor::GetVoltageRange(double &vmin, double &vmax) {
   // We don't know the range yet.
   bool set = false;
   // Loop over the components.
-  for (const auto& cmp : m_components) {
+  for (const auto &cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
     double umin = 0., umax = 0.;
     if (!std::get<0>(cmp)->GetVoltageRange(umin, umax)) continue;
@@ -455,7 +456,7 @@ bool Sensor::GetVoltageRange(double& vmin, double& vmax) {
 }
 
 void Sensor::ClearSignal() {
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     electrode.charge = 0.;
     electrode.signal.assign(m_nTimeBins, 0.);
     electrode.delayedSignal.assign(m_nTimeBins, 0.);
@@ -468,7 +469,7 @@ void Sensor::ClearSignal() {
   m_nEvents = 0;
 }
 
-void Sensor::SetDelayedSignalTimes(const std::vector<double>& ts) {
+void Sensor::SetDelayedSignalTimes(const std::vector<double> &ts) {
   if (!std::is_sorted(ts.begin(), ts.end())) {
     std::cerr << m_className << "::SetDelayedSignalTimes:\n"
               << "    Times are not in ascending order.\n";
@@ -519,7 +520,7 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
   constexpr size_t nG = 6;
   auto tg = Numerics::GaussLegendreNodes6();
   auto wg = Numerics::GaussLegendreWeights6();
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     const std::string lbl = electrode.label;
     if (m_debug) std::cout << "  Electrode " << electrode.label << ":\n";
     // Induced current.
@@ -590,7 +591,7 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
     td[i] = t0 + m_delayedSignalTimes[i];
   }
   // Calculate the signals for each electrode.
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     const std::string lbl = electrode.label;
     std::vector<double> id(nd, 0.);
     if (useWeightingPotential) {
@@ -626,13 +627,13 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
           if (std::abs(current2) < 1e-16) current2 = 0.;
           electrode.delayedSignal[bin2] += current2;
           electrode.signal[bin2] += current2;
-            if(q<0){
-                electrode.electronSignal[bin2] += current2;
-                electrode.delayedElectronSignal[bin2] += current2;
-            }else{
-                electrode.ionSignal[bin2] += current2;
-                electrode.delayedIonSignal[bin2] += current2;
-            }
+          if (q < 0) {
+            electrode.electronSignal[bin2] += current2;
+            electrode.delayedElectronSignal[bin2] += current2;
+          } else {
+            electrode.ionSignal[bin2] += current2;
+            electrode.delayedIonSignal[bin2] += current2;
+          }
           // Linear interpolation if the current is calculated from the induced
           // charge of two non-subsequent bins.
           if (binHolder > 0 && binHolder + 1 < bin2) {
@@ -678,10 +679,10 @@ void Sensor::AddSignal(const double q, const double t0, const double t1,
   }
 }
 
-void Sensor::AddSignal(const double q, const std::vector<double>& ts,
-                       const std::vector<std::array<double, 3> >& xs,
-                       const std::vector<std::array<double, 3> >& vs,
-                       const std::vector<double>& ns, const int navg,
+void Sensor::AddSignal(const double q, const std::vector<double> &ts,
+                       const std::vector<std::array<double, 3>> &xs,
+                       const std::vector<std::array<double, 3>> &vs,
+                       const std::vector<double> &ns, const int navg,
                        const bool useWeightingPotential) {
   // Don't do anything if there are no points on the signal.
   if (ts.size() < 2) return;
@@ -697,12 +698,12 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
   }
 
   if (m_nEvents <= 0) m_nEvents = 1;
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     const std::string label = electrode.label;
     std::vector<double> signal(nPoints, 0.);
     for (size_t i = 0; i < nPoints; ++i) {
-      const auto& x = xs[i];
-      const auto& v = vs[i];
+      const auto &x = xs[i];
+      const auto &v = vs[i];
       if (useWeightingPotential) {
         const double dt = i < nPoints - 1 ? ts[i + 1] - ts[i] : 0.;
 
@@ -749,15 +750,15 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
     const double t1 = ts[k + 1];
     const double dt = t1 - t0;
     if (dt < Small) continue;
-    const auto& x0 = xs[k];
-    const auto& x1 = xs[k + 1];
-    const auto& v = vs[k];
+    const auto &x0 = xs[k];
+    const auto &x1 = xs[k + 1];
+    const auto &v = vs[k];
     std::vector<double> td(nd);
     for (size_t i = 0; i < nd; ++i) {
       td[i] = t0 + m_delayedSignalTimes[i];
     }
     // Calculate the signals for each electrode.
-    for (auto& electrode : m_electrodes) {
+    for (auto &electrode : m_electrodes) {
       const std::string lbl = electrode.label;
       std::vector<double> id(nd, 0.);
       for (size_t i = 0; i < nd; ++i) {
@@ -785,9 +786,9 @@ void Sensor::AddSignal(const double q, const std::vector<double>& ts,
   }
 }
 
-void Sensor::FillSignal(Electrode& electrode, const double q,
-                        const std::vector<double>& ts,
-                        const std::vector<double>& is, const int navg,
+void Sensor::FillSignal(Electrode &electrode, const double q,
+                        const std::vector<double> &ts,
+                        const std::vector<double> &is, const int navg,
                         const bool delayed) {
   const bool electron = q < 0.;
   // Interpolation order.
@@ -828,7 +829,7 @@ void Sensor::AddInducedCharge(const double q, const double x0, const double y0,
                               const double z0, const double x1, const double y1,
                               const double z1) {
   if (m_debug) std::cout << m_className << "::AddInducedCharge:\n";
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     // Calculate the weighting potential at the starting point.
     auto cmp = electrode.comp;
     const double w0 = cmp->WeightingPotential(x0, y0, z0, electrode.label);
@@ -870,7 +871,7 @@ void Sensor::SetTimeWindow(const double tstart, const double tstep,
   }
 
   std::cout << m_className << "::SetTimeWindow: Resetting all signals.\n";
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     electrode.signal.assign(m_nTimeBins, 0.);
     electrode.electronSignal.assign(m_nTimeBins, 0.);
     electrode.ionSignal.assign(m_nTimeBins, 0.);
@@ -885,54 +886,54 @@ void Sensor::SetTimeWindow(const double tstart, const double tstep,
   m_fTransferFFT.clear();
 }
 
-double Sensor::GetElectronSignal(const std::string& label,
+double Sensor::GetElectronSignal(const std::string &label,
                                  const unsigned int bin) {
   if (m_nEvents == 0) return 0.;
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.electronSignal[bin];
   }
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
-double Sensor::GetIonSignal(const std::string& label, const unsigned int bin) {
+double Sensor::GetIonSignal(const std::string &label, const unsigned int bin) {
   if (m_nEvents == 0) return 0.;
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.ionSignal[bin];
   }
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
-double Sensor::GetDelayedElectronSignal(const std::string& label,
+double Sensor::GetDelayedElectronSignal(const std::string &label,
                                         const unsigned int bin) {
   if (m_nEvents == 0) return 0.;
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.delayedElectronSignal[bin];
   }
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
-double Sensor::GetDelayedIonSignal(const std::string& label,
+double Sensor::GetDelayedIonSignal(const std::string &label,
                                    const unsigned int bin) {
   if (m_nEvents == 0) return 0.;
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.delayedIonSignal[bin];
   }
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
-void Sensor::SetSignal(const std::string& label, const unsigned int bin,
+void Sensor::SetSignal(const std::string &label, const unsigned int bin,
                        const double signal) {
   if (bin >= m_nTimeBins) return;
   if (m_nEvents == 0) m_nEvents = 1;
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     if (electrode.label == label) {
       electrode.signal[bin] = m_nEvents * m_tStep * signal / ElementaryCharge;
       break;
@@ -940,22 +941,22 @@ void Sensor::SetSignal(const std::string& label, const unsigned int bin,
   }
 }
 
-double Sensor::GetSignal(const std::string& label, const unsigned int bin) {
+double Sensor::GetSignal(const std::string &label, const unsigned int bin) {
   if (m_nEvents == 0) return 0.;
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.signal[bin];
   }
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
-double Sensor::GetSignal(const std::string& label, const unsigned int bin,
+double Sensor::GetSignal(const std::string &label, const unsigned int bin,
                          const int comp) {
   if (m_nEvents == 0) return 0.;
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) {
       switch (comp) {
         case 1: {
@@ -974,33 +975,33 @@ double Sensor::GetSignal(const std::string& label, const unsigned int bin,
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
-double Sensor::GetPromptSignal(const std::string& label,
+double Sensor::GetPromptSignal(const std::string &label,
                                const unsigned int bin) {
   if (m_nEvents == 0) return 0.;
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label)
       sig += electrode.signal[bin] - electrode.delayedSignal[bin];
   }
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
-double Sensor::GetDelayedSignal(const std::string& label,
+double Sensor::GetDelayedSignal(const std::string &label,
                                 const unsigned int bin) {
   if (m_nEvents == 0) return 0.;
   if (bin >= m_nTimeBins) return 0.;
   double sig = 0.;
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) sig += electrode.delayedSignal[bin];
   }
   return ElementaryCharge * sig / (m_nEvents * m_tStep);
 }
 
-double Sensor::GetInducedCharge(const std::string& label) {
+double Sensor::GetInducedCharge(const std::string &label) {
   if (m_nEvents == 0) return 0.;
   double charge = 0.;
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) charge += electrode.charge;
   }
 
@@ -1019,8 +1020,8 @@ void Sensor::SetTransferFunction(std::function<double(double)> f) {
   m_fTransferFFT.clear();
 }
 
-void Sensor::SetTransferFunction(const std::vector<double>& times,
-                                 const std::vector<double>& values) {
+void Sensor::SetTransferFunction(const std::vector<double> &times,
+                                 const std::vector<double> &values) {
   if (times.empty() || values.empty()) {
     std::cerr << m_className << "::SetTransferFunction: Empty vector.\n";
     return;
@@ -1041,7 +1042,7 @@ void Sensor::SetTransferFunction(const std::vector<double>& times,
   m_fTransferFFT.clear();
 }
 
-void Sensor::SetTransferFunction(Shaper& shaper) {
+void Sensor::SetTransferFunction(Shaper &shaper) {
   m_shaper = &shaper;
   m_fTransfer = nullptr;
   m_fTransferTab.clear();
@@ -1079,7 +1080,6 @@ double Sensor::GetTransferFunction(const double t) {
 }
 
 void Sensor::PrintTransferFunction() {
-
   std::cout << m_className << "::PrintTransferFunction:\n";
   if (m_fTransfer) {
     std::cout << "    User-defined function.";
@@ -1102,7 +1102,7 @@ void Sensor::PrintTransferFunction() {
     return;
   }
   std::cout << "      Time [ns]    Transfer function\n";
-  const double dt = m_nTimeBins * m_tStep / 10.; 
+  const double dt = m_nTimeBins * m_tStep / 10.;
   for (size_t i = 0; i < 10; ++i) {
     const double t = m_tStart + (i + 0.5) * dt;
     const double f = GetTransferFunction(t);
@@ -1110,7 +1110,7 @@ void Sensor::PrintTransferFunction() {
   }
 }
 
-bool Sensor::ConvoluteSignal(const std::string& label, const bool fft) {
+bool Sensor::ConvoluteSignal(const std::string &label, const bool fft) {
   if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
     std::cerr << m_className << "::ConvoluteSignal: "
               << "Transfer function not set.\n";
@@ -1125,7 +1125,7 @@ bool Sensor::ConvoluteSignal(const std::string& label, const bool fft) {
   std::vector<double> cnvTab;
   MakeTransferFunctionTable(cnvTab);
   // Loop over all electrodes.
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     if (label != electrode.label) continue;
     ConvoluteSignal(electrode, cnvTab);
     return true;
@@ -1148,11 +1148,11 @@ bool Sensor::ConvoluteSignals(const bool fft) {
   std::vector<double> cnvTab;
   MakeTransferFunctionTable(cnvTab);
   // Loop over all electrodes.
-  for (auto& electrode : m_electrodes) ConvoluteSignal(electrode, cnvTab);
+  for (auto &electrode : m_electrodes) ConvoluteSignal(electrode, cnvTab);
   return true;
 }
 
-void Sensor::MakeTransferFunctionTable(std::vector<double>& cnvTab) {
+void Sensor::MakeTransferFunctionTable(std::vector<double> &cnvTab) {
   // Set the range where the transfer function is valid.
   constexpr double cnvMin = 0.;
   constexpr double cnvMax = 1.e10;
@@ -1179,8 +1179,8 @@ void Sensor::MakeTransferFunctionTable(std::vector<double>& cnvTab) {
   }
 }
 
-void Sensor::ConvoluteSignal(Electrode& electrode,
-                             const std::vector<double>& tab) {
+void Sensor::ConvoluteSignal(Electrode &electrode,
+                             const std::vector<double> &tab) {
   // Do the convolution.
   std::vector<double> tmpSignal(m_nTimeBins, 0.);
   std::vector<double> tmpSignalDelayed(m_nTimeBins, 0.);
@@ -1211,13 +1211,13 @@ bool Sensor::ConvoluteSignalFFT() {
     FFT(m_fTransferFFT, false, nn);
   }
 
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     ConvoluteSignalFFT(electrode, m_fTransferFFT, nn);
   }
   return true;
 }
 
-bool Sensor::ConvoluteSignalFFT(const std::string& label) {
+bool Sensor::ConvoluteSignalFFT(const std::string &label) {
   // Number of bins must be a power of 2.
   const unsigned int nn = exp2(ceil(log2(m_nTimeBins)));
 
@@ -1230,7 +1230,7 @@ bool Sensor::ConvoluteSignalFFT(const std::string& label) {
     FFT(m_fTransferFFT, false, nn);
   }
 
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     if (label != electrode.label) continue;
     ConvoluteSignalFFT(electrode, m_fTransferFFT, nn);
     return true;
@@ -1238,8 +1238,8 @@ bool Sensor::ConvoluteSignalFFT(const std::string& label) {
   return false;
 }
 
-void Sensor::ConvoluteSignalFFT(Electrode& electrode,
-                                const std::vector<double>& tab,
+void Sensor::ConvoluteSignalFFT(Electrode &electrode,
+                                const std::vector<double> &tab,
                                 const unsigned int nn) {
   std::vector<double> g(2 * (nn + 1), 0.);
   for (unsigned int i = 0; i < m_nTimeBins; ++i) {
@@ -1268,17 +1268,17 @@ bool Sensor::IntegrateSignals() {
     return false;
   }
 
-  for (auto& electrode : m_electrodes) IntegrateSignal(electrode);
+  for (auto &electrode : m_electrodes) IntegrateSignal(electrode);
   return true;
 }
 
-bool Sensor::IntegrateSignal(const std::string& label) {
+bool Sensor::IntegrateSignal(const std::string &label) {
   if (m_nEvents == 0) {
     std::cerr << m_className << "::IntegrateSignal: No signals present.\n";
     return false;
   }
 
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     if (label != electrode.label) continue;
     IntegrateSignal(electrode);
     return true;
@@ -1288,7 +1288,7 @@ bool Sensor::IntegrateSignal(const std::string& label) {
   return false;
 }
 
-void Sensor::IntegrateSignal(Electrode& electrode) {
+void Sensor::IntegrateSignal(Electrode &electrode) {
   for (unsigned int j = 0; j < m_nTimeBins; ++j) {
     electrode.signal[j] *= m_tStep;
     electrode.electronSignal[j] *= m_tStep;
@@ -1304,8 +1304,8 @@ void Sensor::IntegrateSignal(Electrode& electrode) {
   electrode.integrated = true;
 }
 
-bool Sensor::IsIntegrated(const std::string& label) const {
-  for (const auto& electrode : m_electrodes) {
+bool Sensor::IsIntegrated(const std::string &label) const {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label == label) return electrode.integrated;
   }
   return false;
@@ -1313,7 +1313,7 @@ bool Sensor::IsIntegrated(const std::string& label) const {
 
 bool Sensor::DelayAndSubtractFraction(const double td, const double f) {
   const int offset = int(td / m_tStep);
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     std::vector<double> signal1(m_nTimeBins, 0.);
     std::vector<double> signal2(m_nTimeBins, 0.);
     for (unsigned int j = 0; j < m_nTimeBins; ++j) {
@@ -1344,7 +1344,7 @@ void Sensor::AddNoise(const bool total, const bool electron, const bool ion) {
   }
   if (m_nEvents == 0) m_nEvents = 1;
 
-  for (auto& electrode : m_electrodes) {
+  for (auto &electrode : m_electrodes) {
     double t = m_tStart + 0.5 * m_tStep;
     for (unsigned int j = 0; j < m_nTimeBins; ++j) {
       const double noise = m_fNoise(t);
@@ -1356,7 +1356,7 @@ void Sensor::AddNoise(const bool total, const bool electron, const bool ion) {
   }
 }
 
-void Sensor::AddWhiteNoise(const std::string& label, const double enc,
+void Sensor::AddWhiteNoise(const std::string &label, const double enc,
                            const bool poisson, const double q0) {
   if (!m_fTransfer && !m_shaper && m_fTransferTab.empty()) {
     std::cerr << m_className << "::AddWhiteNoise: Transfer function not set.\n";
@@ -1377,7 +1377,7 @@ void Sensor::AddWhiteNoise(const std::string& label, const double enc,
     // Average number of delta pulses.
     const double avg = nu * m_tStep * m_nTimeBins;
     // Sample the number of pulses.
-    for (auto& electrode : m_electrodes) {
+    for (auto &electrode : m_electrodes) {
       if (label != electrode.label) continue;
       const int nPulses = RndmPoisson(avg);
       for (int j = 0; j < nPulses; ++j) {
@@ -1393,7 +1393,7 @@ void Sensor::AddWhiteNoise(const std::string& label, const double enc,
   } else {
     // Gaussian approximation.
     const double sigma = enc * sqrt(m_tStep / f2);
-    for (auto& electrode : m_electrodes) {
+    for (auto &electrode : m_electrodes) {
       if (label != electrode.label) continue;
       for (unsigned int j = 0; j < m_nTimeBins; ++j) {
         electrode.signal[j] += RndmGaussian(0., sigma);
@@ -1424,7 +1424,7 @@ void Sensor::AddWhiteNoise(const double enc, const bool poisson,
     // Average number of delta pulses.
     const double avg = nu * m_tStep * m_nTimeBins;
     // Sample the number of pulses.
-    for (auto& electrode : m_electrodes) {
+    for (auto &electrode : m_electrodes) {
       const int nPulses = RndmPoisson(avg);
       for (int j = 0; j < nPulses; ++j) {
         const int bin = static_cast<int>(m_nTimeBins * RndmUniform());
@@ -1438,7 +1438,7 @@ void Sensor::AddWhiteNoise(const double enc, const bool poisson,
   } else {
     // Gaussian approximation.
     const double sigma = enc * sqrt(m_tStep / f2);
-    for (auto& electrode : m_electrodes) {
+    for (auto &electrode : m_electrodes) {
       for (unsigned int j = 0; j < m_nTimeBins; ++j) {
         electrode.signal[j] += RndmGaussian(0., sigma);
       }
@@ -1468,7 +1468,7 @@ double Sensor::TransferFunctionSq() {
 }
 
 bool Sensor::ComputeThresholdCrossings(const double thr,
-                                       const std::string& label, int& n) {
+                                       const std::string &label, int &n) {
   // Reset the list of threshold crossings.
   m_thresholdCrossings.clear();
   m_thresholdLevel = thr;
@@ -1485,7 +1485,7 @@ bool Sensor::ComputeThresholdCrossings(const double thr,
   std::vector<double> signal(m_nTimeBins, 0.);
   // Loop over the electrodes.
   bool foundLabel = false;
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label != label) continue;
     foundLabel = true;
     if (!electrode.integrated) {
@@ -1568,7 +1568,7 @@ bool Sensor::ComputeThresholdCrossings(const double thr,
   if (m_debug) {
     std::cout << "  Found " << n << " crossings.\n";
     if (n > 0) std::cout << "      Time  [ns]    Direction\n";
-    for (const auto& crossing : m_thresholdCrossings) {
+    for (const auto &crossing : m_thresholdCrossings) {
       std::cout << "      " << crossing.first << "      ";
       if (crossing.second) {
         std::cout << "rising\n";
@@ -1581,8 +1581,8 @@ bool Sensor::ComputeThresholdCrossings(const double thr,
   return true;
 }
 
-bool Sensor::GetThresholdCrossing(const unsigned int i, double& time,
-                                  double& level, bool& rise) const {
+bool Sensor::GetThresholdCrossing(const unsigned int i, double &time,
+                                  double &level, bool &rise) const {
   level = m_thresholdLevel;
 
   if (i >= m_thresholdCrossings.size()) {
@@ -1596,13 +1596,13 @@ bool Sensor::GetThresholdCrossing(const unsigned int i, double& time,
   return true;
 }
 
-bool Sensor::GetBoundingBox(double& xmin, double& ymin, double& zmin,
-                            double& xmax, double& ymax, double& zmax) {
+bool Sensor::GetBoundingBox(double &xmin, double &ymin, double &zmin,
+                            double &xmax, double &ymax, double &zmax) {
   // We don't know the range yet
   bool set = false;
   // Loop over the fields
   double x0, y0, z0, x1, y1, z1;
-  for (const auto& cmp : m_components) {
+  for (const auto &cmp : m_components) {
     if (!std::get<1>(cmp)) continue;
     if (!std::get<0>(cmp)->GetBoundingBox(x0, y0, z0, x1, y1, z1)) continue;
     if (set) {
@@ -1641,7 +1641,7 @@ bool Sensor::GetBoundingBox(double& xmin, double& ymin, double& zmin,
   return true;
 }
 
-void Sensor::FFT(std::vector<double>& data, const bool inverse, const int nn) {
+void Sensor::FFT(std::vector<double> &data, const bool inverse, const int nn) {
   // Replaces data[1..2*nn] by its discrete fourier transform
   // or replaces data[1..2*nn] by nn times its inverse discrete
   // fourier transform.
@@ -1691,10 +1691,10 @@ void Sensor::FFT(std::vector<double>& data, const bool inverse, const int nn) {
   }
 }
 
-void Sensor::ExportSignal(const std::string& label, 
-                          const std::string& name, const bool chargeCarriers) {
+void Sensor::ExportSignal(const std::string &label, const std::string &name,
+                          const bool chargeCarriers) {
   const double scale = ElementaryCharge / (m_nEvents * m_tStep);
-  for (const auto& electrode : m_electrodes) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label != label) continue;
 
     const std::string quantity = electrode.integrated ? "Charge" : "Signal";
@@ -1708,48 +1708,41 @@ void Sensor::ExportSignal(const std::string& label,
       myfile << "The induced signal.\n";
     }
     myfile << "Time [ns]"
-           << ",Total Prompt" << unit 
-           << ",Total Delayed" << unit 
-           << ", Total " << quantity << unit;
+           << ",Total Prompt" << unit << ",Total Delayed" << unit << ", Total "
+           << quantity << unit;
     if (chargeCarriers) {
-      myfile << ",Electron Prompt" << unit 
-             << ",Electron Delayed" << unit 
-             << ",Electron " << quantity << unit 
-             << ",Ion Prompt" << unit 
-             << ",Ion Delayed" << unit 
-             << ",Ion " << quantity << unit;
+      myfile << ",Electron Prompt" << unit << ",Electron Delayed" << unit
+             << ",Electron " << quantity << unit << ",Ion Prompt" << unit
+             << ",Ion Delayed" << unit << ",Ion " << quantity << unit;
     }
     myfile << "\n";
     myfile << std::setprecision(std::numeric_limits<long double>::digits10 + 1);
     for (unsigned int i = 0; i < m_nTimeBins; i++) {
-      myfile << m_tStart + i * m_tStep 
-             << "," << scale * (electrode.signal[i] - 
-                                electrode.delayedSignal[i])
-             << "," << scale * electrode.delayedSignal[i] 
-             << "," << scale * electrode.signal[i];
+      myfile << m_tStart + i * m_tStep << ","
+             << scale * (electrode.signal[i] - electrode.delayedSignal[i])
+             << "," << scale * electrode.delayedSignal[i] << ","
+             << scale * electrode.signal[i];
       if (!chargeCarriers) {
         myfile << "\n";
         continue;
       }
-      myfile << "," << scale * (electrode.electronSignal[i] - 
-                                electrode.delayedElectronSignal[i])
-             << "," << scale * electrode.delayedElectronSignal[i]
-             << "," << scale * electrode.electronSignal[i]
-             << "," << scale * (electrode.ionSignal[i] - 
-                                electrode.delayedIonSignal[i])
-             << "," << scale * electrode.delayedIonSignal[i]
-             << "," << scale * electrode.ionSignal[i]
-             << "\n";
+      myfile << ","
+             << scale * (electrode.electronSignal[i] -
+                         electrode.delayedElectronSignal[i])
+             << "," << scale * electrode.delayedElectronSignal[i] << ","
+             << scale * electrode.electronSignal[i] << ","
+             << scale * (electrode.ionSignal[i] - electrode.delayedIonSignal[i])
+             << "," << scale * electrode.delayedIonSignal[i] << ","
+             << scale * electrode.ionSignal[i] << "\n";
     }
     myfile.close();
     std::cout << m_className << "::ExportSignal: File '" << name
               << ".csv' exported.\n";
-   
   }
 }
 
-double Sensor::GetTotalInducedCharge(const std::string& label) {
-  for (const auto& electrode : m_electrodes) {
+double Sensor::GetTotalInducedCharge(const std::string &label) {
+  for (const auto &electrode : m_electrodes) {
     if (electrode.label != label) continue;
     if (!electrode.integrated || m_nEvents == 0) return 0.;
     return ElementaryCharge * electrode.signal.back() / (m_nEvents * m_tStep);
