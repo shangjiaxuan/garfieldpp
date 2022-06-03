@@ -214,8 +214,6 @@ double ComponentFieldMap::WeightingPotential(double xin, double yin,
   // Look for the label.
   size_t iw = GetWeightingFieldIndex(label);
   // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return 0.;
-  // Check if the weighting field is properly initialised.
     if (iw == m_wfields.size()){
         
         const size_t iwc = GetCopyWeightingPotential(label);
@@ -228,6 +226,8 @@ double ComponentFieldMap::WeightingPotential(double xin, double yin,
             iw = m_wfieldCopies[iwc].iSource;
         }
     }
+  // Check if the weighting field is properly initialised.
+    if (!m_wfieldsOk[iw]) return 0.;
 
   // Copy the coordinates.
   double x = xin, y = yin, z = zin;
@@ -2973,8 +2973,8 @@ void ComponentFieldMap::CopyWeightingPotential(const std::string& label, const s
     
     
     // Check if a weighting field with the same label already exists.
-    size_t nWeightingFieldCopies = m_wfieldCopies.size();
-    for (size_t i = 0; i < nWeightingFieldCopies; ++i) {
+    size_t nWeightingFields = m_wfields.size();
+    for (size_t i = 0; i < nWeightingFields; ++i) {
         if (m_wfields[i] == label){
             std::cout << m_className << "::CopyWeightingPotential:\n"
                       << "    Electrode " << label << " already excists.\n";
@@ -2983,8 +2983,8 @@ void ComponentFieldMap::CopyWeightingPotential(const std::string& label, const s
     }
     
     // Check if a weighting field with the same label already exists.
-    size_t nWeightingFields = m_wfields.size();
-    for (size_t i = 0; i < nWeightingFields; ++i) {
+    size_t nWeightingFieldCopies = m_wfieldCopies.size();
+    for (size_t i = 0; i < nWeightingFieldCopies; ++i) {
         if (m_wfieldCopies[i].name == label){
             std::cout << m_className << "::CopyWeightingPotential:\n"
                       << "    Copy of " << label << " already excists.\n";
@@ -3014,10 +3014,13 @@ void ComponentFieldMap::CopyWeightingPotential(const std::string& label, const s
     
     CoordinateTransformMatrix(rot,trans,-x,-y,-z,-alpha,-beta,-gamma);
     
-    newWeightingFieldCopy.rotMatrix = rot;
-    newWeightingFieldCopy.transVector = trans;
+    newWeightingFieldCopy.rotMatrix.Use(rot);
+    newWeightingFieldCopy.transVector.Use(trans);
     
     m_wfieldCopies.push_back(newWeightingFieldCopy);
+    
+    std::cout << m_className << "::CopyWeightingPotential:\n"
+              << "    Copy named "<<label<<" of weighting potential " << labelSource << " made.\n";
 }
 
 size_t ComponentFieldMap::GetCopyWeightingPotential(const std::string& label){
