@@ -1,12 +1,13 @@
 #ifndef G_COMPONENT_FIELD_MAP_H
 #define G_COMPONENT_FIELD_MAP_H
 
+#include <TMatrix.h>
+#include <TVector.h>
+
 #include <array>
 #include <iostream>
 #include <memory>
 #include <vector>
-#include <TMatrix.h>
-#include <TVector.h>
 
 #include "Component.hh"
 #include "TMatrixD.h"
@@ -99,8 +100,7 @@ class ComponentFieldMap : public Component {
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label) override;
 
-  double DelayedWeightingPotential(double x, double y,
-                                   double z, const double t,
+  double DelayedWeightingPotential(double x, double y, double z, const double t,
                                    const std::string& label) override;
 
   bool IsInBoundingBox(const double x, const double y, const double z) const {
@@ -119,18 +119,19 @@ class ComponentFieldMap : public Component {
     vmax = m_mapvmax;
     return true;
   }
-    
-    /** Makes a weighting potential copy of a imported map which can be translated and rotated.
-     * \param label name of new electrode
-     * \param labelSource name of the source electrode that will be copied
-     * \param x translation in the x-direction.
-     * \param y translation in the y-direction.
-     * \param z translation in the z-direction.
-     * \param alpha rotation around the x-axis.
-     * \param beta rotation around the y-axis.
-     * \param gamma rotation around the z-axis.
-     */
-  void CopyWeightingPotential(const std::string& label, const std::string& labelSource, const double x, const double y, const double z, const double alpha, const double beta, const double gamma);
+
+  /** Makes a weighting potential copy of a imported map which can be translated
+   * and rotated. \param label name of new electrode \param labelSource name of
+   * the source electrode that will be copied \param x translation in the
+   * x-direction. \param y translation in the y-direction. \param z translation
+   * in the z-direction. \param alpha rotation around the x-axis. \param beta
+   * rotation around the y-axis. \param gamma rotation around the z-axis.
+   */
+  void CopyWeightingPotential(const std::string& label,
+                              const std::string& labelSource, const double x,
+                              const double y, const double z,
+                              const double alpha, const double beta,
+                              const double gamma);
 
   friend class ViewFEMesh;
 
@@ -185,20 +186,20 @@ class ComponentFieldMap : public Component {
   std::vector<std::string> m_wfields;
   std::vector<bool> m_wfieldsOk;
   std::vector<bool> m_dwfieldsOk;
-    
-    // Weighting potential copy
-    struct WeightingFieldCopy {
-      // Name
-      std::string name;
-      // Source
-      size_t iSource;
-      TMatrix rotMatrix;
-      TVector transVector;
-    };
+
+  // Weighting potential copy
+  struct WeightingFieldCopy {
+    // Name
+    std::string name;
+    // Source
+    size_t iSource;
+    TMatrix rotMatrix;
+    TVector transVector;
+  };
 
   // Weighting potential copies
   std::vector<WeightingFieldCopy> m_wfieldCopies;
-    
+
   std::vector<double> m_wdtimes;
 
   // Bounding box
@@ -373,15 +374,20 @@ class ComponentFieldMap : public Component {
 
   /// Initialize the tetrahedral tree.
   bool InitializeTetrahedralTree();
-    
+
   /// Coordinate transformation matrix calculator.
-  void CoordinateTransformMatrix(TMatrix& rotMatrix, TVector& transVector, const double x = 0, const double y = 0, const double z = 0, const double alpha = 0, const double beta = 0, const double gamma = 0);
-    
-    /// Get index of copy of weighting potential structure.
-    size_t GetCopyWeightingPotential(const std::string& label);
-    
-    /// Transfor to coordinate system to find weighting potential value of the source field.
-    void FromCopyToSourceWeightingPotential(const size_t& iwc, double& x, double& y, double& z);
+  void CoordinateTransformMatrix(TMatrix& rotMatrix, TVector& transVector,
+                                 const double x = 0, const double y = 0,
+                                 const double z = 0, const double alpha = 0,
+                                 const double beta = 0, const double gamma = 0);
+
+  /// Get index of copy of weighting potential structure.
+  size_t GetCopyWeightingPotential(const std::string& label);
+
+  /// Transfor to coordinate system to find weighting potential value of the
+  /// source field.
+  void FromCopyToSourceWeightingPotential(const size_t& iwc, double& x,
+                                          double& y, double& z);
 };
 }  // namespace Garfield
 
