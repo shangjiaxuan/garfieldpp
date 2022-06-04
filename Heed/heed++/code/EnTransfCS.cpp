@@ -200,7 +200,14 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
   }
 
   const long q2 = particle_charge * particle_charge;
-  double coefpa = fine_structure_const * q2 / (beta2 * CLHEP::pi);
+  double coefpa = fine_structure_const * q2 / CLHEP::pi;
+  if (beta2 > 0.) {
+    coefpa /= beta2;
+  } else {
+    std::cerr << "Heed::EnTransfCS: Particle has zero speed.\n";
+    m_ok = false;
+    coefpa = 0.;
+  }
   const double coefCh = coefpa / hmd->eldens;
   for (long ne = 0; ne < qe; ne++) {
     const double eps1 = hmd->epsi1[ne];
