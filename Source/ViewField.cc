@@ -670,7 +670,7 @@ void ViewField::PlotFieldLines(const std::vector<double>& x0,
   
   if (x0.empty() || y0.empty() || z0.empty()) return;
   const size_t nLines = x0.size();
-  if (y0.size() != nLines || x0.size() != nLines) {
+  if (y0.size() != nLines || z0.size() != nLines) {
     std::cerr << m_className << "::PlotLines:\n"
               << "    Mismatch in number of x/y/z coordinates.\n";
     return;
