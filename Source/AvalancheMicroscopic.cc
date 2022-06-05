@@ -358,10 +358,10 @@ void AvalancheMicroscopic::GetElectronDriftLinePoint(
     return;
   }
 
-  x = m_endpointsElectrons[iel].driftLine[ip - 1].x;
-  y = m_endpointsElectrons[iel].driftLine[ip - 1].y;
-  z = m_endpointsElectrons[iel].driftLine[ip - 1].z;
-  t = m_endpointsElectrons[iel].driftLine[ip - 1].t;
+  x = m_endpointsElectrons[iel].driftLine[ip - 1][0];
+  y = m_endpointsElectrons[iel].driftLine[ip - 1][1];
+  z = m_endpointsElectrons[iel].driftLine[ip - 1][2];
+  t = m_endpointsElectrons[iel].driftLine[ip - 1][3];
 }
 
 void AvalancheMicroscopic::GetHoleDriftLinePoint(double& x, double& y,
@@ -391,10 +391,10 @@ void AvalancheMicroscopic::GetHoleDriftLinePoint(double& x, double& y,
     return;
   }
 
-  x = m_endpointsHoles[ih].driftLine[ip - 1].x;
-  y = m_endpointsHoles[ih].driftLine[ip - 1].y;
-  z = m_endpointsHoles[ih].driftLine[ip - 1].z;
-  t = m_endpointsHoles[ih].driftLine[ip - 1].t;
+  x = m_endpointsHoles[ih].driftLine[ip - 1][0];
+  y = m_endpointsHoles[ih].driftLine[ip - 1][1];
+  z = m_endpointsHoles[ih].driftLine[ip - 1][2];
+  t = m_endpointsHoles[ih].driftLine[ip - 1][3];
 }
 
 void AvalancheMicroscopic::GetPhoton(const size_t i, double& e,
@@ -1221,12 +1221,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
       Update(it, x, y, z, t, en, kx, ky, kz, band);
       // Add a new point to the drift line (if enabled).
       if (m_storeDriftLines) {
-        point newPoint;
-        newPoint.x = x;
-        newPoint.y = y;
-        newPoint.z = z;
-        newPoint.t = t;
-        (*it).driftLine.push_back(std::move(newPoint));
+        (*it).driftLine.push_back({x, y, z, t});
       }
     }
   }

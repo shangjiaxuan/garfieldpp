@@ -601,12 +601,12 @@ bool MediumMagboltz::ElectronCollision(const double e, int& type,
     int& band) {
   ndxc = 0;
   if (e <= 0.) {
-    std::cerr << m_className << "::GetElectronCollision: Invalid energy.\n";
+    std::cerr << m_className << "::ElectronCollision: Invalid energy.\n";
     return false;
   }
   // Check if the electron energy is within the currently set range.
   if (e > m_eMax && m_useAutoAdjust) {
-    std::cerr << m_className << "::GetElectronCollision:\n    Provided energy ("
+    std::cerr << m_className << "::ElectronCollision:\n    Provided energy ("
               << e << " eV) exceeds current energy range.\n"
               << "    Increasing energy range to " << 1.05 * e << " eV.\n";
     SetMaxElectronEnergy(1.05 * e);
@@ -616,7 +616,7 @@ bool MediumMagboltz::ElectronCollision(const double e, int& type,
   if (!Update()) return false;
 
   if (m_debug && band > 0) {
-    std::cerr << m_className << "::GetElectronCollision: Band > 0.\n";
+    std::cerr << m_className << "::ElectronCollision: Band > 0.\n";
   }
 
   double angCut = 1.;
@@ -742,7 +742,7 @@ bool MediumMagboltz::ElectronCollision(const double e, int& type,
       // ionisation potential of one of the gases,
       // create a new electron (with probability rPenning).
       if (m_debug) {
-        std::cout << m_className << "::GetElectronCollision:\n"
+        std::cout << m_className << "::ElectronCollision:\n"
                   << "    Level: " << level << "\n"
                   << "    Ionization potential: " << m_minIonPot << "\n"
                   << "    Excitation energy: " << loss * m_rgas[igas] << "\n"
@@ -787,7 +787,7 @@ bool MediumMagboltz::ElectronCollision(const double e, int& type,
         ctheta0 = (ctheta0 + angPar) / (1. + angPar * ctheta0);
         break;
       default:
-        std::cerr << m_className << "::GetElectronCollision:\n"
+        std::cerr << m_className << "::ElectronCollision:\n"
                   << "    Unknown scattering model.\n"
                   << "    Using isotropic distribution.\n";
         break;
