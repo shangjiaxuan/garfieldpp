@@ -92,10 +92,10 @@ class MediumMagboltz : public MediumGas {
   double GetElectronCollisionRate(const double e, const unsigned int level,
                                   const int band);
   /// Sample the collision type.
-  bool GetElectronCollision(const double e, int& type, int& level, double& e1,
-                            double& dx, double& dy, double& dz,
-                            std::vector<std::pair<int, double> >& secondaries,
-                            int& ndxc, int& band) override;
+  bool ElectronCollision(const double e, int& type, int& level, double& e1,
+                         double& dx, double& dy, double& dz,
+                         std::vector<std::pair<Particle, double> >& secondaries,
+                         int& ndxc, int& band) override;
   void ComputeDeexcitation(int iLevel, int& fLevel);
   unsigned int GetNumberOfDeexcitationProducts() const override {
     return m_dxcProducts.size();

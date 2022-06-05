@@ -718,25 +718,25 @@ double MediumSilicon::GetElectronCollisionRate(const double e, const int band) {
   return 0.;
 }
 
-bool MediumSilicon::GetElectronCollision(
-    const double e, int& type, int& level, double& e1, double& px, double& py,
-    double& pz, std::vector<std::pair<int, double> >& secondaries, int& ndxc,
+bool MediumSilicon::ElectronCollision(const double e, int& type, 
+    int& level, double& e1, double& px, double& py, double& pz, 
+    std::vector<std::pair<Particle, double> >& secondaries, int& ndxc,
     int& band) {
   if (e > m_eFinalG) {
-    std::cerr << m_className << "::GetElectronCollision:\n"
+    std::cerr << m_className << "::ElectronCollision:\n"
               << "    Requested electron energy (" << e << " eV) exceeds the "
               << "current energy range (" << m_eFinalG << " eV).\n"
               << "    Increasing energy range to " << 1.05 * e << " eV.\n";
     SetMaxElectronEnergy(1.05 * e);
   } else if (e <= 0.) {
-    std::cerr << m_className << "::GetElectronCollision:\n"
+    std::cerr << m_className << "::ElectronCollision:\n"
               << "    Electron energy must be greater than zero.\n";
     return false;
   }
 
   if (m_isChanged) {
     if (!UpdateTransportParameters()) {
-      std::cerr << m_className << "::GetElectronCollision:\n"
+      std::cerr << m_className << "::ElectronCollision:\n"
                 << "    Error calculating the collision rates table.\n";
       return false;
     }
@@ -830,7 +830,7 @@ bool MediumSilicon::GetElectronCollision(
     } else if (type == ElectronCollisionTypeIonisation) {
       ++m_nCollElectronIonisation;
     } else {
-      std::cerr << m_className << "::GetElectronCollision:\n";
+      std::cerr << m_className << "::ElectronCollision:\n";
       std::cerr << "    Unexpected collision type (" << type << ").\n";
     }
 
@@ -885,8 +885,8 @@ bool MediumSilicon::GetElectronCollision(
     } else if (type == ElectronCollisionTypeIonisation) {
       ++m_nCollElectronIonisation;
     } else {
-      std::cerr << m_className << "::GetElectronCollision:\n";
-      std::cerr << "    Unexpected collision type (" << type << ").\n";
+      std::cerr << m_className << "::ElectronCollision:\n"
+                << "    Unexpected collision type (" << type << ").\n";
     }
 
     // Get the energy loss.
@@ -937,15 +937,15 @@ bool MediumSilicon::GetElectronCollision(
     } else if (type == ElectronCollisionTypeIonisation) {
       ++m_nCollElectronIonisation;
     } else {
-      std::cerr << m_className << "::GetElectronCollision:\n";
-      std::cerr << "    Unexpected collision type (" << type << ").\n";
+      std::cerr << m_className << "::ElectronCollision:\n"
+                << "    Unexpected collision type (" << type << ").\n";
     }
 
     // Get the energy loss.
     loss = m_energyLossElectronsG[level];
   } else {
-    std::cerr << m_className << "::GetElectronCollision:\n";
-    std::cerr << "    Band index (" << band << ") out of range.\n";
+    std::cerr << m_className << "::ElectronCollision:\n"
+              << "    Band index (" << band << ") out of range.\n";
     return false;
   }
 
@@ -957,9 +957,9 @@ bool MediumSilicon::GetElectronCollision(
     ComputeSecondaries(e, ee, eh);
     loss = ee + eh + m_bandGap;
     // Add the secondary electron.
-    secondaries.emplace_back(std::make_pair(IonProdTypeElectron, ee));
+    secondaries.emplace_back(std::make_pair(Particle::Electron, ee));
     // Add the hole.
-    secondaries.emplace_back(std::make_pair(IonProdTypeHole, eh));
+    secondaries.emplace_back(std::make_pair(Particle::Hole, eh));
   }
 
   if (e < loss) loss = e - 0.00001;
