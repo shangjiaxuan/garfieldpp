@@ -244,10 +244,6 @@ class AvalancheMicroscopic {
 
   Sensor* m_sensor = nullptr;
 
-  struct point {
-    double x, y, z, t;
-  };
-
   struct Electron {
     int status;                    ///< Status.
     bool hole;                     ///< Electron or hole.
@@ -257,7 +253,7 @@ class AvalancheMicroscopic {
     double x, y, z, t;             ///< Current position and time.
     double kx, ky, kz;             ///< Current direction/wave vector.
     double energy;                 ///< Current kinetic energy.
-    std::vector<point> driftLine;  ///< Drift line.
+    std::vector<std::array<double, 4 > > driftLine;  ///< Drift line.
     double xLast, yLast, zLast;    ///< Previous position.
   };
   std::vector<Electron> m_endpointsElectrons;
