@@ -517,9 +517,9 @@ double Medium::GetElectronCollisionRate(const double /*e*/,
   return 0.;
 }
 
-bool Medium::GetElectronCollision(
-    const double e, int& type, int& level, double& e1, double& dx, double& dy,
-    double& dz, std::vector<std::pair<int, double> >& /*secondaries*/,
+bool Medium::ElectronCollision(const double e, int& type, int& level, 
+    double& e1, double& dx, double& dy, double& dz, 
+    std::vector<std::pair<Particle, double> >& /*secondaries*/,
     int& ndxc, int& band) {
   type = level = -1;
   e1 = e;

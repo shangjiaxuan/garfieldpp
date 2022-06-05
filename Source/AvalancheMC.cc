@@ -566,13 +566,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
     const size_t nPoints = m_drift.size();
     // Register the new drift line and get its ID.
     size_t id;
-    if (particle == Particle::Electron) {
-      m_viewer->NewElectronDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
-    } else if (particle == Particle::Hole) {
-      m_viewer->NewHoleDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
-    } else {
-      m_viewer->NewIonDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
-    }
+    m_viewer->NewDriftLine(particle, nPoints, id, xi[0], xi[1], xi[2]);
     // Set the points along the trajectory.
     for (size_t i = 0; i < nPoints; ++i) {
       const auto& x = m_drift[i].x;

@@ -295,10 +295,10 @@ plot data will be saved to a text file.
 %for semiconducting media.
 %  \item
 %\begin{lstlisting}
-%bool GetElectronCollision(const double e, int& type, int& level,
-%                          double& e1, double& dx, double& dy, double& dz,
-%                          std::vector<std::pair<int, double> >& secondaries%,
-%                          int& ndx, int& band);
+%bool ElectronCollision(const double e, int& type, int& level,
+%                       double& e1, double& dx, double& dy, double& dz,
+%                       std::vector<std::pair<Particle, double> >& secondaries%,
+%                       int& ndx, int& band);
 %\end{lstlisting}
 %\begin{description}
 %  \item[e]          electron energy prior to the collision
@@ -619,7 +619,7 @@ bool GetLevel(const unsigned int i, int& ngas, int& type, std::string& descr, do
 It is sometimes useful to know the frequency with which individual levels 
 are excited in an avalanche (or along a drift line). 
 For this purpose, \texttt{MediumMagboltz} keeps track of the number of times 
-the individual levels are sampled in \texttt{GetElectronCollision}. 
+the individual levels are sampled in \texttt{ElectronCollision}. 
 These counters are accessible through the functions
 \begin{lstlisting}
 unsigned int GetNumberOfElectronCollisions();
@@ -629,7 +629,6 @@ unsigned int GetNumberOfElectronCollisions(int& nElastic, int& nIonising,
 unsigned int GetNumberOfElectronCollisions(const unsigned int level);
 \end{lstlisting}
 The first function returns total number of electron collisions 
-% (\textit{i.\,e.} calls to \texttt{GetElectronCollision}) 
 since the last reset. 
 The second function additionally provides the number of collisions of each 
 cross-section category (elastic, ionising etc.). 

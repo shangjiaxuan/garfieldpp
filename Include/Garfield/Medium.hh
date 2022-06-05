@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "FundamentalConstants.hh"
+#include "GarfieldConstants.hh"
 
 namespace Garfield {
 
@@ -137,9 +138,10 @@ class Medium {
   /// Collision rate [ns-1] for given electron energy
   virtual double GetElectronCollisionRate(const double e, const int band = 0);
   /// Sample the collision type. Update energy and direction vector.
-  virtual bool GetElectronCollision(
-      const double e, int& type, int& level, double& e1, double& dx, double& dy,
-      double& dz, std::vector<std::pair<int, double> >& secondaries, int& ndxc,
+  virtual bool ElectronCollision(
+      const double e, int& type, int& level, double& e1, 
+      double& dx, double& dy, double& dz, 
+      std::vector<std::pair<Particle, double> >& secondaries, int& ndxc,
       int& band);
   virtual unsigned int GetNumberOfDeexcitationProducts() const { return 0; }
   virtual bool GetDeexcitationProduct(const unsigned int i, double& t,
