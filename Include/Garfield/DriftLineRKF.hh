@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 
+#include "GarfieldConstants.hh"
 #include "Medium.hh"
 #include "Sensor.hh"
 #include "ViewDrift.hh"
@@ -134,7 +135,6 @@ class DriftLineRKF {
   // Pointer to sensor.
   Sensor* m_sensor = nullptr;
 
-  enum class Particle { Electron = 0, Ion, Hole, Positron, NegativeIon };
   // Particle type of the most recent drift line.
   Particle m_particle = Particle::Electron;
 

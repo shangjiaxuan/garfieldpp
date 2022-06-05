@@ -4,6 +4,8 @@
 
 namespace Garfield {
 
+enum class Particle { Electron = 0, Ion, Hole, Positron, NegativeIon };
+
 static const int IonProdTypeElectron = -1;
 static const int IonProdTypeHole = 1;
 static const int IonProdTypeIon = 2;

@@ -9,6 +9,7 @@
 
 #include <Rtypes.h>
 
+#include "GarfieldConstants.hh"
 #include "ViewBase.hh"
 
 namespace Garfield {
@@ -66,12 +67,8 @@ class ViewDrift : public ViewBase {
                     bool& electron) const;
 
   // Functions used by the transport classes.
-  void NewElectronDriftLine(const size_t np, size_t& id, const float x0,
-                            const float y0, const float z0);
-  void NewHoleDriftLine(const size_t np, size_t& id, const float x0,
-                        const float y0, const float z0);
-  void NewIonDriftLine(const size_t np, size_t& id, const float x0,
-                       const float y0, const float z0);
+  void NewDriftLine(const Particle particle, const size_t np, size_t& id, 
+                    const float x0, const float y0, const float z0);
   void NewChargedParticleTrack(const size_t np, size_t& id, const float x0,
                                const float y0, const float z0);
 
@@ -95,11 +92,6 @@ class ViewDrift : public ViewBase {
  private:
   std::mutex m_mutex;
 
-  enum class Particle {
-    Electron,
-    Hole,
-    Ion
-  };
   std::vector<std::pair<std::vector<std::array<float, 3> >,
                         Particle> > m_driftLines;
 

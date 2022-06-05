@@ -65,37 +65,14 @@ void ViewDrift::GetDriftLine(const size_t i,
   }
 }
 
-void ViewDrift::NewElectronDriftLine(const size_t np, size_t& id,
-                                     const float x0, const float y0,
-                                     const float z0) {
+void ViewDrift::NewDriftLine(const Particle particle, const size_t np, 
+    size_t& id, const float x0, const float y0, const float z0) {
   std::lock_guard<std::mutex> guard(m_mutex);
-  // Create a new electron drift line and add it to the list.
+  // Create a new drift line and add it to the list.
   std::array<float, 3> p = {x0, y0, z0};
   constexpr size_t minSize = 1;
   std::vector<std::array<float, 3> > dl(std::max(minSize, np), p);
-  m_driftLines.push_back(std::make_pair(std::move(dl), Particle::Electron));
-  // Return the index of this drift line.
-  id = m_driftLines.size() - 1;
-}
-
-void ViewDrift::NewHoleDriftLine(const size_t np, size_t& id, const float x0, 
-                                 const float y0, const float z0) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  std::array<float, 3> p = {x0, y0, z0};
-  constexpr size_t minSize = 1;
-  std::vector<std::array<float, 3> > dl(std::max(minSize, np), p);
-  m_driftLines.push_back(std::make_pair(std::move(dl), Particle::Hole));
-  // Return the index of this drift line.
-  id = m_driftLines.size() - 1;
-}
-
-void ViewDrift::NewIonDriftLine(const size_t np, size_t& id, const float x0,
-                                const float y0, const float z0) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  std::array<float, 3> p = {x0, y0, z0};
-  constexpr size_t minSize = 1;
-  std::vector<std::array<float, 3> > dl(std::max(minSize, np), p);
-  m_driftLines.push_back(std::make_pair(std::move(dl), Particle::Ion));
+  m_driftLines.push_back(std::make_pair(std::move(dl), particle));
   // Return the index of this drift line.
   id = m_driftLines.size() - 1;
 }

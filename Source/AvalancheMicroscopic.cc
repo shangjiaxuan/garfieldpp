@@ -1250,7 +1250,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
       if (np <= 0) continue;
       size_t k;
       const Electron& p = m_endpointsElectrons[i];
-      m_viewer->NewElectronDriftLine(np, k, p.x0, p.y0, p.z0);
+      m_viewer->NewDriftLine(Particle::Electron, np, k, p.x0, p.y0, p.z0);
       for (size_t j = 0; j < np; ++j) {
         double x = 0., y = 0., z = 0., t = 0.;
         GetElectronDriftLinePoint(x, y, z, t, j, i);
@@ -1264,7 +1264,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
       if (np <= 0) continue;
       size_t k;
       const Electron& p = m_endpointsHoles[i];
-      m_viewer->NewHoleDriftLine(np, k, p.x0, p.y0, p.z0);
+      m_viewer->NewDriftLine(Particle::Hole, np, k, p.x0, p.y0, p.z0);
       for (size_t j = 0; j < np; ++j) {
         double x = 0., y = 0., z = 0., t = 0.;
         GetHoleDriftLinePoint(x, y, z, t, j, i);
