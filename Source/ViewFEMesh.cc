@@ -632,9 +632,9 @@ void ViewFEMesh::DrawDriftLines2d() {
   // Plot a 2D projection of the drift line.
   for (const auto& driftLine : m_viewDrift->m_driftLines) {
     TGraph gr;
-    if (driftLine.second == ViewDrift::Particle::Electron) {
+    if (driftLine.second == Particle::Electron) {
       gr.SetLineColor(m_viewDrift->m_colElectron);
-    } else if (driftLine.second == ViewDrift::Particle::Hole) {
+    } else if (driftLine.second == Particle::Hole) {
       gr.SetLineColor(m_viewDrift->m_colHole);
     } else {
       gr.SetLineColor(m_viewDrift->m_colIon);
@@ -671,9 +671,9 @@ void ViewFEMesh::DrawDriftLines3d() {
     }
     const int nP = driftLine.first.size();
     TPolyLine3D pl(nP, points.data());
-    if (driftLine.second == ViewDrift::Particle::Electron) {
+    if (driftLine.second == Particle::Electron) {
       pl.SetLineColor(m_viewDrift->m_colElectron);
-    } else if (driftLine.second == ViewDrift::Particle::Hole) {
+    } else if (driftLine.second == Particle::Hole) {
       pl.SetLineColor(m_viewDrift->m_colHole);
     } else {
       pl.SetLineColor(m_viewDrift->m_colIon);

@@ -1,6 +1,7 @@
 #ifndef G_VIEW_ISOCHRONS
 #define G_VIEW_ISOCHRONS
 
+#include "GarfieldConstants.hh"
 #include "ViewBase.hh"
 
 namespace Garfield {
@@ -67,7 +68,6 @@ class ViewIsochrons : public ViewBase {
   Sensor* m_sensor = nullptr;
   Component* m_component = nullptr;
 
-  enum class Particle { Electron = 0, Ion };
   // Type of particle to be used for computing drift lines.
   Particle m_particle = Particle::Electron;
   bool m_positive = false;

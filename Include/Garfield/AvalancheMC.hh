@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "FundamentalConstants.hh"
+#include "GarfieldConstants.hh"
 #include "Sensor.hh"
 #include "ViewDrift.hh"
 
@@ -187,8 +188,6 @@ class AvalancheMC {
   std::string m_className = "AvalancheMC";
 
   Sensor* m_sensor = nullptr;
-
-  enum class Particle { Electron = 0, Ion, Hole, NegativeIon };
 
   struct DriftPoint {
     std::array<double, 3> x;  ///< Position.

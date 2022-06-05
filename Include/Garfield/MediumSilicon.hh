@@ -125,10 +125,10 @@ class MediumSilicon : public Medium {
   // Get the (real) collision rate [ns-1] at a given electron energy
   double GetElectronCollisionRate(const double e, const int band) override;
   // Sample the collision type
-  bool GetElectronCollision(const double e, int& type, int& level, double& e1,
-                            double& dx, double& dy, double& dz,
-                            std::vector<std::pair<int, double> >& secondaries,
-                            int& ndxc, int& band) override;
+  bool ElectronCollision(const double e, int& type, int& level, double& e1,
+                         double& dx, double& dy, double& dz,
+                         std::vector<std::pair<Particle, double> >& secondaries,
+                         int& ndxc, int& band) override;
 
   // Density of states
   double GetConductionBandDensityOfStates(const double e, const int band = 0);

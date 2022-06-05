@@ -562,7 +562,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
   std::vector<Electron> stackNew;
   stackNew.reserve(1000);
   std::vector<std::pair<double, double> > stackPhotons;
-  std::vector<std::pair<int, double> > secondaries;
+  std::vector<std::pair<Particle, double> > secondaries;
 
   while (true) {
     // Remove all inactive items from the stack.
@@ -988,8 +988,8 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
         int cstype = 0;
         int level = 0;
         int ndxc = 0;
-        medium->GetElectronCollision(en1, cstype, level, en, kx1, ky1, kz1,
-                                     secondaries, ndxc, band);
+        medium->ElectronCollision(en1, cstype, level, en, kx1, ky1, kz1,
+                                  secondaries, ndxc, band);
         // If activated, histogram the distance with respect to the
         // last collision.
         if (m_histDistance && !m_distanceHistogramType.empty()) {
@@ -1039,7 +1039,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
               m_userHandleIonisation(x, y, z, t, cstype, level, medium);
             }
             for (const auto& secondary : secondaries) {
-              if (secondary.first == IonProdTypeElectron) {
+              if (secondary.first == Particle::Electron) {
                 const double esec = std::max(secondary.second, Small);
                 if (m_histSecondary) m_histSecondary->Fill(esec);
                 // Increment the electron counter.
@@ -1055,7 +1055,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
                 } else {
                   AddToStack(x, y, z, t, esec, false, stackNew);
                 }
-              } else if (secondary.first == IonProdTypeHole) {
+              } else if (secondary.first == Particle::Hole) {
                 const double esec = std::max(secondary.second, Small);
                 // Increment the hole counter.
                 ++m_nHoles;
@@ -1070,7 +1070,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
                 } else {
                   AddToStack(x, y, z, t, esec, true, stackNew);
                 }
-              } else if (secondary.first == IonProdTypeIon) {
+              } else if (secondary.first == Particle::Ion) {
                 ++m_nIons;
               }
             }
@@ -1250,7 +1250,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
       if (np <= 0) continue;
       size_t k;
       const Electron& p = m_endpointsElectrons[i];
-      m_viewer->NewElectronDriftLine(np, k, p.x0, p.y0, p.z0);
+      m_viewer->NewDriftLine(Particle::Electron, np, k, p.x0, p.y0, p.z0);
       for (size_t j = 0; j < np; ++j) {
         double x = 0., y = 0., z = 0., t = 0.;
         GetElectronDriftLinePoint(x, y, z, t, j, i);
@@ -1264,7 +1264,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
       if (np <= 0) continue;
       size_t k;
       const Electron& p = m_endpointsHoles[i];
-      m_viewer->NewHoleDriftLine(np, k, p.x0, p.y0, p.z0);
+      m_viewer->NewDriftLine(Particle::Hole, np, k, p.x0, p.y0, p.z0);
       for (size_t j = 0; j < np; ++j) {
         double x = 0., y = 0., z = 0., t = 0.;
         GetHoleDriftLinePoint(x, y, z, t, j, i);

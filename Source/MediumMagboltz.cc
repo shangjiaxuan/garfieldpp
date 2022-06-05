@@ -595,9 +595,9 @@ double MediumMagboltz::GetElectronCollisionRate(const double e,
   return rate;
 }
 
-bool MediumMagboltz::GetElectronCollision(
-    const double e, int& type, int& level, double& e1, double& dx, double& dy,
-    double& dz, std::vector<std::pair<int, double> >& secondaries, int& ndxc,
+bool MediumMagboltz::ElectronCollision(const double e, int& type, 
+    int& level, double& e1, double& dx, double& dy, double& dz, 
+    std::vector<std::pair<Particle, double> >& secondaries, int& ndxc,
     int& band) {
   ndxc = 0;
   if (e <= 0.) {
@@ -702,9 +702,9 @@ bool MediumMagboltz::GetElectronCollision(
     if (esec <= 0) esec = Small;
     loss += esec;
     // Add the secondary electron.
-    secondaries.emplace_back(std::make_pair(IonProdTypeElectron, esec));
+    secondaries.emplace_back(std::make_pair(Particle::Electron, esec));
     // Add the ion.
-    secondaries.emplace_back(std::make_pair(IonProdTypeIon, 0.));
+    secondaries.emplace_back(std::make_pair(Particle::Ion, 0.));
     bool fluorescence = false;
     if (m_yFluorescence[level] > Small) {
       if (RndmUniform() < m_yFluorescence[level]) fluorescence = true;
@@ -714,19 +714,19 @@ bool MediumMagboltz::GetElectronCollision(
       if (m_nAuger2[level] > 0) {
         const double eav = m_eAuger2[level] / m_nAuger2[level];
         for (unsigned int i = 0; i < m_nAuger2[level]; ++i) {
-          secondaries.emplace_back(std::make_pair(IonProdTypeElectron, eav));
+          secondaries.emplace_back(std::make_pair(Particle::Electron, eav));
         }
       }
       if (m_nFluorescence[level] > 0) {
         const double eav = m_eFluorescence[level] / m_nFluorescence[level];
         for (unsigned int i = 0; i < m_nFluorescence[level]; ++i) {
-          secondaries.emplace_back(std::make_pair(IonProdTypeElectron, eav));
+          secondaries.emplace_back(std::make_pair(Particle::Electron, eav));
         }
       }
     } else if (m_nAuger1[level] > 0) {
       const double eav = m_eAuger1[level] / m_nAuger1[level];
       for (unsigned int i = 0; i < m_nAuger1[level]; ++i) {
-        secondaries.emplace_back(std::make_pair(IonProdTypeElectron, eav));
+        secondaries.emplace_back(std::make_pair(Particle::Electron, eav));
       }
     } 
   } else if (type == ElectronCollisionTypeExcitation) {
