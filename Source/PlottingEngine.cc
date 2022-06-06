@@ -59,6 +59,7 @@ void PlottingEngine::SetDefaultStyle() {
   m_garfieldStyle.SetTitleSize(tsize, "t");
 
   m_garfieldStyle.SetLegendFont(font);
+  m_garfieldStyle.SetLegendTextSize(tsize);
   m_garfieldStyle.SetStatStyle(0);
   m_garfieldStyle.SetStatBorderSize(0);
   m_garfieldStyle.SetStatColor(0);

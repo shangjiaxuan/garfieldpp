@@ -402,7 +402,6 @@ void ViewSignal::PlotSignal(const std::string& label, const std::string setting,
 
   TLegend* leg = new TLegend(0.7, 0.7, 0.9, 0.9);
   leg->SetHeader("Induced current components");
-  leg->SetTextFont(0.05);
 
   if (totalT) leg->AddEntry(m_hSignal.get(), "Total induced signal", "l");
   if (totalP)
