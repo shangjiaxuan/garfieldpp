@@ -58,17 +58,25 @@ void ViewSignal::DrawHistogram(TH1D* h, const std::string& opt,
   }
 }
 
-void ViewSignal::PlotSignal(const std::string& label,  const std::string settingTotal, const std::string settingPrompt, const std::string settingDelayed,
-                            const bool same) {
+void ViewSignal::PlotSignal(const std::string& label,
+                            const std::string settingTotal,
+                            const std::string settingPrompt,
+                            const std::string settingDelayed, const bool same) {
   const bool totalT = true;
-  const bool totalP = settingPrompt.find("t") != std::string::npos ? true : false;
-  const bool totalD = settingDelayed.find("t") != std::string::npos ? true : false;
-  const bool electronT = settingTotal.find("e") != std::string::npos ? true : false;
-  const bool electronP = settingPrompt.find("e") != std::string::npos ? true : false;
-  const bool electronD = settingDelayed.find("e") != std::string::npos ? true : false;
+  const bool totalP =
+      settingPrompt.find("t") != std::string::npos ? true : false;
+  const bool totalD =
+      settingDelayed.find("t") != std::string::npos ? true : false;
+  const bool electronT =
+      settingTotal.find("e") != std::string::npos ? true : false;
+  const bool electronP =
+      settingPrompt.find("e") != std::string::npos ? true : false;
+  const bool electronD =
+      settingDelayed.find("e") != std::string::npos ? true : false;
   const bool ionT = settingTotal.find("i") != std::string::npos ? true : false;
   const bool ionP = settingPrompt.find("i") != std::string::npos ? true : false;
-  const bool ionD = settingDelayed.find("i") != std::string::npos ? true : false;
+  const bool ionD =
+      settingDelayed.find("i") != std::string::npos ? true : false;
 
   const int lineThickness = 5;
 
