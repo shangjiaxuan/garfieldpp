@@ -40,17 +40,13 @@ class ViewSignal : public ViewBase {
 
   /** Plot the signal.
    * \param label Identifier (weighting field) of the signal to be plotted.
-   * \param setting String containing information about the components you want
-   * to plot. The syntax is the first letter of charge carrier signal you want
-   * to plot: "t" for total, "e" for electron and "i" for Ion/hole. This is
-   * followed by which signal components you want to be plotted: "T" for total,
-   * "P" for promt and "D" for delayed. Enabeling all posibilities will look
-   * like: "tTPDeTPDiTPD". The total signal is always plotted. \param same Flag
-   * to keep existing plots on the canvas or not.
+   * \param settingTotal String containing information about the total signals you want to plot. The syntax is the first letter of charge carrier signal you want to plot: "t" for total, "e" for electron and "i" for Ion/hole. Enabeling all posibilities will look like: "tei. The total signal is always plotted.
+   * \param settingPrompt String containing information about the prompt signals you want to plot. The syntax is identical to the one discribed above.
+   * \param settingdelayed  String containing information about the delayed signals you want to plot. The syntax is identical to the one discribed above.
+   * \param same Flag to keep existing plots on the canvas or not.
    */
 
-  void PlotSignal(const std::string& label, const std::string setting,
-                  const bool same = false);
+    void PlotSignal(const std::string& label, const std::string settingTotal, const std::string settingPrompt = "", const std::string settingDelayed = "", const bool same = false);
 
   /** Retrieve the histogram for the total, prompt and delayed induced charge or
    * signal.. \param label Identifier (weighting field) of the signal to be
