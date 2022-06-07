@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 
   ViewSignal signalView;
   signalView.SetSensor(&sensor);
-  signalView.PlotSignal("readout", true, true, true);
+  signalView.PlotSignal("readout", "tei");
 
   app.Run();
   return 0;
