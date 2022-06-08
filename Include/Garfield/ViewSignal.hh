@@ -28,32 +28,26 @@ class ViewSignal : public ViewBase {
 
   /** Plot the signal.
    * \param label Identifier (weighting field) of the signal to be plotted.
-   * \param settingTotal String containing information about the total signals
-   * you want to plot. The syntax is the first letter of charge carrier signal
-   * you want to plot: "t" for total, "e" for electron and "i" for Ion/hole.
-   * Enabeling all posibilities will look like: "tei. The total signal is always
-   * plotted. \param settingPrompt String containing information about the
-   * prompt signals you want to plot. The syntax is identical to the one
-   * discribed above. \param settingdelayed  String containing information about
-   * the delayed signals you want to plot. The syntax is identical to the one
-   * discribed above. \param same Flag to keep existing plots on the canvas or
-   * not.
+   * \param optTotal String containing information about the total signals
+   *                 you want to plot. The syntax is the first letter of 
+   *                 the charge carrier signal component you want to plot: 
+   *                 "t" for total, "e" for electron and "i" for ion/hole.
+   *                 "tei" enables all three components. 
+   *                 The total signal is always plotted.
+   * \param optPrompt String containing information about the
+   *                  prompt signal components you want to plot. 
+   *                  The syntax is identical to the one described above.
+   * \param optDelayed String containing information about the delayed
+   *                   signal components you want to plot. 
+   *                   The syntax is identical to the one described above.
+   * \param same Flag to keep existing plots on the canvas or not.
    */
 
-  void PlotSignal(const std::string& label, const std::string settingTotal = "",
-                  const std::string settingPrompt = "",
-                  const std::string settingDelayed = "",
+  void PlotSignal(const std::string& label, 
+                  const std::string& optTotal = "t",
+                  const std::string& optPrompt = "",
+                  const std::string& optDelayed = "",
                   const bool same = false);
-
-  /** Retrieve the histogram for the total, prompt and delayed induced charge or
-   * signal.. \param label Identifier (weighting field) of the signal to be
-   * plotted. \param h histogram to be returned \param electron Flag whether to
-   * plot the electron-induced signal. \param ion Flag whether to plot the
-   * ion/hole-induced signal. \param delayed Flag whether to plot the delayed
-   * signal component. \param same Flag to keep existing plots on the canvas or
-   * not. \param getsignal is true for plotting the induced signal and false for
-   * plotting the induced charge.
-   */
 
   void Plot(const std::string& label, const bool getsignal,
             const bool total = true, const bool delayed = true,
@@ -142,7 +136,6 @@ class ViewSignal : public ViewBase {
   void DrawHistogram(TH1D* h, const std::string& opt, const std::string& xlabel,
                      const std::string& ylabel);
 
-  bool ComponentPlotting(std::string entry, std::string prefix);
 };
 }  // namespace Garfield
 #endif
