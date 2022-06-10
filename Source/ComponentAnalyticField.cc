@@ -3923,15 +3923,16 @@ bool ComponentAnalyticField::SetupB2X() {
   //                            image of another * factor.
   //-----------------------------------------------------------------------
 
+  const double tx = Pi / m_sx;  
   m_b2sin.resize(m_nWires);
   DMatrix a(m_nWires, std::vector<double>(m_nWires, 0.));
   // Loop over all wires and calculate the diagonal elements first.
   for (size_t i = 0; i < m_nWires; ++i) {
-    double xx = (Pi / m_sx) * (m_w[i].x - m_coplax);
-    a[i][i] = (0.5 * m_w[i].r * Pi / m_sx) / sin(xx);
+    const double xx = tx * (m_w[i].x - m_coplax);
+    a[i][i] = 0.5 * tx * m_w[i].r / sin(xx);
     // Take care of a plane at constant y if it exists.
     if (m_ynplay) {
-      const double yymirr = (Pi / m_sx) * (m_w[i].y - m_coplay);
+      const double yymirr = tx * (m_w[i].y - m_coplay);
       if (fabs(yymirr) <= 20.) {
         const double sinhy = sinh(yymirr);
         const double sinx = sin(xx);
@@ -3940,30 +3941,32 @@ bool ComponentAnalyticField::SetupB2X() {
     }
     // Store the true value of a[i][i].
     a[i][i] = -log(fabs(a[i][i]));
+  }
+
+  for (size_t i = 0; i < m_nWires; ++i) {
     // Loop over all other wires to obtain off-diagonal elements.
     for (size_t j = i + 1; j < m_nWires; ++j) {
-      xx = HalfPi * (m_w[i].x - m_w[j].x) / m_sx;
-      const double yy = HalfPi * (m_w[i].y - m_w[j].y) / m_sx;
-      const double xxneg =
-          HalfPi * (m_w[i].x + m_w[j].x - 2. * m_coplax) / m_sx;
+      const double xx = 0.5 * tx * (m_w[i].x - m_w[j].x);
+      const double yy = 0.5 * tx * (m_w[i].y - m_w[j].y);
+      const double xxneg = 0.5 * tx * (m_w[i].x + m_w[j].x - 2. * m_coplax);
       if (fabs(yy) <= 20.) {
         const double sinhy = sinh(yy);
         const double sinxx = sin(xx);
         const double sinxxneg = sin(xxneg);
         a[i][j] = (sinhy * sinhy + sinxx * sinxx) /
                   (sinhy * sinhy + sinxxneg * sinxxneg);
+      } else {
+        a[i][j] = 1.0;
       }
-      if (fabs(yy) > 20.) a[i][j] = 1.0;
       // Take an equipotential plane at constant y into account.
       if (m_ynplay) {
-        const double yymirr =
-            HalfPi * (m_w[i].y + m_w[j].y - 2. * m_coplay) / m_sx;
+        const double yymirr = 0.5 * tx * (m_w[i].y + m_w[j].y - 2. * m_coplay);
         if (fabs(yymirr) <= 20.) {
           const double sinhy = sinh(yymirr);
           const double sinxx = sin(xx);
           const double sinxxneg = sin(xxneg);
           a[i][j] *= (sinhy * sinhy + sinxxneg * sinxxneg) /
-                       (sinhy * sinhy + sinxx * sinxx);
+                     (sinhy * sinhy + sinxx * sinxx);
         }
       }
       // Store the true value of a[i][j] in both a[i][j] and a[j][i].
@@ -3971,7 +3974,7 @@ bool ComponentAnalyticField::SetupB2X() {
       a[j][i] = a[i][j];
     }
     // Set the b2sin vector.
-    m_b2sin[i] = sin(Pi * (m_coplax - m_w[i].x) / m_sx);
+    m_b2sin[i] = sin(tx * (m_coplax - m_w[i].x));
   }
   // Invert the capacitance matrix and calculate the charges.
   return Charge(a);
@@ -3989,15 +3992,16 @@ bool ComponentAnalyticField::SetupB2Y() {
   //                            image in period direction of another * fac.
   //-----------------------------------------------------------------------
 
+  const double ty = Pi / m_sy;
   m_b2sin.resize(m_nWires);
   DMatrix a(m_nWires, std::vector<double>(m_nWires, 0.));
   // Loop over all wires and calculate the diagonal elements first.
   for (size_t i = 0; i < m_nWires; ++i) {
-    double yy = (Pi / m_sy) * (m_w[i].y - m_coplay);
-    a[i][i] = (0.5 * m_w[i].r * Pi / m_sy) / sin(yy);
+    const double yy = ty * (m_w[i].y - m_coplay);
+    a[i][i] = 0.5 * ty * m_w[i].r / sin(yy);
     // Take care of a plane at constant x if present.
     if (m_ynplax) {
-      const double xxmirr = (Pi / m_sy) * (m_w[i].x - m_coplax);
+      const double xxmirr = ty * (m_w[i].x - m_coplax);
       if (fabs(xxmirr) <= 20.) {
         const double sinhx = sinh(xxmirr);
         const double sinyy = sin(yy);
@@ -4006,30 +4010,31 @@ bool ComponentAnalyticField::SetupB2Y() {
     }
     // Store the true value of a[i][i].
     a[i][i] = -log(fabs(a[i][i]));
+  }
+  for (size_t i = 0; i < m_nWires; ++i) {
     // Loop over all other wires to obtain off-diagonal elements.
     for (size_t j = i + 1; j < m_nWires; j++) {
-      const double xx = HalfPi * (m_w[i].x - m_w[j].x) / m_sy;
-      yy = HalfPi * (m_w[i].y - m_w[j].y) / m_sy;
-      const double yyneg =
-          HalfPi * (m_w[i].y + m_w[j].y - 2. * m_coplay) / m_sy;
+      const double xx = 0.5 * ty * (m_w[i].x - m_w[j].x);
+      const double yy = 0.5 * ty * (m_w[i].y - m_w[j].y);
+      const double yyneg = 0.5 * ty * (m_w[i].y + m_w[j].y - 2. * m_coplay);
       if (fabs(xx) <= 20.) {
         const double sinhx = sinh(xx);
         const double sinyy = sin(yy);
         const double sinyyneg = sin(yyneg);
         a[i][j] = (sinhx * sinhx + sinyy * sinyy) /
-                    (sinhx * sinhx + sinyyneg * sinyyneg);
+                  (sinhx * sinhx + sinyyneg * sinyyneg);
+      } else {
+        a[i][j] = 1.0;
       }
-      if (fabs(xx) > 20.) a[i][j] = 1.0;
       // Take an equipotential plane at constant x into account.
       if (m_ynplax) {
-        const double xxmirr =
-            HalfPi * (m_w[i].x + m_w[j].x - 2. * m_coplax) / m_sy;
+        const double xxmirr = 0.5 * ty * (m_w[i].x + m_w[j].x - 2. * m_coplax);
         if (fabs(xxmirr) <= 20.) {
           const double sinhx = sinh(xxmirr);
           const double sinyy = sin(yy);
           const double sinyyneg = sin(yyneg);
           a[i][j] *= (sinhx * sinhx + sinyyneg * sinyyneg) /
-                       (sinhx * sinhx + sinyy * sinyy);
+                     (sinhx * sinhx + sinyy * sinyy);
         }
       }
       // Store the true value of a[i][j] in both a[i][j] and a[j][i].
@@ -4037,7 +4042,7 @@ bool ComponentAnalyticField::SetupB2Y() {
       a[j][i] = a[i][j];
     }
     // Set the b2sin vector.
-    m_b2sin[i] = sin(Pi * (m_coplay - m_w[i].y) / m_sy);
+    m_b2sin[i] = sin(ty * (m_coplay - m_w[i].y));
   }
   // Invert the capacitance matrix and calculate the charges.
   return Charge(a);
@@ -4917,7 +4922,7 @@ void ComponentAnalyticField::FieldB2X(const double xpos, const double ypos,
   for (unsigned int i = 0; i < m_nWires; ++i) {
     const double xx = tx * (xpos - m_w[i].x);
     const double yy = tx * (ypos - m_w[i].y);
-    const double xxneg = tx * (xpos - m_w[i].x - 2 * m_coplax);
+    const double xxneg = tx * (xpos + m_w[i].x - 2. * m_coplax);
     // Calculate the field in case there are no equipotential planes.
     std::complex<double> ecompl(0., 0.);
     double r2 = 1.;
