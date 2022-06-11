@@ -9102,7 +9102,7 @@ void ComponentAnalyticField::FieldAtWireB2X(
   for (unsigned int i = 0; i < m_nWires; ++i) {
     const double xx = tx * (xpos - m_w[i].x);
     const double yy = tx * (ypos - m_w[i].y);
-    const double xxneg = tx * (xpos - m_w[i].x - 2 * m_coplax);
+    const double xxneg = tx * (xpos + m_w[i].x - 2 * m_coplax);
     // Calculate the field in case there are no equipotential planes.
     std::complex<double> ecompl(0., 0.);
     if (cnalso[i] && fabs(yy) <= 20.) {
