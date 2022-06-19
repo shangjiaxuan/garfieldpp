@@ -40,6 +40,16 @@ class TrackTrim : public Track {
   /// Get the Fano factor.
   double GetFanoFactor() const { return m_fano; }
 
+  /// Set a max. distance between subsequent steps.
+  void EnableStepSizeLimit(const double dmax) { m_maxStepSize = dmax; }
+  /// Do not reduce the steps with respect to the TRIM input file (default).
+  void DisableStepSizeLimit() { m_maxStepSize = -1.; }
+  /// Set a max. energy loss per cluster.
+  void EnableEnergyLossLimit(const double emax) { m_maxLossPerStep = emax; }
+  /// Do not limit the energy loss per cluster (default).
+  /// Each segment in the TRIM input file corresponds to one cluster.
+  void DisableEnergyLossLimit() { m_maxLossPerStep = -1.; }
+ 
   void SetParticle(const std::string& part) override;
 
   bool NewTrack(const double x0, const double y0, const double z0,
@@ -64,15 +74,21 @@ class TrackTrim : public Track {
   size_t m_ion = 0;
 
   struct Cluster {
-    double x, y, z, t;  ///< Cluster location and time
-    double ec;          ///< Energy spent to make the cluster
-    double ekin;        ///< Ion energy when cluster was created
-    int electrons;      ///< Number of electrons in this cluster
+    std::array<double, 3> x; ///< Location
+    double t;                ///< Time
+    double ec;               ///< Energy spent to make the cluster
+    double ekin;             ///< Ion energy when cluster was created
+    int ne;                  ///< Number of electrons in this cluster
   };
   /// Clusters on the current track.
   std::vector<Cluster> m_clusters;
   /// Index of the next cluster to be returned.
   size_t m_cluster = 0;
+
+  /// Step size limit.
+  double m_maxStepSize = -1.;
+  /// Energy loss limit per step.
+  double m_maxLossPerStep = -1.;
 
   void AddIon(const std::vector<float>& x, const std::vector<float>& y,
               const std::vector<float>& z, const std::vector<float>& dedx,
