@@ -12,8 +12,8 @@
 
 namespace {
 
-std::tuple<double, double> GetPhiTheta(const double x, const double y,
-                                       const double z) {
+std::tuple<double, double, double, double> GetRotation(
+    const double x, const double y, const double z) {
   double phi = 0., theta = 0.;
   const double t = sqrt(x * x + y * y);
   if (t > 0.) {
@@ -22,7 +22,26 @@ std::tuple<double, double> GetPhiTheta(const double x, const double y,
   } else {
     theta = z < 0. ? -Garfield::HalfPi : Garfield::HalfPi;
   }
-  return std::make_tuple(phi, theta);
+  return std::make_tuple(cos(theta), sin(theta), cos(phi), sin(phi));
+}
+
+std::array<double, 3> Step(const std::array<float, 5>& p0, 
+                           const std::array<float, 5>& p1,
+                           const double ctheta, const double stheta,
+                           const double cphi, const double sphi) { 
+  const double x = p1[0] - p0[0];
+  const double y = p1[1] - p0[1];
+  const double z = p1[2] - p0[2];
+  return {cphi * ctheta * x - sphi * y - cphi * stheta * z,
+          sphi * ctheta * x + cphi * y - sphi * stheta * z,
+          stheta * x + ctheta * z};
+}
+
+double Speed(const double ekin, const double mass) {
+  const double rk = ekin / mass;
+  const double gamma = 1. + rk;
+  const double beta2 = rk > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rk;
+  return sqrt(beta2) * Garfield::SpeedOfLight;
 }
 
 }
@@ -205,29 +224,24 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
     return false;
   }
 
-  // Normalise and store the direction.
-  const double d0 = sqrt(dx0 * dx0 + dy0 * dy0 + dz0 * dz0);
-  double dx = dx0;
-  double dy = dy0;
-  double dz = dz0;
-  if (d0 < Small) {
+  // Get the rotation parameters.
+  double ctheta = 1.;
+  double stheta = 0.;
+  double cphi = 1.;
+  double sphi = 0.;
+  if (sqrt(dx0 * dx0 + dy0 * dy0 + dz0 * dz0) < Small) {
     if (m_debug) {
       std::cout << m_className << "::NewTrack: Randomizing initial direction.\n";
     }
     // Null vector. Sample the direction isotropically.
-    RndmDirection(dx, dy, dz);
+    ctheta = 2 * RndmUniform() - 1.;
+    stheta = sqrt(1. - ctheta * ctheta);
+    const double phi = TwoPi * RndmUniform();
+    cphi = cos(phi);
+    sphi = sin(phi);
   } else {
-    // Normalise the direction vector.
-    dx /= d0;
-    dy /= d0;
-    dz /= d0;
+    std::tie(ctheta, stheta, cphi, sphi) = GetRotation(dx0, dy0, dz0); 
   }
-  double phi = 0., theta = 0.;
-  std::tie(phi, theta) = GetPhiTheta(dx, dy, dz); 
-  double ctheta = cos(theta);
-  double stheta = sin(theta);
-  double cphi = cos(phi);
-  double sphi = sin(phi);
 
   Medium* medium = m_sensor->GetMedium(x0, y0, z0);
   if (!medium) {
@@ -258,82 +272,76 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
   const double ekin0 = GetKineticEnergy();
   const auto& path = m_ions[m_ion];
   const size_t nPoints = path.size();
-  double xp = x0;
-  double yp = y0;
-  double zp = z0;
+  std::array<double, 3> xp = {x0, y0, z0};
   double tp = t0;
   for (size_t i = 1; i < nPoints; ++i) {
     // Skip points with kinetic energy below the initial one set by the user.
     const double ekin = path[i][4];
     if (ekin > ekin0) continue;
-    const double x = path[i][0] - path[i - 1][0];
-    const double y = path[i][1] - path[i - 1][1];
-    const double z = path[i][2] - path[i - 1][2];
-    dx = cphi * ctheta * x - sphi * y - cphi * stheta * z;
-    dy = sphi * ctheta * x + cphi * y - sphi * stheta * z;
-    dz = stheta * x + ctheta * z;
-    const double dmag = sqrt(x * x + y * y + z * z);
-    // Get the particle velocity.
-    const double rk = ekin / m_mass;
-    const double gamma = 1. + rk;
-    const double beta2 = rk > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rk;
-    const double vmag = sqrt(beta2) * SpeedOfLight;
+    double eloss = path[i - 1][3];
+    std::array<double, 3> d = Step(path[i - 1], path[i], ctheta, stheta,
+                                   cphi, sphi);
+    double dmag = sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+    unsigned int nSteps = 1;
+    if (m_maxStepSize > 0. && dmag > m_maxStepSize) {
+      nSteps = std::ceil(dmag / m_maxStepSize);
+    }
+    if (m_maxLossPerStep > 0. && eloss > nSteps * m_maxLossPerStep) {
+      nSteps = std::ceil(eloss / m_maxLossPerStep);
+    }
+    if (nSteps > 1) {
+      const double scale = 1. / nSteps;
+      for (size_t j = 0; j < 3; ++j) d[j] *= scale;
+      dmag *= scale;
+      eloss *= scale;
+    }
+    // Compute the particle velocity.
+    const double vmag = Speed(ekin, m_mass);
     // Compute the timestep.
     const double dt = vmag > 0. ? dmag / vmag : 0.;
-    Cluster cluster;
-    if (m_sensor->HasMagneticField()) {
-      double bx = 0., by = 0., bz = 0.;
-      int status = 0;
-      m_sensor->MagneticField(xp, yp, zp, bx, by, bz, status);
-
-      // Direction vector.
-      std::array<double, 3> v = {dx / dmag, dy / dmag, dz / dmag};
-      std::array<double, 3> d = StepBfield(dt, qoverm, vmag, bx, by, bz, v);
-      cluster.x = xp + d[0];
-      cluster.y = yp + d[1];
-      cluster.z = zp + d[2];
-      // Update the rotation angles.
-      std::tie(phi, theta) = GetPhiTheta(v[0], v[1], v[2]); 
-      ctheta = cos(theta);
-      stheta = sin(theta);
-      cphi = cos(phi);
-      sphi = sin(phi);
-    } else {
-      cluster.x = xp + dx;
-      cluster.y = yp + dy;
-      cluster.z = zp + dz;
-    }
-    cluster.t = tp + dt;
-    xp = cluster.x;
-    yp = cluster.y;
-    zp = cluster.z;
-    tp = cluster.t;
-    // Is this point inside an ionisable medium?
-    medium = m_sensor->GetMedium(cluster.x, cluster.y, cluster.z);
-    if (!medium || !medium->IsIonisable()) continue;
-    if (m_work < Small) w = medium->GetW();
-    if (w < Small) continue;
-    double eloss = path[i - 1][3];
-    if (fano < Small) {
-      // No fluctuations.
-      cluster.electrons = int((eloss + epool) / w);
-      cluster.ec = w * cluster.electrons;
-    } else {
-      double ec = eloss + epool;
-      cluster.electrons = 0;
-      cluster.ec = 0.0;
-      while (true) {
-        const double er = RndmHeedWF(w, fano);
-        if (er > ec) break;
-        cluster.electrons++;
-        cluster.ec += er;
-        ec -= er;
+    for (unsigned int j = 0; j < nSteps; ++j) {
+      Cluster cluster;
+      if (m_sensor->HasMagneticField()) {
+        double bx = 0., by = 0., bz = 0.;
+        int status = 0;
+        m_sensor->MagneticField(xp[0], xp[1], xp[2], bx, by, bz, status);
+        // Direction vector.
+        std::array<double, 3> v = {d[0] / dmag, d[1] / dmag, d[2] / dmag};
+        d = StepBfield(dt, qoverm, vmag, bx, by, bz, v);
+        // Update the rotation angles.
+        std::tie(ctheta, stheta, cphi, sphi) = GetRotation(v[0], v[1], v[2]);
       }
-    }
-    cluster.ekin = path[i][4];
-    epool += eloss - cluster.ec;
-    m_clusters.push_back(std::move(cluster));
-    if (m_viewer) PlotCluster(cluster.x, cluster.y, cluster.z);
+      cluster.x = {xp[0] + d[0], xp[1] + d[1], xp[2] + d[2]};
+      cluster.t = tp + dt;
+      xp = cluster.x;
+      tp = cluster.t;
+      // Is this point inside an ionisable medium?
+      medium = m_sensor->GetMedium(cluster.x[0], cluster.x[1], cluster.x[2]);
+      if (!medium || !medium->IsIonisable()) continue;
+      if (m_work < Small) w = medium->GetW();
+      if (w < Small) continue;
+      if (fano < Small) {
+        // No fluctuations.
+        cluster.ne = int((eloss + epool) / w);
+        cluster.ec = w * cluster.ne;
+      } else {
+        double ec = eloss + epool;
+        cluster.ne = 0;
+        cluster.ec = 0.0;
+        while (true) {
+          const double er = RndmHeedWF(w, fano);
+          if (er > ec) break;
+          cluster.ne++;
+          cluster.ec += er;
+          ec -= er;
+        }
+      }
+      cluster.ekin = path[i][4];
+      epool += eloss - cluster.ec;
+      if (cluster.ne == 0) continue;
+      m_clusters.push_back(std::move(cluster));
+      if (m_viewer) PlotCluster(cluster.x[0], cluster.x[1], cluster.x[2]);
+    } 
   }
   // Move to the next ion in the list.
   ++m_ion;
@@ -350,12 +358,12 @@ bool TrackTrim::GetCluster(double& xcls, double& ycls, double& zcls,
   if (m_cluster >= m_clusters.size()) return false;
 
   const auto& cluster = m_clusters[m_cluster];
-  xcls = cluster.x;
-  ycls = cluster.y;
-  zcls = cluster.z;
+  xcls = cluster.x[0];
+  ycls = cluster.x[1];
+  zcls = cluster.x[2];
   tcls = cluster.t;
 
-  n = cluster.electrons;
+  n = cluster.ne;
   e = cluster.ec;
   extra = cluster.ekin;
   // Move to the next cluster.
