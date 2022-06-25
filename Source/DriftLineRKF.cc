@@ -851,6 +851,17 @@ double DriftLineRKF::ComputeLoss(const std::vector<Vec>& x,
   return exp(-sum);
 }
 
+double DriftLineRKF::GetPathLength() const {
+
+  const size_t nPoints = m_x.size();
+  if (nPoints < 2) return 0.;
+  double path = 0.;
+  for (size_t i = 1; i < nPoints; ++i) {
+    path += Dist(m_x[i - 1], m_x[i]);
+  }
+  return path;
+}
+
 int DriftLineRKF::GetField(const std::array<double, 3>& x,
                            double& ex, double& ey, double& ez,
                            double& bx, double& by, double& bz,
