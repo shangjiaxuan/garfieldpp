@@ -113,7 +113,12 @@ class DriftLineRKF {
   double GetGain(const double eps = 1.e-4) const ;
   /// Compute the attachment loss factor for the current drift line.
   double GetLoss(const double eps = 1.e-4) const;
-  double GetDriftTime() const { return m_t.empty() ? 0. : m_t.back(); }
+  /// Get the cumulative drift time.
+  double GetDriftTime() const { 
+    return m_t.empty() ? 0. : m_t.back() - m_t.front(); 
+  }
+  /// Get the cumulative path length.
+  double GetPathLength() const;
 
   void GetAvalancheSize(double& ne, double& ni) const { ne = m_nE; ni = m_nI; }
 
