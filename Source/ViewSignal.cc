@@ -283,32 +283,37 @@ void ViewSignal::PlotSignal(const std::string& label,
     m_hPromptIons->DrawCopy("same");
   }
 
-  TLegend* leg = new TLegend(0.7, 0.7, 0.9, 0.9);
-  leg->SetHeader("Induced current components");
-
-  if (totalT) leg->AddEntry(m_hSignal.get(), "Total induced signal", "l");
-  if (totalP)
-    leg->AddEntry(m_hPromptSignal.get(), "Prompt induced signal", "l");
-  if (totalD)
-    leg->AddEntry(m_hDelayedSignal.get(), "Delayed induced signal", "l");
-
-  if (electronT)
-    leg->AddEntry(m_hSignalElectrons.get(), "Electron induced signal", "l");
-  if (electronP)
-    leg->AddEntry(m_hPromptElectrons.get(), "Electron prompt induced signal",
-                  "l");
-  if (electronD)
-    leg->AddEntry(m_hDelayedSignalElectrons.get(),
-                  "Electron delayed induced signal", "l");
-
-  if (ionT) leg->AddEntry(m_hSignalIons.get(), "Ion induced signal", "l");
-  if (ionP)
-    leg->AddEntry(m_hPromptIons.get(), "Ion/hole prompt induced signal", "l");
-  if (ionD)
-    leg->AddEntry(m_hDelayedSignalIons.get(), "Ion/hole delayed induced signal",
-                  "l");
-
-  leg->Draw();
+  if (m_legend) {
+    TLegend* leg = new TLegend(0.7, 0.7, 0.9, 0.9);
+    leg->SetHeader("Induced current components");
+    if (totalT) leg->AddEntry(m_hSignal.get(), "Total induced signal", "l");
+    if (totalP) {
+      leg->AddEntry(m_hPromptSignal.get(), "Prompt induced signal", "l");
+    }
+    if (totalD) {
+      leg->AddEntry(m_hDelayedSignal.get(), "Delayed induced signal", "l");
+    }
+    if (electronT) {
+      leg->AddEntry(m_hSignalElectrons.get(), "Electron induced signal", "l");
+    }
+    if (electronP) {
+      leg->AddEntry(m_hPromptElectrons.get(), "Electron prompt induced signal",
+                    "l");
+    }
+    if (electronD) {
+      leg->AddEntry(m_hDelayedSignalElectrons.get(),
+                    "Electron delayed induced signal", "l");
+    }
+    if (ionT) leg->AddEntry(m_hSignalIons.get(), "Ion induced signal", "l");
+    if (ionP) {
+      leg->AddEntry(m_hPromptIons.get(), "Ion/hole prompt induced signal", "l");
+    }
+    if (ionD) {
+      leg->AddEntry(m_hDelayedSignalIons.get(), "Ion/hole delayed induced signal",
+                    "l");
+    }
+    leg->Draw();
+  }
   gPad->Update();
 }
 
