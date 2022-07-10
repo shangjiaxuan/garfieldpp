@@ -487,7 +487,8 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
       }
       status = StatusLeftDriftMedium;
       // Adjust the time step.
-      const double tc = t0 + (t1 - t0) * Dist(x0, xc) / Dist(x0, x1);
+      double tc = t0 + (t1 - t0) * Dist(x0, xc) / Dist(x0, x1);
+      Terminate(x0, t0, xc, tc);
       // Add the point to the drift line.
       AddPoint(xc, tc, particle, 1, m_drift);
       break;
@@ -500,7 +501,8 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
       }
       status = StatusHitPlane;
       // Adjust the time step.
-      const double tc = t0 + (t1 - t0) * Dist(x0, xc) / Dist(x0, x1);
+      double tc = t0 + (t1 - t0) * Dist(x0, xc) / Dist(x0, x1);
+      Terminate(x0, t0, xc, tc);
       // Add the point to the drift line.
       AddPoint(xc, tc, particle, 1, m_drift);
       break;
