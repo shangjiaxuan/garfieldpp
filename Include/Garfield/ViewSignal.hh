@@ -49,10 +49,6 @@ class ViewSignal : public ViewBase {
                   const std::string& optDelayed = "",
                   const bool same = false);
 
-  void Plot(const std::string& label, const bool getsignal,
-            const bool total = true, const bool delayed = true,
-            const bool same = false);
-
   /** Retrieve the histogram for the total, prompt and delayed induced charge or
     signal.
     * \param h histogram to be returned
@@ -76,6 +72,9 @@ class ViewSignal : public ViewBase {
 
   /// Override the default y-axis label.
   void SetLabelY(const std::string& label) { m_labelY = label; }
+
+  /// Draw a legend on the plot or not. 
+  void EnableLegend(const bool on = true) { m_legend = on; }
 
   /// Set the (ROOT) colour with which to draw the total signal.
   void SetColourTotal(const short col) { m_colTotal = col; }
@@ -123,6 +122,8 @@ class ViewSignal : public ViewBase {
   std::unique_ptr<TH1D> m_hDelayedSignal;
   std::unique_ptr<TH1D> m_hDelayedSignalElectrons;
   std::unique_ptr<TH1D> m_hDelayedSignalIons;
+
+  bool m_legend = false;
 
   // Colours.
   short m_colTotal = kBlue + 3;
