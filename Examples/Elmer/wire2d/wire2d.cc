@@ -106,10 +106,9 @@ int main(int argc, char* argv[]) {
     vFE.EnableAxes();
     vFE.SetXaxisTitle("x (cm)");
     vFE.SetYaxisTitle("y (cm)");
-    vFE.SetViewDrift(&viewDrift);
-    vFE.Plot();
   }
-
+  vFE.SetViewDrift(&viewDrift);
+  vFE.Plot();
   app.Run();
   return 0;
 }
