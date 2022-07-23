@@ -169,15 +169,16 @@ void TransportPhoton(const double x0, const double y0, const double z0,
 \end{description}
 
 \subsection{Magnetic fields}
-
-By default, Heed does not take the electric and magnetic field in the sensor into account for 
-calculating the charged-particle trajectory. In order to use the electric and/or magnetic field  
+If the sensor has a non-zero magnetic field, \texttt{TrackHeed} will, 
+by default, take the magnetic field into account for 
+calculating the charged-particle trajectory.  
+In order to explicitly enable or disable the use of the magnetic field  
 in the stepping algorithm, the functions 
 \begin{lstlisting}
-EnableElectricField();
 EnableMagneticField();
+DisableMagneticField();
 \end{lstlisting}
-need to be called before simulating a track.
+can be called before simulating a track.
 Depending on the strength of the magnetic field, it might be necessary to adapt the 
 limits/parameters used in the stepping algorithm in order to obtain a smoothly curved 
 trajectory as, for instance, in the example below.

@@ -191,6 +191,9 @@ bool TrackHeed::NewTrack(const double x0, const double y0, const double z0,
 
   Heed::HeedParticle particle(m_chamber.get(), p0, velocity, t0, particleType,
                               m_fieldMap.get(), m_coulombScattering);
+  if (m_useBfieldAuto) {
+    m_fieldMap->UseBfield(m_sensor->HasMagneticField());
+  }
   // Set the step limits.
   particle.set_step_limits(m_maxStep * Heed::CLHEP::cm,
                            m_radStraight * Heed::CLHEP::cm,
@@ -767,8 +770,16 @@ void TrackHeed::TransportPhoton(const double x0, const double y0,
 
 void TrackHeed::EnableElectricField() { m_fieldMap->UseEfield(true); }
 void TrackHeed::DisableElectricField() { m_fieldMap->UseEfield(false); }
-void TrackHeed::EnableMagneticField() { m_fieldMap->UseBfield(true); }
-void TrackHeed::DisableMagneticField() { m_fieldMap->UseBfield(false); }
+
+void TrackHeed::EnableMagneticField() { 
+  m_fieldMap->UseBfield(true); 
+  m_useBfieldAuto = false;
+}
+
+void TrackHeed::DisableMagneticField() { 
+  m_fieldMap->UseBfield(false); 
+  m_useBfieldAuto = false;
+}
 
 void TrackHeed::SetEnergyMesh(const double e0, const double e1,
                               const int nsteps) {

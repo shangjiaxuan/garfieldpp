@@ -9,6 +9,9 @@ endif()
 add_executable(edep edep.C)
 target_link_libraries(edep Garfield::Garfield)
 
+add_executable(heed_bfield heed_bfield.C)
+target_link_libraries(heed_bfield Garfield::Garfield)
+
 add_executable(qdepSi qdepSi.C)
 target_link_libraries(qdepSi Garfield::Garfield)
 
