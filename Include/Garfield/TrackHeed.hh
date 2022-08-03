@@ -245,6 +245,8 @@ class TrackHeed : public Track {
 
   bool m_coulombScattering = false;
 
+  bool m_useBfieldAuto = true;
+
   bool m_doDeltaTransport = true;
   typedef SimplifiedParticle DeltaElectron;
   std::vector<DeltaElectron> m_deltaElectrons;
