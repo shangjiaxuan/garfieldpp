@@ -2244,7 +2244,9 @@ void ComponentFieldMap::Prepare() {
   CalculateElementBoundingBoxes();
   std::cout << " done.\n";
   // Initialize the tetrahedral tree.
-  InitializeTetrahedralTree();
+  if (InitializeTetrahedralTree()) {
+    std::cout << "    Initialized tetrahedral tree.\n";
+  }
 }
 
 void ComponentFieldMap::UpdatePeriodicityCommon() {
@@ -2863,8 +2865,6 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
                           e.bbMax[0], e.bbMax[1], e.bbMax[2]};
     m_octree->InsertMeshElement(bb, i);
   }
-
-  std::cout << m_className << "::InitializeTetrahedralTree: Success.\n";
   return true;
 }
 
