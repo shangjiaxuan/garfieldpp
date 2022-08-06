@@ -34,7 +34,7 @@ class ComponentElmer2d : public ComponentFieldMap {
                   const std::string& volt = "out.result",
                   const std::string& unit = "cm");
   /// Import a list of voltages to be used as weighting field.
-  bool SetWeightingField(std::string prnsol, std::string label);
+  bool SetWeightingField(const std::string& prnsol, const std::string& label);
 
   void SetRangeZ(const double zmin, const double zmax);
 

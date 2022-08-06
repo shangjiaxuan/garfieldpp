@@ -21,12 +21,13 @@ class ComponentAnsys121 : public ComponentFieldMap {
     * \param prnsol name of the file containing the nodal solutions
     * \param unit length unit
     */ 
-  bool Initialise(std::string elist = "ELIST.lis",
-                  std::string nlist = "NLIST.lis",
-                  std::string mplist = "MPLIST.lis",
-                  std::string prnsol = "PRNSOL.lis", std::string unit = "cm");
+  bool Initialise(const std::string& elist = "ELIST.lis",
+                  const std::string& nlist = "NLIST.lis",
+                  const std::string& mplist = "MPLIST.lis",
+                  const std::string& prnsol = "PRNSOL.lis", 
+                  const std::string& unit = "cm");
   /// Import a weighting field map.
-  bool SetWeightingField(std::string prnsol, std::string label);
+  bool SetWeightingField(const std::string& prnsol, const std::string& label);
   /// Set the limits of the active region along z.
   void SetRangeZ(const double zmin, const double zmax);
 

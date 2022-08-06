@@ -61,7 +61,7 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   }
 
   // Temporary variables for use in file reading
-  char* token = NULL;
+  char* token = nullptr;
   bool readerror = false;
   bool readstop = false;
   int il = 0;
@@ -70,7 +70,7 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   fheader.getline(line, size, '\n');
   token = strtok(line, " ");
   const int nNodes = ReadInteger(token, 0, readerror);
-  token = strtok(NULL, " ");
+  token = strtok(nullptr, " ");
   const int nElements = ReadInteger(token, 0, readerror);
   std::cout << hdr << "\n    Read " << nNodes << " nodes and " << nElements
             << " elements from file " << header << ".\n";
@@ -93,8 +93,7 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   // Check the value of the unit.
   double funit = ScalingFactor(unit);
   if (funit <= 0.) {
-    std::cerr << hdr << " Unknown length unit " << unit << ".\n";
-    ok = false;
+    std::cerr << hdr << " Unknown length unit " << unit << " Will use cm.\n";
     funit = 1.0;
   }
   if (m_debug) std::cout << hdr << " Unit scaling factor = " << funit << ".\n";
@@ -106,14 +105,14 @@ bool ComponentElmer2d::Initialise(const std::string& header,
 
     // Ignore the first two characters.
     token = strtok(line, " ");
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
 
     // Get the node coordinates.
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
     double xnode = ReadDouble(token, -1, readerror);
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
     double ynode = ReadDouble(token, -1, readerror);
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
     double znode = ReadDouble(token, -1, readerror);
     if (readerror) {
       PrintErrorReadingFile(hdr, nlist, il);
@@ -122,13 +121,13 @@ bool ComponentElmer2d::Initialise(const std::string& header,
     }
 
     // Set up and create a new node.
-    Node newNode;
-    newNode.w.clear();
-    newNode.x = xnode * funit;
-    newNode.y = ynode * funit;
-    newNode.z = znode * funit;
-    newNode.v = 0.;
-    m_nodes.push_back(std::move(newNode));
+    Node node;
+    node.w.clear();
+    node.x = xnode * funit;
+    node.y = ynode * funit;
+    node.z = znode * funit;
+    node.v = 0.;
+    m_nodes.push_back(std::move(node));
   }
 
   // Close the nodes file.
@@ -209,7 +208,7 @@ bool ComponentElmer2d::Initialise(const std::string& header,
     fmplist.getline(line, size, '\n');
     token = strtok(line, " ");
     ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
     double dc = ReadDouble(token, -1.0, readerror);
     if (readerror) {
       PrintErrorReadingFile(hdr, mplist, il);
@@ -217,7 +216,7 @@ bool ComponentElmer2d::Initialise(const std::string& header,
       return false;
     }
     m_materials[il - 2].eps = dc;
-    std::cout << hdr << "\n    Set material " << il - 2 << " of "
+    std::cout << "    Set material " << il - 2 << " of "
               << nMaterials << " to eps " << dc << ".\n";
   }
 
@@ -225,7 +224,7 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   fmplist.close();
 
   // Find lowest epsilon, check for eps = 0, set default drift medium.
-  if (!SetDefaultDriftMedium()) ok = false;
+  if (!SetDefaultDriftMedium()) return false;
 
   // Open the elements file.
   std::ifstream felems(elist);
@@ -235,48 +234,39 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   }
 
   // Read the elements and their material indices.
-  m_elements.clear();
-  int highestnode = 0;
   for (il = 0; il < nElements; il++) {
     // Get a line
     felems.getline(line, size, '\n');
 
     // Split into tokens.
     token = strtok(line, " ");
-    // Read the 2nd-order element
-    token = strtok(NULL, " ");
+    // Read the 2nd-order element.
+    token = strtok(nullptr, " ");
     int imat = ReadInteger(token, -1, readerror) - 1;
-    token = strtok(NULL, " ");
-    token = strtok(NULL, " ");
-    int in0 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in1 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in2 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in3 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in4 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in5 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in6 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in7 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-
-    if (m_debug && il < 10) {
-      std::cout << "    Read nodes " << in0 << ", " << in1 << ", " << in2
-                << ", " << in3 << ", " << in4 << ", " << in5 << ", " << in6
-                << ", " << in7 << ", ... from element " << il + 1 << " of "
-                << nElements << " with mat " << imat << ".\n";
+    token = strtok(nullptr, " ");
+    std::vector<int> inode;
+    for (size_t k = 0; k < 8; ++k) {
+      token = strtok(nullptr, " ");
+      const int in = ReadInteger(token, -1, readerror);
+      if (!readerror) inode.push_back(in);
     }
-
-    // Check synchronisation.
-    if (readerror) {
+    token = strtok(nullptr, " ");
+    if (inode.size() != 8) {
       PrintErrorReadingFile(hdr, elist, il);
+      std::cerr << "    Read " << inode.size() << " node indices for element"
+                 << il << " (expected 8).\n";
       felems.close();
       return false;
+    }
+
+    if (m_debug && il < 10) {
+      std::cout << "    Read nodes ";
+      for (size_t k = 0; k < 8; ++k) {
+        std::cout << inode[k];
+        if (k < 7) std::cout << ", ";
+      }
+      std::cout << "\n    from element " << il + 1 << " of "
+                << nElements << " with material " << imat << ".\n";
     }
 
     // Check the material number and ensure that epsilon is non-negative.
@@ -284,103 +274,90 @@ bool ComponentElmer2d::Initialise(const std::string& header,
       std::cerr << hdr << "\n    Out-of-range material number on file " << elist
                 << " (line " << il << ").\n";
       std::cerr << "    Element: " << il << ", material: " << imat << "\n";
-      std::cerr << "    nodes: (" << in0 << ", " << in1 << ", " << in2 << ", "
-                << in3 << ", " << in4 << ", " << in5 << ", " << in6 << ", "
-                << in7 << ")\n";
       ok = false;
+      break;
     }
     if (m_materials[imat].eps < 0) {
-      std::cerr << hdr << "\n    Element " << il << " in element list " << elist
-                << "\n    uses material " << imat
-                << " which has not been assigned a positive permittivity in "
-                << mplist << ".\n";
+      std::cerr << hdr << "\n    Element " << il << " in " << elist << "\n"
+                << "    uses material " << imat << " which does not have\n"
+                << "    a positive permittivity in " << mplist << ".\n";
       ok = false;
+      break;
     }
 
     // Check the node numbers.
-    if (in0 < 1 || in1 < 1 || in2 < 1 || in3 < 1 || in4 < 1 || in5 < 1 ||
-        in6 < 1 || in7 < 1) {
-      std::cerr << hdr << "\n    Found a node number < 1 on file " << elist
-                << " (line " << il << ").\n    Element: " << il
-                << ", material: " << imat << "\n    nodes: (" << in0 << ", "
-                << in1 << ", " << in2 << ", " << in3 << ", " << in4 << ", "
-                << in5 << ", " << in6 << ", " << in7 << ")\n";
-      ok = false;
+    bool degenerate = false;
+    for (size_t k = 0; k < 8; ++k) {
+      if (inode[k] < 1) {
+        std::cerr << hdr << "\n    Found a node number < 1 on file " << elist
+                  << " (line " << il << ").\n    Element: " << il
+                  << ", material: " << imat << ".\n";
+        ok = false;
+      } 
+      // These elements must not be degenerate.
+      for (size_t kk = k + 1; kk < 8; ++kk) {
+        if (inode[k] == inode[kk]) degenerate = true;
+      }
     }
-    if (in0 > highestnode) highestnode = in0;
-    if (in1 > highestnode) highestnode = in1;
-    if (in2 > highestnode) highestnode = in2;
-    if (in3 > highestnode) highestnode = in3;
-    if (in4 > highestnode) highestnode = in4;
-    if (in5 > highestnode) highestnode = in5;
-    if (in6 > highestnode) highestnode = in6;
-    if (in7 > highestnode) highestnode = in7;
-
-    // These elements must not be degenerate.
-    if (in0 == in1 || in0 == in2 || in0 == in3 || in0 == in4 || in0 == in5 ||
-        in0 == in6 || in0 == in7 || in1 == in2 || in1 == in3 || in1 == in4 ||
-        in1 == in5 || in1 == in6 || in1 == in7 || in2 == in3 || in2 == in4 ||
-        in2 == in5 || in2 == in6 || in2 == in7 || in3 == in4 || in3 == in5 ||
-        in3 == in6 || in3 == in7 || in4 == in5 || in4 == in6 || in4 == in7 ||
-        in5 == in6 || in5 == in7 || in6 == in7) {
+    if (degenerate) {
       std::cerr << hdr << "\n    Element " << il << " of file " << elist
                 << " is degenerate,\n"
                 << "    no such elements are allowed in this type of map.\n";
       ok = false;
     }
-    Element newElement;
-    newElement.degenerate = false;
+    if (!ok) break;
+    Element element;
+    element.degenerate = false;
     // Store the material reference.
-    newElement.matmap = imat;
+    element.matmap = imat;
 
     // Node references
-    // Note: Ordering of Elmer elements can be described in the                   3 -- 6 -- 2
-    // ElmerSolver manual (appendix D. at the time of this comment)               |         |
-    // In order to work properly with Coordinates4 and Coordinates5, the    -->   7         5
-    // Elmer ordering 0,1,2,3,4,5,6,7 (counter-clockwise about the element)       |         |
-    // will need to be changed to 3,2,1,0,6,5,4,7 (clockwise about the element)   0 -- 4 -- 1
+    //               3 -- 6 -- 2
+    //               |         |
+    //               7         5
+    //               |         |
+    //               0 -- 4 -- 1
+    // Note: Ordering of Elmer elements is described in the
+    // ElmerSolver manual (appendix D. at the time of this comment).
+    // In order to work properly with Coordinates4 and Coordinates5, the
+    // Elmer ordering 0,1,2,3,4,5,6,7 (counter-clockwise about the element)
+    // will need to be changed to 3,2,1,0,6,5,4,7 (clockwise about the element)   
     // if the normal of the defined element points in the -Z direction.
 
     // Check the direction of the element normal, +Z or -Z.
-    double x01 = m_nodes[in1-1].x - m_nodes[in0-1].x;
-    double y01 = m_nodes[in1-1].y - m_nodes[in0-1].y;
-    double x12 = m_nodes[in2-1].x - m_nodes[in1-1].x;
-    double y12 = m_nodes[in2-1].y - m_nodes[in1-1].y;
-    double crossprod = x01*y12 - y01*x12;
+    double x01 = m_nodes[inode[1] - 1].x - m_nodes[inode[0] - 1].x;
+    double y01 = m_nodes[inode[1] - 1].y - m_nodes[inode[0] - 1].y;
+    double x12 = m_nodes[inode[2] - 1].x - m_nodes[inode[1] - 1].x;
+    double y12 = m_nodes[inode[2] - 1].y - m_nodes[inode[1] - 1].y;
+    const double crossprod = x01 * y12 - y01 * x12;
     if (crossprod < 0) {
-      newElement.emap[3] = in0 - 1;
-      newElement.emap[2] = in1 - 1;
-      newElement.emap[1] = in2 - 1;
-      newElement.emap[0] = in3 - 1;
-      newElement.emap[6] = in4 - 1;
-      newElement.emap[5] = in5 - 1;
-      newElement.emap[4] = in6 - 1;
-      newElement.emap[7] = in7 - 1;
+      element.emap[3] = inode[0] - 1;
+      element.emap[2] = inode[1] - 1;
+      element.emap[1] = inode[2] - 1;
+      element.emap[0] = inode[3] - 1;
+      element.emap[6] = inode[4] - 1;
+      element.emap[5] = inode[5] - 1;
+      element.emap[4] = inode[6] - 1;
+      element.emap[7] = inode[7] - 1;
     } else {
-      newElement.emap[0] = in0 - 1;
-      newElement.emap[1] = in1 - 1;
-      newElement.emap[2] = in2 - 1;
-      newElement.emap[3] = in3 - 1;
-      newElement.emap[4] = in4 - 1;
-      newElement.emap[5] = in5 - 1;
-      newElement.emap[6] = in6 - 1;
-      newElement.emap[7] = in7 - 1;
+      element.emap[0] = inode[0] - 1;
+      element.emap[1] = inode[1] - 1;
+      element.emap[2] = inode[2] - 1;
+      element.emap[3] = inode[3] - 1;
+      element.emap[4] = inode[4] - 1;
+      element.emap[5] = inode[5] - 1;
+      element.emap[6] = inode[6] - 1;
+      element.emap[7] = inode[7] - 1;
     }
-    m_elements.push_back(std::move(newElement));
+    m_elements.push_back(std::move(element));
   }
 
   // Close the elements file.
   felems.close();
+  if (!ok) return false;
 
   // Set the ready flag.
-  if (ok) {
-    m_ready = true;
-  } else {
-    std::cerr << hdr << "\n    Field map could not be "
-              << "read and cannot be interpolated.\n";
-    return false;
-  }
-
+  m_ready = true;
   std::cout << hdr << " Finished.\n";
 
   // Remove weighting fields (if any).
@@ -391,7 +368,8 @@ bool ComponentElmer2d::Initialise(const std::string& header,
   return true;
 }
 
-bool ComponentElmer2d::SetWeightingField(std::string wvolt, std::string label) {
+bool ComponentElmer2d::SetWeightingField(const std::string& wvolt, 
+                                         const std::string& label) {
   const std::string hdr = m_className + "::SetWeightingField:";
   if (!m_ready) {
     PrintNotReady("SetWeightingField");
@@ -417,7 +395,7 @@ bool ComponentElmer2d::SetWeightingField(std::string wvolt, std::string label) {
   // Temporary variables for use in file reading
   constexpr int size = 100;
   char line[size];
-  char* token = NULL;
+  char* token = nullptr;
   bool readerror = false;
   bool readstop = false;
   int il = 1;
