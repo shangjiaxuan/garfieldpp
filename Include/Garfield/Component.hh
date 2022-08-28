@@ -346,6 +346,8 @@ class Component {
     return false;
   }
 
+  virtual double StepSizeHint() { return -1.; }
+
  protected:
   /// Class name.
   std::string m_className = "Component";

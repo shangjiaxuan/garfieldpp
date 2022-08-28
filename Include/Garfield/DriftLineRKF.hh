@@ -45,8 +45,11 @@ class DriftLineRKF {
 
   /// Set the accuracy of the Runge Kutta Fehlberg drift line integration.
   void SetIntegrationAccuracy(const double eps);
-  /// Set the maximum step size that is allowed. By default, there is no limit. 
+  /// Set (explicitly) the maximum step size that is allowed. 
   void SetMaximumStepSize(const double ms);
+  /// Try to set an upper limit to the allowable step size based 
+  /// on the feature size of the sensor.
+  void SetMaximumStepSize(); 
   /// Do not apply an upper limit to the step size that is allowed.
   void UnsetMaximumStepSize() { m_useStepSizeLimit = false; }
   /// Request (or not) the drift line calculation to be aborted if the 

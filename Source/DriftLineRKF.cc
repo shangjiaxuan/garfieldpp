@@ -77,6 +77,11 @@ void DriftLineRKF::SetIntegrationAccuracy(const double eps) {
   }
 }
 
+void DriftLineRKF::SetMaximumStepSize() {
+  m_maxStepSize = -1.;
+  m_useStepSizeLimit = true;
+}
+
 void DriftLineRKF::SetMaximumStepSize(const double ms) {
   if (ms > 0.) {
     m_maxStepSize = ms;
@@ -341,6 +346,16 @@ bool DriftLineRKF::DriftLine(const Vec& xi, const double ti,
   double zmin = 0., zmax = 0.;
   bool bbox = m_sensor->GetArea(xmin, ymin, zmin, xmax, ymax, zmax);
 
+  // Set the step size limit if requested.
+  double maxStep = -1.;
+  if (m_useStepSizeLimit) {
+    if (m_maxStepSize > 0.) {
+       maxStep = m_maxStepSize;
+    } else {
+       maxStep = 0.5 * m_sensor->StepSizeHint();
+    }
+  }
+  
   // Set the charge of the drifting particle.
   const double charge = Charge(particle);
 
@@ -500,11 +515,11 @@ bool DriftLineRKF::DriftLine(const Vec& xi, const double ti,
       std::cerr << m_className << "::DriftLine: Step has zero length. Stop.\n";
       flag = StatusCalculationAbandoned;
       break;
-    } else if (m_useStepSizeLimit && h * phi1mag > m_maxStepSize) {
+    } else if (maxStep > 0. && h * phi1mag > maxStep) {
       if (m_debug) {
         std::cout << "    Step is considered too long. H is reduced.\n";
       }
-      h = 0.5 * m_maxStepSize / phi1mag;
+      h = 0.5 * maxStep / phi1mag;
       continue;
     } else if (bbox) {
       // Don't allow h to become too large in view of the time resolution.
@@ -1491,7 +1506,7 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
                              const bool electron) const {
 
   xl.clear();
-  // Is the sensor?
+  // Is the sensor set?
   if (!m_sensor) {
     std::cerr << m_className << "::FieldLine: Sensor is not defined.\n";
     return false;
@@ -1502,6 +1517,16 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
   double ymin = 0., ymax = 0.;
   double zmin = 0., zmax = 0.;
   bool bbox = m_sensor->GetArea(xmin, ymin, zmin, xmax, ymax, zmax);
+
+  // Set the step size limit if requested.
+  double maxStep = -1.;
+  if (m_useStepSizeLimit) {
+    if (m_maxStepSize > 0.) {
+       maxStep = m_maxStepSize;
+    } else {
+       maxStep = 0.5 * m_sensor->StepSizeHint();
+    }
+  }
 
   // Make sure the initial position is at a valid location.
   double ex = 0., ey = 0., ez = 0.;
@@ -1623,11 +1648,11 @@ bool DriftLineRKF::FieldLine(const double xi, const double yi, const double zi,
     if (phi1mag < Small) {
       std::cerr << m_className << "::FieldLine: Step has zero length. Stop.\n";
       break;
-    } else if (m_useStepSizeLimit && h * phi1mag > m_maxStepSize) {
+    } else if (maxStep > 0. && h * phi1mag > maxStep) {
       if (m_debug) {
         std::cout << "    Step is considered too long. H is reduced.\n";
       }
-      h = 0.5 * m_maxStepSize / phi1mag;
+      h = 0.5 * maxStep / phi1mag;
       continue;
     } else if (bbox) {
       // Don't allow h to become too large.
