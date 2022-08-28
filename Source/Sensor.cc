@@ -320,6 +320,17 @@ bool Sensor::CrossedPlane(const double x0, const double y0, const double z0,
   return false;
 }
 
+double Sensor::StepSizeHint() {
+
+  double dmin = std::numeric_limits<double>::max();
+  for (const auto &cmp : m_components) {
+    if (!std::get<1>(cmp)) continue;
+    const double d = std::get<0>(cmp)->StepSizeHint();
+    if (d > 0.) dmin = std::min(dmin, d);
+  }
+  return dmin < std::numeric_limits<double>::max() ? dmin : -1.;
+}
+
 double Sensor::IntegrateFluxLine(const double x0, const double y0,
                                  const double z0, const double x1,
                                  const double y1, const double z1,

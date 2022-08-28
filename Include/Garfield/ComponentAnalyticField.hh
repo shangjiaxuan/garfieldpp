@@ -349,6 +349,8 @@ class ComponentAnalyticField : public Component {
     Unknown
   };
 
+  double StepSizeHint() override;
+
  private:
   std::mutex m_mutex;
 
@@ -473,6 +475,9 @@ class ComponentAnalyticField : public Component {
   double m_cotube = 1.;
   double m_cotube2 = 1.;
   double m_vttube = 0.;
+
+  // Smallest dimension.
+  double m_dmin = -1.;
 
   // Wire weighting charges.
   std::vector<std::vector<std::vector<double> > > m_qwire;

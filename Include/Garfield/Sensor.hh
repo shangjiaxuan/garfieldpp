@@ -268,6 +268,8 @@ class Sensor {
   // TODO!
   double GetTotalInducedCharge(const std::string& label);
 
+  double StepSizeHint();
+
  private:
   std::string m_className = "Sensor";
   /// Mutex.

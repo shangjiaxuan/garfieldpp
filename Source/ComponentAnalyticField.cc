@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <numeric>
 
 #include <TCanvas.h>
@@ -354,6 +355,12 @@ bool ComponentAnalyticField::GetElementaryCell(
   z0 = m_zmin;
   z1 = m_zmax;
   return true;
+}
+
+double ComponentAnalyticField::StepSizeHint() {
+
+  if (!m_cellset && !Prepare()) return -1.;
+  return m_dmin;
 }
 
 void ComponentAnalyticField::PrintCell() {
@@ -1573,8 +1580,8 @@ void ComponentAnalyticField::UpdatePeriodicity() {
     m_sigset = false;
   } else if (!m_perx && m_periodic[0]) {
     if (m_sx < Small) {
-      std::cerr << m_className << "::UpdatePeriodicity:\n";
-      std::cerr << "    Periodicity in x direction was enabled"
+      std::cerr << m_className << "::UpdatePeriodicity:\n"
+                << "    Periodicity in x direction was enabled"
                 << " but periodic length is not set.\n";
     } else {
       m_perx = true;
@@ -1589,8 +1596,8 @@ void ComponentAnalyticField::UpdatePeriodicity() {
     m_sigset = false;
   } else if (!m_pery && m_periodic[1]) {
     if (m_sy < Small) {
-      std::cerr << m_className << "::UpdatePeriodicity:\n";
-      std::cerr << "    Periodicity in y direction was enabled"
+      std::cerr << m_className << "::UpdatePeriodicity:\n"
+                << "    Periodicity in y direction was enabled"
                 << " but periodic length is not set.\n";
     } else {
       m_pery = true;
@@ -2447,8 +2454,8 @@ int ComponentAnalyticField::Field(const double xin, const double yin,
       break;
     default:
       // Unknown cell type
-      std::cerr << m_className << "::Field:\n";
-      std::cerr << "    Unknown cell type (id " << m_cellType << ")\n";
+      std::cerr << m_className << "::Field:\n"
+                << "    Unknown cell type (id " << m_cellType << ")\n";
       return -10;
   }
 
@@ -2550,6 +2557,8 @@ void ComponentAnalyticField::CellInit() {
   m_zmin = m_zmax = 0.;
   m_vmin = m_vmax = 0.;
 
+  m_dmin = -1.;
+
   // Periodicities
   m_perx = m_pery = false;
   m_periodic[0] = m_periodic[1] = false;
@@ -2646,19 +2655,72 @@ bool ComponentAnalyticField::Prepare() {
               << "    Type identification of the cell failed.\n";
     return false;
   }
-  if (m_debug) {
-    std::cout << m_className << "::Prepare:\n"
-              << "    Cell is of type " << CellType() << ".\n";
+  if (m_debug) std::cout << "    Cell is of type " << CellType() << ".\n";
+  
+  // Determine the smallest feature size.
+  double dmin = std::numeric_limits<double>::max();
+  if (m_tube) dmin = std::min(dmin, m_cotube);
+  if (m_ynplan[0] && m_ynplan[1]) {
+    dmin = std::min(dmin, std::abs(m_coplan[1] - m_coplan[0]));
   }
+  if (m_ynplan[2] && m_ynplan[3]) {
+    dmin = std::min(dmin, std::abs(m_coplan[3] - m_coplan[2]));
+  }
+  for (size_t i = 0; i < m_nWires; ++i) {
+    if (m_ynplan[0]) {
+      const double d = std::abs(m_w[i].x - m_coplan[0]);
+      if (d > 0.) dmin = std::min(dmin, d);
+    }
+    if (m_ynplan[1]) {
+      const double d = std::abs(m_coplan[1] - m_w[i].x);
+      if (d > 0.) dmin = std::min(dmin, d);
+    }
+    if (m_ynplan[2]) {
+      const double d = std::abs(m_w[i].y - m_coplan[2]);
+      if (d > 0.) dmin = std::min(dmin, d);
+    }
+    if (m_ynplan[3]) {
+      const double d = std::abs(m_coplan[3] - m_w[i].y);
+      if (d > 0.) dmin = std::min(dmin, d);
+    }
+    for (size_t j = i + 1; j < m_nWires; ++j) {
+      double dx = 0.;
+      double dy = 0.;
+      if (m_tube) {
+        if (m_pery) {
+          double x1, x2, y1, y2;
+          Cartesian2Polar(m_w[i].x, m_w[i].y, x1, y1);
+          Cartesian2Polar(m_w[j].x, m_w[j].y, x2, y2);
+          y1 -= m_sy * round(y1 / m_sy);
+          y2 -= m_sy * round(y2 / m_sy);
+          Polar2Cartesian(x1, y1, x1, y1);
+          Polar2Cartesian(x2, y2, x2, y2);
+          dx = x1 - x2;
+          dy = y1 - y2;
+        } else {
+          dx = m_w[i].x - m_w[j].x;
+          dy = m_w[i].y - m_w[j].y;
+        }
+      } else {
+        dx = std::abs(m_w[i].x - m_w[j].x);
+        if (m_perx) dx -= m_sx * round(dx / m_sx);
+        dy = std::abs(m_w[i].y - m_w[j].y);
+        if (m_pery) dy -= m_sy * round(dy / m_sy);
+      }
+      if (dx > 0.) dmin = std::min(dmin, dx);
+      if (dy > 0.) dmin = std::min(dmin, dy);
+    }
+  }
+  if (m_debug) std::cout << "    Smallest distance: " << dmin << " cm.\n";
+  m_dmin = dmin < std::numeric_limits<double>::max() ? dmin : -1.;
 
   // Calculate the charges.
   if (!Setup()) {
-    std::cerr << m_className << "::Prepare: Calculation of charges failed.\n";
+    std::cerr << m_className << "::Prepare: Charge calculation failed.\n";
     return false;
   }
   if (m_debug) {
-    std::cout << m_className << "::Prepare:\n"
-              << "    Calculation of charges was successful.\n";
+    std::cout << "    Calculation of the charges was successful.\n";
   }
 
   // Assign default gaps for strips and pixels.
@@ -2796,17 +2858,9 @@ bool ComponentAnalyticField::CellCheck() {
                     << i << " and " << i + 1 << " are interchanged.\n";
         }
         // Interchange the two planes.
-        const double cohlp = m_coplan[i];
-        m_coplan[i] = m_coplan[i + 1];
-        m_coplan[i + 1] = cohlp;
-
-        const double vthlp = m_vtplan[i];
-        m_vtplan[i] = m_vtplan[i + 1];
-        m_vtplan[i + 1] = vthlp;
-
-        Plane plahlp = m_planes[i];
-        m_planes[i] = m_planes[i + 1];
-        m_planes[i + 1] = plahlp;
+        std::swap(m_coplan[i], m_coplan[i + 1]);
+        std::swap(m_vtplan[i], m_vtplan[i + 1]);
+        std::swap(m_planes[i], m_planes[i + 1]);
       }
     }
   }
@@ -3069,9 +3123,9 @@ bool ComponentAnalyticField::CellCheck() {
   if (m_tube) ++nElements;
 
   if (nElements < 2) {
-    std::cerr << m_className << "::CellCheck:\n";
-    std::cerr << "    At least 2 elements are necessary.\n";
-    std::cerr << "    Cell rejected.\n";
+    std::cerr << m_className << "::CellCheck:\n"
+              << "    At least 2 elements are necessary.\n"
+              << "    Cell rejected.\n";
     return false;
   }
 
@@ -3202,16 +3256,16 @@ bool ComponentAnalyticField::CellCheck() {
 
   // Ensure that all dimensions are now set.
   if (!(setx && sety && setz)) {
-    std::cerr << m_className << "::CellCheck:\n";
-    std::cerr << "    Unable to establish"
+    std::cerr << m_className << "::CellCheck:\n"
+              << "    Unable to establish"
               << " default dimensions in all directions.\n";
   }
 
   // Check that at least some different voltages are present.
   if (m_vmin == m_vmax || !setv) {
-    std::cerr << m_className << "::CellCheck:\n";
-    std::cerr << "    All potentials in the cell are the same.\n";
-    std::cerr << "    There is no point in going on.\n";
+    std::cerr << m_className << "::CellCheck:\n"
+              << "    All potentials in the cell are the same.\n"
+              << "    There is no point in going on.\n";
     return false;
   }
 
