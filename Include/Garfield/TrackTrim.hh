@@ -69,7 +69,7 @@ class TrackTrim : public Track {
   /// Projectile energy [eV].
   double m_ekin = 0.;
   /// List of tracks. 
-  std::vector<std::vector<std::array<float, 5> > > m_ions;
+  std::vector<std::vector<std::array<float, 6> > > m_ions;
   /// Index of the current track.
   size_t m_ion = 0;
 

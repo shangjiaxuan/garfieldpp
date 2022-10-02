@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <numeric>
 
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
@@ -12,29 +13,67 @@
 
 namespace {
 
-std::tuple<double, double, double, double> GetRotation(
-    const double x, const double y, const double z) {
-  double phi = 0., theta = 0.;
-  const double t = sqrt(x * x + y * y);
-  if (t > 0.) {
-    phi = atan2(y, x);
-    theta = atan2(z, t);
-  } else {
-    theta = z < 0. ? -Garfield::HalfPi : Garfield::HalfPi;
-  }
-  return std::make_tuple(cos(theta), sin(theta), cos(phi), sin(phi));
-}
+void Rotate(const std::array<double, 3>& f, 
+            const std::array<double, 3>& t,
+            std::array<double, 3>& a) {
 
-std::array<double, 3> Step(const std::array<float, 5>& p0, 
-                           const std::array<float, 5>& p1,
-                           const double ctheta, const double stheta,
-                           const double cphi, const double sphi) { 
-  const double x = p1[0] - p0[0];
-  const double y = p1[1] - p0[1];
-  const double z = p1[2] - p0[2];
-  return {cphi * ctheta * x - sphi * y - cphi * stheta * z,
-          sphi * ctheta * x + cphi * y - sphi * stheta * z,
-          stheta * x + ctheta * z};
+  // T. Moller and J. F. Hughes,
+  // Efficiently Building a Matrix to Rotate One Vector to Another, 1999
+
+  // We assume that f and t are unit vectors.
+  // Calculate the cross-product.
+  std::array<double, 3> v = {f[1] * t[2] - f[2] * t[1],
+                             f[2] * t[0] - f[0] * t[2],
+                             f[0] * t[1] - f[1] * t[0]};
+  const auto v2 = std::inner_product(v.cbegin(), v.cend(), v.cbegin(), 0.);
+  if (v2 < Garfield::Small) return;
+  const double c = std::inner_product(f.cbegin(), f.cend(), t.cbegin(), 0.);
+  const double h = (1. - c) / v2;
+  std::array<std::array<double, 3>, 3> r;
+  if (fabs(c) > 0.99) {
+    // f and t are not parallel.
+    r[0][0] = h * v[0] * v[0] + c;
+    r[0][1] = h * v[0] * v[1] - v[2];
+    r[0][2] = h * v[0] * v[2] + v[1];
+    r[1][0] = h * v[0] * v[1] + v[2];
+    r[1][1] = h * v[1] * v[1] + c;
+    r[1][2] = h * v[1] * v[2] - v[0];
+    r[2][0] = h * v[0] * v[2] - v[1];
+    r[2][1] = h * v[1] * v[2] + v[0];
+    r[2][2] = h * v[2] * v[2] + c;
+  } else {
+    // f and t are nearly parallel.
+    std::array<double, 3> x = {0, 0, 0};
+    if (fabs(f[0]) < fabs(f[1]) && fabs(f[0]) < fabs(f[2])) {
+      x[0] = 1;
+    } else if (fabs(f[1]) < fabs(f[0]) && fabs(f[1]) < fabs(f[2])) {
+      x[1] = 1;
+    } else {
+      x[2] = 1;
+    }
+    const std::array<double, 3> u = {x[0] - f[0], x[1] - f[1], x[2] - f[2]};
+    const std::array<double, 3> g = {x[0] - t[0], x[1] - t[1], x[2] - t[2]};
+    const double u2 = std::inner_product(u.cbegin(), u.cend(), u.cbegin(), 0.);
+    const double g2 = std::inner_product(g.cbegin(), g.cend(), g.cbegin(), 0.);
+    const double ug = std::inner_product(u.cbegin(), u.cend(), g.cbegin(), 0.);
+    const double c0 = -2. / u2;
+    const double c1 = -2. / g2;
+    const double c2 = 4. * ug / (u2 * g2);
+    for (size_t i = 0; i < 3; ++i) {
+      for (size_t j = 0; j < 3; ++j) {
+        r[i][j] = c0 * u[i] * u[j] + c1 * g[i] * g[j] + c2 * g[i] * u[j];
+        if (i == j) r[i][j] += 1.;
+      }
+    }
+  }
+  // Compute the rotated vector.
+  std::array<double, 3> b = {0., 0., 0.};
+  for (size_t i = 0; i < 3; ++i) {
+    for (size_t j = 0; j < 3; ++j) {
+      b[i] += r[i][j] * a[j];
+    }
+  }
+  std::swap(a, b); 
 }
 
 double Speed(const double ekin, const double mass) {
@@ -160,23 +199,22 @@ void TrackTrim::AddIon(const std::vector<float>& x,
 
   const size_t nPoints = x.size();
   if (nPoints < 2) return;
-  std::vector<std::array<float, 5> > path;
-  for (size_t i = 0; i < nPoints; ++i) {
+  std::vector<std::array<float, 6> > path;
+  for (size_t i = 0; i < nPoints - 1; ++i) {
+    const float dx = x[i + 1] - x[i];
+    const float dy = y[i + 1] - y[i];
+    const float dz = z[i + 1] - z[i];
+    const float dmag = sqrt(dx * dx + dy * dy + dz * dz);
+    const float scale = dmag > 0. ? 1. / dmag : 1.;
     float eloss = 0.;
-    if (i < nPoints - 1) {
-      const float dx = x[i + 1] - x[i];
-      const float dy = y[i + 1] - y[i];
-      const float dz = z[i + 1] - z[i];
-      const float step = sqrt(dx * dx + dy * dy + dz * dz);
-      if (i == 0 && dedx[i] > 10. * dedx[i + 1]) {
-        eloss = step * dedx[i + 1];
-      } else { 
-        eloss = step * dedx[i];
-      }
-      const float dekin = ekin[i] - ekin[i + 1];
-      if (dekin > 0.) eloss = std::min(eloss, dekin); 
+    if (i == 0 && dedx[i] > 10. * dedx[i + 1]) {
+      eloss = dmag * dedx[i + 1];
+    } else { 
+      eloss = dmag * dedx[i];
     }
-    path.push_back({x[i], y[i], z[i], eloss, ekin[i]});
+    const float dekin = ekin[i] - ekin[i + 1];
+    if (dekin > 0.) eloss = std::min(eloss, dekin); 
+    path.push_back({dx * scale, dy * scale, dz * scale, dmag, eloss, ekin[i]});
   }
   m_ions.push_back(std::move(path));
 }
@@ -224,23 +262,18 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
     return false;
   }
 
-  // Get the rotation parameters.
-  double ctheta = 1.;
-  double stheta = 0.;
-  double cphi = 1.;
-  double sphi = 0.;
-  if (sqrt(dx0 * dx0 + dy0 * dy0 + dz0 * dz0) < Small) {
+  // Set the initial direction.
+  std::array<double, 3> v = {dx0, dy0, dz0};
+  const double d0 = sqrt(dx0 * dx0 + dy0 * dy0 + dz0 * dz0);
+  if (d0 < Small) {
     if (m_debug) {
-      std::cout << m_className << "::NewTrack: Randomizing initial direction.\n";
+      std::cout << m_className << "::NewTrack: Sampling initial direction.\n";
     }
     // Null vector. Sample the direction isotropically.
-    ctheta = 2 * RndmUniform() - 1.;
-    stheta = sqrt(1. - ctheta * ctheta);
-    const double phi = TwoPi * RndmUniform();
-    cphi = cos(phi);
-    sphi = sin(phi);
+    RndmDirection(v[0], v[1], v[2]);
   } else {
-    std::tie(ctheta, stheta, cphi, sphi) = GetRotation(dx0, dy0, dz0); 
+    const double scale = 1. / d0;
+    for (size_t i = 0; i < 3; ++i) v[i] *= scale;
   }
 
   Medium* medium = m_sensor->GetMedium(x0, y0, z0);
@@ -270,18 +303,27 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
   double epool = 0.0;
 
   const double ekin0 = GetKineticEnergy();
+
   const auto& path = m_ions[m_ion];
   const size_t nPoints = path.size();
-  std::array<double, 3> xp = {x0, y0, z0};
-  double tp = t0;
-  for (size_t i = 1; i < nPoints; ++i) {
+  std::array<double, 3> x = {x0, y0, z0};
+  double t = t0;
+  for (size_t i = 0; i < nPoints; ++i) {
     // Skip points with kinetic energy below the initial one set by the user.
-    const double ekin = path[i][4];
+    double ekin = path[i][5];
     if (ekin > ekin0) continue;
-    double eloss = path[i - 1][3];
-    std::array<double, 3> d = Step(path[i - 1], path[i], ctheta, stheta,
-                                   cphi, sphi);
-    double dmag = sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+    // Rotate the direction vector.
+    if (i == 0) {
+      Rotate({1, 0, 0}, {path[i][0], path[i][1], path[i][2]}, v);
+    } else {
+      Rotate({path[i - 1][0], path[i - 1][1], path[i - 1][2]},
+             {path[i][0], path[i][1], path[i][2]}, v);
+    }
+    // Get the step length and energy loss.
+    double dmag = path[i][3];
+    double eloss = path[i][4];
+    std::array<double, 3> d = {dmag * v[0], dmag * v[1], dmag * v[2]};
+    // Subdivide the step if necessary.
     unsigned int nSteps = 1;
     if (m_maxStepSize > 0. && dmag > m_maxStepSize) {
       nSteps = std::ceil(dmag / m_maxStepSize);
@@ -304,17 +346,13 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
       if (m_sensor->HasMagneticField()) {
         double bx = 0., by = 0., bz = 0.;
         int status = 0;
-        m_sensor->MagneticField(xp[0], xp[1], xp[2], bx, by, bz, status);
-        // Direction vector.
-        std::array<double, 3> v = {d[0] / dmag, d[1] / dmag, d[2] / dmag};
+        m_sensor->MagneticField(x[0], x[1], x[2], bx, by, bz, status);
         d = StepBfield(dt, qoverm, vmag, bx, by, bz, v);
-        // Update the rotation angles.
-        std::tie(ctheta, stheta, cphi, sphi) = GetRotation(v[0], v[1], v[2]);
       }
-      cluster.x = {xp[0] + d[0], xp[1] + d[1], xp[2] + d[2]};
-      cluster.t = tp + dt;
-      xp = cluster.x;
-      tp = cluster.t;
+      cluster.x = {x[0] + d[0], x[1] + d[1], x[2] + d[2]};
+      cluster.t = t + dt;
+      x = cluster.x;
+      t = cluster.t;
       // Is this point inside an ionisable medium?
       medium = m_sensor->GetMedium(cluster.x[0], cluster.x[1], cluster.x[2]);
       if (!medium || !medium->IsIonisable()) continue;
@@ -336,7 +374,8 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
           ec -= er;
         }
       }
-      cluster.ekin = path[i][4];
+      // TODO
+      cluster.ekin = i < nPoints - 1 ? path[i + 1][5] : ekin;
       epool += eloss - cluster.ec;
       if (cluster.ne == 0) continue;
       m_clusters.push_back(std::move(cluster));
