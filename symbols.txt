@@ -1,0 +1,240 @@
+002 00000000 SECT1  notype ()    External     | MAGBOLTZ
+003 000007A8 SECT1  notype ()    External     | ANGCUT
+004 00000928 SECT1  notype ()    External     | MIXERT
+005 00015B0E SECT1  notype ()    External     | GASMIX
+006 0001F579 SECT1  notype ()    External     | READIN
+007 0001FCB1 SECT1  notype ()    External     | SETUPT
+008 00020CF5 SECT1  notype ()    External     | PRNTERT
+009 0002177C SECT1  notype ()    External     | SORTT
+00A 000218E8 SECT1  notype ()    External     | GERJAN
+00B 00021A38 SECT1  notype ()    External     | MONTET
+00C 00024F3A SECT1  notype ()    External     | OUTPUTT
+00D 00025F84 SECT1  notype ()    External     | MONTEAT
+00E 0002946F SECT1  notype ()    External     | MONTEBT
+00F 0002D2DD SECT1  notype ()    External     | MONTECT
+010 000318B1 SECT1  notype ()    External     | ELIMITT
+011 00032D55 SECT1  notype ()    External     | ELIMITBT
+012 000341DB SECT1  notype ()    External     | ELIMITCT
+013 0003580E SECT1  notype ()    External     | ALPCALCT
+014 00037436 SECT1  notype ()    External     | MONTEFTT
+015 0003C2F3 SECT1  notype ()    External     | TPLANET
+016 0003C932 SECT1  notype ()    External     | FRIEDLANDT
+017 0003CD11 SECT1  notype ()    External     | PT
+018 0003D3AA SECT1  notype ()    External     | TOF
+019 0003ECA0 SECT1  notype ()    External     | MONTEFDT
+01A 000444A1 SECT1  notype ()    External     | SPLANET
+01B 00044E39 SECT1  notype ()    External     | TCALCT
+01C 00045580 SECT1  notype ()    External     | SST
+01D 00047DB4 SECT1  notype ()    External     | OUTPUT2T
+01E 000490A5 SECT1  notype ()    External     | OUTPUT1T
+01F 0004A065 SECT1  notype ()    External     | ALPCLCBT
+020 0004B888 SECT1  notype ()    External     | MONTEFTGT
+021 000509B5 SECT1  notype ()    External     | TPLANEGT
+022 000511FD SECT1  notype ()    External     | PTG
+023 00051993 SECT1  notype ()    External     | TOFG
+024 00053B68 SECT1  notype ()    External     | ALPCLCCT
+025 000555CE SECT1  notype ()    External     | MONTEFTHT
+026 0005A902 SECT1  notype ()    External     | TPLANEHT
+027 0005B3E4 SECT1  notype ()    External     | PTH
+028 0005BC77 SECT1  notype ()    External     | TOFH
+029 0005EA99 SECT1  notype ()    External     | ALPCLCAT
+02A 0005FFDC SECT1  notype ()    External     | MONTEFTAT
+02B 00065163 SECT1  notype ()    External     | TPLANEAT
+02C 000657FE SECT1  notype ()    External     | MIXER
+02D 000779A7 SECT1  notype ()    External     | SETUP
+02E 000788A3 SECT1  notype ()    External     | PRNTER
+02F 00079431 SECT1  notype ()    External     | SORT
+030 0007954F SECT1  notype ()    External     | MONTE
+031 0007C421 SECT1  notype ()    External     | OUTPUT
+032 0007D46B SECT1  notype ()    External     | MONTEA
+033 000803E2 SECT1  notype ()    External     | MONTEB
+034 00083CDF SECT1  notype ()    External     | MONTEC
+035 00087D42 SECT1  notype ()    External     | ELIMIT
+036 00088DA7 SECT1  notype ()    External     | ELIMITB
+037 00089FDE SECT1  notype ()    External     | ELIMITC
+038 0008B392 SECT1  notype ()    External     | ALPCALC
+039 0008CEA7 SECT1  notype ()    External     | MONTEFT
+03A 00091458 SECT1  notype ()    External     | TPLANE
+03B 00091A97 SECT1  notype ()    External     | FRIEDLAND
+03C 00091E5A SECT1  notype ()    External     | MONTEFD
+03D 00096CF5 SECT1  notype ()    External     | SPLANE
+03E 0009768D SECT1  notype ()    External     | TCALC
+03F 00097DD4 SECT1  notype ()    External     | OUTPUT2
+040 00098E46 SECT1  notype ()    External     | COLFT
+041 000990A1 SECT1  notype ()    External     | COLF
+042 00099489 SECT1  notype ()    External     | OUTPUT1
+043 0009A202 SECT1  notype ()    External     | ALPCLCB
+044 0009B97A SECT1  notype ()    External     | MONTEFTG
+045 000A03B9 SECT1  notype ()    External     | TPLANEG
+046 000A0C01 SECT1  notype ()    External     | ALPCLCC
+047 000A25CD SECT1  notype ()    External     | MONTEFTH
+048 000A722B SECT1  notype ()    External     | TPLANEH
+049 000A7D0D SECT1  notype ()    External     | ALPCLCA
+04A 000A9158 SECT1  notype ()    External     | MONTEFTA
+04B 000ADBE7 SECT1  notype ()    External     | TPLANEA
+04C 000AE282 SECT1  notype ()    External     | DMAX0
+04D 000AE2DE SECT1  notype ()    External     | DMIN0
+04E 000AE362 SECT1  notype ()    External     | DRAND48
+04F 000AE3E9 SECT1  notype ()    External     | RM48
+050 000AE468 SECT1  notype ()    External     | RM48IN
+051 000AEE91 SECT1  notype ()    External     | RM48UT
+052 000AEF73 SECT1  notype ()    External     | GAS1
+053 000C2B7F SECT1  notype ()    External     | GAS2
+054 000D5179 SECT1  notype ()    External     | GAS3
+055 000E8A22 SECT1  notype ()    External     | GAS4
+056 000FC36E SECT1  notype ()    External     | GAS5
+057 0010CE8D SECT1  notype ()    External     | GAS6
+058 001235F3 SECT1  notype ()    External     | GAS7
+059 001382B9 SECT1  notype ()    External     | GAS8
+05A 001483D3 SECT1  notype ()    External     | GAS9
+05B 0015ECB3 SECT1  notype ()    External     | GAS10
+05C 00178B05 SECT1  notype ()    External     | GAS11
+05D 00183084 SECT1  notype ()    External     | GAS12
+05E 001A6D71 SECT1  notype ()    External     | GAS13
+05F 001AA176 SECT1  notype ()    External     | GAS14
+060 001CF438 SECT1  notype ()    External     | GAS15
+061 001FC512 SECT1  notype ()    External     | GAS16
+062 0021C366 SECT1  notype ()    External     | GAS17
+063 0021DF9E SECT1  notype ()    External     | GAS18
+064 0024358A SECT1  notype ()    External     | GAS19
+065 00246ACE SECT1  notype ()    External     | GAS20
+066 00248F35 SECT1  notype ()    External     | GAS21
+067 0026807F SECT1  notype ()    External     | GAS22
+068 0028CDE7 SECT1  notype ()    External     | GAS23
+069 002B2AD5 SECT1  notype ()    External     | GAS24
+06A 002B4466 SECT1  notype ()    External     | GAS25
+06B 002D8EC1 SECT1  notype ()    External     | GAS26
+06C 002D9629 SECT1  notype ()    External     | GAS27
+06D 002D9B5A SECT1  notype ()    External     | GAS28
+06E 002DA1ED SECT1  notype ()    External     | GAS29
+06F 002DDC92 SECT1  notype ()    External     | GAS30
+070 002EFA8A SECT1  notype ()    External     | GAS31
+071 00319355 SECT1  notype ()    External     | GAS32
+072 0031CD7D SECT1  notype ()    External     | GAS33
+073 0031FF69 SECT1  notype ()    External     | GAS34
+074 00338A05 SECT1  notype ()    External     | GAS35
+075 00357750 SECT1  notype ()    External     | GAS36
+076 003778BF SECT1  notype ()    External     | GAS37
+077 0037951C SECT1  notype ()    External     | GAS38
+078 0037C06E SECT1  notype ()    External     | GAS39
+079 0037E3BA SECT1  notype ()    External     | GAS40
+07A 003815F4 SECT1  notype ()    External     | GAS41
+07B 00384C6B SECT1  notype ()    External     | GAS42
+07C 003878CB SECT1  notype ()    External     | GAS43
+07D 0038B890 SECT1  notype ()    External     | GAS44
+07E 0039710D SECT1  notype ()    External     | GAS45
+07F 003975F8 SECT1  notype ()    External     | GAS46
+080 003B77FE SECT1  notype ()    External     | GAS47
+081 003D656A SECT1  notype ()    External     | GAS48
+082 003FAEF3 SECT1  notype ()    External     | GAS49
+083 003FB3AC SECT1  notype ()    External     | GAS50
+084 003FD9D3 SECT1  notype ()    External     | GAS51
+085 003FF6E5 SECT1  notype ()    External     | GAS52
+086 0040332D SECT1  notype ()    External     | GAS53
+087 0040661D SECT1  notype ()    External     | GAS54
+088 004090CD SECT1  notype ()    External     | GAS55
+089 0040BA95 SECT1  notype ()    External     | GAS56
+08A 0040E9F8 SECT1  notype ()    External     | GAS57
+08B 00411DFD SECT1  notype ()    External     | GAS58
+08C 00417B81 SECT1  notype ()    External     | GAS59
+08D 0041A0E9 SECT1  notype ()    External     | GAS60
+08E 0041CA8F SECT1  notype ()    External     | GAS61
+08F 0041CF7A SECT1  notype ()    External     | GAS62
+090 0041D457 SECT1  notype ()    External     | GAS63
+091 0041D942 SECT1  notype ()    External     | GAS64
+092 0041DE2D SECT1  notype ()    External     | GAS65
+093 0041E318 SECT1  notype ()    External     | GAS66
+094 0041E803 SECT1  notype ()    External     | GAS67
+095 0041ECEE SECT1  notype ()    External     | GAS68
+096 0041F1D9 SECT1  notype ()    External     | GAS69
+097 0041F6C4 SECT1  notype ()    External     | GAS70
+098 0041FBAF SECT1  notype ()    External     | GAS71
+099 0042009A SECT1  notype ()    External     | GAS72
+09A 00420585 SECT1  notype ()    External     | GAS73
+09B 00420A70 SECT1  notype ()    External     | GAS74
+09C 00420F5B SECT1  notype ()    External     | GAS75
+09D 00421446 SECT1  notype ()    External     | GAS76
+09E 00421931 SECT1  notype ()    External     | GAS77
+09F 00421E1C SECT1  notype ()    External     | GAS78
+0A0 00422307 SECT1  notype ()    External     | GAS79
+0A1 004227F2 SECT1  notype ()    External     | GAS80
+0B4 00000020 UNDEF  notype       External     | CTOWNS
+0B5 00000020 UNDEF  notype       External     | BFLD
+0B6 00000060 UNDEF  notype       External     | SETP
+0B7 00000060 UNDEF  notype       External     | INPT
+0B8 000000A0 UNDEF  notype       External     | THRM
+0C0 00000000 UNDEF  notype ()    External     | asin
+0C1 00000000 UNDEF  notype ()    External     | cos
+0C2 00000000 UNDEF  notype ()    External     | sin
+0C7 00000080 UNDEF  notype       External     | RATIO
+0C8 000000A0 UNDEF  notype       External     | FAKE
+0C9 0001B300 UNDEF  notype       External     | IONFL
+0CA 00016B60 UNDEF  notype       External     | SCRIPT
+0CB 00000020 UNDEF  notype       External     | CNSTS
+0CC 00000040 UNDEF  notype       External     | MRATIO
+0CD 0000FA00 UNDEF  notype       External     | FRED
+0CE 02E0D100 UNDEF  notype       External     | MIX1
+0CF 00000040 UNDEF  notype       External     | GASN
+0D0 00203C20 UNDEF  notype       External     | LARGENT
+0D1 03563DA0 UNDEF  notype       External     | LARGET
+0D2 0002EE00 UNDEF  notype       External     | MIX2
+0D3 000000A0 UNDEF  notype       External     | NAMES
+0D4 00005E60 UNDEF  notype       External     | MIX3
+0D5 06A36E80 UNDEF  notype       External     | ANIST
+0D6 00000000 UNDEF  notype ()    External     | for_cpystr
+0D9 00000000 UNDEF  notype ()    External     | memcpy
+0DC 00000000 UNDEF  notype ()    External     | for_write_seq_fmt
+0DD 00000000 UNDEF  notype ()    External     | for_write_seq_fmt_xmit
+188 00000040 UNDEF  notype       External     | CNSTS1
+189 00000000 UNDEF  notype ()    External     | __ImageBase
+18A 00000000 UNDEF  notype ()    External     | for_read_seq_lis
+18B 00000000 UNDEF  notype ()    External     | for_read_seq_lis_xmit
+1B8 00007D00 UNDEF  notype       External     | DENS
+1B9 0000BFE0 UNDEF  notype       External     | OUTPTT
+1BA 00000040 UNDEF  notype       External     | DIFERB
+1BB 00000040 UNDEF  notype       External     | DIFLAB
+1BC 00000020 UNDEF  notype       External     | DIFERL
+1BD 00000020 UNDEF  notype       External     | DIFVEL
+1BE 00000020 UNDEF  notype       External     | CTWNER
+1BF 00000020 UNDEF  notype       External     | TTRM
+1C0 00000020 UNDEF  notype       External     | VELERR
+1C1 00000020 UNDEF  notype       External     | VEL
+1C2 00000020 UNDEF  notype       External     | DECOR
+1C3 00000020 UNDEF  notype       External     | GER
+1CD 00000000 UNDEF  notype ()    External     | for_stop_core_quiet
+1EC 00000040 UNDEF  notype       External     | RANM
+1ED 00000000 UNDEF  notype ()    External     | log
+1FC 00000000 UNDEF  notype ()    External     | d_int_val
+1FD 00000000 UNDEF  notype ()    External     | acos
+247 00007D00 UNDEF  notype       External     | SINT
+2B1 00000060 UNDEF  notype       External     | SSTOUT
+2B2 00000060 UNDEF  notype       External     | CTCALC
+2B3 00000080 UNDEF  notype       External     | TOFOUT
+2B4 00000040 UNDEF  notype       External     | CION
+2EE 00023280 UNDEF  notype       External     | ISPT
+2EF 000002A0 UNDEF  notype       External     | TPLOUT
+2F0 00000000 UNDEF  notype ()    External     | atan
+2F1 00000000 UNDEF  notype ()    External     | tan
+2F2 00000000 UNDEF  notype ()    External     | pow
+316 00000100 UNDEF  notype       External     | PTTOF
+338 00023280 UNDEF  notype       External     | IPS
+339 00000140 UNDEF  notype       External     | SPL1
+33A 00000320 UNDEF  notype       External     | SPLOUT
+35F 00000000 UNDEF  notype ()    External     | __powr8i4
+3CA 000000C0 UNDEF  notype       External     | TOFGOUT
+3F6 00000320 UNDEF  notype       External     | TPLOUTG
+416 00000140 UNDEF  notype       External     | PTTOFG
+442 00000100 UNDEF  notype       External     | TOFHOUT
+474 00000040 UNDEF  notype       External     | ROTS
+475 000003E0 UNDEF  notype       External     | TPLOUTH
+48E 00000180 UNDEF  notype       External     | PTTOFH
+505 0000F000 UNDEF  notype       External     | IONFL1
+506 0000C740 UNDEF  notype       External     | SCRIP
+507 001DCB00 UNDEF  notype       External     | LARGEN
+508 01D62D60 UNDEF  notype       External     | LARGE
+509 03A99E20 UNDEF  notype       External     | ANIS
+5C0 0000A780 UNDEF  notype       External     | OUTPT
+869 00000320 UNDEF  notype       External     | R48ST1
+923 00000000 UNDEF  notype ()    External     | exp
+AAF 00000000 UNDEF  notype ()    External     | __chkstk
+4028 00000000 UNDEF  notype       External     | _fltused

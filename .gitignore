@@ -8,6 +8,9 @@ install
 .vscode
 .build
 
+# Cmake common build location
+build
+
 Doc/UserGuide/UserGuide.aux
 Doc/UserGuide/UserGuide.bbl
 Doc/UserGuide/UserGuide.blg

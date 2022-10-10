@@ -3,6 +3,10 @@
 # Version 3.9 is required by the ROOT Use file
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
+if(CMAKE_HOST_WIN32)
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+endif()
+
 # Setting a default build type to be release with debug information. 
 # Otherwise the default mode is debug.
 set(default_build_type "Release")
@@ -241,6 +245,10 @@ set(nebem_sources
 # CMake can recognize them automatically as CXX and not C
 set_source_files_properties(${nebem_sources} PROPERTIES LANGUAGE CXX)
 target_sources( Garfield PRIVATE ${nebem_sources})
+target_compile_definitions(Garfield PRIVATE BUILDING_GARFIELD=1)
+if(MSVC)
+  target_compile_definitions(Garfield PRIVATE _USE_MATH_DEFINES=1 _CRT_SECURE_NO_DEPRECATE=1)
+endif()
 
 #--- Add Heed sources ---------------------------------------------------------
 add_subdirectory(Heed)
