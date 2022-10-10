@@ -4,7 +4,9 @@
 
 #include <stdio.h>
 #include <time.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 #include "neBEMInterface.h"
 #include "Isles.h"

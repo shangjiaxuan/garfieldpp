@@ -6,7 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifndef _WIN32
 #include <unistd.h>
+#else
+#define stat _stat
+#endif
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -29,14 +33,16 @@ namespace neBEM {
 
 int InfluenceMatrixFlag;
 
+int LHMatrix(void), RHVector(void), Solve(void);
+int InvertMatrix(void);
+int ReadInvertedMatrix(void);
+int DecomposeMatrixSVD(double** SVDInf, double* SVDw, double** SVDv);
+
 // At the end of this function, one should have the charge density distribution
 // This function is not called when only post-processing is being carried out,
 // i.e., when NewModel == NewMesh == NewBC == 0.
 // In such an event, the solution is directly read using ReadSolution
 int ComputeSolution(void) {
-  int LHMatrix(void), RHVector(void), Solve(void);
-  int InvertMatrix(void);
-  int ReadInvertedMatrix(void);
 #ifdef _OPENMP
   double time_begin = 0., time_end = 0.;
 #endif
@@ -1234,7 +1240,6 @@ To be tried later */
 // Note that slightly modified influence coefficient matrix can be solved
 // without going for a fresh re-inversion
 int InvertMatrix(void) {
-  int DecomposeMatrixSVD(double **SVDInf, double *SVDw, double **SVDv);
 
   InvMat = dmatrix(1, NbUnknowns, 1, NbEqns);
 

@@ -30,9 +30,11 @@ int FindIndex(const std::vector<double>& fields, const double field,
 } 
 
 bool NonZero(const std::vector<double>& v) {
- 
-  constexpr double tol = 1.e-10;
+
+  // msvc lambda cannot capture local constexpr
+  #define tol 1.e-10
   return std::any_of(v.cbegin(), v.cend(), [](double x){ return fabs(x) > tol; });
+  #undef tol
 }
 
 }

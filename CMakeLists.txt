@@ -3,6 +3,8 @@
 # Version 3.9 is required by the ROOT Use file
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 # Setting a default build type to be release with debug information. 
 # Otherwise the default mode is debug.
 set(default_build_type "Release")
@@ -15,10 +17,37 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
                                                "RelWithDebInfo")
 endif()
 
+# do not require a fortran at top-level project, so this can build with visual studio + gfortran
 project(
   Garfield
-  LANGUAGES CXX Fortran
+  LANGUAGES CXX #Fortran
   VERSION 0.3.0)
+
+include(CheckLanguage)
+message(CHECK_START "Checking for fortran compiler")
+check_language(Fortran)
+
+# this branching logic references CMakeAddFortranSubdirectory.cmake, logic stayed the same since first release with it
+# (2.8.8) up to current latest 3.24
+if(NOT CMAKE_Fortran_COMPILER)
+  if(MSVC)
+    set(GARFIELD_USE_SUBPROJ_MINGW ON)
+    message(STATUS "Msvc without fotran compiler in build system, will try with mingw-gfortran later.")
+    message(STATUS "Use MINGW_GFORTRAN variable to specify the compiler")
+    message(STATUS "Generated project will be used as external project, and will not by default regenerated when Garfield Regenerates.")
+  else()
+    # CHECK_FAIL requires cmake 3.17
+    #message(CHECK_FAIL "missing fortran compiler")
+    message(STATUS "missing fortran compiler")
+    message(FATAL_ERROR "Cannot compile megaboltz without fortran compiler")
+  endif()
+else()
+  set(GARFIELD_USE_SUBPROJ_MINGW OFF)
+  enable_language(Fortran)
+  # CHECK_FAIL requires cmake 3.17
+  #message(CHECK_PASS "Found fortran compiler: ${CMAKE_Fortran_COMPILER}")
+  message(STATUS "Found fortran compiler: ${CMAKE_Fortran_COMPILER}")
+endif()
 
 #--- Set default installation prefix ------------------------------------------
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -81,7 +110,23 @@ find_package(GSL REQUIRED)
 find_package(OpenMP)
 
 #--- Add Magboltz -------------------------------------------------------------
-add_subdirectory(Magboltz)
+include(CMakeAddFortranSubdirectory)
+
+cmake_add_fortran_subdirectory(
+  Magboltz
+  # cmake will fallback and create a new mingw project
+  # using these parameters on msvc instead of normal subdir behavior
+  PROJECT "Magboltz_mingw"
+  # need to propagate this variable to subproj, so the "if(x) proj" could work
+  CMAKE_COMMAND_LINE = -DGARFIELD_USE_SUBPROJ_MINGW=${GARFIELD_USE_SUBPROJ_MINGW}
+  ARCHIVE_DIR "Magboltz"
+  RUNTIME_DIR "Magboltz"
+  LIBRARIES "magboltz"
+  LINK_LIBRARIES "magboltz"
+  NO_EXTERNAL_INSTALL
+)
+
+add_library(Garfield::magboltz ALIAS magboltz)
 
 # Creating the main Garfield library
 add_library(Garfield SHARED "")
@@ -241,6 +286,10 @@ set(nebem_sources
 # CMake can recognize them automatically as CXX and not C
 set_source_files_properties(${nebem_sources} PROPERTIES LANGUAGE CXX)
 target_sources( Garfield PRIVATE ${nebem_sources})
+target_compile_definitions(Garfield PRIVATE BUILDING_GARFIELD=1)
+if(MSVC)
+  target_compile_definitions(Garfield PRIVATE _USE_MATH_DEFINES=1 _CRT_SECURE_NO_DEPRECATE=1)
+endif()
 
 #--- Add Heed sources ---------------------------------------------------------
 add_subdirectory(Heed)
