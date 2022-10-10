@@ -31,7 +31,10 @@
 #ifndef Garfieldnalysis_h
 #define Garfieldnalysis_h 1
 
-#include "g4root.hh"
+//#include "g4root.hh"
 //#include "g4xml.hh"
+
+#include <G4RootAnalysisManager.hh>
+using G4AnalysisManager = G4RootAnalysisManager;
 
 #endif

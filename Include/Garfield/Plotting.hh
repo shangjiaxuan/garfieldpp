@@ -2,10 +2,11 @@
 #define G_PLOTTING_H
 
 #include "PlottingEngine.hh"
+#include "exports.h"
 
 namespace Garfield {
 
-extern PlottingEngine plottingEngine;
+GARFIELD_EXTERNAL_SYMBOL PlottingEngine plottingEngine;
 
 inline void SetDefaultStyle() { 
   plottingEngine.SetDefaultStyle();

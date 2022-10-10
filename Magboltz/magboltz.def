@@ -1,0 +1,30 @@
+EXPORTS
+   bfld_ = BFLD DATA 
+   inpt_ = INPT DATA 
+   setp_ = SETP DATA 
+   thrm_ = THRM DATA 
+   cnsts_ = CNSTS DATA 
+   mix2_ = MIX2 DATA 
+   dens_ = DENS DATA 
+   outpt_ = OUTPT DATA 
+   outptt_ = OUTPTT DATA 
+   scrip_ = SCRIP DATA 
+   script_ = SCRIPT DATA
+   large_ = LARGE DATA
+   larget_ = LARGET DATA
+   gasn_ = GASN DATA
+   ratio_ = RATIO DATA
+   vel_ = VEL DATA
+   velerr_ = VELERR DATA
+   diflab_ = DIFLAB DATA
+   diferb_ = DIFERB DATA
+   difvel_ = DIFVEL DATA
+   diferl_ = DIFERL DATA
+   ctowns_ = CTOWNS DATA
+   ctwner_ = CTWNER DATA
+   tofout_ = TOFOUT DATA
+
+   gasmix_ = GASMIX
+   colf_ = COLF
+   colft_ = COLFT
+   magboltz_ = MAGBOLTZ
