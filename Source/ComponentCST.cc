@@ -478,6 +478,10 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   return true;
 }
 
+#ifdef _WIN32
+#define stat _stat
+#endif
+
 bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
   m_ready = false;
 
