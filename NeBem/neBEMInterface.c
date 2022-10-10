@@ -15,7 +15,12 @@
 
 #include <stdio.h>
 #include <sys/stat.h>  // use of stat function
+#ifndef _WIN32
 #include <unistd.h>
+#else
+#define sleep _sleep
+#define stat _stat
+#endif
 #include <float.h>
 
 #ifdef __cplusplus
@@ -4764,6 +4769,8 @@ int neBEMEnd(void) {
   return 0;
 }  // neBEMEnd ends
 
+int CreateOrUseDir(char[]);
+int CreateDirOrQuit(char[]);
 // In a given problem, the DeviceOutDir is the one that is unique for a given
 // device. Within it, there are several sub-directories, one related to each
 // device counter; within each device counter directory, there can be
@@ -4773,8 +4780,6 @@ int neBEMEnd(void) {
 // several related to each post-processing counter.
 int CreateDirStr(void) {
   char strModelCntr[10], strMeshCntr[10], strBCCntr[10], strPPCntr[10];
-  int CreateOrUseDir(char[]);
-  int CreateDirOrQuit(char[]);
 
   sprintf(strModelCntr, "/Model%d", ModelCntr);
   sprintf(strMeshCntr, "/M%d", MeshCntr);

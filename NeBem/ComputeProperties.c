@@ -5,7 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifndef _WIN32
 #include <unistd.h>
+#else
+#define stat _stat
+#endif
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -24,6 +28,10 @@ namespace {
 
 namespace neBEM {
 #endif
+
+    double TriLin(double xd, double yd, double zd, double c000, double c100,
+        double c010, double c001, double c110, double c101, double c011,
+        double c111);
 
 // Weighting field function (WtPFAtPoint) has not been modified!
 // Should be merged with PFAtPoint function.
@@ -2829,9 +2837,9 @@ int FastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   double CornerX = FastVol.CrnrX;
   double CornerY = FastVol.CrnrY;
   double CornerZ = FastVol.CrnrZ;
-  double TriLin(double xd, double yd, double zd, double c000, double c100,
+  /*double TriLin(double xd, double yd, double zd, double c000, double c100,
                 double c010, double c001, double c110, double c101, double c011,
-                double c111);
+                double c111);*/
 
   // First of all, check how the point in question should be treated ...
 
@@ -3315,8 +3323,8 @@ int FastPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
 }  // FastPFAtPoint ends
 
 // There could be a function
-int FastElePFAtPoint(Point3D* /*globalP*/, double* /*Potential*/, 
-                     Vector3D* /*globalF*/) {
+int FastElePFAtPoint(Point3D* globalP, double* Potential, 
+                     Vector3D* globalF) {
   return 0;
 }  // FastElePFAtPoint ends
 
@@ -3334,9 +3342,9 @@ int FastKnChPFAtPoint(Point3D *globalP, double *Potential, Vector3D *globalF) {
   double CornerX = FastVol.CrnrX;
   double CornerY = FastVol.CrnrY;
   double CornerZ = FastVol.CrnrZ;
-  double TriLin(double xd, double yd, double zd, double c000, double c100,
+  /*double TriLin(double xd, double yd, double zd, double c000, double c100,
                 double c010, double c001, double c110, double c101, double c011,
-                double c111);
+                double c111);*/
 
   // First of all, check how the point in question should be treated ...
 

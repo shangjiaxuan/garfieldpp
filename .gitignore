@@ -8,6 +8,11 @@ install
 .vscode
 .build
 
+# Cmake common build location
+build
+# Built binaries
+Releases
+
 Doc/UserGuide/UserGuide.aux
 Doc/UserGuide/UserGuide.bbl
 Doc/UserGuide/UserGuide.blg

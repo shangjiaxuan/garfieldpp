@@ -128,8 +128,9 @@ int main(int argc, char * argv[]) {
     }
     // Loop over the primary electrons along the track.
     const std::size_t ne = electrons.size();
+    // omp 2.0 on windows only allow int type
     #pragma omp parallel for
-    for (size_t k = 0; k < ne; ++k) {
+    for (int k = 0; k < ne; ++k) {
       DriftLineRKF drift;
       drift.SetSensor(&sensor);
       drift.SetGainFluctuationsPolya(0., 20000.);
