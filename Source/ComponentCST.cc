@@ -1,6 +1,9 @@
 #include <math.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#define stat _stat
+#endif
 #include <algorithm>
 #include <fstream>
 #include <functional>

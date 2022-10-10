@@ -77,3 +77,36 @@ endif()
 add_executable(test test.C)
 target_link_libraries(test Garfield::Garfield)
 ```
+
+## About Windows Build:
+Currently only tested 64 bit with cmake visual studio msvc + ifort 
+(from [`Intel oneAPI HPC Toolkit`](https://www.intel.com/content/www/us/en/developer/tools/oneapi/hpc-toolkit-download.html), 
+need registering and EULA to download) and msvc + gfortran (mingw binaries), using root from public release binary, 
+and self-compiled geant4 with Qt 5.15 and GDML (xerces-c installed with vcpkg).
+
+The compiled Garfield++ library have root generated header paths that loads on start, thus source directory needs to be
+constant, and cannot make portable install binary. Dependency binaries can be found in the releases section (excluding Garfield.dll).
+
+Since the library requires large memory resources, 64 bit compilation is required. Running GEM example uses 2.1GB on typical 
+machine:
+![GEM example](GEM-win64.PNG)
+
+The following environment variables need to be set to run (running without the shell scripts):
+```
+GARFIELD_INSTALL (Where to look for gas datasets)
+optional:
+    HEED_DATABASE (By default a location relative to GARFIELD_INSTALL)
+    G4XXXXDATA (The Geant4 data variables for datasets)
+```
+
+### Required dependencies:
+#### Root
+vs2022 binary available at https://root.cern/install/all_releases/, installer version sets environment variables. 
+Tested with 6.26/06, should work with all versions built with vs2022.
+#### Geant4
+vs2019 binary available at https://geant4.web.cern.ch/support/download, binary compatible with vs2022.
+Tested with self-compiled 6.11.03 with Qt and GDML(xerces-c) using vs2022. 
+Qt5.15 binary in vs2019 is compatible with vs2022 compiler.
+#### gsl
+`vckpg install gsl`, and just use cmake with vcpkg. Currently you need to specify the gsl and gslblas library files manually. 
+Located at `<vcpkg-dir>\installed\<compiler-setting(x64-windows)>`

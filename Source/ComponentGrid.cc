@@ -765,10 +765,12 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   if (!found[3]) xmax = std::numeric_limits<double>::min();
   if (!found[4]) ymax = std::numeric_limits<double>::min();
   if (!found[5]) zmax = std::numeric_limits<double>::min();
-  constexpr double tol = 1.e-10;
+  // msvc lambda cannot capture local constexpr
+  #define tol 1.e-10
   auto cmp = [](double x, double y) {
     return x < y - tol * (std::fabs(x) + std::fabs(y));
   };
+  #undef tol;
   std::set<double, decltype(cmp)> xLines(cmp);
   std::set<double, decltype(cmp)> yLines(cmp);
   std::set<double, decltype(cmp)> zLines(cmp);
