@@ -79,5 +79,3 @@ target_link_libraries(test Garfield)
 ## About Windows Build:
 Currently only tested with cmake+ifort. gfortran should use original one. Also, cmake by default adds /fpp to CMAKE_Fortran_FLAGS, 
 which will break build. One should remove that option from cmake cache or specify correct options.
-Also requires to manually add the following definitions:
-`/D__STDC__ /D_USE_MATH_DEFINES /D_CRT_SECURE_NO_DEPRECATE`
