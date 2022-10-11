@@ -5,10 +5,12 @@
 #include "FundamentalConstants.hh"
 #include "RandomEngineRoot.hh"
 
+#include "exports.h"
+
 namespace Garfield {
 
 /// Random number generator
-extern RandomEngineRoot randomEngine;
+GARFIELD_EXTERNAL_SYMBOL RandomEngineRoot randomEngine;
 
 /// Draw a random number uniformly distributed in the range [0, 1).
 inline double RndmUniform() { return randomEngine.Draw(); }

@@ -9,8 +9,8 @@ add_library(${libname} SHARED "")
 add_library(Garfield::${libname} ALIAS ${libname})
 target_sources(${libname} PRIVATE magboltz.f)
 target_link_options(${libname} PRIVATE /DEF:${CMAKE_CURRENT_SOURCE_DIR}/magboltz.def)
+target_compile_definitions(${libname} PRIVATE BUILDING_MEGABOLTZ=1)
 # Sets the API version of the library
-set_property(TARGET ${libname} PROPERTY SOVERSION ${lib_apiver})
 
 install(
   TARGETS ${libname}
