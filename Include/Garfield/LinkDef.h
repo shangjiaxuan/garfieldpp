@@ -42,7 +42,7 @@
 #pragma link C++ class Garfield::ComponentCST;
 #pragma link C++ class Garfield::ComponentComsol;
 #pragma link C++ class Garfield::ComponentElmer;
-#pragma link C++ class Garfield::ComponentElmer2D;
+#pragma link C++ class Garfield::ComponentElmer2d;
 #pragma link C++ class Garfield::ComponentConstant;
 #pragma link C++ class Garfield::ComponentGrid;
 #pragma link C++ class Garfield::ComponentNeBem2d;
@@ -70,5 +70,7 @@
 
 #pragma link C++ function Garfield::RndmUniform();
 #pragma link C++ function Garfield::SetDefaultStyle();
+#pragma link C++ function Garfield::SetSerif();
+#pragma link C++ function Garfield::SetSansSerif();
 
 #endif

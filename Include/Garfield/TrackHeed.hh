@@ -9,13 +9,12 @@
 
 namespace Heed {
 class gparticle;
+class particle_def;
 class HeedParticle;
 class HeedCondElectron;
 class HeedMatterDef;
 class GasDef;
 class MatterDef;
-class AtomPhotoAbsCS;
-class MolecPhotoAbsCS;
 class EnergyMesh;
 class EnTransfCS;
 class ElElasticScat;
@@ -46,6 +45,17 @@ class TrackHeed : public Track {
                   int& n, double& e, double& extra) override;
   bool GetCluster(double& xcls, double& ycls, double& zcls, double& tcls,
                   int& ne, int& ni, double& e, double& extra);
+  /** Get the next "cluster" (ionising collision of the charged particle).
+    * \param xcls,ycls,zcls coordinates of the collision
+    * \param tcls time of the collision
+    * \param ne number of electrons
+    * \param ni number of ions
+    * \param np number of fluorescence photons
+    * \param e deposited energy
+    * \param extra additional information (not always implemented)
+    */
+  bool GetCluster(double& xcls, double& ycls, double& zcls, double& tcls,
+                  int& ne, int& ni, int& np, double& e, double& extra);
   /** Retrieve the properties of a conduction or delta electron
     * in the current cluster.
     * \param i index of the electron
@@ -64,6 +74,17 @@ class TrackHeed : public Track {
   bool GetIon(const unsigned int i, double& x, double& y, double& z,
               double& t) const;
 
+  /** Retrieve the properties of an unabsorbed photon.
+   * \param i index of the photon
+   * \param x,y,z coordinates of the photon
+   * \param t time
+   * \param e photon energy
+   * \param dx,dy,dz direction vector
+   **/
+  bool GetPhoton(const unsigned int i, double& x, double& y, double& z,
+                 double& t, double& e, double& dx, double& dy,
+                 double& dz) const;
+
   double GetClusterDensity() override;
   double GetStoppingPower() override;
   /// Return the W value of the medium (of the last simulated track).
@@ -74,7 +95,7 @@ class TrackHeed : public Track {
   double GetPhotoAbsorptionCrossSection(const double e) const;
 
   /// Compute the differential cross-section for a given medium.
-  bool Initialise(Medium* medium);
+  bool Initialise(Medium* medium, const bool verbose = false);
 
   /** Simulate a delta electron.
     * \param x0,y0,z0 initial position of the delta electron
@@ -104,7 +125,22 @@ class TrackHeed : public Track {
     * \param t0 initial time
     * \param e0 initial energy of the photon
     * \param dx0,dy0,dz0 initial direction of the photon
-    * \param ne,ni number of electrons/ions produced by the photon
+    * \param ne number of electrons produced by the photon
+    * \param ni number of ions produced by the photon
+    * \param np number of fluorescence photons
+    **/
+  void TransportPhoton(const double x0, const double y0, const double z0,
+                       const double t0, const double e0, const double dx0,
+                       const double dy0, const double dz0, 
+                       int& ne, int& ni, int& np);
+
+  /** Simulate a photon.
+    * \param x0,y0,z0 initial position of the photon
+    * \param t0 initial time
+    * \param e0 initial energy of the photon
+    * \param dx0,dy0,dz0 initial direction of the photon
+    * \param ne number of electrons produced by the photon
+    * \param ni number of ions produced by the photon
     **/
   void TransportPhoton(const double x0, const double y0, const double z0,
                        const double t0, const double e0, const double dx0,
@@ -155,6 +191,9 @@ class TrackHeed : public Track {
     stepAngleCurved = m_stepAngleCurved;
   }
 
+  void EnableCoulombScattering(const bool on = true) { 
+    m_coulombScattering = on;
+  } 
   /// Switch simulation of delta electrons on.
   void EnableDeltaElectronTransport() { m_doDeltaTransport = true; }
   /// Switch simulation of delta electrons off.
@@ -162,7 +201,7 @@ class TrackHeed : public Track {
 
   /// Simulate (or not) the photons produced in the atomic relaxation cascade.
   void EnablePhotonReabsorption(const bool on = true) {
-    m_usePhotonReabsorption = on;
+    m_doPhotonReabsorption = on;
   }
 
   /// Write the photoabsorption cross-sections used to a text file.
@@ -179,13 +218,13 @@ class TrackHeed : public Track {
   /// For standard particles Track::SetParticle should be used.
   void SetParticleUser(const double m, const double z);
 
-  void EnableOneStepFly(const bool on) { m_useOneStepFly=on; }
+  void EnableOneStepFly(const bool on) { m_oneStepFly = on; }
  private:
   // Prevent usage of copy constructor and assignment operator
   TrackHeed(const TrackHeed& heed);
   TrackHeed& operator=(const TrackHeed& heed);
 
-  bool m_useOneStepFly = false;
+  bool m_oneStepFly = false;
 
   bool m_ready = false;
   bool m_hasActiveTrack = false;
@@ -193,19 +232,29 @@ class TrackHeed : public Track {
   double m_mediumDensity = -1.;
   std::string m_mediumName = "";
 
-  bool m_usePhotonReabsorption = true;
   bool m_usePacsOutput = false;
 
-  bool m_doDeltaTransport = true;
-  struct deltaElectron {
+  bool m_doPhotonReabsorption = true;
+  struct SimplifiedParticle {
     double x, y, z, t;
     double e;
     double dx, dy, dz;
   };
-  std::vector<deltaElectron> m_deltaElectrons;
+  typedef SimplifiedParticle Photon;
+  std::vector<Photon> m_photons;
+
+  bool m_coulombScattering = false;
+
+  bool m_useBfieldAuto = true;
+
+  bool m_doDeltaTransport = true;
+  typedef SimplifiedParticle DeltaElectron;
+  std::vector<DeltaElectron> m_deltaElectrons;
   std::vector<Heed::HeedCondElectron> m_conductionElectrons;
   std::vector<Heed::HeedCondElectron> m_conductionIons;
 
+  // Particle properties
+  std::unique_ptr<Heed::particle_def> m_particle_def; 
   // Material properties
   std::unique_ptr<Heed::HeedMatterDef> m_matter;
   std::unique_ptr<Heed::GasDef> m_gas;
@@ -248,7 +297,6 @@ class TrackHeed : public Track {
   bool SetupGas(Medium* medium);
   bool SetupMaterial(Medium* medium);
   bool SetupDelta(const std::string& databasePath);
-  std::string FindUnusedMaterialName(const std::string& namein);
   void ClearParticleBank();
   bool IsInside(const double x, const double y, const double z);
   bool UpdateBoundingBox(bool& update);

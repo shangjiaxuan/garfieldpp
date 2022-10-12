@@ -58,7 +58,7 @@ namespace Garfield {
 int Medium::m_idCounter = -1;
 
 Medium::Medium() : m_id(++m_idCounter) {
-  // Initialise the transport tables.
+  // Initialise the tables.
   m_bFields.assign(1, 0.);
   m_bAngles.assign(1, HalfPi);
 
@@ -191,15 +191,10 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
     vy = mu * ey;
     vz = mu * ez;
     return true;
-  } else if (velX.empty() || velB.empty()) {
+  } else if (velX.empty() || velB.empty() ||
+             (m_bFields.size() == 1 && fabs(m_bFields[0]) < Small)) {
     // Magnetic field, velocities along ExB, Bt not available.
-    const double mu = q * ve / e;
-    const double mu2 = mu * mu;
-    const double eb = bx * ex + by * ey + bz * ez;
-    const double f = mu / (1. + mu2 * b * b);
-    vx = f * (ex + mu * (ey * bz - ez * by) + mu2 * bx * eb);
-    vy = f * (ey + mu * (ez * bx - ex * bz) + mu2 * by * eb);
-    vz = f * (ez + mu * (ex * by - ey * bx) + mu2 * bz * eb);
+    Langevin(ex, ey, ez, bx, by, bz, q * ve / e, vx, vy, vz);
     return true;
   }
 
@@ -219,7 +214,8 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
     uexb[2] = ue[2];
   }
 
-  double ubt[3] = {uexb[1] * ez - uexb[2] * ey, uexb[2] * ex - uexb[0] * ez,
+  double ubt[3] = {uexb[1] * ez - uexb[2] * ey, 
+                   uexb[2] * ex - uexb[0] * ez,
                    uexb[0] * ey - uexb[1] * ex};
   const double bt = sqrt(ubt[0] * ubt[0] + ubt[1] * ubt[1] + ubt[2] * ubt[2]);
   if (bt > 0.) {
@@ -233,14 +229,13 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
   }
 
   if (m_debug) {
-    std::cout << std::setprecision(5);
-    std::cout << m_className << "::Velocity:\n"
-              << "    unit vector along E:     (" << ue[0] << ", " << ue[1]
-              << ", " << ue[2] << ")\n";
-    std::cout << "    unit vector along E x B: (" << uexb[0] << ", "
-              << uexb[1] << ", " << uexb[2] << ")\n";
-    std::cout << "    unit vector along Bt:    (" << ubt[0] << ", " << ubt[1]
-              << ", " << ubt[2] << ")\n";
+    std::cout << m_className << "::Velocity:\n";
+    std::printf("    unit vector along E:     (%15.5f, %15.5f, %15.5f)\n",
+                ue[0], ue[1], ue[2]);
+    std::printf("    unit vector along E x B: (%15.5f, %15.5f, %15.5f)\n",
+                uexb[0], uexb[1], uexb[2]);
+    std::printf("    unit vector along Bt:    (%15.5f, %15.5f, %15.5f)\n",
+                ubt[0], ubt[1], ubt[2]);
   }
 
   // Calculate the velocities in all directions.
@@ -249,6 +244,7 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
     std::cerr << m_className << "::Velocity: Interpolation along ExB failed.\n";
     return false;
   }
+  vexb *= q;
   double vbt = 0.;
   if (!Interpolate(e0, b, ebang, velB, vbt, m_intpVel, m_extrVel)) {
     std::cerr << m_className << "::Velocity: Interpolation along Bt failed.\n";
@@ -259,11 +255,44 @@ bool Medium::Velocity(const double ex, const double ey, const double ez,
   } else {
     vbt = -fabs(vbt);
   }
-  vx = q * (ve * ue[0] + q * q * vbt * ubt[0] + q * vexb * uexb[0]);
-  vy = q * (ve * ue[1] + q * q * vbt * ubt[1] + q * vexb * uexb[1]);
-  vz = q * (ve * ue[2] + q * q * vbt * ubt[2] + q * vexb * uexb[2]);
-
+  vbt *= q * q;
+  vx = q * (ve * ue[0] + vbt * ubt[0] + vexb * uexb[0]);
+  vy = q * (ve * ue[1] + vbt * ubt[1] + vexb * uexb[1]);
+  vz = q * (ve * ue[2] + vbt * ubt[2] + vexb * uexb[2]);
   return true;
+}
+
+void Medium::Langevin(const double ex, const double ey, const double ez,
+                      double bx, double by, double bz, const double mu,
+                      double& vx, double& vy, double& vz) {
+
+  bx *= Tesla2Internal;
+  by *= Tesla2Internal;
+  bz *= Tesla2Internal;
+  const double b2 = bx * bx + by * by + bz * bz;
+  const double mu2 = mu * mu;
+  const double eb = bx * ex + by * ey + bz * ez;
+  const double f = mu / (1. + mu2 * b2);
+  vx = f * (ex + mu * (ey * bz - ez * by) + mu2 * bx * eb);
+  vy = f * (ey + mu * (ez * bx - ex * bz) + mu2 * by * eb);
+  vz = f * (ez + mu * (ex * by - ey * bx) + mu2 * bz * eb);
+}
+
+void Medium::Langevin(const double ex, const double ey, const double ez,
+                      double bx, double by, double bz, 
+                      const double mu, const double muH,
+                      double& vx, double& vy, double& vz) {
+
+  bx *= Tesla2Internal;
+  by *= Tesla2Internal;
+  bz *= Tesla2Internal;
+  const double b2 = bx * bx + by * by + bz * bz;
+  const double mu2 = muH * muH;
+  const double f = mu / (1. + mu2 * b2);
+  const double eb = bx * ex + by * ey + bz * ez;
+  vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
+  vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
+  vz = f * (ez + muH * (ex * by - ey * bx) + mu2 * bz * eb);
 }
 
 bool Medium::Diffusion(const double ex, const double ey, const double ez,
@@ -488,9 +517,9 @@ double Medium::GetElectronCollisionRate(const double /*e*/,
   return 0.;
 }
 
-bool Medium::GetElectronCollision(
-    const double e, int& type, int& level, double& e1, double& dx, double& dy,
-    double& dz, std::vector<std::pair<int, double> >& /*secondaries*/,
+bool Medium::ElectronCollision(const double e, int& type, int& level, 
+    double& e1, double& dx, double& dy, double& dz, 
+    std::vector<std::pair<Particle, double> >& /*secondaries*/,
     int& ndxc, int& band) {
   type = level = -1;
   e1 = e;
@@ -586,12 +615,7 @@ bool Medium::IonVelocity(const double ex, const double ey, const double ez,
     vy = mu * ey;
     vz = mu * ez;
   } else {
-    const double eb = bx * ex + by * ey + bz * ez;
-    const double mu2 = mu * mu;
-    const double f = mu / (1. + mu2 * b * b);
-    vx = f * (ex + mu * (ey * bz - ez * by) + mu2 * bx * eb);
-    vy = f * (ey + mu * (ez * bx - ex * bz) + mu2 * by * eb);
-    vz = f * (ez + mu * (ex * by - ey * bx) + mu2 * bz * eb);
+    Langevin(ex, ey, ez, bx, by, bz, mu, vx, vy, vz);
   }
 
   return true;
@@ -619,6 +643,44 @@ bool Medium::IonDissociation(const double ex, const double ey, const double ez,
 
 double Medium::IonMobility() {
   return m_iMob.empty() ? -1. : m_iMob[0][0][0];
+}
+
+bool Medium::NegativeIonVelocity(
+    const double ex, const double ey, const double ez,
+    const double bx, const double by, const double bz,
+    double& vx, double& vy, double& vz) {
+  vx = vy = vz = 0.;
+  if (m_iMob.empty() && m_nMob.empty()) return false;
+
+  // Compute the magnitude of the electric field.
+  const double e = sqrt(ex * ex + ey * ey + ez * ez);
+  const double e0 = ScaleElectricField(e);
+  if (e < Small || e0 < Small) return true;
+  // Compute the magnitude of the electric field.
+  const double b = sqrt(bx * bx + by * by + bz * bz);
+
+  // Compute the angle between B field and E field.
+  const double ebang = m_tab2d ? GetAngle(ex, ey, ez, bx, by, bz, e, b) : 0.;
+  double mu = 0.;
+  if (m_nMob.empty()) {
+    if (!Interpolate(e0, b, ebang, m_iMob, mu, m_intpMob, m_extrMob)) mu = 0.;
+  } else {
+    if (!Interpolate(e0, b, ebang, m_nMob, mu, m_intpMob, m_extrMob)) mu = 0.;
+  }
+  constexpr double q = -1.;
+  mu *= q;
+  if (b < Small) {
+    vx = mu * ex;
+    vy = mu * ey;
+    vz = mu * ez;
+  } else {
+    Langevin(ex, ey, ez, bx, by, bz, mu, vx, vy, vz);
+  }
+  return true;
+}
+
+double Medium::NegativeIonMobility() {
+  return m_nMob.empty() ? IonMobility() : m_nMob[0][0][0];
 }
 
 bool Medium::GetOpticalDataRange(double& emin, double& emax,
@@ -913,6 +975,8 @@ void Medium::ResetTables() {
   ResetIonMobility();
   ResetIonDiffusion();
   ResetIonDissociation();
+
+  ResetNegativeIonMobility();
 }
 
 void Medium::Clone(std::vector<std::vector<std::vector<double> > >& tab,
@@ -1037,28 +1101,43 @@ bool Medium::SetIonMobility(const size_t ie, const size_t ib,
 }
 
 bool Medium::SetIonMobility(const std::vector<double>& efields,
-                            const std::vector<double>& mobs) {
+                            const std::vector<double>& mobs,
+                            const bool negativeIons) {
   if (efields.size() != mobs.size()) {
     std::cerr << m_className << "::SetIonMobility:\n"
               << "    E-field and mobility arrays have different sizes.\n";
     return false;
   }
 
-  ResetIonMobility();
+  if (negativeIons) {
+    ResetNegativeIonMobility();
+  } else {
+    ResetIonMobility();
+  }
   const auto nE = m_eFields.size();
   const auto nB = m_bFields.size();
   const auto nA = m_bAngles.size();
-  Init(nE, nB, nA, m_iMob, 0.);
+  if (negativeIons) {
+    Init(nE, nB, nA, m_nMob, 0.);
+  } else {
+    Init(nE, nB, nA, m_iMob, 0.);
+  }
   for (size_t i = 0; i < nE; ++i) {
     const double e = m_eFields[i];
     const double mu = Interpolate1D(e, mobs, efields, m_intpMob, m_extrMob);
-    m_iMob[0][0][i] = mu;
+    if (negativeIons) {
+      m_nMob[0][0][i] = mu;
+    } else {
+      m_iMob[0][0][i] = mu;
+    }
   }
-
-  if (m_tab2d) {
-    for (size_t i = 0; i < nA; ++i) {
-      for (size_t j = 0; j < nB; ++j) {
-        for (size_t k = 0; k < nE; ++k) {
+  if (!m_tab2d) return true;
+  for (size_t i = 0; i < nA; ++i) {
+    for (size_t j = 0; j < nB; ++j) {
+      for (size_t k = 0; k < nE; ++k) {
+        if (negativeIons) {
+          m_nMob[i][j][k] = m_nMob[0][0][k];
+        } else {
           m_iMob[i][j][k] = m_iMob[0][0][k];
         }
       }
@@ -1184,16 +1263,14 @@ void Medium::SetInterpolationMethodIonDissociation(const unsigned int intrp) {
 
 double Medium::GetAngle(const double ex, const double ey, const double ez,
                         const double bx, const double by, const double bz,
-                        const double e, const double b) const {
-  const double eb = e * b; 
+                        const double emag, const double bmag) const {
+  const double eb = emag * bmag; 
   if (eb <= 0.) return m_bAngles[0];
   const double einb = fabs(ex * bx + ey * by + ez * bz);
   if (einb > 0.2 * eb) {
-    const double ebxy = ex * by - ey * bx;
-    const double ebxz = ex * bz - ez * bx;
-    const double ebzy = ez * by - ey * bz;
+    double exb[3] = {ex * by - ey * bx, ex * bz - ez * bx, ez * by - ey * bz};
     return asin(
-        std::min(1., sqrt(ebxy * ebxy + ebxz * ebxz + ebzy * ebzy) / eb));
+        std::min(1., sqrt(exb[0] * exb[0] + exb[1] * exb[1] + exb[2] * exb[2]) / eb));
   }
   return acos(std::min(1., einb / eb));
 }

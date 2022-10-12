@@ -13,7 +13,7 @@ There are a few exceptions from this system of units, though.
 \begin{itemize}
   \item
   The unit for the magnetic field \(\mathbf{B}\) corresponding
-  to the above system of units  (10\(^{-5}\) Tesla) is impractical. 
+  to the above system of units (10\(^{-5}\) Tesla) is impractical. 
   Instead, magnetic fields are expressed in Tesla.
   \item
   Pressures are specified in Torr.
@@ -24,6 +24,8 @@ A summary of commonly used quantities and their units is given
 in Table~\ref{Tab:Units}.
 \begin{table}
   \centering
+  \caption{Physical units.}
+  \label{Tab:Units}
   \begin{tabular}{l l}
     \toprule
     physical quantity & unit \\
@@ -43,8 +45,6 @@ in Table~\ref{Tab:Units}.
     angle & rad \\
     \bottomrule
   \end{tabular}
-  \caption{Physical units.}
-  \label{Tab:Units}
 \end{table}
   
 The values of the physical constants used in the code are defined  
@@ -73,7 +73,7 @@ associated with large uncertainties.
           Kr & krypton  & 4* \\
           Xe & xenon    & 4* \\
   \midrule
-  Cs         & cesium   & 2* \\
+  Cs         & caesium  & 2* \\
   Hg         & mercury  & 2* \\
   \midrule
   H\(_{2}\) & hydrogen  & 5* \\
@@ -103,7 +103,7 @@ associated with large uncertainties.
   iC\(_{4}\)H\(_{10}\) & isobutane & 4* \\ 
   nC\(_{5}\)H\(_{12}\) & n-pentane & 4* \\  
   neo-C\(_{5}\)H\(_{12}\) & neopentane & 4* \\
-  C\(_{2}\)H\(_{4}\)   & ethene    & 4* \\
+  C\(_{2}\)H\(_{4}\)   & ethene    & 5* \\
   C\(_{2}\)H\(_{2}\)   & acetylene & 4* \\
   C\(_{3}\)H\(_{6}\)   & propene   & 4* \\
   cC\(_{3}\)H\(_{6}\)   & cyclopropane & 4* \\
@@ -119,7 +119,7 @@ associated with large uncertainties.
   CHF\(_{3}\)          & fluoroform         & 3* \\
   C\(_{2}\)F\(_{6}\)   & hexafluoroethane   & 4* \\
   C\(_{2}\)H\(_{2}\)F\(_{4}\) & tetrafluoroethane & 3* \\
-  C\(_{3}\)F\(_{8}\)   & octafluoropropane  & 3* \\
+  C\(_{3}\)F\(_{8}\)   & octafluoropropane  & 4* \\
   SF\(_{6}\)           & sulfur hexafluoride  & 4* \\
   BF\(_{3}\)           & boron trifluoride    & 4* \\ 
   CF\(_{3}\)Br         & bromotrifluoromethane & 3* \\
@@ -128,8 +128,9 @@ associated with large uncertainties.
   N(CH\(_{3}\))\(_{3}\) & TMA      & 3* \\
   SiH\(_{4}\)           & silane   & 3* \\
   GeH\(_{4}\)           & germane  & 4* \\
+  CCl\(_{4}\)           & carbon tetrachloride & 4* \\ 
   \bottomrule
-  \caption{Gases available in \textsc{Magboltz} 11.11.} 
+  \caption{Gases available in \textsc{Magboltz} 11.15.} 
   \label{Tab:GasesMagboltz11}
 \end{longtable}
 

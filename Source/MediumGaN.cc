@@ -72,15 +72,7 @@ bool MediumGaN::ElectronVelocity(const double ex, const double ey,
     vy = mu * ey;
     vz = mu * ez;
   } else {
-    // Hall mobility
-    const double muH = m_eHallFactor * mu;
-    const double mu2 = muH * muH;
-    const double eb = bx * ex + by * ey + bz * ez;
-    const double f = muH / (1. + mu2 * b2);
-    // Compute the drift velocity using the Langevin equation.
-    vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
-    vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
-    vz = f * (ez + muH * (ex * by - ey * bx) + mu2 * bz * eb);
+    Langevin(ex, ey, ez, bx, by, bz, mu, m_eHallFactor * mu, vx, vy, vz); 
   }
   return true;
 }
@@ -143,15 +135,7 @@ bool MediumGaN::HoleVelocity(const double ex, const double ey, const double ez,
     vy = mu * ey;
     vz = mu * ez;
   } else {
-    // Hall mobility
-    const double muH = m_hHallFactor * mu;
-    const double mu2 = muH * muH;
-    const double eb = bx * ex + by * ey + bz * ez;
-    const double f = mu / (1. + mu2 * b2);
-    // Compute the drift velocity using the Langevin equation.
-    vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
-    vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
-    vz = f * (ez + muH * (ex * by - ey * bx) + mu2 * bz * eb);
+    Langevin(ex, ey, ez, bx, by, bz, mu, m_hHallFactor * mu, vx, vy, vz);
   }
   return true;
 }

@@ -2,6 +2,7 @@
 #define G_SENSOR_H
 
 #include <fstream>
+#include <functional>
 #include <mutex>
 #include <tuple>
 #include <utility>
@@ -31,6 +32,8 @@ class Sensor {
   void EnableComponent(const unsigned int i, const bool on);
   /// Activate/deactivate use of the magnetic field of a given component.
   void EnableMagneticField(const unsigned int i, const bool on);
+  /// Does the sensor have a non-zero magnetic field?
+  bool HasMagneticField() const;
 
   /// Add an electrode.
   void AddElectrode(Component* comp, const std::string& label);
@@ -59,9 +62,13 @@ class Sensor {
   double WeightingPotential(const double x, const double y, const double z,
                             const std::string& label);
 
+  /// Get the delayed weighting potential at (x, y, z).
+  double DelayedWeightingPotential(const double x, const double y,
+                                   const double z, const double t,
+                                   const std::string& label);
+
   /// Get the medium at (x, y, z).
-  bool GetMedium(const double x, const double y, const double z,
-                 Medium*& medium);
+  Medium* GetMedium(const double x, const double y, const double z);
 
   /// Switch debugging messages on/off.
   void EnableDebugging(const bool on = true) { m_debug = on; }
@@ -76,6 +83,9 @@ class Sensor {
                double& ymax, double& zmax);
   /// Check if a point is inside the user area.
   bool IsInArea(const double x, const double y, const double z);
+
+  /// Check if a point is inside an active medium and inside the user area.
+  bool IsInside(const double x, const double y, const double z);
 
   /// Return the voltage range.
   bool GetVoltageRange(double& vmin, double& vmax);
@@ -137,7 +147,7 @@ class Sensor {
   double GetInducedCharge(const std::string& label);
 
   /// Set the function to be used for evaluating the transfer function.
-  void SetTransferFunction(double (*f)(double t));
+  void SetTransferFunction(std::function<double(double)>);
   /// Set the points to be used for interpolating the transfer function.
   void SetTransferFunction(const std::vector<double>& times,
                            const std::vector<double>& values);
@@ -222,25 +232,32 @@ class Sensor {
   void AddSignal(const double q, const std::vector<double>& ts,
                  const std::vector<std::array<double, 3> >& xs,
                  const std::vector<std::array<double, 3> >& vs,
-                 const std::vector<double>& ns, const int navg, 
+                 const std::vector<double>& ns, const int navg,
                  const bool useWeightingPotential = false);
 
   /// Exporting induced signal to a csv file.
-  void ExportSignal(const std::string& label, const std::string& filename);
+  void ExportSignal(const std::string& label, const std::string& filename,
+                    const bool chargeCariers = false);
 
   /// Add the induced charge from a charge carrier drift between two points.
   void AddInducedCharge(const double q, const double x0, const double y0,
                         const double z0, const double x1, const double y1,
                         const double z1);
 
-  /// Determine whether a line between two points has crossed a wire,
-  /// calls Component::IsWireCrossed.
-  bool IsWireCrossed(const double x0, const double y0, const double z0,
-                     const double x1, const double y1, const double z1,
-                     double& xc, double& yc, double& zc, const bool centre,
-                     double& rc);
-  bool IsInTrapRadius(const double q0, const double x0, const double y0,
-                      const double z0, double& xw, double& yw, double& rw);
+  /// Determine whether a line between two points crosses a wire,
+  /// calls Component::CrossedWire.
+  bool CrossedWire(const double x0, const double y0, const double z0,
+                   const double x1, const double y1, const double z1,
+                   double& xc, double& yc, double& zc, const bool centre,
+                   double& rc);
+  /// Determine whether a point is in the trap radius of a wire.
+  bool InTrapRadius(const double q0, const double x0, const double y0,
+                    const double z0, double& xw, double& yw, double& rw);
+  /// Determine whether a line between two points crosses a plane,
+  /// calls Component::CrossedPlane.
+  bool CrossedPlane(const double x0, const double y0, const double z0,
+                    const double x1, const double y1, const double z1,
+                    double& xc, double& yc, double& zc);
 
   /// Integrate the electric field flux through a line from
   /// (x0,y0,z0) to (x1,y1,z1) along a direction (xp,yp,zp).
@@ -249,7 +266,10 @@ class Sensor {
                            const double xp, const double yp, const double zp,
                            const unsigned int nI, const int isign = 0);
   // TODO!
-  double GetTotalInducedCharge(const std::string label);
+  double GetTotalInducedCharge(const std::string& label);
+
+  double StepSizeHint();
+
  private:
   std::string m_className = "Sensor";
   /// Mutex.
@@ -257,7 +277,6 @@ class Sensor {
 
   /// Components
   std::vector<std::tuple<Component*, bool, bool> > m_components;
-  Component* m_lastComponent = nullptr;
 
   struct Electrode {
     Component* comp;
@@ -284,7 +303,7 @@ class Sensor {
   unsigned int m_nAvgDelayedSignal = 0;
 
   // Transfer function
-  double (*m_fTransfer)(double t) = nullptr;
+  std::function<double(double)> m_fTransfer;
   Shaper* m_shaper = nullptr;
   std::vector<std::pair<double, double> > m_fTransferTab;
   bool m_cacheTransferFunction = true;

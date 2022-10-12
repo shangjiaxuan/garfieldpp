@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "FundamentalConstants.hh"
+#include "GarfieldConstants.hh"
 
 namespace Garfield {
 
@@ -63,7 +64,7 @@ class Medium {
   /// Get the mass density [g/cm3].
   virtual double GetMassDensity() const;
 
-  /// Switch electron/ion/hole on/off.
+  /// Switch electron/ion/hole transport on/off.
   virtual void EnableDrift(const bool on = true) { m_driftable = on; }
   /// Make the medium ionisable or non-ionisable.
   virtual void EnablePrimaryIonisation(const bool on = true) { 
@@ -80,11 +81,11 @@ class Medium {
   /// Set the W value (average energy to produce an electron/ion or e/h pair).
   void SetW(const double w) { m_w = w; }
   /// Get the W value.
-  double GetW() { return m_w; }
+  double GetW() const { return m_w; }
   /// Set the Fano factor.
   void SetFanoFactor(const double f) { m_fano = f; }
   /// Get the Fano factor.
-  double GetFanoFactor() { return m_fano; }
+  double GetFanoFactor() const { return m_fano; }
 
   // Transport parameters for electrons
   /// Drift velocity [cm / ns]
@@ -137,9 +138,10 @@ class Medium {
   /// Collision rate [ns-1] for given electron energy
   virtual double GetElectronCollisionRate(const double e, const int band = 0);
   /// Sample the collision type. Update energy and direction vector.
-  virtual bool GetElectronCollision(
-      const double e, int& type, int& level, double& e1, double& dx, double& dy,
-      double& dz, std::vector<std::pair<int, double> >& secondaries, int& ndxc,
+  virtual bool ElectronCollision(
+      const double e, int& type, int& level, double& e1, 
+      double& dx, double& dy, double& dz, 
+      std::vector<std::pair<Particle, double> >& secondaries, int& ndxc,
       int& band);
   virtual unsigned int GetNumberOfDeexcitationProducts() const { return 0; }
   virtual bool GetDeexcitationProduct(const unsigned int i, double& t,
@@ -171,7 +173,7 @@ class Medium {
   virtual double HoleMobility();
 
   // Transport parameters for ions
-  /// Drift velocity [cm / ns]
+  /// Ion drift velocity [cm / ns]
   virtual bool IonVelocity(const double ex, const double ey, const double ez,
                            const double bx, const double by, const double bz,
                            double& vx, double& vy, double& vz);
@@ -183,8 +185,16 @@ class Medium {
   virtual bool IonDissociation(const double ex, const double ey,
                                const double ez, const double bx,
                                const double by, const double bz, double& diss);
-  /// Low-field mobility [cm2 V-1 ns-1]
+  /// Low-field ion mobility [cm2 V-1 ns-1]
   virtual double IonMobility();
+
+  /// Negative ion drift velocity [cm / ns]
+  virtual bool NegativeIonVelocity(
+    const double ex, const double ey, const double ez,
+    const double bx, const double by, const double bz,
+    double& vx, double& vy, double& vz);
+  /// Low-field negative ion mobility [cm2 V-1 ns-1]
+  virtual double NegativeIonMobility();
 
   /// Set the range of fields to be covered by the transport tables.
   void SetFieldGrid(double emin, double emax, const size_t ne, bool logE,
@@ -358,7 +368,8 @@ class Medium {
   /// The mobilities will be interpolated at the electric fields 
   /// of the currently set grid.
   bool SetIonMobility(const std::vector<double>& fields,
-                      const std::vector<double>& mobilities);
+                      const std::vector<double>& mobilities,
+                      const bool negativeIons = false);
   /// Set an entry in the table of ion mobilities.
   bool SetIonMobility(const size_t ie, const size_t ib, 
                       const size_t ia, const double mu);
@@ -399,6 +410,17 @@ class Medium {
     return GetEntry(ie, ib, ia, "IonDissociation", m_iDis, diss);
   }
 
+  /// Set an entry in the table of negative ion mobilities.
+  bool SetNegativeIonMobility(const size_t ie, const size_t ib, 
+                              const size_t ia, const double mu) {
+    return SetEntry(ie, ib, ia, "NegativeIonMobility", m_nMob, mu);
+  }
+  /// Get an entry in the table of negative ion mobilities.
+  bool GetNegativeIonMobility(const size_t ie, const size_t ib, 
+                              const size_t ia, double& mu) {
+    return GetEntry(ie, ib, ia, "NegativeIonMobility", m_nMob, mu);
+  }
+
   /// Reset all tables of transport parameters.
   virtual void ResetTables();
 
@@ -435,6 +457,7 @@ class Medium {
     m_iDifT.clear();
   }
   void ResetIonDissociation() { m_iDis.clear(); }
+  void ResetNegativeIonMobility() { m_nMob.clear(); }
 
   /// Select the extrapolation method for fields below/above the table range.
   /// Possible options are "constant", "linear", and "exponential".
@@ -565,6 +588,8 @@ class Medium {
   std::vector<std::vector<std::vector<double> > > m_iDifL;
   std::vector<std::vector<std::vector<double> > > m_iDifT;
   std::vector<std::vector<std::vector<double> > > m_iDis;
+  // Negative ions
+  std::vector<std::vector<std::vector<double> > > m_nMob;
 
   // Thresholds for Townsend, attachment and dissociation coefficients.
   unsigned int m_eThrAlp = 0;
@@ -597,6 +622,13 @@ class Medium {
                 const std::vector<std::vector<std::vector<double> > >& velB,
                 const std::vector<std::vector<std::vector<double> > >& velX,
                 const double q, double& vx, double& vy, double& vz) const;
+  static void Langevin(const double ex, const double ey, const double ez,
+                       double bx, double by, double bz, const double mu, 
+                       double& vx, double& vy, double& vz);
+  static void Langevin(const double ex, const double ey, const double ez,
+                       double bx, double by, double bz, 
+                       const double mu, const double muH,
+                       double& vx, double& vy, double& vz);
   bool Diffusion(const double ex, const double ey, const double ez,
                  const double bx, const double by, const double bz,
                  const std::vector<std::vector<std::vector<double> > >& difL,
@@ -662,6 +694,7 @@ class Medium {
       const size_t nE, const size_t nB, const size_t nA, const size_t nT,
       std::vector<std::vector<std::vector<std::vector<double> > > >& tab,
       const double val);
+
 };
 }
 

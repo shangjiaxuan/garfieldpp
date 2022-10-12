@@ -63,6 +63,10 @@ class ViewBase {
   void SetPlaneXZ();
   /// Set the viewing plane to y-z. 
   void SetPlaneYZ();
+  /// Set the viewing plane to z-x. 
+  void SetPlaneZX();
+  /// Set the viewing plane to z-y. 
+  void SetPlaneZY();
 
   /// Switch on/off debugging output.
   void EnableDebugging(const bool on = true) { m_debug = on; }
@@ -144,9 +148,9 @@ class ViewBase {
                   double& xmin, double& ymin,
                   double& xmax, double& ymax) const;
 
-  bool RangeSet(TPad*);
-  void SetRange(TPad* pad, const double x0, const double y0,
-                const double x1, const double y1);
+  static bool RangeSet(TVirtualPad*);
+  static void SetRange(TVirtualPad* pad, const double x0, const double y0,
+                       const double x1, const double y1);
  private:
   // Current pad.
   TPad* m_pad = nullptr;

@@ -6,11 +6,11 @@
 #include <time.h>
 //#include <unistd.h>
 
-#include "neBEMInterface.h"
 #include "Isles.h"
 #include "NR.h"
 #include "Vector.h"
 #include "neBEM.h"
+#include "neBEMInterface.h"
 
 #define MyPI 3.14159265358979323846
 
@@ -270,8 +270,7 @@ int AnalyzeSurface(int prim, int *NbSegCoord1, int *NbSegCoord2) {
     // double area = l1 * l2;
 
     nb1 = (int)(l1 / ElementLengthRqstd);
-    if ((nb1 > MinNbElementsOnLength) &&
-        (nb1 < MaxNbElementsOnLength)) {  
+    if ((nb1 > MinNbElementsOnLength) && (nb1 < MaxNbElementsOnLength)) {
       // nothing to be done
     } else if (l1 < MINDIST) {
       fprintf(fMeshLog, "Length1 too small on primitive %d!\n", prim);
@@ -300,8 +299,7 @@ int AnalyzeSurface(int prim, int *NbSegCoord1, int *NbSegCoord2) {
     }
 
     nb2 = (int)(l2 / ElementLengthRqstd);
-    if ((nb2 > MinNbElementsOnLength) &&
-        (nb2 < MaxNbElementsOnLength)) {
+    if ((nb2 > MinNbElementsOnLength) && (nb2 < MaxNbElementsOnLength)) {
       // nothing to be done
     } else if (l2 < MINDIST) {
       fprintf(fMeshLog, "Length2 element too small on primitive %d!\n", prim);
@@ -354,7 +352,7 @@ int AnalyzeSurface(int prim, int *NbSegCoord1, int *NbSegCoord2) {
     l2 = sqrt(l2);
 
     if (l1 > l2) {
-      if (nb2 > nb1) { 
+      if (nb2 > nb1) {
         // swap numbers to allow larger number to larger side
         int tmpnb = nb1;
         nb1 = nb2;
@@ -2103,12 +2101,12 @@ int DiscretizeRectangle(int prim, int nvertex, double xvert[], double yvert[],
   return (0);
 }  // end of DiscretizeRectangle
 
-int DiscretizePolygon(int /*prim*/, int /*nvertex*/, double /*xvert*/[], 
+int DiscretizePolygon(int /*prim*/, int /*nvertex*/, double /*xvert*/[],
                       double /*yvert*/[], double /*zvert*/[], double /*xnorm*/,
-                      double /*ynorm*/, double /*znorm*/, 
-                      int /*volref1*/, int /*volref2*/, int /*inttype*/, 
-                      double /*potential*/, double /*charge*/, 
-                      double /*lambda*/, int NbSegX, int NbSegZ) {
+                      double /*ynorm*/, double /*znorm*/, int /*volref1*/,
+                      int /*volref2*/, int /*inttype*/, double /*potential*/,
+                      double /*charge*/, double /*lambda*/, int NbSegX,
+                      int NbSegZ) {
   // Check inputs
   if ((NbSegX <= 0) || (NbSegZ <= 0)) {
     printf("segmentation input wrong in DiscretizePolygon ...\n");
@@ -2145,6 +2143,1944 @@ int BoundaryConditions(void) {
   return (0);
 }  // end of BoundaryConditions
 
+// Set up initial conditions (C styling to be fixed)
+int InitialConditions(void) {
+  int fstatus = 0;
+
+  // Known charges
+  if (OptKnCh) {
+    startClock = clock();
+    printf("InitialConditions: InitKnownCharges ... ");
+    fflush(stdout);
+    fstatus = InitKnownCharges();
+    if (fstatus != 0) {
+      neBEMMessage("InitialConditions - InitKnownCharges");
+      return -1;
+    }
+    printf("InitialConditions: InitKnownCharges done!\n");
+    fflush(stdout);
+    stopClock = clock();
+    neBEMTimeElapsed(startClock, stopClock);
+    printf("to InitKnownCharges.\n");
+  }  // if OptKnCh
+
+  // Charging up
+  if (OptChargingUp) {
+    startClock = clock();
+    printf("InitialConditions: InitChargingUp ... ");
+    fflush(stdout);
+    fstatus = InitChargingUp();
+    if (fstatus != 0) {
+      neBEMMessage("InitialConditions - InitChargingUp");
+      return -1;
+    }
+    printf("InitialConditions: InitChargingUp done!\n");
+    fflush(stdout);
+    stopClock = clock();
+    neBEMTimeElapsed(startClock, stopClock);
+    printf("to InitChargingUp.\n");
+  }  // if OptChargingUp
+
+  return 0;
+}  // InitialConditions ends
+
+// Very important note (Vin):
+// There are two approaches by which existing charge distributions can be
+// considered. The first one, neBEMKnownCharges, is the simpler approach
+// in which the external charges are left as they are. In the second one,
+// neBEMChargingUp, the charges that have crossed an element of a dielectric
+// interface, is considered to be sitting on the element. All such accumulated
+// charges are assigned to that element by suitably modifying
+// (EleArr+elesrc-1)->Assigned.
+// However, possible pitfalls such as considering the effects twice, exist.
+// Hence the code needs to be carefully exampined.
+// int neBEMKnownCharges(int (*Pt2UserFunction)(void)) - apt for UpdateKnCh
+int InitKnownCharges(void) {
+  int debugFn = 0;
+
+  /*
+  // How to check that the pointer points to a valid function?
+  if(Pt2UserFunction == NULL)
+          {
+          printf("Not a valid function ... returning ...\n");
+          return(-1);
+          }
+  else
+          {
+          // printf("Pt2UserFunction points to %p\n", Pt2UserFunction);
+          }
+
+  // Status of the known charges conditions is meaningful only after the
+  // element discretization has been completed, i.e., beyond the 5th state.
+  if(neBEMState >= 5)
+          {	// the following function is declared in the Interface.h.
+          int fstatus = (*Pt2UserFunction)();	// user to supply function
+          if(fstatus != 0)
+                  {
+                  neBEMMessage("neBEMKnownCharges - Pt2UserFunction");
+                  return -1;
+                  }
+          if(neBEMState > 5)	// assume LHS and inversion to be over?
+                  neBEMState = 8;
+          }
+  else
+          {
+          printf("Known charges are meaningful only beyond state 4 ...\n");
+          printf("returning ...\n");
+          return(-1);
+          }
+  */
+
+  // Set up parameters related to known charge calculations
+  // Electrons and ions can be distributed as points, lines, areas or volumes.
+  {
+    FILE *KnChInpFile = fopen("neBEMInp/neBEMKnCh.inp", "r");
+    if (KnChInpFile == NULL) {
+      OptKnCh = 0;
+      printf(
+          "neBEMKnCh.inp absent ... assuming absence of known charges ...\n");
+    } else {
+      fscanf(KnChInpFile, "OptKnCh: %d\n", &OptKnCh);
+      if (1) printf("OptKnCh: %d\n", OptKnCh);
+
+      if (!OptKnCh) printf("OptKnCh = 0 ... assuming no known charges ...\n");
+
+      if (OptKnCh) {
+        char PointKnChFile[256];
+        char LineKnChFile[256];
+        char AreaKnChFile[256];
+        char VolumeKnChFile[256];
+        double LScaleFactor;
+        double KnChFactor;
+
+        fscanf(KnChInpFile, "NbPointsKnCh: %d\n", &NbPointsKnCh);
+        fscanf(KnChInpFile, "PointKnChFile: %s\n", PointKnChFile);
+        fscanf(KnChInpFile, "NbLinesKnCh: %d\n", &NbLinesKnCh);
+        fscanf(KnChInpFile, "LineKnChFile: %s\n", LineKnChFile);
+        fscanf(KnChInpFile, "NbAreasKnCh: %d\n", &NbAreasKnCh);
+        fscanf(KnChInpFile, "AreaKnChFile: %s\n", AreaKnChFile);
+        fscanf(KnChInpFile, "NbVolumesKnCh: %d\n", &NbVolumesKnCh);
+        fscanf(KnChInpFile, "VolumeKnChFile: %s\n", VolumeKnChFile);
+        fscanf(KnChInpFile, "LScaleFactor: %lg\n", &LScaleFactor);
+        fscanf(KnChInpFile, "KnChFactor: %lg\n", &KnChFactor);
+        if (1) {
+          printf("NbPointsKnCh: %d\n", NbPointsKnCh);
+          printf("PointKnChFile: %s\n", PointKnChFile);
+          printf("NbLinesKnCh: %d\n", NbLinesKnCh);
+          printf("LineKnChFile: %s\n", LineKnChFile);
+          printf("NbAreasKnCh: %d\n", NbAreasKnCh);
+          printf("AreaKnChFile: %s\n", AreaKnChFile);
+          printf("NbVolumesKnCh: %d\n", NbVolumesKnCh);
+          printf("VolumeKnChFile: %s\n", VolumeKnChFile);
+          printf("LScaleFactor: %lg\n", LScaleFactor);
+          printf("KnChFactor: %lg\n", KnChFactor);
+        }
+
+        if (NbPointsKnCh) {  // Points
+          if (debugFn)
+            printf("No. of points with known charges: %d\n", NbPointsKnCh);
+
+          FILE *fptrPointKnChFile = fopen(PointKnChFile, "r");
+          if (fptrPointKnChFile == NULL) {
+            neBEMMessage("PointKnCh file absent ... returning\n");
+            return -10;
+          }
+
+          PointKnChArr =
+              (PointKnCh *)malloc((NbPointsKnCh + 1) * sizeof(PointKnCh));
+
+          for (int point = 0; point <= NbPointsKnCh; ++point) {  
+            // CHECK!!! ele limits start from 0, but all else from 1 to ...
+            PointKnChArr[point].Nb = 0;
+            PointKnChArr[point].P.X = 0.0;
+            PointKnChArr[point].P.Y = 0.0;
+            PointKnChArr[point].P.Z = 0.0;
+            PointKnChArr[point].Assigned = 0.0;
+          }
+
+          char header[256];
+          fgets(header, 256, fptrPointKnChFile);  // header
+
+          for (int point = 1; point <= NbPointsKnCh; ++point) {
+            fscanf(fptrPointKnChFile, "%d %lg %lg %lg %lg\n",
+                   &PointKnChArr[point].Nb, &PointKnChArr[point].P.X,
+                   &PointKnChArr[point].P.Y, &PointKnChArr[point].P.Z,
+                   &PointKnChArr[point].Assigned);
+
+            PointKnChArr[point].P.X /= LScaleFactor;     // convert Garfield cm
+            PointKnChArr[point].P.Y /= LScaleFactor;     // to SI meter
+            PointKnChArr[point].P.Z /= LScaleFactor;     // and similar other
+            PointKnChArr[point].Assigned *= KnChFactor;  // requirements
+
+            if (debugFn) {
+              printf("Nb: %d , X: %lg, Y:%lg, Z:%lg, Assigned:%lg\n",
+                     PointKnChArr[point].Nb, PointKnChArr[point].P.X,
+                     PointKnChArr[point].P.Y, PointKnChArr[point].P.Z,
+                     PointKnChArr[point].Assigned);
+            }
+          }
+
+          fclose(fptrPointKnChFile);
+          if (debugFn) printf("done for all points\n");
+        }  // if NbPointsKnCh: Inputs and calculations for points ends
+
+        if (NbLinesKnCh) {  // Lines
+          if (debugFn)
+            printf("No. of lines with known charges: %d\n", NbLinesKnCh);
+
+          FILE *fptrLineKnChFile = fopen(LineKnChFile, "r");
+          if (fptrLineKnChFile == NULL) {
+            neBEMMessage("LineKnCh file absent ... returning\n");
+            return -10;
+          }
+
+          LineKnChArr =
+              (LineKnCh *)malloc((NbLinesKnCh + 1) * sizeof(LineKnCh));
+
+          for (int line = 0; line <= NbLinesKnCh; ++line) {  
+            // CHECK!!! ele limits start from 0, but all else from 1 to ...
+            LineKnChArr[line].Nb = 0;
+            LineKnChArr[line].Start.X = 0.0;
+            LineKnChArr[line].Start.Y = 0.0;
+            LineKnChArr[line].Start.Z = 0.0;
+            LineKnChArr[line].Stop.X = 0.0;
+            LineKnChArr[line].Stop.Y = 0.0;
+            LineKnChArr[line].Stop.Z = 0.0;
+            LineKnChArr[line].Radius = 0.0;
+            LineKnChArr[line].Assigned = 0.0;
+          }
+
+          char header[256];
+          fgets(header, 256, fptrLineKnChFile);  // header
+
+          for (int line = 1; line <= NbLinesKnCh; ++line) {
+            fscanf(fptrLineKnChFile, "%d %lg %lg %lg %lg %lg %lg %lg %lg\n",
+                   &LineKnChArr[line].Nb, &LineKnChArr[line].Start.X,
+                   &LineKnChArr[line].Start.Y, &LineKnChArr[line].Start.Z,
+                   &LineKnChArr[line].Stop.X, &LineKnChArr[line].Stop.Y,
+                   &LineKnChArr[line].Stop.Z, &LineKnChArr[line].Radius,
+                   &LineKnChArr[line].Assigned);
+
+            LineKnChArr[line].Start.X /= LScaleFactor;  // cm to m
+            LineKnChArr[line].Start.Y /= LScaleFactor;  // and similar other
+            LineKnChArr[line].Start.Z /= LScaleFactor;
+            LineKnChArr[line].Stop.X /= LScaleFactor;
+            LineKnChArr[line].Stop.Y /= LScaleFactor;
+            LineKnChArr[line].Stop.Z /= LScaleFactor;
+            LineKnChArr[line].Radius /= LScaleFactor;
+            LineKnChArr[line].Assigned *= LScaleFactor;  // Q/cm to Q/m
+            LineKnChArr[line].Assigned *= KnChFactor;
+
+            if (debugFn) {
+              printf(
+                  "Nb: %d, X1Y1Z1: %lg %lg %lg X2Y2Z2 %lg %lg %lg R: %lg "
+                  "Lmda:%lg\n",
+                  LineKnChArr[line].Nb, LineKnChArr[line].Start.X,
+                  LineKnChArr[line].Start.Y, LineKnChArr[line].Start.Z,
+                  LineKnChArr[line].Stop.X, LineKnChArr[line].Stop.Y,
+                  LineKnChArr[line].Stop.Z, LineKnChArr[line].Radius,
+                  LineKnChArr[line].Assigned);
+            }
+          }
+
+          fclose(fptrLineKnChFile);
+          if (debugFn) printf("done for all lines\n");
+        }  // if NbLinesKnCh: Inputs and calculations for lines ends
+
+        if (NbAreasKnCh) {  // Areas
+          if (debugFn)
+            printf("No. of areas with known charges: %d\n", NbAreasKnCh);
+
+          FILE *fptrAreaKnChFile = fopen(AreaKnChFile, "r");
+          if (fptrAreaKnChFile == NULL) {
+            neBEMMessage("AreaKnCh file absent ... returning\n");
+            return -10;
+          }
+
+          AreaKnChArr =
+              (AreaKnCh *)malloc((NbAreasKnCh + 1) * sizeof(AreaKnCh));
+
+          for (int area = 0; area <= NbAreasKnCh; ++area) {  
+            // CHECK!!! ele limits start from 0, but all else from 1 to ...
+            AreaKnChArr[area].Nb = 0;
+            AreaKnChArr[area].NbVertices = 0;
+            for (int vert = 1; vert <= (AreaKnChArr + area - 1)->NbVertices;
+                 ++vert) {
+              (AreaKnChArr + area - 1)->Vertex[vert].X = 0.0;
+              (AreaKnChArr + area - 1)->Vertex[vert].Y = 0.0;
+              (AreaKnChArr + area - 1)->Vertex[vert].Z = 0.0;
+            }
+            AreaKnChArr[area].Assigned = 0.0;
+          }
+
+          char header[256];
+          fgets(header, 256, fptrAreaKnChFile);  // header
+
+          for (int area = 1; area <= NbAreasKnCh; ++area) {
+            fscanf(fptrAreaKnChFile, "%d %d %le\n",
+                   &(AreaKnChArr + area - 1)->Nb,
+                   &(AreaKnChArr + area - 1)->NbVertices,
+                   &(AreaKnChArr + area - 1)->Assigned);
+            for (int vert = 1; vert <= (AreaKnChArr + area - 1)->NbVertices;
+                 ++vert) {
+              fscanf(fptrAreaKnChFile, "%le %le %le\n",
+                     &(AreaKnChArr + area - 1)->Vertex[vert].X,
+                     &(AreaKnChArr + area - 1)->Vertex[vert].Y,
+                     &(AreaKnChArr + area - 1)->Vertex[vert].Z);
+            }
+
+            for (int vert = 1; vert <= (AreaKnChArr + area - 1)->NbVertices;
+                 ++vert) {  // cm to m
+              (AreaKnChArr + area - 1)->Vertex[vert].X /= LScaleFactor;
+              (AreaKnChArr + area - 1)->Vertex[vert].Y /= LScaleFactor;
+              (AreaKnChArr + area - 1)->Vertex[vert].Z /= LScaleFactor;
+            }
+            AreaKnChArr[area].Assigned *=
+                (LScaleFactor * LScaleFactor);  // cm^2 to m^2
+            AreaKnChArr[area].Assigned *= KnChFactor;
+          }
+
+          fclose(fptrAreaKnChFile);
+          if (debugFn) printf("done for all areas\n");
+        }  // if AreasKnCh: Inputs and calculations for areas ends
+
+        if (NbVolumesKnCh) {  // Volumes
+          if (debugFn)
+            printf("No. of volumes with known charges: %d\n", NbVolumesKnCh);
+
+          FILE *fptrVolumeKnChFile = fopen(VolumeKnChFile, "r");
+          if (fptrVolumeKnChFile == NULL) {
+            neBEMMessage("VolumeKnCh file absent ... returning\n");
+            return -10;
+          }
+
+          VolumeKnChArr =
+              (VolumeKnCh *)malloc((NbVolumesKnCh + 1) * sizeof(VolumeKnCh));
+
+          for (int volume = 0; volume <= NbVolumesKnCh; ++volume) {  
+            // CHECK!!! ele limits start from 0, but all else from 1 to ...
+            VolumeKnChArr[volume].Nb = 0;
+            VolumeKnChArr[volume].NbVertices = 0;
+            for (int vert = 1; vert <= (VolumeKnChArr + volume - 1)->NbVertices;
+                 ++vert) {
+              (VolumeKnChArr + volume - 1)->Vertex[vert].X = 0.0;
+              (VolumeKnChArr + volume - 1)->Vertex[vert].Y = 0.0;
+              (VolumeKnChArr + volume - 1)->Vertex[vert].Z = 0.0;
+            }
+            VolumeKnChArr[volume].Assigned *=
+                (LScaleFactor * LScaleFactor * LScaleFactor);  // cm^3 to m^3
+            VolumeKnChArr[volume].Assigned = 0.0;
+          }
+
+          char header[256];
+          fgets(header, 256, fptrVolumeKnChFile);  // header
+
+          for (int volume = 1; volume <= NbVolumesKnCh; ++volume) {
+            fscanf(fptrVolumeKnChFile, "%d %d %le\n",
+                   &(VolumeKnChArr + volume - 1)->Nb,
+                   &(VolumeKnChArr + volume - 1)->NbVertices,
+                   &(VolumeKnChArr + volume - 1)->Assigned);
+            for (int vert = 1; vert <= (VolumeKnChArr + volume - 1)->NbVertices;
+                 ++vert) {
+              fscanf(fptrVolumeKnChFile, "%le %le %le\n",
+                     &(VolumeKnChArr + volume - 1)->Vertex[vert].X,
+                     &(VolumeKnChArr + volume - 1)->Vertex[vert].Y,
+                     &(VolumeKnChArr + volume - 1)->Vertex[vert].Z);
+            }
+
+            for (int vert = 1; vert <= (VolumeKnChArr + volume - 1)->NbVertices;
+                 ++vert) {  // cm to m
+              (VolumeKnChArr + volume - 1)->Vertex[vert].X /= LScaleFactor;
+              (VolumeKnChArr + volume - 1)->Vertex[vert].Y /= LScaleFactor;
+              (VolumeKnChArr + volume - 1)->Vertex[vert].Z /= LScaleFactor;
+            }
+            VolumeKnChArr[volume].Assigned *= KnChFactor;
+          }
+
+          fclose(fptrVolumeKnChFile);
+          if (debugFn) printf("done for all volumes\n");
+        }  // if NbVolumesKnCh: Inputs and calculations for volumes ends
+
+      }  // if OptKnCh
+
+      fclose(KnChInpFile);
+    }  // else KnChInpFile
+  }    // parameters related to known charge calculations
+
+  return (0);
+}  // InitKnownCharges ends
+
+// It is quite possible that the elements had a charge assgined to them
+// even before they are being considered for getting charged up.
+// Moreover, following the sequence in which the algorithm has been developed,
+// the same element accumulates the available electrons and then the ions.
+// The resultant of all three (prior charge, electrons and ions) turns out
+// to be the assigned charge on the elements, after the execution of this
+// function.
+int InitChargingUp(void) {
+  int debugFn = 0;
+
+  // status of elements before being charged up
+  if (debugFn) {
+    for (int ele = 1; ele <= NbElements; ++ele) {
+      printf("ele, Assigned charge: %d, %lg\n", ele,
+             (EleArr + ele - 1)->Assigned);
+    }
+  }
+
+  // Set up parameters related to charging-up calculations
+  // The plan is to distribute the electrons and ions ending in dielectric
+  // volumes to the elements on the volumes
+  {
+    FILE *ChargingUpInpFile = fopen("neBEMInp/neBEMChargingUp.inp", "r");
+    if (ChargingUpInpFile == NULL) {
+      printf(
+          "neBEMChargingUp.inp absent ... assuming no charging up effect "
+          "...\n");
+      // assign NbChUpEEle and NbChUpIEle and Prims to be zeros?
+    } else {
+      fscanf(ChargingUpInpFile, "OptChargingUp: %d\n", &OptChargingUp);
+      if (!OptChargingUp)
+        printf("OptChargingUp = 0 ... assuming no charging up effect ...\n");
+      if (1) printf("OptChargingUp: %d\n", OptChargingUp);
+
+      if (OptChargingUp) {
+        char ChargingUpEFile[256];
+        char ChargingUpIFile[256];
+        double LScaleFactor;
+        double ChUpFactor;
+        int *NbChUpEonEle, *NbChUpIonEle;
+
+        fscanf(ChargingUpInpFile, "ChargingUpEFile: %s\n", ChargingUpEFile);
+        fscanf(ChargingUpInpFile, "ChargingUpIFile: %s\n", ChargingUpIFile);
+        fscanf(ChargingUpInpFile, "LScaleFactor: %lg\n", &LScaleFactor);
+        fscanf(ChargingUpInpFile, "ChUpFactor: %lg\n", &ChUpFactor);
+        if (1) {
+          printf("ChargingUpEFile: %s\n", ChargingUpEFile);
+          printf("ChargingUpIFile: %s\n", ChargingUpIFile);
+          printf("LScaleFactor: %lg\n", LScaleFactor);
+          printf("ChUpFactor: %lg\n", ChUpFactor);
+        }
+
+        {  // Calculation for electrons
+          FILE *fptrChargingUpEFile = fopen(ChargingUpEFile, "r");
+          if (fptrChargingUpEFile == NULL) {
+            neBEMMessage("ChargingUpE file absent ... returning\n");
+            return -10;
+          }
+          int NbOfE = neBEMGetNbOfLines(ChargingUpEFile);
+          if (NbOfE <= 1) {
+            neBEMMessage("Too few lines in ChargingUpE ... returning\n");
+            return -11;
+          } else {  // initialize
+            NbChUpEonEle = (int *)malloc((NbElements + 1) * sizeof(int));
+            for (int ele = 0; ele <= NbElements; ++ele) {  
+              // CHECK!!! ele limits start from 0, but all else from 1 to ...
+              NbChUpEonEle[ele] = 0;
+            }
+          }
+
+          // read the header line
+          char header[256];
+          fgets(header, 256, fptrChargingUpEFile);
+
+          --NbOfE;  // one line was for the header
+          if (debugFn) printf("No. of electrons: %d\n", NbOfE);
+          char tmpEFile[256];
+          strcpy(tmpEFile, "/tmp/ElectronTempFile.out");
+          FILE *ftmpEF = fopen(tmpEFile, "w");
+          if (ftmpEF == NULL) {
+            printf("cannot open temporary output file ... returning ...\n");
+            return -100;
+          }
+          FILE *fPtEChUpMap = fopen("PtEChUpMap.out", "w");
+          if (fPtEChUpMap == NULL) {
+            printf("cannot open PtEChUpMap.out file for writing ...\n");
+            return 110;
+          }
+
+          char label;
+          int vol, enb;  // label, volume and electron number
+          double xlbend, ylbend, zlbend, xend, yend,
+              zend;  // lbend == Last But END
+          Point3D
+              ptintsct;  // each electron likely to have an intersection point
+          for (int electron = 1; electron <= NbOfE; ++electron) {
+            fscanf(fptrChargingUpEFile, "%c %d %d %lg %lg %lg %lg %lg %lg\n",
+                   &label, &vol, &enb, &xlbend, &xend, &ylbend, &yend, &zlbend,
+                   &zend);
+            xlbend /= LScaleFactor;  // cm to metre
+            xend /= LScaleFactor;    // and similar other
+            ylbend /= LScaleFactor;
+            yend /= LScaleFactor;
+            zlbend /= LScaleFactor;
+            zend /= LScaleFactor;
+            ptintsct.X = 0.0;
+            ptintsct.Y = 0.0;
+            ptintsct.Z = 0.0;  // initialize
+
+            // find the parametric equation of this last segment
+            // if xend < xlbend, swap the directions
+            // This has not been mentioned as mandatory in Vince's book
+            // "Geometry for Computer Graphics", but implied in the book "A
+            // Programmer's Geometry"
+            if (xend < xlbend)  // not implemented now
+            {
+            }
+            double lseg = (xend - xlbend) * (xend - xlbend) +
+                          (yend - ylbend) * (yend - ylbend) +
+                          (zend - zlbend) * (zend - zlbend);
+            lseg = sqrt(lseg);
+            double xgrd =
+                (xend - xlbend) / lseg;  // normalized direction vector
+            double ygrd = (yend - ylbend) / lseg;
+            double zgrd = (zend - zlbend) / lseg;
+            if (debugFn) {
+              printf("\nelectron: %d\n", electron);
+              printf("xlbend: %lg, ylbend: %lg, zlbend: %lg\n", xlbend, ylbend,
+                     zlbend);
+              printf("xend: %lg, yend: %lg, zend: %lg\n", xend, yend, zend);
+              printf("xgrd: %lg, ygrd: %lg, zgrd: %lg\n", xgrd, ygrd, zgrd);
+              fprintf(ftmpEF, "#e: %d, label: %c, vol: %d\n", electron, label,
+                      vol);
+              fprintf(ftmpEF, "%lg %lg %lg\n", xlbend, ylbend, zlbend);
+              fprintf(ftmpEF, "%lg %lg %lg\n", xend, yend, zend);
+              fprintf(ftmpEF, "#xgrd: %lg, ygrd: %lg, zgrd: %lg\n", xgrd, ygrd,
+                      zgrd);
+              fprintf(ftmpEF, "\n");
+            }
+
+            // determine which element gets this electron
+            // At present, the logic is as follow:
+            // Using the information on the last segment, find out which
+            // primitive is pierced by it and at which point From the
+            // intersection point, find out the element number on the primitive
+            // in a local sense Using the information (start and end elements of
+            // a given primitive) identify the element in a global sense. This
+            // approach should be lot more efficient than checking intersection
+            // element by element.
+            // The intersection point is computed following algorithm
+            // implemented in a matlab code (plane_imp_line_par_int_3d.m) Also
+            // check which primitive in the list is the closet to the end point
+
+            double SumOfAngles;
+            int PrimIntsctd = -1,
+                EleIntsctd = -1;   // intersected primitive & element
+            int nearestprim = -1;  // absurd value
+            double dist = 1.0e6, mindist = 1.0e6;  // absurdly high numbers
+            // check all primitives
+            for (int prim = 1; prim <= NbPrimitives; ++prim) { 
+              if (InterfaceType[prim] != 4)
+                continue;  // primitive not a dielectric
+
+              int intersect = 0, extrasect = 1;  // worst of conditions
+              int InPrim = 0, InEle = 0;
+              if (debugFn)
+                printf("prim: %d, mindist: %lg, nearestprim: %d\n", prim,
+                       mindist, nearestprim);
+
+              // Use two nodes at a time to get two independent vectors on
+              // primitive Get cross-product of these two vector - normal to the
+              // plane Note that the normal is already associated with the
+              // primitive of type 3 and 4; 2 is wire and does not have any
+              // associated normal
+              if ((PrimType[prim] == 3) || (PrimType[prim] == 4)) {
+                if (debugFn) {
+                  printf("prim: %d\n", prim);
+                  printf("vertex0: %lg, %lg, %lg\n", XVertex[prim][0],
+                         YVertex[prim][0], ZVertex[prim][0]);
+                  printf("vertex1: %lg, %lg, %lg\n", XVertex[prim][1],
+                         YVertex[prim][1], ZVertex[prim][1]);
+                  printf("vertex2: %lg, %lg, %lg\n", XVertex[prim][2],
+                         YVertex[prim][2], ZVertex[prim][2]);
+                  if (PrimType[prim] == 4) {
+                    printf("vertex3: %lg, %lg, %lg\n", XVertex[prim][3],
+                           YVertex[prim][3], ZVertex[prim][3]);
+                  }
+                  fprintf(ftmpEF, "#prim: %d\n", prim);
+                  fprintf(ftmpEF, "%lg %lg %lg\n", XVertex[prim][0],
+                          YVertex[prim][0], ZVertex[prim][0]);
+                  fprintf(ftmpEF, "%lg %lg %lg\n", XVertex[prim][1],
+                          YVertex[prim][1], ZVertex[prim][1]);
+                  fprintf(ftmpEF, "%lg %lg %lg\n", XVertex[prim][2],
+                          YVertex[prim][2], ZVertex[prim][2]);
+                  if (PrimType[prim] == 4) {
+                    fprintf(ftmpEF, "%lg %lg %lg\n", XVertex[prim][3],
+                            YVertex[prim][3], ZVertex[prim][3]);
+                  }
+                  fprintf(ftmpEF, "%lg %lg %lg\n", XVertex[prim][0],
+                          YVertex[prim][0], ZVertex[prim][0]);
+                  fprintf(ftmpEF, "\n");
+                  fflush(stdout);
+                }  // debugFn
+
+                // use a, b, c (normal is ai + bj + ck) at one of the nodes to
+                // get d ax + by + cz + d = 0 is the equation of the plane
+                double a = XNorm[prim];
+                double b = YNorm[prim];
+                double c = ZNorm[prim];
+                double d = -a * XVertex[prim][0] - b * YVertex[prim][0] -
+                           c * ZVertex[prim][0];
+
+                // distance of the end point to this primitve is
+                dist = (xend * a + yend * b + zend * c + d) /
+                       sqrt(a * a + b * b + c * c);
+                dist = fabs(dist);  // if only magnitude is required
+                if (prim == 1) {
+                  mindist = dist;
+                  nearestprim = prim;
+                }
+                if ((prim == 1) && debugFn)
+                  printf(
+                      "after prim == 1 check mindist: %lg, nearestprim: %d\n",
+                      mindist, nearestprim);
+
+                // Point of intersection
+                // Algo as on p62 (pdf 81) of Vince - Geometry for Computer
+                // Graphics 1.5.13 Intersection of a line and a plane Algorithm
+                // as implemented in plne_imp_line_par_int_3d.m a (nx), b (ny),
+                // c (nz), d are a, b, c, d vx, vy, vz are xgrd, ygrd and zgrd
+                // tx, ty, tz are xlbend, ylbend, zlbend
+                // In the present case, n and v are unit vectors
+                double norm1 = sqrt(a * a + b * b + c * c);
+                double norm2 = sqrt(xgrd * xgrd + ygrd * ygrd + zgrd * zgrd);
+                double denom =
+                    a * xgrd + b * ygrd + c * zgrd;  // (vec)n.(vec)v; if 0, ||
+                double tol =
+                    1.0e-16;  // CHECK: -8 in original code; sizes small here
+                intersect = extrasect = 0;
+
+                if (debugFn) {
+                  printf("a, b, c, d, dist: %lg, %lg, %lg, %lg, %lg\n", a, b, c,
+                         d, dist);
+                  printf("vector n: ai + bj + ck\n");
+                  printf("vector v: xgrd, ygrd, zgrd: %lg, %lg, %lg\n", xgrd,
+                         ygrd, zgrd);
+                  printf("norm1, norm2, (vec n . vec v) denom: %lg, %lg, %lg\n",
+                         norm1, norm2, denom);
+                  printf("if vec n . vec v == 0, line and plane parallel\n");
+                  fflush(stdout);
+                }
+
+                if (fabs(denom) < tol * norm1 * norm2) { 
+                  // line parallel to the plane
+                  if (fabs(a * xlbend + b * ylbend + c * zlbend + d) <=
+                      1.0e-16) {  // CHECK: was == 0.0 in original code
+                    intersect = 1;
+                    extrasect = 0;  // line ends on the plane
+                    ptintsct.X = xlbend;
+                    ptintsct.Y = ylbend;
+                    ptintsct.Z = zlbend;
+                  } else {
+                    intersect = 0;
+                    extrasect = 1;     // both wrong
+                    ptintsct.X = 0.0;  // Wrong to assign 0 values
+                    ptintsct.Y =
+                        0.0;  // However, they are never going to be used
+                    ptintsct.Z = 0.0;  // since intersect is 0
+                  }
+                  if (debugFn) {
+                    printf("line and plane parallel ...\n");
+                    printf("intersect: %d, extrasect: %d\n", intersect,
+                           extrasect);
+                    printf("intersection point: %lg, %lg, %lg\n", ptintsct.X,
+                           ptintsct.Y, ptintsct.Z);
+                  }       // if line and plane are parallel
+                } else {  // if they are not parallel, they must intersect
+                  intersect = 1;
+                  double t =
+                      -(a * xlbend + b * ylbend + c * zlbend + d) / denom;
+
+                  // check whether t is less than the length of the segment
+                  // and in the correct direction
+                  // If not, then an extrapolated intersection is not of
+                  // interest
+                  if ((t < 0.0) ||
+                      (fabs(t) > fabs(lseg)))  // wrong dirn or beyond end
+                  {
+                    extrasect = 1;
+                    ptintsct.X = xlbend + t * xgrd;
+                    ptintsct.Y = ylbend + t * ygrd;
+                    ptintsct.Z = zlbend + t * zgrd;
+                  } else {
+                    extrasect = 0;
+                    ptintsct.X = xlbend + t * xgrd;
+                    ptintsct.Y = ylbend + t * ygrd;
+                    ptintsct.Z = zlbend + t * zgrd;
+                  }
+                  if (debugFn) {
+                    printf("line and plane NOT parallel ...\n");
+                    printf("intersect: %d, extrasect: %d\n", intersect,
+                           extrasect);
+                    printf("intersection point: %lg, %lg, %lg\n", ptintsct.X,
+                           ptintsct.Y, ptintsct.Z);
+                    printf("t, lseg: %lg, %lg\n", t, lseg);
+                    printf(
+                        "for an interesting intersection, lseg > t > 0.0 "
+                        "...\n\n");
+                    fflush(stdout);
+                  }   // must intersect
+                }     // if not parallel
+              }       // if PrimType is 3 or 4
+              else {  // this is a wire primitive - assume no charging up issues
+                dist = -1.0;  // an absurd negative distance
+                intersect = 0;
+                extrasect = 0;
+                continue;
+              }  // else PrimType 3 or 4
+
+              if (dist < mindist) {
+                mindist = dist;
+                nearestprim = prim;
+              }
+              if (debugFn)
+                printf("nearestprim: %d, mindist: %lg\n\n", nearestprim,
+                       mindist);
+
+              // implicit assumption: the first primitive that gets pierced by
+              // the ray is the one that we want. There can be other primitives
+              // that are pierced by the same ray. So, this logic should be
+              // refined further
+              if ((intersect == 1) && (extrasect == 0)) {
+                // check whether the intersection point is within primitive
+                // polygon
+                int nvert = PrimType[prim];
+                Point3D polynode[4];
+                polynode[0].X = XVertex[prim][0];
+                polynode[0].Y = YVertex[prim][0];
+                polynode[0].Z = ZVertex[prim][0];
+                polynode[1].X = XVertex[prim][1];
+                polynode[1].Y = YVertex[prim][1];
+                polynode[1].Z = ZVertex[prim][1];
+                polynode[2].X = XVertex[prim][2];
+                polynode[2].Y = YVertex[prim][2];
+                polynode[2].Z = ZVertex[prim][2];
+                if (PrimType[prim] == 4) {
+                  polynode[3].X = XVertex[prim][3];
+                  polynode[3].Y = YVertex[prim][3];
+                  polynode[3].Z = ZVertex[prim][3];
+                }
+                // printf("neBEMChkInPoly for primitive %d\n", prim);
+                SumOfAngles = neBEMChkInPoly(nvert, polynode, ptintsct);
+                if (fabs(fabs(SumOfAngles) - neBEMtwopi) <= 1.0e-8) {
+                  InPrim = 1;
+                  PrimIntsctd = prim;
+                }
+                if (debugFn) {
+                  // print polynode and InPrim
+                  printf("Prim: %d\n", prim);
+                  printf("ptintsct: %lg, %lg, %lg\n", ptintsct.X, ptintsct.Y,
+                         ptintsct.Z);
+                  printf("nvert: %d\n", nvert);
+                  printf("polynode0: %lg, %lg, %lg\n", polynode[0].X,
+                         polynode[0].Y, polynode[0].Z);
+                  printf("polynode1: %lg, %lg, %lg\n", polynode[1].X,
+                         polynode[1].Y, polynode[1].Z);
+                  printf("polynode2: %lg, %lg, %lg\n", polynode[2].X,
+                         polynode[2].Y, polynode[2].Z);
+                  if (nvert == 4) {
+                    printf("polynode3: %lg, %lg, %lg\n", polynode[3].X,
+                           polynode[3].Y, polynode[3].Z);
+                  }
+                  printf("SumOfAngles: %lg, InPrim: %d\n", SumOfAngles, InPrim);
+                  fflush(stdout);
+                }
+
+                if (!InPrim && (prim != NbPrimitives)) {
+                  continue;  // check next primitive
+                }
+
+                // Once identified, check in which element belonging to this
+                // primitive contains the point of intersection
+                if (InPrim) {
+                  InEle = 0;
+                  for (int ele = ElementBgn[prim]; ele <= ElementEnd[prim];
+                       ++ele) {
+                    nvert = 0;
+                    if ((EleArr + ele - 1)->G.Type == 3) nvert = 3;
+                    if ((EleArr + ele - 1)->G.Type == 4) nvert = 4;
+                    if (!nvert) {
+                      neBEMMessage(
+                          "no vertex in element! ... neBEMKnownCharges ...\n");
+                      return -20;
+                    }
+
+                    polynode[0].X = (EleArr + ele - 1)->G.Vertex[0].X;
+                    polynode[0].Y = (EleArr + ele - 1)->G.Vertex[0].Y;
+                    polynode[0].Z = (EleArr + ele - 1)->G.Vertex[0].Z;
+                    polynode[1].X = (EleArr + ele - 1)->G.Vertex[1].X;
+                    polynode[1].Y = (EleArr + ele - 1)->G.Vertex[1].Y;
+                    polynode[1].Z = (EleArr + ele - 1)->G.Vertex[1].Z;
+                    polynode[2].X = (EleArr + ele - 1)->G.Vertex[2].X;
+                    polynode[2].Y = (EleArr + ele - 1)->G.Vertex[2].Y;
+                    polynode[2].Z = (EleArr + ele - 1)->G.Vertex[2].Z;
+                    if (nvert == 4) {
+                      polynode[3].X = (EleArr + ele - 1)->G.Vertex[3].X;
+                      polynode[3].Y = (EleArr + ele - 1)->G.Vertex[3].Y;
+                      polynode[3].Z = (EleArr + ele - 1)->G.Vertex[3].Z;
+                    }
+
+                    // printf("neBEMChkInPoly for element %d\n", ele);
+                    SumOfAngles = neBEMChkInPoly(nvert, polynode, ptintsct);
+                    if (fabs(fabs(SumOfAngles) - neBEMtwopi) <= 1.0e-8)
+                      InEle = 1;
+                    if (debugFn) {
+                      // print polynode and InEle
+                      printf("Ele: %d\n", ele);
+                      printf("ptintsct: %lg, %lg, %lg\n", ptintsct.X,
+                             ptintsct.Y, ptintsct.Z);
+                      printf("nvert: %d\n", nvert);
+                      printf("polynode0: %lg, %lg, %lg\n", polynode[0].X,
+                             polynode[0].Y, polynode[0].Z);
+                      printf("polynode1: %lg, %lg, %lg\n", polynode[1].X,
+                             polynode[1].Y, polynode[1].Z);
+                      printf("polynode2: %lg, %lg, %lg\n", polynode[2].X,
+                             polynode[2].Y, polynode[2].Z);
+                      if (nvert == 4) {
+                        printf("polynode3: %lg, %lg, %lg\n", polynode[3].X,
+                               polynode[3].Y, polynode[3].Z);
+                      }
+                      printf("SumOfAngles: %lg, InEle: %d\n", SumOfAngles,
+                             InEle);
+                      fflush(stdout);
+                    }
+                    if (InEle) {
+                      ptintsct.X = (EleArr + ele - 1)->G.Origin.X;
+                      ptintsct.Y = (EleArr + ele - 1)->G.Origin.Y;
+                      ptintsct.Z = (EleArr + ele - 1)->G.Origin.Z;
+                      // Associate this electron to the identified element
+                      EleIntsctd = ele;
+                      NbChUpEonEle[ele]++;
+                      fprintf(fPtEChUpMap, "%d %lg %lg %lg %d %d %d %d\n",
+                              electron, ptintsct.X, ptintsct.Y, ptintsct.Z,
+                              prim, InPrim, ele, InEle);
+
+                      if (debugFn) {
+                        printf("# electron: %d\n", electron);
+                        printf("%lg %lg %lg\n", xlbend, ylbend, zlbend);
+                        printf("%lg %lg %lg\n", xend, yend, zend);
+                        printf("%lg, %lg, %lg\n", ptintsct.X, ptintsct.Y,
+                               ptintsct.Z);
+                        printf("# Associated primitive: %d\n", prim);
+                        printf(
+                            "# Associated element and origin: %d, %lg, %lg, "
+                            "%lg\n",
+                            ele, (EleArr + ele - 1)->G.Origin.X,
+                            (EleArr + ele - 1)->G.Origin.Y,
+                            (EleArr + ele - 1)->G.Origin.Z);
+                        printf("#NbChUpEonEle on element: %d\n",
+                               NbChUpEonEle[ele]);
+                        fprintf(ftmpEF, "#Element: %d\n", ele);
+                        fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X,
+                                polynode[0].Y, polynode[0].Z);
+                        fprintf(ftmpEF, "%lg %lg %lg\n", polynode[1].X,
+                                polynode[1].Y, polynode[1].Z);
+                        fprintf(ftmpEF, "%lg %lg %lg\n", polynode[2].X,
+                                polynode[2].Y, polynode[2].Z);
+                        if (nvert == 4) {
+                          fprintf(ftmpEF, "%lg %lg %lg\n", polynode[3].X,
+                                  polynode[3].Y, polynode[3].Z);
+                        }
+                        fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X,
+                                polynode[0].Y, polynode[0].Z);
+                        fprintf(ftmpEF, "\n");
+                        fflush(stdout);
+                      }
+                      break;  // desired element has been found!
+                    }
+                  }  // for all elements on this primitive
+
+                  if (InEle)
+                    break;
+                  else {
+                    neBEMMessage(
+                        "Element not identified ... neBEMKnownCharges\n");
+                    return -2;
+                  }
+                }  // if InPrim
+              }    // if intersection and no extrasection
+
+              if ((InPrim) && (intersect) && (!extrasect) &&
+                  (InEle))  // all satisfied
+                break;  // do not check any further primtive for this electron
+
+              // If, after checking all the primitives, no interstion is found
+              // valid
+              if (prim ==
+                  (NbPrimitives))  // end of the list and no intersection
+              {
+                int nvert;
+                Point3D polynode[4];
+                int nearestele = ElementBgn[nearestprim];
+                double distele = 1.0e6,
+                       mindistele = 1.0e6;  // absurdly high value
+
+                if (debugFn) {
+                  printf("prim == (NbPrimitives) ... checking nearest ...\n");
+                  printf("nearestprim: %d, mindist: %lg\n", nearestprim,
+                         mindist);
+                }
+
+                if (mindist <= 10.0e-6) {
+                  PrimIntsctd = nearestprim;
+                  InPrim = 1;
+                } else {
+                  InPrim = 0;
+                  InEle = 0;
+                  break;
+                }
+
+                for (int ele = ElementBgn[nearestprim];  // check all elements
+                     ele <= ElementEnd[nearestprim]; ++ele) {
+                  nvert = 0;
+                  if ((EleArr + ele - 1)->G.Type == 3) nvert = 3;
+                  if ((EleArr + ele - 1)->G.Type == 4) nvert = 4;
+                  if (!nvert) {
+                    neBEMMessage(
+                        "no vertex element! ... neBEMKnownCharges ...\n");
+                    return -20;
+                  }
+
+                  /*
+                  polynode[0].X = (EleArr+ele-1)->G.Vertex[0].X;
+                  polynode[0].Y = (EleArr+ele-1)->G.Vertex[0].Y;
+                  polynode[0].Z = (EleArr+ele-1)->G.Vertex[0].Z;
+                  polynode[1].X = (EleArr+ele-1)->G.Vertex[1].X;
+                  polynode[1].Y = (EleArr+ele-1)->G.Vertex[1].Y;
+                  polynode[1].Z = (EleArr+ele-1)->G.Vertex[1].Z;
+                  polynode[2].X = (EleArr+ele-1)->G.Vertex[2].X;
+                  polynode[2].Y = (EleArr+ele-1)->G.Vertex[2].Y;
+                  polynode[2].Z = (EleArr+ele-1)->G.Vertex[2].Z;
+                  if(nvert == 4)
+                          {
+                          polynode[3].X = (EleArr+ele-1)->G.Vertex[3].X;
+                          polynode[3].Y = (EleArr+ele-1)->G.Vertex[3].Y;
+                          polynode[3].Z = (EleArr+ele-1)->G.Vertex[3].Z;
+                          }
+
+                  Vector3D v01, v12, elenorm, unitelenorm;
+                  v01.X = polynode[1].X - polynode[0].X;
+                  v01.Y = polynode[1].Y - polynode[0].Y;
+                  v01.Z = polynode[1].Z - polynode[0].Z;
+                  v12.X = polynode[2].X - polynode[1].X;
+                  v12.Y = polynode[2].Y - polynode[1].Y;
+                  v12.Z = polynode[2].Z - polynode[1].Z;
+                  elenorm = Vector3DCrossProduct(&v01, &v12);
+                  unitelenorm = UnitVector3D(&elenorm);
+
+                  if((nvert == 3) || (nvert == 4))
+                          {
+                          if(debugFn)
+                                  {
+                                  printf("nearestprim: %d, element: %d\n",
+  nearestprim, ele); printf("vertex0: %lg, %lg, %lg\n", polynode[0].X,
+  polynode[0].Y, polynode[0].Z); printf("vertex1: %lg, %lg, %lg\n",
+                                                  polynode[1].X, polynode[1].Y,
+  polynode[1].Z); printf("vertex2: %lg, %lg, %lg\n", polynode[2].X,
+  polynode[2].Y, polynode[2].Z); if(PrimType[prim] == 4)
+                                          {
+                                          printf("vertex3: %lg, %lg, %lg\n",
+                                                  polynode[3].X, polynode[3].Y,
+  polynode[3].Z);
+                                          }
+                                  fprintf(ftmpEF, "#nearestprim: %d, element:
+  %d\n", nearestprim, ele); fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X,
+  polynode[0].Y, polynode[0].Z); fprintf(ftmpEF, "%lg %lg %lg\n", polynode[1].X,
+  polynode[1].Y, polynode[1].Z); fprintf(ftmpEF, "%lg %lg %lg\n", polynode[2].X,
+  polynode[2].Y, polynode[2].Z); if(PrimType[prim] == 4)
+                                          {
+                                          fprintf(ftmpEF, "%lg %lg %lg\n",
+                                                  polynode[3].X, polynode[3].Y,
+  polynode[3].Z);
+                                          }
+                                  fprintf(ftmpEF, "%lg %lg %lg\n",
+                                                  polynode[0].X, polynode[0].Y,
+  polynode[0].Z); fprintf(ftmpEF, "\n"); fflush(stdout); }	// debugFn
+
+  // use a, b, c (normal is ai + bj + ck) at one of the nodes to get d
+  // ax + by + cz + d = 0 is the equation of the plane
+                          double a = unitelenorm.X;
+                          double b = unitelenorm.Y;
+                          double c = unitelenorm.Z;
+                          double d = - a*polynode[0].X - b*polynode[0].Y
+                                                                          -
+  c*polynode[0].Z;
+
+                          // distance of the end point to this primitve is
+                          distele = (xend*a + yend*b + zend*c + d)
+                                                                                  / sqrt(a*a + b*b + c*c);
+                          distele = fabs(distele);	// if only magnitude is
+  required
+                          */
+
+                  Vector3D eleOrigin;
+                  eleOrigin.X = (EleArr + ele - 1)->G.Origin.X;
+                  eleOrigin.Y = (EleArr + ele - 1)->G.Origin.Y;
+                  eleOrigin.Z = (EleArr + ele - 1)->G.Origin.Z;
+                  distele = (eleOrigin.X - xend) * (eleOrigin.X - xend) +
+                            (eleOrigin.Y - yend) * (eleOrigin.Y - yend) +
+                            (eleOrigin.Z - zend) * (eleOrigin.Z - zend);
+                  distele = sqrt(distele);
+
+                  if (ele == ElementBgn[nearestprim]) {
+                    mindistele = distele;
+                    nearestele = ele;
+                  }
+                  if (distele < mindistele) {
+                    mindistele = distele;
+                    nearestele = ele;
+                  }
+
+                  if (debugFn) {
+                    // printf("a, b, c, d, dist: %lg, %lg, %lg, %lg, %lg\n",
+                    // a, b, c, d,  dist);
+                    // printf("vector n: ai + bj + ck\n");
+                    // printf("vector v: xgrd, ygrd, zgrd: %lg, %lg, %lg\n",
+                    // xgrd, ygrd, zgrd);
+                    printf(
+                        "distele: %lg, mindistele: %lg,from nearest ele "
+                        "origin: %d\n",
+                        distele, mindistele, nearestele);
+                    fflush(stdout);
+                  }
+
+                  // }	// if PrimType is 3 or 4
+                }  // for elements in nearestprim
+
+                // if(mindistele <= 10.0e-6)
+                // {
+                EleIntsctd = nearestele;
+                InEle = 1;
+                ptintsct.X = (EleArr + EleIntsctd - 1)->G.Origin.X;
+                ptintsct.Y = (EleArr + EleIntsctd - 1)->G.Origin.Y;
+                ptintsct.Z = (EleArr + EleIntsctd - 1)->G.Origin.Z;
+                NbChUpEonEle[EleIntsctd]++;
+
+                fprintf(fPtEChUpMap, "%d %lg %lg %lg %d %d %d %d\n", electron,
+                        ptintsct.X, ptintsct.Y, ptintsct.Z, PrimIntsctd, InPrim,
+                        EleIntsctd, InEle);
+                // }	// if mindistele
+
+                if (debugFn) {
+                  printf("# electron: %d\n", electron);
+                  printf("%lg %lg %lg\n", xlbend, ylbend, zlbend);
+                  printf("%lg %lg %lg\n", xend, yend, zend);
+                  printf("%lg, %lg, %lg\n", ptintsct.X, ptintsct.Y, ptintsct.Z);
+                  printf("# Associated primitive: %d\n", PrimIntsctd);
+                  printf("# Associated element and origin: %d, %lg, %lg, %lg\n",
+                         EleIntsctd, (EleArr + EleIntsctd - 1)->G.Origin.X,
+                         (EleArr + EleIntsctd - 1)->G.Origin.Y,
+                         (EleArr + EleIntsctd - 1)->G.Origin.Z);
+                  printf("#NbChUpEonEle on element: %d\n",
+                         NbChUpEonEle[EleIntsctd]);
+                  fflush(stdout);
+
+                  fprintf(ftmpEF, "#Element: %d\n", EleIntsctd);
+                  polynode[0].X = (EleArr + EleIntsctd - 1)->G.Vertex[0].X;
+                  polynode[0].Y = (EleArr + EleIntsctd - 1)->G.Vertex[0].Y;
+                  polynode[0].Z = (EleArr + EleIntsctd - 1)->G.Vertex[0].Z;
+                  polynode[1].X = (EleArr + EleIntsctd - 1)->G.Vertex[1].X;
+                  polynode[1].Y = (EleArr + EleIntsctd - 1)->G.Vertex[1].Y;
+                  polynode[1].Z = (EleArr + EleIntsctd - 1)->G.Vertex[1].Z;
+                  polynode[2].X = (EleArr + EleIntsctd - 1)->G.Vertex[2].X;
+                  polynode[2].Y = (EleArr + EleIntsctd - 1)->G.Vertex[2].Y;
+                  polynode[2].Z = (EleArr + EleIntsctd - 1)->G.Vertex[2].Z;
+                  if (nvert == 4) {
+                    polynode[3].X = (EleArr + EleIntsctd - 1)->G.Vertex[3].X;
+                    polynode[3].Y = (EleArr + EleIntsctd - 1)->G.Vertex[3].Y;
+                    polynode[3].Z = (EleArr + EleIntsctd - 1)->G.Vertex[3].Z;
+                  }
+                  fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X, polynode[0].Y,
+                          polynode[0].Z);
+                  fprintf(ftmpEF, "%lg %lg %lg\n", polynode[1].X, polynode[1].Y,
+                          polynode[1].Z);
+                  fprintf(ftmpEF, "%lg %lg %lg\n", polynode[2].X, polynode[2].Y,
+                          polynode[2].Z);
+                  if (nvert == 4) {
+                    fprintf(ftmpEF, "%lg %lg %lg\n", polynode[3].X,
+                            polynode[3].Y, polynode[3].Z);
+                  }
+                  fprintf(ftmpEF, "%lg %lg %lg\n", polynode[0].X, polynode[0].Y,
+                          polynode[0].Z);
+                  fprintf(ftmpEF, "\n");
+                }  // debug
+              }    // if prim == NbPrimitives
+
+            }  // for all primitives // just not those on the volume
+
+            if (debugFn)
+              printf("writing file for checking electron positions\n");
+
+            if (debugFn)  // check electron positions, volume primitives and
+                          // elements
+            {
+              char elecposdbg[256], enbstr[10];
+              sprintf(enbstr, "%d", electron);
+              strcpy(elecposdbg, "/tmp/Electron");
+              strcat(elecposdbg, enbstr);
+              strcat(elecposdbg, ".out");
+              FILE *fepd = fopen(elecposdbg, "w");
+              if (fepd == NULL) {
+                printf(
+                    "cannot open writable file to debug electron positions "
+                    "...\n");
+                printf("returning ...\n");
+                return -111;
+              }
+              // write electron number, end, lbend, volume, primitive, elements,
+              // intxn
+              fprintf(fepd, "#electron: %d %d\n", enb,
+                      electron);  // should print same
+              fprintf(fepd, "#last but end position:\n");
+              fprintf(fepd, "%lg %lg %lg\n", xlbend, ylbend, zlbend);
+              fprintf(fepd, "#end position:\n");
+              fprintf(fepd, "%lg %lg %lg\n\n", xend, yend, zend);
+              fprintf(fepd, "#intersected primitive number: %d\n", PrimIntsctd);
+              if (PrimIntsctd >= 1) {
+                fprintf(fepd, "#PrimType: %d\n", PrimType[PrimIntsctd]);
+                fprintf(fepd, "#prim vertices:\n");
+                fprintf(fepd, "%lg %lg %lg\n", XVertex[PrimIntsctd][0],
+                        YVertex[PrimIntsctd][0], ZVertex[PrimIntsctd][0]);
+                fprintf(fepd, "%lg %lg %lg\n", XVertex[PrimIntsctd][1],
+                        YVertex[PrimIntsctd][1], ZVertex[PrimIntsctd][1]);
+                fprintf(fepd, "%lg %lg %lg\n", XVertex[PrimIntsctd][2],
+                        YVertex[PrimIntsctd][2], ZVertex[PrimIntsctd][2]);
+                if (PrimType[PrimIntsctd] == 4) {
+                  fprintf(fepd, "%lg %lg %lg\n", XVertex[PrimIntsctd][3],
+                          YVertex[PrimIntsctd][3], ZVertex[PrimIntsctd][3]);
+                }
+                fprintf(fepd, "%lg %lg %lg\n", XVertex[PrimIntsctd][0],
+                        YVertex[PrimIntsctd][0], ZVertex[PrimIntsctd][0]);
+                fprintf(fepd, "\n");
+
+                fprintf(fepd, "#ptintsct:\n");
+                fprintf(fepd, "%lg %lg %lg\n", ptintsct.X, ptintsct.Y,
+                        ptintsct.Z);
+                fprintf(fepd, "\n");
+              }
+              fprintf(fepd, "#intersected element number: %d\n", EleIntsctd);
+              if (EleIntsctd >= 1) {
+                int gtype = (EleArr + EleIntsctd - 1)->G.Type;
+                fprintf(fepd, "#EleType: %d\n", gtype);
+                fprintf(fepd, "#element vertices:\n");
+                double x0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].X;
+                double y0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].Y;
+                double z0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].Z;
+                double x1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].X;
+                double y1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].Y;
+                double z1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].Z;
+                double x2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].X;
+                double y2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].Y;
+                double z2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].Z;
+                fprintf(fepd, "%lg %lg %lg\n", x0, y0, z0);
+                fprintf(fepd, "%lg %lg %lg\n", x1, y1, z1);
+                fprintf(fepd, "%lg %lg %lg\n", x2, y2, z2);
+                if (gtype == 4) {
+                  double x3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].X;
+                  double y3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].Y;
+                  double z3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].Z;
+                  fprintf(fepd, "%lg %lg %lg\n", x3, y3, z3);
+                }
+                fprintf(fepd, "%lg %lg %lg\n", x0, y0, z0);
+                fprintf(fepd, "\n");
+
+                fprintf(fepd, "#ptintsct:\n");
+                fprintf(fepd, "%lg %lg %lg\n", ptintsct.X, ptintsct.Y,
+                        ptintsct.Z);
+                fprintf(fepd, "\n");
+              }
+
+              fclose(fepd);
+            }  // if 1
+            if (debugFn)
+              printf("done writing file for checking electron positions\n");
+          }  // for all the electrons
+          fclose(fPtEChUpMap);
+          if (debugFn) printf("done for all electrons\n");
+
+          FILE *fEleEChUpMap = fopen("EleEChUpMap.out", "w");
+          if (fEleEChUpMap == NULL) {
+            printf("cannot open EleEChUpMap.out file for writing ...\n");
+            return 111;
+          }
+          for (int ele = 1; ele <= NbElements; ++ele) {
+            (EleArr + ele - 1)->Assigned +=
+                ChUpFactor * Q_E * NbChUpEonEle[ele] / (EleArr + ele - 1)->G.dA;
+            fprintf(fEleEChUpMap, "%d %lg %lg %lg %d %lg\n", ele,
+                    (EleArr + ele - 1)->G.Origin.X,
+                    (EleArr + ele - 1)->G.Origin.Y,
+                    (EleArr + ele - 1)->G.Origin.Z, NbChUpEonEle[ele],
+                    (EleArr + ele - 1)->Assigned);
+          }
+          fclose(fEleEChUpMap);
+
+          fclose(ftmpEF);
+          free(NbChUpEonEle);
+        }  // Calculation for electrons ends
+
+        {  // Calculation for ions
+          FILE *fptrChargingUpIFile = fopen(ChargingUpIFile, "r");
+          if (fptrChargingUpIFile == NULL) {
+            neBEMMessage("ChargingUpI file absent ... returning\n");
+            return -10;
+          }
+          int NbOfI = neBEMGetNbOfLines(ChargingUpIFile);
+          if (NbOfI <= 1) {
+            neBEMMessage("Too few lines in ChargingUpI ... returning\n");
+            return -11;
+          } else {  // initialize
+            NbChUpIonEle = (int *)malloc((NbElements + 1) * sizeof(int));
+            for (int ele = 0; ele <= NbElements; ++ele) {  
+              // CHECK!!! ele limit starts from 0 but all other from 1 to ...
+              NbChUpIonEle[ele] = 0;
+            }
+          }
+
+          // read the header line
+          char header[256];
+          fgets(header, 256, fptrChargingUpIFile);
+
+          --NbOfI;  // one line was for the header
+          if (debugFn) printf("No. of ions: %d\n", NbOfI);
+          char tmpIFile[256];
+          strcpy(tmpIFile, "/tmp/IonTempFile.out");
+          FILE *ftmpIF = fopen(tmpIFile, "w");
+          if (ftmpIF == NULL) {
+            printf("cannot open temporary ion output file ... returning ...\n");
+            return -100;
+          }
+          FILE *fPtIChUpMap = fopen("PtIChUpMap.out", "w");
+          if (fPtIChUpMap == NULL) {
+            printf("cannot open PtIChUpMap.out file for writing ...\n");
+            return 110;
+          }
+
+          char label;
+          int inb, vol;  // label, volume and ion number
+          double xlbend, ylbend, zlbend, xend, yend,
+              zend;          // lbend == Last But END
+          Point3D ptintsct;  // each ion likely to have an intersection point
+          for (int ion = 1; ion <= NbOfI; ++ion) {
+            fscanf(fptrChargingUpIFile, "%c %d %d %lg %lg %lg %lg %lg %lg\n",
+                   &label, &vol, &inb, &xlbend, &xend, &ylbend, &yend, &zlbend,
+                   &zend);
+            xlbend /= LScaleFactor;  // cm to metre
+            xend /= LScaleFactor;    // and similar other
+            ylbend /= LScaleFactor;
+            yend /= LScaleFactor;
+            zlbend /= LScaleFactor;
+            zend /= LScaleFactor;
+            ptintsct.X = 0.0;
+            ptintsct.Y = 0.0;
+            ptintsct.Z = 0.0;  // initialize
+
+            // find the parametric equation of this last segment
+            // if xend < xlbend, swap the directions
+            // This has not been mentioned as mandatory in Vince's book
+            // "Geometry for Computer Graphics", but implied in the book "A
+            // Programmer's Geometry"
+            if (xend < xlbend)  // not implemented now
+            {
+            }
+            double lseg = (xend - xlbend) * (xend - xlbend) +
+                          (yend - ylbend) * (yend - ylbend) +
+                          (zend - zlbend) * (zend - zlbend);
+            lseg = sqrt(lseg);
+            double xgrd =
+                (xend - xlbend) / lseg;  // normalized direction vector
+            double ygrd = (yend - ylbend) / lseg;
+            double zgrd = (zend - zlbend) / lseg;
+            if (debugFn) {
+              printf("\nion: %d\n", ion);
+              printf("xlbend: %lg, ylbend: %lg, zlbend: %lg\n", xlbend, ylbend,
+                     zlbend);
+              printf("xend: %lg, yend: %lg, zend: %lg\n", xend, yend, zend);
+              printf("xgrd: %lg, ygrd: %lg, zgrd: %lg\n", xgrd, ygrd, zgrd);
+              fprintf(ftmpIF, "#e: %d, label: %c, vol: %d\n", ion, label, vol);
+              fprintf(ftmpIF, "%lg %lg %lg\n", xlbend, ylbend, zlbend);
+              fprintf(ftmpIF, "%lg %lg %lg\n", xend, yend, zend);
+              fprintf(ftmpIF, "#xgrd: %lg, ygrd: %lg, zgrd: %lg\n", xgrd, ygrd,
+                      zgrd);
+              fprintf(ftmpIF, "\n");
+            }
+
+            // determine which element gets this electron
+            // At present, the logic is as follow:
+            // Using the information on the last segment, find out which
+            // primitive is pierced by it and at which point From the
+            // intersection point, find out the element number on the primitive
+            // in a local sense Using the information (start and end elements of
+            // a given primitive) identify the element in a global sense. This
+            // approach should be lot more efficient than checking intersection
+            // element by element.
+            // The intersection point is computed following algorithm
+            // implemented in a matlab code (plane_imp_line_par_int_3d.m) Also
+            // check which primitive in the list is the closet to the end point
+
+            int PrimIntsctd = -1,
+                EleIntsctd = -1;   // intersected primitive & element
+            int nearestprim = -1;  // absurd value
+            double dist = 1.0e6, mindist = 1.0e6;  // absurdly high numbers
+            double SumOfAngles;
+            // check all primitives
+            for (int prim = 1; prim <= NbPrimitives; ++prim) { 
+              if (InterfaceType[prim] != 4)
+                continue;  // primitive not a dielectric
+
+              int intersect = 0, extrasect = 1;  // worst of conditions
+              int InPrim = 0, InEle = 0;
+              if (debugFn)
+                printf("prim: %d, mindist: %lg, nearestprim: %d\n", prim,
+                       mindist, nearestprim);
+
+              // get the primitive nodes
+
+              // Use two nodes at a time to get two independent vectors on
+              // primitive Get cross-product of these two vector - normal to the
+              // plane Note that the normal is already associated with the
+              // primitive of type 3 and 4; 2 is wire and does not have any
+              // associated normal
+              if ((PrimType[prim] == 3) || (PrimType[prim] == 4)) {
+                if (debugFn) {
+                  printf("prim: %d\n", prim);
+                  printf("vertex0: %lg, %lg, %lg\n", XVertex[prim][0],
+                         YVertex[prim][0], ZVertex[prim][0]);
+                  printf("vertex1: %lg, %lg, %lg\n", XVertex[prim][1],
+                         YVertex[prim][1], ZVertex[prim][1]);
+                  printf("vertex2: %lg, %lg, %lg\n", XVertex[prim][2],
+                         YVertex[prim][2], ZVertex[prim][2]);
+                  if (PrimType[prim] == 4) {
+                    printf("vertex3: %lg, %lg, %lg\n", XVertex[prim][3],
+                           YVertex[prim][3], ZVertex[prim][3]);
+                  }
+                  fprintf(ftmpIF, "#prim: %d\n", prim);
+                  fprintf(ftmpIF, "%lg %lg %lg\n", XVertex[prim][0],
+                          YVertex[prim][0], ZVertex[prim][0]);
+                  fprintf(ftmpIF, "%lg %lg %lg\n", XVertex[prim][1],
+                          YVertex[prim][1], ZVertex[prim][1]);
+                  fprintf(ftmpIF, "%lg %lg %lg\n", XVertex[prim][2],
+                          YVertex[prim][2], ZVertex[prim][2]);
+                  if (PrimType[prim] == 4) {
+                    fprintf(ftmpIF, "%lg %lg %lg\n", XVertex[prim][3],
+                            YVertex[prim][3], ZVertex[prim][3]);
+                  }
+                  fprintf(ftmpIF, "%lg %lg %lg\n", XVertex[prim][0],
+                          YVertex[prim][0], ZVertex[prim][0]);
+                  fprintf(ftmpIF, "\n");
+                  fflush(stdout);
+                }  // debugFn
+
+                // use a, b, c (normal is ai + bj + ck) at one of the nodes to
+                // get d ax + by + cz + d = 0 is the equation of the plane
+                double d = -XNorm[prim] * XVertex[prim][0] -
+                           YNorm[prim] * YVertex[prim][0] -
+                           ZNorm[prim] * ZVertex[prim][0];
+
+                // distance of the end point to this primitve is
+                dist =
+                    (xend * XNorm[prim] + yend * YNorm[prim] +
+                     zend * ZNorm[prim] + d) /
+                    sqrt(XNorm[prim] * XNorm[prim] + YNorm[prim] * YNorm[prim] +
+                         ZNorm[prim] * ZNorm[prim]);
+                dist = fabs(dist);  // if only magnitude is required
+                if (prim == 1) {
+                  mindist = dist;
+                  nearestprim = prim;
+                }
+                if ((prim == 1) && debugFn)
+                  printf(
+                      "after prim == 1 check mindist: %lg, nearestprim: %d\n",
+                      mindist, nearestprim);
+
+                // Point of intersection
+                // Algo as on p62 (pdf 81) of Vince - Geometry for Computer
+                // Graphics 1.5.13 Intersection of a line and a plane Algorithm
+                // as implemented in plne_imp_line_par_int_3d.m a (nx), b (ny),
+                // c (nz), d are a, b, c, d vx, vy, vz are xgrd, ygrd and zgrd
+                // tx, ty, tz are xlbend, ylbend, zlbend
+                // In the present case, n and v are unit vectors
+                double a = XNorm[prim];
+                double b = YNorm[prim];
+                double c = ZNorm[prim];
+                double norm1 = sqrt(a * a + b * b + c * c);
+                double norm2 = sqrt(xgrd * xgrd + ygrd * ygrd + zgrd * zgrd);
+                double denom =
+                    a * xgrd + b * ygrd + c * zgrd;  // (vec)n.(vec)v; if 0, ||
+                double tol =
+                    1.0e-12;  // CHECK: -8 in original code; sizes small here
+                intersect = extrasect = 0;
+
+                if (debugFn) {
+                  printf("a, b, c, d, dist: %lg, %lg, %lg, %lg, %lg\n", a, b, c,
+                         d, dist);
+                  printf("vector n: ai + bj + ck\n");
+                  printf("vector v: xgrd, ygrd, zgrd: %lg, %lg, %lg\n", xgrd,
+                         ygrd, zgrd);
+                  printf("norm1, norm2, (vec n . vec v) denom: %lg, %lg, %lg\n",
+                         norm1, norm2, denom);
+                  printf("if vec n . vec v == 0, line and plane parallel\n");
+                  fflush(stdout);
+                }
+
+                if (fabs(denom) <
+                    tol * norm1 * norm2)  // line parallel to the plane
+                {
+                  if (a * xlbend + b * ylbend + c * zlbend + d ==
+                      0.0)  // CHECK == for float
+                  {
+                    intersect = 1;
+                    extrasect = 0;
+                    ptintsct.X = xlbend;
+                    ptintsct.Y = ylbend;
+                    ptintsct.Z = zlbend;
+                  } else {
+                    intersect = 0;
+                    extrasect = 0;
+                    ptintsct.X = 0.0;  // Wrong to assign 0 values
+                    ptintsct.Y =
+                        0.0;  // However, they are never going to be used
+                    ptintsct.Z = 0.0;  // since intersect is 0
+                  }
+                  if (debugFn) {
+                    printf("line and plane parallel ...\n");
+                    printf("intersect: %d, extrasect: %d\n", intersect,
+                           extrasect);
+                    printf("intersection point: %lg, %lg, %lg\n", ptintsct.X,
+                           ptintsct.Y, ptintsct.Z);
+                  }       // if line and plane are parallel
+                } else {  // if they are not parallel, they must intersect
+                  intersect = 1;
+                  double t =
+                      -(a * xlbend + b * ylbend + c * zlbend + d) / denom;
+
+                  // check whether t is less than the length of the segment
+                  // and in the correct direction
+                  // If not, then an extrapolated intersection is not of
+                  // interest
+                  if ((t < 0.0) || (fabs(t) > fabs(lseg))) {
+                    extrasect = 1;
+                    ptintsct.X = xlbend + t * xgrd;
+                    ptintsct.Y = ylbend + t * ygrd;
+                    ptintsct.Z = zlbend + t * zgrd;
+                  } else {
+                    extrasect = 0;
+                    ptintsct.X = xlbend + t * xgrd;
+                    ptintsct.Y = ylbend + t * ygrd;
+                    ptintsct.Z = zlbend + t * zgrd;
+                  }
+                  if (debugFn) {
+                    printf("line and plane NOT parallel ...\n");
+                    printf("intersect: %d, extrasect: %d\n", intersect,
+                           extrasect);
+                    printf("intersection point: %lg, %lg, %lg\n", ptintsct.X,
+                           ptintsct.Y, ptintsct.Z);
+                    printf("t, lseg: %lg, %lg\n", t, lseg);
+                    printf(
+                        "for an interesting intersection, lseg > t > 0.0 "
+                        "...\n\n");
+                    fflush(stdout);
+                  }   // must intersect
+                }     // if not parallel
+              }       // if PrimType is 3 or 4
+              else {  // this is a wire primitive - assume no charging up issues
+                dist = -1.0;  // an absurd negative distance
+                intersect = 0;
+                extrasect = 0;
+              }  // else PrimType 3 or 4
+
+              if (dist < mindist) {
+                mindist = dist;
+                nearestprim = prim;
+              }
+
+              // implicit assumption: the first primitive that gets pierced by
+              // the ray is the one that we want. There can be other primitives
+              // that are pierced by the same ray. So, this logic should be
+              // refined further
+              if ((intersect == 1) && (extrasect == 0)) {
+                // check whether the intersection point is within primitive
+                // polygon
+                int nvert = PrimType[prim];
+                Point3D polynode[4];
+                polynode[0].X = XVertex[prim][0];
+                polynode[0].Y = YVertex[prim][0];
+                polynode[0].Z = ZVertex[prim][0];
+                polynode[1].X = XVertex[prim][1];
+                polynode[1].Y = YVertex[prim][1];
+                polynode[1].Z = ZVertex[prim][1];
+                polynode[2].X = XVertex[prim][2];
+                polynode[2].Y = YVertex[prim][2];
+                polynode[2].Z = ZVertex[prim][2];
+                if (PrimType[prim] == 4) {
+                  polynode[3].X = XVertex[prim][3];
+                  polynode[3].Y = YVertex[prim][3];
+                  polynode[3].Z = ZVertex[prim][3];
+                }
+                // printf("neBEMChkInPoly for primitive %d\n", prim);
+                SumOfAngles = neBEMChkInPoly(nvert, polynode, ptintsct);
+                if (fabs(fabs(SumOfAngles) - neBEMtwopi) <= 1.0e-8) {
+                  InPrim = 1;
+                  PrimIntsctd = prim;
+                }
+                if (debugFn) {
+                  // print polynode and InPrim
+                  printf("Prim: %d\n", prim);
+                  printf("ptintsct: %lg, %lg, %lg\n", ptintsct.X, ptintsct.Y,
+                         ptintsct.Z);
+                  printf("nvert: %d\n", nvert);
+                  printf("polynode0: %lg, %lg, %lg\n", polynode[0].X,
+                         polynode[0].Y, polynode[0].Z);
+                  printf("polynode1: %lg, %lg, %lg\n", polynode[1].X,
+                         polynode[1].Y, polynode[1].Z);
+                  printf("polynode2: %lg, %lg, %lg\n", polynode[2].X,
+                         polynode[2].Y, polynode[2].Z);
+                  if (nvert == 4) {
+                    printf("polynode3: %lg, %lg, %lg\n", polynode[3].X,
+                           polynode[3].Y, polynode[3].Z);
+                  }
+                  printf("SumOfAngles: %lg, InPrim: %d\n", SumOfAngles, InPrim);
+                  fflush(stdout);
+                }
+                if (!InPrim) continue;  // check next primitive
+
+                // Once identified, check in which element belonging to this
+                // primitive contains the point of intersection
+                InEle = 0;
+                for (int ele = ElementBgn[prim]; ele <= ElementEnd[prim];
+                     ++ele) {
+                  nvert = 0;
+                  if ((EleArr + ele - 1)->G.Type == 3) nvert = 3;
+                  if ((EleArr + ele - 1)->G.Type == 4) nvert = 4;
+                  if (!nvert) {
+                    neBEMMessage(
+                        "no vertex in element! ... neBEMKnownCharges ...\n");
+                    return -20;
+                  }
+
+                  polynode[0].X = (EleArr + ele - 1)->G.Vertex[0].X;
+                  polynode[0].Y = (EleArr + ele - 1)->G.Vertex[0].Y;
+                  polynode[0].Z = (EleArr + ele - 1)->G.Vertex[0].Z;
+                  polynode[1].X = (EleArr + ele - 1)->G.Vertex[1].X;
+                  polynode[1].Y = (EleArr + ele - 1)->G.Vertex[1].Y;
+                  polynode[1].Z = (EleArr + ele - 1)->G.Vertex[1].Z;
+                  polynode[2].X = (EleArr + ele - 1)->G.Vertex[2].X;
+                  polynode[2].Y = (EleArr + ele - 1)->G.Vertex[2].Y;
+                  polynode[2].Z = (EleArr + ele - 1)->G.Vertex[2].Z;
+                  if (nvert == 4) {
+                    polynode[3].X = (EleArr + ele - 1)->G.Vertex[3].X;
+                    polynode[3].Y = (EleArr + ele - 1)->G.Vertex[3].Y;
+                    polynode[3].Z = (EleArr + ele - 1)->G.Vertex[3].Z;
+                  }
+
+                  // printf("neBEMChkInPoly for element %d\n", ele);
+                  SumOfAngles = neBEMChkInPoly(nvert, polynode, ptintsct);
+                  if (fabs(fabs(SumOfAngles) - neBEMtwopi) <= 1.0e-8) InEle = 1;
+                  if (debugFn) {
+                    // print polynode and InEle
+                    printf("Ele: %d\n", ele);
+                    printf("ptintsct: %lg, %lg, %lg\n", ptintsct.X, ptintsct.Y,
+                           ptintsct.Z);
+                    printf("nvert: %d\n", nvert);
+                    printf("polynode0: %lg, %lg, %lg\n", polynode[0].X,
+                           polynode[0].Y, polynode[0].Z);
+                    printf("polynode1: %lg, %lg, %lg\n", polynode[1].X,
+                           polynode[1].Y, polynode[1].Z);
+                    printf("polynode2: %lg, %lg, %lg\n", polynode[2].X,
+                           polynode[2].Y, polynode[2].Z);
+                    if (nvert == 4) {
+                      printf("polynode3: %lg, %lg, %lg\n", polynode[3].X,
+                             polynode[3].Y, polynode[3].Z);
+                    }
+                    printf("SumOfAngles: %lg, InEle: %d\n", SumOfAngles, InEle);
+                    fflush(stdout);
+                  }
+                  if (InEle) {
+                    ptintsct.X = (EleArr + ele - 1)->G.Origin.X;
+                    ptintsct.Y = (EleArr + ele - 1)->G.Origin.Y;
+                    ptintsct.Z = (EleArr + ele - 1)->G.Origin.Z;
+                    EleIntsctd = ele;
+                    // Associate this electron to the identified element
+                    NbChUpIonEle[ele]++;
+                    fprintf(fPtIChUpMap, "%d %lg %lg %lg %d %d %d %d\n", ion,
+                            ptintsct.X, ptintsct.Y, ptintsct.Z, prim, InPrim,
+                            ele, InEle);
+
+                    if (debugFn) {
+                      printf("# ion: %d\n", ion);
+                      printf("%lg %lg %lg\n", xlbend, ylbend, zlbend);
+                      printf("%lg %lg %lg\n", xend, yend, zend);
+                      printf("%lg, %lg, %lg\n", ptintsct.X, ptintsct.Y,
+                             ptintsct.Z);
+                      printf("# Associated primitive: %d\n", prim);
+                      printf(
+                          "# Associated element and origin: %d, %lg, %lg, "
+                          "%lg\n",
+                          ele, (EleArr + ele - 1)->G.Origin.X,
+                          (EleArr + ele - 1)->G.Origin.Y,
+                          (EleArr + ele - 1)->G.Origin.Z);
+                      printf("#NbChUpIonEle on element: %d\n",
+                             NbChUpIonEle[ele]);
+                      fprintf(ftmpIF, "#Element: %d\n", ele);
+                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X,
+                              polynode[0].Y, polynode[0].Z);
+                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[1].X,
+                              polynode[1].Y, polynode[1].Z);
+                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[2].X,
+                              polynode[2].Y, polynode[2].Z);
+                      if (nvert == 4) {
+                        fprintf(ftmpIF, "%lg %lg %lg\n", polynode[3].X,
+                                polynode[3].Y, polynode[3].Z);
+                      }
+                      fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X,
+                              polynode[0].Y, polynode[0].Z);
+                      fprintf(ftmpIF, "\n");
+                      fflush(stdout);
+                    }
+                    break;  // desired element has been found!
+                  }         // if InEle
+                }           // for all elements on this primitive
+
+                if (InEle)
+                  break;
+                else {
+                  neBEMMessage(
+                      "Element cannot be identified ... neBEMKnownCharges\n");
+                  return -2;
+                }
+              }  // if proper intersection and no extrasection
+
+              if ((InPrim) && (intersect) && (!extrasect) &&
+                  (InEle))  // all satisfied
+                break;  // do not check any further primtive for this electron
+
+              // If, after checking all the primitives, no interstion is found
+              // valid
+              if (prim ==
+                  (NbPrimitives))  // end of the list and no intersection
+              {
+                int nvert;
+                Point3D polynode[4];
+                int nearestele = ElementBgn[nearestprim];
+                double distele = 1.0e6,
+                       mindistele = 1.0e6;  // absurdly high value
+
+                if (debugFn) {
+                  printf("prim == (NbPrimitives) ... checking nearest ...\n");
+                  printf("nearestprim: %d, mindist: %lg\n", nearestprim,
+                         mindist);
+                }
+
+                if (mindist <= 10.0e-6) {
+                  PrimIntsctd = nearestprim;
+                  InPrim = 1;
+                } else {
+                  InPrim = 0;
+                  InEle = 0;
+                  break;
+                }
+
+                for (int ele = ElementBgn[nearestprim];  // check all elements
+                     ele <= ElementEnd[nearestprim]; ++ele) {
+                  nvert = 0;
+                  if ((EleArr + ele - 1)->G.Type == 3) nvert = 3;
+                  if ((EleArr + ele - 1)->G.Type == 4) nvert = 4;
+                  if (!nvert) {
+                    neBEMMessage(
+                        "no vertex element! ... neBEMKnownCharges ...\n");
+                    return -20;
+                  }
+
+                  /*
+                  polynode[0].X = (EleArr+ele-1)->G.Vertex[0].X;
+                  polynode[0].Y = (EleArr+ele-1)->G.Vertex[0].Y;
+                  polynode[0].Z = (EleArr+ele-1)->G.Vertex[0].Z;
+                  polynode[1].X = (EleArr+ele-1)->G.Vertex[1].X;
+                  polynode[1].Y = (EleArr+ele-1)->G.Vertex[1].Y;
+                  polynode[1].Z = (EleArr+ele-1)->G.Vertex[1].Z;
+                  polynode[2].X = (EleArr+ele-1)->G.Vertex[2].X;
+                  polynode[2].Y = (EleArr+ele-1)->G.Vertex[2].Y;
+                  polynode[2].Z = (EleArr+ele-1)->G.Vertex[2].Z;
+                  if(nvert == 4)
+                          {
+                          polynode[3].X = (EleArr+ele-1)->G.Vertex[3].X;
+                          polynode[3].Y = (EleArr+ele-1)->G.Vertex[3].Y;
+                          polynode[3].Z = (EleArr+ele-1)->G.Vertex[3].Z;
+                          }
+
+                  Vector3D v01, v12, elenorm, unitelenorm;
+                  v01.X = polynode[1].X - polynode[0].X;
+                  v01.Y = polynode[1].Y - polynode[0].Y;
+                  v01.Z = polynode[1].Z - polynode[0].Z;
+                  v12.X = polynode[2].X - polynode[1].X;
+                  v12.Y = polynode[2].Y - polynode[1].Y;
+                  v12.Z = polynode[2].Z - polynode[1].Z;
+                  elenorm = Vector3DCrossProduct(&v01, &v12);
+                  unitelenorm = UnitVector3D(&elenorm);
+
+                  if((nvert == 3) || (nvert == 4))
+                          {
+                          if(debugFn)
+                                  {
+                                  printf("nearestprim: %d, element: %d\n",
+          nearestprim, ele); printf("vertex0: %lg, %lg, %lg\n", polynode[0].X,
+          polynode[0].Y, polynode[0].Z); printf("vertex1: %lg, %lg, %lg\n",
+                                                          polynode[1].X,
+          polynode[1].Y, polynode[1].Z); printf("vertex2: %lg, %lg, %lg\n",
+                                                  polynode[2].X, polynode[2].Y,
+          polynode[2].Z); if(PrimType[prim] == 4)
+                                          {
+                                          printf("vertex3: %lg, %lg, %lg\n",
+                                                          polynode[3].X,
+          polynode[3].Y, polynode[3].Z);
+                                          }
+                                  fprintf(ftmpIF, "#nearestprim: %d, element:
+          %d\n", nearestprim, ele); fprintf(ftmpIF, "%lg %lg %lg\n",
+                                                          polynode[0].X,
+          polynode[0].Y, polynode[0].Z); fprintf(ftmpIF, "%lg %lg %lg\n",
+                                                          polynode[1].X,
+          polynode[1].Y, polynode[1].Z); fprintf(ftmpIF, "%lg %lg %lg\n",
+                                                          polynode[2].X,
+          polynode[2].Y, polynode[2].Z); if(PrimType[prim] == 4)
+                                          {
+                                          fprintf(ftmpIF, "%lg %lg %lg\n",
+                                                  polynode[3].X, polynode[3].Y,
+          polynode[3].Z);
+                                          }
+                                  fprintf(ftmpIF, "%lg %lg %lg\n",
+                                                          polynode[0].X,
+          polynode[0].Y, polynode[0].Z); fprintf(ftmpIF, "\n"); fflush(stdout);
+                                  }	// debugFn
+
+          // use a, b, c (normal is ai + bj + ck) at one of the nodes to get d
+          // ax + by + cz + d = 0 is the equation of the plane
+                          double a = unitelenorm.X;
+                          double b = unitelenorm.Y;
+                          double c = unitelenorm.Z;
+                          double d = - unitelenorm.X*polynode[0].X
+                                                                                  - unitelenorm.Y*polynode[0].Y
+                                                                                  - unitelenorm.Z*polynode[0].Z;
+
+                          // distance of the end point to this primitve is
+                          distele = (xend * unitelenorm.X + yend * unitelenorm.Y
+                                                                                  + zend * unitelenorm.Z + d)
+                                                                                          /
+                                                                                  sqrt(unitelenorm.X*unitelenorm.X
+                                                                                                          + unitelenorm.Y*unitelenorm.Y
+                                                                                                          + unitelenorm.Z*unitelenorm.Z);
+                          distele = fabs(distele);	// if only magnitude is
+          required
+                          */
+
+                  Vector3D eleOrigin;
+                  eleOrigin.X = (EleArr + ele - 1)->G.Origin.X;
+                  eleOrigin.Y = (EleArr + ele - 1)->G.Origin.Y;
+                  eleOrigin.Z = (EleArr + ele - 1)->G.Origin.Z;
+                  distele = (eleOrigin.X - xend) * (eleOrigin.X - xend) +
+                            (eleOrigin.Y - yend) * (eleOrigin.Y - yend) +
+                            (eleOrigin.Z - zend) * (eleOrigin.Z - zend);
+                  distele = sqrt(distele);
+
+                  if (ele == ElementBgn[nearestprim]) {
+                    mindistele = distele;
+                    nearestele = ele;
+                  }
+                  if (distele < mindistele) {
+                    mindistele = distele;
+                    nearestele = ele;
+                  }
+
+                  if (debugFn) {
+                    // printf("a, b, c, d, dist: %lg, %lg, %lg, %lg, %lg\n",
+                    // a, b, c, d,  dist);
+                    // printf("vector n: ai + bj + ck\n");
+                    // printf("vector v: xgrd, ygrd, zgrd: %lg, %lg, %lg\n",
+                    // xgrd, ygrd, zgrd);
+                    printf(
+                        "distele: %lg, mindist: %lg,  from nearest ele: %d\n",
+                        distele, mindistele, nearestele);
+                    fflush(stdout);
+                  }
+
+                  // }	// if PrimType is 3 or 4
+                }  // for elements in nearestprim
+
+                // if(mindistele <= 10.0e-6)
+                // {
+                EleIntsctd = nearestele;
+                InEle = 1;
+                ptintsct.X = (EleArr + EleIntsctd - 1)->G.Origin.X;
+                ptintsct.Y = (EleArr + EleIntsctd - 1)->G.Origin.Y;
+                ptintsct.Z = (EleArr + EleIntsctd - 1)->G.Origin.Z;
+                NbChUpIonEle[EleIntsctd]++;
+
+                fprintf(fPtIChUpMap, "%d %lg %lg %lg %d %d %d %d\n", ion,
+                        ptintsct.X, ptintsct.Y, ptintsct.Z, PrimIntsctd, InPrim,
+                        EleIntsctd, InEle);
+                // }
+
+                if (debugFn) {
+                  printf("# ion: %d\n", ion);
+                  printf("%lg %lg %lg\n", xlbend, ylbend, zlbend);
+                  printf("%lg %lg %lg\n", xend, yend, zend);
+                  printf("%lg, %lg, %lg\n", ptintsct.X, ptintsct.Y, ptintsct.Z);
+                  printf("# Associated primitive: %d\n", PrimIntsctd);
+                  printf("# Associated element and origin: %d, %lg, %lg, %lg\n",
+                         EleIntsctd, (EleArr + EleIntsctd - 1)->G.Origin.X,
+                         (EleArr + EleIntsctd - 1)->G.Origin.Y,
+                         (EleArr + EleIntsctd - 1)->G.Origin.Z);
+                  printf("#NbChUpIonEle on element: %d\n",
+                         NbChUpIonEle[EleIntsctd]);
+                  fprintf(ftmpIF, "#Element: %d\n", EleIntsctd);
+                  polynode[0].X = (EleArr + EleIntsctd - 1)->G.Vertex[0].X;
+                  polynode[0].Y = (EleArr + EleIntsctd - 1)->G.Vertex[0].Y;
+                  polynode[0].Z = (EleArr + EleIntsctd - 1)->G.Vertex[0].Z;
+                  polynode[1].X = (EleArr + EleIntsctd - 1)->G.Vertex[1].X;
+                  polynode[1].Y = (EleArr + EleIntsctd - 1)->G.Vertex[1].Y;
+                  polynode[1].Z = (EleArr + EleIntsctd - 1)->G.Vertex[1].Z;
+                  polynode[2].X = (EleArr + EleIntsctd - 1)->G.Vertex[2].X;
+                  polynode[2].Y = (EleArr + EleIntsctd - 1)->G.Vertex[2].Y;
+                  polynode[2].Z = (EleArr + EleIntsctd - 1)->G.Vertex[2].Z;
+                  if (nvert == 4) {
+                    polynode[3].X = (EleArr + EleIntsctd - 1)->G.Vertex[3].X;
+                    polynode[3].Y = (EleArr + EleIntsctd - 1)->G.Vertex[3].Y;
+                    polynode[3].Z = (EleArr + EleIntsctd - 1)->G.Vertex[3].Z;
+                  }
+                  fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X, polynode[0].Y,
+                          polynode[0].Z);
+                  fprintf(ftmpIF, "%lg %lg %lg\n", polynode[1].X, polynode[1].Y,
+                          polynode[1].Z);
+                  fprintf(ftmpIF, "%lg %lg %lg\n", polynode[2].X, polynode[2].Y,
+                          polynode[2].Z);
+                  if (nvert == 4) {
+                    fprintf(ftmpIF, "%lg %lg %lg\n", polynode[3].X,
+                            polynode[3].Y, polynode[3].Z);
+                  }
+                  fprintf(ftmpIF, "%lg %lg %lg\n", polynode[0].X, polynode[0].Y,
+                          polynode[0].Z);
+                  fprintf(ftmpIF, "\n");
+                  fflush(stdout);
+                }  // debug
+              }    // if prim == NbPrimitives
+
+            }  // for all primitives // just not those on the volume
+
+            if (debugFn)  // check ion positions, volume primitives and elements
+            {
+              char ionposdbg[256], inbstr[10];
+              sprintf(inbstr, "%d", ion);
+              strcpy(ionposdbg, "/tmp/Ion");
+              strcat(ionposdbg, inbstr);
+              strcat(ionposdbg, ".out");
+              FILE *fipd = fopen(ionposdbg, "w");
+              if (fipd == NULL) {
+                printf(
+                    "cannot open writable file to debug ion positions ...\n");
+                printf("returning ...\n");
+                return -111;
+              }
+              // write electron number, end, lbend, volume, primitive, elements,
+              // intxn
+              fprintf(fipd, "#ion: %d %d\n", inb, ion);  // should print same
+              fprintf(fipd, "#last but end position:\n");
+              fprintf(fipd, "%lg %lg %lg\n", xlbend, ylbend, zlbend);
+              fprintf(fipd, "#end position:\n");
+              fprintf(fipd, "%lg %lg %lg\n\n", xend, yend, zend);
+
+              fprintf(fipd, "#intersected primitive number: %d\n", PrimIntsctd);
+              if (PrimIntsctd >= 1) {
+                fprintf(fipd, "#PrimType: %d\n", PrimType[PrimIntsctd]);
+                fprintf(fipd, "#prim vertices:\n");
+                fprintf(fipd, "%lg %lg %lg\n", XVertex[PrimIntsctd][0],
+                        YVertex[PrimIntsctd][0], ZVertex[PrimIntsctd][0]);
+                fprintf(fipd, "%lg %lg %lg\n", XVertex[PrimIntsctd][1],
+                        YVertex[PrimIntsctd][1], ZVertex[PrimIntsctd][1]);
+                fprintf(fipd, "%lg %lg %lg\n", XVertex[PrimIntsctd][2],
+                        YVertex[PrimIntsctd][2], ZVertex[PrimIntsctd][2]);
+                if (PrimType[PrimIntsctd] == 4) {
+                  fprintf(fipd, "%lg %lg %lg\n", XVertex[PrimIntsctd][3],
+                          YVertex[PrimIntsctd][3], ZVertex[PrimIntsctd][3]);
+                }
+                fprintf(fipd, "%lg %lg %lg\n", XVertex[PrimIntsctd][0],
+                        YVertex[PrimIntsctd][0], ZVertex[PrimIntsctd][0]);
+                fprintf(fipd, "\n");
+
+                fprintf(fipd, "#ptintsct:\n");
+                fprintf(fipd, "%lg %lg %lg\n", ptintsct.X, ptintsct.Y,
+                        ptintsct.Z);
+                fprintf(fipd, "\n");
+              }
+
+              fprintf(fipd, "#intersected element number: %d\n", EleIntsctd);
+              if (EleIntsctd >= 1) {
+                int gtype = (EleArr + EleIntsctd - 1)->G.Type;
+                fprintf(fipd, "#EleType: %d\n", gtype);
+                fprintf(fipd, "#element vertices:\n");
+                double x0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].X;
+                double y0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].Y;
+                double z0 = (EleArr + EleIntsctd - 1)->G.Vertex[0].Z;
+                double x1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].X;
+                double y1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].Y;
+                double z1 = (EleArr + EleIntsctd - 1)->G.Vertex[1].Z;
+                double x2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].X;
+                double y2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].Y;
+                double z2 = (EleArr + EleIntsctd - 1)->G.Vertex[2].Z;
+                fprintf(fipd, "%lg %lg %lg\n", x0, y0, z0);
+                fprintf(fipd, "%lg %lg %lg\n", x1, y1, z1);
+                fprintf(fipd, "%lg %lg %lg\n", x2, y2, z2);
+                if (gtype == 4) {
+                  double x3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].X;
+                  double y3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].Y;
+                  double z3 = (EleArr + EleIntsctd - 1)->G.Vertex[3].Z;
+                  fprintf(fipd, "%lg %lg %lg\n", x3, y3, z3);
+                }
+                fprintf(fipd, "%lg %lg %lg\n", x0, y0, z0);
+                fprintf(fipd, "\n");
+
+                fprintf(fipd, "#ptintsct:\n");
+                fprintf(fipd, "%lg %lg %lg\n", ptintsct.X, ptintsct.Y,
+                        ptintsct.Z);
+                fprintf(fipd, "\n");
+              }
+              fclose(fipd);
+            }  // if 1
+          }    // for all the ions
+          fclose(fPtIChUpMap);
+
+          // This file contains information about number of ions (I)
+          // and total (E+I) charge deposition on each element
+          FILE *fEleEIChUpMap = fopen("EleE+IChUpMap.out", "w");
+          if (fEleEIChUpMap == NULL) {
+            printf("cannot open EleE+IChUpMap.out file for writing ...\n");
+            return 111;
+          }
+          for (int ele = 1; ele <= NbElements; ++ele) {
+            (EleArr + ele - 1)->Assigned +=
+                ChUpFactor * Q_I * NbChUpIonEle[ele] / (EleArr + ele - 1)->G.dA;
+            fprintf(fEleEIChUpMap, "%d %lg %lg %lg %d %lg\n", ele,
+                    (EleArr + ele - 1)->G.Origin.X,
+                    (EleArr + ele - 1)->G.Origin.Y,
+                    (EleArr + ele - 1)->G.Origin.Z, NbChUpIonEle[ele],
+                    (EleArr + ele - 1)->Assigned);
+          }
+          fclose(fEleEIChUpMap);
+
+          fclose(ftmpIF);
+          free(NbChUpIonEle);
+        }  // Calculation for ions ends
+
+      }  // OptChargingUp
+
+      fclose(ChargingUpInpFile);
+    }  // else ChargingUpInpFile
+
+    if (debugFn) {
+      // print all the elements and their number of charging up e-s and i-s
+    }
+  }  // charging up parameters set up
+
+  return (0);
+}  // InitChargingUp ends
+
 #ifdef __cplusplus
-} // namespace
+}  // namespace
 #endif

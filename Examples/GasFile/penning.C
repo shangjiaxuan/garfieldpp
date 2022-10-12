@@ -26,14 +26,14 @@ int main(int argc, char * argv[]) {
   // Plot the Townsend coefficient (without Penning transfer). 
   TCanvas c1("c1", "", 600, 600);
   view.SetCanvas(&c1);
-  view.PlotElectronTownsend('e');
+  view.PlotElectronTownsend();
 
   // Switch on Penning transfer for all excitation levels in the mixture.
   gas.EnablePenningTransfer(0.42, 0.);
   // Plot the Townsend coefficient with Penning transfer.
   TCanvas c2("c2", "", 600, 600);
   view.SetCanvas(&c2);
-  view.PlotElectronTownsend('e');
+  view.PlotElectronTownsend();
 
   app.Run(true);
 }

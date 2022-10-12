@@ -1,5 +1,8 @@
 #include "Garfield/ComponentFieldMap.hh"
 
+#include <TCanvas.h>
+#include <TH1F.h>
+#include <TMath.h>
 #include <math.h>
 #include <stdio.h>
 
@@ -16,6 +19,552 @@ ComponentFieldMap::ComponentFieldMap(const std::string& name)
     : Component(name) {}
 
 ComponentFieldMap::~ComponentFieldMap() {}
+
+void ComponentFieldMap::ElectricField(const double x, const double y,
+                                      const double z, double& ex, double& ey,
+                                      double& ez, Medium*& m, int& status) {
+  double v = 0.;
+  ElectricField(x, y, z, ex, ey, ez, v, m, status);
+}
+
+void ComponentFieldMap::ElectricField(const double xin, const double yin,
+                                      const double zin, double& ex, double& ey,
+                                      double& ez, double& volt, Medium*& m,
+                                      int& status) {
+  // Copy the coordinates.
+  double x = xin, y = yin;
+  double z = m_is3d ? zin : 0.;
+
+  // Map the coordinates onto field map coordinates.
+  bool xmirr, ymirr, zmirr;
+  double rcoordinate, rotation;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  // Initial values
+  ex = ey = ez = volt = 0.;
+  status = 0;
+  m = nullptr;
+
+  // Do not proceed if not properly initialised.
+  if (!m_ready) {
+    status = -10;
+    PrintNotReady("ElectricField");
+    return;
+  }
+
+  if (m_warning) PrintWarning("ElectricField");
+
+  if (!m_is3d) {
+    if (zin < m_minBoundingBox[2] || zin > m_maxBoundingBox[2]) {
+      status = -5;
+      return;
+    }
+  }
+
+  // Find the element that contains this point.
+  double t1, t2, t3, t4, jac[4][4], det;
+  int imap = -1;
+  if (m_elementType == ElementType::Serendipity) {
+    imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
+  }
+  // Stop if the point is not in the mesh.
+  if (imap < 0) {
+    if (m_debug) {
+      std::cerr << m_className << "::ElectricField: (" << x << ", " << y << ", "
+                << z << ") is not in the mesh.\n";
+    }
+    status = -6;
+    return;
+  }
+
+  const Element& element = m_elements[imap];
+  if (m_elementType == ElementType::Serendipity) {
+    if (m_debug) {
+      PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 8);
+    }
+    if (element.degenerate) {
+      std::array<double, 6> v;
+      for (size_t i = 0; i < 6; ++i) {
+        v[i] = m_nodes[element.emap[i]].v;
+      }
+      volt = Potential3(v, {t1, t2, t3});
+      Field3(v, {t1, t2, t3}, jac, det, ex, ey);
+    } else {
+      std::array<double, 8> v;
+      for (size_t i = 0; i < 8; ++i) {
+        v[i] = m_nodes[element.emap[i]].v;
+      }
+      volt = Potential5(v, {t1, t2});
+      Field5(v, {t1, t2}, jac, det, ex, ey);
+    }
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    if (m_debug) {
+      PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 10);
+    }
+    std::array<double, 10> v;
+    for (size_t i = 0; i < 10; ++i) {
+      v[i] = m_nodes[element.emap[i]].v;
+    }
+    volt = Potential13(v, {t1, t2, t3, t4});
+    Field13(v, {t1, t2, t3, t4}, jac, det, ex, ey, ez);
+  }
+
+  // Transform field to global coordinates.
+  UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  // Drift medium?
+  if (element.matmap >= m_materials.size()) {
+    if (m_debug) std::cout << "    Out-of-range material number.\n";
+    status = -5;
+    return;
+  }
+
+  const auto& mat = m_materials[element.matmap];
+  if (m_debug) {
+    std::cout << "    Material " << element.matmap << ", drift flag "
+              << mat.driftmedium << ".\n";
+  }
+  m = mat.medium;
+  status = -5;
+  if (mat.driftmedium) {
+    if (m && m->IsDriftable()) status = 0;
+  }
+}
+
+void ComponentFieldMap::WeightingField(const double xin, const double yin,
+                                       const double zin, double& wx, double& wy,
+                                       double& wz, const std::string& label) {
+  // Initial values.
+  wx = wy = wz = 0;
+
+  // Do not proceed if not properly initialised.
+  if (!m_ready) return;
+
+  // Look for the label.
+  const size_t iw = GetWeightingFieldIndex(label);
+  // Do not proceed if the requested weighting field does not exist.
+  if (iw == m_wfields.size()) return;
+  // Check if the weighting field is properly initialised.
+  if (!m_wfieldsOk[iw]) return;
+
+  // Copy the coordinates.
+  double x = xin, y = yin, z = zin;
+
+  // Map the coordinates onto field map coordinates
+  bool xmirr, ymirr, zmirr;
+  double rcoordinate, rotation;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  if (m_warning) PrintWarning("WeightingField");
+
+  // Find the element that contains this point.
+  double t1, t2, t3, t4, jac[4][4], det;
+  int imap = -1;
+  if (m_elementType == ElementType::Serendipity) {
+    imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
+  }
+  // Stop if the point is not in the mesh.
+  if (imap < 0) return;
+
+  const Element& element = m_elements[imap];
+  if (m_elementType == ElementType::Serendipity) {
+    if (m_debug) {
+      PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 8, iw);
+    }
+    if (element.degenerate) {
+      std::array<double, 6> v;
+      for (size_t i = 0; i < 6; ++i) {
+        v[i] = m_nodes[element.emap[i]].w[iw];
+      }
+      Field3(v, {t1, t2, t3}, jac, det, wx, wy);
+    } else {
+      std::array<double, 8> v;
+      for (size_t i = 0; i < 8; ++i) {
+        v[i] = m_nodes[element.emap[i]].w[iw];
+      }
+      Field5(v, {t1, t2}, jac, det, wx, wy);
+    }
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    if (m_debug) {
+      PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 10, iw);
+    }
+    std::array<double, 10> v;
+    for (size_t i = 0; i < 10; ++i) {
+      v[i] = m_nodes[element.emap[i]].w[iw];
+    }
+    Field13(v, {t1, t2, t3, t4}, jac, det, wx, wy, wz);
+  }
+  // Transform field to global coordinates.
+  UnmapFields(wx, wy, wz, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+}
+
+double ComponentFieldMap::WeightingPotential(double xin, double yin, double zin,
+                                             const std::string& label) {
+  // Do not proceed if not properly initialised.
+  if (!m_ready) return 0.;
+
+  // TODO! From ComponentComsol:
+  // if (!CheckInRange(xin, yin, zin)) return 0.;
+
+  // Look for the label.
+  size_t iw = GetWeightingFieldIndex(label);
+  // Do not proceed if the requested weighting field does not exist.
+  if (iw == m_wfields.size()) {
+    const size_t iwc = GetCopyWeightingPotential(label);
+    // If there is a copy of the weighting potential proceed.
+    if (iwc == m_wfieldCopies.size()) {
+      return 0.;
+    } else {
+      // If there is a copy perform a coordinate transform to take advantage of
+      // the symmetry of the system.
+      FromCopyToSourceWeightingPotential(iwc, xin, yin, zin);
+      iw = m_wfieldCopies[iwc].iSource;
+    }
+  }
+  // Check if the weighting field is properly initialised.
+  if (!m_wfieldsOk[iw]) return 0.;
+
+  // Copy the coordinates.
+  double x = xin, y = yin, z = zin;
+
+  // Map the coordinates onto field map coordinates.
+  bool xmirr, ymirr, zmirr;
+  double rcoordinate, rotation;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  if (m_warning) PrintWarning("WeightingPotential");
+
+  // Find the element that contains this point.
+  double t1, t2, t3, t4, jac[4][4], det;
+  int imap = -1;
+  if (m_elementType == ElementType::Serendipity) {
+    imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
+  }
+  if (imap < 0) return 0.;
+
+  const Element& element = m_elements[imap];
+  if (m_elementType == ElementType::Serendipity) {
+    if (m_debug) {
+      PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 8,
+                   iw);
+    }
+    if (element.degenerate) {
+      std::array<double, 6> v;
+      for (size_t i = 0; i < 6; ++i) {
+        v[i] = m_nodes[element.emap[i]].w[iw];
+      }
+      return Potential3(v, {t1, t2, t3});
+    }
+    std::array<double, 8> v;
+    for (size_t i = 0; i < 8; ++i) {
+      v[i] = m_nodes[element.emap[i]].w[iw];
+    }
+    return Potential5(v, {t1, t2});
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    if (m_debug) {
+      PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
+                   iw);
+    }
+    std::array<double, 10> v;
+    for (size_t i = 0; i < 10; ++i) {
+      v[i] = m_nodes[element.emap[i]].w[iw];
+    }
+    return Potential13(v, {t1, t2, t3, t4});
+  }
+  return 0.;
+}
+
+double ComponentFieldMap::DelayedWeightingPotential(double xin, double yin,
+                                                    double zin,
+                                                    const double tin,
+                                                    const std::string& label) {
+  if (m_wdtimes.empty()) return 0.;
+  // Assume no weighting field for times outside the range of available maps.
+  if (tin < m_wdtimes.front()) return 0.;
+  double t = tin;
+  if (tin > m_wdtimes.back()) t = m_wdtimes.back();
+
+  // Do not proceed if not properly initialised.
+  if (!m_ready) return 0.;
+  // Look for the label.
+  size_t iw = GetWeightingFieldIndex(label);
+  // Do not proceed if the requested weighting field does not exist.
+  if (iw == m_wfields.size()) {
+    const size_t iwc = GetCopyWeightingPotential(label);
+    // If there is a copy of the weighting potential proceed.
+    if (iwc == m_wfieldCopies.size()) {
+      return 0.;
+    } else {
+      // If there is a copy perform a coordinate transform to take advantage of
+      // the symmetry of the system.
+      FromCopyToSourceWeightingPotential(iwc, xin, yin, zin);
+      iw = m_wfieldCopies[iwc].iSource;
+    }
+  }
+  // Check if the weighting field is properly initialised.
+
+  // Copy the coordinates.
+  double x = xin, y = yin, z = zin;
+
+  // Map the coordinates onto field map coordinates.
+  bool xmirr, ymirr, zmirr;
+  double rcoordinate, rotation;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  if (m_warning) PrintWarning("WeightingPotential");
+
+  // Find the element that contains this point.
+  double t1, t2, t3, t4, jac[4][4], det;
+
+  int imap = -1;
+  if (m_elementType == ElementType::Serendipity) {
+    imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
+  }
+  if (imap < 0) return 0.;
+
+  // Linear interpolation between time slices
+  int i0;
+  int i1;
+  double f0;
+  double f1;
+
+  TimeInterpolation(t, f0, f1, i0, i1);
+
+  // Get potential value
+
+  double dp0 = 0;
+  double dp1 = 0;
+  const Element& element = m_elements[imap];
+  if (m_elementType == ElementType::Serendipity) {
+    if (m_debug) {
+      PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 8,
+                   iw);
+    }
+    if (element.degenerate) {
+      std::array<double, 6> v0, v1;
+      for (size_t i = 0; i < 6; ++i) {
+        v0[i] = m_nodes[element.emap[i]].dw[iw][i0];
+        v1[i] = m_nodes[element.emap[i]].dw[iw][i1];
+      }
+      dp0 = Potential3(v0, {t1, t2, t3});
+      dp1 = Potential3(v1, {t1, t2, t3});
+    }
+    std::array<double, 8> v0, v1;
+    for (size_t i = 0; i < 8; ++i) {
+      v0[i] = m_nodes[element.emap[i]].dw[iw][i0];
+      v1[i] = m_nodes[element.emap[i]].dw[iw][i1];
+    }
+    dp0 = Potential5(v0, {t1, t2});
+    dp1 = Potential5(v1, {t1, t2});
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    if (m_debug) {
+      PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
+                   iw);
+    }
+    std::array<double, 10> v0, v1;
+    for (size_t i = 0; i < 10; ++i) {
+      v0[i] = m_nodes[element.emap[i]].dw[iw][i0];
+      v1[i] = m_nodes[element.emap[i]].dw[iw][i1];
+    }
+    dp0 = Potential13(v0, {t1, t2, t3, t4});
+    dp1 = Potential13(v1, {t1, t2, t3, t4});
+  }
+
+  return f0 * dp0 + f1 * dp1;
+}
+
+Medium* ComponentFieldMap::GetMedium(const double xin, const double yin,
+                                     const double zin) {
+  // Copy the coordinates.
+  double x = xin, y = yin;
+  double z = m_is3d ? zin : 0.;
+
+  // Map the coordinates onto field map coordinates.
+  bool xmirr, ymirr, zmirr;
+  double rcoordinate, rotation;
+  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
+
+  if (!m_is3d) {
+    if (zin < m_minBoundingBox[2] || z > m_maxBoundingBox[2]) {
+      return nullptr;
+    }
+  }
+
+  // Do not proceed if not properly initialised.
+  if (!m_ready) {
+    PrintNotReady("GetMedium");
+    return nullptr;
+  }
+  if (m_warning) PrintWarning("GetMedium");
+
+  // Find the element that contains this point.
+  double t1, t2, t3, t4, jac[4][4], det;
+  int imap = -1;
+  if (m_elementType == ElementType::Serendipity) {
+    imap = FindElement5(x, y, z, t1, t2, t3, t4, jac, det);
+  } else if (m_elementType == ElementType::CurvedTetrahedron) {
+    imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
+  }
+  if (imap < 0) {
+    if (m_debug) {
+      std::cerr << m_className << "::GetMedium: (" << x << ", " << y << ", "
+                << z << ") is not in the mesh.\n";
+    }
+    return nullptr;
+  }
+  const Element& element = m_elements[imap];
+  if (element.matmap >= m_materials.size()) {
+    if (m_debug) {
+      std::cerr << m_className << "::GetMedium: Element " << imap
+                << " has out-of-range material number " << element.matmap
+                << ".\n";
+    }
+    return nullptr;
+  }
+  if (m_debug) {
+    if (m_elementType == ElementType::Serendipity) {
+      PrintElement("GetMedium", x, y, z, t1, t2, t3, t4, element, 8);
+    } else if (m_elementType == ElementType::CurvedTetrahedron) {
+      PrintElement("GetMedium", x, y, z, t1, t2, t3, t4, element, 10);
+    }
+  }
+
+  // Assign a medium.
+  return m_materials[element.matmap].medium;
+}
+
+bool ComponentFieldMap::Check() {
+  // MAPCHK
+  // Ensure there are some mesh elements.
+  if (!m_ready) {
+    PrintNotReady("Check");
+    return false;
+  }
+  // Compute the range of volumes.
+  const size_t nElements = m_elements.size();
+  double vmin = 0., vmax = 0.;
+  for (size_t i = 0; i < nElements; ++i) {
+    const double v = GetElementVolume(i);
+    if (i == 0) {
+      vmin = vmax = v;
+    } else {
+      vmin = std::min(vmin, v);
+      vmax = std::max(vmax, v);
+    }
+  }
+  // Number of bins.
+  constexpr int nBins = 100;
+  double scale = 1.;
+  std::string unit = "cm";
+  if (m_is3d) {
+    if (vmax < 1.e-9) {
+      unit = "um";
+      scale = 1.e12;
+    } else if (vmax < 1.e-3) {
+      unit = "mm";
+      scale = 1.e3;
+    }
+  } else {
+    if (vmax < 1.e-6) {
+      unit = "um";
+      scale = 1.e8;
+    } else if (vmax < 1.e-2) {
+      unit = "mm";
+      scale = 1.e2;
+    }
+  }
+  vmin *= scale;
+  vmax *= scale;
+  // Check we do have a range and round it.
+  vmin = std::max(0., vmin - 0.1 * (vmax - vmin));
+  vmax = vmax + 0.1 * (vmax - vmin);
+  if (vmin == vmax) {
+    vmin -= 1. + std::abs(vmin);
+    vmax += 1. + std::abs(vmax);
+  }
+  // CALL ROUND(SMIN,SMAX,NCHA,'LARGER,COARSER',STEP)
+  std::string title = m_is3d ? ";volume [" : ";surface [";
+  if (unit == "um") {
+    title += "#mum";
+  } else {
+    title += unit;
+  }
+  if (m_is3d) {
+    title += "^{3}];";
+  } else {
+    title += "^{2}];";
+  }
+  TH1F hElementVolume("hElementVolume", title.c_str(), nBins, vmin, vmax);
+
+  TH1F hAspectRatio("hAspectRatio", ";largest / smallest vertex distance;",
+                    nBins, 0., 100.);
+
+  // Loop over all mesh elements.
+  size_t nZero = 0;
+  double rmin = 0., rmax = 0.;
+  for (size_t i = 0; i < nElements; ++i) {
+    double v = 0., dmin = 0., dmax = 0.;
+    if (!GetElement(i, v, dmin, dmax)) return false;
+    // Check for null-sizes.
+    if (dmin <= 0. && !m_elements[i].degenerate) {
+      std::cerr << m_className << "::Check:\n"
+                << "    Found element with zero-length vertex separation.\n";
+      return false;
+    }
+    const double r = dmax / dmin;
+    hAspectRatio.Fill(r);
+    if (v <= 0.) ++nZero;
+    v *= scale;
+    hElementVolume.Fill(v);
+    //  Update maxima and minima.
+    if (i == 0) {
+      vmin = vmax = v;
+      rmin = rmax = r;
+    } else {
+      vmin = std::min(vmin, v);
+      vmax = std::max(vmax, v);
+      rmin = std::min(rmin, r);
+      rmax = std::max(rmax, r);
+    }
+  }
+  if (nZero > 0) {
+    std::cerr << m_className << "::Check:\n";
+    if (m_is3d) {
+      std::cerr << "    Found " << nZero << " element(s) with zero volume.\n";
+    } else {
+      std::cerr << "    Found " << nZero << " element(s) with zero surface.\n";
+    }
+  }
+  TCanvas* c1 = new TCanvas("cAspectRatio", "Aspect ratio", 600, 600);
+  c1->cd();
+  hAspectRatio.DrawCopy();
+  c1->Update();
+  TCanvas* c2 = new TCanvas("cElementVolume", "Element measure", 600, 600);
+  c2->cd();
+  hElementVolume.DrawCopy();
+  c2->Update();
+
+  // Printout.
+  std::cout << m_className << "::Check:\n"
+            << "                      Smallest     Largest\n";
+  std::printf("    Aspect ratios:  %15.8f  %15.8f\n", rmin, rmax);
+  if (m_is3d) {
+    std::printf("    Volumes [%s3]:  %15.8f  %15.8f\n", unit.c_str(), vmin,
+                vmax);
+  } else {
+    std::printf("    Surfaces [%s2]: %15.8f  %15.8f\n", unit.c_str(), vmin,
+                vmax);
+  }
+  return true;
+}
 
 void ComponentFieldMap::PrintMaterials() {
   // Do not proceed if not properly initialised.
@@ -47,7 +596,7 @@ void ComponentFieldMap::PrintMaterials() {
   }
 }
 
-void ComponentFieldMap::DriftMedium(const unsigned int imat) {
+void ComponentFieldMap::DriftMedium(const size_t imat) {
   // Do not proceed if not properly initialised.
   if (!m_ready) PrintNotReady("DriftMedium");
 
@@ -61,7 +610,7 @@ void ComponentFieldMap::DriftMedium(const unsigned int imat) {
   m_materials[imat].driftmedium = true;
 }
 
-void ComponentFieldMap::NotDriftMedium(const unsigned int imat) {
+void ComponentFieldMap::NotDriftMedium(const size_t imat) {
   // Do not proceed if not properly initialised.
   if (!m_ready) PrintNotReady("NotDriftMedium");
 
@@ -75,54 +624,67 @@ void ComponentFieldMap::NotDriftMedium(const unsigned int imat) {
   m_materials[imat].driftmedium = false;
 }
 
-double ComponentFieldMap::GetPermittivity(const unsigned int imat) const {
+double ComponentFieldMap::GetPermittivity(const size_t imat) const {
   if (imat >= m_materials.size()) {
     std::cerr << m_className << "::GetPermittivity: Index out of range.\n";
     return -1.;
   }
-
   return m_materials[imat].eps;
 }
 
-double ComponentFieldMap::GetConductivity(const unsigned int imat) const {
+double ComponentFieldMap::GetConductivity(const size_t imat) const {
   if (imat >= m_materials.size()) {
     std::cerr << m_className << "::GetConductivity: Index out of range.\n";
     return -1.;
   }
-
   return m_materials[imat].ohm;
 }
 
-void ComponentFieldMap::SetMedium(const unsigned int imat, Medium* m) {
+void ComponentFieldMap::SetMedium(const size_t imat, Medium* medium) {
   if (imat >= m_materials.size()) {
     std::cerr << m_className << "::SetMedium: Index out of range.\n";
     return;
   }
-
-  if (!m) {
+  if (!medium) {
     std::cerr << m_className << "::SetMedium: Null pointer.\n";
     return;
   }
-
   if (m_debug) {
-    std::cout << m_className << "::SetMedium:\n    Associated material " << imat
-              << " with medium " << m->GetName() << ".\n";
+    std::cout << m_className << "::SetMedium: Associated material " << imat
+              << " with medium " << medium->GetName() << ".\n";
   }
-
-  m_materials[imat].medium = m;
+  m_materials[imat].medium = medium;
 }
 
-Medium* ComponentFieldMap::GetMedium(const unsigned int imat) const {
+Medium* ComponentFieldMap::GetMedium(const size_t imat) const {
   if (imat >= m_materials.size()) {
     std::cerr << m_className << "::GetMedium: Index out of range.\n";
     return nullptr;
   }
-
   return m_materials[imat].medium;
 }
 
-bool ComponentFieldMap::GetElement(const size_t i, double& vol,
-                                   double& dmin, double& dmax) {
+void ComponentFieldMap::SetGas(Medium* medium) {
+  if (!medium) {
+    std::cerr << m_className << "::SetGas: Null pointer.\n";
+    return;
+  }
+  size_t nMatch = 0;
+  const size_t nMaterials = m_materials.size();
+  for (size_t i = 0; i < nMaterials; ++i) {
+    if (fabs(m_materials[i].eps - 1.) > 1.e-4) continue;
+    m_materials[i].medium = medium;
+    std::cout << m_className << "::SetGas: Associating material " << i
+              << " with " << medium->GetName() << ".\n";
+    ++nMatch;
+  }
+  if (nMatch == 0) {
+    std::cerr << m_className << "::SetGas: Found no material with eps = 1.\n";
+  }
+}
+
+bool ComponentFieldMap::GetElement(const size_t i, double& vol, double& dmin,
+                                   double& dmax) const {
   if (i >= m_elements.size()) {
     std::cerr << m_className << "::GetElement: Index out of range.\n";
     return false;
@@ -131,6 +693,90 @@ bool ComponentFieldMap::GetElement(const size_t i, double& vol,
   vol = GetElementVolume(i);
   GetAspectRatio(i, dmin, dmax);
   return true;
+}
+
+double ComponentFieldMap::GetElementVolume(const size_t i) const {
+  if (i >= m_elements.size()) return 0.;
+
+  const Element& element = m_elements[i];
+  if (m_elementType == ElementType::CurvedTetrahedron) {
+    const Node& n0 = m_nodes[element.emap[0]];
+    const Node& n1 = m_nodes[element.emap[1]];
+    const Node& n2 = m_nodes[element.emap[2]];
+    const Node& n3 = m_nodes[element.emap[3]];
+
+    // Uses formula V = |a (dot) b x c|/6
+    // with a => "3", b => "1", c => "2" and origin "0"
+    const double vol = fabs((n3.x - n0.x) * ((n1.y - n0.y) * (n2.z - n0.z) -
+                                             (n2.y - n0.y) * (n1.z - n0.z)) +
+                            (n3.y - n0.y) * ((n1.z - n0.z) * (n2.x - n0.x) -
+                                             (n2.z - n0.z) * (n1.x - n0.x)) +
+                            (n3.z - n0.z) * ((n1.x - n0.x) * (n2.y - n0.y) -
+                                             (n3.x - n0.x) * (n1.y - n0.y))) /
+                       6.;
+    return vol;
+  } else if (m_elementType == ElementType::Serendipity) {
+    const Node& n0 = m_nodes[element.emap[0]];
+    const Node& n1 = m_nodes[element.emap[1]];
+    const Node& n2 = m_nodes[element.emap[2]];
+    const Node& n3 = m_nodes[element.emap[3]];
+    const double surf =
+        0.5 *
+        (fabs((n1.x - n0.x) * (n2.y - n0.y) - (n2.x - n0.x) * (n1.y - n0.y)) +
+         fabs((n3.x - n0.x) * (n2.y - n0.y) - (n2.x - n0.x) * (n3.y - n0.y)));
+    return surf;
+  }
+  return 0.;
+}
+
+void ComponentFieldMap::GetAspectRatio(const size_t i, double& dmin,
+                                       double& dmax) const {
+  if (i >= m_elements.size()) {
+    dmin = dmax = 0.;
+    return;
+  }
+
+  const Element& element = m_elements[i];
+  if (m_elementType == ElementType::CurvedTetrahedron) {
+    const int np = 4;
+    // Loop over all pairs of vertices.
+    for (int j = 0; j < np - 1; ++j) {
+      const Node& nj = m_nodes[element.emap[j]];
+      for (int k = j + 1; k < np; ++k) {
+        const Node& nk = m_nodes[element.emap[k]];
+        // Compute distance.
+        const double dx = nj.x - nk.x;
+        const double dy = nj.y - nk.y;
+        const double dz = nj.z - nk.z;
+        const double dist = sqrt(dx * dx + dy * dy + dz * dz);
+        if (k == 1) {
+          dmin = dmax = dist;
+        } else {
+          if (dist < dmin) dmin = dist;
+          if (dist > dmax) dmax = dist;
+        }
+      }
+    }
+  } else if (m_elementType == ElementType::Serendipity) {
+    const int np = 8;
+    // Loop over all pairs of vertices.
+    for (int j = 0; j < np - 1; ++j) {
+      const Node& nj = m_nodes[element.emap[j]];
+      for (int k = j + 1; k < np; ++k) {
+        const Node& nk = m_nodes[element.emap[k]];
+        // Compute distance.
+        const double dx = nj.x - nk.x;
+        const double dy = nj.y - nk.y;
+        const double dist = sqrt(dx * dx + dy * dy);
+        if (k == 1) {
+          dmin = dmax = dist;
+        } else {
+          if (dist < dmin) dmin = dist;
+          if (dist > dmax) dmax = dist;
+        }
+      }
+    }
+  }
 }
 
 bool ComponentFieldMap::GetElement(const size_t i, size_t& mat, bool& drift,
@@ -142,9 +788,13 @@ bool ComponentFieldMap::GetElement(const size_t i, size_t& mat, bool& drift,
   const auto& element = m_elements[i];
   mat = element.matmap;
   drift = m_materials[mat].driftmedium;
-  nodes.resize(4);
-  for (size_t j = 0; j < 4; ++j) nodes[j] = element.emap[j];
-  return true; 
+  size_t nNodes = 4;
+  if (m_elementType == ElementType::Serendipity && element.degenerate) {
+    nNodes = 3;
+  }
+  nodes.resize(nNodes);
+  for (size_t j = 0; j < nNodes; ++j) nodes[j] = element.emap[j];
+  return true;
 }
 
 bool ComponentFieldMap::GetNode(const size_t i, double& x, double& y,
@@ -159,10 +809,14 @@ bool ComponentFieldMap::GetNode(const size_t i, double& x, double& y,
   return true;
 }
 
-bool ComponentFieldMap::SetDefaultDriftMedium() {
+double ComponentFieldMap::GetPotential(const size_t i) const {
+  if (i >= m_nodes.size()) return 0.;
+  return m_nodes[i].v;
+}
 
+bool ComponentFieldMap::SetDefaultDriftMedium() {
   // Find lowest epsilon and set drift medium flags.
-  const size_t nMaterials = m_materials.size(); 
+  const size_t nMaterials = m_materials.size();
   double epsmin = -1;
   size_t iepsmin = 0;
   for (size_t i = 0; i < nMaterials; ++i) {
@@ -187,15 +841,100 @@ bool ComponentFieldMap::SetDefaultDriftMedium() {
   return true;
 }
 
+double ComponentFieldMap::Potential3(const std::array<double, 6>& v,
+                                     const std::array<double, 3>& t) {
+  double sum = 0.;
+  for (size_t i = 0; i < 3; ++i) {
+    sum += v[i] * t[i] * (2 * t[i] - 1);
+  }
+  sum += 4 * (v[3] * t[0] * t[1] + v[4] * t[0] * t[2] + v[5] * t[1] * t[2]);
+  return sum;
+}
+
+void ComponentFieldMap::Field3(const std::array<double, 6>& v,
+                               const std::array<double, 3>& t, double jac[4][4],
+                               const double det, double& ex, double& ey) {
+  std::array<double, 3> g;
+  g[0] = v[0] * (4 * t[0] - 1) + v[3] * 4 * t[1] + v[4] * 4 * t[2];
+  g[1] = v[1] * (4 * t[1] - 1) + v[3] * 4 * t[0] + v[5] * 4 * t[2];
+  g[2] = v[2] * (4 * t[2] - 1) + v[4] * 4 * t[0] + v[5] * 4 * t[1];
+  const double invdet = 1. / det;
+  ex = -(jac[0][1] * g[0] + jac[1][1] * g[1] + jac[2][1] * g[2]) * invdet;
+  ey = -(jac[0][2] * g[0] + jac[1][2] * g[1] + jac[2][2] * g[2]) * invdet;
+}
+
+double ComponentFieldMap::Potential5(const std::array<double, 8>& v,
+                                     const std::array<double, 2>& t) {
+  return -v[0] * (1 - t[0]) * (1 - t[1]) * (1 + t[0] + t[1]) * 0.25 -
+         v[1] * (1 + t[0]) * (1 - t[1]) * (1 - t[0] + t[1]) * 0.25 -
+         v[2] * (1 + t[0]) * (1 + t[1]) * (1 - t[0] - t[1]) * 0.25 -
+         v[3] * (1 - t[0]) * (1 + t[1]) * (1 + t[0] - t[1]) * 0.25 +
+         v[4] * (1 - t[0]) * (1 + t[0]) * (1 - t[1]) * 0.5 +
+         v[5] * (1 + t[0]) * (1 + t[1]) * (1 - t[1]) * 0.5 +
+         v[6] * (1 - t[0]) * (1 + t[0]) * (1 + t[1]) * 0.5 +
+         v[7] * (1 - t[0]) * (1 + t[1]) * (1 - t[1]) * 0.5;
+}
+
+void ComponentFieldMap::Field5(const std::array<double, 8>& v,
+                               const std::array<double, 2>& t, double jac[4][4],
+                               const double det, double& ex, double& ey) {
+  std::array<double, 2> g;
+  g[0] = (v[0] * (1 - t[1]) * (2 * t[0] + t[1]) +
+          v[1] * (1 - t[1]) * (2 * t[0] - t[1]) +
+          v[2] * (1 + t[1]) * (2 * t[0] + t[1]) +
+          v[3] * (1 + t[1]) * (2 * t[0] - t[1])) *
+             0.25 +
+         v[4] * t[0] * (t[1] - 1) + v[5] * (1 - t[1]) * (1 + t[1]) * 0.5 -
+         v[6] * t[0] * (1 + t[1]) + v[7] * (t[1] - 1) * (t[1] + 1) * 0.5;
+  g[1] = (v[0] * (1 - t[0]) * (t[0] + 2 * t[1]) -
+          v[1] * (1 + t[0]) * (t[0] - 2 * t[1]) +
+          v[2] * (1 + t[0]) * (t[0] + 2 * t[1]) -
+          v[3] * (1 - t[0]) * (t[0] - 2 * t[1])) *
+             0.25 +
+         v[4] * (t[0] - 1) * (t[0] + 1) * 0.5 - v[5] * (1 + t[0]) * t[1] +
+         v[6] * (1 - t[0]) * (1 + t[0]) * 0.5 + v[7] * (t[0] - 1) * t[1];
+  const double invdet = 1. / det;
+  ex = -(g[0] * jac[0][0] + g[1] * jac[1][0]) * invdet;
+  ey = -(g[0] * jac[0][1] + g[1] * jac[1][1]) * invdet;
+}
+
+double ComponentFieldMap::Potential13(const std::array<double, 10>& v,
+                                      const std::array<double, 4>& t) {
+  double sum = 0.;
+  for (size_t i = 0; i < 4; ++i) {
+    sum += v[i] * t[i] * (t[i] - 0.5);
+  }
+  sum *= 2;
+  sum += 4 * (v[4] * t[0] * t[1] + v[5] * t[0] * t[2] + v[6] * t[0] * t[3] +
+              v[7] * t[1] * t[2] + v[8] * t[1] * t[3] + v[9] * t[2] * t[3]);
+  return sum;
+}
+
+void ComponentFieldMap::Field13(const std::array<double, 10>& v,
+                                const std::array<double, 4>& t,
+                                double jac[4][4], const double det, double& ex,
+                                double& ey, double& ez) {
+  std::array<double, 4> g;
+  g[0] = v[0] * (t[0] - 0.25) + v[4] * t[1] + v[5] * t[2] + v[6] * t[3];
+  g[1] = v[1] * (t[1] - 0.25) + v[4] * t[0] + v[7] * t[2] + v[8] * t[3];
+  g[2] = v[2] * (t[2] - 0.25) + v[5] * t[0] + v[7] * t[1] + v[9] * t[3];
+  g[3] = v[3] * (t[3] - 0.25) + v[6] * t[0] + v[8] * t[1] + v[9] * t[2];
+  std::array<double, 3> f = {0., 0., 0.};
+  for (size_t j = 0; j < 4; ++j) {
+    for (size_t i = 0; i < 3; ++i) {
+      f[i] += g[j] * jac[j][i + 1];
+    }
+  }
+  const double invdet = -4. / det;
+  ex = f[0] * invdet;
+  ey = f[1] * invdet;
+  ez = f[2] * invdet;
+}
+
 int ComponentFieldMap::FindElement5(const double x, const double y,
                                     double const z, double& t1, double& t2,
                                     double& t3, double& t4, double jac[4][4],
-                                    double& det) {
-  // Check if bounding boxes of elements have been computed
-  if (!m_cacheElemBoundingBoxes) {
-    m_cacheElemBoundingBoxes = true;
-  }
-
+                                    double& det) const {
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
   if (m_useTetrahedralTree && m_octree) {
@@ -209,22 +948,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
   // Initial values.
   t1 = t2 = t3 = t4 = 0;
 
-  // Check previously used element
-  if (m_lastElement > -1 && !m_checkMultipleElement) {
-    const Element& element = m_elements[m_lastElement];
-    if (element.degenerate) {
-      if (Coordinates3(x, y, z, t1, t2, t3, t4, jac, det, element) == 0) {
-        if (t1 >= 0 && t1 <= +1 && t2 >= 0 && t2 <= +1 && t3 >= 0 && t3 <= +1) {
-          return m_lastElement;
-        }
-      }
-    } else {
-      if (Coordinates5(x, y, z, t1, t2, t3, t4, jac, det, element) == 0) {
-        if (t1 >= -1 && t1 <= +1 && t2 >= -1 && t2 <= +1) return m_lastElement;
-      }
-    }
-  }
-
   // Verify the count of volumes that contain the point.
   int nfound = 0;
   int imap = -1;
@@ -236,9 +959,8 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
   for (int i = 0; i < numElemToSearch; ++i) {
     const int idxToElemList = m_useTetrahedralTree ? tetList[i] : i;
     const Element& element = m_elements[idxToElemList];
-    if (x < element.bbMin[0] || x > element.bbMax[0] || 
-        y < element.bbMin[1] || y > element.bbMax[1] || 
-        z < element.bbMin[2] || z > element.bbMax[2])
+    if (x < element.bbMin[0] || x > element.bbMax[0] || y < element.bbMin[1] ||
+        y > element.bbMax[1] || z < element.bbMin[2] || z > element.bbMax[2])
       continue;
     if (element.degenerate) {
       // Degenerate element
@@ -248,7 +970,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
       if (t1 < 0 || t1 > 1 || t2 < 0 || t2 > 1 || t3 < 0 || t3 > 1) continue;
       ++nfound;
       imap = idxToElemList;
-      m_lastElement = idxToElemList;
       if (m_debug) {
         std::cout << m_className << "::FindElement5:\n";
         std::cout << "    Found matching degenerate element " << idxToElemList
@@ -275,7 +996,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
       if (t1 < -1 || t1 > 1 || t2 < -1 || t2 > 1) continue;
       ++nfound;
       imap = idxToElemList;
-      m_lastElement = idxToElemList;
       if (m_debug) {
         std::cout << m_className << "::FindElement5:\n";
         std::cout << "    Found matching non-degenerate element "
@@ -305,7 +1025,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
         std::cout << "    No element matching point (" << x << ", " << y
                   << ") found.\n";
       }
-      m_lastElement = -1;
       return -1;
     }
     if (nfound > 1) {
@@ -322,7 +1041,6 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
     t3 = t3bak;
     t4 = t4bak;
     imap = imapbak;
-    m_lastElement = imap;
     return imap;
   }
 
@@ -337,7 +1055,7 @@ int ComponentFieldMap::FindElement5(const double x, const double y,
 int ComponentFieldMap::FindElement13(const double x, const double y,
                                      const double z, double& t1, double& t2,
                                      double& t3, double& t4, double jac[4][4],
-                                     double& det) {
+                                     double& det) const {
   // Backup
   double jacbak[4][4];
   double detbak = 1.;
@@ -346,17 +1064,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
 
   // Initial values.
   t1 = t2 = t3 = t4 = 0.;
-
-  // Check previously used element
-  if (m_lastElement > -1 && !m_checkMultipleElement) {
-    const Element& element = m_elements[m_lastElement];
-    if (Coordinates13(x, y, z, t1, t2, t3, t4, jac, det, element) == 0) {
-      if (t1 >= 0 && t1 <= +1 && t2 >= 0 && t2 <= +1 && t3 >= 0 && t3 <= +1 &&
-          t4 >= 0 && t4 <= +1) {
-        return m_lastElement;
-      }
-    }
-  }
 
   // Tetra list in the block that contains the input 3D point.
   std::vector<int> tetList;
@@ -375,9 +1082,8 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
   for (int i = 0; i < numElemToSearch; i++) {
     const int idxToElemList = m_useTetrahedralTree ? tetList[i] : i;
     const Element& element = m_elements[idxToElemList];
-    if (x < element.bbMin[0] || x > element.bbMax[0] || 
-        y < element.bbMin[1] || y > element.bbMax[1] || 
-        z < element.bbMin[2] || z > element.bbMax[2])
+    if (x < element.bbMin[0] || x > element.bbMax[0] || y < element.bbMin[1] ||
+        y > element.bbMax[1] || z < element.bbMin[2] || z > element.bbMax[2])
       continue;
     if (Coordinates13(x, y, z, t1, t2, t3, t4, jac, det, element) != 0) {
       continue;
@@ -388,7 +1094,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
     }
     ++nfound;
     imap = idxToElemList;
-    m_lastElement = idxToElemList;
     if (m_debug) {
       std::cout << m_className << "::FindElement13:\n";
       std::cout << "    Found matching element " << i << ".\n";
@@ -416,7 +1121,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
         std::cout << "    No element matching point (" << x << ", " << y << ", "
                   << z << ") found.\n";
       }
-      m_lastElement = -1;
       return -1;
     }
     if (nfound > 1) {
@@ -433,7 +1137,6 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
     t3 = t3bak;
     t4 = t4bak;
     imap = imapbak;
-    m_lastElement = imap;
     return imap;
   }
 
@@ -448,42 +1151,26 @@ int ComponentFieldMap::FindElement13(const double x, const double y,
 int ComponentFieldMap::FindElementCube(const double x, const double y,
                                        const double z, double& t1, double& t2,
                                        double& t3, TMatrixD*& jac,
-                                       std::vector<TMatrixD*>& dN) {
+                                       std::vector<TMatrixD*>& dN) const {
   int imap = -1;
-  if (m_lastElement >= 0) {
-    const Element& element = m_elements[m_lastElement];
+  const size_t nElements = m_elements.size();
+  for (size_t i = 0; i < nElements; ++i) {
+    const Element& element = m_elements[i];
     const Node& n3 = m_nodes[element.emap[3]];
-    if (x >= n3.x && y >= n3.y && z >= n3.z) {
-      const Node& n0 = m_nodes[element.emap[0]];
-      const Node& n2 = m_nodes[element.emap[2]];
-      const Node& n7 = m_nodes[element.emap[7]];
-      if (x < n0.x && y < n2.y && z < n7.z) {
-        imap = m_lastElement;
-      }
-    }
-  }
-
-  // Default element loop
-  if (imap == -1) {
-    const size_t nElements = m_elements.size();
-    for (size_t i = 0; i < nElements; ++i) {
-      const Element& element = m_elements[i];
-      const Node& n3 = m_nodes[element.emap[3]];
-      if (x < n3.x || y < n3.y || z < n3.z) continue;
-      const Node& n0 = m_nodes[element.emap[0]];
-      const Node& n2 = m_nodes[element.emap[2]];
-      const Node& n7 = m_nodes[element.emap[7]];
-      if (x < n0.x && y < n2.y && z < n7.z) {
-        imap = i;
-        break;
-      }
+    if (x < n3.x || y < n3.y || z < n3.z) continue;
+    const Node& n0 = m_nodes[element.emap[0]];
+    const Node& n2 = m_nodes[element.emap[2]];
+    const Node& n7 = m_nodes[element.emap[7]];
+    if (x < n0.x && y < n2.y && z < n7.z) {
+      imap = i;
+      break;
     }
   }
 
   if (imap < 0) {
     if (m_debug) {
-      std::cout << m_className << "::FindElementCube:\n";
-      std::cout << "    Point (" << x << "," << y << "," << z
+      std::cout << m_className << "::FindElementCube:\n"
+                << "    Point (" << x << "," << y << "," << z
                 << ") not in the mesh, it is background or PEC.\n";
       const Node& first0 = m_nodes[m_elements.front().emap[0]];
       const Node& first2 = m_nodes[m_elements.front().emap[2]];
@@ -562,157 +1249,31 @@ void ComponentFieldMap::Jacobian5(const Element& element, const double u,
   const Node& n5 = m_nodes[element.emap[5]];
   const Node& n6 = m_nodes[element.emap[6]];
   const Node& n7 = m_nodes[element.emap[7]];
-  const double u2 = u * u;
-  const double v2 = v * v;
-  const double twou = 2 * u;
-  const double twov = 2 * v;
-  const double two0x = 2 * n0.x;
-  const double two0y = 2 * n0.y;
-  const double two1x = 2 * n1.x;
-  const double two1y = 2 * n1.y;
-  const double two2x = 2 * n2.x;
-  const double two2y = 2 * n2.y;
-  const double two3x = 2 * n3.x;
-  const double two3y = 2 * n3.y;
-  const double two4x = 2 * n4.x;
-  const double two4y = 2 * n4.y;
-  const double two5x = 2 * n5.x;
-  const double two5y = 2 * n5.y;
-  const double two6x = 2 * n6.x;
-  const double two6y = 2 * n6.y;
-  const double two7x = 2 * n7.x;
-  const double two7y = 2 * n7.y;
-  // Determinant of the quadrilateral serendipity Jacobian
-  det =
-      (-twou * u2 *
-           ((n2.x + n3.x - two6x) * (n0.y + n1.y - two4y) -
-            (n0.x + n1.x - two4x) * (n2.y + n3.y - two6y)) +
-       twov * v2 *
-           (-((n0.x + n3.x - two7x) * (n1.y + n2.y - two5y)) +
-            (n1.x + n2.x - two5x) * (n0.y + n3.y - two7y)) +
-       2 * (-((n5.x - n7.x) * (n4.y - n6.y)) + (n4.x - n6.x) * (n5.y - n7.y)) +
-       v * (-(n6.x * n0.y) - two7x * n0.y + n6.x * n1.y - two7x * n1.y -
-            n6.x * n2.y - two7x * n2.y + n4.x * (n0.y - n1.y + n2.y - n3.y) +
-            n6.x * n3.y - two7x * n3.y - n0.x * n4.y + n1.x * n4.y -
-            n2.x * n4.y + n3.x * n4.y - two0x * n5.y - two1x * n5.y -
-            two2x * n5.y - two3x * n5.y + 8 * n7.x * n5.y + n0.x * n6.y -
-            n1.x * n6.y + n2.x * n6.y - n3.x * n6.y +
-            two5x * (n0.y + n1.y + n2.y + n3.y - 4 * n7.y) +
-            2 * (n0.x + n1.x + n2.x + n3.x) * n7.y) +
-       v2 * (-(n4.x * n0.y) + two5x * n0.y + n6.x * n0.y + two7x * n0.y +
-             n4.x * n1.y - two5x * n1.y - n6.x * n1.y - two7x * n1.y +
-             n4.x * n2.y + two5x * n2.y - n6.x * n2.y + two7x * n2.y -
-             n4.x * n3.y - two5x * n3.y + n6.x * n3.y - two7x * n3.y +
-             two2x * (n1.y + n3.y) - n2.x * n4.y + two5x * n4.y - two7x * n4.y -
-             two2x * n5.y - two4x * n5.y + two6x * n5.y + n2.x * n6.y -
-             two5x * n6.y + two7x * n6.y +
-             n0.x * (two1y + two3y + n4.y - two5y - n6.y - two7y) -
-             2 * (n2.x - n4.x + n6.x) * n7.y +
-             n3.x * (-two0y - two2y + n4.y + two5y - n6.y + two7y) +
-             n1.x * (-two0y - two2y - n4.y + two5y + n6.y + two7y)) +
-       u * (n5.x * n0.y - two6x * n0.y - n7.x * n0.y - n5.x * n1.y -
-            two6x * n1.y + n7.x * n1.y + n5.x * n2.y - two6x * n2.y -
-            n7.x * n2.y - n5.x * n3.y - two6x * n3.y + n7.x * n3.y -
-            two1x * n4.y - two2x * n4.y - two3x * n4.y + 8 * n6.x * n4.y +
-            n1.x * n5.y - n2.x * n5.y + n3.x * n5.y +
-            two4x * (n0.y + n1.y + n2.y + n3.y - 4 * n6.y) + two1x * n6.y +
-            two2x * n6.y + two3x * n6.y - (n1.x - n2.x + n3.x) * n7.y +
-            n0.x * (-two4y - n5.y + two6y + n7.y) +
-            v2 * (4 * n4.x * n0.y - 3 * n5.x * n0.y - 4 * n6.x * n0.y -
-                  5 * n7.x * n0.y + 4 * n4.x * n1.y - 5 * n5.x * n1.y -
-                  4 * n6.x * n1.y - 3 * n7.x * n1.y + 4 * n4.x * n2.y +
-                  5 * n5.x * n2.y - 4 * n6.x * n2.y + 3 * n7.x * n2.y +
-                  4 * n4.x * n3.y + 3 * n5.x * n3.y - 4 * n6.x * n3.y +
-                  5 * n7.x * n3.y + 8 * n5.x * n4.y + 8 * n7.x * n4.y -
-                  8 * n4.x * n5.y + 8 * n6.x * n5.y - 8 * n5.x * n6.y -
-                  8 * n7.x * n6.y +
-                  n3.x * (5 * n0.y + 3 * n1.y - 4 * n4.y - 3 * n5.y + 4 * n6.y -
-                          5 * n7.y) +
-                  n2.x * (3 * n0.y + 5 * n1.y - 4 * n4.y - 5 * n5.y + 4 * n6.y -
-                          3 * n7.y) -
-                  8 * n4.x * n7.y + 8 * n6.x * n7.y +
-                  n1.x * (-5 * n2.y - 3 * n3.y - 4 * n4.y + 5 * n5.y +
-                          4 * n6.y + 3 * n7.y) +
-                  n0.x * (-3 * n2.y - 5 * n3.y - 4 * n4.y + 3 * n5.y +
-                          4 * n6.y + 5 * n7.y)) -
-            twov * (n6.x * n0.y - 3 * n7.x * n0.y + n6.x * n1.y - n7.x * n1.y +
-                    3 * n6.x * n2.y - n7.x * n2.y + 3 * n6.x * n3.y -
-                    3 * n7.x * n3.y - 3 * n0.x * n4.y - 3 * n1.x * n4.y -
-                    n2.x * n4.y - n3.x * n4.y + 4 * n7.x * n4.y + n0.x * n5.y +
-                    3 * n1.x * n5.y + 3 * n2.x * n5.y + n3.x * n5.y -
-                    4 * n6.x * n5.y - n0.x * n6.y - n1.x * n6.y -
-                    3 * n2.x * n6.y - 3 * n3.x * n6.y + 4 * n7.x * n6.y -
-                    n5.x * (n0.y + 3 * n1.y + 3 * n2.y + n3.y -
-                            4 * (n4.y + n6.y)) +
-                    (3 * n0.x + n1.x + n2.x + 3 * n3.x - 4 * n6.x) * n7.y +
-                    n4.x * (3 * n0.y + 3 * n1.y + n2.y + n3.y -
-                            4 * (n5.y + n7.y)))) +
-       u2 *
-           (two3x * n0.y - two4x * n0.y - n5.x * n0.y - two6x * n0.y +
-            n7.x * n0.y - two0x * n1.y + two4x * n1.y - n5.x * n1.y +
-            two6x * n1.y + n7.x * n1.y + two3x * n2.y - two4x * n2.y +
-            n5.x * n2.y - two6x * n2.y - n7.x * n2.y + two4x * n3.y +
-            n5.x * n3.y + two6x * n3.y - n7.x * n3.y - two3x * n4.y +
-            two5x * n4.y - two7x * n4.y - n3.x * n5.y - two4x * n5.y +
-            two6x * n5.y - two3x * n6.y - two5x * n6.y + two7x * n6.y +
-            n0.x * (-two3y + two4y + n5.y + two6y - n7.y) +
-            (n3.x + two4x - two6x) * n7.y +
-            n2.x * (-two1y - two3y + two4y - n5.y + two6y + n7.y) -
-            3 * v2 *
-                (n5.x * n0.y - n6.x * n0.y - n7.x * n0.y + n5.x * n1.y +
-                 n6.x * n1.y - n7.x * n1.y - n5.x * n2.y + n6.x * n2.y +
-                 n7.x * n2.y - n5.x * n3.y - n6.x * n3.y + n7.x * n3.y -
-                 two5x * n4.y + two7x * n4.y - two6x * n5.y + two5x * n6.y -
-                 two7x * n6.y +
-                 n4.x * (n0.y - n1.y - n2.y + n3.y + two5y - two7y) +
-                 n3.x * (n0.y - n2.y - n4.y + n5.y + n6.y - n7.y) +
-                 two6x * n7.y +
-                 (n0.x - n2.x) * (n1.y - n3.y - n4.y - n5.y + n6.y + n7.y)) +
-            v * (4 * n5.x * n0.y + 3 * n6.x * n0.y - 4 * n7.x * n0.y +
-                 4 * n5.x * n1.y - 3 * n6.x * n1.y - 4 * n7.x * n1.y +
-                 4 * n5.x * n2.y - 5 * n6.x * n2.y - 4 * n7.x * n2.y +
-                 4 * n5.x * n3.y + 5 * n6.x * n3.y - 4 * n7.x * n3.y -
-                 8 * n5.x * n4.y + 8 * n7.x * n4.y + 8 * n6.x * n5.y -
-                 8 * n5.x * n6.y + 8 * n7.x * n6.y +
-                 n4.x * (5 * n0.y - 5 * n1.y - 3 * n2.y + 3 * n3.y + 8 * n5.y -
-                         8 * n7.y) -
-                 8 * n6.x * n7.y +
-                 n3.x * (3 * n1.y + 5 * n2.y - 3 * n4.y - 4 * n5.y - 5 * n6.y +
-                         4 * n7.y) +
-                 n0.x * (5 * n1.y + 3 * n2.y - 5 * n4.y - 4 * n5.y - 3 * n6.y +
-                         4 * n7.y) +
-                 n2.x * (-3 * n0.y - 5 * n3.y + 3 * n4.y - 4 * n5.y + 5 * n6.y +
-                         4 * n7.y)) +
-            n1.x * ((-1 + v) * (-2 + 3 * v) * n0.y + two2y - two4y + n5.y -
-                    two6y - n7.y +
-                    v * (-3 * n3.y + 5 * n4.y - 4 * n5.y + 3 * n6.y + 4 * n7.y -
-                         3 * v * (n2.y + n4.y - n5.y - n6.y + n7.y))))) /
-      8;
+
   // Jacobian terms
   jac[0][0] =
-      (u2 * (-n0.y - n1.y + n2.y + n3.y + two4y - two6y) +
-       2 * (-n4.y + n6.y + v * (n0.y + n1.y + n2.y + n3.y - two5y - two7y)) +
-       u * (n0.y - twov * n0.y - n1.y + twov * n1.y + n2.y + twov * n2.y -
-            n3.y - twov * n3.y - twov * two5y + twov * two7y)) /
-      4;
+      0.25 * ((1 - u) * (2 * v + u) * n0.y + (1 + u) * (2 * v - u) * n1.y +
+              (1 + u) * (2 * v + u) * n2.y + (1 - u) * (2 * v - u) * n3.y) -
+      0.5 * (1 - u) * (1 + u) * n4.y - (1 + u) * v * n5.y +
+      0.5 * (1 - u) * (1 + u) * n6.y - (1 - u) * v * n7.y;
   jac[0][1] =
-      (u2 * (n0.x + n1.x - n2.x - n3.x - two4x + two6x) -
-       2 * (-n4.x + n6.x + v * (n0.x + n1.x + n2.x + n3.x - two5x - two7x)) +
-       u * ((-1 + twov) * n0.x + n1.x - twov * n1.x - n2.x - twov * n2.x +
-            n3.x + twov * n3.x + twov * two5x - twov * two7x)) /
-      4;
+      -0.25 * ((1 - u) * (2 * v + u) * n0.x + (1 + u) * (2 * v - u) * n1.x +
+               (1 + u) * (2 * v + u) * n2.x + (1 - u) * (2 * v - u) * n3.x) +
+      0.5 * (1 - u) * (1 + u) * n4.x + (1 + u) * v * n5.x -
+      0.5 * (1 - u) * (1 + u) * n6.x + (1 - u) * v * n7.x;
   jac[1][0] =
-      (v * (-n0.y + n1.y - n2.y + n3.y) - two5y +
-       twou * ((-1 + v) * n0.y + (-1 + v) * n1.y - n2.y - v * n2.y - n3.y -
-               v * n3.y + two4y - twov * n4.y + two6y + twov * n6.y) +
-       v2 * (n0.y - n1.y - n2.y + n3.y + two5y - two7y) + two7y) /
-      4;
+      -0.25 * ((1 - v) * (2 * u + v) * n0.y + (1 - v) * (2 * u - v) * n1.y +
+               (1 + v) * (2 * u + v) * n2.y + (1 + v) * (2 * u - v) * n3.y) +
+      (1 - v) * u * n4.y - 0.5 * (1 - v) * (1 + v) * n5.y + (1 + v) * u * n6.y +
+      0.5 * (1 - v) * (1 + v) * n7.y;
   jac[1][1] =
-      (v * (n0.x - n1.x + n2.x - n3.x) +
-       twou * (n0.x - v * n0.x + n1.x - v * n1.x + n2.x + v * n2.x + n3.x +
-               v * n3.x - two4x + twov * n4.x - two6x - twov * n6.x) +
-       two5x - two7x + v2 * (-n0.x + n1.x + n2.x - n3.x - two5x + two7x)) /
-      4;
+      0.25 * ((1 - v) * (2 * u + v) * n0.x + (1 - v) * (2 * u - v) * n1.x +
+              (1 + v) * (2 * u + v) * n2.x + (1 + v) * (2 * u - v) * n3.x) -
+      (1 - v) * u * n4.x + 0.5 * (1 - v) * (1 + v) * n5.x - (1 + v) * u * n6.x -
+      0.5 * (1 - v) * (1 + v) * n7.x;
+
+  // Determinant.
+  det = jac[0][0] * jac[1][1] - jac[0][1] * jac[1][0];
 }
 
 void ComponentFieldMap::Jacobian13(const Element& element, const double t,
@@ -730,73 +1291,39 @@ void ComponentFieldMap::Jacobian13(const Element& element, const double t,
   const Node& n8 = m_nodes[element.emap[8]];
   const Node& n9 = m_nodes[element.emap[9]];
 
-  // Shorthands.
-  const double fourt = 4 * t;
-  const double fouru = 4 * u;
-  const double fourv = 4 * v;
-  const double fourw = 4 * w;
+  const double tx = 4 * ((-0.25 + t) * n0.x + u * n4.x + v * n5.x + w * n6.x);
+  const double ty = 4 * ((-0.25 + t) * n0.y + u * n4.y + v * n5.y + w * n6.y);
+  const double tz = 4 * ((-0.25 + t) * n0.z + u * n4.z + v * n5.z + w * n6.z);
 
-  const double x0 = (-1 + fourt) * n0.x;
-  const double y0 = (-1 + fourt) * n0.y;
-  const double z0 = (-1 + fourt) * n0.z;
-  const double xp = fouru * n4.x + fourv * n5.x + fourw * n6.x;
-  const double yp = fouru * n4.y + fourv * n5.y + fourw * n6.y;
-  const double zp = fouru * n4.z + fourv * n5.z + fourw * n6.z;
+  const double ux = 4 * ((-0.25 + u) * n1.x + t * n4.x + v * n7.x + w * n8.x);
+  const double uy = 4 * ((-0.25 + u) * n1.y + t * n4.y + v * n7.y + w * n8.y);
+  const double uz = 4 * ((-0.25 + u) * n1.z + t * n4.z + v * n7.z + w * n8.z);
 
-  const double tx = x0 + xp;
-  const double ty = y0 + yp;
-  const double tz = z0 + zp;
+  const double vx = 4 * ((-0.25 + v) * n2.x + t * n5.x + u * n7.x + w * n9.x);
+  const double vy = 4 * ((-0.25 + v) * n2.y + t * n5.y + u * n7.y + w * n9.y);
+  const double vz = 4 * ((-0.25 + v) * n2.z + t * n5.z + u * n7.z + w * n9.z);
 
-  const double x1 = (-1 + fouru) * n1.x;
-  const double y1 = (-1 + fouru) * n1.y;
-  const double z1 = (-1 + fouru) * n1.z;
-  const double xq = fourt * n4.x + fourv * n7.x + fourw * n8.x;
-  const double yq = fourt * n4.y + fourv * n7.y + fourw * n8.y;
-  const double zq = fourt * n4.z + fourv * n7.z + fourw * n8.z;
+  const double wx = 4 * ((-0.25 + w) * n3.x + t * n6.x + u * n8.x + v * n9.x);
+  const double wy = 4 * ((-0.25 + w) * n3.y + t * n6.y + u * n8.y + v * n9.y);
+  const double wz = 4 * ((-0.25 + w) * n3.z + t * n6.z + u * n8.z + v * n9.z);
 
-  const double ux = x1 + xq;
-  const double uy = y1 + yq;
-  const double uz = z1 + zq;
+  const double ax = ux - wx;
+  const double ay = uy - wy;
 
-  const double x2 = (-1 + fourv) * n2.x;
-  const double y2 = (-1 + fourv) * n2.y;
-  const double z2 = (-1 + fourv) * n2.z;
-  const double xr = fourt * n5.x + fouru * n7.x + fourw * n9.x;
-  const double yr = fourt * n5.y + fouru * n7.y + fourw * n9.y;
-  const double zr = fourt * n5.z + fouru * n7.z + fourw * n9.z;
+  const double bx = ux - vx;
+  const double by = uy - vy;
 
-  const double vx = x2 + xr;
-  const double vy = y2 + yr;
-  const double vz = z2 + zr;
+  const double cx = vx - wx;
+  const double cy = vy - wy;
 
-  const double x3 = (-1 + fourw) * n3.x;
-  const double y3 = (-1 + fourw) * n3.y;
-  const double z3 = (-1 + fourw) * n3.z;
-  const double xs = fourt * n6.x + fouru * n8.x + fourv * n9.x;
-  const double ys = fourt * n6.y + fouru * n8.y + fourv * n9.y;
-  const double zs = fourt * n6.z + fouru * n8.z + fourv * n9.z;
+  const double dx = tx - wx;
+  const double dy = ty - wy;
 
-  const double wx = x3 + xs;
-  const double wy = y3 + ys;
-  const double wz = z3 + zs;
+  const double ex = tx - vx;
+  const double ey = ty - vy;
 
-  const double ax = x1 - x3 + xq - xs;
-  const double ay = y1 - y3 + yq - ys;
-
-  const double bx = x1 - x2 + xq - xr;
-  const double by = y1 - y2 + yq - yr;
-
-  const double cx = x2 - x3 + xr - xs;
-  const double cy = y2 - y3 + yr - ys;
-
-  const double dx = x0 - x3 + xp - xs;
-  const double dy = y0 - y3 + yp - ys;
-
-  const double ex = x0 - x2 + xp - xr;
-  const double ey = y0 - y2 + yp - yr;
-
-  const double fx = x0 - x1 + xp - xq;
-  const double fy = y0 - y1 + yp - yq;
+  const double fx = tx - ux;
+  const double fy = ty - uy;
 
   // Determinant of the quadrilateral serendipity Jacobian
   det = (-ax * vy + bx * wy + cx * uy) * tz -
@@ -813,23 +1340,23 @@ void ComponentFieldMap::Jacobian13(const Element& element, const double t,
 
   jac[0][0] = -uw * vz + uv * wz + vw * uz;
   jac[1][0] = -vw * tz + tw * vz - tv * wz;
-  jac[2][0] =  uw * tz + tu * wz - tw * uz;
+  jac[2][0] = uw * tz + tu * wz - tw * uz;
   jac[3][0] = -uv * tz - tu * vz + tv * uz;
 
   jac[0][1] = -ay * vz + by * wz + cy * uz;
-  jac[0][2] =  ax * vz - bx * wz - cx * uz;
+  jac[0][2] = ax * vz - bx * wz - cx * uz;
   jac[0][3] = -ax * vy + bx * wy + cx * uy;
 
   jac[1][1] = -cy * tz + dy * vz - ey * wz;
-  jac[1][2] =  cx * tz - dx * vz + ex * wz;
+  jac[1][2] = cx * tz - dx * vz + ex * wz;
   jac[1][3] = -cx * ty + dx * vy - ex * wy;
 
-  jac[2][1] =  ay * tz + fy * wz - dy * uz;
+  jac[2][1] = ay * tz + fy * wz - dy * uz;
   jac[2][2] = -ax * tz - fx * wz + dx * uz;
-  jac[2][3] =  ax * ty + fx * wy - dx * uy;
+  jac[2][3] = ax * ty + fx * wy - dx * uy;
 
   jac[3][1] = -by * tz - fy * vz + ey * uz;
-  jac[3][2] =  bx * tz + fx * vz - ex * uz;
+  jac[3][2] = bx * tz + fx * vz - ex * uz;
   jac[3][3] = -bx * ty - fx * vy + ex * uy;
 }
 
@@ -923,8 +1450,8 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
                                     double& t3, double& t4, double jac[4][4],
                                     double& det, const Element& element) const {
   if (m_debug) {
-    std::cout << m_className << "::Coordinates3:\n";
-    std::cout << "   Point (" << x << ", " << y << ", " << z << ")\n";
+    std::cout << m_className << "::Coordinates3:\n"
+              << "    Point (" << x << ", " << y << ", " << z << ")\n";
   }
 
   // Provisional values
@@ -941,8 +1468,8 @@ int ComponentFieldMap::Coordinates3(const double x, const double y,
   const double d3 =
       (n2.x - n0.x) * (n1.y - n0.y) - (n1.x - n0.x) * (n2.y - n0.y);
   if (d1 == 0 || d2 == 0 || d3 == 0) {
-    std::cerr << m_className << "::Coordinates3:\n";
-    std::cerr << "    Calculation of linear coordinates failed; abandoned.\n";
+    std::cerr << m_className << "::Coordinates3:\n"
+              << "    Calculation of linear coordinates failed; abandoned.\n";
     return 1;
   }
   t1 = ((x - n1.x) * (n2.y - n1.y) - (y - n1.y) * (n2.x - n1.x)) / d1;
@@ -1068,8 +1595,8 @@ int ComponentFieldMap::Coordinates4(const double x, const double y,
                                     const Element& element) const {
   // Debugging
   if (m_debug) {
-    std::cout << m_className << "::Coordinates4:\n";
-    std::cout << "   Point (" << x << ", " << y << ", " << z << ")\n";
+    std::cout << m_className << "::Coordinates4:\n"
+              << "   Point (" << x << ", " << y << ", " << z << ")\n";
   }
 
   // Failure flag
@@ -1443,8 +1970,8 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
                                      double& det,
                                      const Element& element) const {
   if (m_debug) {
-    std::cout << m_className << "::Coordinates13:\n";
-    std::cout << "   Point (" << x << ", " << y << ", " << z << ")\n";
+    std::cout << m_className << "::Coordinates13:\n"
+              << "    Point (" << x << ", " << y << ", " << z << ")\n";
   }
 
   // Provisional values
@@ -1458,9 +1985,9 @@ int ComponentFieldMap::Coordinates13(const double x, const double y,
   if (t1 < -f || t2 < -f || t3 < -f || t4 < -f || t1 > 1 + f || t2 > 1 + f ||
       t3 > 1 + f || t4 > 1 + f) {
     if (m_debug) {
-      std::cout << m_className << "::Coordinates13:\n";
-      std::cout << "    Linear isoparametric coordinates more than\n";
-      std::cout << "    f (" << f << ") out of range.\n";
+      std::cout << m_className << "::Coordinates13:\n"
+                << "    Linear isoparametric coordinates more than\n"
+                << "    f (" << f << ") out of range.\n";
     }
     return 0;
   }
@@ -1693,7 +2220,6 @@ int ComponentFieldMap::CoordinatesCube(const double x, const double y,
 }
 
 void ComponentFieldMap::Reset() {
-
   m_ready = false;
 
   m_elements.clear();
@@ -1707,11 +2233,9 @@ void ComponentFieldMap::Reset() {
 
   m_octree.reset(nullptr);
   m_cacheElemBoundingBoxes = false;
-  m_lastElement = -1;
 }
 
 void ComponentFieldMap::Prepare() {
-
   // Establish the ranges.
   SetRange();
   UpdatePeriodicity();
@@ -1720,7 +2244,9 @@ void ComponentFieldMap::Prepare() {
   CalculateElementBoundingBoxes();
   std::cout << " done.\n";
   // Initialize the tetrahedral tree.
-  InitializeTetrahedralTree();
+  if (InitializeTetrahedralTree()) {
+    std::cout << "    Initialized tetrahedral tree.\n";
+  }
 }
 
 void ComponentFieldMap::UpdatePeriodicityCommon() {
@@ -1809,7 +2335,7 @@ void ComponentFieldMap::UpdatePeriodicityCommon() {
   }
 
   if (m_axiallyPeriodic[0]) {
-    const double yzmax = std::max({fabs(m_mapmin[1]), fabs(m_mapmax[1]), 
+    const double yzmax = std::max({fabs(m_mapmin[1]), fabs(m_mapmax[1]),
                                    fabs(m_mapmin[2]), fabs(m_mapmax[2])});
     m_minBoundingBox[1] = -yzmax;
     m_maxBoundingBox[1] = +yzmax;
@@ -1824,7 +2350,7 @@ void ComponentFieldMap::UpdatePeriodicityCommon() {
     m_maxBoundingBox[2] = +xzmax;
   } else if (m_axiallyPeriodic[2]) {
     const double xymax = std::max({fabs(m_mapmin[0]), fabs(m_mapmax[0]),
-                                   fabs(m_mapmin[1]), fabs(m_mapmax[1])}); 
+                                   fabs(m_mapmin[1]), fabs(m_mapmax[1])});
     m_minBoundingBox[0] = -xymax;
     m_maxBoundingBox[0] = +xymax;
     m_minBoundingBox[1] = -xymax;
@@ -1990,9 +2516,9 @@ void ComponentFieldMap::PrintRange() {
   }
 }
 
-bool ComponentFieldMap::GetBoundingBox(
-    double& xmin, double& ymin, double& zmin,
-    double& xmax, double& ymax, double& zmax) {
+bool ComponentFieldMap::GetBoundingBox(double& xmin, double& ymin, double& zmin,
+                                       double& xmax, double& ymax,
+                                       double& zmax) {
   if (!m_ready) return false;
 
   xmin = m_minBoundingBox[0];
@@ -2004,10 +2530,9 @@ bool ComponentFieldMap::GetBoundingBox(
   return true;
 }
 
-bool ComponentFieldMap::GetElementaryCell(
-    double& xmin, double& ymin, double& zmin,
-    double& xmax, double& ymax, double& zmax) {
-
+bool ComponentFieldMap::GetElementaryCell(double& xmin, double& ymin,
+                                          double& zmin, double& xmax,
+                                          double& ymax, double& zmax) {
   if (!m_ready) return false;
   xmin = m_mapmin[0];
   xmax = m_mapmax[0];
@@ -2336,12 +2861,10 @@ bool ComponentFieldMap::InitializeTetrahedralTree() {
   // Insert all mesh elements (tetrahedrons) in the tree
   for (unsigned int i = 0; i < m_elements.size(); i++) {
     const Element& e = m_elements[i];
-    const double bb[6] = {e.bbMin[0], e.bbMin[1], e.bbMin[2], 
+    const double bb[6] = {e.bbMin[0], e.bbMin[1], e.bbMin[2],
                           e.bbMax[0], e.bbMax[1], e.bbMax[2]};
     m_octree->InsertMeshElement(bb, i);
   }
-
-  std::cout << m_className << "::InitializeTetrahedralTree: Success.\n";
   return true;
 }
 
@@ -2373,7 +2896,6 @@ size_t ComponentFieldMap::GetOrCreateWeightingFieldIndex(
 }
 
 void ComponentFieldMap::PrintWarning(const std::string& header) {
-
   if (!m_warning || m_nWarnings > 10) return;
   std::cerr << m_className << "::" << header << ":\n"
             << "    Warnings have been issued for this field map.\n";
@@ -2385,7 +2907,7 @@ void ComponentFieldMap::PrintNotReady(const std::string& header) const {
             << "    Field map not yet initialised.\n";
 }
 
-void ComponentFieldMap::PrintCouldNotOpen(const std::string& header, 
+void ComponentFieldMap::PrintCouldNotOpen(const std::string& header,
                                           const std::string& filename) const {
   std::cerr << m_className << "::" << header << ":\n"
             << "    Could not open file " << filename << " for reading.\n"
@@ -2411,4 +2933,132 @@ void ComponentFieldMap::PrintElement(const std::string& header, const double x,
            node.z, v);
   }
 }
+
+void ComponentFieldMap::CoordinateTransformMatrix(
+    TMatrix& rotMatrix, TVector& transVector, const double xT, const double yT,
+    const double zT, const double xA, const double yA, const double zA) {
+  TMatrix Rx(3, 3);  // Rotation around the x-axis.
+
+  Rx(0, 0) = 1;
+  Rx(1, 1) = TMath::Cos(xA);
+  Rx(1, 2) = -TMath::Sin(xA);
+  Rx(2, 1) = TMath::Sin(xA);
+  Rx(2, 2) = TMath::Cos(xA);
+
+  TMatrix Ry(3, 3);  // Rotation around the y-axis.
+
+  Ry(1, 1) = 1;
+  Ry(0, 0) = TMath::Cos(yA);
+  Ry(2, 0) = -TMath::Sin(yA);
+  Ry(0, 2) = TMath::Sin(yA);
+  Ry(2, 2) = TMath::Cos(yA);
+
+  TMatrix Rz(3, 3);  // Rotation around the z-axis.
+
+  Rz(2, 2) = 1;
+  Rz(0, 0) = TMath::Cos(zA);
+  Rz(0, 1) = -TMath::Sin(zA);
+  Rz(1, 0) = TMath::Sin(zA);
+  Rz(1, 1) = TMath::Cos(zA);
+
+  rotMatrix = Rx * Ry * Rz;  // Total rotation around the origin
+
+  transVector(0) = xT;
+  transVector(1) = yT;
+  transVector(2) = zT;
+}
+
+void ComponentFieldMap::CopyWeightingPotential(
+    const std::string& label, const std::string& labelSource, const double x,
+    const double y, const double z, const double alpha, const double beta,
+    const double gamma) {
+  // Check if a weighting field with the same label already exists.
+  size_t nWeightingFields = m_wfields.size();
+  for (size_t i = 0; i < nWeightingFields; ++i) {
+    if (m_wfields[i] == label) {
+      std::cout << m_className << "::CopyWeightingPotential:\n"
+                << "    Electrode " << label << " already excists.\n";
+      return;
+    }
+  }
+
+  // Check if a weighting field with the same label already exists.
+  size_t nWeightingFieldCopies = m_wfieldCopies.size();
+  for (size_t i = 0; i < nWeightingFieldCopies; ++i) {
+    if (m_wfieldCopies[i].name == label) {
+      std::cout << m_className << "::CopyWeightingPotential:\n"
+                << "    Copy of " << label << " already excists.\n";
+      return;
+    }
+  }
+
+  size_t iws = -1;
+  for (size_t i = 0; i < nWeightingFields; ++i) {
+    if (m_wfields[i] == labelSource) iws = i;
+  }
+
+  if (iws == (size_t)-1) {
+    std::cout << m_className << "::CopyWeightingPotential:\n"
+              << "    Source electrode " << labelSource
+              << " does not excists.\n";
+    return;
+  }
+
+  WeightingFieldCopy newWeightingFieldCopy;
+
+  newWeightingFieldCopy.name = label;
+  newWeightingFieldCopy.iSource = iws;
+
+  TMatrix rot(3, 3);
+  TVector trans(3);
+
+  CoordinateTransformMatrix(rot, trans, -x, -y, -z, -alpha, -beta, -gamma);
+
+  newWeightingFieldCopy.rotMatrix.Use(rot);
+  newWeightingFieldCopy.transVector.Use(trans);
+
+  m_wfieldCopies.push_back(newWeightingFieldCopy);
+
+  std::cout << m_className << "::CopyWeightingPotential:\n"
+            << "    Copy named " << label << " of weighting potential "
+            << labelSource << " made.\n";
+}
+
+size_t ComponentFieldMap::GetCopyWeightingPotential(const std::string& label) {
+  // Check if a weighting field with the same label already exists.
+  size_t nWeightingFieldCopies = m_wfieldCopies.size();
+  for (size_t i = 0; i < nWeightingFieldCopies; ++i) {
+    if (m_wfieldCopies[i].name == label) return i;
+  }
+  return nWeightingFieldCopies;
+}
+
+void ComponentFieldMap::FromCopyToSourceWeightingPotential(const size_t& iwc,
+                                                           double& x, double& y,
+                                                           double& z) {
+  TVector pos(3);
+  pos(0) = x;
+  pos(1) = y;
+  pos(2) = z;
+
+  pos = m_wfieldCopies[iwc].rotMatrix * pos + m_wfieldCopies[iwc].transVector;
+
+  x = pos(0);
+  y = pos(1);
+  z = pos(2);
+}
+
+void ComponentFieldMap::TimeInterpolation(const double t, double& f0,
+                                          double& f1, int& i0, int& i1) {
+  const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
+  const auto it0 = std::prev(it1);
+
+  const double dt = t - *it0;
+  i0 = it0 - m_wdtimes.cbegin();
+  i1 = it1 - m_wdtimes.cbegin();
+
+  f1 = dt / (*it1 - *it0);
+  f0 = 1. - f1;
+}
+
 }  // namespace Garfield

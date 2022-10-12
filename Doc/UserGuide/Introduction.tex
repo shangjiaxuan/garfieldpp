@@ -24,10 +24,9 @@ For calculating the transport properties of electrons in gas
 mixtures, an interface to the \textsc{Magboltz} program 
 \cite{BiagiMagboltz,Biagi1999} is available. 
 
-The ionization pattern produced along the 
-track of relativistic charged particles can be simulated using 
-the program ``Heed'' \cite{Smirnov2005}.
-For simulating the ionization produced by low-energy ions, 
+The ionisation pattern produced by relativistic charged particles 
+can be simulated using the program ``Heed'' \cite{Smirnov2005}.
+For simulating the ionisation produced by low-energy ions, 
 results calculated using the SRIM software package \cite{Ziegler1985} 
 can be imported.
 
@@ -39,7 +38,7 @@ which may serve as a basis for the user's own programs.
 Further examples and information can be found on the website 
 \url{http://garfieldpp.web.cern.ch/garfieldpp/}.
 If you have questions, doubts, comments \textit{etc.} about the code 
-or this manual, please don't hesitate to contact the authors.
+or this manual, please do not hesitate to contact the authors.
  
 %\section{Class Structure}
 
@@ -75,7 +74,7 @@ scope to the \texttt{\&CELL} section.
                       \item silicon 
                     \end{itemize}}}]  {\small Medium};
     \node (dummy)  [right of=medium,
-                    label=above:{\small Detector Description}] {};
+                    label=above:{\small detector description}] {};
     \node (geo)    [block,right of = dummy]  {\small Geometry};
     \node (comp1)  [block, below of = dummy, 
                     xshift = 1em, yshift = -1em]     {};
@@ -94,7 +93,7 @@ scope to the \texttt{\&CELL} section.
     \node (dummy1) [below of = sensor,
                     label=below:{\small Transport}] {};
     \node (aval)   [drift, right of=dummy1,label=right:{\parbox{8em}{\footnotesize charge transport \begin{itemize} \item microscopic \item MC \item RKF \end{itemize}}}]        {\small Drift};
-    \node (track)  [drift, left of=dummy1,label=left:{\parbox{8em}{\footnotesize primary ionization \begin{itemize} \item Heed \item SRIM \end{itemize}}}]      {\small Track}; 
+    \node (track)  [drift, left of=dummy1,label=left:{\parbox{8em}{\footnotesize primary ionisation \begin{itemize} \item Heed \item SRIM, TRIM \end{itemize}}}]      {\small Track}; 
     \path [line]   (medium) -- (comp);
     \path [line]   (geo)    -- (comp);
     \path [line]   (comp)   -- (sensor);

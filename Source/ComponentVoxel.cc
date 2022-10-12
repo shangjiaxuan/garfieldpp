@@ -13,10 +13,9 @@ namespace Garfield {
 
 ComponentVoxel::ComponentVoxel() : Component("Voxel") {}
 
-void ComponentVoxel::ElectricField(const double x, const double y,
-                                   const double z, double& ex, double& ey,
-                                   double& ez, double& p, Medium*& m,
-                                   int& status) {
+void ComponentVoxel::ElectricField(
+    const double x, const double y, const double z, 
+    double& ex, double& ey, double& ez, double& p, Medium*& m, int& status) {
   m = nullptr;
   status = 0;
 
@@ -44,16 +43,16 @@ void ComponentVoxel::ElectricField(const double x, const double y,
   if (!m) status = -5;
 }
 
-void ComponentVoxel::ElectricField(const double x, const double y,
-                                   const double z, double& ex, double& ey,
-                                   double& ez, Medium*& m, int& status) {
+void ComponentVoxel::ElectricField(
+    const double x, const double y, const double z, 
+    double& ex, double& ey, double& ez, Medium*& m, int& status) {
   double v = 0.;
   ElectricField(x, y, z, ex, ey, ez, v, m, status);
 }
 
-void ComponentVoxel::WeightingField(const double x, const double y,
-                                    const double z, double& wx, double& wy,
-                                    double& wz, const std::string& /*label*/) {
+void ComponentVoxel::WeightingField(
+    const double x, const double y, const double z, 
+    double& wx, double& wy, double& wz, const std::string& /*label*/) {
 
   wx = wy = wz = 0.;
   if (!m_hasWfield) return;
@@ -65,9 +64,10 @@ void ComponentVoxel::WeightingField(const double x, const double y,
   GetField(xx, yy, zz, m_wfields, wx, wy, wz, wp, region);
 }
 
-double ComponentVoxel::WeightingPotential(const double x, const double y,
-                                          const double z,
-                                          const std::string& /*label*/) {
+double ComponentVoxel::WeightingPotential(
+    const double x, const double y, const double z,
+    const std::string& /*label*/) {
+
   if (!m_hasWfield) return 0.;
   const double xx = x - m_wField_xOffset;
   const double yy = y - m_wField_yOffset;
@@ -79,10 +79,9 @@ double ComponentVoxel::WeightingPotential(const double x, const double y,
   return wp;
 }
 
-void ComponentVoxel::DelayedWeightingField(const double x, const double y,
-                                           const double z, const double t,
-                                           double& wx, double& wy, double& wz,
-                                           const std::string& /*label*/) {
+void ComponentVoxel::DelayedWeightingField(
+    const double x, const double y, const double z, const double t,
+    double& wx, double& wy, double& wz, const std::string& /*label*/) {
 
   wx = wy = wz = 0.;
   if (m_wdtimes.empty()) return;
@@ -122,6 +121,40 @@ void ComponentVoxel::DelayedWeightingField(const double x, const double y,
   wz = f0 * wz0 + f1 * wz1;
 }
 
+double ComponentVoxel::DelayedWeightingPotential(
+    const double x, const double y, const double z, const double t,
+    const std::string& /*label*/) {
+
+  if (m_wdtimes.empty()) return 0.;
+  // Outside the range of the available maps?
+  if (t < m_wdtimes.front() || t > m_wdtimes.back()) return 0.;
+
+  const double xx = x - m_wField_xOffset;
+  const double yy = y - m_wField_yOffset;
+  const double zz = z - m_wField_zOffset;
+
+  const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
+  const auto it0 = std::prev(it1);
+ 
+  const double dt = t - *it0; 
+  int region = 0;
+  const unsigned int i0 = it0 - m_wdtimes.cbegin();
+  double wp0 = 0., wx0 = 0., wy0 = 0., wz0 = 0.;
+  if (!GetField(xx, yy, zz, m_wdfields[i0], wx0, wy0, wz0, wp0, region)) {
+    return 0.;
+  } 
+  if (dt < Small || it1 == m_wdtimes.cend()) return 0.;
+
+  const unsigned int i1 = it1 - m_wdtimes.cbegin();
+  double wp1 = 0., wx1 = 0., wy1 = 0., wz1 = 0.;
+  if (!GetField(xx, yy, zz, m_wdfields[i1], wx1, wy1, wz1, wp1, region)) {
+    return 0.;
+  } 
+  const double f1 = dt / (*it1 - *it0);
+  const double f0 = 1. - f1;
+  return f0 * wp0 + f1 * wp1;
+}
+
 void ComponentVoxel::SetWeightingFieldOffset(const double x, const double y,
                                              const double z) {
   m_wField_xOffset = x;
@@ -142,6 +175,10 @@ void ComponentVoxel::MagneticField(const double x, const double y,
   if (!GetField(x, y, z, m_bfields, bx, by, bz, p, region)) {
     status = -6;
   }
+}
+
+bool ComponentVoxel::HasMagneticField() const {
+  return m_hasBfield ? true : Component::HasMagneticField();
 }
 
 Medium* ComponentVoxel::GetMedium(const double x, const double y,
@@ -326,8 +363,7 @@ bool ComponentVoxel::LoadData(const std::string& filename, std::string format,
       m_nX,
       std::vector<std::vector<bool> >(m_nY, std::vector<bool>(m_nZ, false)));
 
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
+  std::ifstream infile(filename);
   if (!infile) {
     std::cerr << m_className << "::LoadData:\n"
               << "    Could not open file " << filename << ".\n";
@@ -372,8 +408,7 @@ bool ComponentVoxel::LoadData(const std::string& filename, std::string format,
     double fz = 0.;
     double v = 0.;
     int region = 0;
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     if (fmt == 1) {
       // "XY"
       double x, y;

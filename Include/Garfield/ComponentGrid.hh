@@ -16,36 +16,6 @@ class ComponentGrid : public Component {
   /// Destructor
   ~ComponentGrid() {}
 
-  void Clear() override { Reset(); }
-
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, double& v, Medium*& m,
-                     int& status) override;
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, Medium*& m, int& status) override;
-
-  void WeightingField(const double x, const double y, const double z,
-                      double& wx, double& wy, double& wz,
-                      const std::string& label) override;
-  double WeightingPotential(const double x, const double y, const double z,
-                            const std::string& label) override;
-  void DelayedWeightingField(const double x, const double y, const double z,
-                             const double t, double& wx, double& wy, double& wz,
-                             const std::string& label) override;
-
-  void MagneticField(const double x, const double y, const double z, double& bx,
-                     double& by, double& bz, int& status) override;
-
-  Medium* GetMedium(const double x, const double y, const double z) override;
-
-  bool GetVoltageRange(double& vmin, double& vmax) override;
-  bool GetElectricFieldRange(double& exmin, double& exmax, double& eymin,
-                             double& eymax, double& ezmin, double& ezmax);
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
-                      double& xmax, double& ymax, double& zmax) override;
-  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
-                         double& xmax, double& ymax, double& zmax) override;
-
   /** Define the grid.
    * \param nx,ny,nz number of nodes along \f$x, y, z\f$.
    * \param xmin,xmax range along \f$x\f$.
@@ -60,6 +30,11 @@ class ComponentGrid : public Component {
   bool GetMesh(unsigned int& nx, unsigned int& ny, unsigned int& nz,
                double& xmin, double& xmax, double& ymin, double& ymax,
                double& zmin, double& zmax) const;
+  /// Use Cartesian coordinates (default).
+  void SetCartesianCoordinates() { m_coordinates = Coordinates::Cartesian; }
+  /// Use cylindrical coordinates.
+  void SetCylindricalCoordinates();
+
   /** Import electric field and potential values from a file.
    * The file is supposed to contain one line for each grid point starting with
    *   - either two or three floating point numbers,
@@ -74,8 +49,12 @@ class ComponentGrid : public Component {
    *     or not (0).
    *
    * Format types are:
-   *  - "xy", "xyz": nodes are specified by their coordinates
-   *  - "ij", "ijk": nodes are specified by their indices
+   *  - "xy", "xz", "xyz": nodes are specified by their coordinates
+   *  - "ij", "ik", "ijk": nodes are specified by their indices
+   * 
+   * If cylindrical coordinates are used, the first coordinate (x)
+   * corresponds to the radial distance and the second coordinate (y)
+   * corresponds to the azimuth (in radian).
    */
   bool LoadElectricField(const std::string& filename, const std::string& format,
                          const bool withPotential, const bool withFlag,
@@ -104,19 +83,19 @@ class ComponentGrid : public Component {
   /** Export the electric field and potential of a component to a text file.
    * \param cmp Component object for which to export the field/potential
    * \param filename name of the text file
-   * \param format "xy", "xyz", "ij" or "ijk", see @ref LoadElectricField
+   * \param fmt format string, see @ref LoadElectricField
    */
   bool SaveElectricField(Component* cmp, const std::string& filename,
-                         const std::string& format);
+                         const std::string& fmt);
   /** Export the weighting field and potential of a component to a text file.
    * \param cmp Component object for which to export the field/potential
    * \param id identifier of the weighting field
    * \param filename name of the text file
-   * \param format "xy", "xyz", "ij" or "ijk", see @ref LoadElectricField
+   * \param fmt format string, see @ref LoadElectricField
    */
   bool SaveWeightingField(Component* cmp, const std::string& id,
                           const std::string& filename,
-                          const std::string& format);
+                          const std::string& fmt);
 
   /// Return the field at a given node.
   bool GetElectricField(const unsigned int i, const unsigned int j,
@@ -133,7 +112,7 @@ class ComponentGrid : public Component {
 
   /** Import electron attachment coefficients from a file.
    * \param fname name of the text file.
-   * \param fmt format string ("XY", "XYZ", "IJ", "IJK").
+   * \param fmt format string, see @ref LoadElectricField.
    * \param col column in the file which has the attachment coefficient.
    * \param scaleX scaling factor to be applied to the coordinates.
    */ 
@@ -147,17 +126,9 @@ class ComponentGrid : public Component {
                           const unsigned int col,
                           const double scaleX = 1.);
 
-  bool HasAttachmentMap() const override {
-    return !(m_eAttachment.empty() && m_hAttachment.empty());
-  } 
-  bool ElectronAttachment(const double x, const double y, const double z,
-                          double& att) override;
-  bool HoleAttachment(const double x, const double y, const double z,
-                      double& att) override;
-
   /** Import a map of electron drift velocities from a file.
    * \param fname name of the text file.
-   * \param fmt format string ("XY", "XYZ", "IJ", "IJK").
+   * \param fmt format string, see @ref LoadElectricField
    * \param scaleX scaling factor to be applied to the coordinates.
    * \param scaleV scaling factor to be applied to the velocity components.
    */ 
@@ -171,6 +142,46 @@ class ComponentGrid : public Component {
                         const double scaleX = 1.,
                         const double scaleV = 1.e-9);
 
+  void Clear() override { Reset(); }
+  void ElectricField(const double x, const double y, const double z, double& ex,
+                     double& ey, double& ez, double& v, Medium*& m,
+                     int& status) override;
+  void ElectricField(const double x, const double y, const double z, double& ex,
+                     double& ey, double& ez, Medium*& m, int& status) override;
+  void WeightingField(const double x, const double y, const double z,
+                      double& wx, double& wy, double& wz,
+                      const std::string& label) override;
+  double WeightingPotential(const double x, const double y, const double z,
+                            const std::string& label) override;
+  void DelayedWeightingField(const double x, const double y, const double z,
+                             const double t, double& wx, double& wy, double& wz,
+                             const std::string& label) override;
+  double DelayedWeightingPotential(const double x, const double y,
+                                   const double z, const double t,
+                                   const std::string& label) override;
+  void MagneticField(const double x, const double y, const double z, double& bx,
+                     double& by, double& bz, int& status) override;
+
+  Medium* GetMedium(const double x, const double y, const double z) override;
+
+  bool GetVoltageRange(double& vmin, double& vmax) override;
+  bool GetElectricFieldRange(double& exmin, double& exmax, double& eymin,
+                             double& eymax, double& ezmin, double& ezmax);
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
+                      double& xmax, double& ymax, double& zmax) override;
+  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
+                         double& xmax, double& ymax, double& zmax) override;
+
+  bool HasMagneticField() const override;
+
+  bool HasAttachmentMap() const override {
+    return !(m_eAttachment.empty() && m_hAttachment.empty());
+  } 
+  bool ElectronAttachment(const double x, const double y, const double z,
+                          double& att) override;
+  bool HoleAttachment(const double x, const double y, const double z,
+                      double& att) override;
+
   bool HasVelocityMap() const override {
     return !(m_eVelocity.empty() && m_hVelocity.empty());
   } 
@@ -182,12 +193,19 @@ class ComponentGrid : public Component {
   enum class Format {
     Unknown,
     XY,
+    XZ,
     XYZ,
     IJ,
+    IK,
     IJK,
     YXZ
   };
-
+  enum class Coordinates {
+    Cartesian,
+    Cylindrical
+  };
+  Coordinates m_coordinates = Coordinates::Cartesian;
+ 
   Medium* m_medium = nullptr;
   struct Node {
     double fx, fy, fz;  ///< Field

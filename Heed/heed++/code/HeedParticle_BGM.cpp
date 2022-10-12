@@ -18,6 +18,7 @@ using CLHEP::c_light;
 using CLHEP::c_squared;
 using CLHEP::cm;
 using CLHEP::MeV;
+using CLHEP::electron_mass_c2;
 
 HeedParticle_BGM::HeedParticle_BGM(manip_absvol* primvol, const point& pt,
                                    const vec& vel, vfloat ftime,
@@ -28,7 +29,7 @@ HeedParticle_BGM::HeedParticle_BGM(manip_absvol* primvol, const point& pt,
     : eparticle(primvol, pt, vel, ftime, fpardef, fieldmap),
       m_print_listing(fprint_listing),
       m_loss_only(floss_only),
-      m_particle_number(last_particle_number++) {}
+      m_particle_number(s_counter++) {}
 
 void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
   mfunname("void HeedParticle_BGM::physics()");
@@ -36,10 +37,9 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
     mcout << "HeedParticle_BGM::physics is started\n";
     Iprintn(mcout, m_currpos.prange);
   }
-  m_edep = 0.;
   // Get the step.
   if (m_currpos.prange <= 0.0) return;
-  const double step = m_currpos.prange / cm;
+  const double stp = m_currpos.prange / cm;
   const vec dir = unit_vec(m_currpos.pt - m_prevpos.pt);
   // This approximation ignores curvature
   const double range = (m_currpos.pt - m_prevpos.pt).length();
@@ -58,7 +58,7 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
   const double ep = mp + m_curr_ekin;
   const double bg = sqrt(m_curr_gamma_1 * (m_curr_gamma_1 + 2.0));
   // Electron mass.
-  const double mt = electron_def.mass * c_squared;
+  const double mt = electron_mass_c2;
   // Particle velocity.
   const double invSpeed = 1. / m_prevpos.speed;
   PointCoorMesh<double, std::vector<double> > pcm(etcs->mesh->q,
@@ -100,7 +100,7 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
       const double y2 = etcs->etcs_bgm[n2].quan[na][ns];
       const double mean_pois = f1 * y1 + f2 * y2;
       if (mean_pois <= 0.) continue;
-      const long qt = pois(mean_pois * step);
+      const long qt = pois(mean_pois * stp);
       if (m_print_listing) Iprintn(mcout, qt);
       if (qt <= 0) continue;
       for (long nt = 0; nt < qt; nt++) {
@@ -146,6 +146,11 @@ void HeedParticle_BGM::physics(std::vector<gparticle*>& secondaries) {
       }
     }
   }
+  if (m_edep >= m_curr_ekin) {
+    // Accumulated energy loss exceeds the particle's kinetic energy.
+    m_alive = false;
+  }
+
   if (m_print_listing) {
     Iprintn(mcout, m_edep);
     mcout << "Exiting HeedParticle_BGM::physics\n";
@@ -156,7 +161,11 @@ void HeedParticle_BGM::print(std::ostream& file, int l) const {
   if (l < 0) return;
   Ifile << "HeedParticle_BGM (l=" << l
         << "): particle_number=" << m_particle_number << " type=";
-  print_notation(file);
+  if (!m_pardef) {
+    file << "none";
+  } else {
+    file << m_pardef->notation;
+  }
   file << std::endl;
   if (l == 1) return;
   mparticle::print(file, l - 1);

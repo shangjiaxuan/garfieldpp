@@ -6,13 +6,6 @@ namespace Garfield {
 
 ComponentUser::ComponentUser() : Component("User") {}
 
-Medium* ComponentUser::GetMedium(const double x, const double y, 
-                                 const double z) {
-
-  if (!m_hasArea) return Component::GetMedium(x, y, z);
-  return InArea(x, y, z) ? m_medium : nullptr; 
-}
-
 void ComponentUser::ElectricField(const double x, const double y,
                                   const double z, double& ex, double& ey,
                                   double& ez, Medium*& m, int& status) {
@@ -77,8 +70,7 @@ void ComponentUser::MagneticField(const double x, const double y,
                                   const double z, double& bx, double& by,
                                   double& bz, int& status) {
   if (!m_bfield) {
-    bx = by = bz = 0.;
-    status = -10;
+    Component::MagneticField(x, y, z, bx, by, bz, status);
     return;
   }
   m_bfield(x, y, z, bx, by, bz);
@@ -123,6 +115,10 @@ bool ComponentUser::GetBoundingBox(
   ymax = m_xmax[1];
   zmax = m_xmax[2];
   return true;
+}
+
+bool ComponentUser::HasMagneticField() const {
+  return m_bfield ? true : Component::HasMagneticField();
 }
 
 void ComponentUser::SetElectricField(

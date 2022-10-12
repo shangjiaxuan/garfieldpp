@@ -25,7 +25,7 @@ HeedPhoton::HeedPhoton(manip_absvol* primvol, const point& pt, const vec& vel,
                        double fenergy, HeedFieldMap* fieldmap,
                        const bool fs_print_listing)
     : gparticle(primvol, pt, vel, ftime),
-      m_particle_number(last_particle_number++),
+      m_particle_number(s_counter++),
       m_parent_particle_number(fparent_particle_number),
       m_energy(fenergy),
 #ifdef SFER_PHOTOEL

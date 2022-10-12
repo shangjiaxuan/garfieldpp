@@ -22,72 +22,61 @@ using namespace Garfield;
 
 // Transfer function
 double transfer(double t) {
-
-  constexpr double tauR =  5.6;
-  constexpr double tauI =  1.8;
-  constexpr double tauA = 47.;
-  constexpr double dAI = (tauA - tauI);
-  constexpr double dAR = (tauA - tauR);
-  constexpr double dIR = (tauI - tauR);
-  constexpr double c1 = tauA / (dAI * dAI * dAR); 
-  constexpr double c2 = 1. / (dAI * tauI * dIR);
-  constexpr double c3 = tauR / (dAR * dIR * dIR);
-  constexpr double c4 = (tauI * tauI * tauI - tauA * tauI * tauR) / 
-                        (dAI * dAI * tauI * dIR * dIR);
-  const double f1 = -exp(-t / tauA) * c1;
-  const double f2 =  exp(-t / tauI) * t * c2; 
-  const double f3 =  exp(-t / tauR) * c3;
-  const double f4 =  exp(-t / tauI) * c4; 
+  constexpr double tR =  5.6;
+  constexpr double tI =  1.8;
+  constexpr double tA = 47.;
+  constexpr double c1 = tA / ((tA - tI) * (tA - tI) * (tA - tR));
+  constexpr double c2 = 1. / ((tA - tI) * tI * (tI - tR));
+  constexpr double c3 = tR / ((tA - tR) * (tI - tR) * (tI - tR));
+  constexpr double c4 = (tI * tI - tA * tR) / 
+                        ((tA - tI) * (tA - tI) * (tI - tR) * (tI - tR));
+  const double f1 = -exp(-t / tA) * c1;
+  const double f2 =  exp(-t / tI) * t * c2; 
+  const double f3 =  exp(-t / tR) * c3;
+  const double f4 =  exp(-t / tI) * c4; 
   // constexpr double g = 0.07 / 0.46938;
-  return tauA * tauR * (f1 + f2 + f3 + f4); 
-
+  return tA * tR * (f1 + f2 + f3 + f4); 
 }
 
 int main(int argc, char * argv[]) {
 
   TApplication app("app", &argc, argv);
 
-  const double gap =  100.e-4;
+  // Sensor thickness.
+  const double d = 100.e-4;
+  // Strip pitch.
   const double pitch = 55.e-4;
   const double width = 3 * pitch;
 
-  // Create a drift medium.
   MediumSilicon si;
 
-  // Make a component with two-dimensional TCAD field map.
-  ComponentTcad2d cmp;
+  // Import a two-dimensional TCAD field map.
+  ComponentTcad2d fm;
   // Load the mesh (.grd file) and electric field (.dat).
-  cmp.Initialise("pixel_des.grd", "pixel_des.dat");
-  cmp.SetRangeZ(-width, width);
+  fm.Initialise("pixel_des.grd", "pixel_des.dat");
+  fm.SetRangeZ(-width, width);
+  // Associate the silicon regions in the field map with a medium object. 
+  fm.SetMedium("Silicon", &si);
 
-  // Associate the TCAD regions with the Si medium.
-  int nRegions = cmp.GetNumberOfRegions();
-  for (int i = 0; i < nRegions; ++i) {
-    std::string region;
-    bool active;
-    cmp.GetRegion(i, region, active);
-    if (region == "\"bulk\"") cmp.SetMedium(i, &si);
-  }
-
-  ComponentAnalyticField wfieldAnalytic;
-  wfieldAnalytic.AddPlaneY( 0.,    0., "bot");
-  wfieldAnalytic.AddPlaneY(gap, -100., "top");
-  wfieldAnalytic.AddStripOnPlaneY('z', gap, 
-                                  0.5 * width - 0.5 * pitch,
-                                  0.5 * width + 0.5 * pitch, "strip");
-  wfieldAnalytic.AddReadout("strip");
+  ComponentAnalyticField wfield;
+  wfield.AddPlaneY(0,    0., "bot");
+  wfield.AddPlaneY(d, -100., "top");
+  wfield.AddStripOnPlaneY('z', d, 
+                          0.5 * width - 0.5 * pitch,
+                          0.5 * width + 0.5 * pitch, "strip");
+  wfield.AddReadout("strip");
 
   ViewField vField;
   constexpr bool plotField = true;
   if (plotField) {
-    vField.SetComponent(&cmp);
+    vField.SetComponent(&fm);
     vField.PlotContour("v");
   }
 
   // Make a sensor.
   Sensor sensor;
-  sensor.AddComponent(&cmp);
-  sensor.AddElectrode(&wfieldAnalytic, "strip");
+  sensor.AddComponent(&fm);
+  sensor.AddElectrode(&wfield, "strip");
 
   const int nSignalBins = 2000;
   const double tStep = 0.01;
@@ -110,16 +99,15 @@ int main(int argc, char * argv[]) {
   ViewDrift vDrift;
   constexpr bool plotDrift = true;
   if (plotDrift) {
-    vDrift.SetArea(0., 0., width, gap); 
+    vDrift.SetArea(0., 0., width, d);
     track.EnablePlotting(&vDrift);
   }
 
   const unsigned int nEvents = 1;
   for (unsigned int j = 0; j < nEvents; ++j) {
     sensor.ClearSignal();
-    double x0 = 0.5 * width;
-    x0 += RndmUniform() * pitch - 0.5 * pitch;
-    double t0 = 0.1; 
+    const double x0 = 0.5 * width + (RndmUniform() - 0.5) * pitch;
+    const double t0 = 0.1; 
     track.NewTrack(x0, 0., 0., t0, 0., 1., 0.);
     double xc = 0., yc = 0., zc = 0., tc = 0., ec = 0., dummy = 0.;
     int ne = 0, nh = 0;

@@ -61,7 +61,7 @@ void ComponentGrid::ElectricField(const double x, const double y,
   status = 0;
 
   // Make sure the field map has been loaded.
-  if (!m_ready) {
+  if (m_efields.empty()) {
     PrintNotReady(m_className + "::ElectricField");
     status = -10;
     return;
@@ -155,6 +155,38 @@ void ComponentGrid::DelayedWeightingField(const double x, const double y,
   wz = f0 * wz0 + f1 * wz1;
 }
 
+double ComponentGrid::DelayedWeightingPotential(
+    const double x, const double y, const double z, const double t,
+    const std::string& /*label*/) {
+
+  if (m_wdtimes.empty()) return 0.;
+  // Outside the range of the available maps?
+  if (t < m_wdtimes.front() || t > m_wdtimes.back()) return 0.;
+
+  const double xx = x - m_wFieldOffset[0];
+  const double yy = y - m_wFieldOffset[1];
+  const double zz = z - m_wFieldOffset[2];
+
+  const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
+  const auto it0 = std::prev(it1);
+
+  const double dt = t - *it0;
+  const unsigned int i0 = it0 - m_wdtimes.cbegin();
+  double wp0 = 0., wx0 = 0., wy0 = 0., wz0 = 0.;
+  bool active = true;
+  if (!GetField(xx, yy, zz, m_wdfields[i0], wx0, wy0, wz0, wp0, active)) return 0.;
+
+  if (dt < Small || it1 == m_wdtimes.cend()) return wp0;
+
+  const unsigned int i1 = it1 - m_wdtimes.cbegin();
+  double wp1 = 0., wx1 = 0., wy1 = 0., wz1 = 0.;
+  if (!GetField(xx, yy, zz, m_wdfields[i1], wx1, wy1, wz1, wp1, active)) return 0.;
+
+  const double f1 = dt / (*it1 - *it0);
+  const double f0 = 1. - f1;
+  return f0 * wp0 + f1 * wp1;
+}
+
 void ComponentGrid::SetWeightingFieldOffset(const double x, const double y,
                                             const double z) {
   m_wFieldOffset = {x, y, z};
@@ -175,20 +207,28 @@ void ComponentGrid::MagneticField(const double x, const double y,
   }
 }
 
+bool ComponentGrid::HasMagneticField() const {
+  return m_bfields.empty() ? Component::HasMagneticField() : true;
+}
+
 Medium* ComponentGrid::GetMedium(const double x, const double y,
                                  const double z) {
   // Make sure the field map has been loaded.
-  if (!m_ready) {
+  if (m_efields.empty()) {
     PrintNotReady(m_className + "::GetMedium");
     return nullptr;
   }
 
   std::array<double, 3> xx = {x, y, z};
+  if (m_coordinates == Coordinates::Cylindrical) {
+    if (fabs(x) > Small || fabs(y) > Small) {
+      xx[0] = sqrt(x * x + y * y);
+      xx[1] = atan2(y, x);
+    }
+  } 
   for (size_t i = 0; i < 3; ++i) {
     if (m_periodic[i] || m_mirrorPeriodic[i]) continue;
-    if (xx[i] < m_xMin[i] || xx[i] > m_xMax[i]) {
-      return nullptr;
-    }
+    if (xx[i] < m_xMin[i] || xx[i] > m_xMax[i]) return nullptr;
   }
   if (m_active.empty()) return m_medium;
   for (size_t i = 0; i < 3; ++i) {
@@ -235,6 +275,13 @@ bool ComponentGrid::SetMesh(const unsigned int nx, const unsigned int ny,
     std::cerr << m_className << "::SetMesh: Invalid z range.\n";
     return false;
   }
+  if (m_coordinates == Coordinates::Cylindrical) {
+    if (xmin < 0.) {
+      std::cerr << m_className << "::SetMesh: Invalid range.\n"
+                << "    Radial coordinates must be >= 0.\n";
+      return false; 
+    }
+  }
   m_nX[0] = nx;
   m_nX[1] = ny;
   m_nX[2] = nz;
@@ -250,6 +297,15 @@ bool ComponentGrid::SetMesh(const unsigned int nx, const unsigned int ny,
       m_sX[i] = std::max(m_nX[i] - 1., 1.) / (m_xMax[i] - m_xMin[i]);
     } else {
       m_sX[i] = 0.;
+    }
+  }
+  if (m_coordinates == Coordinates::Cylindrical) {
+    if (fabs(m_xMax[1] - m_xMin[1] - TwoPi) < tol) {
+      if (!m_periodic[1]) {
+        std::cerr << m_className << "::SetMesh: Enabling theta periodicity.\n";
+      }
+      m_periodic[1] = true;
+      m_mirrorPeriodic[1] = false;
     }
   }
   m_hasMesh = true;
@@ -273,12 +329,32 @@ bool ComponentGrid::GetMesh(unsigned int& nx, unsigned int& ny,
   return true;
 }
 
+void ComponentGrid::SetCylindricalCoordinates() {
+
+  if (m_xMin[0] < 0. || m_xMax[0] < 0.) {
+    std::cerr << m_className << "::SetCylindricalCoordinates:\n"
+              << "    Invalid mesh limits. Radial coordinate must be >= 0.\n"; 
+    return;
+  }
+  if (m_periodic[1] || m_mirrorPeriodic[1]) {
+    const double s = m_xMax[1] - m_xMin[1];
+    if (std::abs(TwoPi - s * int(TwoPi / s)) > 1.e-4) {
+      std::cerr << m_className << "::SetCylindricalCoordinates:\n"
+                << "    Angular range does not divide 2 pi.\n"
+                << "    Switching off periodicity.\n";
+      m_periodic[1] = false;
+      m_mirrorPeriodic[1] = false;
+    }
+  }
+  m_coordinates = Coordinates::Cylindrical;
+}
+
 bool ComponentGrid::LoadElectricField(const std::string& fname,
                                       const std::string& fmt, const bool withP,
                                       const bool withFlag, const double scaleX,
                                       const double scaleE,
                                       const double scaleP) {
-  m_ready = false;
+  m_efields.clear();
   m_hasPotential = false;
   m_active.assign(m_nX[0], std::vector<std::vector<bool> >(
                             m_nX[1], std::vector<bool>(m_nX[2], true)));
@@ -290,7 +366,6 @@ bool ComponentGrid::LoadElectricField(const std::string& fname,
     m_efields.clear();
     return false;
   }
-  m_ready = true;
   if (withP) m_hasPotential = true;
   return true;
 }
@@ -359,7 +434,7 @@ bool ComponentGrid::SaveElectricField(Component* cmp,
     return false;
   }
   std::ofstream outfile;
-  outfile.open(filename.c_str(), std::ios::out);
+  outfile.open(filename, std::ios::out);
   if (!outfile) {
     std::cerr << m_className << "::SaveElectricField:\n"
               << "    Could not open file " << filename << ".\n";
@@ -394,18 +469,32 @@ bool ComponentGrid::SaveElectricField(Component* cmp,
         const double z = m_xMin[2] + k * dz;
         if (fmt == Format::XY) {
           outfile << x << "  " << y << "  ";
+        } else if (fmt == Format::XZ) {
+          outfile << x << "  " << z << "  ";
         } else if (fmt == Format::XYZ) {
           outfile << x << "  " << y << "  " << z << "  ";
         } else if (fmt == Format::IJ) {
           outfile << i << "  " << j << "  ";
+        } else if (fmt == Format::IK) {
+          outfile << i << "  " << k << "  ";
         } else if (fmt == Format::IJK) {
           outfile << i << "  " << j << "  " << k << "  ";
         } else if (fmt == Format::YXZ) {
           outfile << y << "  " << x << "  " << z << "  ";
         }
-        double ex = 0., ey = 0., ez = 0., v = 0.;
-        cmp->ElectricField(x, y, z, ex, ey, ez, v, medium, status);
-        outfile << ex << "  " << ey << "  " << ez << "  " << v << "\n";
+        if (m_coordinates == Coordinates::Cylindrical) {
+          const double ct = cos(y);
+          const double st = sin(y);
+          double ex = 0., ey = 0., ez = 0., v = 0.;
+          cmp->ElectricField(x * ct, x * st, z, ex, ey, ez, v, medium, status);
+          const double er = +ex * ct + ey * st;
+          const double et = -ex * st + ey * ct;
+          outfile << er << "  " << et << "  " << ez << "  " << v << "\n";
+        } else { 
+          double ex = 0., ey = 0., ez = 0., v = 0.;
+          cmp->ElectricField(x, y, z, ex, ey, ez, v, medium, status);
+          outfile << ex << "  " << ey << "  " << ez << "  " << v << "\n";
+        }
         ++nLines;
         if (nLines % nPrint == 0) PrintProgress(double(nLines) / nValues);
       }
@@ -435,7 +524,7 @@ bool ComponentGrid::SaveWeightingField(Component* cmp,
     return false;
   }
   std::ofstream outfile;
-  outfile.open(filename.c_str(), std::ios::out);
+  outfile.open(filename, std::ios::out);
   if (!outfile) {
     std::cerr << m_className << "::SaveWeightingField:\n"
               << "    Could not open file " << filename << ".\n";
@@ -467,19 +556,34 @@ bool ComponentGrid::SaveWeightingField(Component* cmp,
         const double z = m_xMin[2] + k * dz;
         if (fmt == Format::XY) {
           outfile << x << "  " << y << "  ";
+        } else if (fmt == Format::XZ) {
+          outfile << x << "  " << z << "  ";
         } else if (fmt == Format::XYZ) {
           outfile << x << "  " << y << "  " << z << "  ";
         } else if (fmt == Format::IJ) {
           outfile << i << "  " << j << "  ";
+        } else if (fmt == Format::IK) {
+          outfile << i << "  " << k << "  ";
         } else if (fmt == Format::IJK) {
           outfile << i << "  " << j << "  " << k << "  ";
         } else if (fmt == Format::YXZ) {
           outfile << y << "  " << x << "  " << z << "  ";
         }
-        double wx = 0., wy = 0., wz = 0.;
-        cmp->WeightingField(x, y, z, wx, wy, wz, id);
-        const double v = cmp->WeightingPotential(x, y, z, id);
-        outfile << wx << "  " << wy << "  " << wz << "  " << v << "\n";
+        if (m_coordinates == Coordinates::Cylindrical) {
+          const double ct = cos(y);
+          const double st = sin(y);
+          double wx = 0., wy = 0., wz = 0.;
+          cmp->WeightingField(x * ct, x * st, z, wx, wy, wz, id);
+          const double v = cmp->WeightingPotential(x * ct, x * st, z, id);
+          const double wr = +wx * ct + wy * st;
+          const double wt = -wx * st + wy * ct;
+          outfile << wr << "  " << wt << "  " << wz << "  " << v << "\n";
+        } else { 
+          double wx = 0., wy = 0., wz = 0.;
+          cmp->WeightingField(x, y, z, wx, wy, wz, id);
+          const double v = cmp->WeightingPotential(x, y, z, id);
+          outfile << wx << "  " << wy << "  " << wz << "  " << v << "\n";
+        }
         ++nLines;
         if (nLines % nPrint == 0) PrintProgress(double(nLines) / nValues);
       }
@@ -505,10 +609,9 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   double xmin = 0., ymin = 0., zmin = 0.;
   double xmax = 0., ymax = 0., zmax = 0.;
   unsigned int nx = 0, ny = 0, nz = 0;
-
+  bool cylindrical = (m_coordinates == Coordinates::Cylindrical);
   // Parse the comment lines in the file.
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
+  std::ifstream infile(filename);
   if (!infile) {
     std::cerr << m_className << "::LoadMesh:\n"
               << "    Could not open file " << filename << ".\n";
@@ -559,6 +662,8 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
       } else if (key.find("NZ") != std::string::npos) {
         val >> nz;
         found.set(8);
+      } else if (key.find("CYLINDRICAL") != std::string::npos) {
+        cylindrical = true;
       }
       if (pos2 == std::string::npos) break;
       pos0 = pos2 + 1;
@@ -587,28 +692,67 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
           {fabs(xmin), fabs(xmax), fabs(ymin), fabs(ymax), fabs(zmin)});
       found.set(5);
     }
+  } else if (fmt == Format::XZ || fmt == Format::IK) {
+    // Try to complement missing information on the y/theta-range.
+    if (!found[7]) {
+      ny = 1;
+      found.set(7);
+    }
+    if (cylindrical) {
+      if (!found[1]) ymin = -Pi;
+      if (!found[4]) ymax = +Pi;
+      found.set(1);
+      found.set(4);
+    } else {
+      if (!found[1]) {
+        if (found[0] || found[2] || found[3] || found[4] || found[5]) {
+          ymin = -std::max(
+              {fabs(xmin), fabs(xmax), fabs(zmin), fabs(zmax), fabs(ymax)});
+        } else {
+          ymin = -100.;
+        }
+        found.set(1);
+      }
+      if (!found[4]) {
+        ymax = std::max(
+            {fabs(xmin), fabs(xmax), fabs(zmin), fabs(zmax), fabs(ymin)});
+        found.set(4);
+      }
+    }
   }
   if (found.all()) {
+    if (cylindrical && xmin < 0.) {
+      std::cerr << m_className << "::LoadMesh:\n"
+                << "    Radial coordinate must be >= 0.\n";
+      return false;
+    }
     std::cout << m_className << "::LoadMesh:\n";
     std::printf("%12.6f < x [cm] < %12.6f, %5u points\n", xmin, xmax, nx);
     std::printf("%12.6f < y [cm] < %12.6f, %5u points\n", ymin, ymax, ny);
     std::printf("%12.6f < z [cm] < %12.6f, %5u points\n", zmin, zmax, nz);
+    if (cylindrical) {
+      m_coordinates = Coordinates::Cylindrical;
+    } else {
+      m_coordinates = Coordinates::Cartesian;
+    }
     return SetMesh(nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax);
   }
-
-  if ((fmt == Format::IJ || fmt == Format::IJK) && !(found[0] && found[3])) {
+  if ((fmt == Format::IJ || fmt == Format::IJK || fmt == Format::IK) && 
+      !(found[0] && found[3])) {
     std::cerr << m_className << "::LoadMesh: x-limits not found.\n";
     return false;
-  } else if ((fmt == Format::IJ || fmt == Format::IJK) && !(found[1] && found[4])) {
+  } else if ((fmt == Format::IJ || fmt == Format::IJK) && 
+             !(found[1] && found[4])) {
     std::cerr << m_className << "::LoadMesh: y-limits not found.\n";
     return false;
-  } else if (fmt == Format::IJK && !(found[2] && found[5])) {
+  } else if ((fmt == Format::IK || fmt == Format::IJK) && 
+             !(found[2] && found[5])) {
     std::cerr << m_className << "::LoadMesh: z-limits not found.\n";
     return false;
   }
 
   unsigned int nValues = 0;
-  infile.open(filename.c_str(), std::ios::in);
+  infile.open(filename, std::ios::in);
   if (!infile) {
     std::cerr << m_className << "::LoadMesh:\n"
               << "    Could not open file " << filename << ".\n";
@@ -640,8 +784,7 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
     if (line.empty()) continue;
     // Skip comments.
     if (IsComment(line)) continue;
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     if (fmt == Format::XY) {
       double x, y;
       data >> x >> y;
@@ -658,6 +801,22 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
       if (!found[4]) ymax = std::max(y, ymax);
       xLines.insert(x);
       yLines.insert(y);
+    } else if (fmt == Format::XZ) {
+      double x, z;
+      data >> x >> z;
+      if (data.fail()) {
+        PrintError(m_className + "::LoadMesh", nLines, "coordinates");
+        bad = true;
+        break;
+      }
+      x *= scaleX;
+      z *= scaleX;
+      if (!found[0]) xmin = std::min(x, xmin);
+      if (!found[2]) zmin = std::min(z, zmin);
+      if (!found[3]) xmax = std::max(x, xmax);
+      if (!found[5]) zmax = std::max(z, zmax);
+      xLines.insert(x);
+      zLines.insert(z);
     } else if (fmt == Format::XYZ) {
       double x, y, z;
       data >> x >> y >> z;
@@ -688,6 +847,16 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
       }
       if (!found[6]) nx = std::max(nx, i);
       if (!found[7]) ny = std::max(ny, j);
+    } else if (fmt == Format::IK) {
+      unsigned int i = 0, k = 0;
+      data >> i >> k;
+      if (data.fail()) {
+        PrintError(m_className + "::LoadMesh", nLines, "indices");
+        bad = true;
+        break;
+      }
+      if (!found[6]) nx = std::max(nx, i);
+      if (!found[8]) nz = std::max(nz, k);
     } else if (fmt == Format::IJK) {
       unsigned int i = 0, j = 0, k = 0;
       data >> i >> j >> k;
@@ -725,17 +894,33 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
   infile.close();
   if (bad) return false;
 
-  if (fmt == Format::XY || fmt == Format::XYZ || fmt == Format::YXZ) {
+  if (fmt == Format::XY || fmt == Format::XYZ || 
+      fmt == Format::XZ || fmt == Format::YXZ) {
     if (!found[6]) nx = xLines.size();
     if (!found[7]) ny = yLines.size();
     if (!found[8]) nz = zLines.size();
   }
 
+  if (cylindrical && xmin < 0.) {
+    std::cerr << m_className << "::LoadMesh:\n"
+              << "    Radial coordinate must be >= 0.\n";
+    return false;
+  }
   std::cout << m_className << "::LoadMesh:\n";
-  std::printf("%12.6f < x [cm] < %12.6f, %5u points\n", xmin, xmax, nx);
-  std::printf("%12.6f < y [cm] < %12.6f, %5u points\n", ymin, ymax, ny);
+  if (cylindrical) {
+    std::printf("%12.6f < r [cm] < %12.6f, %5u points\n", xmin, xmax, nx);
+    std::printf("%12.6f < theta  < %12.6f, %5u points\n", ymin, ymax, ny);
+  } else {
+    std::printf("%12.6f < x [cm] < %12.6f, %5u points\n", xmin, xmax, nx);
+    std::printf("%12.6f < y [cm] < %12.6f, %5u points\n", ymin, ymax, ny);
+  }
   std::printf("%12.6f < z [cm] < %12.6f, %5u points\n", zmin, zmax, nz);
-  unsigned int nExpected = nx * ny;
+  unsigned int nExpected = nx;
+  if (fmt == Format::XZ || fmt == Format::IK) {
+    nExpected *= nz;
+  } else {
+    nExpected *= ny;
+  }
   if (fmt == Format::XYZ || fmt == Format::IJK || fmt == Format::YXZ) {
     nExpected *= nz;
   }
@@ -743,6 +928,11 @@ bool ComponentGrid::LoadMesh(const std::string& filename, std::string format,
     std::cerr << m_className << "::LoadMesh:\n"
               << "   Warning: Expected " << nExpected << " lines, read "
               << nValues << ".\n";
+  }
+  if (cylindrical) {
+    m_coordinates = Coordinates::Cylindrical;
+  } else {
+    m_coordinates = Coordinates::Cartesian;
   }
   return SetMesh(nx, ny, nz, xmin, xmax, ymin, ymax, zmin, zmax);
 }
@@ -775,8 +965,7 @@ bool ComponentGrid::LoadData(
       m_nX[0],
       std::vector<std::vector<bool> >(m_nX[1], std::vector<bool>(m_nX[2], false)));
 
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
+  std::ifstream infile(filename);
   if (!infile) {
     std::cerr << m_className << "::LoadData:\n"
               << "    Could not open file " << filename << ".\n";
@@ -802,8 +991,7 @@ bool ComponentGrid::LoadData(
     double fy = 0.;
     double fz = 0.;
     double p = 0.;
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     if (fmt == Format::XY) {
       double x, y;
       data >> x >> y;
@@ -822,6 +1010,26 @@ bool ComponentGrid::LoadData(
       if (m_nX[1] > 1) {
         const double v = std::round((y - m_xMin[1]) * m_sX[1]);
         j = v < 0. ? 0 : static_cast<unsigned int>(v);
+        if (j >= m_nX[1]) j = m_nX[1] - 1;
+      }
+    } else if (fmt == Format::XZ) {
+      double x, z;
+      data >> x >> z;
+      if (data.fail()) {
+        PrintError(m_className + "::LoadData", nLines, "coordinates");
+        bad = true;
+        break;
+      }
+      x *= scaleX;
+      z *= scaleX;
+      if (m_nX[0] > 1) {
+        const double u = std::round((x - m_xMin[0]) * m_sX[0]);
+        i = u < 0. ? 0 : static_cast<unsigned int>(u);
+        if (i >= m_nX[0]) i = m_nX[0] - 1;
+      }
+      if (m_nX[2] > 1) {
+        const double v = std::round((z - m_xMin[2]) * m_sX[2]);
+        k = v < 0. ? 0 : static_cast<unsigned int>(v);
         if (j >= m_nX[1]) j = m_nX[1] - 1;
       }
     } else if (fmt == Format::XYZ) {
@@ -908,9 +1116,13 @@ bool ComponentGrid::LoadData(
     }
     // Get the field values.
     if (fmt == Format::XY || fmt == Format::IJ) {
-      // Two-dimensional field-map
+      // Two-dimensional map.
       fz = 0.;
       data >> fx >> fy;
+    } else if (fmt == Format::XZ || fmt == Format::IK) {
+      // Two-dimensional map.
+      fy = 0.;
+      data >> fx >> fz;
     } else if (fmt == Format::YXZ) {
       data >> fy >> fx >> fz;
     } else {
@@ -952,7 +1164,7 @@ bool ComponentGrid::LoadData(
     }
     const bool isActive = flag == 0 ? false : true;
     if (fmt == Format::XY || fmt == Format::IJ) {
-      // Two-dimensional field-map
+      // Two-dimensional map.
       for (unsigned int kk = 0; kk < m_nX[2]; ++kk) {
         fields[i][j][kk].fx = fx;
         fields[i][j][kk].fy = fy;
@@ -960,6 +1172,16 @@ bool ComponentGrid::LoadData(
         fields[i][j][kk].v = p;
         if (withFlag) m_active[i][j][kk] = isActive;
         isSet[i][j][kk] = true;
+      }
+    } else if (fmt == Format::XZ || fmt == Format::IK) {
+      // Two-dimensional map.
+      for (unsigned int jj = 0; jj < m_nX[1]; ++jj) {
+        fields[i][jj][k].fx = fx;
+        fields[i][jj][k].fy = fy;
+        fields[i][jj][k].fz = fz;
+        fields[i][jj][k].v = p;
+        if (withFlag) m_active[i][jj][k] = isActive;
+        isSet[i][jj][k] = true;
       }
     } else {
       fields[i][j][k].fx = fx;
@@ -974,9 +1196,13 @@ bool ComponentGrid::LoadData(
   if (bad) return false;
   std::cout << m_className << "::LoadData:\n"
             << "    Read " << nValues << " values from " << filename << ".\n";
-  unsigned int nExpected = m_nX[0] * m_nX[1];
-  if (fmt == Format::XYZ || fmt == Format::IJK || fmt == Format::YXZ) {
+  unsigned int nExpected = m_nX[0];
+  if (fmt == Format::XY || fmt == Format::IJ) {
+    nExpected *= m_nX[1];
+  } else if (fmt == Format::XZ || fmt == Format::IK) {
     nExpected *= m_nX[2];
+  } else {
+    nExpected *= m_nX[1] * m_nX[2];
   }
   if (nExpected != nValues) {
     std::cerr << m_className << "::LoadData:\n"
@@ -987,7 +1213,19 @@ bool ComponentGrid::LoadData(
 
 bool ComponentGrid::GetBoundingBox(double& xmin, double& ymin, double& zmin,
                                    double& xmax, double& ymax, double& zmax) {
-  if (!m_ready) return false;
+  if (m_efields.empty() && m_wfields.empty() && m_bfields.empty()) {
+    return false;
+  }
+  if (m_coordinates == Coordinates::Cylindrical) {
+    const double rmax = m_xMax[0];
+    xmin = -rmax;
+    ymin = -rmax;
+    xmax = +rmax;
+    ymax = +rmax;
+    zmin = (m_periodic[2] || m_mirrorPeriodic[2]) ? -INFINITY : m_xMin[2];
+    zmax = (m_periodic[2] || m_mirrorPeriodic[2]) ? +INFINITY : m_xMax[2];
+    return true;
+  }
   if (m_periodic[0] || m_mirrorPeriodic[0]) {
     xmin = -INFINITY;
     xmax = +INFINITY;
@@ -1018,18 +1256,28 @@ bool ComponentGrid::GetElementaryCell(
     double& xmin, double& ymin, double& zmin,
     double& xmax, double& ymax, double& zmax) {
 
-  if (!m_ready) return false;
-  xmin = m_xMin[0];
-  xmax = m_xMax[0];
-  ymin = m_xMin[1];
-  ymax = m_xMax[1];
+  if (m_efields.empty() && m_wfields.empty() && m_bfields.empty()) {
+    return false;
+  }
+  if (m_coordinates == Coordinates::Cylindrical) {
+    const double rmax = m_xMax[0];
+    xmin = -rmax;
+    ymin = -rmax;
+    xmax = +rmax;
+    ymax = +rmax;
+  } else {
+    xmin = m_xMin[0];
+    xmax = m_xMax[0];
+    ymin = m_xMin[1];
+    ymax = m_xMax[1];
+  }
   zmin = m_xMin[2];
   zmax = m_xMax[2];
   return true;
 }
 
 bool ComponentGrid::GetVoltageRange(double& vmin, double& vmax) {
-  if (!m_ready) return false;
+  if (m_efields.empty()) return false;
   vmin = m_pMin;
   vmax = m_pMax;
   return true;
@@ -1038,7 +1286,7 @@ bool ComponentGrid::GetVoltageRange(double& vmin, double& vmax) {
 bool ComponentGrid::GetElectricFieldRange(double& exmin, double& exmax,
                                           double& eymin, double& eymax,
                                           double& ezmin, double& ezmax) {
-  if (!m_ready) {
+  if (m_efields.empty()) {
     PrintNotReady(m_className + "::GetElectricFieldRange");
     return false;
   }
@@ -1082,6 +1330,14 @@ bool ComponentGrid::GetField(
   // check if it is inside the mesh.
   std::array<bool, 3> mirrored = {false, false, false};
   std::array<double, 3> xx = {xi, yi, zi};
+  double theta = 0.;
+  if (m_coordinates == Coordinates::Cylindrical) {
+    if (fabs(xi) > Small || fabs(yi) > Small) {
+      theta = atan2(yi, xi);
+      xx[0] = sqrt(xi * xi + yi * yi);
+      xx[1] = theta;
+    } 
+  }
   for (size_t i = 0; i < 3; ++i) {
     xx[i] = Reduce(xx[i], m_xMin[i], m_xMax[i], 
                    m_periodic[i], m_mirrorPeriodic[i], mirrored[i]);
@@ -1091,6 +1347,7 @@ bool ComponentGrid::GetField(
   const double sx = (xx[0] - m_xMin[0]) * m_sX[0];
   const double sy = (xx[1] - m_xMin[1]) * m_sX[1];
   const double sz = (xx[2] - m_xMin[2]) * m_sX[2];
+  // Get the indices.
   const unsigned int i0 = static_cast<unsigned int>(std::floor(sx));
   const unsigned int j0 = static_cast<unsigned int>(std::floor(sy));
   const unsigned int k0 = static_cast<unsigned int>(std::floor(sz));
@@ -1153,6 +1410,14 @@ bool ComponentGrid::GetField(
   if (mirrored[0]) fx = -fx;
   if (mirrored[1]) fy = -fy;
   if (mirrored[2]) fz = -fz;
+  if (m_coordinates == Coordinates::Cylindrical) {
+    const double ct = cos(theta);
+    const double st = sin(theta);
+    const double fr = fx;
+    const double ft = fy;
+    fx = ct * fr - st * ft;
+    fy = st * fr + ct * ft;
+  }
   return true;
 }
 
@@ -1160,7 +1425,7 @@ bool ComponentGrid::GetElectricField(const unsigned int i, const unsigned int j,
                                      const unsigned int k, double& v,
                                      double& ex, double& ey, double& ez) const {
   v = ex = ey = ez = 0.;
-  if (!m_ready) {
+  if (m_efields.empty()) {
     if (!m_hasMesh) {
       std::cerr << m_className << "::GetElectricField: Mesh not set.\n";
       return false;
@@ -1244,16 +1509,11 @@ void ComponentGrid::Reset() {
 
   m_hasMesh = false;
   m_hasPotential = false;
-  m_ready = false;
 
   m_wFieldOffset.fill(0.);
 }
 
 void ComponentGrid::UpdatePeriodicity() {
-  if (!m_ready) {
-    PrintNotReady(m_className + "::UpdatePeriodicity");
-    return;
-  }
 
   // Check for conflicts.
   for (size_t i = 0; i < 3; ++i) {
@@ -1425,8 +1685,7 @@ bool ComponentGrid::LoadData(
       m_nX[0],
       std::vector<std::vector<bool> >(m_nX[1], std::vector<bool>(m_nX[2], false)));
 
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
+  std::ifstream infile(filename);
   if (!infile) {
     std::cerr << m_className << "::LoadData:\n"
               << "    Could not open file " << filename << ".\n";
@@ -1449,8 +1708,7 @@ bool ComponentGrid::LoadData(
     unsigned int j = 0;
     unsigned int k = 0;
     double val = 0;
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     if (fmt == Format::XY) {
       double x, y;
       data >> x >> y;
@@ -1692,10 +1950,14 @@ ComponentGrid::Format ComponentGrid::GetFormat(std::string format) {
   std::transform(format.begin(), format.end(), format.begin(), toupper);
   if (format == "XY") {
     return Format::XY;
+  } else if (format == "XZ") {
+    return Format::XZ;
   } else if (format == "XYZ") {
     return Format::XYZ;
   } else if (format == "IJ") {
     return Format::IJ;
+  } else if (format == "IK") {
+    return Format::IK;
   } else if (format == "IJK") {
     return Format::IJK;
   } else if (format == "YXZ") {

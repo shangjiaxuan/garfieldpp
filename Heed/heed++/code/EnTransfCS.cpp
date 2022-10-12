@@ -111,7 +111,7 @@ using CLHEP::cm;
 
 EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
                        bool fs_primary_electron, HeedMatterDef* fhmd,
-                       long fparticle_charge)
+                       long fparticle_charge, const bool debug)
     : particle_mass(fparticle_mass),
       particle_charge(fparticle_charge),
       gamma_1(fgamma_1),
@@ -142,29 +142,44 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
     }
   }
   const long qe = hmd->energy_mesh->get_q();
-  log1C.assign(qe, 0.0);
-  log2C.assign(qe, 0.0);
-  chereC.assign(qe, 0.0);
-  chereCangle.assign(qe, 0.0);
-  Rruth.assign(qe, 0.0);
-  addaC.assign(qe, 0.0);
+  // Common first log without cs.
+  std::vector<double> log1C(qe, 0.);
+  // Common second log without cs.
+  std::vector<double> log2C(qe, 0.);
+  // Cherenkov radiation term.
+  std::vector<double> chereC(qe, 0.);
+  // Angle of Cherenkov's radiation.
+  std::vector<double> chereCangle(qe, 0.);
+  // Term called R in my paper
+  std::vector<double> Rruth(qe, 0.);
+  // Sum of (ionization) differential cross-section terms
+  std::vector<double> addaC(qe, 0.);
+
 #ifndef EXCLUDE_A_VALUES
-  addaC_a.assign(qe, 0.0);
+  // Sum of (absorption) differential cross-section terms
+  std::vector<double> addaC_a(qe, 0.);
 #endif
 
   const long qa = hmd->matter->qatom();
-  cher.resize(qa);
-  fruth.resize(qa);
-  adda.resize(qa);
-  fadda.resize(qa);
   quan.resize(qa);
-  mean.resize(qa);
+  fadda.resize(qa);
+  // Fraction of Cherenkov term.
+  std::vector<std::vector<std::vector<double> > > cher(qa);
+  // Rutherford term
+  std::vector<std::vector<std::vector<double> > > fruth(qa);
+  // Sum
+  std::vector<std::vector<std::vector<double> > > adda(qa);
+  // First moment, for each atom and shell.
+  std::vector<std::vector<double> > mean(qa);
 #ifndef EXCLUDE_A_VALUES
-  cher_a.resize(qa);
-  adda_a.resize(qa);
-  fadda_a.resize(qa);
   quan_a.resize(qa);
-  mean_a.resize(qa);
+  fadda_a.resize(qa);
+  // Cherenkov term (total absorption)
+  std::vector<std::vector<std::vector<double> > > cher_a(qa);
+  // Sum (total absorption)
+  std::vector<std::vector<std::vector<double> > > adda_a(qa);
+  // First moment (total absorption), for each atom and shell.
+  std::vector<std::vector<double> > mean_a(qa);
 #endif
 
   for (long na = 0; na < qa; na++) {
@@ -185,7 +200,14 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
   }
 
   const long q2 = particle_charge * particle_charge;
-  double coefpa = fine_structure_const * q2 / (beta2 * CLHEP::pi);
+  double coefpa = fine_structure_const * q2 / CLHEP::pi;
+  if (beta2 > 0.) {
+    coefpa /= beta2;
+  } else {
+    std::cerr << "Heed::EnTransfCS: Particle has zero speed.\n";
+    m_ok = false;
+    coefpa = 0.;
+  }
   const double coefCh = coefpa / hmd->eldens;
   for (long ne = 0; ne < qe; ne++) {
     const double eps1 = hmd->epsi1[ne];
@@ -274,6 +296,7 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
       }
     }
   }
+  long nNegative = 0;
   for (long ne = 0; ne < qe; ++ne) {
     double s = 0.0;
 #ifndef EXCLUDE_A_VALUES
@@ -300,28 +323,32 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
           ics = pacs->get_integral_ICS(ns, e1, e2) / (e2 - e1);
         }
         double r = std::max(cL * awq * ics + fruth[na][ns][ne], 0.);
-#ifndef EXCLUDE_A_VALUES
-        double acs = pacs->get_integral_ACS(ns, e1, e2) / (e2 - e1);
-        double r_a = std::max(cL * awq * acs + fruth[na][ns][ne], 0.);
-#endif
-        if (ec > ethr) {
-          r += cher[na][ns][ne];
-          if (r < 0.0) {
+        if (ec > ethr) r += cher[na][ns][ne];
+        if (r < 0.) {
+          ++nNegative;
+          if (debug) {
             funnw.whdr(mcout);
             mcout << "negative adda\n";
             mcout << "na=" << na << " ns=" << ns << " ne=" << ne
                   << ": " << r << '\n';
-            r = 0.;
           }
+          r = 0.;
         }
-#ifndef EXCLUDE_A_VALUES
-        r_a += cher[na][ns][ne];
-        check_econd11a(r_a, < 0,
-                       "na=" << na << " ns=" << ns << " na=" << na, mcerr);
-#endif
         adda[na][ns][ne] = r;
         s += r;
 #ifndef EXCLUDE_A_VALUES
+        double acs = pacs->get_integral_ACS(ns, e1, e2) / (e2 - e1);
+        double r_a = std::max(cL * awq * acs + fruth[na][ns][ne], 0.);
+        r_a += cher[na][ns][ne];
+        if (r_a < 0.) {
+          if (debug) {
+            funnw.whdr(mcout);
+            mcout << "negative adda_a\n";
+            mcout << "na=" << na << " ns=" << ns << " ne=" << ne
+                  << ": " << r_a << '\n';
+          }
+          r_a = 0.;
+        }
         adda_a[na][ns][ne] = r_a;
         s_a += r_a;
 #endif
@@ -332,7 +359,12 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
     addaC_a[ne] = s_a;
 #endif
   }
-
+  if (nNegative > 0) {
+    std::cerr << "Heed::EnTransfCS:\n    " << nNegative
+              << " negative values in the differential cross-section table.\n"
+              << "    The particle speed might be too low.\n";
+    m_ok = false;
+  }
   const double* aetemp = hmd->energy_mesh->get_ae();
   PointCoorMesh<double, const double*> pcm_e(qe + 1, &(aetemp));
   double emin = hmd->energy_mesh->get_emin();
@@ -404,6 +436,7 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
         const double s = cdf(pcm_e, adda[na][ns], fadda[na][ns]);
         if (fabs(s * rho - quan[na][ns]) > 1.e-10) {
           std::cerr << "Heed::EnTransfCS: Integrals differ (warning).\n";
+          m_ok = false;
         }
       }
 #ifndef EXCLUDE_A_VALUES
@@ -411,6 +444,7 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
         const double s = cdf(pcm_e, adda_a[na][ns], fadda_a[na][ns]);
         if (fabs(s * rho - quan_a[na][ns]) > 1.e-10) {
           std::cerr << "Heed::EnTransfCS: Integrals differ (warning).\n";
+          m_ok = false;
         }
       }
 #endif
@@ -423,8 +457,11 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
     const double det_value = 1.0 / (gamma * gamma) - hmd->epsi1[ne] * beta2;
     length_y0[ne] = det_value > 0. ? beta / k0 * 1.0 / sqrt(det_value) : 0.;
   }
+  
+  // Prefactor of the Highland formula.
+  sigma_ms = sqrt(2.) * 13.6 / (beta * beta * gamma * particle_mass);
 
-  /*
+  if (!debug) return;
   std::ofstream dcsfile;
   dcsfile.open("dcs.txt", std::ios::out);
   dcsfile << "# energy [MeV] vs. diff. cs per electron [Mbarn / MeV]\n";
@@ -452,26 +489,7 @@ EnTransfCS::EnTransfCS(double fparticle_mass, double fgamma_1,
             << "\n";
   }
   dcsfile.close();
-  //*/
 
-  log1C.clear();
-  log2C.clear();
-  chereC.clear();
-  chereCangle.clear();
-  Rruth.clear();
-
-  addaC.clear();
-  cher.clear();
-  fruth.clear();
-  adda.clear();
-  mean.clear();
-#ifndef EXCLUDE_A_VALUES
-  addaC_a.clear();
-  cher_a.clear();
-  adda_a.clear();
-  fadda_a.clear();
-  mean_a.clear();
-#endif
 }
 
 void EnTransfCS::print(std::ostream& file, int l) const {
@@ -495,51 +513,31 @@ void EnTransfCS::print(std::ostream& file, int l) const {
   Ifile << "meanC1=" << meanC1 << '\n';
 #endif
   if (l > 2) {
-    long qe = hmd->energy_mesh->get_q();
-    long ne;
+    const long qe = hmd->energy_mesh->get_q();
     if (l > 4) {
-      Ifile << "       enerc,      log1C,      log2C,      chereC,     addaC, "
-               "chereCangle   Rruth   length_y0\n";
-      for (ne = 0; ne < qe; ne++) {
-        Ifile << std::setw(12) << hmd->energy_mesh->get_ec(ne) << std::setw(12)
-              << log1C[ne] << std::setw(12) << log2C[ne] << std::setw(12)
-              << chereC[ne] << std::setw(12) << addaC[ne] << std::setw(12)
-              << chereCangle[ne] << std::setw(12) << Rruth[ne]
+      Ifile << "       enerc,      length_y0\n";
+      for (long ne = 0; ne < qe; ne++) {
+        Ifile << std::setw(12) << hmd->energy_mesh->get_ec(ne) 
               << std::setw(12) << length_y0[ne] << '\n';
       }
     }
     if (l > 3) {
-      long qa = hmd->matter->qatom();
-      long na;
+      const long qa = hmd->matter->qatom();
       Iprintn(file, hmd->matter->qatom());
-      for (na = 0; na < qa; na++) {
+      for (long na = 0; na < qa; na++) {
         Iprintn(file, na);
-        long qs = hmd->apacs[na]->get_qshell();
-        long ns;
+        const long qs = hmd->apacs[na]->get_qshell();
         Iprintn(file, hmd->apacs[na]->get_qshell());
-        for (ns = 0; ns < qs; ns++) {
+        for (long ns = 0; ns < qs; ns++) {
           Iprintn(file, ns);
-          Ifile << "quan      =" << std::setw(13) << quan[na][ns]
-                << " mean  =" << std::setw(13) << mean[na][ns] << '\n';
+          Ifile << "quan      =" << std::setw(13) << quan[na][ns] << '\n';
 #ifndef EXCLUDE_A_VALUES
-          Ifile << "quan_a    =" << std::setw(13) << quan_a[na][ns]
-                << " mean_a=" << std::setw(13) << mean_a[na][ns] << '\n';
+          Ifile << "quan_a    =" << std::setw(13) << quan_a[na][ns] << '\n';
 #endif
           if (l > 5) {
-            Ifile << "   enerc,        cher,       cher_a,     fruth,   adda, "
-                     "  adda_a,  fadda,   fadda_a\n";
-            for (ne = 0; ne < qe; ne++) {
-              Ifile << std::setw(12)
-                    << hmd->energy_mesh->get_ec(ne)
-                    << std::setw(12) << cher[na][ns][ne]
-#ifndef EXCLUDE_A_VALUES
-                    << std::setw(12) << cher_a[na][ns][ne]
-#endif
-                    << std::setw(12) << fruth[na][ns][ne] << std::setw(12)
-                    << adda[na][ns][ne]
-#ifndef EXCLUDE_A_VALUES
-                    << std::setw(12) << adda_a[na][ns][ne]
-#endif
+            Ifile << "   enerc,      fadda,      fadda_a\n";
+            for (long ne = 0; ne < qe; ne++) {
+              Ifile << std::setw(12) << hmd->energy_mesh->get_ec(ne)
                     << std::setw(12) << fadda[na][ns][ne]
 #ifndef EXCLUDE_A_VALUES
                     << std::setw(12) << fadda_a[na][ns][ne]

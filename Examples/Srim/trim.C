@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
   constexpr double d = 100.e-4;
   cmp.SetArea(-d, 0., -d, d, d, d);
   cmp.SetMedium(&si); 
+  // cmp.SetMagneticField(0., 0., 1.);
 
   // Make a sensor.
   Sensor sensor;
@@ -47,8 +48,6 @@ int main(int argc, char *argv[]) {
     std::cerr << "Reading TRIM EXYZ file failed.\n";
     return 1;
   }
-  tr.SetWorkFunction(3.6);
-  tr.SetFanoFactor(0.11);
   tr.Print();
 
   // Plot the tracks.

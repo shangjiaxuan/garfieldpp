@@ -33,8 +33,7 @@ fieldView.GetCanvas().SetLeftMargin(0.16)
 fieldView.PlotContour();
 
 # Setup the gas.
-gas = ROOT.Garfield.MediumMagboltz()
-gas.SetComposition("ar", 80., "co2", 20.)
+gas = ROOT.Garfield.MediumMagboltz("ar", 80., "co2", 20.)
 gas.SetTemperature(293.15)
 gas.SetPressure(760.)
 gas.Initialise(True)
@@ -45,10 +44,7 @@ gas.EnablePenningTransfer(rPenning, 0., "ar")
 # Load the ion mobilities.
 gas.LoadIonMobility(path + '/share/Garfield/Data/IonMobility_Ar+_Ar.txt')
  
-nMaterials = fm.GetNumberOfMaterials()
-for i in range(nMaterials):
-  eps = fm.GetPermittivity(i)
-  if eps == 1.: fm.SetMedium(i, gas)
+fm.SetGas(gas)
 fm.PrintMaterials()
 
 # Assemble the sensor.
@@ -71,7 +67,7 @@ if plotDrift:
 
 nEvents = 10
 for i in range(nEvents):
-  print i, '/', nEvents
+  # print i, '/', nEvents
   # Randomize the initial position. 
   x0 = -0.5 * pitch + ROOT.Garfield.RndmUniform() * pitch
   y0 = -0.5 * pitch + ROOT.Garfield.RndmUniform() * pitch

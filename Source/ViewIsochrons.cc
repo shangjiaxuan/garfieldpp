@@ -433,6 +433,10 @@ void ViewIsochrons::ComputeDriftLines(const double tstep,
     drift.SetSensor(m_sensor);
   } else {
     sensor.AddComponent(m_component);
+    if (m_userBox) {
+      sensor.SetArea(m_xMinBox, m_yMinBox, m_zMinBox,
+                     m_xMaxBox, m_yMaxBox, m_zMaxBox);
+    }
     drift.SetSensor(&sensor);
   }
   const double lx = 0.1 * fabs(m_xMaxPlot - m_xMinPlot);

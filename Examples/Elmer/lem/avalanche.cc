@@ -52,8 +52,6 @@ int main(int argc, char* argv[]) {
   gas->SetTemperature(293.15);  
   // Set the pressure (Torr)
   gas->SetPressure(740.);       
-  // Allow for drifting in this medium
-  gas->EnableDrift();           
   // Specify the gas mixture (Ar/CO2 70:30)
   gas->SetComposition("ar", 70., "co2", 30.);  
 
@@ -63,7 +61,7 @@ int main(int argc, char* argv[]) {
       "gemcell/dielectrics.dat", "gemcell/gemcell.result", "cm");
   elm->EnablePeriodicityX();
   elm->EnableMirrorPeriodicityY();
-  elm->SetMedium(0, gas);
+  elm->SetGas(gas);
   // Import the weighting field for the readout electrode.
   // elm->SetWeightingField("gemcell/gemcell_WTlel.result", "wtlel");
 

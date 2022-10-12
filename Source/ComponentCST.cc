@@ -95,9 +95,8 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   const int size = 200;
   char line[size];
   // Open the material list
-  std::ifstream fmplist;
-  fmplist.open(mplist.c_str(), std::ios::in);
-  if (fmplist.fail()) {
+  std::ifstream fmplist(mplist);
+  if (!fmplist) {
     PrintCouldNotOpen("Initialise", mplist);
     return false;
   }
@@ -108,8 +107,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   while (fmplist.getline(line, size, '\n')) {
     il++;
     // Split the line in tokens
-    char* token = NULL;
-    token = strtok(line, " ");
+    char* token = strtok(line, " ");
     // Skip blank lines and headers
     if (!token || strcmp(token, " ") == 0 || strcmp(token, "\n") == 0 ||
         int(token[0]) == 10 || int(token[0]) == 13)
@@ -117,7 +115,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
     // Read number of materials,
     // ensure it does not exceed the maximum and initialize the list
     if (strcmp(token, "Materials") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok(nullptr, " ");
       const int nMaterials = ReadInteger(token, -1, readerror);
       if (readerror) {
         std::cerr << m_className << "::Initialise:\n"
@@ -137,7 +135,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
         std::cout << "    Number of materials: " << nMaterials << "\n";
       }
     } else if (strcmp(token, "Material") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok(nullptr, " ");
       int imat = ReadInteger(token, -1, readerror);
       if (readerror) {
         std::cerr << m_className << "::Initialise:" << std::endl;
@@ -151,7 +149,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
                   << "    material properties file " << mplist << ".\n";
         ok = false;
       } else {
-        token = strtok(NULL, " ");
+        token = strtok(nullptr, " ");
         int itype = 0;
         if (strcmp(token, "PERX") == 0) {
           itype = 1;
@@ -164,12 +162,12 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
                     << " (line " << il << ").\n";
           ok = false;
         }
-        token = strtok(NULL, " ");
+        token = strtok(nullptr, " ");
         if (itype == 1) {
           m_materials[imat - 1].eps = ReadDouble(token, -1, readerror);
         } else if (itype == 2) {
           m_materials[imat - 1].ohm = ReadDouble(token, -1, readerror);
-          token = strtok(NULL, " ");
+          token = strtok(nullptr, " ");
           if (strcmp(token, "PERX") != 0) {
             std::cerr << m_className << "::Initialise:\n"
                       << "   Unknown material property flag " << token << "\n"
@@ -177,7 +175,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
                       << imat << ").\n";
             ok = false;
           } else {
-            token = strtok(NULL, " ");
+            token = strtok(nullptr, " ");
             m_materials[imat - 1].eps = ReadDouble(token, -1, readerror);
           }
         }
@@ -230,9 +228,8 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   }
 
   // Open the node list
-  std::ifstream fnlist;
-  fnlist.open(nlist.c_str(), std::ios::in);
-  if (fnlist.fail()) {
+  std::ifstream fnlist(nlist);
+  if (!fnlist) {
     PrintCouldNotOpen("Initialise", nlist);
     return false;
   }
@@ -245,22 +242,20 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   while (fnlist.getline(line, size, '\n')) {
     il++;
     // Split the line in tokens
-    char* token = NULL;
-    // Split into tokens
-    token = strtok(line, " ");
+    char* token = strtok(line, " ");
     // Skip blank lines and headers
     if (!token || strcmp(token, " ") == 0 || strcmp(token, "\n") == 0 ||
         int(token[0]) == 10 || int(token[0]) == 13)
       continue;
     // Read max sizes
     if (strcmp(token, "xmax") == 0) {
-      token = strtok(NULL, " ");
+      token = strtok(nullptr, " ");
       xlines = ReadInteger(token, -1, readerror);
-      token = strtok(NULL, " ");
-      token = strtok(NULL, " ");
+      token = strtok(nullptr, " ");
+      token = strtok(nullptr, " ");
       ylines = ReadInteger(token, -1, readerror);
-      token = strtok(NULL, " ");
-      token = strtok(NULL, " ");
+      token = strtok(nullptr, " ");
+      token = strtok(nullptr, " ");
       zlines = ReadInteger(token, -1, readerror);
       if (readerror) break;
       continue;
@@ -345,9 +340,8 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
             << std::endl;
 
   // Open the element list
-  std::ifstream felist;
-  felist.open(elist.c_str(), std::ios::in);
-  if (felist.fail()) {
+  std::ifstream felist(elist);
+  if (!felist) {
     PrintCouldNotOpen("Initialise", elist);
     return false;
   }
@@ -357,9 +351,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   while (felist.getline(line, size, '\n')) {
     il++;
     // Split the line in tokens
-    char* token = NULL;
-    // Split into tokens
-    token = strtok(line, " ");
+    char* token = strtok(line, " ");
     // Skip blank lines and headers
     if (!token || strcmp(token, " ") == 0 || strcmp(token, "\n") == 0 ||
         int(token[0]) == 10 || int(token[0]) == 13 ||
@@ -367,7 +359,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
       continue;
     // Read the element
     int ielem = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
     unsigned char imat = atoi(token);
     // construct node numbers
     std::vector<int> node_nb;
@@ -412,9 +404,8 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
 
   // Open the voltage list
   m_potential.resize(m_nNodes);
-  std::ifstream fprnsol;
-  fprnsol.open(prnsol.c_str(), std::ios::in);
-  if (fprnsol.fail()) {
+  std::ifstream fprnsol(prnsol);
+  if (!fprnsol) {
     PrintCouldNotOpen("Initialise", prnsol);
     return false;
   }
@@ -425,8 +416,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
   while (fprnsol.getline(line, size, '\n')) {
     il++;
     // Split the line in tokens
-    char* token = NULL;
-    token = strtok(line, " ");
+    char* token = strtok(line, " ");
     // Skip blank lines and headers
     if (!token || strcmp(token, " ") == 0 || strcmp(token, "\n") == 0 ||
         int(token[0]) == 10 || int(token[0]) == 13 || strcmp(token, "Max") == 0)
@@ -434,7 +424,7 @@ bool ComponentCST::Initialise(std::string elist, std::string nlist,
     // Read node potential (in prnsol node id starts with 1 and here we will use
     // 0 as first node...)
     int inode = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
     double volt = ReadDouble(token, -1, readerror);
 
     try {
@@ -597,7 +587,7 @@ bool ComponentCST::Initialise(std::string dataFile, std::string unit) {
       exit(3);
     }
     std::string name = c;
-    st << "  Read material: " << name.c_str();
+    st << "  Read material: " << name;
     if (name.compare("gas") == 0) {
       st << " (considered as drift medium)";
       m_materials.at(index).driftmedium = true;
@@ -676,9 +666,8 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
   }
 
   // Open the voltage list
-  std::ifstream fprnsol;
-  fprnsol.open(prnsol.c_str(), std::ios::in);
-  if (fprnsol.fail()) {
+  std::ifstream fprnsol(prnsol);
+  if (!fprnsol) {
     PrintCouldNotOpen("SetWeightingField", prnsol);
     return false;
   }
@@ -709,7 +698,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
   if (isBinary) {
     std::cout << m_className << "::SetWeightingField:" << std::endl;
     std::cout << "    Reading weighting field from binary file:"
-              << prnsol.c_str() << std::endl;
+              << prnsol << std::endl;
     FILE* f = fopen(prnsol.c_str(), "rb");
     if (f == nullptr) {
       PrintCouldNotOpen("SetWeightingField", prnsol);
@@ -743,7 +732,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
     fprnsol.close();
   } else {
     std::cout << m_className << "::SetWeightingField:" << std::endl;
-    std::cout << "    Reading weighting field from text file:" << prnsol.c_str()
+    std::cout << "    Reading weighting field from text file:" << prnsol
               << std::endl;
     // Buffer for reading
     const int size = 100;
@@ -756,8 +745,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
     while (fprnsol.getline(line, size, '\n')) {
       il++;
       // Split the line in tokens
-      char* token = NULL;
-      token = strtok(line, " ");
+      char* token = strtok(line, " ");
       // Skip blank lines and headers
       if (!token || strcmp(token, " ") == 0 || strcmp(token, "\n") == 0 ||
           int(token[0]) == 10 || int(token[0]) == 13 ||
@@ -768,7 +756,7 @@ bool ComponentCST::SetWeightingField(std::string prnsol, std::string label,
         continue;
       // Read the element
       int inode = ReadInteger(token, -1, readerror);
-      token = strtok(NULL, " ");
+      token = strtok(nullptr, " ");
       double volt = ReadDouble(token, -1, readerror);
       try {
         potentials.at(inode - 1) = volt;
@@ -856,8 +844,7 @@ void ComponentCST::WeightingField(const double xin, const double yin,
   auto it = m_weightingFields.find(label);
   if (it == m_weightingFields.end()) {
     // Do not proceed if the requested weighting field does not exist.
-    std::cerr << "No weighting field named " << label.c_str() << " found!"
-              << std::endl;
+    std::cerr << "No weighting field named " << label << " found!\n";
     return;
   }
 
@@ -911,8 +898,7 @@ double ComponentCST::WeightingPotential(const double xin, const double yin,
   auto it = m_weightingFields.find(label);
   if (it == m_weightingFields.end()) {
     // Do not proceed if the requested weighting field does not exist.
-    std::cerr << "No weighting field named " << label.c_str() << " found!"
-              << std::endl;
+    std::cerr << "No weighting field named " << label << " found!\n";
     return 0.;
   }
 
@@ -1157,13 +1143,8 @@ int ComponentCST::Index2Element(const unsigned int i, const unsigned int j,
   return i + j * (m_nx - 1) + k * (m_nx - 1) * (m_ny - 1);
 }
 
-void ComponentCST::UpdatePeriodicity() {
-  UpdatePeriodicity2d();
-  UpdatePeriodicityCommon();
-}
-
-void ComponentCST::GetAspectRatio(const unsigned int element, double& dmin,
-                                  double& dmax) {
+void ComponentCST::GetAspectRatio(const size_t element, double& dmin,
+                                  double& dmax) const {
   if (element >= m_nElements) {
     dmin = dmax = 0.;
     return;
@@ -1177,7 +1158,7 @@ void ComponentCST::GetAspectRatio(const unsigned int element, double& dmin,
   dmax = std::max({dx, dy, dz});
 }
 
-double ComponentCST::GetElementVolume(const unsigned int element) {
+double ComponentCST::GetElementVolume(const size_t element) const {
   if (element >= m_nElements) return 0.;
   unsigned int i, j, k;
   Element2Index(element, i, j, k);

@@ -20,10 +20,14 @@ class EnTransfCS {
   EnTransfCS() = default;
   /// Constructor
   EnTransfCS(double fparticle_mass, double fgamma_1, bool fs_primary_electron,
-             HeedMatterDef* fhmd, long fparticle_charge = 1);
+             HeedMatterDef* fhmd, long fparticle_charge = 1,
+             const bool debug = false);
 
   void print(std::ostream& file, int l) const;
   EnTransfCS* copy() const { return new EnTransfCS(*this); }
+
+  /// Flag indicating whether the calculation was successful.
+  bool m_ok = true;
 
   /// Particle mass [MeV]
   double particle_mass = 0.;
@@ -46,67 +50,36 @@ class EnTransfCS {
 
   HeedMatterDef* hmd = nullptr;
 
-  /// In the following arrays there is the only index: the energy.
-  /// The meaning: the average value on the energy interval.
-  std::vector<double> log1C;        ///< common first log without cs
-  std::vector<double> log2C;        ///< common second log without cs
-  std::vector<double> chereC;       ///< Cherenkov's radiation
-  std::vector<double> chereCangle;  ///< angle of Cherenkov's radiation
-  std::vector<double> Rruth;        ///< term called R in my paper
-
-  /// Sum of (ionization) differential cross-section terms
-  std::vector<double> addaC;
   /// Integrated (ionization) cross-section
   double quanC = 0.;
+  /// First moment (mean restricted energy loss) [MeV]
+  double meanC = 0.;
+  /// First moment with additional tail to max. kinematically allowed transfer,
+  /// calculated only for heavy particles (integral for electrons non-trivial).
+  double meanC1 = 0.;
 
 #ifndef EXCLUDE_A_VALUES
-  /// Sum of (absorption) differential cross-section terms
-  std::vector<double> addaC_a;
   /// Integrated (absorption) cross-section
   double quanC_a = 0.;
-#endif
-
-  // First moment (mean restricted energy loss) [MeV]
-  double meanC = 0.;
-  // First moment with additional tail to max. kinematically allowed transfer,
-  // calculated only for heavy particles (integral for electrons non-trivial).
-  double meanC1 = 0.;
-#ifndef EXCLUDE_A_VALUES
   double meanC1_a = 0.;
   double meanC_a = 0.;
 #endif
 
-  /// In the following arrays there are three indices:
-  /// atom number in the matter, shell number in atom, energy
-  /// Fraction of Cherenkov term.
-  std::vector<std::vector<std::vector<double> > > cher;
-  /// Rutherford term
-  std::vector<std::vector<std::vector<double> > > fruth;
-  /// Sum
-  std::vector<std::vector<std::vector<double> > > adda;
-  /// Integral, normalised to unity
+  /// Integral, normalised to unity for each atom, shell and energy.
   std::vector<std::vector<std::vector<double> > > fadda;
-#ifndef EXCLUDE_A_VALUES
-  /// Cherenkov term (total absorption)
-  std::vector<std::vector<std::vector<double> > > cher_a;
-  /// Sum (total absorption)
-  std::vector<std::vector<std::vector<double> > > adda_a;
-  /// Integral (total absorption), normalised to unity
-  std::vector<std::vector<std::vector<double> > > fadda_a;
-#endif
-
   /// Number of collisions / cm, for each atom and shell.
   std::vector<std::vector<double> > quan;
-  /// First moment, for each atom and shell.
-  std::vector<std::vector<double> > mean;
 #ifndef EXCLUDE_A_VALUES
+  // Integral (total absorption), normalised to unity.
+  std::vector<std::vector<std::vector<double> > > fadda_a;
   /// Number of collisions / cm (total absorption), for each atom and shell.
   std::vector<std::vector<double> > quan_a;
-  /// First moment (total absorption), for each atom and shell.
-  std::vector<std::vector<double> > mean_a;
 #endif
 
   std::vector<double> length_y0;
+
+  // Prefactor (without thickness dependence) of the Highland formula.
+  double sigma_ms = 0.; 
 };
 }
 

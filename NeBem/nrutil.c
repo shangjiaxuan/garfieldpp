@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+
 #include "NR.h"
 
 #define NR_END 1
@@ -142,7 +143,7 @@ int **imatrix(long nrl, long nrh, long ncl, long nch)
   return m;
 }
 
-float **submatrix(float **a, long oldrl, long oldrh, long oldcl, long /*oldch*/,
+float **submatrix(float **a, long oldrl, long oldrh, long oldcl, long oldch,
                   long newrl, long newcl)
 /* point a submatrix [newrl...][newcl...] to a [oldrl...][oldcl...] */
 {

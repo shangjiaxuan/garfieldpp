@@ -12,7 +12,7 @@ namespace Heed {
 /// particle and specification of concrete particle as one of types
 /// known by science.
 
-class eparticle : public mparticle, public particle_type {
+class eparticle : public mparticle /*, public particle_type*/ {
  public:
   /// Default constructor
   eparticle() = default;
@@ -29,7 +29,7 @@ class eparticle : public mparticle, public particle_type {
   /// Calculate force components.
   int force(const point& pt, vec& f, vec& f_perp, vfloat& mrange) override;
   // mrange - distance at which the force should not change much
-
+  particle_def* m_pardef = nullptr;
   /// Pointer to field map.
   HeedFieldMap* m_fieldMap = nullptr;
 };

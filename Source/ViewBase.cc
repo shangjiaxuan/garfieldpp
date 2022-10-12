@@ -80,8 +80,8 @@ TPad* ViewBase::GetCanvas() {
   return m_pad;
 }
 
-bool ViewBase::RangeSet(TPad* pad) {
-
+bool ViewBase::RangeSet(TVirtualPad* pad) {
+  if (!pad) return false;
   if (pad->GetListOfPrimitives()->GetSize() == 0 && 
       pad->GetX1() == 0 && pad->GetX2() == 1 && 
       pad->GetY1() == 0 && pad->GetY2() == 1) {
@@ -90,7 +90,7 @@ bool ViewBase::RangeSet(TPad* pad) {
   return true;
 }
 
-void ViewBase::SetRange(TPad* pad, const double x0, const double y0,
+void ViewBase::SetRange(TVirtualPad* pad, const double x0, const double y0,
                         const double x1, const double y1) {
   if (!pad) return;
   const double bm = pad->GetBottomMargin();
@@ -250,6 +250,21 @@ void ViewBase::SetPlane(const double fx, const double fy, const double fz,
               << "    Inversion failed; reset to default.\n";
     SetPlaneXY();
   }
+  if (m_debug) {
+    std::cout << m_className << "::SetPlane:\n    PRMAT:\n";
+    for (size_t i = 0; i < 3; ++i) {
+      std::printf("  %10.5f  %10.5f  %10.5f\n", 
+                  m_prmat[i][0], m_prmat[i][1], m_prmat[i][2]);
+    }
+    std::cout << "    PROJ:\n";
+    for (size_t i = 0; i < 3; ++i) {
+      std::printf("  %10.5f  %10.5f  %10.5f\n", 
+                  m_proj[i][0], m_proj[i][1], m_proj[i][2]);
+    }
+    std::cout << "   PLANE:\n";
+    std::printf("  %10.5f  %10.5f  %10.5f  %10.5f\n", 
+                m_plane[0], m_plane[1], m_plane[2], m_plane[3]);
+  }       
 }
 
 void ViewBase::Rotate(const double theta) {
@@ -283,6 +298,18 @@ void ViewBase::SetPlaneXZ() {
 
 void ViewBase::SetPlaneYZ() {
   m_proj = {{{0, 1, 0}, {0, 0, 1}, {0, 0, 0}}};
+  m_plane = {1, 0, 0, 0};
+  UpdateProjectionMatrix();
+}
+
+void ViewBase::SetPlaneZX() {
+  m_proj = {{{0, 0, 1}, {1, 0, 0}, {0, 0, 0}}};
+  m_plane = {0, 1, 0, 0};
+  UpdateProjectionMatrix();
+}
+
+void ViewBase::SetPlaneZY() {
+  m_proj = {{{0, 0, 1}, {0, 1, 0}, {0, 0, 0}}};
   m_plane = {1, 0, 0, 0};
   UpdateProjectionMatrix();
 }

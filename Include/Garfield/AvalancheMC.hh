@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "FundamentalConstants.hh"
+#include "GarfieldConstants.hh"
 #include "Sensor.hh"
 #include "ViewDrift.hh"
 
@@ -68,14 +69,12 @@ class AvalancheMC {
   /// Switch off attachment and multiplication.
   void DisableAttachment() { m_useAttachment = false; }
 
+  /// Retrieve the Townsend coefficient from the component.
+  void EnableTownsendMap(const bool on = true) { m_useTownsendMap = on; }
   /// Retrieve the attachment coefficient from the component.
   void EnableAttachmentMap(const bool on = true) { m_useAttachmentMap = on; }
-
   /// Retrieve the drift velocity from the component.
   void EnableVelocityMap(const bool on = true) { m_useVelocityMap = on; }
-
-  /// Enable use of magnetic field in stepping algorithm.
-  void EnableMagneticField(const bool on = true) { m_useBfield = on; }
 
   /** Set a maximum avalanche size (ignore further multiplication
       once this size has been reached). */
@@ -114,25 +113,21 @@ class AvalancheMC {
   }
 
   /// Return the number of points along the last simulated drift line.
-  unsigned int GetNumberOfDriftLinePoints() const { return m_drift.size(); }
+  size_t GetNumberOfDriftLinePoints() const { return m_drift.size(); }
   /// Return the coordinates and time of a point along the last drift line.
-  void GetDriftLinePoint(const unsigned int i, double& x, double& y, double& z,
+  void GetDriftLinePoint(const size_t i, double& x, double& y, double& z,
                          double& t) const;
 
   /** Return the number of electron trajectories in the last
    * simulated avalanche (including captured electrons). */
-  unsigned int GetNumberOfElectronEndpoints() const {
+  size_t GetNumberOfElectronEndpoints() const {
     return m_endpointsElectrons.size();
   }
   /** Return the number of hole trajectories in the last
    * simulated avalanche (including captured holes). */
-  unsigned int GetNumberOfHoleEndpoints() const {
-    return m_endpointsHoles.size();
-  }
+  size_t GetNumberOfHoleEndpoints() const { return m_endpointsHoles.size(); }
   /// Return the number of ion trajectories.
-  unsigned int GetNumberOfIonEndpoints() const {
-    return m_endpointsIons.size();
-  }
+  size_t GetNumberOfIonEndpoints() const { return m_endpointsIons.size(); }
 
   /** Return the coordinates and time of start and end point of a given
    * electron drift line.
@@ -141,37 +136,49 @@ class AvalancheMC {
    * \param x1,y1,z1,t1 coordinates and time of the end point
    * \param status status code (see GarfieldConstants.hh)
    */
-  void GetElectronEndpoint(const unsigned int i, double& x0, double& y0,
+  void GetElectronEndpoint(const size_t i, double& x0, double& y0,
                            double& z0, double& t0, double& x1, double& y1,
                            double& z1, double& t1, int& status) const;
-  void GetHoleEndpoint(const unsigned int i, double& x0, double& y0, double& z0,
+  void GetHoleEndpoint(const size_t i, double& x0, double& y0, double& z0,
                        double& t0, double& x1, double& y1, double& z1,
                        double& t1, int& status) const;
-  void GetIonEndpoint(const unsigned int i, double& x0, double& y0, double& z0,
+  void GetIonEndpoint(const size_t i, double& x0, double& y0, double& z0,
                       double& t0, double& x1, double& y1, double& z1,
                       double& t1, int& status) const;
 
   /// Simulate the drift line of an electron from a given starting point.
-  bool DriftElectron(const double x0, const double y0, const double z0,
-                     const double t0);
+  bool DriftElectron(const double x, const double y, const double z,
+                     const double t);
   /// Simulate the drift line of a hole from a given starting point.
-  bool DriftHole(const double x0, const double y0, const double z0,
-                 const double t0);
+  bool DriftHole(const double x, const double y, const double z,
+                 const double t);
   /// Simulate the drift line of an ion from a given starting point.
-  bool DriftIon(const double x0, const double y0, const double z0,
-                const double t0);
+  bool DriftIon(const double x, const double y, const double z,
+                const double t);
+  /// Simulate the drift line of a negative ion from a given starting point.
+  bool DriftNegativeIon(const double x, const double y, const double z,
+                        const double t);
   /** Simulate an avalanche initiated by an electron at a given starting point.
-   * \param x0,y0,z0,t0 coordinates and time of the initial electron
+   * \param x,y,z,t coordinates and time of the initial electron
    * \param hole simulate the hole component of the avalanche or not
    */
-  bool AvalancheElectron(const double x0, const double y0, const double z0,
-                         const double t0, const bool hole = false);
+  bool AvalancheElectron(const double x, const double y, const double z,
+                         const double t, const bool hole = false);
   /// Simulate an avalanche initiated by a hole at a given starting point.
-  bool AvalancheHole(const double x0, const double y0, const double z0,
-                     const double t0, const bool electron = false);
+  bool AvalancheHole(const double x, const double y, const double z,
+                     const double t, const bool electron = false);
   /// Simulate an avalanche initiated by an electron-hole pair.
-  bool AvalancheElectronHole(const double x0, const double y0, const double z0,
-                             const double t0);
+  bool AvalancheElectronHole(const double x, const double y, const double z,
+                             const double t);
+
+  /// Add an electron to the list of particles to be transported.
+  void AddElectron(const double x, const double y, const double z,
+                   const double t);
+  /// Add a hole to the list of particles to be transported.
+  void AddHole(const double x, const double y, const double z, const double t);
+  /// Add an ion to the list of particles to be transported.
+  void AddIon(const double x, const double y, const double z, const double t);
+  /// Resume the simulation from the current set of charge carriers.
   bool ResumeAvalanche(const bool electron = true, const bool hole = true);
 
   /// Switch debugging messages on/off (default: off).
@@ -181,8 +188,6 @@ class AvalancheMC {
   std::string m_className = "AvalancheMC";
 
   Sensor* m_sensor = nullptr;
-
-  enum class Particle { Electron = 0, Ion, Hole };
 
   struct DriftPoint {
     std::array<double, 3> x;  ///< Position.
@@ -251,7 +256,6 @@ class AvalancheMC {
   bool m_doRKF = false;
   bool m_useDiffusion = true;
   bool m_useAttachment = true;
-  bool m_useBfield = false;
   /// Scaling factor for electron signals.
   double m_scaleE = 1.;
   /// Scaling factor for hole signals.
@@ -259,6 +263,8 @@ class AvalancheMC {
   /// Scaling factor for ion signals.
   double m_scaleI = 1.;
 
+  /// Take Townsend coefficients from the component.
+  bool m_useTownsendMap = false;
   /// Take attachment coefficients from the component.
   bool m_useAttachmentMap = false;
   /// Take the drift velocities from the component.
@@ -324,6 +330,11 @@ class AvalancheMC {
                        const std::array<double, 3>& x,
                        const std::array<double, 3>& e,
                        const std::array<double, 3>& b) const;
+  /// Compute the Townsend coefficient.
+  double GetTownsend(const Particle particle, Medium* medium,
+                     const std::array<double, 3>& x,
+                     const std::array<double, 3>& e,
+                     const std::array<double, 3>& b) const;
   /// Compute end point and effective velocity for a step.
   void StepRKF(const Particle particle, const std::array<double, 3>& x0,
                const std::array<double, 3>& v0, const double dt,
@@ -343,7 +354,7 @@ class AvalancheMC {
                        const bool semiconductor = false);
   /// Compute Townsend and attachment coefficients along the current drift line.
   bool ComputeAlphaEta(const Particle particle,
-                       const std::vector<DriftPoint>& driftLine,
+                       std::vector<DriftPoint>& driftLine,
                        std::vector<double>& alphas,
                        std::vector<double>& etas) const;
   bool Equilibrate(std::vector<double>& alphas) const;

@@ -70,10 +70,7 @@ class HeedMatterDef {
   // The order in which atoms appear in fampacs[n] should correspond to that
   // of molecules in gas.
   HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
-                const std::vector<MolecPhotoAbsCS*>& fampacs,
-                double fW = 0.0, double fF = standard_factor_Fano);
-  HeedMatterDef(EnergyMesh* fenergy_mesh, const std::string& gas_notation,
-                const std::vector<MolecPhotoAbsCS*>& fampacs,
+                std::vector<MolecPhotoAbsCS>& fampacs,
                 double fW = 0.0, double fF = standard_factor_Fano);
   // Replace permeability (epsi1 and epsi2) by the numbers
   // calculated by another program and written to a file (only for debug)
@@ -91,7 +88,7 @@ class HeedMatterDef {
 
  private:
   // Initialization after assignment of matter and apacs
-  void inite_HeedMatterDef();
+  void initialize();
 };
 }
 

@@ -99,23 +99,15 @@ INTFACEGLOBAL int OptElementFiles;
 INTFACEGLOBAL int neBEMDiscretize(int **elementNbs);
 
 // Set boundary condition
-INTFACEGLOBAL int neBEMBoundaryConditions(void);
-
-// Update the status of the known charge(s) / charge density (ies)
-// within the device.
-// INTFACEGLOBAL int neBEMKnownCharges(int (*Pt2UserFunction)(void));
-INTFACEGLOBAL int neBEMKnownCharges(void);
-
-// Effect of charging up of device elements
-INTFACEGLOBAL int neBEMChargingUp(int InfluenceMatrixFlag);
+INTFACEGLOBAL int neBEMBoundaryInitialConditions(void);
 
 // argument: status of matrix inversion (0: not inverted; 1: inverted)
 INTFACEGLOBAL int neBEMSolve(void);
 
 // arguments: a 3D point, potential and flux vector, the last two to be
 // returned by the function
-INTFACEGLOBAL int neBEMFieldCallCntr;
-INTFACEGLOBAL int neBEMField(Point3D *, double *, Vector3D *);
+INTFACEGLOBAL int neBEMPFCallCntr;
+INTFACEGLOBAL int neBEMPF(Point3D *, double *, Vector3D *);
 
 // returns the total charge in a volume
 // the volume identifier is the argument
@@ -136,8 +128,8 @@ INTFACEGLOBAL void neBEMDeleteAllWeightingFields(void);
 
 // Get weighting field and potential at a specific point
 // arguments: evaluation position, field vector and the identification tag
-// to indicate the necessary weighting field configuration; returns potential values
-// evaluation failure returns DBL_MAX for the value of potential
+// to indicate the necessary weighting field configuration; returns potential
+// values evaluation failure returns DBL_MAX for the value of potential
 INTFACEGLOBAL double neBEMWeightingField(Point3D *point, Vector3D *field,
                                          int IdWtField);
 
@@ -157,7 +149,7 @@ INTFACEGLOBAL int WriteElements(void);
 INTFACEGLOBAL int ReadElements(void);
 
 #ifdef __cplusplus
-} // namespace
+}  // namespace
 #endif
 
 #endif

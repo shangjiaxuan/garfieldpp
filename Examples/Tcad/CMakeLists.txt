@@ -1,4 +1,3 @@
-# Use the code in this section for standalone projects
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project(TCAD)
 if(NOT TARGET Garfield::Garfield)

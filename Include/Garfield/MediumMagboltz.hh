@@ -14,8 +14,15 @@ namespace Garfield {
 
 class MediumMagboltz : public MediumGas {
  public:
-  /// Constructor
+  /// Default constructor.
   MediumMagboltz();
+  /// Constructor.
+  MediumMagboltz(const std::string& gas1, const double f1 = 1.,
+                 const std::string& gas2 = "", const double f2 = 0.,
+                 const std::string& gas3 = "", const double f3 = 0.,
+                 const std::string& gas4 = "", const double f4 = 0.,
+                 const std::string& gas5 = "", const double f5 = 0.,
+                 const std::string& gas6 = "", const double f6 = 0.);
   /// Destructor
   virtual ~MediumMagboltz() {}
 
@@ -57,6 +64,7 @@ class MediumMagboltz : public MediumGas {
   /// Switch off discrete photoabsorption levels.
   void DisableRadiationTrapping() { m_useRadTrap = false; }
 
+  bool EnablePenningTransfer() override;
   bool EnablePenningTransfer(const double r, const double lambda) override;
   bool EnablePenningTransfer(const double r, const double lambda,
                              std::string gasname) override;
@@ -84,10 +92,10 @@ class MediumMagboltz : public MediumGas {
   double GetElectronCollisionRate(const double e, const unsigned int level,
                                   const int band);
   /// Sample the collision type.
-  bool GetElectronCollision(const double e, int& type, int& level, double& e1,
-                            double& dx, double& dy, double& dz,
-                            std::vector<std::pair<int, double> >& secondaries,
-                            int& ndxc, int& band) override;
+  bool ElectronCollision(const double e, int& type, int& level, double& e1,
+                         double& dx, double& dy, double& dz,
+                         std::vector<std::pair<Particle, double> >& secondaries,
+                         int& ndxc, int& band) override;
   void ComputeDeexcitation(int iLevel, int& fLevel);
   unsigned int GetNumberOfDeexcitationProducts() const override {
     return m_dxcProducts.size();
@@ -169,6 +177,8 @@ class MediumMagboltz : public MediumGas {
   /// angles in the currently set grid.
   void GenerateGasTable(const int numCollisions = 10,
                         const bool verbose = true);
+
+  void PlotElectronCrossSections();
 
  private:
   static constexpr int nEnergyStepsLog = 1000;
@@ -344,22 +354,24 @@ class MediumMagboltz : public MediumGas {
   // 3: excitation
   std::array<unsigned int, nCsTypesGamma> m_nPhotonCollisions;
 
-  int GetGasNumberMagboltz(const std::string& input) const;
+  static int GetGasNumberMagboltz(const std::string& input);
+  bool Update(const bool verbose = false);
   bool Mixer(const bool verbose = false);
   void SetupGreenSawada();
-  void SetScatteringParameters(const int model, const double parIn, double& cut,
-                               double& parOut) const;
-  void ComputeAngularCut(const double parIn, double& cut, double& parOut) const;
 
   void GetExcitationIonisationLevels();
 
   void ComputeDeexcitationTable(const bool verbose);
   void AddPenningDeexcitation(Deexcitation& dxc, const double rate,
                               const double pPenning) {
-    dxc.p.push_back(rate * pPenning);
     dxc.p.push_back(rate * (1. - pPenning));
-    dxc.type.push_back(DxcTypeCollIon);
     dxc.type.push_back(DxcTypeCollNonIon);
+    dxc.final.push_back(-1);
+    if (pPenning > 0.) { 
+      dxc.p.push_back(rate * pPenning);
+      dxc.type.push_back(DxcTypeCollIon);
+      dxc.final.push_back(-1);
+    }
   }
   double RateConstantWK(const double energy, const double osc,
                         const double pacs, const int igas1,

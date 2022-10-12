@@ -42,7 +42,7 @@ int neBEMSetDefaults(void) {
 
   TimeStep = 1;
 
-  strcpy(DeviceOutDir, "Outputs");
+  strcpy(DeviceOutDir, "neBEMOut");
 
   OptDeviceFile = 0;
   strcpy(DeviceInputFile, "");

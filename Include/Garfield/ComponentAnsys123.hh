@@ -14,35 +14,14 @@ class ComponentAnsys123 : public ComponentFieldMap {
   /// Destructor
   ~ComponentAnsys123() {}
 
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, Medium*& m, int& status) override;
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, double& v, Medium*& m,
-                     int& status) override;
+  bool Initialise(const std::string& elist = "ELIST.lis",
+                  const std::string& nlist = "NLIST.lis",
+                  const std::string& mplist = "MPLIST.lis",
+                  const std::string& prnsol = "PRNSOL.lis", 
+                  const std::string& unit = "cm");
 
-  void WeightingField(const double x, const double y, const double z,
-                      double& wx, double& wy, double& wz,
-                      const std::string& label) override;
+  bool SetWeightingField(const std::string& prnsol, const std::string& label);
 
-  double WeightingPotential(const double x, const double y, const double z,
-                            const std::string& label) override;
-
-  Medium* GetMedium(const double x, const double y, const double z) override;
-
-  bool Initialise(std::string elist = "ELIST.lis",
-                  std::string nlist = "NLIST.lis",
-                  std::string mplist = "MPLIST.lis",
-                  std::string prnsol = "PRNSOL.lis", std::string unit = "cm");
-
-  bool SetWeightingField(std::string prnsol, std::string label);
-
- protected:
-  // Verify periodicities
-  void UpdatePeriodicity() override { UpdatePeriodicityCommon(); }
-
-  double GetElementVolume(const unsigned int i) override;
-  void GetAspectRatio(const unsigned int i, double& dmin,
-                      double& dmax) override;
 };
 }
 #endif

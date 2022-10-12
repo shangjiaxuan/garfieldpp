@@ -48,11 +48,11 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, MatterDef* amatter,
     W = coef_I_to_W * mean_I;
 #endif
   }
-  inite_HeedMatterDef();
+  initialize();
 }
 
 HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
-                             const std::vector<MolecPhotoAbsCS*>& fampacs, 
+                             std::vector<MolecPhotoAbsCS>& fampacs, 
                              double fW, double fF)
     : matter(agas), W(fW), F(fF), energy_mesh(fenergy_mesh) {
   mfunname("HeedMatterDef::HeedMatterDef(...)");
@@ -63,12 +63,12 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
   const long qmol = agas->qmolec();
   long nat = 0;
   for (long nmol = 0; nmol < qmol; ++nmol) {
-    check_econd12(agas->molec(nmol)->tqatom(), !=, fampacs[nmol]->get_qatom(),
+    check_econd12(agas->molec(nmol)->tqatom(), !=, fampacs[nmol].get_qatom(),
                   mcerr);
-    // number of different atoms in mol
+    // number of different atoms in molecule
     const long qa = agas->molec(nmol)->qatom();
     for (long na = 0; na < qa; ++na) {
-      apacs[nat] = fampacs[nmol]->get_atom(na);
+      apacs[nat] = fampacs[nmol].get_atom(na);
       check_econd12(apacs[nat]->get_Z(), !=, agas->molec(nmol)->atom(na)->Z(),
                     mcerr);
       nat++;
@@ -79,14 +79,14 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
     double u = 0.0;
     double d = 0.0;
     for (long n = 0; n < qmol; ++n) {
-      const double w = agas->weight_quan_molec(n) * fampacs[n]->get_total_Z();
-      u += w * fampacs[n]->get_F();
+      const double w = agas->weight_quan_molec(n) * fampacs[n].get_total_Z();
+      u += w * fampacs[n].get_F();
       d += w;
     }
     F = u / d;
 #else
     for (long n = 0; n < qmol; ++n) {
-      F += agas->weight_quan_molec(n) * fampacs[n]->get_F();
+      F += agas->weight_quan_molec(n) * fampacs[n].get_F();
     }
 #endif
   }
@@ -96,92 +96,22 @@ HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh, GasDef* agas,
     double u = 0.0;
     double d = 0.0;
     for (long n = 0; n < qmol; ++n) {
-      const double w = agas->weight_quan_molec(n) * fampacs[n]->get_total_Z();
-      u += w * fampacs[n]->get_W();
+      const double w = agas->weight_quan_molec(n) * fampacs[n].get_total_Z();
+      u += w * fampacs[n].get_W();
       d += w;
     }
     W = u / d;
 #else
     for (long n = 0; n < qmol; ++n) {
-      W += agas->weight_quan_molec(n) * fampacs[n]->get_W();
+      W += agas->weight_quan_molec(n) * fampacs[n].get_W();
     }
 #endif
   }
-  inite_HeedMatterDef();
+  initialize();
 }
 
-HeedMatterDef::HeedMatterDef(EnergyMesh* fenergy_mesh,
-                             const std::string& gas_notation,
-                             const std::vector<MolecPhotoAbsCS*>& fampacs, 
-                             double fW, double fF)
-    : W(fW), F(fF), energy_mesh(fenergy_mesh) {
-  mfunnamep("HeedMatterDef::HeedMatterDef(...)");
-  MatterDef* amat = MatterDef::get_MatterDef(gas_notation);
-  GasDef* agas = dynamic_cast<GasDef*>(amat);
-  if (!agas) {
-    funnw.ehdr(mcerr);
-    mcerr << "notation supplied as the gas notation is not appear "
-          << "to be related to gas \n";
-    mcerr << "gas_notation=" << gas_notation << '\n';
-    spexit(mcerr);
-  }
-
-  matter = agas;
-  check_econd11(agas->qmolec(), <= 0, mcerr);
-  const long qat = agas->qatom();
-  apacs.resize(qat);
-  const long qmol = agas->qmolec();
-  long nat = 0;
-  for (long nmol = 0; nmol < qmol; ++nmol) {
-    check_econd12(agas->molec(nmol)->tqatom(), !=, fampacs[nmol]->get_qatom(),
-                  mcerr);
-    // quantity of different atoms in molecule.
-    const long qa = agas->molec(nmol)->qatom();
-    for (long na = 0; na < qa; ++na) {
-      apacs[nat] = fampacs[nmol]->get_atom(na);
-      check_econd12(apacs[nat]->get_Z(), !=, agas->molec(nmol)->atom(na)->Z(),
-                    mcerr);
-      nat++;
-    }
-  }
-  if (F == 0.0) {
-#ifdef CALC_W_USING_CHARGES
-    double u = 0.0;
-    double d = 0.0;
-    for (long n = 0; n < qmol; ++n) {
-      const double w = agas->weight_quan_molec(n) * fampacs[n]->get_total_Z();
-      u += w * fampacs[n]->get_F();
-      d += w;
-    }
-    F = u / d;
-#else
-    for (long n = 0; n < qmol; ++n) {
-      F += agas->weight_quan_molec(n) * fampacs[n]->get_F();
-    }
-#endif
-  }
-
-  if (W == 0.0) {
-#ifdef CALC_W_USING_CHARGES
-    double u = 0.0;
-    double d = 0.0;
-    for (long n = 0; n < qmol; ++n) {
-      const double w = agas->weight_quan_molec(n) * fampacs[n]->get_total_Z();
-      u += w * fampacs[n]->get_W();
-      d += w;
-    }
-    W = u / d;
-#else
-    for (long n = 0; n < qmol; ++n) {
-      W += agas->weight_quan_molec(n) * fampacs[n]->get_W();
-    }
-#endif
-  }
-  inite_HeedMatterDef();
-}
-
-void HeedMatterDef::inite_HeedMatterDef() {
-  mfunname("void HeedMatterDef::inite_HeedMatterDef()");
+void HeedMatterDef::initialize() {
+  mfunname("void HeedMatterDef::initialize()");
   const double amean = matter->A_mean() / (gram / mole);
   const double rho = matter->density() / (gram / cm3);
   eldens_cm_3 = matter->Z_mean() / amean * Avogadro * rho;
@@ -333,20 +263,13 @@ void HeedMatterDef::replace_epsi12(const std::string& file_name) {
   double emax = ener[qe - 1] + 0.5 * (ener[qe - 1] - ener[qe - 2]);
 
   qe = energy_mesh->get_q();
+  const auto interpolate = t_value_straight_point_ar<double, std::vector<double>,
+                                   PointCoorMesh<double, std::vector<double> > >;
   for (long ne = 0; ne < qe; ++ne) {
     double ec = energy_mesh->get_ec(ne);
-    epsi1[ne] =
-        t_value_straight_point_ar<double, std::vector<double>,
-                                  PointCoorMesh<double, std::vector<double> > >(
-            pcmd,  // dimension q
-            eps1,  // dimension q-1
-            ec, 0, 1, emin, 1, emax);
-    epsi2[ne] =
-        t_value_straight_point_ar<double, std::vector<double>,
-                                  PointCoorMesh<double, std::vector<double> > >(
-            pcmd,  // dimension q
-            eps2,  // dimension q-1
-            ec, 1, 1, emin, 1, emax);
+    // pcmd: dimension q; eps1, eps2: dimension q - 1.
+    epsi1[ne] = interpolate(pcmd, eps1, ec, 0, 1, emin, 1, emax);
+    epsi2[ne] = interpolate(pcmd, eps2, ec, 1, 1, emin, 1, emax);
     // Iprint3n(mcout, ec, epsi1[ne], epsi2[ne]);
   }
 }

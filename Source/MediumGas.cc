@@ -6,8 +6,9 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
+#include <limits>
 #include <numeric>
+#include <sstream>
 #include <utility>
 
 #include "Garfield/FundamentalConstants.hh"
@@ -27,7 +28,9 @@ std::string FmtFloat(const double x, const unsigned int width = 15,
 
 std::string FmtInt(const int n, const unsigned int width) {
   char buffer[256];
-  std::snprintf(buffer, width + 1, "%*d", width, n);
+  if (std::snprintf(buffer, width + 1, "%*d", width, n) < 0.) {
+    std::cout << "    Warning: error formatting integer number " << n << "\n";
+  }
   return std::string(buffer);
 }
 
@@ -121,7 +124,7 @@ MediumGas::MediumGas()
   m_gas[0] = "Ar";
   m_fraction[0] = 1.;
   m_name = m_gas[0];
-  GetGasInfo(m_gas[0], m_atWeight[0], m_atNum[0]);
+  GetGasInfo(m_gas[0], m_atWeight[0], m_atNum[0], m_w, m_fano);
 
   m_rPenningGas.fill(0.);
   m_lambdaPenningGas.fill(0.);
@@ -163,6 +166,9 @@ bool MediumGas::SetComposition(const std::string& gas1, const double f1,
       m_gas[m_nComponents] = gasname;
       m_fraction[m_nComponents] = fractions[i];
       ++m_nComponents;
+    } else {
+      std::cerr << m_className << "::SetComposition:\n"
+                << "    Unknown identifier '" << gases[i] << "'.\n";
     }
   }
 
@@ -181,14 +187,19 @@ bool MediumGas::SetComposition(const std::string& gas1, const double f1,
     m_name += m_gas[i];
     sum += m_fraction[i];
   }
-  // Normalise the fractions to one.
+  // Normalise the fractions to unity.
   for (unsigned int i = 0; i < m_nComponents; ++i) {
     m_fraction[i] /= sum;
   }
 
-  // Set the atomic weight and number.
+  // Set the W value, Fano factor, and the atomic weight and number.
+  m_w = 0.;
+  m_fano = 0.; 
   for (unsigned int i = 0; i < m_nComponents; ++i) {
-    GetGasInfo(m_gas[i], m_atWeight[i], m_atNum[i]);
+    double w = 0., f = 0.;
+    GetGasInfo(m_gas[i], m_atWeight[i], m_atNum[i], w, f);
+    m_w += w * m_fraction[i];
+    m_fano += f * m_fraction[i];
   }
 
   // Print the composition.
@@ -226,10 +237,10 @@ bool MediumGas::SetComposition(const std::string& gas1, const double f1,
   return true;
 }
 
-void MediumGas::GetComposition(std::string& gas1, double& f1, std::string& gas2,
-                               double& f2, std::string& gas3, double& f3,
-                               std::string& gas4, double& f4, std::string& gas5,
-                               double& f5, std::string& gas6, double& f6) {
+void MediumGas::GetComposition(
+    std::string& gas1, double& f1, std::string& gas2, double& f2, 
+    std::string& gas3, double& f3, std::string& gas4, double& f4, 
+    std::string& gas5, double& f5, std::string& gas6, double& f6) const {
   gas1 = m_gas[0];
   gas2 = m_gas[1];
   gas3 = m_gas[2];
@@ -309,27 +320,29 @@ double MediumGas::GetAtomicNumber() const {
   return z;
 }
 
-bool MediumGas::LoadGasFile(const std::string& filename) {
+bool MediumGas::LoadGasFile(const std::string& filename, 
+                            const bool quiet) {
 
   // -----------------------------------------------------------------------
   //    GASGET
   // -----------------------------------------------------------------------
-
-  std::ifstream gasfile;
   // Open the file.
-  gasfile.open(filename.c_str());
+  std::ifstream gasfile(filename);
   // Make sure the file could be opened.
   if (!gasfile.is_open()) {
     std::cerr << m_className << "::LoadGasFile:\n"
               << "    Cannot open file " << filename << ".\n";
     return false;
   }
-  std::cout << m_className << "::LoadGasFile: Reading " << filename << ".\n";
+  if (!quiet || m_debug) {
+    std::cout << m_className << "::LoadGasFile:\n"
+              << "    Reading file " << filename << ".\n";
+  }
 
   ResetTables();
 
   // Start reading the data.
-  if (m_debug) std::cout << m_className << "::LoadGasFile: Reading header.\n";
+  if (m_debug) std::cout << "    Reading header.\n";
   int version = 12;
   // GASOK bits
   std::bitset<20> gasok;
@@ -341,7 +354,7 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
     gasfile.close();
     return false;
   }
-  std::cout << m_className << "::LoadGasFile: Version " << version << "\n";
+  if (!quiet) std::cout << "    Version " << version << ".\n";
 
   // Check the gas mixture.
   std::vector<std::string> gasnames;
@@ -355,30 +368,35 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
 
   m_name = "";
   m_nComponents = gasnames.size();
+  m_w = 0.;
+  m_fano = 0.;
   for (unsigned int i = 0; i < m_nComponents; ++i) {
     if (i > 0) m_name += "/";
     m_name += gasnames[i];
     m_gas[i] = gasnames[i];
     m_fraction[i] = percentages[i] / 100.;
-    GetGasInfo(m_gas[i], m_atWeight[i], m_atNum[i]);
+    double w = 0., f = 0.;
+    GetGasInfo(m_gas[i], m_atWeight[i], m_atNum[i], w, f);
+    m_w += w * m_fraction[i];
+    m_fano += f * m_fraction[i];
   }
-  std::cout << m_className << "::LoadGasFile:\n"
-            << "    Gas composition set to " << m_name;
-  if (m_nComponents > 1) {
-    std::cout << " (" << m_fraction[0] * 100;
-    for (unsigned int i = 1; i < m_nComponents; ++i) {
-      std::cout << "/" << m_fraction[i] * 100;
+  if (!quiet) {
+    std::cout << "    Gas composition set to " << m_name;
+    if (m_nComponents > 1) {
+      std::cout << " (" << m_fraction[0] * 100;
+      for (unsigned int i = 1; i < m_nComponents; ++i) {
+        std::cout << "/" << m_fraction[i] * 100;
+      }
+      std::cout << ")";
     }
-    std::cout << ")";
+    std::cout << ".\n";
   }
-  std::cout << "\n";
 
   const int nE = m_eFields.size();
   const int nB = m_bFields.size();
   const int nA = m_bAngles.size();
   if (m_debug) {
-    std::cout << m_className << "::LoadGasFile:\n    " << nE
-              << " electric field(s), " << nB
+    std::cout << "    " << nE << " electric field(s), " << nB
               << " magnetic field(s), " << nA << " angle(s).\n";
   }
 
@@ -423,7 +441,7 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
 
   if (m_debug) {
     const std::string fmt = m_tab2d ? "3D" : "1D";
-    std::cout << m_className << "::LoadGasFile: Reading " << fmt << " table.\n";
+    std::cout << "    Reading " << fmt << " table.\n";
   }
 
   // Drift velocity along E, Bt and ExB
@@ -498,7 +516,7 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
   double tgas = 0.;
   // Moving on to the file footer
   gasfile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-  if (m_debug) std::cout << m_className << "::LoadGasFile: Reading footer.\n";
+  if (m_debug) std::cout << "    Reading footer.\n";
   ReadFooter(gasfile, extrapH, extrapL, interp, 
              m_eThrAlp, m_eThrAtt, m_iThrDis, ionDiffL, ionDiffT, pgas, tgas);
   gasfile.close();
@@ -571,7 +589,7 @@ bool MediumGas::LoadGasFile(const std::string& filename) {
   if (ionDiffL > 0.) Init(nE, nB, nA, m_iDifL, ionDiffL);
   if (ionDiffT > 0.) Init(nE, nB, nA, m_iDifT, ionDiffT);
 
-  if (m_debug) std::cout << m_className << "::LoadGasFile: Done.\n";
+  if (m_debug) std::cout << "    Done.\n";
 
   return true;
 }
@@ -938,10 +956,8 @@ bool MediumGas::MergeGasFile(const std::string& filename,
   // -----------------------------------------------------------------------
 
   constexpr double eps = 1.e-3;
-
-  std::ifstream gasfile;
   // Open the file.
-  gasfile.open(filename.c_str());
+  std::ifstream gasfile(filename);
   // Make sure the file could be opened.
   if (!gasfile.is_open()) {
     std::cerr << m_className << "::MergeGasFile:\n"
@@ -1782,7 +1798,7 @@ bool MediumGas::WriteGasFile(const std::string& filename) {
   }
 
   std::ofstream outfile;
-  outfile.open(filename.c_str(), std::ios::out);
+  outfile.open(filename, std::ios::out);
   if (!outfile.is_open()) {
     std::cerr << m_className << "::WriteGasFile:\n"
               << "    Cannot open file " << filename << ".\n";
@@ -1820,8 +1836,7 @@ bool MediumGas::WriteGasFile(const std::string& filename) {
   const int version = 12;
   outfile << " Version   : " << version << "\n";
   outfile << " GASOK bits: " << okstr << "\n";
-  std::stringstream ids;
-  ids.str("");
+  std::stringstream ids("");
   for (unsigned int i = 0; i < m_nComponents; ++i) {
     ids << m_gas[i] << " " << 100. * m_fraction[i] << "%, ";
   }
@@ -2212,15 +2227,28 @@ void MediumGas::PrintGas() {
   }
 }
 
-bool MediumGas::LoadIonMobility(const std::string& filename) {
+bool MediumGas::LoadIonMobility(const std::string& filename, 
+                                const bool quiet) {
+  return LoadMobility(filename, quiet, false);
+}
+
+bool MediumGas::LoadNegativeIonMobility(const std::string& filename,
+                                        const bool quiet) {
+  return LoadMobility(filename, quiet, true);
+}
+
+bool MediumGas::LoadMobility(const std::string& filename, 
+                             const bool quiet, const bool negative) {
   // Open the file.
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
+  std::ifstream infile(filename);
   // Make sure the file could actually be opened.
   if (!infile) {
-    std::cerr << m_className << "::LoadIonMobility:\n"
+    std::cerr << m_className << "::LoadMobility:\n"
               << "    Error opening file " << filename << ".\n";
     return false;
+  } else if (m_debug) {
+    std::cout << m_className << "::LoadMobility: Opened " << filename 
+              << " for reading.\n";
   }
 
   std::vector<std::pair<double, double> > data;
@@ -2239,7 +2267,7 @@ bool MediumGas::LoadIonMobility(const std::string& filename) {
     double field = atof(token);
     token = strtok(NULL, " ,\t");
     if (!token) {
-      std::cerr << m_className << "::LoadIonMobility:\n"
+      std::cerr << m_className << "::LoadMobility:\n"
                 << "    Found E/N but no mobility before the end-of-line.\n"
                 << "    Skipping line " << i << ".\n";
       continue;
@@ -2251,7 +2279,7 @@ bool MediumGas::LoadIonMobility(const std::string& filename) {
     // Make sure the values make sense.
     // Negative field values are not allowed.
     if (field < 0.) {
-      std::cerr << m_className << "::LoadIonMobility:\n"
+      std::cerr << m_className << "::LoadMobility:\n"
                 << "    Negative electric field (line " << i << ").\n";
       return false;
     }
@@ -2261,8 +2289,7 @@ bool MediumGas::LoadIonMobility(const std::string& filename) {
   infile.close();
 
   if (data.empty()) {
-    std::cerr << m_className << "::LoadIonMobilities:\n"
-              << "    No valid data found.\n";
+    std::cerr << m_className << "::LoadMobility: No valid data found.\n";
     return false;
   }
   // Sort by electric field.
@@ -2282,11 +2309,11 @@ bool MediumGas::LoadIonMobility(const std::string& filename) {
     efields[j] = data[j].first * scaleField;
     mobilities[j] = data[j].second * scaleMobility;
   }
-
-  std::cout << m_className << "::LoadIonMobility:\n"
-            << "    Read " << ne << " values from file " << filename << "\n";
-
-  return SetIonMobility(efields, mobilities);
+  if (!quiet) {
+    std::cout << m_className << "::LoadMobility:\n"
+              << "    Read " << ne << " values from file " << filename << "\n";
+  }
+  return SetIonMobility(efields, mobilities, negative);
 }
 
 void MediumGas::ResetTables() {
@@ -2299,12 +2326,200 @@ void MediumGas::ResetTables() {
   m_ionRates.clear();
 }
 
+bool MediumGas::EnablePenningTransfer() {
+  DisablePenningTransfer();
+ 
+  if (m_nComponents != 2) { 
+    std::cerr << m_className << "::EnablePenningTransfer:\n"
+              << "    Penning transfer probability for " << m_name
+              << " is not implemented.\n";
+    return false;
+  }
+
+  const double p = m_pressure / AtmosphericPressure;
+
+  auto itNe = std::find(m_gas.cbegin(), m_gas.cend(), "Ne");
+  auto itAr = std::find(m_gas.cbegin(), m_gas.cend(), "Ar");
+  auto itXe = std::find(m_gas.cbegin(), m_gas.cend(), "Xe");
+
+  auto itN2 = std::find(m_gas.cbegin(), m_gas.cend(), "N2");
+  auto itCO2 = std::find(m_gas.cbegin(), m_gas.cend(), "CO2");
+
+  auto itCH4 = std::find(m_gas.cbegin(), m_gas.cend(), "CH4");
+  auto itC2H2 = std::find(m_gas.cbegin(), m_gas.cend(), "C2H2");
+  auto itC2H6 = std::find(m_gas.cbegin(), m_gas.cend(), "C2H6");
+  auto itC3H8 = std::find(m_gas.cbegin(), m_gas.cend(), "C3H8");
+  auto itC4H10 = std::find(m_gas.cbegin(), m_gas.cend(), "iC4H10");
+
+  auto itTMA = std::find(m_gas.cbegin(), m_gas.cend(), "TMA");
+
+  double rP = 0.;
+  std::string gas = "";
+  if (itAr != m_gas.cend() && itCO2 != m_gas.cend()) {
+    gas = "Ar";
+    const int iCO2 = std::distance(m_gas.cbegin(), itCO2);
+    const double cCO2 = m_fraction[iCO2]; 
+    if (fabs(p - 1.) < 1.e-3) {
+      // 2014 paper with p = 1 atm
+      // http://dx.doi.org/10.1016/j.nima.2014.09.061
+      constexpr double a1 = 0.6643;
+      constexpr double a2 = 0.0518;
+      constexpr double a3 = 0.0028;
+      rP = (a1 * cCO2 + a3) / (cCO2 + a2);
+    } else {
+      // http://dx.doi.org/10.1088/1748-0221/12/01/C01035
+      constexpr double a1 = 0.627898;
+      constexpr double a2 = 0.041394;
+      constexpr double a3 = 0.004716;
+      constexpr double a4 = 0.001562;
+      constexpr double a5 = 0.002422;
+      constexpr double a6 = 0.027115;
+      const double pcCO2 = p * cCO2;
+      const double pcAr = p * (1. - cCO2);
+      rP = (a5 * pcAr * pcAr + a1 * pcCO2 + a4 * cCO2 + a3) /
+           (a6 * pcAr * pcAr + pcCO2 + a2);
+    }
+  } else if (itAr != m_gas.cend() && itCH4 != m_gas.cend()) {
+    // http://dx.doi.org/10.1088/1748-0221/5/05/P05002
+    constexpr double b1 =  0.1956;
+    constexpr double b2 = 16.38;
+    constexpr double b3 = 22.12;
+    constexpr double b4 =  3.842;
+    constexpr double b5 =  2.992;
+    constexpr double b6 = b4;
+    const int iCH4 = std::distance(m_gas.cbegin(), itCH4);
+    const double cCH4 = m_fraction[iCH4];
+    const double pcAr = p * (1. - cCH4);
+    rP = (b4 * p * cCH4 + b1 * pcAr + b2 * cCH4 + b5) / 
+         (b6 * p * cCH4 + pcAr + b3);
+    gas = "Ar";
+  } else if (itAr != m_gas.cend() && itC2H6 != m_gas.cend()) { 
+    // http://dx.doi.org/10.1088/1748-0221/5/05/P05002
+    // There is only one value for this mixture: c = 0.1, p = 1 atm.
+    rP = 0.31;
+    const int iC2H6 = std::distance(m_gas.cbegin(), itC2H6);
+    const double c = m_fraction[iC2H6];
+    if (fabs(c - 0.1) > 0.01 || fabs(p - 1.) > 1.e-3) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability";
+      if (fabs(c - 0.1) > 0.01) std::cout << " for 10% C2H6";
+      if (fabs(p - 1.) > 1.e-3) std::cout << " at atmospheric pressure";
+      std::cout << ".\n";
+    }
+    gas = "Ar";
+  } else if (itAr != m_gas.cend() && itC3H8 != m_gas.cend()) {
+    constexpr double a1 = 0.4536;
+    constexpr double a2 = 0.0035;
+    const int iC3H8 = std::distance(m_gas.cbegin(), itC3H8);
+    const double cC3H8 = m_fraction[iC3H8];
+    rP = (a1 * cC3H8) / (cC3H8 + a2);
+    if (fabs(p - 1.) > 1.e-3) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability at atmospheric pressure.\n";
+    }
+    gas = "Ar";
+  } else if (itAr != m_gas.cend() && itC4H10 != m_gas.cend()) {
+    // http://dx.doi.org/10.1088/1748-0221/5/05/P05002
+    // There is only one value for this mixture: c = 0.1, p = 1 atm.
+    rP = 0.40;
+    const int iC4H10 = std::distance(m_gas.cbegin(), itC4H10);
+    const double c = m_fraction[iC4H10];
+    if (fabs(c - 0.1) > 0.01 || fabs(p - 1.) > 1.e-3) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability";
+      if (fabs(c - 0.1) > 0.01) std::cout << " for 10% iC4H10";
+      if (fabs(p - 1.) > 1.e-3) std::cout << " at atmospheric pressure";
+      std::cout << ".\n";
+    }
+    gas = "Ar";
+  } else if (itAr != m_gas.cend() && itC2H2 != m_gas.cend()) {
+    // http://dx.doi.org/10.1088/1748-0221/5/05/P05002
+    // For this mixture r_p is constant but it has different values for 
+    // cylindrical and parallel plate chambers.
+    // I have used the case of cylindrical chamber here.
+    rP = 0.72;
+    if (fabs(p - 1.) > 1.e-3) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability at atmospheric pressure.\n";
+    }
+    gas = "Ar";
+  } else if (itAr != m_gas.cend() && itXe != m_gas.cend()) {
+    // http://dx.doi.org/10.1088/1748-0221/5/05/P05002
+    constexpr double a1 = 1.248;
+    constexpr double a2 = 0.039;
+    constexpr double a3 = 0.008;
+    constexpr double a4 = 0;
+    const int iXe = std::distance(m_gas.cbegin(), itXe);
+    const double cXe = m_fraction[iXe];
+    const double cAr = 1. - cXe; 
+    rP = (a1 * cXe + a3) / (a4 * cAr * cAr + cXe + a2);
+    if (fabs(p - 1.) > 1.e-3) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability at atmospheric pressure.\n";
+    }
+    gas = "Ar";
+  } else if (itNe != m_gas.cend() && itCO2 != m_gas.cend()) {
+    // https://doi.org/10.1088/1748-0221/16/03/P03026
+    constexpr double a1 = 0.71104;
+    constexpr double a2 = 0.06323;
+    constexpr double a3 = 0.03085;
+    constexpr double a4 = 4.20089;
+    constexpr double a5 = 0.07831;
+    constexpr double a6 = 0.13235;
+    constexpr double a7 = 1.47470;
+    const int iCO2 = std::distance(m_gas.cbegin(), itCO2);
+    const double cCO2 = m_fraction[iCO2];
+    const double pcCO2 = p * cCO2;
+    const double pcNe = p * (1.- cCO2); 
+    rP = (a5 * pcNe * pcNe + a7 * cCO2 * cCO2 + a1 * pcCO2 + a3) / 
+         (a6 * pcNe * pcNe + a4 * cCO2 * cCO2 + pcCO2 + a2);
+    gas = "Ne";
+  } else if (itNe != m_gas.cend() && itN2 != m_gas.cend()) {
+    // https://doi.org/10.1088/1748-0221/16/03/P03026
+    constexpr double a1 = 0.55802;
+    constexpr double a2 = 0.00514;
+    constexpr double a3 = 0.00206;
+    constexpr double a4 = 0.55385;
+    constexpr double a5 = 0.01153;
+    constexpr double a6 = 0.02073;
+    constexpr double a7 = 0.01;
+    const int iN2 = std::distance(m_gas.cbegin(), itN2);
+    const double cN2 = m_fraction[iN2];
+    const double pcNe = p * (1. - cN2);
+    rP = (a5 * pcNe * pcNe + a7 * cN2 * cN2 + a1 * p * cN2 + a3) / 
+         (a6 * pcNe * pcNe + a4 * cN2 * cN2 + p * cN2 + a2);
+    gas = "Ne";
+  } else if (itXe != m_gas.cend() && itTMA != m_gas.cend()) {
+    // https://doi.org/10.1088/1748-0221/13/10/P10032
+    constexpr double a1 = 0.2472;
+    constexpr double a2 = 0.2372;
+    constexpr double a3 = 0.0414;
+    // This mixture's r_P is not a function of the fraction of TMA,
+    // only the pressure.
+    rP = (a1 * p + a3) / (p + a2);
+    const int iTMA = std::distance(m_gas.cbegin(), itTMA);
+    const double cTMA = m_fraction[iTMA];
+    if (fabs(cTMA - 0.05) > 0.002) {
+      std::cout << m_className << "::EnablePenningTransfer:\n"
+                << "    Using transfer probability for 5% TMA.\n";
+    }
+    gas = "Xe";
+  } else {
+    std::cerr << m_className << "::EnablePenningTransfer:\n"
+              << "    Penning transfer probability for " << m_name
+              << " is not implemented.\n";
+    return false;
+  }
+  rP = std::max(rP, 0.);
+  return EnablePenningTransfer(rP, 0., gas);
+}
+
 bool MediumGas::EnablePenningTransfer(const double r,
                                       const double lambda) {
 
-  if (r < 0. || r > 1.) {
+  if (r < 0. ) {
     std::cerr << m_className << "::EnablePenningTransfer:\n"
-              << "    Transfer probability must be in the range [0, 1].\n";
+              << "    Transfer probability must be >= 0.\n";
     return false;
   }
 
@@ -2356,9 +2571,9 @@ bool MediumGas::EnablePenningTransfer(const double r,
 bool MediumGas::EnablePenningTransfer(const double r, const double lambda,
                                       std::string gasname) {
 
-  if (r < 0. || r > 1.) {
+  if (r < 0.) {
     std::cerr << m_className << "::EnablePenningTransfer:\n"
-              << "    Transfer probability must be in the range [0, 1].\n";
+              << "    Transfer probability must be >= 0.\n";
     return false;
   }
 
@@ -2406,11 +2621,8 @@ bool MediumGas::EnablePenningTransfer(const double r, const double lambda,
   unsigned int nLevelsFound = 0;
   for (auto& exc : m_excLevels) {
     if (exc.energy < minIonPot) continue;
-    // Try to extract the gas name from the label. 
-    // TODO: test if this works for all gases and excitation levels.
-    const auto pos = exc.label.find('-');
-    if (pos == std::string::npos) continue;
-    if (GetGasName(exc.label.substr(0, pos)) != gasname) continue;
+    // Skip excitation levels of other components in the mixture.
+    if (exc.label.find(gasname) != 0) continue;
     exc.prob = r;
     exc.rms = lambda;
     ++nLevelsFound; 
@@ -2418,7 +2630,7 @@ bool MediumGas::EnablePenningTransfer(const double r, const double lambda,
   if (nLevelsFound > 0) {
     std::cout << m_className << "::EnablePenningTransfer:\n"
               << "    Updated transfer probabilities for " << nLevelsFound 
-              << " excitation rates.\n";
+              << " " << gasname << " excitation rates.\n";
     AdjustTownsendCoefficient();
   } else {
     std::cerr << m_className << "::EnablePenningTransfer:\n    Warning: present"
@@ -2441,6 +2653,48 @@ void MediumGas::DisablePenningTransfer() {
     exc.prob = 0.; 
   }
   AdjustTownsendCoefficient();
+}
+
+void MediumGas::GetIonisationLevel(const size_t level, std::string& label, 
+                                   double& energy) const {
+  if (level >= m_ionLevels.size()) {
+    std::cerr << m_className << "::GetIonisationLevel: Index out of range.\n";
+    return;
+  }
+  label = m_ionLevels[level].label;
+  energy = m_ionLevels[level].energy;
+} 
+
+void MediumGas::GetExcitationLevel(const size_t level, std::string& label, 
+                                   double& energy) const { 
+  if (level >= m_excLevels.size()) {
+    std::cerr << m_className << "::GetExcitationLevel: Index out of range.\n";
+    return;
+  }
+  label = m_excLevels[level].label;
+  energy = m_excLevels[level].energy;
+}
+
+bool MediumGas::GetElectronIonisationRate(const size_t level, 
+                                          const size_t ie, const size_t ib,
+                                          const size_t ia, double& f) const {
+  if (level >= m_ionLevels.size()) {
+    std::cerr << m_className << "::GetElectronIonisationRate:\n"
+              << "    Level index out of range.\n";
+    return false;
+  }
+  return GetEntry(ie, ib, ia, "ElectronIonisationRate", m_ionRates[level], f);
+}
+
+bool MediumGas::GetElectronExcitationRate(const size_t level, 
+                                          const size_t ie, const size_t ib,
+                                          const size_t ia, double& f) const {
+  if (level >= m_excLevels.size()) {
+    std::cerr << m_className << "::GetElectronExcitationRate:\n"
+              << "    Level index out of range.\n";
+    return false;
+  }
+  return GetEntry(ie, ib, ia, "ElectronExcitationRate", m_excRates[level], f);
 }
 
 bool MediumGas::DisablePenningTransfer(std::string gasname) {
@@ -2549,173 +2803,296 @@ bool MediumGas::AdjustTownsendCoefficient() {
   return true;
 }
 
-bool MediumGas::GetGasInfo(const std::string& gasname, double& a,
-                           double& z) const {
+bool MediumGas::GetGasInfo(const std::string& gasname, double& a, double& z,
+                           double& w, double& f) {
+  // Unless indicated otherwise, the W values are taken from 
+  // ICRU report 31 (Table 5-IX), and the Fano factors are taken 
+  // from IAEA TECDOC 799.
+  // For gases for which no experimental data on the Fano factor 
+  // are available, the Fano factor is calculated using the 
+  // Krajcar-Bronic relation, F = 0.188 * W / I - 0.15 
   if (gasname == "CF4") {
     a = 12.0107 + 4 * 18.9984032;
     z = 6 + 4 * 9;
+    w = 34.3; // DOI: 10.1063/1.337792
+    f = 0.26; // Krajcar-Bronic relation
     return true;
   } else if (gasname == "Ar") {
     a = 39.948;
     z = 18;
+    w = 26.4;
+    f = 0.17;
   } else if (gasname == "He") {
     a = 4.002602;
     z = 2;
+    w = 41.3;
+    f = 0.17; 
   } else if (gasname == "He-3") {
     a = 3.01602931914;
     z = 2;
+    w = 41.3;
+    f = 0.17;
   } else if (gasname == "Ne") {
     a = 20.1797;
     z = 10;
+    w = 35.4;
+    f = 0.17;
   } else if (gasname == "Kr") {
     a = 37.798;
     z = 36;
+    w = 24.4;
+    f = 0.17;
   } else if (gasname == "Xe") {
     a = 131.293;
     z = 54;
+    w = 22.1;
+    f = 0.17;
   } else if (gasname == "CH4") {
     a = 12.0107 + 4 * 1.00794;
     z = 6 + 4;
+    w = 27.3;
+    f = 0.26;
   } else if (gasname == "C2H6") {
     a = 2 * 12.0107 + 6 * 1.00794;
     z = 2 * 6 + 6;
+    w = 25.0; 
+    f = 0.28; // DOI 10.1088/0022-3700/20/17/025
   } else if (gasname == "C3H8") {
     a = 3 * 12.0107 + 8 * 1.00794;
     z = 3 * 6 + 8;
+    w = 24.0;
+    f = 0.25;
   } else if (gasname == "iC4H10") {
     a = 4 * 12.0107 + 10 * 1.00794;
     z = 4 * 6 + 10;
+    w = 23.4;
+    f = 0.26; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "CO2") {
     a = 12.0107 + 2 * 15.9994;
     z = 6 + 2 * 8;
+    w = 33.0;
+    f = 0.32;
   } else if (gasname == "neoC5H12") {
     a = 5 * 12.0107 + 12 * 1.00794;
     z = 5 * 6 + 12;
+    w = 23.2;
+    f = 0.27; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "H2O") {
     a = 2 * 1.00794 + 15.9994;
     z = 2 + 8;
+    w = 29.6;
+    f = 0.25;
   } else if (gasname == "O2") {
     a = 2 * 15.9994;
     z = 2 * 8;
+    w = 30.8;
+    f = 0.37;
   } else if (gasname == "N2") {
     a = 2 * 14.0067;
     z = 2 * 7;
+    w = 34.8;
+    f = 0.28;
   } else if (gasname == "NO") {
     a = 14.0067 + 15.9994;
     z = 7 + 8;
+    w = 28.9; // ICRU 31, Table 5-V
+    f = 0.44; // Krajcar-Bronic relation
   } else if (gasname == "N2O") {
     a = 2 * 14.0067 + 15.9994;
     z = 2 * 7 + 8;
+    w = 32.6;
+    f = 0.33; // Krajcar-Bronic relation
   } else if (gasname == "C2H4") {
     a = 2 * 12.0107 + 4 * 1.00794;
     z = 2 * 6 + 4;
+    w = 25.8;
+    f = 0.31; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "C2H2") {
     a = 2 * 12.0107 + 2 * 1.00794;
     z = 2 * 6 + 2;
+    w = 25.8;
+    f = 0.27;
   } else if (gasname == "H2" || gasname == "paraH2") {
     a = 2 * 1.00794;
     z = 2;
+    w = 36.5;
+    f = 0.34;
   } else if (gasname == "D2" || gasname == "orthoD2") {
     a = 2 * 2.01410177785;
     z = 2;
+    w = 36.5;
+    f = 0.34;
   } else if (gasname == "CO") {
     a = 12.0107 + 15.9994;
     z = 6 + 8;
+    w = 34.5; // ICRU 31, Table 5-V
+    f = 0.31; // Krajcar-Bronic relation
   } else if (gasname == "Methylal") {
     a = 3 * 12.0107 + 8 * 1.00794 + 2 * 15.9994;
     z = 3 * 6 + 8 + 2 * 8;
+    w = 20.0; // rough estimate (twice the ionisation potential)
+    f = 0.23; // Krajcar-Bronic relation 
   } else if (gasname == "DME") {
     a = 4 * 12.0107 + 10 * 1.00794 + 2 * 15.9994;
     z = 4 * 6 + 10 + 2 * 8;
+    // DOI 10.1063/1.365787
+    w = 27.7;
+    f = 0.285;
   } else if (gasname == "Reid-Step" || gasname == "Maxwell-Model" ||
              gasname == "Reid-Ramp") {
     a = 1.;
     z = 1.;
+    w = 30.;
+    f = 0.2;
   } else if (gasname == "C2F6") {
     a = 2 * 12.0107 + 6 * 18.9984032;
     z = 2 * 6 + 6 * 9;
+    w = 34.5; // DOI: 10.1063/1.337792
+    f = 0.30; // Krajcar-Bronic relation
   } else if (gasname == "SF6") {
     a = 32.065 + 6 * 18.9984032;
     z = 16 + 6 * 9;
+    w = 35.8; // ICRU 31, Table 5-V
+    f = 0.28; // Krajcar-Bronic relation
   } else if (gasname == "NH3") {
     a = 14.0067 + 3 * 1.00794;
     z = 7 + 3;
+    w = 26.6;
+    f = 0.34; // Krajcar-Bronic relation
   } else if (gasname == "C3H6") {
     a = 3 * 12.0107 + 6 * 1.00794;
     z = 3 * 6 + 6;
+    w = 27.1; // ICRU 31, Table 5-V
+    f = 0.37; // Krajcar-Bronic relation
   } else if (gasname == "cC3H6") {
     a = 3 * 12.0107 + 6 * 1.00794;
     z = 3 * 6 + 6;
+    w = 25.9; // ICRU 31, Table 5-V
+    f = 0.34; // Krajcar-Bronic relation
   } else if (gasname == "CH3OH") {
     a = 12.0107 + 4 * 1.00794 + 15.9994;
     z = 6 + 4 + 8;
+    w = 24.7;
+    f = 0.37; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "C2H5OH") {
     a = 2 * 12.0107 + 6 * 1.00794 + 15.9994;
     z = 2 * 6 + 6 + 8;
+    w = 24.8;
+    f = 0.37; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "C3H7OH" || gasname == "nC3H7OH") {
     a = 3 * 12.0107 + 8 * 1.00794 + 15.9994;
     z = 3 * 6 + 8 * 8;
+    w = 21.;  // Magboltz
+    f = 0.37; // same value as for methanol and ethanol
   } else if (gasname == "Cs") {
     a = 132.9054519;
     z = 55;
+    w = 16.; // Dugan and Sovie (1964)
+    f = 0.6; // Krajcar-Bronic relation. Seems high.
   } else if (gasname == "F2") {
     a = 2 * 18.9984032;
     z = 2 * 9;
+    // Magboltz
+    w = 30.2;
+    f = 0.21;
   } else if (gasname == "CS2") {
     a = 12.0107 + 2 * 32.065;
     z = 6 + 2 * 16;
+    w = 26.0; // Myers
+    f = 0.34; // Krajcar-Bronic relation
   } else if (gasname == "COS") {
     a = 12.0107 + 15.9994 + 32.065;
     z = 6 + 8 + 16;
+    // Magboltz
+    w = 23.7;
+    f = 0.25;
   } else if (gasname == "CD4") {
     a = 12.0107 + 4 * 2.01410177785;
     z = 6 + 4;
+    w = 27.3;
+    f = 0.26;
   } else if (gasname == "BF3") {
     a = 10.811 + 3 * 18.9984032;
     z = 5 + 3 * 9;
+    w = 35.7; // ICRU 31, Table 5-V
+    f = 0.28; // Krajcar-Bronic relation
   } else if (gasname == "C2H2F4") {
     a = 2 * 12.0107 + 2 * 1.00794 + 4 * 18.9984032;
     z = 2 * 6 + 2 + 4 * 9;
+    // Magboltz
+    w = 30.7;
+    f = 0.25;
   } else if (gasname == "CHF3") {
     a = 12.0107 + 1.00794 + 3 * 18.9984032;
     z = 6 + 1 + 3 * 9;
+    // Magboltz
+    w = 26.6;
+    f = 0.21;
   } else if (gasname == "CF3Br") {
     a = 12.0107 + 3 * 18.9984032 + 79.904;
     z = 6 + 3 * 9 + 35;
+    // Magboltz
+    w = 22.4;
+    f = 0.22;
   } else if (gasname == "C3F8") {
     a = 3 * 12.0107 + 8 * 18.9984032;
     z = 3 * 6 + 8 * 9;
+    w = 34.4; // DOI: 10.1063/1.337792
+    f = 0.33; // Krajcar-Bronic relation
   } else if (gasname == "O3") {
     a = 3 * 15.9994;
     z = 3 * 8;
+    // Magboltz
+    w = 30.7;
+    f = 0.3;
   } else if (gasname == "Hg") {
     a = 2 * 200.59;
     z = 80;
+    w = 23.6;
+    f = 0.28; // Krajcar-Bronic relation
   } else if (gasname == "H2S") {
     a = 2 * 1.00794 + 32.065;
     z = 2 + 16;
+    w = 23.3; // ICRU 31, Table 5-V
+    f = 0.27; // Krajcar-Bronic relation
   } else if (gasname == "nC4H10") {
     a = 4 * 12.0107 + 10 * 1.00794;
     z = 4 * 6 + 10;
+    w = 23.4;
+    f = 0.26; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "nC5H12") {
     a = 5 * 12.0107 + 12 * 1.00794;
     z = 5 * 6 + 12;
+    w = 23.2;
+    f = 0.27; // DOI 10.1088/0022-3700/20/17/025 
   } else if (gasname == "GeH4") {
     a = 72.64 + 4 * 1.00794;
     z = 32 + 4;
+    // Magboltz
+    w = 25.9;
+    f = 0.28;
   } else if (gasname == "SiH4") {
     a = 28.0855 + 4 * 1.00794;
     z = 14 + 4;
+    // Magboltz
+    w = 27.5;
+    f = 0.30;
+  } else if (gasname == "CCl4") {
+    a = 12.0107 + 4 * 35.45;
+    z = 6 + 4 * 17;
+    w = 25.8; // ICRU 31, Table 5-V
+    f = 0.21; // Krajcar-Bronic relation 
   } else {
     a = 0.;
     z = 0.;
+    w = 0.;
+    f = 0.;
     return false;
   }
-
   return true;
 }
 
-std::string MediumGas::GetGasName(const int gasnumber, const int version) const {
+std::string MediumGas::GetGasName(const int gasnumber, const int version) {
 
   switch (gasnumber) {
     case 1:
@@ -2838,221 +3215,229 @@ std::string MediumGas::GetGasName(const int gasnumber, const int version) const 
       return "GeH4";
     case 60:
       return "SiH4";
+    case 61:
+      return "CCl4";
     default:
       break;
   }
   return "";
 }
 
-std::string MediumGas::GetGasName(std::string input) const {
+const std::vector<std::string> MediumGas::GetAliases(const std::string& gas) {
+
+  if (gas == "CF4") {
+    return {"tetrafluoromethane", "Freon", "Freon-14"};
+  } else if (gas == "Ar") {
+    return {"argon"};
+  } else if (gas == "He") {
+    return {"helium", "He-4", "He 4", "He4", "4-He", "4 He", "4He", 
+            "helium-4", "helium 4", "helium4"};
+  } else if (gas == "He-3") {
+    return {"He3", "He 3", "3-He", "3 He", "3He",
+            "helium-3", "helium 3", "helium3"};
+  } else if (gas == "Ne") {
+    return {"neon"};
+  } else if (gas == "Kr") {
+    return {"krypton"};
+  } else if (gas == "Xe") {
+    return {"xenon"};
+  } else if (gas == "CH4") {
+    return {"methane"};
+  } else if (gas == "C2H6") {
+    return {"ethane"};
+  } else if (gas == "C3H8") {
+    return {"propane"};
+  } else  if (gas == "iC4H10") {
+    return {"isobutane", "iso-C4H10", "isoC4H10", "C4H10"};
+  } else if (gas == "CO2") {
+    return {"carbon-dioxide", "carbon dioxide", "carbondioxide"};
+  } else if (gas == "neoC5H12") {
+    return {"neopentane", "neo-pentane", "neo-C5H12", "C5H12", 
+            "dimethylpropane", "tetramethylmethane"};
+  } else if (gas == "H2O") {
+    return {"water", "water-vapour", "water vapour"};
+  } else if (gas == "O2") {
+    return {"oxygen"};
+  } else if (gas == "N2") {
+    return {"nitrogen"};
+  } else if (gas == "NO") {
+    return {"nitric-oxide", "nitric oxide",
+            "nitrogen-monoxide", "nitrogen monoxide"};
+  } else if (gas == "N2O") {
+    return {"nitrous-oxide", "nitrous oxide", "laughing-gas", "laughing gas",
+            "dinitrogen-monoxide", "dinitrogen monoxide",
+            "dinitrogen-oxide", "dinitrogen oxide"};
+  } else if (gas == "C2H4") {
+    return {"ethene", "ethylene"};
+  } else if (gas == "C2H2") {
+    return {"acetyl", "acetylene", "ethyne"};
+  } else if (gas == "H2") {
+    return {"hydrogen"};
+  } else if (gas == "paraH2") {
+    return {"para H2", "para-H2", "para hydrogen",
+            "para-hydrogen", "parahydrogen"};
+  } else if (gas == "D2") {
+    return {"deuterium"};
+  } else if (gas == "orthoD2") {
+    return {"ortho D2", "ortho-D2", "ortho deuterium",
+            "ortho-deuterium", "orthodeuterium"};
+  } else if (gas == "CO") {
+    return {"carbon-monoxide", "carbon monoxide"};
+  } else if (gas == "Methylal") {
+    return {"methylal-hot", "DMM", "dimethoxymethane", "Formal", "C3H8O2"};
+  } else if (gas == "DME") {
+    return {"dimethyl-ether", "dimethylether", "dimethyl ether", 
+            "methyl-ether", "methylether", "methyl ether", 
+            "wood-ether", "woodether", "wood ether",
+            "dimethyl oxide", "dimethyl-oxide", "Demeon",
+            "methoxymethane", "C4H10O2"};
+  } else if (gas == "Reid-Step") {
+    return {};
+  } else if (gas == "Maxwell-Model") {
+    return {};
+  } else if (gas == "Reid-Ramp") {
+    return {};
+  } else if (gas == "C2F6") {
+    return {"Freon-116", "Zyron-116", "Zyron-116-N5", "hexafluoroethane"};
+  } else if (gas == "SF6") {
+    return {"sulphur-hexafluoride", "sulfur-hexafluoride",
+            "sulphur hexafluoride", "sulfur hexafluoride"};
+  } else if (gas == "NH3") {
+    return {"ammonia", "azane", "R-717", "R717"};
+  } else if (gas == "C3H6") {
+    return {"propene", "propylene"};
+  } else if (gas == "cC3H6") {
+    return {"c-propane", "cyclo-propane", "cyclo propane", "cyclopropane",
+            "c-C3H6", "cyclo-C3H6"};
+  } else if (gas == "CH3OH") {
+    return {"methanol", "methyl-alcohol", "methyl alcohol", "wood alcohol",
+            "wood-alcohol"};
+  } else if (gas == "C2H5OH") {
+    return {"ethanol", "ethyl-alcohol", "ethyl alcohol", "grain alcohol",
+            "grain-alcohol"};
+  } else if (gas == "C3H7OH") {
+    return {"propanol", "2-propanol", "isopropyl", "iso-propanol",
+            "isopropanol", "isopropyl alcohol", "isopropyl-alcohol"};
+  } else if (gas == "nC3H7OH") {
+    return {"npropanol", "n-propanol", "1-propanol", "propyl alcohol",
+            "propyl-alcohol", "n-propyl alcohol", "nC3H7OH", "n-C3H7OH"};
+  } else if (gas == "Cs") {
+    return {"cesium", "caesium"};
+  } else if (gas == "F2") {
+    return {"fluor", "fluorine"};
+  } else if (gas == "CS2") {
+    return {"carbon-disulphide", "carbon-disulfide", 
+            "carbon disulphide", "carbon disulfide"};
+  } else if (gas == "COS") {
+    return {"carbonyl-sulphide", "carbonyl-sulfide", "carbonyl sulfide"};
+  } else if (gas == "CD4") {
+    return {"deut-methane", "deuterium-methane", "deuterated-methane",
+            "deuterated methane", "deuterium methane"};
+  } else if (gas == "BF3") {
+    return {"boron-trifluoride", "boron trifluoride"};
+  } else if (gas == "C2H2F4") {
+    return {"C2HF5", "C2F5H", "C2F4H2", "Freon 134", "Freon 134A",
+            "Freon-134", "Freon-134-A", "R-134a", "R134a", 
+            "Freon 125", "Freon-125", "Zyron 125", "Zyron-125", 
+            "tetrafluoroethane", "pentafluoroethane", "norflurane"};
+  } else if (gas == "TMA") {
+    return {"trimethylamine", "N(CH3)3", "N-(CH3)3"};
+  } else if (gas == "CHF3") {
+    return {"Freon-23", "trifluoromethane", "Fluoroform"};
+  } else if (gas == "CF3Br") {
+    return {"CBrF3", "trifluorobromomethane", "bromotrifluoromethane",
+            "Halon-1301", "Halon 1301", "Freon-13B1", "Freon 13BI"};
+  } else if (gas == "C3F8") {
+    return {"octafluoropropane", "R218", "R-218", "Freon 218", "Freon-218",
+            "perfluoropropane", "RC 218", "PFC 218",
+            "RC-218", "PFC-218", "Flutec PP30", "Genetron 218"};
+  } else if (gas == "O3") {
+    return {"ozone"};
+  } else if (gas == "Hg") {
+    return {"mercury", "Hg2"};
+  } else if (gas == "H2S") {
+    return {"hydrogen sulphide", "hydrogen-sulphide", 
+            "hydrogen sulfide", "hydrogen-sulfide", 
+            "sewer gas", "sewer-gas", "hepatic acid", "hepatic-acid",
+            "sulfur hydride", "sulfur-hydride",
+            "dihydrogen monosulfide", "dihydrogen-monosulfide", 
+            "dihydrogen monosulphide", "dihydrogen-monosulphide",
+            "sulphur hydride", "sulphur-hydride", "stink damp", "stink-damp", 
+            "sulfurated hydrogen", "sulfurated-hydrogen"};
+  } else if (gas == "nC4H10") {
+    return {"n-butane", "n-C4H10", "nbutane"};
+  } else if (gas == "nC5H12") {
+    return {"n-pentane", "n-C5H12", "npentane"};
+  } else if (gas == "N2 (Phelps)") {
+    return {"nitrogen-Phelps", "nitrogen Phelps", "N2-Phelps", "N2 Phelps"};
+  } else if (gas == "GeH4") {
+    return {"germane", "germanium-hydride", "germanium hydride",
+            "germanium tetrahydride", "germanium-tetrahydride",
+            "germanomethane", "monogermane"};
+  } else if (gas == "SiH4") {
+    return {"silane", "silicon-hydride", "silicon hydride",
+            "silicon-tetrahydride", "silicane", "monosilane"};
+  } else if (gas == "CCl4") {
+    return {"carbon tetrachloride", "carbon-tetrachloride",
+            "Benziform", "tetrachloromethane", "carbon tet",
+            "Halon 104", "Halon-104", "Freon 10", "Freon-10"};
+  }
+  return {};
+}
+
+void MediumGas::PrintGases() {
+
+  constexpr int version = 12;
+  std::cout << "MediumGas::PrintGases:\n"
+            << "Gas            Aliases\n" << std::string(80, '-') << "\n";
+  for (int i = 1; i <= 61; ++i) {
+    if (i == 47) continue;
+    const std::string gas = i == 58 ? "N2 (Phelps)" : GetGasName(i, version);
+    if (gas.empty()) continue;
+    std::cout << std::setw(15) << std::left << gas;
+    const auto aliases = GetAliases(gas);
+    size_t count = 0;
+    for (auto it = aliases.cbegin(); it != aliases.cend(); ++it) {
+      const auto alias = (*it);
+      if (count + alias.size() > 63) {
+        std::cout << "\n" << std::string(15, ' ');
+        count = 0;
+      }
+      std::cout << alias;
+      count += alias.size();
+      if (std::next(it) != aliases.cend()) {
+        std::cout << ", ";
+        count += 2;
+      }
+    }
+    std::cout << "\n";
+  }
+}
+ 
+std::string MediumGas::GetGasName(std::string input) {
   // Convert to upper-case.
   std::transform(input.begin(), input.end(), input.begin(), toupper);
-
   if (input.empty()) return "";
 
-  if (input == "CF4" || input == "FREON" || input == "FREON-14" ||
-      input == "TETRAFLUOROMETHANE") {
-    return "CF4";
-  } else if (input == "AR" || input == "ARGON") {
-    return "Ar";
-  } else if (input == "HE" || input == "HELIUM" || input == "HE-4" ||
-             input == "HE 4" || input == "HE4" || input == "4-HE" || 
-             input == "4 HE" || input == "4HE" || input == "HELIUM-4" || 
-             input == "HELIUM 4" || input == "HELIUM4") {
-    return "He";
-  } else if (input == "HE-3" || input == "HE3" || input == "HELIUM-3" ||
-      input == "HELIUM 3" || input == "HELIUM3") {
-    return "He-3";
-  } else if (input == "NE" || input == "NEON") {
-    return "Ne";
-  } else if (input == "KR" || input == "KRYPTON") {
-    return "Kr";
-  } else if (input == "XE" || input == "XENON") {
-    return "Xe";
-  } else if (input == "CH4" || input == "METHANE") {
-    return "CH4";
-  } else if (input == "C2H6" || input == "ETHANE") {
-    return "C2H6";
-  } else if (input == "C3H8" || input == "PROPANE") {
-    return "C3H8";
-  } else  if (input == "C4H10" || input == "ISOBUTANE" || input == "ISO" ||
-              input == "IC4H10" || input == "ISO-C4H10" || input == "ISOC4H10") {
-    return "iC4H10";
-  } else if (input == "CO2" || input == "CARBON-DIOXIDE" ||
-      input == "CARBON DIOXIDE" || input == "CARBONDIOXIDE") {
-    return "CO2";
-  } else if (input == "NEOPENTANE" || input == "NEO-PENTANE" || 
-             input == "NEO-C5H12" || input == "NEOC5H12" || 
-             input == "DIMETHYLPROPANE" || input == "C5H12") {
-    return "neoC5H12";
-  } else if (input == "H2O" || input == "WATER" || input == "WATER-VAPOUR" ||
-      input == "WATER VAPOUR") {
-    return "H2O";
-  } else if (input == "O2" || input == "OXYGEN") {
-    return "O2";
-  } else if (input == "NI" || input == "NITRO" || input == "N2" ||
-      input == "NITROGEN") {
-    return "N2";
-  } else if (input == "NO" || input == "NITRIC-OXIDE" || input == "NITRIC OXIDE" ||
-      input == "NITROGEN-MONOXIDE" || input == "NITROGEN MONOXIDE") {
-    return "NO";
-  } else if (input == "N2O" || input == "NITROUS-OXIDE" || input == "NITROUS OXIDE" ||
-      input == "DINITROGEN-MONOXIDE" || input == "LAUGHING-GAS") {
-    return "N2O";
-  } else if (input == "C2H4" || input == "ETHENE" || input == "ETHYLENE") {
-    return "C2H4";
-  } else if (input == "C2H2" || input == "ACETYL" || input == "ACETYLENE" ||
-      input == "ETHYNE") {
-    return "C2H2";
-  } else if (input == "H2" || input == "HYDROGEN") {
-    return "H2";
-  } else if (input == "PARA H2" || input == "PARA-H2" ||
-             input == "PARAH2" || input == "PARA HYDROGEN" ||
-             input == "PARA-HYDROGEN" || input == "PARAHYDROGEN") {
-    return "paraH2";
-  } else if (input == "D2" || input == "DEUTERIUM") {
-    return "D2";
-  } else if (input == "ORTHO D2" || input == "ORTHO-D2" ||
-             input == "ORTHOD2" || input == "ORTHO DEUTERIUM" ||
-             input == "ORTHO-DEUTERIUM" || input == "ORTHODEUTERIUM") {
-    return "orthoD2";
-  } else if (input == "CO" || input == "CARBON-MONOXIDE" ||
-      input == "CARBON MONOXIDE") {
-    return "CO";
-  } else if (input == "METHYLAL" || input == "METHYLAL-HOT" || input == "DMM" ||
-      input == "DIMETHOXYMETHANE" || input == "FORMAL" || input == "C3H8O2") {
-    // Methylal (dimethoxymethane, CH3-O-CH2-O-CH3, "hot" version)
-    return "Methylal";
-  } else if (input == "DME" || input == "DIMETHYL-ETHER" || input == "DIMETHYLETHER" ||
-      input == "DIMETHYL ETHER" || input == "METHYL ETHER" ||
-      input == "METHYL-ETHER" || input == "METHYLETHER" ||
-      input == "WOOD-ETHER" || input == "WOODETHER" || input == "WOOD ETHER" ||
-      input == "DIMETHYL OXIDE" || input == "DIMETHYL-OXIDE" ||
-      input == "DEMEON" || input == "METHOXYMETHANE" || input == "C4H10O2") {
-    return "DME";
-  } else if (input == "REID-STEP") {
-    return "Reid-Step";
-  } else if (input == "MAXWELL-MODEL") {
-    return "Maxwell-Model";
-  } else if (input == "REID-RAMP") {
-    return "Reid-Ramp";
-  } else if (input == "C2F6" || input == "FREON-116" || input == "ZYRON-116" ||
-      input == "ZYRON-116-N5" || input == "HEXAFLUOROETHANE") {
-    return "C2F6";
-  } else if (input == "SF6" || input == "SULPHUR-HEXAFLUORIDE" ||
-      input == "SULFUR-HEXAFLUORIDE" || input == "SULPHUR HEXAFLUORIDE" ||
-      input == "SULFUR HEXAFLUORIDE") {
-    return "SF6";
-  } else if (input == "NH3" || input == "AMMONIA") {
-    return "NH3";
-  } else if (input == "C3H6" || input == "PROPENE" || input == "PROPYLENE") {
-    return "C3H6";
-  } else if (input == "C-PROPANE" || input == "CYCLO-PROPANE" ||
-      input == "CYCLO PROPANE" || input == "CYCLOPROPANE" ||
-      input == "C-C3H6" || input == "CC3H6" || input == "CYCLO-C3H6") {
-    return "cC3H6";
-  } else if (input == "METHANOL" || input == "METHYL-ALCOHOL" ||
-      input == "METHYL ALCOHOL" || input == "WOOD ALCOHOL" ||
-      input == "WOOD-ALCOHOL" || input == "CH3OH") {
-    return "CH3OH";
-  } else if (input == "ETHANOL" || input == "ETHYL-ALCOHOL" ||
-      input == "ETHYL ALCOHOL" || input == "GRAIN ALCOHOL" ||
-      input == "GRAIN-ALCOHOL" || input == "C2H5OH") {
-    return "C2H5OH";
-  } else if (input == "PROPANOL" || input == "2-PROPANOL" || input == "ISOPROPYL" ||
-      input == "ISO-PROPANOL" || input == "ISOPROPANOL" ||
-      input == "ISOPROPYL ALCOHOL" || input == "ISOPROPYL-ALCOHOL" ||
-      input == "C3H7OH") {
-    return "C3H7OH";
-  } else if (input == "NPROPANOL" || input == "N-PROPANOL" || 
-             input == "1-PROPANOL" || input == "PROPYL ALCOHOL" ||
-             input == "PROPYL-ALCOHOL" || input == "N-PROPYL ALCOHOL" ||
-             input == "NC3H7OH" || input == "N-C3H7OH") {
-    return "nC3H7OH"; 
-  } else if (input == "CS" || input == "CESIUM" || input == "CAESIUM") {
-    return "Cs";
-  } else if (input == "F2" || input == "FLUOR" || input == "FLUORINE") {
-    return "F2";
-  } else if (input == "CS2" || input == "CARBON-DISULPHIDE" ||
-      input == "CARBON-DISULFIDE" || input == "CARBON DISULPHIDE" ||
-      input == "CARBON DISULFIDE") {
-    return "CS2";
-  } else if (input == "COS" || input == "CARBONYL-SULPHIDE" ||
-      input == "CARBONYL-SULFIDE" || input == "CARBONYL SULFIDE") {
-    return "COS";
-  } else if (input == "DEUT-METHANE" || input == "DEUTERIUM-METHANE" ||
-      input == "DEUTERATED-METHANE" || input == "DEUTERATED METHANE" ||
-      input == "DEUTERIUM METHANE" || input == "CD4") {
-    return "CD4";
-  } else if (input == "BF3" || input == "BORON-TRIFLUORIDE" ||
-      input == "BORON TRIFLUORIDE") {
-    return "BF3";
-  } else if (input == "C2HF5" || input == "C2H2F4" || input == "C2F5H" ||
-      input == "C2F4H2" || input == "FREON 134" || input == "FREON 134A" ||
-      input == "FREON-134" || input == "FREON-134-A" || input == "FREON 125" ||
-      input == "ZYRON 125" || input == "FREON-125" || input == "ZYRON-125" ||
-      input == "TETRAFLUOROETHANE" || input == "PENTAFLUOROETHANE") {
-    // C2H2F4 (and C2HF5).
-    return "C2H2F4";
-  } else if (input == "TMA" || input == "TRIMETHYLAMINE" || input == "N(CH3)3" ||
-      input == "N-(CH3)3") {
-    return "TMA";
-  } else if (input == "CHF3" || input == "FREON-23" || input == "TRIFLUOROMETHANE" ||
-      input == "FLUOROFORM") {
-    return "CHF3";
-  } else if (input == "CF3BR" || input == "TRIFLUOROBROMOMETHANE" ||
-      input == "BROMOTRIFLUOROMETHANE" || input == "HALON-1301" ||
-      input == "HALON 1301" || input == "FREON-13B1" || input == "FREON 13BI") {
-    return "CF3Br";
-  } else if (input == "C3F8" || input == "OCTAFLUOROPROPANE" || input == "R218" ||
-      input == "R-218" || input == "FREON 218" || input == "FREON-218" ||
-      input == "PERFLUOROPROPANE" || input == "RC 218" || input == "PFC 218" ||
-      input == "RC-218" || input == "PFC-218" || input == "FLUTEC PP30" ||
-      input == "GENETRON 218") {
-    return "C3F8";
-  } else if (input == "OZONE" || input == "O3") {
-    return "O3";
-  } else if (input == "MERCURY" || input == "HG" || input == "HG2") {
-    return "Hg";
-  } else if (input == "H2S" || input == "HYDROGEN SULPHIDE" || input == "SEWER GAS" ||
-      input == "HYDROGEN-SULPHIDE" || input == "SEWER-GAS" ||
-      input == "HYDROGEN SULFIDE" || input == "HEPATIC ACID" ||
-      input == "HYDROGEN-SULFIDE" || input == "HEPATIC-ACID" ||
-      input == "SULFUR HYDRIDE" || input == "DIHYDROGEN MONOSULFIDE" ||
-      input == "SULFUR-HYDRIDE" || input == "DIHYDROGEN-MONOSULFIDE" ||
-      input == "DIHYDROGEN MONOSULPHIDE" || input == "SULPHUR HYDRIDE" ||
-      input == "DIHYDROGEN-MONOSULPHIDE" || input == "SULPHUR-HYDRIDE" ||
-      input == "STINK DAMP" || input == "SULFURATED HYDROGEN" ||
-      input == "STINK-DAMP" || input == "SULFURATED-HYDROGEN") {
-    return "H2S";
-  } else if (input == "N-BUTANE" || input == "N-C4H10" || input == "NBUTANE" ||
-      input == "NC4H10") {
-    return "nC4H10";
-  } else if (input == "N-PENTANE" || input == "N-C5H12" || input == "NPENTANE" ||
-      input == "NC5H12") {
-    return "nC5H12";
-  } else if (input == "NI-PHELPS" || input == "NI PHELPS" ||
-      input == "NITROGEN-PHELPS" || input == "NITROGEN PHELPHS" ||
-      input == "N2-PHELPS" || input == "N2 PHELPS" || input == "N2 (PHELPS)") {
-    // Nitrogen
-    return "N2 (Phelps)";
-  } else if (input == "GERMANE" || input == "GERM" || input == "GERMANIUM-HYDRIDE" ||
-      input == "GERMANIUM HYDRIDE" || input == "GERMANIUM TETRAHYDRIDE" ||
-      input == "GERMANIUM-TETRAHYDRIDE" || input == "GERMANOMETHANE" ||
-      input == "MONOGERMANE" || input == "GEH4") {
-    return "GeH4";
-  } else if (input == "SILANE" || input == "SIL" || input == "SILICON-HYDRIDE" ||
-             input == "SILICON HYDRIDE" || input == "SILICON-TETRAHYDRIDE" ||
-             input == "SILICANE" || input == "MONOSILANE" || input == "SIH4") {
-    return "SiH4";
-  }
+  // Loop over the available gases.
+  for (int i = 1; i <= 61; ++i) {
+    const std::string gas = i == 58 ? "N2 (Phelps)" : GetGasName(i, 12);
+    if (gas.empty()) continue;
 
-  std::cerr << m_className << "::GetGasName:\n"
-            << "    Gas " << input << " is not recognized.\n";
+    std::string tmp = gas;
+    std::transform(tmp.begin(), tmp.end(), tmp.begin(), toupper);
+    if (tmp == input) return gas;
+    const auto aliases = GetAliases(gas);
+    for (const auto& alias : aliases) {
+      tmp = alias;
+      std::transform(tmp.begin(), tmp.end(), tmp.begin(), toupper);
+      if (tmp == input) return gas;
+    }
+  }
   return "";
 }
 
-int MediumGas::GetGasNumberGasFile(const std::string& input) const {
+int MediumGas::GetGasNumberGasFile(const std::string& input) {
 
   if (input.empty()) return 0;
 
@@ -3195,10 +3580,9 @@ int MediumGas::GetGasNumberGasFile(const std::string& input) const {
   } else if (input == "SiH4") {
     // Silane
     return 60;
+  } else if (input == "CCl4") {
+    return 61;
   }
-
-  std::cerr << m_className << "::GetGasNumberGasFile:\n"
-            << "    Gas " << input << " not found.\n";
   return 0;
 }
 
@@ -3210,9 +3594,8 @@ bool MediumGas::GetPhotoAbsorptionCrossSection(const double e, double& sigma,
     return false;
   }
 
-  OpticalData optData;
-  if (!optData.IsAvailable(m_gas[i])) return false;
+  if (!OpticalData::IsAvailable(m_gas[i])) return false;
   double eta = 0.;
-  return optData.GetPhotoabsorptionCrossSection(m_gas[i], e, sigma, eta);
+  return OpticalData::PhotoabsorptionCrossSection(m_gas[i], e, sigma, eta);
 }
 }

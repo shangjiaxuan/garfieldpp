@@ -119,7 +119,7 @@ class ComponentCST : public ComponentFieldMap {
                          bool isBinary = true);
 
   // Range
-  void SetRange() override;
+
   void SetRangeZ(const double zmin, const double zmax);
   /**
    * Use these functions to disable a certain field component.
@@ -197,11 +197,11 @@ class ComponentCST : public ComponentFieldMap {
                         unsigned int& i, unsigned int& j, unsigned int& k) const;
 
  protected:
-  // Verify periodicities
-  void UpdatePeriodicity() override;
-  double GetElementVolume(const unsigned int i) override;
-  void GetAspectRatio(const unsigned int i, double& dmin,
-                      double& dmax) override;
+  void SetRange() override;
+
+  double GetElementVolume(const size_t i) const override;
+  void GetAspectRatio(const size_t i, 
+                      double& dmin, double& dmax) const override;
 
   /**
    * Calculate the index in the vectors m_xlines, m_ylines, m_zlines, which is

@@ -7,7 +7,6 @@
 namespace Heed {
 
 class PairProd;
-extern long last_particle_number;
 
 /// Definition of delta-electron which can be traced through the geometry.
 /// 2003, I. Smirnov
@@ -72,6 +71,7 @@ class HeedDeltaElectron : public eparticle {
 
   static bool s_low_mult_scattering;
   static bool s_high_mult_scattering;
+  static bool s_direct_low_if_little;
 
   void ionisation(const double eloss, const double dedx, PairProd* pairprod);
 };

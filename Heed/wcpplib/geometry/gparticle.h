@@ -1,5 +1,6 @@
 #ifndef GPARTICLE_H
 #define GPARTICLE_H
+#include <atomic>
 #include "wcpplib/geometry/volume.h"
 
 /*
@@ -132,7 +133,9 @@ class stvpoint {
     tid.down_absref(&dir);
   }
   /// Copy constructor.
-  stvpoint(const stvpoint& fp) = default;
+  stvpoint(const stvpoint&) = default;
+  /// Copy assignment operator
+  stvpoint& operator=(const stvpoint&) = default;
   void print(std::ostream& file, int l) const;
   absvol* volume() { return tid.G_lavol(); }
 };
@@ -188,8 +191,11 @@ class gparticle {
   vfloat time() const { return m_currpos.time; }
   /// Get the current direction of the particle.
   const vec& direction() const { return m_currpos.dir; }
-  // Alive?
+  /// Alive?
   bool alive() const { return m_alive; }
+
+  /// Reset the counter.
+  static void reset_counter() { s_counter = 0L; }
 
   /// Print-out.
   virtual void print(std::ostream& file, int l) const;
@@ -240,8 +246,14 @@ class gparticle {
   /// Determine next position.
   virtual stvpoint calc_step_to_bord();
 
+  /// Change the direction of the particle.
+  void turn(const double ctheta, const double stheta);
+
   /// Generate next position in new volume.
   stvpoint switch_new_vol();
+
+  /// Instance counter.
+  static std::atomic<long> s_counter;
 
   /// Status flag whether the particle is active.
   bool m_alive = false;

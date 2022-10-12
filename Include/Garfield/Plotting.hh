@@ -12,6 +12,14 @@ inline void SetDefaultStyle() {
   plottingEngine.SetDefaultStyle();
 }
 
+inline void SetSerif() {
+  plottingEngine.SetSerif();
+}
+
+inline void SetSansSerif() {
+  plottingEngine.SetSansSerif();
+}
+
 }
 
 #endif

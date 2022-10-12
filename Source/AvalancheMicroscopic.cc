@@ -54,6 +54,10 @@ void RotationMatrix(double bx, double by, double bz, const double bmag,
       rB[1][1] = (bx * by * by + bz * bz) * btInv;
       rB[2][2] = (bx * bz * bz + by * by) * btInv;
       rB[1][2] = rB[2][1] = (bx - 1.) * by * bz * btInv;
+    } else if (bx < 0.) {
+      // B field is anti-parallel to x.
+      rB[0][0] = -1.;
+      rB[1][1] = -1.;
     }
   }
   // Calculate the second rotation matrix (rotation around x axis).
@@ -223,12 +227,10 @@ void AvalancheMicroscopic::SetTimeWindow(const double t0, const double t1) {
   m_hasTimeWindow = true;
 }
 
-void AvalancheMicroscopic::GetElectronEndpoint(const unsigned int i, double& x0,
-                                               double& y0, double& z0,
-                                               double& t0, double& e0,
-                                               double& x1, double& y1,
-                                               double& z1, double& t1,
-                                               double& e1, int& status) const {
+void AvalancheMicroscopic::GetElectronEndpoint(const size_t i, 
+    double& x0, double& y0, double& z0, double& t0, double& e0,
+    double& x1, double& y1, double& z1, double& t1, double& e1, 
+    int& status) const {
   if (i >= m_endpointsElectrons.size()) {
     std::cerr << m_className << "::GetElectronEndpoint: Index out of range.\n";
     x0 = y0 = z0 = t0 = e0 = 0.;
@@ -250,9 +252,9 @@ void AvalancheMicroscopic::GetElectronEndpoint(const unsigned int i, double& x0,
   status = m_endpointsElectrons[i].status;
 }
 
-void AvalancheMicroscopic::GetElectronEndpoint(
-    const unsigned int i, double& x0, double& y0, double& z0, double& t0,
-    double& e0, double& x1, double& y1, double& z1, double& t1, double& e1,
+void AvalancheMicroscopic::GetElectronEndpoint(const size_t i, 
+    double& x0, double& y0, double& z0, double& t0, double& e0, 
+    double& x1, double& y1, double& z1, double& t1, double& e1,
     double& dx1, double& dy1, double& dz1, int& status) const {
   if (i >= m_endpointsElectrons.size()) {
     std::cerr << m_className << "::GetElectronEndpoint: Index out of range.\n";
@@ -279,11 +281,10 @@ void AvalancheMicroscopic::GetElectronEndpoint(
   status = m_endpointsElectrons[i].status;
 }
 
-void AvalancheMicroscopic::GetHoleEndpoint(const unsigned int i, double& x0,
-                                           double& y0, double& z0, double& t0,
-                                           double& e0, double& x1, double& y1,
-                                           double& z1, double& t1, double& e1,
-                                           int& status) const {
+void AvalancheMicroscopic::GetHoleEndpoint(const size_t i, 
+    double& x0, double& y0, double& z0, double& t0, double& e0, 
+    double& x1, double& y1, double& z1, double& t1, double& e1,
+    int& status) const {
   if (i >= m_endpointsHoles.size()) {
     std::cerr << m_className << "::GetHoleEndpoint: Index out of range.\n";
     x0 = y0 = z0 = t0 = e0 = 0.;
@@ -305,11 +306,11 @@ void AvalancheMicroscopic::GetHoleEndpoint(const unsigned int i, double& x0,
   status = m_endpointsHoles[i].status;
 }
 
-unsigned int AvalancheMicroscopic::GetNumberOfElectronDriftLinePoints(
-    const unsigned int i) const {
+size_t AvalancheMicroscopic::GetNumberOfElectronDriftLinePoints(
+    const size_t i) const {
   if (i >= m_endpointsElectrons.size()) {
-    std::cerr << m_className << "::GetNumberOfElectronDriftLinePoints:\n";
-    std::cerr << "    Endpoint index (" << i << ") out of range.\n";
+    std::cerr << m_className << "::GetNumberOfElectronDriftLinePoints: "
+              << "Index out of range.\n";
     return 0;
   }
 
@@ -318,11 +319,11 @@ unsigned int AvalancheMicroscopic::GetNumberOfElectronDriftLinePoints(
   return m_endpointsElectrons[i].driftLine.size() + 2;
 }
 
-unsigned int AvalancheMicroscopic::GetNumberOfHoleDriftLinePoints(
-    const unsigned int i) const {
+size_t AvalancheMicroscopic::GetNumberOfHoleDriftLinePoints(
+    const size_t i) const {
   if (i >= m_endpointsHoles.size()) {
-    std::cerr << m_className << "::GetNumberOfHoleDriftLinePoints:\n";
-    std::cerr << "    Endpoint index (" << i << ") out of range.\n";
+    std::cerr << m_className << "::GetNumberOfHoleDriftLinePoints: "
+              << "Index out of range.\n";
     return 0;
   }
 
@@ -357,10 +358,10 @@ void AvalancheMicroscopic::GetElectronDriftLinePoint(
     return;
   }
 
-  x = m_endpointsElectrons[iel].driftLine[ip - 1].x;
-  y = m_endpointsElectrons[iel].driftLine[ip - 1].y;
-  z = m_endpointsElectrons[iel].driftLine[ip - 1].z;
-  t = m_endpointsElectrons[iel].driftLine[ip - 1].t;
+  x = m_endpointsElectrons[iel].driftLine[ip - 1][0];
+  y = m_endpointsElectrons[iel].driftLine[ip - 1][1];
+  z = m_endpointsElectrons[iel].driftLine[ip - 1][2];
+  t = m_endpointsElectrons[iel].driftLine[ip - 1][3];
 }
 
 void AvalancheMicroscopic::GetHoleDriftLinePoint(double& x, double& y,
@@ -390,17 +391,15 @@ void AvalancheMicroscopic::GetHoleDriftLinePoint(double& x, double& y,
     return;
   }
 
-  x = m_endpointsHoles[ih].driftLine[ip - 1].x;
-  y = m_endpointsHoles[ih].driftLine[ip - 1].y;
-  z = m_endpointsHoles[ih].driftLine[ip - 1].z;
-  t = m_endpointsHoles[ih].driftLine[ip - 1].t;
+  x = m_endpointsHoles[ih].driftLine[ip - 1][0];
+  y = m_endpointsHoles[ih].driftLine[ip - 1][1];
+  z = m_endpointsHoles[ih].driftLine[ip - 1][2];
+  t = m_endpointsHoles[ih].driftLine[ip - 1][3];
 }
 
-void AvalancheMicroscopic::GetPhoton(const unsigned int i, double& e,
-                                     double& x0, double& y0, double& z0,
-                                     double& t0, double& x1, double& y1,
-                                     double& z1, double& t1,
-                                     int& status) const {
+void AvalancheMicroscopic::GetPhoton(const size_t i, double& e,
+    double& x0, double& y0, double& z0, double& t0, 
+    double& x1, double& y1, double& z1, double& t1, int& status) const {
   if (i >= m_photons.size()) {
     std::cerr << m_className << "::GetPhoton: Index out of range.\n";
     return;
@@ -450,23 +449,26 @@ void AvalancheMicroscopic::SetUserHandleIonisation(void (*f)(
   m_userHandleIonisation = f;
 }
 
-bool AvalancheMicroscopic::DriftElectron(const double x0, const double y0,
-                                         const double z0, const double t0,
-                                         const double e0, const double dx0,
-                                         const double dy0, const double dz0) {
+bool AvalancheMicroscopic::DriftElectron(
+    const double x, const double y, const double z, const double t,
+    const double e, const double dx, const double dy, const double dz) {
   std::vector<Electron> stack;
-  AddToStack(x0, y0, z0, t0, e0, dx0, dy0, dz0, 0, false, stack);
+  AddToStack(x, y, z, t, e, dx, dy, dz, 0, false, stack);
   return TransportElectrons(stack, false);
 }
 
-bool AvalancheMicroscopic::AvalancheElectron(const double x0, const double y0,
-                                             const double z0, const double t0,
-                                             const double e0, const double dx0,
-                                             const double dy0,
-                                             const double dz0) {
+bool AvalancheMicroscopic::AvalancheElectron(
+    const double x, const double y, const double z, const double t,
+    const double e, const double dx, const double dy, const double dz) {
   std::vector<Electron> stack;
-  AddToStack(x0, y0, z0, t0, e0, dx0, dy0, dz0, 0, false, stack);
+  AddToStack(x, y, z, t, e, dx, dy, dz, 0, false, stack);
   return TransportElectrons(stack, true);
+}
+
+void AvalancheMicroscopic::AddElectron(
+    const double x, const double y, const double z, const double t,
+    const double e, const double dx, const double dy, const double dz) {
+  AddToStack(x, y, z, t, e, dx, dy, dz, 0, false, m_endpointsElectrons);
 }
 
 bool AvalancheMicroscopic::ResumeAvalanche() {
@@ -497,18 +499,27 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
   // Reset the particle counters.
   m_nElectrons = m_nHoles = m_nIons = 0;
 
-  const std::string hdr = m_className + "::TransportElectron: ";
+  const std::string hdr = m_className + "::TransportElectrons: ";
   // Make sure that the sensor is defined.
   if (!m_sensor) {
     std::cerr << hdr << "Sensor is not defined.\n";
     return false;
   }
 
+  // Do we need to consider the magnetic field?
+  const bool useBfield = m_useBfieldAuto ? m_sensor->HasMagneticField() : 
+                         m_useBfield;
+
   // Loop over the initial set of electrons/holes.
   for (auto& p : stack) {
+    // Make sure that the starting point is inside the active area.
+    if (!m_sensor->IsInArea(p.x0, p.y0, p.z0)) {
+      std::cerr << hdr << "No valid field at initial position.\n";
+      return false;
+    }
     // Make sure that the starting point is inside a medium.
-    Medium* medium = nullptr;
-    if (!m_sensor->GetMedium(p.x0, p.y0, p.z0, medium) || !medium) {
+    Medium* medium = m_sensor->GetMedium(p.x0, p.y0, p.z0);
+    if (!medium) {
       std::cerr << hdr << "No medium at initial position.\n";
       return false;
     } 
@@ -546,12 +557,12 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
 
   // Numerical prefactors in equation of motion
   const double c1 = SpeedOfLight * sqrt(2. / ElectronMass);
-  const double c2 = c1 * c1 / 4.;
+  const double c2 = 0.25 * c1 * c1;
 
   std::vector<Electron> stackNew;
   stackNew.reserve(1000);
   std::vector<std::pair<double, double> > stackPhotons;
-  std::vector<std::pair<int, double> > secondaries;
+  std::vector<std::pair<Particle, double> > secondaries;
 
   while (true) {
     // Remove all inactive items from the stack.
@@ -637,7 +648,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
       // Ratio of transverse electric field component and magnetic field.
       double ezovb = 0.;
       std::array<std::array<double, 3>, 3> rot;
-      if (m_useBfield) {
+      if (useBfield) {
         m_sensor->MagneticField(x, y, z, bx, by, bz, status);
         const double scale = hole ? Tesla2Internal : -Tesla2Internal;
         bx *= scale;
@@ -716,7 +727,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
         double a1 = 0., a2 = 0.;
         // Initial velocity.
         double vx = 0., vy = 0., vz = 0.;
-        if (m_useBfield) {
+        if (useBfield) {
           // Calculate the velocity vector in the local frame.
           const double vmag = c1 * sqrt(en);
           ToLocal(rot, vmag * kx, vmag * ky, vmag * kz, vx, vy, vz);
@@ -757,7 +768,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
           const double r = RndmUniformPos();
           dt += -log(r) * fInv;
           // Calculate the energy after the proposed step.
-          if (m_useBfield) {
+          if (useBfield) {
             en1 = en + (a1 + a2 * dt) * dt;
             if (omega > Small) {
               cphi = cos(omega * dt);
@@ -810,7 +821,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
         // and the proposed new position.
         double kx1 = 0., ky1 = 0., kz1 = 0.;
         double dx = 0., dy = 0., dz = 0.;
-        if (m_useBfield) {
+        if (useBfield) {
           // Calculate the new velocity.
           double vx1 = vx + 2. * c2 * ex * dt;
           double vy1 = vy * cphi + vz * sphi + ezovb;
@@ -898,8 +909,8 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
         // Check if the electron/hole has crossed a wire.
         double xc = x, yc = y, zc = z;
         double rc = 0.;
-        if (m_sensor->IsWireCrossed(x, y, z, x1, y1, z1, xc, yc, zc, false,
-                                    rc)) {
+        if (m_sensor->CrossedWire(x, y, z, x1, y1, z1, xc, yc, zc, false,
+                                  rc)) {
           const double dc = Mag(xc - x, yc - y, zc - z);
           const double tc = t + dt * dc / Mag(dx, dy, dz);
           // If switched on, calculated the induced signal over this step.
@@ -914,6 +925,24 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
           AddToEndPoints(*it, hole);
           ok = false;
           if (m_debug) PrintStatus(hdr, "hit a wire", x, y, z, hole);
+          break;
+        }
+        // Check if the electron/hole has crossed a plane.
+        if (m_sensor->CrossedPlane(x, y, z, x1, y1, z1, xc, yc, zc)) {
+          const double dc = Mag(xc - x, yc - y, zc - z);
+          const double tc = t + dt * dc / Mag(dx, dy, dz);
+          // If switched on, calculated the induced signal over this step.
+          if (m_doSignal) {
+            const int q = hole ? 1 : -1;
+            m_sensor->AddSignal(q, t, tc, x, y, z, xc, yc, zc,
+                                m_integrateWeightingField,
+                                m_useWeightingPotential);
+          }
+          Update(it, xc, yc, zc, tc, en, kx1, ky1, kz1, band);
+          (*it).status = StatusHitPlane;
+          AddToEndPoints(*it, hole);
+          ok = false;
+          if (m_debug) PrintStatus(hdr, "hit a plane", x, y, z, hole);
           break;
         }
 
@@ -932,7 +961,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
         t = t1;
 
         // If switched on, get the magnetic field at the new location.
-        if (m_useBfield) {
+        if (useBfield) {
           m_sensor->MagneticField(x, y, z, bx, by, bz, status);
           const double scale = hole ? Tesla2Internal : -Tesla2Internal;
           bx *= scale;
@@ -959,15 +988,15 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
         int cstype = 0;
         int level = 0;
         int ndxc = 0;
-        medium->GetElectronCollision(en1, cstype, level, en, kx1, ky1, kz1,
-                                     secondaries, ndxc, band);
+        medium->ElectronCollision(en1, cstype, level, en, kx1, ky1, kz1,
+                                  secondaries, ndxc, band);
         // If activated, histogram the distance with respect to the
         // last collision.
         if (m_histDistance && !m_distanceHistogramType.empty()) {
           for (const auto& htype : m_distanceHistogramType) {
             if (htype != cstype) continue;
             if (m_debug) {
-              std::cout << m_className << "::TransportElectron: Collision type "
+              std::cout << hdr << "Collision type "
                         << cstype << ". Fill distance histogram.\n";
               getchar();
             }
@@ -1010,7 +1039,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
               m_userHandleIonisation(x, y, z, t, cstype, level, medium);
             }
             for (const auto& secondary : secondaries) {
-              if (secondary.first == IonProdTypeElectron) {
+              if (secondary.first == Particle::Electron) {
                 const double esec = std::max(secondary.second, Small);
                 if (m_histSecondary) m_histSecondary->Fill(esec);
                 // Increment the electron counter.
@@ -1026,7 +1055,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
                 } else {
                   AddToStack(x, y, z, t, esec, false, stackNew);
                 }
-              } else if (secondary.first == IonProdTypeHole) {
+              } else if (secondary.first == Particle::Hole) {
                 const double esec = std::max(secondary.second, Small);
                 // Increment the hole counter.
                 ++m_nHoles;
@@ -1041,7 +1070,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
                 } else {
                   AddToStack(x, y, z, t, esec, true, stackNew);
                 }
-              } else if (secondary.first == IonProdTypeIon) {
+              } else if (secondary.first == Particle::Ion) {
                 ++m_nIons;
               }
             }
@@ -1111,8 +1140,8 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
                 // Check if this location is inside a drift medium/area.
                 if (status != 0 || !m_sensor->IsInArea(xp, yp, zp)) continue;
                 // Make sure we haven't jumped across a wire.
-                if (m_sensor->IsWireCrossed(x, y, z, xp, yp, zp, xc, yc, zc,
-                                            false, rc)) {
+                if (m_sensor->CrossedWire(x, y, z, xp, yp, zp, xc, yc, zc,
+                                          false, rc)) {
                   continue;
                 }
                 // Increment the electron and ion counters.
@@ -1192,12 +1221,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
       Update(it, x, y, z, t, en, kx, ky, kz, band);
       // Add a new point to the drift line (if enabled).
       if (m_storeDriftLines) {
-        point newPoint;
-        newPoint.x = x;
-        newPoint.y = y;
-        newPoint.z = z;
-        newPoint.t = t;
-        (*it).driftLine.push_back(std::move(newPoint));
+        (*it).driftLine.push_back({x, y, z, t});
       }
     }
   }
@@ -1221,7 +1245,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
       if (np <= 0) continue;
       size_t k;
       const Electron& p = m_endpointsElectrons[i];
-      m_viewer->NewElectronDriftLine(np, k, p.x0, p.y0, p.z0);
+      m_viewer->NewDriftLine(Particle::Electron, np, k, p.x0, p.y0, p.z0);
       for (size_t j = 0; j < np; ++j) {
         double x = 0., y = 0., z = 0., t = 0.;
         GetElectronDriftLinePoint(x, y, z, t, j, i);
@@ -1235,7 +1259,7 @@ bool AvalancheMicroscopic::TransportElectrons(std::vector<Electron>& stack,
       if (np <= 0) continue;
       size_t k;
       const Electron& p = m_endpointsHoles[i];
-      m_viewer->NewHoleDriftLine(np, k, p.x0, p.y0, p.z0);
+      m_viewer->NewDriftLine(Particle::Hole, np, k, p.x0, p.y0, p.z0);
       for (size_t j = 0; j < np; ++j) {
         double x = 0., y = 0., z = 0., t = 0.;
         GetHoleDriftLinePoint(x, y, z, t, j, i);
@@ -1260,9 +1284,16 @@ void AvalancheMicroscopic::TransportPhoton(const double x0, const double y0,
     return;
   }
 
+  // Make sure that the starting point is inside the active area.
+  if (!m_sensor->IsInArea(x0, y0, z0)) {
+    std::cerr << m_className << "::TransportPhoton:\n"
+              << "    No valid field at initial position.\n";
+    return;
+  }
+
   // Make sure that the starting point is inside a medium.
-  Medium* medium;
-  if (!m_sensor->GetMedium(x0, y0, z0, medium)) {
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
     std::cerr << m_className << "::TransportPhoton:\n"
               << "    No medium at initial position.\n";
     return;
@@ -1300,7 +1331,8 @@ void AvalancheMicroscopic::TransportPhoton(const double x0, const double y0,
   z += dt * dz;
 
   // Check if the photon is still inside a medium.
-  if (!m_sensor->GetMedium(x, y, z, medium) || medium->GetId() != id) {
+  medium = m_sensor->GetMedium(x, y, z);
+  if (!medium || medium->GetId() != id) {
     // Try to terminate the photon track close to the boundary
     // by means of iterative bisection.
     dx *= dt;
@@ -1324,7 +1356,8 @@ void AvalancheMicroscopic::TransportPhoton(const double x0, const double y0,
       yM = y + delta * dy;
       zM = z + delta * dz;
       // Check if the mid-point is inside the drift medium.
-      if (m_sensor->GetMedium(xM, yM, zM, medium) && medium->GetId() == id) {
+      medium = m_sensor->GetMedium(xM, yM, zM);
+      if (medium && medium->GetId() == id) {
         x = xM;
         y = yM;
         z = zM;
@@ -1488,6 +1521,26 @@ void AvalancheMicroscopic::Terminate(double x0, double y0, double z0, double t0,
       t1 = tm;
     }
   }
+    bool outsideMedium = true;
+    while(outsideMedium){
+        d *= 0.5;
+        const double xm = 0.5 * (x0 + x1);
+        const double ym = 0.5 * (y0 + y1);
+        const double zm = 0.5 * (z0 + z1);
+        const double tm = 0.5 * (t0 + t1);
+        // Check if the mid-point is inside the drift medium.
+        double ex = 0., ey = 0., ez = 0.;
+        Medium* medium = nullptr;
+        int status = 0;
+        m_sensor->ElectricField(xm, ym, zm, ex, ey, ez, medium, status);
+        if (status == 0 && m_sensor->IsInArea(xm, ym, zm)) {
+            outsideMedium = false;
+        }
+        x1 = xm;
+        y1 = ym;
+        z1 = zm;
+        t1 = tm;
+    }
 }
 
 }  // namespace Garfield

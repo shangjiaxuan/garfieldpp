@@ -4,9 +4,7 @@
 
 namespace Garfield {
 
-static const int IonProdTypeElectron = -1;
-static const int IonProdTypeHole = 1;
-static const int IonProdTypeIon = 2;
+enum class Particle { Electron = 0, Ion, Hole, Positron, NegativeIon };
 
 static const int DxcProdTypeElectron = -1;
 static const int DxcProdTypePhoton = 1;
@@ -42,6 +40,7 @@ static const int StatusCalculationAbandoned = -3;
 static const int StatusLeftDriftMedium = -5;
 static const int StatusAttached = -7;
 static const int StatusSharpKink = -8;
+static const int StatusHitPlane = -11;
 static const int StatusBelowTransportCut = -16;
 static const int StatusOutsideTimeWindow = -17;
 static const double Small = 1.e-20;

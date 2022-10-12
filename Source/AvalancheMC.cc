@@ -7,6 +7,7 @@
 #include "Garfield/AvalancheMC.hh"
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
+#include "Garfield/Numerics.hh"
 #include "Garfield/Random.hh"
 
 namespace {
@@ -18,6 +19,24 @@ std::string PrintVec(const std::array<double, 3>& x) {
 
 double Mag(const std::array<double, 3>& x) {
   return sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]);
+}
+
+double Dist(const std::array<double, 3>& x0, 
+            const std::array<double, 3>& x1) {
+  std::array<double, 3> d = x1;
+  for (size_t i = 0; i < 3; ++i) d[i] -= x0[i];
+  return Mag(d); 
+}
+
+double Slope(const double x0, const double x1) {
+  return (x0 > 0. && x1 > 0.) ? fabs(x1 - x0) / (x0 + x1) : 0.;
+}
+
+std::array<double, 3> MidPoint(const std::array<double, 3>& x0,
+                               const std::array<double, 3>& x1) {
+  std::array<double, 3> xm;
+  for (size_t k = 0; k < 3; ++k) xm[k] = 0.5 * (x0[k] + x1[k]);
+  return xm;
 }
 
 }  // namespace
@@ -111,7 +130,7 @@ void AvalancheMC::SetTimeWindow(const double t0, const double t1) {
   m_hasTimeWindow = true;
 }
 
-void AvalancheMC::GetDriftLinePoint(const unsigned int i, double& x, double& y,
+void AvalancheMC::GetDriftLinePoint(const size_t i, double& x, double& y,
                                     double& z, double& t) const {
   if (i >= m_drift.size()) {
     std::cerr << m_className << "::GetDriftLinePoint: Index out of range.\n";
@@ -124,7 +143,7 @@ void AvalancheMC::GetDriftLinePoint(const unsigned int i, double& x, double& y,
   t = m_drift[i].t;
 }
 
-void AvalancheMC::GetHoleEndpoint(const unsigned int i, double& x0, double& y0,
+void AvalancheMC::GetHoleEndpoint(const size_t i, double& x0, double& y0,
                                   double& z0, double& t0, double& x1,
                                   double& y1, double& z1, double& t1,
                                   int& status) const {
@@ -144,7 +163,7 @@ void AvalancheMC::GetHoleEndpoint(const unsigned int i, double& x0, double& y0,
   status = m_endpointsHoles[i].status;
 }
 
-void AvalancheMC::GetIonEndpoint(const unsigned int i, double& x0, double& y0,
+void AvalancheMC::GetIonEndpoint(const size_t i, double& x0, double& y0,
                                  double& z0, double& t0, double& x1, double& y1,
                                  double& z1, double& t1, int& status) const {
   if (i >= m_endpointsIons.size()) {
@@ -163,7 +182,7 @@ void AvalancheMC::GetIonEndpoint(const unsigned int i, double& x0, double& y0,
   status = m_endpointsIons[i].status;
 }
 
-void AvalancheMC::GetElectronEndpoint(const unsigned int i, double& x0,
+void AvalancheMC::GetElectronEndpoint(const size_t i, double& x0,
                                       double& y0, double& z0, double& t0,
                                       double& x1, double& y1, double& z1,
                                       double& t1, int& status) const {
@@ -240,6 +259,25 @@ bool AvalancheMC::DriftIon(const double x0, const double y0, const double z0,
   return DriftLine({x0, y0, z0}, t0, Particle::Ion, secondaries);
 }
 
+bool AvalancheMC::DriftNegativeIon(const double x0, const double y0, 
+                                   const double z0, const double t0) {
+  if (!m_sensor) {
+    std::cerr << m_className << "::DriftNegativeIon: Sensor is not defined.\n";
+    return false;
+  }
+
+  m_endpointsElectrons.clear();
+  m_endpointsHoles.clear();
+  m_endpointsIons.clear();
+
+  m_nElectrons = 0;
+  m_nHoles = 0;
+  m_nIons = 1;
+
+  std::vector<DriftPoint> secondaries;
+  return DriftLine({x0, y0, z0}, t0, Particle::NegativeIon, secondaries);
+}
+
 bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
                             const Particle particle,
                             std::vector<DriftPoint>& secondaries,
@@ -288,7 +326,6 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
     std::array<double, 3> v0;
     if (!GetVelocity(particle, medium, x0, e0, b0, v0)) {
       status = StatusCalculationAbandoned;
-      std::cerr << m_className + "::DriftLine: Abandoning the calculation.\n";
       break;
     }
 
@@ -343,7 +380,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
       if (m_stepModel != StepModel::FixedTime) {
         t1 += sigma * sigma / (2 * dif);
       }
-      for (unsigned int i = 0; i < 3; ++i) x1[i] += RndmGaussian(0., sigma);
+      for (size_t i = 0; i < 3; ++i) x1[i] += RndmGaussian(0., sigma);
     } else {
       // Drift and diffusion. Determine the time step.
       double dt = 0.;
@@ -355,7 +392,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
           dt = m_dMc / vmag;
           break;
         case StepModel::CollisionTime:
-          if (particle == Particle::Ion) {
+          if (particle == Particle::Ion || particle == Particle::NegativeIon) {
             constexpr double c1 = AtomicMassUnitElectronVolt / 
               (SpeedOfLight * SpeedOfLight);
             dt = -m_nMc * (c1 * vmag / emag) * log(RndmUniformPos());
@@ -390,15 +427,33 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
           }
         }
       }
-      // Compute the proposed end-point of this step and the mean velocity.
+      // Compute the proposed end point of this step.
+      for (size_t k = 0; k < 3; ++k) x1[k] += dt * v0[k];
       std::array<double, 3> v1 = v0;
+      constexpr unsigned int nMaxIter = 3;
+      for (unsigned int i = 0; i < nMaxIter; ++i) {
+        status = GetField(x1, e0, b0, medium);
+        if (status != 0) {
+          // Point is outside the active region. Reduce the step size.
+          x1 = MidPoint(x0, x1);
+          dt *= 0.5;
+          continue;
+        }
+        // Compute the velocity at the proposed end point.
+        if (!GetVelocity(particle, medium, x1, e0, b0, v1)) {
+          status = StatusCalculationAbandoned;
+          break;
+        }
+        if (Slope(vmag, Mag(v1)) < 0.05) break;
+        // Halve the step.
+        x1 = MidPoint(x0, x1);
+        dt *= 0.5;
+      }
+      if (status == StatusCalculationAbandoned) break;
       if (m_doRKF) {
         StepRKF(particle, x0, v0, dt, x1, v1, status);
         vmag = Mag(v1);
-      } else {
-        for (unsigned int k = 0; k < 3; ++k) x1[k] += dt * v0[k];
       }
-
       if (m_useDiffusion) AddDiffusion(sqrt(vmag * dt), difl, dift, x1, v1);
       t1 += dt;
     }
@@ -424,17 +479,30 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
     // Check if the particle has crossed a wire.
     std::array<double, 3> xc = x0;
     double rc = 0.;
-    if (m_sensor->IsWireCrossed(x0[0], x0[1], x0[2], x1[0], x1[1], x1[2], xc[0],
-                                xc[1], xc[2], false, rc)) {
+    if (m_sensor->CrossedWire(x0[0], x0[1], x0[2], x1[0], x1[1], x1[2], 
+                              xc[0], xc[1], xc[2], false, rc)) {
       if (m_debug) {
         std::cout << m_className + "::DriftLine: Hit a wire at "
                   << PrintVec(xc) + ".\n";
       }
       status = StatusLeftDriftMedium;
       // Adjust the time step.
-      std::array<double, 3> dc = {xc[0] - x0[0], xc[1] - x0[1], xc[2] - x0[2]};
-      std::array<double, 3> d1 = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
-      const double tc = t0 + (t1 - t0) * Mag(dc) / Mag(d1);
+      double tc = t0 + (t1 - t0) * Dist(x0, xc) / Dist(x0, x1);
+      Terminate(x0, t0, xc, tc);
+      // Add the point to the drift line.
+      AddPoint(xc, tc, particle, 1, m_drift);
+      break;
+    }
+    if (m_sensor->CrossedPlane(x0[0], x0[1], x0[2], x1[0], x1[1], x1[2], 
+                               xc[0], xc[1], xc[2])) {
+      if (m_debug) {
+        std::cout << m_className + "::DriftLine: Hit a plane at "
+                  << PrintVec(xc) + ".\n";
+      }
+      status = StatusHitPlane;
+      // Adjust the time step.
+      double tc = t0 + (t1 - t0) * Dist(x0, xc) / Dist(x0, x1);
+      Terminate(x0, t0, xc, tc);
       // Add the point to the drift line.
       AddPoint(xc, tc, particle, 1, m_drift);
       break;
@@ -449,6 +517,10 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
     // Update the current position and time.
     x0 = x1;
     t0 = t1;
+  }
+ 
+  if (status == StatusCalculationAbandoned) {
+    std::cerr << m_className + "::DriftLine: Abandoned the calculation.\n";
   }
 
   // Compute Townsend and attachment coefficients for each drift step.
@@ -496,13 +568,7 @@ bool AvalancheMC::DriftLine(const std::array<double, 3>& xi, const double ti,
     const size_t nPoints = m_drift.size();
     // Register the new drift line and get its ID.
     size_t id;
-    if (particle == Particle::Electron) {
-      m_viewer->NewElectronDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
-    } else if (particle == Particle::Hole) {
-      m_viewer->NewHoleDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
-    } else {
-      m_viewer->NewIonDriftLine(nPoints, id, xi[0], xi[1], xi[2]);
-    }
+    m_viewer->NewDriftLine(particle, nPoints, id, xi[0], xi[1], xi[2]);
     // Set the points along the trajectory.
     for (size_t i = 0; i < nPoints; ++i) {
       const auto& x = m_drift[i].x;
@@ -536,6 +602,23 @@ bool AvalancheMC::AvalancheElectronHole(const double x0, const double y0,
   AddPoint({x0, y0, z0}, t0, Particle::Electron, 1, aval);
   AddPoint({x0, y0, z0}, t0, Particle::Hole, 1, aval);
   return Avalanche(aval, true, true);
+}
+
+void AvalancheMC::AddElectron(const double x, const double y, const double z,
+                              const double t) {
+  AddEndPoint({x, y, z}, t, {x, y, z}, t, StatusAlive, Particle::Electron);
+  ++m_nElectrons;
+}
+
+void AvalancheMC::AddHole(const double x, const double y, const double z,
+                          const double t) {
+  AddEndPoint({x, y, z}, t, {x, y, z}, t, StatusAlive, Particle::Hole);
+  ++m_nHoles;
+}
+void AvalancheMC::AddIon(const double x, const double y, const double z,
+                         const double t) {
+  AddEndPoint({x, y, z}, t, {x, y, z}, t, StatusAlive, Particle::Ion);
+  ++m_nIons;
 }
 
 bool AvalancheMC::ResumeAvalanche(const bool electrons, const bool holes) {
@@ -624,19 +707,16 @@ int AvalancheMC::GetField(const std::array<double, 3>& x,
                           Medium*& medium) const {
   e.fill(0.);
   b.fill(0.);
-  // Get the electric field.
   int status = 0;
+  // Get the magnetic field.
+  m_sensor->MagneticField(x[0], x[1], x[2], b[0], b[1], b[2], status);
+  // Get the electric field.
   m_sensor->ElectricField(x[0], x[1], x[2], e[0], e[1], e[2], medium, status);
   // Make sure the point is inside a drift medium.
   if (status != 0 || !medium) return StatusLeftDriftMedium;
   // Make sure the point is inside the drift area.
   if (!m_sensor->IsInArea(x[0], x[1], x[2])) return StatusLeftDriftArea;
 
-  // Get the magnetic field, if requested.
-  if (m_useBfield) {
-    m_sensor->MagneticField(x[0], x[1], x[2], b[0], b[1], b[2], status);
-    for (size_t k = 0; k < 3; ++k) b[k] *= Tesla2Internal;
-  }
   return 0;
 }
 
@@ -647,6 +727,8 @@ double AvalancheMC::GetMobility(const Particle particle, Medium* medium) const {
     return medium->HoleMobility();
   } else if (particle == Particle::Ion) {
     return medium->IonMobility();
+  } else if (particle == Particle::NegativeIon) {
+    return medium->NegativeIonMobility();
   }
   return -1.;
 }
@@ -658,7 +740,8 @@ bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium,
                               std::array<double, 3>& v) const {
   v.fill(0.);
   bool ok = false;
-  if (m_useVelocityMap && particle != Particle::Ion) {
+  if (m_useVelocityMap && 
+      particle != Particle::Ion && particle != Particle::NegativeIon) {
     // We assume there is only one component with a velocity map.
     const auto nComponents = m_sensor->GetNumberOfComponents();
     for (size_t i = 0; i < nComponents; ++i) {
@@ -679,14 +762,17 @@ bool AvalancheMC::GetVelocity(const Particle particle, Medium* medium,
     }
   }
   if (particle == Particle::Electron) {
-    ok = medium->ElectronVelocity(e[0], e[1], e[2], b[0], b[1], b[2], v[0],
-                                  v[1], v[2]);
+    ok = medium->ElectronVelocity(e[0], e[1], e[2], b[0], b[1], b[2], 
+                                  v[0], v[1], v[2]);
   } else if (particle == Particle::Hole) {
-    ok = medium->HoleVelocity(e[0], e[1], e[2], b[0], b[1], b[2], v[0], v[1],
-                              v[2]);
+    ok = medium->HoleVelocity(e[0], e[1], e[2], b[0], b[1], b[2], 
+                              v[0], v[1], v[2]);
   } else if (particle == Particle::Ion) {
-    ok = medium->IonVelocity(e[0], e[1], e[2], b[0], b[1], b[2], v[0], v[1],
-                             v[2]);
+    ok = medium->IonVelocity(e[0], e[1], e[2], b[0], b[1], b[2], 
+                             v[0], v[1], v[2]);
+  } else if (particle == Particle::NegativeIon) {
+    ok = medium->NegativeIonVelocity(e[0], e[1], e[2], b[0], b[1], b[2], 
+                                     v[0], v[1], v[2]);
   }
   if (!ok) {
     PrintError("GetVelocity", "velocity", particle, x);
@@ -710,7 +796,7 @@ bool AvalancheMC::GetDiffusion(const Particle particle, Medium* medium,
     ok = medium->ElectronDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
   } else if (particle == Particle::Hole) {
     ok = medium->HoleDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
-  } else if (particle == Particle::Ion) {
+  } else if (particle == Particle::Ion || particle == Particle::NegativeIon) {
     ok = medium->IonDiffusion(e[0], e[1], e[2], b[0], b[1], b[2], dl, dt);
   }
   return ok;
@@ -740,6 +826,32 @@ double AvalancheMC::GetAttachment(const Particle particle, Medium* medium,
     medium->HoleAttachment(e[0], e[1], e[2], b[0], b[1], b[2], eta);
   }
   return eta;
+}
+
+double AvalancheMC::GetTownsend(const Particle particle, Medium* medium,
+                                const std::array<double, 3>& x,
+                                const std::array<double, 3>& e,
+                                const std::array<double, 3>& b) const {
+  double alpha = 0.;
+  if (m_useTownsendMap) {
+    const auto nComponents = m_sensor->GetNumberOfComponents();
+    for (size_t i = 0; i < nComponents; ++i) {
+      auto cmp = m_sensor->GetComponent(i);
+      if (!cmp->HasTownsendMap()) continue;
+      if (particle == Particle::Electron) {
+        if (!cmp->ElectronTownsend(x[0], x[1], x[2], alpha)) continue;
+      } else {
+        if (!cmp->HoleTownsend(x[0], x[1], x[2], alpha)) continue;
+      }
+      return alpha;
+    }
+  }
+  if (particle == Particle::Electron) {
+    medium->ElectronTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
+  } else {
+    medium->HoleTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
+  }
+  return alpha;
 }
 
 void AvalancheMC::StepRKF(const Particle particle,
@@ -853,9 +965,9 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
                                   std::vector<DriftPoint>& driftLine,
                                   int& status, std::vector<DriftPoint>& secondaries, 
                                   const bool semiconductor) {
-  const size_t nPoints = driftLine.size();
-  std::vector<double> alps(nPoints, 0.);
-  std::vector<double> etas(nPoints, 0.);
+
+  std::vector<double> alps;
+  std::vector<double> etas;
   // Compute the integrated Townsend and attachment coefficients.
   if (!ComputeAlphaEta(particle, driftLine, alps, etas)) return false;
 
@@ -864,79 +976,62 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
   if (particle == Particle::Electron) {
     other = semiconductor ? Particle::Hole : Particle::Ion;
   } 
-  // Subdivision of a step.
-  constexpr double probth = 0.01;
+  const size_t nPoints = driftLine.size();
   // Loop over the drift line.
   for (size_t i = 0; i < nPoints - 1; ++i) {
-    // Compute the number of subdivisions.
-    const int nDiv = std::max(int((alps[i] + etas[i]) / probth), 1);
-    // Compute the probabilities for gain and loss.
-    const double p = std::max(alps[i] / nDiv, 0.);
-    const double q = std::max(etas[i] / nDiv, 0.);
     // Start with the initial electron (or hole).
     int ne = 1;
-    // Loop over the subdivisions.
-    for (int j = 0; j < nDiv; ++j) {
-      // Count the number of ions/holes (or electrons) produced 
-      // along this subdivision.
-      int ni = 0;
-      if (ne > 100) {
-        // Gaussian approximation.
-        const int gain = int(ne * p + RndmGaussian() * sqrt(ne * p * (1. - p)));
-        const int loss = int(ne * q + RndmGaussian() * sqrt(ne * q * (1. - q)));
-        ne += gain - loss;
-        ni += gain;
-      } else {
-        // Binomial approximation
-        for (int k = ne; k--;) {
-          if (RndmUniform() < p) {
-            ++ne;
-            ++ni;
+    int ni = 0;
+    if (etas[i] < Small) {
+      ne = RndmYuleFurry(std::exp(alps[i]));
+      ni = ne - 1;
+    } else {
+      // Subdivision of a step.
+      constexpr double probth = 0.01;
+      // Compute the number of subdivisions.
+      const int nDiv = std::max(int((alps[i] + etas[i]) / probth), 1);
+      // Compute the probabilities for gain and loss.
+      const double p = std::max(alps[i] / nDiv, 0.);
+      const double q = std::max(etas[i] / nDiv, 0.);
+      // Loop over the subdivisions.
+      for (int j = 0; j < nDiv; ++j) {
+        if (ne > 100) {
+          // Gaussian approximation.
+          const int gain = int(ne * p + RndmGaussian() * sqrt(ne * p * (1. - p)));
+          const int loss = int(ne * q + RndmGaussian() * sqrt(ne * q * (1. - q)));
+          ne += gain - loss;
+          ni += gain;
+        } else {
+          // Binomial approximation
+          for (int k = ne; k--;) {
+            if (RndmUniform() < p) {
+              ++ne;
+              ++ni;
+            }
+            if (RndmUniform() < q) --ne;
           }
-          if (RndmUniform() < q) --ne;
         }
-      }
-      if (ni > 0) {
-        if (other == Particle::Hole) {
-          m_nHoles += ni;
-        } else if (other == Particle::Ion) {
-          m_nIons += ni;
-        } else {
-          m_nElectrons += ni;
-        } 
-        for (int k = 0; k < ni; ++k) {
-          const double f0 = (j + RndmUniform()) / nDiv;
+        // Check if the electron (or hole) has survived.
+        if (ne <= 0) {
+          status = StatusAttached;
+          if (particle == Particle::Electron) {
+            --m_nElectrons;
+          } else if (particle == Particle::Hole) {
+            --m_nHoles;
+          } else {
+            --m_nIons;
+          }
+          const double f0 = (j + 0.5) / nDiv;
           const double f1 = 1. - f0;
-          DriftPoint point;
-          point.x[0] = f0 * driftLine[i].x[0] + f1 * driftLine[i + 1].x[0]; 
-          point.x[1] = f0 * driftLine[i].x[1] + f1 * driftLine[i + 1].x[1]; 
-          point.x[2] = f0 * driftLine[i].x[2] + f1 * driftLine[i + 1].x[2];
-          point.t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
-          point.particle = other;
-          point.n = 1;
-          secondaries.push_back(std::move(point));
-        } 
-      }
-      // Check if the electron (or hole) has survived.
-      if (ne <= 0) {
-        status = StatusAttached;
-        if (particle == Particle::Electron) {
-          --m_nElectrons;
-        } else if (particle == Particle::Hole) {
-          --m_nHoles;
-        } else {
-          --m_nIons;
+          const auto x0 = driftLine[i].x;
+          const auto x1 = driftLine[i + 1].x;
+          driftLine.resize(i + 2);
+          for (size_t k = 0; k < 3; ++k) {
+            driftLine[i + 1].x[k] = f0 * x0[k] + f1 * x1[k];
+          }
+          driftLine[i + 1].t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
+          break;
         }
-        const double f0 = (j + 0.5) / nDiv;
-        const double f1 = 1. - f0;
-        const auto x0 = driftLine[i].x;
-        const auto x1 = driftLine[i + 1].x;
-        driftLine.resize(i + 2);
-        for (size_t k = 0; k < 3; ++k) {
-          driftLine[i + 1].x[k] = f0 * x0[k] + f1 * x1[k];
-        }
-        driftLine[i + 1].t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
-        break;
       }
     }
     // Add the new electrons to the table.
@@ -950,6 +1045,32 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
         m_nHoles += ne - 1;
       }
     }
+    // Add the new holes/ions to the table.
+    if (ni > 0) {
+      if (other == Particle::Hole) {
+        m_nHoles += ni;
+      } else if (other == Particle::Ion) {
+        m_nIons += ni;
+      } else {
+        m_nElectrons += ni;
+      } 
+      const auto x0 = driftLine[i].x;
+      const auto x1 = driftLine[i + 1].x;
+      const double n1 = std::exp(alps[i]) - 1;
+      const double a1 = n1 > 0. ? 1. / std::log1p(n1) : 0.;
+      for (int j = 0; j < ni; ++j) {
+        const double f1 = n1 > 0. ? a1 * std::log1p(RndmUniform() * n1) : 0.5;
+        const double f0 = 1. - f1;
+        DriftPoint point;
+        for (size_t k = 0; k < 3; ++k) {
+          point.x[k] = f0 * x0[k] + f1 * x1[k]; 
+        }
+        point.t = f0 * driftLine[i].t + f1 * driftLine[i + 1].t;
+        point.particle = other;
+        point.n = 1;
+        secondaries.push_back(std::move(point));
+      }
+    }
     // If trapped, exit the loop over the drift line.
     if (status == StatusAttached) return true;
   }
@@ -957,26 +1078,53 @@ bool AvalancheMC::ComputeGainLoss(const Particle particle,
 }
 
 bool AvalancheMC::ComputeAlphaEta(const Particle particle,
-                                  const std::vector<DriftPoint>& driftLine,
+                                  std::vector<DriftPoint>& driftLine,
                                   std::vector<double>& alps,
                                   std::vector<double>& etas) const {
   // -----------------------------------------------------------------------
-  //    DLCEQU - Computes equilibrated alpha's and eta's over the current
-  //             drift line.
+  //    DLCEQU - Computes equilibrated alphas and etas.
   // -----------------------------------------------------------------------
 
-  // Locations and weights for 6-point Gaussian integration
-  constexpr double tg[6] = {-0.932469514203152028, -0.661209386466264514,
-                            -0.238619186083196909, 0.238619186083196909,
-                            0.661209386466264514,  0.932469514203152028};
-  constexpr double wg[6] = {0.171324492379170345, 0.360761573048138608,
-                            0.467913934572691047, 0.467913934572691047,
-                            0.360761573048138608, 0.171324492379170345};
- 
-  const size_t nPoints = driftLine.size();
+  // Loop a first time over the drift line and get alpha at each point.
+  size_t nPoints = driftLine.size();
+  alps.assign(nPoints, 0.);
+  etas.assign(nPoints, 0.);
+  for (size_t i = 0; i < nPoints; ++i) {
+    const auto& x0 = driftLine[i].x;
+    std::array<double, 3> e0, b0;
+    Medium* medium = nullptr;
+    if (GetField(x0, e0, b0, medium) != 0) continue;
+    alps[i] = GetTownsend(particle, medium, x0, e0, b0);
+  }
+
+  std::vector<DriftPoint> driftLineExt;
+  for (size_t i = 0; i < nPoints - 1; ++i) {
+    const auto& p0 = driftLine[i];
+    const auto& p1 = driftLine[i + 1];
+    driftLineExt.push_back(p0);
+    if (Slope(alps[i], alps[i + 1]) < 0.5) continue;
+    auto xm = MidPoint(p0.x, p1.x);
+    std::array<double, 3> em, bm;
+    Medium* medium = nullptr;
+    if (GetField(xm, em, bm, medium) != 0) continue;
+    auto pm = p0;
+    pm.x = xm;
+    pm.t = 0.5 * (p0.t + p1.t);
+    driftLineExt.push_back(std::move(pm));
+  }
+  driftLineExt.push_back(driftLine.back());
+  driftLine.swap(driftLineExt);
+
+  nPoints = driftLine.size();
   alps.assign(nPoints, 0.);
   etas.assign(nPoints, 0.);
   if (nPoints < 2) return true;
+
+  // Locations and weights for Gaussian integration.
+  constexpr size_t nG = 6;
+  auto tg = Numerics::GaussLegendreNodes6();
+  auto wg = Numerics::GaussLegendreWeights6();
+
   bool equilibrate = m_doEquilibration;
   // Loop over the drift line.
   for (size_t i = 0; i < nPoints - 1; ++i) {
@@ -990,7 +1138,7 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
     const double veff = dmag / (driftLine[i + 1].t - driftLine[i].t);
     // Integrate drift velocity and Townsend and attachment coefficients.
     std::array<double, 3> vd = {0., 0., 0.};
-    for (size_t j = 0; j < 6; ++j) {
+    for (size_t j = 0; j < nG; ++j) {
       const double f = 0.5 * (1. + tg[j]);
       std::array<double, 3> x = x0;
       for (size_t k = 0; k < 3; ++k) x[k] += f * del[k];
@@ -1004,8 +1152,8 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
         // Check if this point is the last but one.
         if (i < nPoints - 2) {
           std::cerr << m_className << "::ComputeAlphaEta: Got status " << status
-                    << " at segment " << j + 1 << "/6, drift point " << i + 1
-                    << "/" << nPoints << ".\n";
+                    << " at segment " << j + 1 << "/" << nG 
+                    << ", drift point " << i + 1 << "/" << nPoints << ".\n";
           return false;
         }
         continue;
@@ -1014,14 +1162,7 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
       std::array<double, 3> v;
       if (!GetVelocity(particle, medium, x, e, b, v)) continue;
       // Get Townsend and attachment coefficients.
-      double alpha = 0.;
-
-      if (particle == Particle::Electron) {
-        medium->ElectronTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
-      } else {
-        medium->HoleTownsend(e[0], e[1], e[2], b[0], b[1], b[2], alpha);
-      }
-
+      double alpha = GetTownsend(particle, medium, x, e, b);
       double eta = GetAttachment(particle, medium, x, e, b);
       if (eta < 0.) {
         eta = std::abs(eta) * Mag(v) / veff;
@@ -1051,15 +1192,17 @@ bool AvalancheMC::ComputeAlphaEta(const Particle particle,
   if (!equilibrate) return true;
   if (!Equilibrate(alps)) {
     if (m_debug) {
-      std::cerr << m_className << "::ComputeAlphaEta:\n    Unable to even out "
-                << "alpha steps. Calculation is probably inaccurate.\n";
+      std::cerr << m_className << "::ComputeAlphaEta:\n"
+                << "    Unable to even out alpha steps.\n"
+                << "    Calculation is probably inaccurate.\n";
     }
     return false;
   }
   if (!Equilibrate(etas)) {
     if (m_debug) {
-      std::cerr << m_className << "::ComputeAlphaEta:\n    Unable to even out "
-                << "eta steps. Calculation is probably inaccurate.\n";
+      std::cerr << m_className << "::ComputeAlphaEta:\n"
+                << "    Unable to even out eta steps.\n"
+                << "    Calculation is probably inaccurate.\n";
     }
     return false;
   }

@@ -6,7 +6,6 @@
 #include "HeedCluster.h"
 
 namespace Heed {
-extern long last_particle_number;
 
 /// Charged particle which can be traced through the geometry.
 ///
@@ -22,8 +21,9 @@ class HeedParticle : public eparticle {
   /// no generation of virtual photons.
   HeedParticle(manip_absvol* primvol, const point& pt, const vec& vel,
                vfloat time, particle_def* fpardef, HeedFieldMap* fieldmap,
-               const bool fs_loss_only = false,
-               const bool fs_print_listing = false);
+               const bool fcoulomb_scattering = false,
+               const bool floss_only = false,
+               const bool fprint_listing = false);
   /// Destructor
   virtual ~HeedParticle() {}
 
@@ -32,10 +32,12 @@ class HeedParticle : public eparticle {
 
  protected:
   void physics(std::vector<gparticle*>& secondaries) override;
+  void physics_mrange(double& fmrange) override;
 
  private:
-  bool m_print_listing = false;
+  bool m_coulomb_scattering = false;
   bool m_loss_only = false;
+  bool m_print_listing = false;
   bool m_store_clusters = false;
 
   long m_particle_number = 0;

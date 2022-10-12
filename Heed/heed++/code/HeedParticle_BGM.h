@@ -6,7 +6,6 @@
 #include "wcpplib/particle/eparticle.h"
 
 namespace Heed {
-extern long last_particle_number;
 
 /// Definition of the particle which can be traced through the geometry.
 /// 2003, I. Smirnov

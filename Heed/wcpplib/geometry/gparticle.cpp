@@ -37,6 +37,8 @@ void stvpoint::print(std::ostream& file, int l) const {
   file.flush();
 }
 
+std::atomic<long> gparticle::s_counter{0L};
+ 
 gparticle::gparticle(manip_absvol* primvol, const point& pt, const vec& vel,
                      vfloat ftime)
     : m_prevpos(),
@@ -149,6 +151,20 @@ stvpoint gparticle::calc_step_to_bord() {
   return stvpoint(m_currpos, ts, ts.mrange, sb, 0, faeid);
 }
 
+void gparticle::turn(const double ctheta, const double stheta) {
+
+  vec dir = m_currpos.dir;
+  basis temp(dir, "temp");
+  vec vturn;
+  vturn.random_round_vec();
+  vturn = vturn * stheta;
+  vec new_dir(vturn.x, vturn.y, ctheta);
+  new_dir.down(&temp);
+  m_currpos.dir = new_dir;
+  m_currpos.dirloc = m_currpos.dir;
+  m_currpos.tid.up_absref(&m_currpos.dirloc);
+}
+
 stvpoint gparticle::switch_new_vol() {
   // Generate next position in new volume.
   mfunname("stvpoint gparticle::switch_new_vol(void)");
@@ -194,10 +210,7 @@ void gparticle::print(std::ostream& file, int l) const {
   Ifile << "gparticle(l=" << l << "): alive=" << m_alive << " nstep=" << m_nstep
         << " total_range_from_origin=" << m_total_range_from_origin
         << " nzero_step=" << m_nzero_step << '\n';
-  if (l == 1) {
-    file.flush();
-    return;
-  }
+  if (l <= 1) return;
   indn.n += 2;
   if (l - 5 >= 0) {
     Ifile << "origin point:\n";

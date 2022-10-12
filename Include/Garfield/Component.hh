@@ -175,19 +175,24 @@ class Component {
     *        crossing point or of the wire centre.
     * \param rc radius [cm] of the wire.
     */
-  virtual bool IsWireCrossed(const double x0, const double y0, const double z0,
-                             const double x1, const double y1, const double z1,
-                             double& xc, double& yc, double& zc,
-                             const bool centre, double& rc);
+  virtual bool CrossedWire(const double x0, const double y0, const double z0,
+                           const double x1, const double y1, const double z1,
+                           double& xc, double& yc, double& zc,
+                           const bool centre, double& rc);
   /** Determine whether a particle is inside the trap radius of a wire.
    * \param q0 charge of the particle [in elementary charges].
    * \param x0,y0,z0 position [cm] of the particle.
    * \param xw,yw coordinates of the wire (if applicable).
    * \param rw radius of the wire (if applicable).
    */
-  virtual bool IsInTrapRadius(const double q0, const double x0, const double y0,
-                              const double z0, double& xw, double& yw,
-                              double& rw);
+  virtual bool InTrapRadius(const double q0, const double x0, const double y0,
+                            const double z0, double& xw, double& yw,
+                            double& rw);
+  /** Determine whether the line between two points crosses a plane.
+    */
+  virtual bool CrossedPlane(const double x0, const double y0, const double z0,
+                            const double x1, const double y1, const double z1,
+                            double& xc, double& yc, double& zc);
 
   /// Enable simple periodicity in the \f$x\f$ direction.
   void EnablePeriodicityX(const bool on = true) {
@@ -282,6 +287,11 @@ class Component {
   /// Switch off debugging messages.
   void DisableDebugging() { m_debug = false; }
 
+  /// Does the component have a non-zero magnetic field?
+  virtual bool HasMagneticField() const;
+
+  /// Does the component have maps of the Townsend coefficient?
+  virtual bool HasTownsendMap() const { return false; }
   /// Does the component have attachment maps?
   virtual bool HasAttachmentMap() const { return false; }
   /// Does the component have velocity maps?
@@ -297,6 +307,18 @@ class Component {
   virtual bool HoleAttachment(const double /*x*/, const double /*y*/,
                               const double /*z*/, double& eta) {
     eta = 0;
+    return false;
+  }
+  /// Get the electron Townsend coefficient.
+  virtual bool ElectronTownsend(const double /*x*/, const double /*y*/,
+                                const double /*z*/, double& alpha) {
+    alpha = 0;
+    return false;
+  }
+  /// Get the hole Townsend coefficient.
+  virtual bool HoleTownsend(const double /*x*/, const double /*y*/,
+                            const double /*z*/, double& alpha) {
+    alpha = 0;
     return false;
   }
   /// Get the electron drift velocity.
@@ -323,6 +345,8 @@ class Component {
     htau = -1;
     return false;
   }
+
+  virtual double StepSizeHint() { return -1.; }
 
  protected:
   /// Class name.

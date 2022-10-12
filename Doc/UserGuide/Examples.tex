@@ -7,7 +7,7 @@ the use of analytic field calculation techniques,
 and the calculation of induced signals. 
  
 Microscopic transport of electrons and 
-the use of finite element field maps are dealt with in 
+the use of finite element field maps are introduced in 
 Sec.~\ref{Sec:ExampleGem}. 
 
 Section~\ref{Sec:ExampleSilicon} presents an example of 
@@ -33,8 +33,7 @@ as well as the angle between \(\mathbf{E}\) and \(\mathbf{B}\)).
 In this example, we use a gas mixture of 93\% argon and 7\% 
 carbon dioxide at a pressure of 3\,atm and room temperature.
 \begin{lstlisting}
-MediumMagboltz gas;
-gas.SetComposition("ar", 93., "co2", 7.);
+MediumMagboltz gas("ar", 93., "co2", 7.);
 // Set temperature [K] and pressure [Torr].
 gas.SetPressure(3 * 760.);
 gas.SetTemperature(293.15);
@@ -46,7 +45,7 @@ with logarithmic spacing.
 \begin{lstlisting}
 gas.SetFieldGrid(100., 100.e3, 20, true);
 \end{lstlisting}
-Now we run \textsc{Magboltz} to generate the gas table for this grid. 
+Now we run \textsc{Magboltz} to generate a gas table for this grid. 
 As input parameter we have to specify the number of collisions 
 (in multiples of \(10^{7}\)) over which the electron is traced 
 by \textsc{Magboltz}.
@@ -107,7 +106,8 @@ Using
 cmp.AddReadout("s");
 \end{lstlisting}
 we tell \texttt{ComponentAnalyticField} to prepare the solution for the 
-weighting field of the wire (which we have given the label ``s'' before).
+weighting potential and weighting field of the wire 
+(which we have given the label ``s'' before).
  
 Finally we assemble a \texttt{Sensor} object which acts as an 
 interface to the transport classes discussed below.
@@ -214,6 +214,22 @@ signalView.SetSensor(&sensor);
 signalView.PlotSignal("s");
 \end{lstlisting}
 
+\subsubsection{Ion tail}
+So far we have only considered the electron contribution 
+to the induced signal. 
+If we want to include the contribution from the ions produced in 
+the avalanche we need to import a table of ion mobilities
+\begin{lstlisting}
+auto installdir = std::getenv("GARFIELD_INSTALL");
+const std::string path = installdir;
+gas.LoadIonMobility(path + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
+\end{lstlisting}
+and we need to call
+\begin{lstlisting}
+drift.EnableIonTail();
+\end{lstlisting}
+before simulating the drift lines.
+
 \subsection{GEM}\label{Sec:ExampleGem}
 In this example, we will simulate the drift of electrons and ions 
 in a standard GEM \cite{Sauli2016}, 
@@ -225,9 +241,10 @@ etched into the foil.
 \subsubsection{Field map}
 As a first step, we need to calculate the electric field in the GEM. 
 Currently this calculation has to be performed using an external field 
-solver like Ansys \cite{ANSYS} or Elmer \cite{Elmer}. In this example, 
-we use Ansys, but the steps for importing and using an Elmer field map 
-are very similar.
+solver like Ansys \cite{ANSYS}, Elmer \cite{Elmer}, or Comsol \cite{Comsol}.
+In this example, 
+we use Ansys, but the steps for importing field maps from other 
+programs are very similar.
 
 In the following we assume that the output files resulting from the 
 Ansys run are located in the current working directory.
@@ -283,15 +300,14 @@ sensor.AddComponent(&fm);
 \end{lstlisting}
 Normally, particles are transported until they exit the mesh. 
 To speed up the calculation we restrict the drift region to 
-$-100,\textmu\text{m} < z < +250\,\textmu\text{m}$.
+$-100\upmu\text{m} < z < +250\upmu\text{m}$.
 \begin{lstlisting}
 sensor.SetArea(-5 * pitch, -5 * pitch, -0.01, 5 * pitch,  5 * pitch,  0.025);
 \end{lstlisting}
 \subsubsection{Gas}
 We use a gas mixture of 80\% argon and 20\% CO\(_{2}\).
 \begin{lstlisting}
-MediumMagboltz gas;
-gas.SetComposition("ar", 80., "co2", 20.);
+MediumMagboltz gas("ar", 80., "co2", 20.);
 // Set temperature [K] and pressure [Torr].
 gas.SetTemperature(293.15);
 gas.SetPressure(760.);
@@ -348,8 +364,8 @@ the file name with a directory.
 If your mobility file is not located in your current working directory,
 then you have to specify a fully qualified file name.
 \begin{lstlisting}
-const std::string path = getenv("GARFIELD\_HOME");
-gas.LoadIonMobility(path + "/Data/IonMobility\_Ar+\_Ar.txt");
+const std::string path = std::getenv("GARFIELD_INSTALL");
+gas.LoadIonMobility(path + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
 \end{lstlisting}
 \paragraph{Associating the gas to a field map region}
 In order to track a particle through the detector we have to 
@@ -359,13 +375,18 @@ The gas can be distinguished from the other materials
 (here: kapton and copper) by its dielectric constant, in our case
 $\varepsilon = 1$.
 \begin{lstlisting}
-const unsigned int nMaterials = fm->GetNumberOfMaterials();
-for (unsigned int i = 0; i < nMaterials; ++i) {
+const size_t nMaterials = fm.GetNumberOfMaterials();
+for (size_t i = 0; i < nMaterials; ++i) {
   const double eps = fm.GetPermittivity(i);
-  if (fabs(eps - 1.) < 1.e-3) fm.SetMedium(i, gas);
+  if (fabs(eps - 1.) < 1.e-3) fm.SetMedium(i, &gas);
 }
 // Print a list of the field map materials (for information).
 fm.PrintMaterials();
+\end{lstlisting}
+Instead of iterating over the materials and retrieving the relative 
+dielectric constant, we can also use the helper function \texttt{SetGas}.
+\begin{lstlisting}
+fm.SetGas(&gas);
 \end{lstlisting}
 
 \subsubsection{Electron transport}

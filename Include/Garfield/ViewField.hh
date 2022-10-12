@@ -30,6 +30,8 @@ class ViewField : public ViewBase {
   void SetElectricFieldRange(const double emin, const double emax);
   /// Set the plot limits for the weighting field.
   void SetWeightingFieldRange(const double wmin, const double wmax);
+  /// Set the plot limits for the magnetic field.
+  void SetMagneticFieldRange(const double bmin, const double bmax);
 
   /// Set the number of contour levels.
   void SetNumberOfContours(const unsigned int n);
@@ -38,22 +40,28 @@ class ViewField : public ViewBase {
   /// Set the number of points used for drawing 2D functions.
   void SetNumberOfSamples2d(const unsigned int nx, const unsigned int ny);
 
-  /** Make a contour plot of the electric potential or field.
+  /** Make a contour plot of the electric potential, electric field,
+    * or magnetic field.
     * \param option quantity to be plotted
     * - potential: "v", "voltage", "p", "potential"
-    * - magnitude of the electric field: "e", "field"
+    * - magnitude of the electric field: "emag", "field"
     * - x-component of the electric field: "ex"
     * - y-component of the electric field: "ey"
     * - z-component of the electric field: "ez"
+    * - magnitude of the magnetic field: "bmag"
+    * - x-component of the magnetic field: "bx"
+    * - y-component of the magnetic field: "by"
+    * - z-component of the magnetic field: "bz"
     **/
   void PlotContour(const std::string& option = "v");
-  /** Make a 2D plot of the electric potential or field.
+  /** Make a 2D plot of the electric potential, electric field or 
+    * magnetic field.
     * \param option quantity to be plotted (see PlotContour)
     * \param drawopt option string passed to TF2::Draw
     **/
   void Plot(const std::string& option = "v",
             const std::string& drawopt = "arr");
-  /** Make a 1D plot of the electric potential or field along a line.
+  /** Make a 1D plot of the potential or field along a line.
     * \param x0,y0,z0 starting point
     * \param x1,y1,z1 end point
     * \param option quantity to be plotted (see PlotContour)
@@ -70,13 +78,14 @@ class ViewField : public ViewBase {
     **/
   void PlotContourWeightingField(const std::string& label,
                                  const std::string& option);
-  /** Make a 2D plot of the weighting potential or field.
-    * \param label identifier of the electrode
-    * \param option quantity to be plotted (see PlotContour)
-    * \param drawopt option string passed to TF2::Draw
-    **/
-  void PlotWeightingField(const std::string& label, const std::string& option,
-                          const std::string& drawopt);
+    /** Make a 2D plot of the weighting potential or field.
+      * \param label identifier of the electrode
+      * \param option quantity to be plotted (see PlotContour)
+      * \param drawopt option string passed to TF2::Draw
+      *\param t time slice of dynamic weighting potential [ns].
+      **/
+    void PlotWeightingField(const std::string& label, const std::string& option,
+                            const std::string& drawopt, const double t = 0.);
 
   /** Make a 1D plot of the weighting potential or field along a line.
     * \param label identifier of the electrode
@@ -128,7 +137,17 @@ class ViewField : public ViewBase {
                           const double interval = 10.) const;
 
  private:
-  enum class Parameter { Potential = 0, Magnitude, Ex, Ey, Ez, Unknown };
+  enum class Parameter { 
+    Potential = 0, 
+    Emag,
+    Ex, 
+    Ey, 
+    Ez, 
+    Bmag,
+    Bx, 
+    By, 
+    Bz, 
+    Unknown };
 
   bool m_useAutoRange = true;
   bool m_samplePotential = true;
@@ -143,6 +162,7 @@ class ViewField : public ViewBase {
   double m_vmin = 0., m_vmax = 100.;
   double m_emin = 0., m_emax = 10000.;
   double m_wmin = 0., m_wmax = 100.;
+  double m_bmin = 0., m_bmax = 10.;
 
   // Number of contours
   unsigned int m_nContours = 20;
@@ -154,16 +174,19 @@ class ViewField : public ViewBase {
   bool SetPlotLimits();
   void Draw2d(const std::string& option, const bool contour,
               const bool wfield, const std::string& electrode,
-              const std::string& drawopt);
+              const std::string& drawopt, const double t = 0.);
   void DrawProfile(const double x0, const double y0, const double z0,
                    const double x1, const double y1, const double z1,
                    const std::string& option, const bool wfield,
                    const std::string& electrode, const bool normalised);
-  Parameter GetPar(const std::string& option, std::string& title) const;
-  double Field(const double x, const double y, const double z,
-               const Parameter par) const;
+  Parameter GetPar(const std::string& option, std::string& title,
+                   bool& bfield) const;
+  double Efield(const double x, const double y, const double z,
+                const Parameter par) const;
   double Wfield(const double x, const double y, const double z,
-                const Parameter par, const std::string& electrode) const;
+                const Parameter par, const std::string& electrode, const double t = 0.) const;
+  double Bfield(const double x, const double y, const double z,
+                const Parameter par) const;
 
 };
 }

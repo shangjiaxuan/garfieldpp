@@ -39,7 +39,7 @@ By default, this installs the documentation into `<installdir>/share/doc/HSFTEMP
 
 You can run the examples from the build directory (if WITH_EXAMPLES has been turned on) but you need to setup a running environment defining some variables, in particular for the HEED database.
 
-In the following lines we use the `Gem` example:
+In the following lines we use the `Gem` example (assuming that the build folder is our current working directory):
 ```
 source setupGarfield.sh
 cd Examples/Gem
@@ -67,13 +67,15 @@ make
 If you want to build your own project against Garfield, CMake may be the best option for you. Just add its location to _CMAKE_PREFIX_PATH_ and call _find_package(Garfield)_ within your CMakeLists.txt.
 
 ```
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project(test)
 
-find_package(Garfield REQUIRED)
+if(NOT TARGET Garfield::Garfield)
+  find_package(Garfield REQUIRED)
+endif()
 
 add_executable(test test.C)
-target_link_libraries(test Garfield)
+target_link_libraries(test Garfield::Garfield)
 ```
 
 ## About Windows Build:

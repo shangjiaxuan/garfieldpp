@@ -28,29 +28,26 @@ class ViewSignal : public ViewBase {
 
   /** Plot the signal.
    * \param label Identifier (weighting field) of the signal to be plotted.
-   * \param total Flag whether to plot the total induced signal.
-   * \param electron Flag whether to plot the electron-induced signal.
-   * \param ion Flag whether to plot the ion/hole-induced signal.
-   * \param delayed Flag whether to plot the delayed signal component.
+   * \param optTotal String containing information about the total signals
+   *                 you want to plot. The syntax is the first letter of 
+   *                 the charge carrier signal component you want to plot: 
+   *                 "t" for total, "e" for electron and "i" for ion/hole.
+   *                 "tei" enables all three components. 
+   *                 The total signal is always plotted.
+   * \param optPrompt String containing information about the
+   *                  prompt signal components you want to plot. 
+   *                  The syntax is identical to the one described above.
+   * \param optDelayed String containing information about the delayed
+   *                   signal components you want to plot. 
+   *                   The syntax is identical to the one described above.
    * \param same Flag to keep existing plots on the canvas or not.
    */
-  void PlotSignal(const std::string& label, const bool total = true,
-                  const bool electron = false, const bool ion = false,
-                  const bool delayed = false, const bool same = false);
 
-  /** Retrieve the histogram for the total, prompt and delayed induced charge or
-   * signal.. \param label Identifier (weighting field) of the signal to be
-   * plotted. \param h histogram to be returned \param electron Flag whether to
-   * plot the electron-induced signal. \param ion Flag whether to plot the
-   * ion/hole-induced signal. \param delayed Flag whether to plot the delayed
-   * signal component. \param same Flag to keep existing plots on the canvas or
-   * not. \param getsignal is true for plotting the induced signal and false for
-   * plotting the induced charge.
-   */
-
-  void Plot(const std::string& label, const bool getsignal,
-            const bool total = true, const bool delayed = true,
-            const bool same = false);
+  void PlotSignal(const std::string& label, 
+                  const std::string& optTotal = "t",
+                  const std::string& optPrompt = "",
+                  const std::string& optDelayed = "",
+                  const bool same = false);
 
   /** Retrieve the histogram for the total, prompt and delayed induced charge or
     signal.
@@ -75,6 +72,9 @@ class ViewSignal : public ViewBase {
 
   /// Override the default y-axis label.
   void SetLabelY(const std::string& label) { m_labelY = label; }
+
+  /// Draw a legend on the plot or not. 
+  void EnableLegend(const bool on = true) { m_legend = on; }
 
   /// Set the (ROOT) colour with which to draw the total signal.
   void SetColourTotal(const short col) { m_colTotal = col; }
@@ -110,6 +110,8 @@ class ViewSignal : public ViewBase {
   // Histograms.
   std::unique_ptr<TH1D> m_hSignal;
   std::unique_ptr<TH1D> m_hPromptSignal;
+  std::unique_ptr<TH1D> m_hPromptElectrons;
+  std::unique_ptr<TH1D> m_hPromptIons;
 
   std::unique_ptr<TH1D> m_hCharge;
   std::unique_ptr<TH1D> m_hPromptCharge;
@@ -121,11 +123,20 @@ class ViewSignal : public ViewBase {
   std::unique_ptr<TH1D> m_hDelayedSignalElectrons;
   std::unique_ptr<TH1D> m_hDelayedSignalIons;
 
+  bool m_legend = false;
+
   // Colours.
   short m_colTotal = kBlue + 3;
   short m_colElectrons = kOrange - 3;
   short m_colIons = kRed + 1;
-  std::array<short, 3> m_colDelayed{{kCyan + 2, kYellow - 7, kRed - 9}};
+  std::array<short, 6> m_colDelayed{
+      {kCyan + 2, kYellow - 7, kRed - 9, kGreen + 1, kYellow - 4, kRed - 9}};
+
+  std::array<short, 3> m_colPrompt{{kAzure + 10, kRed - 4, kMagenta + 2}};
+
+  void DrawHistogram(TH1D* h, const std::string& opt, const std::string& xlabel,
+                     const std::string& ylabel);
+
 };
 }  // namespace Garfield
 #endif

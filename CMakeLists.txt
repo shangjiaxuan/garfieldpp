@@ -103,7 +103,7 @@ target_sources(
           Source/ComponentComsol.cc
           Source/ComponentConstant.cc
           Source/ComponentElmer.cc
-          Source/ComponentElmer2D.cc
+          Source/ComponentElmer2d.cc
           Source/ComponentFieldMap.cc
           Source/ComponentGrid.cc
           Source/ComponentNeBem2d.cc
@@ -146,6 +146,7 @@ target_sources(
           Source/SolidTube.cc
           Source/SolidWire.cc
           Source/TetrahedralTree.cc
+          Source/TGeoTet.cc
           Source/Track.cc
           Source/TrackBichsel.cc
           Source/TrackElectron.cc

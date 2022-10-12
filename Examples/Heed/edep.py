@@ -7,8 +7,8 @@ if sys.platform == 'darwin':
   ROOT.gSystem.Load(path + '/lib/libmagboltz.dylib')
   ROOT.gSystem.Load(path + '/lib/libGarfield.dylib')
 else:
-  ROOT.gSystem.Load(path + '/install/lib/libmagboltz.so')
-  ROOT.gSystem.Load(path + '/install/lib/libGarfield.so')
+  ROOT.gSystem.Load(path + '/lib/libmagboltz.so')
+  ROOT.gSystem.Load(path + '/lib/libGarfield.so')
 
 ROOT.Garfield.SetDefaultStyle()
 
@@ -16,9 +16,9 @@ ROOT.Garfield.SetDefaultStyle()
 ROOT.TH1.StatOverflows(True)
 hElectrons = ROOT.TH1F("hElectrons", "Number of electrons", 200, 0, 200)
 hEdep = ROOT.TH1F("hEdep", "Energy Loss", 100, 0., 10.)
+hClusterSize = ROOT.TH1F("hClusterSize", "Cluster size", 100, 0.5, 100.5)
 
-gas = ROOT.Garfield.MediumMagboltz()
-gas.SetComposition("ar", 90., "co2", 10.)
+gas = ROOT.Garfield.MediumMagboltz("ar", 90., "co2", 10.)
 gas.SetTemperature(293.15)
 gas.SetPressure(760.)
 
@@ -40,10 +40,11 @@ track = ROOT.Garfield.TrackHeed()
 track.SetSensor(sensor)
 track.SetParticle("pi")
 track.SetMomentum(120.e9)
+track.Initialise(gas, True)
 
 nEvents = 10000
 for i in range(nEvents):
-  if i % 1000 == 0: print i, "/", nEvents
+  # if i % 1000 == 0: print i, "/", nEvents
   # Initial position and direction 
   x0 = 0.
   y0 = 0.
@@ -72,6 +73,7 @@ for i in range(nEvents):
   while track.GetCluster(xc, yc, zc, tc, nc, ec, extra):
     esum += ec.value
     nsum += nc.value
+    hClusterSize.Fill(nc.value)
   hElectrons.Fill(nsum)
   hEdep.Fill(esum * 1.e-3);
  
@@ -85,3 +87,8 @@ hEdep.GetXaxis().SetTitle("energy loss [keV]")
 hEdep.Draw()
 c2.SaveAs("edep.pdf")
 
+c3 = ROOT.TCanvas()
+hClusterSize.GetXaxis().SetTitle("electrons / cluster")
+hClusterSize.Draw()
+c3.SetLogy()
+c3.SaveAs("clusterSizeDistribution.pdf")

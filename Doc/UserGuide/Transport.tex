@@ -174,14 +174,17 @@ Similarly, the function
 \begin{lstlisting}
 void GetArrivalTimeSpread(const double eps = 1.e-4);
 \end{lstlisting}
-returns the $\sigma$ of the arrival time distribution calculated by 
-integrating the longitudinal diffusion coefficient along the drift line. 
+computes the $\sigma$ of the arrival time distribution by 
+integrating quadratically the ratio of longitudinal diffusion coefficient 
+and drift velocity over the drift line,
+\begin{equation*}
+  \sigma^{2} = \int\left(D_{L}/v_{\text{D}}\right)^2\,\text{d}s.
+\end{equation*}
 
 The points along the most recent drift line are accessible through the functions
 \begin{lstlisting}
-unsigned int GetNumberOfDriftLinePoints() const;
-void GetDriftLinePoint(const unsigned int i, 
-                       double& x, double& y, double& z, double& t) const;
+size_t GetNumberOfDriftLinePoints() const;
+void GetDriftLinePoint(const size_t i, double& x, double& y, double& z, double& t) const;
 \end{lstlisting}
 \begin{description}
   \item[i] index of the point.
@@ -252,7 +255,7 @@ is integrated in a stochastic manner:
   a step of length \(\Delta{s} = v_{\text{d}}\Delta{t}\) 
   in the direction of the
   drift velocity \(\mathbf{v}_{\text{d}}\) 
-  at the local field is calculated (with either the 
+  at the local electric and magnetic field is calculated (with either the 
   time step \(\Delta{t}\) or the distance \(\Delta{s}\) 
   being specified by the user);
   \item
@@ -281,7 +284,7 @@ with a mean equal to a multiple of the ``collision time''
 \begin{equation*}
   \tau = \frac{m v_{d}}{q E}.
 \end{equation*}
-The third method is activated by default.
+The third method is activated by default. 
 
 Instead of making simple straight-line steps (using the drift velocity 
 vector at the starting point of a step), the end point of a step 
@@ -318,28 +321,28 @@ to diffusion-only steps based on the low-field mobility.
 
 Drift line calculations are started using 
 \begin{lstlisting}
-bool DriftElectron(const double x0, const double y0, const double z0, const double t0);
-bool DriftHole(const double x0, const double y0, const double z0, const double t0);
-bool DriftIon(const double x0, const double y0, const double z0, const double t0);
+bool DriftElectron(const double x, const double y, const double z, const double t);
+bool DriftHole(const double x, const double y, const double z, const double t);
+bool DriftIon(const double x, const double y, const double z, const double t);
 \end{lstlisting}
 \begin{description}
-  \item[x0, y0, z0, t0] initial position and time
+  \item[x, y, z, t] initial position and time
 \end{description}
 The trajectory can be retrieved using
 \begin{lstlisting} 
-unsigned int GetNumberOfDriftLinePoints() const;
-void GetDriftLinePoint(const int i, double& x, double& y, double& z, double& t);
+size_t GetNumberOfDriftLinePoints() const;
+void GetDriftLinePoint(const size_t i, double& x, double& y, double& z, double& t);
 \end{lstlisting}
 
 The calculation of an avalanche initiated by an electron, 
 a hole or an electron-hole pair is done using
 \begin{lstlisting}
-bool AvalancheElectron(const double x0, const double y0, const double z0,
-                       const double t0, const bool hole = false);
-bool AvalancheHole(const double x0, const double y0, const double z0,
-                   const double t0, const bool electron = false);
-bool AvalancheElectronHole(const double x0, const double y0, const double z0, 
-                           const double t0);
+bool AvalancheElectron(const double x, const double y, const double z,
+                       const double t, const bool hole = false);
+bool AvalancheHole(const double x, const double y, const double z,
+                   const double t, const bool electron = false);
+bool AvalancheElectronHole(const double x, const double y, const double z, 
+                           const double t);
 \end{lstlisting}
 The flags \texttt{hole} and \texttt{electron} specify whether the  
 drift and multiplication of the holes/ions (electrons) created in the 
@@ -350,8 +353,8 @@ avalanche should be simulated.
 The starting and endpoints of electrons in the avalanche can be 
 retrieved using
 \begin{lstlisting}
-unsigned int GetNumberOfElectronEndpoints() const;
-void GetElectronEndpoint(const unsigned int i, 
+size_t GetNumberOfElectronEndpoints() const;
+void GetElectronEndpoint(const size_t i, 
                          double& x0, double& y0, double& z0, double& t0,
                          double& x1, double& y1, double& z1, double& t1, int& status) const;
 \end{lstlisting}
@@ -362,14 +365,6 @@ void GetElectronEndpoint(const unsigned int i,
   \item[status] status code indicating why the tracking of the electron was stopped.  
 \end{description}
 Analogous functions are available for holes and ions.
-
-The functions
-\begin{lstlisting}
-void EnableMagneticField();
-\end{lstlisting}
-instructs the class to consider not only the electric but also the magnetic field
-in the evaluation of the transport parameters.  
-By default, magnetic fields are not taken into account.
 
 For debugging purposes, attachment and diffusion can be switched off using
 \begin{lstlisting}
@@ -391,24 +386,44 @@ are tracked. If the time coordinate of a particle crosses the upper limit,
 it is stopped and assigned the status code -17.
 Slicing the calculation into time steps can be useful for instance 
 for making a movie of the avalanche evolution 
-or for calculations involving space charge.
+or for calculations involving space charge. 
+Another useful function for that purpose is
+\begin{lstlisting}
+bool ResumeAvalanche(const bool electron = true, const bool hole = true);
+\end{lstlisting}
+\begin{description}
+  \item[electron,hole] flags to switch off the electron (hole) component of the avalanche
+\end{description}
+which instructs \texttt{AvalancheMC} to continue the avalanche simulation 
+from the most recent set of end points.
+Before calling \texttt{ResumeAvalanche}, one can ``manually'' add 
+electrons, holes, or ions to the list of charge carriers to be transported. 
+\begin{lstlisting}
+void AddElectron(const double x, const double y, const double z, const double t); 
+void AddHole(const double x, const double y, const double z, const double t); 
+void AddIon(const double x, const double y, const double z, const double t); 
+\end{lstlisting} 
+
 The time window can be removed using
 \begin{lstlisting}
 void UnsetTimeWindow();
 \end{lstlisting}
 
-By default, the Townsend and attachment coefficients are integrated over 
-path segments projected onto the local drift velocity vector. 
-This feature, which can be activated or deactivated by calling the function
+Using the function 
 \begin{lstlisting}
 void EnableProjectedPathIntegration(const bool on = true);
 \end{lstlisting} 
-ensures that the path length integral does not depend on the step size.
-Using 
+one can request the Townsend and attachment coefficients to 
+be projected onto the local drift velocity vector when integrating 
+them over drift path segments.
+By default, this feature is switched on.
+%It ensures that the path length integral does not depend on the step size.
+The function 
 \begin{lstlisting}
 void EnableAvalancheSizeLimit(const unsigned int size);
 \end{lstlisting}
-an upper limit to the number of electrons in an avalanche can be imposed.
+sets an upper limit to the number of electrons in an avalanche 
+can be imposed.
 
 \section{Microscopic tracking}\label{Sec:MicroscopicTracking}
 In the microscopic tracking approach -- implemented at present only for electrons --
@@ -434,16 +449,16 @@ according to the type of collision.
 In Garfield++, the microscopic tracking method is implemented in the class 
 \texttt{AvalancheMicroscopic}. A calculation is started by means of
 \begin{lstlisting}
-void AvalancheElectron(const double x0, const double y0, const double z0,
-                       const double t0, const double e0,
-                       const double dx0 = 0., const double dy0 = 0., const double dz0 = 0.);
+void AvalancheElectron(const double x, const double y, const double z,
+                       const double t, const double e,
+                       const double dx = 0., const double dy = 0., const double dz = 0.);
 \end{lstlisting}
 \begin{description}
-  \item[x0, y0, z0, t0] initial position and time
-  \item[e0] initial energy (eV)
-  \item[dx0, dy0, dz0] initial direction 
+  \item[x, y, z, t] initial position and time
+  \item[e] initial energy (eV)
+  \item[dx, dy, dz] initial direction 
 \end{description}
-If the norm of the direction vector is zero, 
+If the length of the direction vector is zero, 
 the initial direction is randomized.
 
 After the calculation is finished, the number of electrons 
@@ -455,8 +470,8 @@ void GetAvalancheSize(int& ne, int& ni);
 Information about the ``history'' of each avalanche electron can be 
 retrieved by
 \begin{lstlisting}
-unsigned int GetNumberOfElectronEndpoints() const;
-void GetElectronEndpoint(const unsigned int i, 
+size_t GetNumberOfElectronEndpoints() const;
+void GetElectronEndpoint(const size_t i, 
                          double& x0, double& y0, double& z0, double& t0, double& e0,
                          double& x1, double& y1, double& z1, double& t1, double& e1,
                          int& status); 
@@ -471,8 +486,8 @@ A list of status codes is given in Table~\ref{Tab:DriftLineStatusCodes}.
 
 The function
 \begin{lstlisting}
-bool DriftElectron(const double x0, const double y0, const double z0, const double t0,
-                   const double e0, const double dx0, const double dy0, const double dz0);
+bool DriftElectron(const double x, const double y, const double z, const double t,
+                   const double e, const double dx, const double dy, const double dz);
 \end{lstlisting}
 traces only the initial electron but not the secondaries 
 produced along its drift path 
@@ -480,6 +495,8 @@ produced along its drift path
 
 \begin{table}
   \centering
+  \caption{Status codes for the termination of drift lines.}
+  \label{Tab:DriftLineStatusCodes}
   \begin{tabular}{r l}
     \toprule
     status code &  meaning\\
@@ -493,8 +510,6 @@ produced along its drift path
     -17 & outside the time window             \\
     \bottomrule
   \end{tabular}
-  \caption{Status codes for the termination of drift lines.}
-  \label{Tab:DriftLineStatusCodes}
 \end{table}
 
 The electron energy distribution can be extracted in the following way:
@@ -508,12 +523,14 @@ aval.EnableElectronEnergyHistogramming(&hEnergy);
 After each collision, 
 the histogram is filled with the current electron energy. 
 
-The effect of magnetic fields can be included 
-in the stepping algorithm using the function
+If the sensor has a non-zero magnetic field, \texttt{AvalancheMicroscopic} 
+will by default use a more complicated stepping algorithm which takes
+the effect of the $B$ field on the electron trajectory into account.
+In order to explicitly switch using magnetic fields on or off 
+one can use the function
 \begin{lstlisting}
-void EnableMagneticField();
+void EnableMagneticField(const bool on);
 \end{lstlisting}
-By default, magnetic fields are not taken into account in the calculation.
 
 Using 
 \begin{lstlisting}
@@ -543,13 +560,12 @@ is below the ionization potential of the gas.
 The transport cut can be removed by setting the threshold to a negative value.
 By default, no cut is applied.
 
-In order to extract information from the avalanche on a collision-by-collision basis, 
-so-called ``user handles'' are available. 
+In order to extract information from the avalanche on a collision-by-collision basis, a number of callback functions (``user handles'') are available. 
 \begin{lstlisting}
- void SetUserHandleStep(void (*f)(double x, double y, double z,
-                                  double t, double e,
-                                  double dx, double dy, double dz,
-                                  bool hole));
+void SetUserHandleStep(void (*f)(double x, double y, double z,
+                                 double t, double e,
+                                 double dx, double dy, double dz,
+                                 bool hole));
 void UnsetUserHandleStep();
 void SetUserHandleCollision(void (*f)(double x, double y, double z, double     t,
                                       int type, int level, Medium* m,

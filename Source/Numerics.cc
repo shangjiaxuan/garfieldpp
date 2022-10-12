@@ -1,8 +1,9 @@
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <iostream>
-#include <algorithm>
+#include <limits>
 #include <numeric>
-#include <array>
 
 #include "Garfield/Numerics.hh"
 
@@ -1199,6 +1200,54 @@ int cinv(const int n, std::vector<std::vector<std::complex<double> > >& a) {
     a[0][0] = std::complex<double>(1., 0.) / a[0][0];
   }
   return 0;
+}
+
+void cfft(std::vector<std::complex<double> >& a, const int msign) {
+
+  if (msign == 0) return;
+  const int m = std::abs(msign);
+  const int n = pow(2, m);
+  // Bit reversal.
+  int j = 1;
+  for (int i = 1; i <= n - 1; ++i) {
+    if (i < j) std::swap(a[j - 1], a[i - 1]);
+    int k = n / 2;
+    while (k < j) {
+      j -= k;
+      k /= 2;
+    }
+    j += k;
+  }
+  for (int i = 1; i <= n; i += 2) {
+    const auto t = a[i];
+    a[i] = a[i - 1] - t;
+    a[i - 1] += t;
+  }
+  if (m == 1) return;
+  double c = 0.;
+  double s = msign >= 0 ? 1. : -1.;
+  int le = 2;
+  for (int l = 2; l <= m; ++l) {
+    std::complex<double> w(c, s);
+    std::complex<double> u = w;
+    c = sqrt(0.5 * c + 0.5);
+    s = imag(w) / (c + c);
+    int le1 = le;
+    le = le1 + le1;
+    for (int i = 1; i <= n; i += le) {
+      const auto t = a[i + le1 - 1];
+      a[i + le1 - 1] = a[i - 1] - t;
+      a[i - 1] += t;
+    }
+    for (j = 2; j <= le1; ++j) {
+      for (int i = j; i <= n; i += le) {
+        const auto t = a[i + le1 - 1] * u;
+        a[i + le1 - 1] = a[i - 1] - t;
+        a[i - 1] += t;
+      }
+      u *= w;
+    }
+  }
 }
 
 }

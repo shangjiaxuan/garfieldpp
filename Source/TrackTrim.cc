@@ -2,30 +2,99 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <numeric>
 
 #include "Garfield/FundamentalConstants.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Random.hh"
 #include "Garfield/Sensor.hh"
+#include "Garfield/Utilities.hh"
 #include "Garfield/TrackTrim.hh"
 
 namespace {
 
-std::vector<std::string> tokenize(const std::string& line) {
+void Rotate(const std::array<double, 3>& f, 
+            const std::array<double, 3>& t,
+            std::array<double, 3>& a) {
 
-  std::vector<std::string> words;
-  std::istringstream ss(line);
-	for (std::string word; ss >> word;) {
-		words.push_back(word);
+  // T. Moller and J. F. Hughes,
+  // Efficiently Building a Matrix to Rotate One Vector to Another, 1999
+
+  // We assume that f and t are unit vectors.
+  // Calculate the cross-product.
+  std::array<double, 3> v = {f[1] * t[2] - f[2] * t[1],
+                             f[2] * t[0] - f[0] * t[2],
+                             f[0] * t[1] - f[1] * t[0]};
+  const auto v2 = std::inner_product(v.cbegin(), v.cend(), v.cbegin(), 0.);
+  if (v2 < Garfield::Small) return;
+  const double c = std::inner_product(f.cbegin(), f.cend(), t.cbegin(), 0.);
+  const double h = (1. - c) / v2;
+  std::array<std::array<double, 3>, 3> r;
+  if (fabs(c) > 0.99) {
+    // f and t are not parallel.
+    r[0][0] = h * v[0] * v[0] + c;
+    r[0][1] = h * v[0] * v[1] - v[2];
+    r[0][2] = h * v[0] * v[2] + v[1];
+    r[1][0] = h * v[0] * v[1] + v[2];
+    r[1][1] = h * v[1] * v[1] + c;
+    r[1][2] = h * v[1] * v[2] - v[0];
+    r[2][0] = h * v[0] * v[2] - v[1];
+    r[2][1] = h * v[1] * v[2] + v[0];
+    r[2][2] = h * v[2] * v[2] + c;
+  } else {
+    // f and t are nearly parallel.
+    std::array<double, 3> x = {0, 0, 0};
+    if (fabs(f[0]) < fabs(f[1]) && fabs(f[0]) < fabs(f[2])) {
+      x[0] = 1;
+    } else if (fabs(f[1]) < fabs(f[0]) && fabs(f[1]) < fabs(f[2])) {
+      x[1] = 1;
+    } else {
+      x[2] = 1;
+    }
+    const std::array<double, 3> u = {x[0] - f[0], x[1] - f[1], x[2] - f[2]};
+    const std::array<double, 3> g = {x[0] - t[0], x[1] - t[1], x[2] - t[2]};
+    const double u2 = std::inner_product(u.cbegin(), u.cend(), u.cbegin(), 0.);
+    const double g2 = std::inner_product(g.cbegin(), g.cend(), g.cbegin(), 0.);
+    const double ug = std::inner_product(u.cbegin(), u.cend(), g.cbegin(), 0.);
+    const double c0 = -2. / u2;
+    const double c1 = -2. / g2;
+    const double c2 = 4. * ug / (u2 * g2);
+    for (size_t i = 0; i < 3; ++i) {
+      for (size_t j = 0; j < 3; ++j) {
+        r[i][j] = c0 * u[i] * u[j] + c1 * g[i] * g[j] + c2 * g[i] * u[j];
+        if (i == j) r[i][j] += 1.;
+      }
+    }
   }
-	return words;
+  // Compute the rotated vector.
+  std::array<double, 3> b = {0., 0., 0.};
+  for (size_t i = 0; i < 3; ++i) {
+    for (size_t j = 0; j < 3; ++j) {
+      b[i] += r[i][j] * a[j];
+    }
+  }
+  std::swap(a, b); 
+}
+
+double Speed(const double ekin, const double mass) {
+  const double rk = ekin / mass;
+  const double gamma = 1. + rk;
+  const double beta2 = rk > 1.e-5 ? 1. - 1. / (gamma * gamma) : 2. * rk;
+  return sqrt(beta2) * Garfield::SpeedOfLight;
 }
 
 }
 
 namespace Garfield {
 
-TrackTrim::TrackTrim() : Track() { m_className = "TrackTrim"; }
+TrackTrim::TrackTrim() : Track() { 
+  m_className = "TrackTrim";
+  m_q = 1.;
+}
+
+void TrackTrim::SetParticle(const std::string& /*particle*/) {
+  std::cerr << m_className << "::SetParticle: Not applicable.\n";
+}
 
 bool TrackTrim::ReadFile(const std::string& filename, 
                          const unsigned int nIons, const unsigned int nSkip) {
@@ -33,14 +102,14 @@ bool TrackTrim::ReadFile(const std::string& filename,
   // TRMREE - Reads the TRIM EXYZ file.
 
   // Reset.
+  m_ekin = 0.;
   m_ions.clear();
   m_ion = 0;
   m_clusters.clear();
   m_cluster = 0;
 
-  std::ifstream infile;
-  infile.open(filename.c_str(), std::ios::in);
-  if (infile.fail()) {
+  std::ifstream infile(filename);
+  if (!infile) {
     std::cerr << m_className << "::ReadFile:\n"
               << "    Unable to open the EXYZ file (" << filename << ").\n";
     return false;
@@ -50,6 +119,7 @@ bool TrackTrim::ReadFile(const std::string& filename,
   unsigned int nRead = 0;
   unsigned int ionNumber = 0;
   bool header = true;
+  double mass = 0.;
   std::vector<float> x;
   std::vector<float> y;
   std::vector<float> z;
@@ -67,6 +137,7 @@ bool TrackTrim::ReadFile(const std::string& filename,
         auto words = tokenize(line);
         if (words.size() >= 3) {
           m_particleName = words[0];
+          mass = std::stod(words[1]);
           auto pos = words[2].find("keV");
           if (pos != std::string::npos) {
             m_ekin = 1.e3 * std::stod(words[2].substr(0, pos));
@@ -111,6 +182,12 @@ bool TrackTrim::ReadFile(const std::string& filename,
   AddIon(x, y, z, dedx, ekin);
   std::cout << m_className << "::ReadFile: Read energy vs position for " 
             << m_ions.size() << " ions.\n";
+  if (m_ekin > 0. && mass > 0.) {
+    std::cout << "    Initial kinetic energy set to " 
+              << m_ekin * 1.e-3 << " keV. Mass number: " << mass << ".\n";
+    m_mass = AtomicMassUnitElectronVolt * mass;
+    SetKineticEnergy(m_ekin);
+  }
   return true;
 }
 
@@ -122,25 +199,24 @@ void TrackTrim::AddIon(const std::vector<float>& x,
 
   const size_t nPoints = x.size();
   if (nPoints < 2) return;
-  std::vector<std::array<float, 5> > path;
-  for (size_t i = 0; i < nPoints; ++i) {
+  std::vector<std::array<float, 6> > path;
+  for (size_t i = 0; i < nPoints - 1; ++i) {
+    const float dx = x[i + 1] - x[i];
+    const float dy = y[i + 1] - y[i];
+    const float dz = z[i + 1] - z[i];
+    const float dmag = sqrt(dx * dx + dy * dy + dz * dz);
+    const float scale = dmag > 0. ? 1. / dmag : 1.;
     float eloss = 0.;
-    if (i < nPoints - 1) {
-      const float dx = x[i + 1] - x[i];
-      const float dy = y[i + 1] - y[i];
-      const float dz = z[i + 1] - z[i];
-      const float step = sqrt(dx * dx + dy * dy + dz * dz);
-      if (i == 0 && dedx[i] > 10. * dedx[i + 1]) {
-        eloss = step * dedx[i + 1];
-      } else { 
-        eloss = step * dedx[i];
-      }
-      const float dekin = ekin[i] - ekin[i + 1];
-      if (dekin > 0.) eloss = std::min(eloss, dekin); 
+    if (i == 0 && dedx[i] > 10. * dedx[i + 1]) {
+      eloss = dmag * dedx[i + 1];
+    } else { 
+      eloss = dmag * dedx[i];
     }
-    path.push_back({x[i], y[i], z[i], eloss, ekin[i]});
+    const float dekin = ekin[i] - ekin[i + 1];
+    if (dekin > 0.) eloss = std::min(eloss, dekin); 
+    path.push_back({dx * scale, dy * scale, dz * scale, dmag, eloss, ekin[i]});
   }
-  m_ions.push_back(path);
+  m_ions.push_back(std::move(path));
 }
 
 void TrackTrim::Print() {
@@ -151,9 +227,17 @@ void TrackTrim::Print() {
   }
   std::cout << "    Projectile: " << m_particleName << ", "
             << m_ekin * 1.e-3 << " keV\n"
-            << "    Number of tracks: " << m_ions.size() << "\n"
-            << "    Work function: " << m_work << " eV\n"
-            << "    Fano factor: " << m_fano << "\n";
+            << "    Number of tracks: " << m_ions.size() << "\n";
+  if (m_work > 0.) {
+    std::cout << "    Work function: " << m_work << " eV\n";
+  } else {
+    std::cout << "    Work function: Automatic\n";
+  }
+  if (m_fset) {
+    std::cout << "    Fano factor: " << m_fano << "\n";
+  } else {
+    std::cout << "    Fano factor: Automatic\n";
+  }
 }
 
 bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
@@ -178,43 +262,36 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
     return false;
   }
 
-  // Normalise and store the direction.
+  // Set the initial direction.
+  std::array<double, 3> v = {dx0, dy0, dz0};
   const double d0 = sqrt(dx0 * dx0 + dy0 * dy0 + dz0 * dz0);
-  double dx = dx0;
-  double dy = dy0;
-  double dz = dz0;
   if (d0 < Small) {
     if (m_debug) {
-      std::cout << m_className << "::NewTrack: Randomizing initial direction.\n";
+      std::cout << m_className << "::NewTrack: Sampling initial direction.\n";
     }
     // Null vector. Sample the direction isotropically.
-    RndmDirection(dx, dy, dz);
+    RndmDirection(v[0], v[1], v[2]);
   } else {
-    // Normalise the direction vector.
-    dx /= d0;
-    dy /= d0;
-    dz /= d0;
+    const double scale = 1. / d0;
+    for (size_t i = 0; i < 3; ++i) v[i] *= scale;
   }
-  const double dt = sqrt(dx * dx + dy * dy);
-  double phi = 0.;
-  double theta = 0.; 
-  if (dt > 0.) {
-    phi = atan2(dy, dx);
-    theta = atan2(dz, dt);
-  } else {
-    theta = dz < 0. ? -HalfPi : HalfPi;
-  }
-  const double ctheta = cos(theta);
-  const double stheta = sin(theta);
-  const double cphi = cos(phi);
-  const double sphi = sin(phi);
 
-  // Make sure all necessary parameters have been set.
-  if (m_work < Small) {
-    std::cerr << m_className << "::NewTrack: Work function not set.\n";
-    return false;
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
+    std::cerr << m_className << "::NewTrack: No medium at initial point.\n";
   }
- 
+  double w = m_work > 0. ? m_work : medium->GetW();
+  // Warn if the W value is not defined.
+  if (w < Small) {
+    std::cerr << m_className << "::NewTrack: "
+              << "Work function at initial point is not defined.\n";
+  }
+  double fano = m_fset ? m_fano : medium->GetFanoFactor();
+  fano = std::max(fano, 0.);
+
+  // Charge-over-mass ratio.
+  const double qoverm = m_mass > 0. ? m_q / m_mass : 0.;
+
   // Plot.
   if (m_viewer) PlotNewTrack(x0, y0, z0);
  
@@ -225,44 +302,85 @@ bool TrackTrim::NewTrack(const double x0, const double y0, const double z0,
   // Pool of unused energy
   double epool = 0.0;
 
+  const double ekin0 = GetKineticEnergy();
+
   const auto& path = m_ions[m_ion];
   const size_t nPoints = path.size();
-  for (size_t i = 1; i < nPoints; ++i) {
-    const double x = path[i][0];
-    const double y = path[i][1];
-    const double z = path[i][2];
-    Cluster cluster;
-    cluster.x = x0 + cphi * ctheta * x - sphi * y - cphi * stheta * z;
-    cluster.y = y0 + sphi * ctheta * x + cphi * y - sphi * stheta * z;
-    cluster.z = z0 + stheta * x + ctheta * z;
-    // Is this point inside an ionisable medium?
-    Medium* medium = nullptr;
-    if (!m_sensor->GetMedium(cluster.x, cluster.y, cluster.z, medium)) {
-      continue;
-    } 
-    if (!medium || !medium->IsIonisable()) continue;
-    cluster.t = t0;
-    double eloss = path[i - 1][3];
-    if (m_fano < Small) {
-      // No fluctuations.
-      cluster.electrons = int((eloss + epool) / m_work);
-      cluster.ec = m_work * cluster.electrons;
+  std::array<double, 3> x = {x0, y0, z0};
+  double t = t0;
+  for (size_t i = 0; i < nPoints; ++i) {
+    // Skip points with kinetic energy below the initial one set by the user.
+    double ekin = path[i][5];
+    if (ekin > ekin0) continue;
+    // Rotate the direction vector.
+    if (i == 0) {
+      Rotate({1, 0, 0}, {path[i][0], path[i][1], path[i][2]}, v);
     } else {
-      double ec = eloss + epool;
-      cluster.electrons = 0;
-      cluster.ec = 0.0;
-      while (true) {
-        const double er = RndmHeedWF(m_work, m_fano);
-        if (er > ec) break;
-        cluster.electrons++;
-        cluster.ec += er;
-        ec -= er;
-      }
+      Rotate({path[i - 1][0], path[i - 1][1], path[i - 1][2]},
+             {path[i][0], path[i][1], path[i][2]}, v);
     }
-    cluster.ekin = path[i][4];
-    epool += eloss - cluster.ec;
-    m_clusters.push_back(std::move(cluster));
-    if (m_viewer) PlotCluster(cluster.x, cluster.y, cluster.z);
+    // Get the step length and energy loss.
+    double dmag = path[i][3];
+    double eloss = path[i][4];
+    std::array<double, 3> d = {dmag * v[0], dmag * v[1], dmag * v[2]};
+    // Subdivide the step if necessary.
+    unsigned int nSteps = 1;
+    if (m_maxStepSize > 0. && dmag > m_maxStepSize) {
+      nSteps = std::ceil(dmag / m_maxStepSize);
+    }
+    if (m_maxLossPerStep > 0. && eloss > nSteps * m_maxLossPerStep) {
+      nSteps = std::ceil(eloss / m_maxLossPerStep);
+    }
+    if (nSteps > 1) {
+      const double scale = 1. / nSteps;
+      for (size_t j = 0; j < 3; ++j) d[j] *= scale;
+      dmag *= scale;
+      eloss *= scale;
+    }
+    // Compute the particle velocity.
+    const double vmag = Speed(ekin, m_mass);
+    // Compute the timestep.
+    const double dt = vmag > 0. ? dmag / vmag : 0.;
+    for (unsigned int j = 0; j < nSteps; ++j) {
+      Cluster cluster;
+      if (m_sensor->HasMagneticField()) {
+        double bx = 0., by = 0., bz = 0.;
+        int status = 0;
+        m_sensor->MagneticField(x[0], x[1], x[2], bx, by, bz, status);
+        d = StepBfield(dt, qoverm, vmag, bx, by, bz, v);
+      }
+      cluster.x = {x[0] + d[0], x[1] + d[1], x[2] + d[2]};
+      cluster.t = t + dt;
+      x = cluster.x;
+      t = cluster.t;
+      // Is this point inside an ionisable medium?
+      medium = m_sensor->GetMedium(cluster.x[0], cluster.x[1], cluster.x[2]);
+      if (!medium || !medium->IsIonisable()) continue;
+      if (m_work < Small) w = medium->GetW();
+      if (w < Small) continue;
+      if (fano < Small) {
+        // No fluctuations.
+        cluster.ne = int((eloss + epool) / w);
+        cluster.ec = w * cluster.ne;
+      } else {
+        double ec = eloss + epool;
+        cluster.ne = 0;
+        cluster.ec = 0.0;
+        while (true) {
+          const double er = RndmHeedWF(w, fano);
+          if (er > ec) break;
+          cluster.ne++;
+          cluster.ec += er;
+          ec -= er;
+        }
+      }
+      // TODO
+      cluster.ekin = i < nPoints - 1 ? path[i + 1][5] : ekin;
+      epool += eloss - cluster.ec;
+      if (cluster.ne == 0) continue;
+      m_clusters.push_back(std::move(cluster));
+      if (m_viewer) PlotCluster(cluster.x[0], cluster.x[1], cluster.x[2]);
+    } 
   }
   // Move to the next ion in the list.
   ++m_ion;
@@ -279,12 +397,12 @@ bool TrackTrim::GetCluster(double& xcls, double& ycls, double& zcls,
   if (m_cluster >= m_clusters.size()) return false;
 
   const auto& cluster = m_clusters[m_cluster];
-  xcls = cluster.x;
-  ycls = cluster.y;
-  zcls = cluster.z;
+  xcls = cluster.x[0];
+  ycls = cluster.x[1];
+  zcls = cluster.x[2];
   tcls = cluster.t;
 
-  n = cluster.electrons;
+  n = cluster.ne;
   e = cluster.ec;
   extra = cluster.ekin;
   // Move to the next cluster.

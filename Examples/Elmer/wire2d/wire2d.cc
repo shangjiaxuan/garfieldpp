@@ -13,10 +13,9 @@
 #include <TFile.h>
 
 #include "Garfield/MediumMagboltz.hh"
-#include "Garfield/ComponentElmer2D.hh"
+#include "Garfield/ComponentElmer2d.hh"
 #include "Garfield/Sensor.hh"
 #include "Garfield/ViewField.hh"
-#include "Garfield/Plotting.hh"
 #include "Garfield/ViewFEMesh.hh"
 #include "Garfield/GarfieldConstants.hh"
 #include "Garfield/Random.hh"
@@ -37,39 +36,34 @@ int main(int argc, char* argv[]) {
   const double axis_y = 5;
   const double axis_z = 5;
 
-
-  // Define the medium.
-  MediumMagboltz* gas = new MediumMagboltz();
-  // Set the temperature (K)
-  gas->SetTemperature(293.15);
-  // Set the pressure (Torr)
-  gas->SetPressure(740.);
-  // Allow for drifting in this medium
-  gas->EnableDrift();
-  // Specify the gas mixture (Ar/CO2 70:30)
-  gas->SetComposition("ar", 70., "co2", 30.);
+  // Define the medium (Ar/CO2 70:30).
+  MediumMagboltz gas("ar", 70., "co2", 30.);
+  // Set the temperature (K).
+  gas.SetTemperature(293.15);
+  // Set the pressure (Torr).
+  gas.SetPressure(740.);
 
   // Import an Elmer-created field map.
-  ComponentElmer2D* elm = new ComponentElmer2D(
+  ComponentElmer2d elm(
       "wire2d/mesh.header", "wire2d/mesh.elements", "wire2d/mesh.nodes",
       "wire2d/dielectrics.dat", "wire2d/wire2d.result", "cm");
-  elm->SetMedium(0, gas);
-  elm->SetRangeZ(-5.,5.);
+  elm.SetGas(&gas);
+  elm.SetRangeZ(-5.,5.);
 
   // Set up a sensor object.
-  Sensor* sensor = new Sensor();
-  sensor->AddComponent(elm);
-  sensor->SetArea(-axis_x, -axis_y, -axis_z, axis_x, axis_y, axis_z);
+  Sensor sensor;
+  sensor.AddComponent(&elm);
+  sensor.SetArea(-axis_x, -axis_y, -axis_z, axis_x, axis_y, axis_z);
 
   // Create an avalanche object
-  AvalancheMicroscopic* aval = new AvalancheMicroscopic();
-  aval->SetSensor(sensor);
-  aval->SetCollisionSteps(100);
+  AvalancheMicroscopic aval;
+  aval.SetSensor(&sensor);
+  aval.SetCollisionSteps(100);
 
   // Set up the object for drift line visualization.
-  ViewDrift* viewDrift = new ViewDrift();
-  viewDrift->SetArea(-axis_x, -axis_y, -axis_z, axis_x, axis_y, axis_z);
-  aval->EnablePlotting(viewDrift);
+  ViewDrift viewDrift;
+  viewDrift.SetArea(-axis_x, -axis_y, -axis_z, axis_x, axis_y, axis_z);
+  aval.EnablePlotting(&viewDrift);
 
   // Set the electron start parameters.
   const double zi = 1.0;
@@ -78,11 +72,12 @@ int main(int argc, char* argv[]) {
   double xi = ri * cos(thetai);
   double yi = ri * sin(thetai);
   // Calculate the avalanche.
-  std::cout << "Avalanche of a single electron starting from (" << xi << ", " << yi << ", " << zi << ")..." << std::endl;
-  aval->AvalancheElectron(xi, yi, zi, 0., 0., 0., 0., 0.);
+  std::cout << "Avalanche of a single electron starting from (" 
+            << xi << ", " << yi << ", " << zi << ")..." << std::endl;
+  aval.AvalancheElectron(xi, yi, zi, 0., 0., 0., 0., 0.);
 
   std::cout << "... avalanche complete with "
-            << aval->GetNumberOfElectronEndpoints() << " electron tracks.\n";
+            << aval.GetNumberOfElectronEndpoints() << " electron tracks.\n";
 
   // Plot the geometry, field and drift lines.
   TCanvas* cGeom = new TCanvas("geom", "Geometry/Avalanche/Fields");
@@ -90,7 +85,7 @@ int main(int argc, char* argv[]) {
   const bool plotContours = false;
   if (plotContours) {
     ViewField* vf = new ViewField();
-    vf->SetSensor(sensor);
+    vf->SetSensor(&sensor);
     vf->SetCanvas(cGeom);
     vf->SetArea(-axis_x, -axis_y, axis_x, axis_y);
     vf->SetNumberOfContours(40);
@@ -100,22 +95,20 @@ int main(int argc, char* argv[]) {
   }
 
   // Set up the object for FE mesh visualization.
-  ViewFEMesh* vFE = new ViewFEMesh();
-  vFE->SetArea(-axis_x, -axis_z, -axis_y, axis_x, axis_z, axis_y);
-  vFE->SetCanvas(cGeom);
-  vFE->SetComponent(elm);
-  vFE->SetPlane(0, 0, 1, 0, 0, 0);
-  vFE->SetFillMesh(true);
-  vFE->SetColor(1, kGray);
+  ViewFEMesh vFE;
+  vFE.SetArea(-axis_x, -axis_z, -axis_y, axis_x, axis_z, axis_y);
+  vFE.SetCanvas(cGeom);
+  vFE.SetComponent(&elm);
+  vFE.SetPlane(0, 0, 1, 0, 0, 0);
+  vFE.SetFillMesh(true);
+  vFE.SetColor(1, kGray);
   if (!plotContours) {
-    vFE->EnableAxes();
-    vFE->SetXaxisTitle("x (cm)");
-    vFE->SetYaxisTitle("y (cm)");
-    vFE->SetViewDrift(viewDrift);
-    vFE->Plot();
+    vFE.EnableAxes();
+    vFE.SetXaxisTitle("x (cm)");
+    vFE.SetYaxisTitle("y (cm)");
   }
-
-  app.Run(kTRUE);
-
+  vFE.SetViewDrift(&viewDrift);
+  vFE.Plot();
+  app.Run();
   return 0;
 }

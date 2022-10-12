@@ -24,10 +24,10 @@ int main(int argc, char * argv[]) {
   TH1::StatOverflows(true); 
   TH1F hElectrons("hElectrons", "Number of electrons", 200, 0, 200);
   TH1F hEdep("hEdep", "Energy Loss", 100, 0., 10.);
+  TH1F hClusterSize("hClusterSize", "Cluster size", 100, 0.5, 100.5);
 
   // Make a medium
-  MediumMagboltz gas;
-  gas.SetComposition("ar", 90., "co2", 10.);
+  MediumMagboltz gas("ar", 90., "co2", 10.);
   gas.SetTemperature(293.15);
   gas.SetPressure(760.);
 
@@ -49,11 +49,10 @@ int main(int argc, char * argv[]) {
   track.SetSensor(&sensor);
   track.SetParticle("pi");
   track.SetMomentum(120.e9);
-
+  constexpr bool verbose = true;
+  track.Initialise(&gas, verbose); 
   const int nEvents = 10000;
-  track.EnableDebugging();
   for (int i = 0; i < nEvents; ++i) {
-    if (i == 1) track.DisableDebugging();
     if (i % 1000 == 0) std::cout << i << "/" << nEvents << "\n";
     // Initial position and direction 
     double x0 = 0., y0 = 0., z0 = 0., t0 = 0.;
@@ -75,6 +74,7 @@ int main(int argc, char * argv[]) {
     while (track.GetCluster(xc, yc, zc, tc, nc, ec, extra)) {
       esum += ec;
       nsum += nc;
+      hClusterSize.Fill(nc);
     }
     hElectrons.Fill(nsum);
     hEdep.Fill(esum * 1.e-3);
@@ -89,6 +89,12 @@ int main(int argc, char * argv[]) {
   hEdep.GetXaxis()->SetTitle("energy loss [keV]");
   hEdep.Draw();
   c2.SaveAs("edep.pdf");
+
+  TCanvas c3;
+  hClusterSize.GetXaxis()->SetTitle("electrons / cluster");
+  hClusterSize.Draw();
+  c3.SetLogy();
+  c3.SaveAs("clusterSizeDistribution.pdf");
 
   app.Run(true); 
 

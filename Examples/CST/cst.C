@@ -54,11 +54,7 @@ int main(int argc, char * argv[]) {
   const std::string path = std::getenv("GARFIELD_INSTALL");
   gas.LoadIonMobility(path + "/share/Garfield/Data/IonMobility_Ar+_Ar.txt");
   // Associate the gas with the corresponding field map material. 
-  const unsigned int nMaterials = fm.GetNumberOfMaterials();
-  for (unsigned int i = 0; i < nMaterials; ++i) {
-    const double eps = fm.GetPermittivity(i);
-    if (eps == 1.) fm.SetMedium(i, &gas);
-  }
+  fm.SetGas(&gas);
   fm.PrintMaterials();
 
   // Create the sensor.

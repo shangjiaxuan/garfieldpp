@@ -14,43 +14,8 @@ class ComponentVoxel : public Component {
   /// Destructor
   ~ComponentVoxel() {}
 
-  void Clear() override { Reset(); }
-
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, double& v, Medium*& m,
-                     int& status) override;
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, Medium*& m, int& status) override;
-
-  void WeightingField(const double x, const double y, const double z,
-                      double& wx, double& wy, double& wz,
-                      const std::string& label) override;
-  double WeightingPotential(const double x, const double y, const double z,
-                            const std::string& label) override;
-  void DelayedWeightingField(const double x, const double y, const double z,
-                             const double t, double& wx, double& wy, double& wz,
-                             const std::string& label) override;
-
-  void MagneticField(const double x, const double y, const double z, double& bx,
-                     double& by, double& bz, int& status) override;
-
   /// Interpolate between field values at the element centres.
   void EnableInterpolation(const bool on = true) { m_interpolate = on; }
-
-  /// Offset coordinates in the weighting field, such that the
-  /// same numerical weighting field map can be used for electrodes at
-  /// different positions.
-  void SetWeightingFieldOffset(const double x, const double y, const double z);
-
-  Medium* GetMedium(const double x, const double y, const double z) override;
-
-  bool GetVoltageRange(double& vmin, double& vmax) override;
-  bool GetElectricFieldRange(double& exmin, double& exmax, double& eymin,
-                             double& eymax, double& ezmin, double& ezmax);
-  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
-                      double& xmax, double& ymax, double& zmax) override;
-  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
-                         double& xmax, double& ymax, double& zmax) override;
 
   /** Define the grid.
     * \param nx,ny,nz number of bins along x, y, z.
@@ -87,6 +52,11 @@ class ComponentVoxel : public Component {
                           const bool withPotential, 
                           const double scaleX = 1., const double scaleE = 1.,
                           const double scaleP = 1.);
+  /// Offset coordinates in the weighting field, such that the
+  /// same numerical weighting field map can be used for electrodes at
+  /// different positions.
+  void SetWeightingFieldOffset(const double x, const double y, const double z);
+
   /// Import delayed weighting field from file.
   bool LoadWeightingField(const std::string& filename, const std::string& format,
                           const double time, const bool withPotential, 
@@ -95,6 +65,13 @@ class ComponentVoxel : public Component {
   /// Import magnetic field values from a file.
   bool LoadMagneticField(const std::string& filename, const std::string& format,
                          const double scaleX = 1., const double scaleB = 1.);
+
+  /// Set the medium in region i.
+  void SetMedium(const unsigned int i, Medium* m);
+  /// Get the medium in region i.
+  Medium* GetMedium(const unsigned int i) const;
+  /// Print all regions.
+  void PrintRegions() const;
 
   /// Return the indices of the element at a given point.
   bool GetElement(const double xi, const double yi, const double zi,
@@ -105,12 +82,36 @@ class ComponentVoxel : public Component {
                   const unsigned int k, double& v, double& ex, double& ey,
                   double& ez) const;
 
-  /// Set the medium in region i.
-  void SetMedium(const unsigned int i, Medium* m);
-  /// Get the medium in region i.
-  Medium* GetMedium(const unsigned int i) const;
-  /// Print all regions.
-  void PrintRegions() const;
+  void Clear() override { Reset(); }
+  void ElectricField(const double x, const double y, const double z, double& ex,
+                     double& ey, double& ez, double& v, Medium*& m,
+                     int& status) override;
+  void ElectricField(const double x, const double y, const double z, double& ex,
+                     double& ey, double& ez, Medium*& m, int& status) override;
+  void WeightingField(const double x, const double y, const double z,
+                      double& wx, double& wy, double& wz,
+                      const std::string& label) override;
+  double WeightingPotential(const double x, const double y, const double z,
+                            const std::string& label) override;
+  void DelayedWeightingField(const double x, const double y, const double z,
+                             const double t, double& wx, double& wy, double& wz,
+                             const std::string& label) override;
+  double DelayedWeightingPotential(const double x, const double y,
+                                   const double z, const double t,
+                                   const std::string& label) override;
+  void MagneticField(const double x, const double y, const double z, double& bx,
+                     double& by, double& bz, int& status) override;
+  bool HasMagneticField() const override;
+
+  Medium* GetMedium(const double x, const double y, const double z) override;
+
+  bool GetVoltageRange(double& vmin, double& vmax) override;
+  bool GetElectricFieldRange(double& exmin, double& exmax, double& eymin,
+                             double& eymax, double& ezmin, double& ezmax);
+  bool GetBoundingBox(double& xmin, double& ymin, double& zmin, 
+                      double& xmax, double& ymax, double& zmax) override;
+  bool GetElementaryCell(double& xmin, double& ymin, double& zmin, 
+                         double& xmax, double& ymax, double& zmax) override;
 
  private:
   std::vector<Medium*> m_media;

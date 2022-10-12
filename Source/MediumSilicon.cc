@@ -151,41 +151,16 @@ bool MediumSilicon::ElectronVelocity(const double ex, const double ey,
     return Medium::ElectronVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
   }
 
+  // Calculate the mobility.
   const double emag = sqrt(ex * ex + ey * ey + ez * ez);
+  const double mu = -ElectronMobility(emag);
 
-  // Calculate the mobility
-  double mu;
-  switch (m_highFieldMobilityModel) {
-    case HighFieldMobility::Minimos:
-      ElectronMobilityMinimos(emag, mu);
-      break;
-    case HighFieldMobility::Canali:
-      ElectronMobilityCanali(emag, mu);
-      break;
-    case HighFieldMobility::Reggiani:
-      ElectronMobilityReggiani(emag, mu);
-      break;
-    default:
-      mu = m_eMobility;
-      break;
-  }
-  mu = -mu;
-
-  const double b2 = bx * bx + by * by + bz * bz;
-  if (b2 < Small) {
+  if (fabs(bx) < Small && fabs(by) < Small && fabs(bz) < Small) {
     vx = mu * ex;
     vy = mu * ey;
     vz = mu * ez;
   } else {
-    // Hall mobility
-    const double muH = m_eHallFactor * mu;
-    const double mu2 = muH * muH;
-    const double f = mu / (1. + mu2 * b2);
-    const double eb = bx * ex + by * ey + bz * ez;
-    // Compute the drift velocity using the Langevin equation.
-    vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
-    vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
-    vz = f * (ez + muH * (ex * by - ey * bx) + mu2 * bz * eb);
+    Langevin(ex, ey, ez, bx, by, bz, mu, m_eHallFactor * mu, vx, vy, vz);
   }
   return true;
 }
@@ -210,19 +185,8 @@ bool MediumSilicon::ElectronTownsend(const double ex, const double ey,
   }
 
   const double emag = sqrt(ex * ex + ey * ey + ez * ez);
-
-  switch (m_impactIonisationModel) {
-    case ImpactIonisation::VanOverstraeten:
-      return ElectronImpactIonisationVanOverstraetenDeMan(emag, alpha);
-    case ImpactIonisation::Grant:
-      return ElectronImpactIonisationGrant(emag, alpha);
-    case ImpactIonisation::Massey:
-      return ElectronImpactIonisationMassey(emag, alpha);
-    default:
-      std::cerr << m_className << "::ElectronTownsend: Unknown model. Bug!\n";
-      break;
-  }
-  return false;
+  alpha = ElectronAlpha(emag);
+  return true;
 }
 
 bool MediumSilicon::ElectronAttachment(const double ex, const double ey,
@@ -281,39 +245,16 @@ bool MediumSilicon::HoleVelocity(const double ex, const double ey,
     return Medium::HoleVelocity(ex, ey, ez, bx, by, bz, vx, vy, vz);
   }
 
+  // Calculate the mobility.
   const double emag = sqrt(ex * ex + ey * ey + ez * ez);
+  const double mu = HoleMobility(emag);
 
-  // Calculate the mobility
-  double mu;
-  switch (m_highFieldMobilityModel) {
-    case HighFieldMobility::Minimos:
-      HoleMobilityMinimos(emag, mu);
-      break;
-    case HighFieldMobility::Canali:
-      HoleMobilityCanali(emag, mu);
-      break;
-    case HighFieldMobility::Reggiani:
-      HoleMobilityReggiani(emag, mu);
-      break;
-    default:
-      mu = m_hMobility;
-  }
-
-  const double b2 = bx * bx + by * by + bz * bz;
-  if (b2 < Small) {
+  if (fabs(bx) < Small && fabs(by) < Small && fabs(bz) < Small) {
     vx = mu * ex;
     vy = mu * ey;
     vz = mu * ez;
   } else {
-    // Hall mobility
-    const double muH = m_hHallFactor * mu;
-    const double mu2 = muH * muH;
-    const double f = mu / (1. + mu2 * b2);
-    const double eb = bx * ex + by * ey + bz * ez;
-    // Compute the drift velocity using the Langevin equation.
-    vx = f * (ex + muH * (ey * bz - ez * by) + mu2 * bx * eb);
-    vy = f * (ey + muH * (ez * bx - ex * bz) + mu2 * by * eb);
-    vz = f * (ez + muH * (ex * by - ey * bx) + mu2 * bz * eb);
+    Langevin(ex, ey, ez, bx, by, bz, mu, m_hHallFactor * mu, vx, vy, vz);
   }
   return true;
 }
@@ -338,19 +279,8 @@ bool MediumSilicon::HoleTownsend(const double ex, const double ey,
   }
 
   const double emag = sqrt(ex * ex + ey * ey + ez * ez);
-
-  switch (m_impactIonisationModel) {
-    case ImpactIonisation::VanOverstraeten:
-      return HoleImpactIonisationVanOverstraetenDeMan(emag, alpha);
-    case ImpactIonisation::Grant:
-      return HoleImpactIonisationGrant(emag, alpha);
-    case ImpactIonisation::Massey:
-      return HoleImpactIonisationMassey(emag, alpha);
-    default:
-      std::cerr << m_className << "::HoleTownsend: Unknown model. Bug!\n";
-      break;
-  }
-  return false;
+  alpha = HoleAlpha(emag);
+  return true;
 }
 
 bool MediumSilicon::HoleAttachment(const double ex, const double ey,
@@ -497,6 +427,11 @@ void MediumSilicon::SetImpactIonisationModelGrant() {
 
 void MediumSilicon::SetImpactIonisationModelMassey() {
   m_impactIonisationModel = ImpactIonisation::Massey;
+  m_isChanged = true;
+}
+
+void MediumSilicon::SetImpactIonisationModelOkutoCrowell() {
+  m_impactIonisationModel = ImpactIonisation::Okuto;
   m_isChanged = true;
 }
 
@@ -783,25 +718,25 @@ double MediumSilicon::GetElectronCollisionRate(const double e, const int band) {
   return 0.;
 }
 
-bool MediumSilicon::GetElectronCollision(
-    const double e, int& type, int& level, double& e1, double& px, double& py,
-    double& pz, std::vector<std::pair<int, double> >& secondaries, int& ndxc,
+bool MediumSilicon::ElectronCollision(const double e, int& type, 
+    int& level, double& e1, double& px, double& py, double& pz, 
+    std::vector<std::pair<Particle, double> >& secondaries, int& ndxc,
     int& band) {
   if (e > m_eFinalG) {
-    std::cerr << m_className << "::GetElectronCollision:\n"
+    std::cerr << m_className << "::ElectronCollision:\n"
               << "    Requested electron energy (" << e << " eV) exceeds the "
               << "current energy range (" << m_eFinalG << " eV).\n"
               << "    Increasing energy range to " << 1.05 * e << " eV.\n";
     SetMaxElectronEnergy(1.05 * e);
   } else if (e <= 0.) {
-    std::cerr << m_className << "::GetElectronCollision:\n"
+    std::cerr << m_className << "::ElectronCollision:\n"
               << "    Electron energy must be greater than zero.\n";
     return false;
   }
 
   if (m_isChanged) {
     if (!UpdateTransportParameters()) {
-      std::cerr << m_className << "::GetElectronCollision:\n"
+      std::cerr << m_className << "::ElectronCollision:\n"
                 << "    Error calculating the collision rates table.\n";
       return false;
     }
@@ -895,7 +830,7 @@ bool MediumSilicon::GetElectronCollision(
     } else if (type == ElectronCollisionTypeIonisation) {
       ++m_nCollElectronIonisation;
     } else {
-      std::cerr << m_className << "::GetElectronCollision:\n";
+      std::cerr << m_className << "::ElectronCollision:\n";
       std::cerr << "    Unexpected collision type (" << type << ").\n";
     }
 
@@ -950,8 +885,8 @@ bool MediumSilicon::GetElectronCollision(
     } else if (type == ElectronCollisionTypeIonisation) {
       ++m_nCollElectronIonisation;
     } else {
-      std::cerr << m_className << "::GetElectronCollision:\n";
-      std::cerr << "    Unexpected collision type (" << type << ").\n";
+      std::cerr << m_className << "::ElectronCollision:\n"
+                << "    Unexpected collision type (" << type << ").\n";
     }
 
     // Get the energy loss.
@@ -1002,15 +937,15 @@ bool MediumSilicon::GetElectronCollision(
     } else if (type == ElectronCollisionTypeIonisation) {
       ++m_nCollElectronIonisation;
     } else {
-      std::cerr << m_className << "::GetElectronCollision:\n";
-      std::cerr << "    Unexpected collision type (" << type << ").\n";
+      std::cerr << m_className << "::ElectronCollision:\n"
+                << "    Unexpected collision type (" << type << ").\n";
     }
 
     // Get the energy loss.
     loss = m_energyLossElectronsG[level];
   } else {
-    std::cerr << m_className << "::GetElectronCollision:\n";
-    std::cerr << "    Band index (" << band << ") out of range.\n";
+    std::cerr << m_className << "::ElectronCollision:\n"
+              << "    Band index (" << band << ") out of range.\n";
     return false;
   }
 
@@ -1022,9 +957,9 @@ bool MediumSilicon::GetElectronCollision(
     ComputeSecondaries(e, ee, eh);
     loss = ee + eh + m_bandGap;
     // Add the secondary electron.
-    secondaries.emplace_back(std::make_pair(IonProdTypeElectron, ee));
+    secondaries.emplace_back(std::make_pair(Particle::Electron, ee));
     // Add the hole.
-    secondaries.emplace_back(std::make_pair(IonProdTypeHole, eh));
+    secondaries.emplace_back(std::make_pair(Particle::Hole, eh));
   }
 
   if (e < loss) loss = e - 0.00001;
@@ -1251,39 +1186,12 @@ bool MediumSilicon::Initialise() {
 bool MediumSilicon::UpdateTransportParameters() {
   std::lock_guard<std::mutex> guard(m_mutex);
 
-  // Calculate impact ionisation coefficients
-  switch (m_impactIonisationModel) {
-    case ImpactIonisation::VanOverstraeten:
-      UpdateImpactIonisationVanOverstraetenDeMan();
-      break;
-    case ImpactIonisation::Grant:
-      UpdateImpactIonisationGrant();
-      break;
-    case ImpactIonisation::Massey:
-      break;
-    default:
-      std::cerr << m_className << "::UpdateTransportParameters:\n    "
-                << "Unknown impact ionisation model. Program bug!\n";
-      break;
-  }
+  // Calculate impact ionisation coefficients.
+  UpdateImpactIonisation();
 
   if (!m_hasUserMobility) {
-    // Calculate lattice mobility
-    switch (m_latticeMobilityModel) {
-      case LatticeMobility::Minimos:
-        UpdateLatticeMobilityMinimos();
-        break;
-      case LatticeMobility::Sentaurus:
-        UpdateLatticeMobilitySentaurus();
-        break;
-      case LatticeMobility::Reggiani:
-        UpdateLatticeMobilityReggiani();
-        break;
-      default:
-        std::cerr << m_className << "::UpdateTransportParameters:\n    "
-                  << "Unknown lattice mobility model. Program bug!\n";
-        break;
-    }
+    // Calculate lattice mobility.
+    UpdateLatticeMobility();
 
     // Calculate doping mobility
     switch (m_dopingMobilityModel) {
@@ -1302,17 +1210,7 @@ bool MediumSilicon::UpdateTransportParameters() {
 
   // Calculate saturation velocity
   if (!m_hasUserSaturationVelocity) {
-    switch (m_saturationVelocityModel) {
-      case SaturationVelocity::Minimos:
-        UpdateSaturationVelocityMinimos();
-        break;
-      case SaturationVelocity::Canali:
-        UpdateSaturationVelocityCanali();
-        break;
-      case SaturationVelocity::Reggiani:
-        UpdateSaturationVelocityReggiani();
-        break;
-    }
+    UpdateSaturationVelocity();
   }
 
   // Calculate high field saturation parameters
@@ -1343,51 +1241,35 @@ bool MediumSilicon::UpdateTransportParameters() {
   return true;
 }
 
-void MediumSilicon::UpdateLatticeMobilityMinimos() {
-  // References:
-  // - S. Selberherr, W. Haensch, M. Seavey, J. Slotboom,
-  //   Solid State Electronics 33 (1990), 1425-1436
-  // - Minimos 6.1 User's Guide (1999)
+void MediumSilicon::UpdateLatticeMobility() {
 
-  // Lattice mobilities at 300 K [cm2 / (V ns)]
-  constexpr double eMu0 = 1.43e-6;
-  constexpr double hMu0 = 0.46e-6;
   // Temperature normalized to 300 K
   const double t = m_temperature / 300.;
-  // Temperature dependence of lattice mobility
-  m_eLatticeMobility = eMu0 * pow(t, -2.);
-  m_hLatticeMobility = hMu0 * pow(t, -2.18);
-}
 
-void MediumSilicon::UpdateLatticeMobilitySentaurus() {
-  // References:
-  // - C. Lombardi et al.,
-  //   IEEE Trans. CAD 7 (1988), 1164-1171
-  // - Sentaurus Device User Guide (2007)
-
-  // Lattice mobilities at 300 K [cm2 / (V ns)]
-  constexpr double eMu0 = 1.417e-6;
-  constexpr double hMu0 = 0.4705e-6;
-  // Temperature normalized to 300 K
-  const double t = m_temperature / 300.;
-  // Temperature dependence of lattice mobility
-  m_eLatticeMobility = eMu0 * pow(t, -2.5);
-  m_hLatticeMobility = hMu0 * pow(t, -2.2);
-}
-
-void MediumSilicon::UpdateLatticeMobilityReggiani() {
-  // Reference:
-  // - M. A. Omar, L. Reggiani
-  //   Solid State Electronics 30 (1987), 693-697
-
-  // Lattice mobilities at 300 K [cm2 / (V ns)]
-  constexpr double eMu0 = 1.320e-6;
-  constexpr double hMu0 = 0.460e-6;
-  // Temperature normalized to 300 K
-  const double t = m_temperature / 300.;
-  // Temperature dependence of lattice mobility
-  m_eLatticeMobility = eMu0 * pow(t, -2.);
-  m_hLatticeMobility = hMu0 * pow(t, -2.2);
+  switch (m_latticeMobilityModel) {
+    case LatticeMobility::Minimos:
+      // - S. Selberherr, W. Haensch, M. Seavey, J. Slotboom,
+      //   Solid State Electronics 33 (1990), 1425
+      // - Minimos 6.1 User's Guide (1999)
+      m_eLatticeMobility = 1.43e-6 * pow(t, -2.);
+      m_hLatticeMobility = 0.46e-6 * pow(t, -2.18);
+      break;
+    case LatticeMobility::Sentaurus:
+      // - C. Lombardi et al., IEEE Trans. CAD 7 (1988), 1164
+      // - Sentaurus Device User Guide (2007)
+      m_eLatticeMobility = 1.417e-6 * pow(t, -2.5);
+      m_hLatticeMobility = 0.4705e-6 * pow(t, -2.2);
+      break;
+    case LatticeMobility::Reggiani:
+      // M. A. Omar, L. Reggiani, Solid State Electronics 30 (1987), 693
+      m_eLatticeMobility = 1.320e-6 * pow(t, -2.);
+      m_hLatticeMobility = 0.460e-6 * pow(t, -2.2);
+      break;
+    default:
+      std::cerr << m_className << "::UpdateLatticeMobility:\n"
+                << "    Unknown lattice mobility model. Program bug!\n";
+      break;
+  }
 }
 
 void MediumSilicon::UpdateDopingMobilityMinimos() {
@@ -1463,34 +1345,33 @@ void MediumSilicon::UpdateDopingMobilityMasetti() {
                 hMu1 / (1. + pow(hCs / m_dopingConcentration, hBeta));
 }
 
-void MediumSilicon::UpdateSaturationVelocityMinimos() {
-  // References:
-  // - R. Quay, C. Moglestue, V. Palankovski, S. Selberherr,
-  //   Materials Science in Semiconductor Processing 3 (2000), 149-155
-  // - Minimos NT User Guide (2004)
+void MediumSilicon::UpdateSaturationVelocity() {
 
-  // Temperature-dependence of saturation velocities [cm / ns]
-  m_eSatVel = 1.e-2 / (1. + 0.74 * (m_temperature / 300. - 1.));
-  m_hSatVel = 0.704e-2 / (1. + 0.37 * (m_temperature / 300. - 1.));
-}
-
-void MediumSilicon::UpdateSaturationVelocityCanali() {
-  // References:
-  // - C. Canali, G. Majni, R. Minder, G. Ottaviani,
-  //   IEEE Transactions on Electron Devices 22 (1975), 1045-1047
-  // - Sentaurus Device User Guide (2007)
-
-  m_eSatVel = 1.07e-2 * pow(300. / m_temperature, 0.87);
-  m_hSatVel = 8.37e-3 * pow(300. / m_temperature, 0.52);
-}
-
-void MediumSilicon::UpdateSaturationVelocityReggiani() {
-  // Reference:
-  // - M. A. Omar, L. Reggiani
-  //   Solid State Electronics 30 (1987), 693-697
-
-  m_eSatVel = 1.470e-2 * sqrt(tanh(150. / m_temperature));
-  m_hSatVel = 0.916e-2 * sqrt(tanh(300. / m_temperature));
+  switch (m_saturationVelocityModel) {
+    case SaturationVelocity::Minimos:
+      // - R. Quay, C. Moglestue, V. Palankovski, S. Selberherr,
+      //   Materials Science in Semiconductor Processing 3 (2000), 149
+      // - Minimos NT User Guide (2004)
+      m_eSatVel = 1.e-2 / (1. + 0.74 * (m_temperature / 300. - 1.));
+      m_hSatVel = 0.704e-2 / (1. + 0.37 * (m_temperature / 300. - 1.));
+      break;
+    case SaturationVelocity::Canali:
+      // - C. Canali, G. Majni, R. Minder, G. Ottaviani,
+      //   IEEE Transactions on Electron Devices 22 (1975), 1045
+      // - Sentaurus Device User Guide (2007)
+      m_eSatVel = 1.07e-2 * pow(300. / m_temperature, 0.87);
+      m_hSatVel = 8.37e-3 * pow(300. / m_temperature, 0.52);
+      break;
+    case SaturationVelocity::Reggiani:
+      // M. A. Omar, L. Reggiani, Solid State Electronics 30 (1987), 693
+      m_eSatVel = 1.470e-2 * sqrt(tanh(150. / m_temperature));
+      m_hSatVel = 0.916e-2 * sqrt(tanh(300. / m_temperature));
+      break;
+    default:
+      std::cerr << m_className << "::UpdateSaturationVelocity:\n" 
+                << "    Unknown saturation velocity model. Program bug!\n";
+      break;
+  }
 }
 
 void MediumSilicon::UpdateHighFieldMobilityCanali() {
@@ -1506,246 +1387,175 @@ void MediumSilicon::UpdateHighFieldMobilityCanali() {
   m_hBetaCanaliInv = 1. / m_hBetaCanali;
 }
 
-void MediumSilicon::UpdateImpactIonisationVanOverstraetenDeMan() {
+void MediumSilicon::UpdateImpactIonisation() {
 
-  // References:
-  //  - R. van Overstraeten and H. de Man,
-  //    Solid State Electronics 13 (1970), 583-608
-  //  - W. Maes, K. de Meyer and R. van Overstraeten,
-  //    Solid State Electronics 33 (1990), 705-718
-  //  - Sentaurus Device User Guide (2016)
+  if (m_impactIonisationModel == ImpactIonisation::VanOverstraeten ||
+      m_impactIonisationModel == ImpactIonisation::Grant) {
 
-  // Temperature dependence as in Sentaurus Device
-  // Optical phonon energy
-  constexpr double hbarOmega = 0.063;
-  // Temperature scaling coefficient
-  const double gamma =
-      tanh(hbarOmega / (2. * BoltzmannConstant * 300.)) /
-      tanh(hbarOmega / (2. * BoltzmannConstant * m_temperature));
+    // Temperature dependence as in Sentaurus Device
+    // Optical phonon energy
+    constexpr double hbarOmega = 0.063;
+    // Temperature scaling coefficient
+    const double gamma =
+        tanh(hbarOmega / (2. * BoltzmannConstant * 300.)) /
+        tanh(hbarOmega / (2. * BoltzmannConstant * m_temperature));
 
-  // Low field coefficients taken from Maes, de Meyer, van Overstraeten
-  // eImpactA0 = gamma * 3.318e5;
-  // eImpactB0 = gamma * 1.135e6;
-  m_eImpactA0 = gamma * 7.03e5;
-  m_eImpactB0 = gamma * 1.231e6;
-  m_eImpactA1 = gamma * 7.03e5;
-  m_eImpactB1 = gamma * 1.231e6;
+    if (m_impactIonisationModel == ImpactIonisation::VanOverstraeten) {
+      // - R. van Overstraeten and H. de Man,
+      //   Solid State Electronics 13 (1970), 583
+      // - W. Maes, K. de Meyer and R. van Overstraeten,
+      //   Solid State Electronics 33 (1990), 705
+      // - Sentaurus Device User Guide (2016)
 
-  m_hImpactA0 = gamma * 1.582e6;
-  m_hImpactB0 = gamma * 2.036e6;
-  m_hImpactA1 = gamma * 6.71e5;
-  m_hImpactB1 = gamma * 1.693e6;
-}
+      // Low field coefficients taken from Maes, de Meyer, van Overstraeten
+      // eImpactA0 = gamma * 3.318e5;
+      // eImpactB0 = gamma * 1.135e6;
+      m_eImpactA0 = gamma * 7.03e5;
+      m_eImpactB0 = gamma * 1.231e6;
+      m_eImpactA1 = gamma * 7.03e5;
+      m_eImpactB1 = gamma * 1.231e6;
 
-void MediumSilicon::UpdateImpactIonisationGrant() {
-  // References:
-  // - W. N. Grant,
-  //   Solid State Electronics 16 (1973), 1189 - 1203
-  // - Sentaurus Device User Guide (2007)
+      m_hImpactA0 = gamma * 1.582e6;
+      m_hImpactB0 = gamma * 2.036e6;
+      m_hImpactA1 = gamma * 6.71e5;
+      m_hImpactB1 = gamma * 1.693e6;
+    } else if (m_impactIonisationModel == ImpactIonisation::Grant) {
+      // W. N. Grant, Solid State Electronics 16 (1973), 1189
+      // Sentaurus Device User Guide (2007)
+      m_eImpactA0 = 2.60e6 * gamma;
+      m_eImpactB0 = 1.43e6 * gamma;
+      m_eImpactA1 = 6.20e5 * gamma;
+      m_eImpactB1 = 1.08e6 * gamma;
+      m_eImpactA2 = 5.05e5 * gamma;
+      m_eImpactB2 = 9.90e5 * gamma;
 
-  // Temperature dependence as in Sentaurus Device
-  // Optical phonon energy
-  constexpr double hbarOmega = 0.063;
-  // Temperature scaling coefficient
-  const double gamma =
-      tanh(hbarOmega / (2. * BoltzmannConstant * 300.)) /
-      tanh(hbarOmega / (2. * BoltzmannConstant * m_temperature));
+      m_hImpactA0 = 2.00e6 * gamma;
+      m_hImpactB0 = 1.97e6 * gamma;
+      m_hImpactA1 = 5.60e5 * gamma;
+      m_hImpactB1 = 1.32e6 * gamma;
+    }
+  } else if (m_impactIonisationModel == ImpactIonisation::Massey) {
+    // D. J. Massey, J. P. R. David, and G. J. Rees,
+    // IEEE Trans. Electron Devices 53 (2006), 2328
+    m_eImpactA0 = 4.43e5;
+    m_eImpactB0 = 9.66e5 + 4.99e2 * m_temperature;
 
-  m_eImpactA0 = 2.60e6 * gamma;
-  m_eImpactB0 = 1.43e6 * gamma;
-  m_eImpactA1 = 6.20e5 * gamma;
-  m_eImpactB1 = 1.08e6 * gamma;
-  m_eImpactA2 = 5.05e5 * gamma;
-  m_eImpactB2 = 9.90e5 * gamma;
-
-  m_hImpactA0 = 2.00e6 * gamma;
-  m_hImpactB0 = 1.97e6 * gamma;
-  m_hImpactA1 = 5.60e5 * gamma;
-  m_hImpactB1 = 1.32e6 * gamma;
-}
-
-bool MediumSilicon::ElectronMobilityMinimos(const double e, double& mu) const {
-  // Reference:
-  // - Minimos User's Guide (1999)
-
-  if (e < Small) {
-    mu = 0.;
+    m_hImpactA0 = 1.13e6;
+    m_hImpactB0 = 1.71e6 + 1.09e3 * m_temperature;
+  } else if (m_impactIonisationModel == ImpactIonisation::Okuto) {
+    const double dt = m_temperature - 300.;
+    m_eImpactA0 = 0.426 * (1. + 3.05e-4 * dt);
+    m_hImpactA0 = 0.243 * (1. + 5.35e-4 * dt);
+    m_eImpactB0 = 4.81e5 * (1. + 6.86e-4 * dt);
+    m_hImpactB0 = 6.53e5 * (1. + 5.67e-4 * dt);
   } else {
-    const double r = 2 * m_eMobility * e / m_eSatVel;
-    mu = 2. * m_eMobility / (1. + sqrt(1. + r * r));
+    std::cerr << m_className << "::UpdateImpactIonisation:\n"
+              << "    Unknown impact ionisation model. Program bug!\n";
   }
-  return true;
 }
 
-bool MediumSilicon::ElectronMobilityCanali(const double e, double& mu) const {
-  // Reference:
-  // - Sentaurus Device User Guide (2007)
+double MediumSilicon::ElectronMobility(const double emag) const {
 
-  if (e < Small) {
-    mu = 0.;
-  } else {
-    const double r = m_eMobility * e / m_eSatVel;
-    mu = m_eMobility / pow(1. + pow(r, m_eBetaCanali), m_eBetaCanaliInv);
-  }
-  return true;
-}
+  if (emag < Small) return 0.;
 
-bool MediumSilicon::ElectronMobilityReggiani(const double e, double& mu) const {
-  // Reference:
-  // - M. A. Omar, L. Reggiani
-  //   Solid State Electronics 30 (1987), 693-697
-
-  if (e < Small) {
-    mu = 0.;
-  } else {
-    const double r = m_eMobility * e / m_eSatVel;
+  if (m_highFieldMobilityModel == HighFieldMobility::Minimos) {
+    // Minimos User's Guide (1999)
+    const double r = 2 * m_eMobility * emag / m_eSatVel;
+    return 2. * m_eMobility / (1. + sqrt(1. + r * r));
+  } else if (m_highFieldMobilityModel == HighFieldMobility::Canali) {
+    // Sentaurus Device User Guide (2007)
+    const double r = m_eMobility * emag / m_eSatVel;
+    return m_eMobility / pow(1. + pow(r, m_eBetaCanali), m_eBetaCanaliInv);
+  } else if (m_highFieldMobilityModel == HighFieldMobility::Reggiani) {
+    // M. A. Omar, L. Reggiani, Solid State Electronics 30 (1987), 693
+    const double r = m_eMobility * emag / m_eSatVel;
     constexpr double k = 1. / 1.5;
-    mu = m_eMobility / pow(1. + pow(r, 1.5), k);
+    return m_eMobility / pow(1. + pow(r, 1.5), k);
   }
-  return true;
+  return m_eMobility;
 }
 
-bool MediumSilicon::ElectronImpactIonisationVanOverstraetenDeMan(
-    const double e, double& alpha) const {
-  // References:
-  //  - R. van Overstraeten and H. de Man,
-  //    Solid State Electronics 13 (1970), 583-608
-  //  - W. Maes, K. de Meyer and R. van Overstraeten,
-  //    Solid State Electronics 33 (1990), 705-718
-  //  - Sentaurus Device User Guide (2016)
+double MediumSilicon::ElectronAlpha(const double emag) const {
 
-  if (e < Small) {
-    alpha = 0.;
-  } else if (e < 4e5) {
-    alpha = m_eImpactA0 * exp(-m_eImpactB0 / e);
-  } else {
-    alpha = m_eImpactA1 * exp(-m_eImpactB1 / e);
+  if (emag < Small) return 0.;
+  
+  if (m_impactIonisationModel == ImpactIonisation::VanOverstraeten) {
+    // - R. van Overstraeten and H. de Man,
+    //   Solid State Electronics 13 (1970), 583
+    // - W. Maes, K. de Meyer and R. van Overstraeten,
+    //   Solid State Electronics 33 (1990), 705
+    // - Sentaurus Device User Guide (2016)
+    if (emag < 4e5) {
+      return m_eImpactA0 * exp(-m_eImpactB0 / emag);
+    } else {
+      return m_eImpactA1 * exp(-m_eImpactB1 / emag);
+    }
+  } else if (m_impactIonisationModel == ImpactIonisation::Grant) {
+    // W. N. Grant, Solid State Electronics 16 (1973), 1189
+    if (emag < 2.4e5) {
+      return m_eImpactA0 * exp(-m_eImpactB0 / emag);
+    } else if (emag < 5.3e5) {
+      return m_eImpactA1 * exp(-m_eImpactB1 / emag);
+    } else {
+      return m_eImpactA2 * exp(-m_eImpactB2 / emag);
+    }
+  } else if (m_impactIonisationModel == ImpactIonisation::Massey) {
+    return m_eImpactA0 * exp(-m_eImpactB0 / emag);
+  } else if (m_impactIonisationModel == ImpactIonisation::Okuto) {
+    const double f = m_eImpactB0 / emag;
+    return m_eImpactA0 * emag * exp(-f * f);
   }
-  return true;
+  std::cerr << m_className << "::ElectronAlpha: Unknown model. Program bug!\n";
+  return 0.;
 }
 
-bool MediumSilicon::ElectronImpactIonisationGrant(const double e,
-                                                  double& alpha) const {
-  // Reference:
-  //  - W. N. Grant, Solid State Electronics 16 (1973), 1189 - 1203
+double MediumSilicon::HoleMobility(const double emag) const {
 
-  if (e < Small) {
-    alpha = 0.;
-  } else if (e < 2.4e5) {
-    alpha = m_eImpactA0 * exp(-m_eImpactB0 / e);
-  } else if (e < 5.3e5) {
-    alpha = m_eImpactA1 * exp(-m_eImpactB1 / e);
-  } else {
-    alpha = m_eImpactA2 * exp(-m_eImpactB2 / e);
+  if (emag < Small) return 0.;
+
+  if (m_highFieldMobilityModel == HighFieldMobility::Minimos) {
+    // Minimos User's Guide (1999)
+    return m_hMobility / (1. + m_hMobility * emag / m_eSatVel);
+  } else if (m_highFieldMobilityModel == HighFieldMobility::Canali) {
+    // Sentaurus Device User Guide (2007)
+    const double r = m_hMobility * emag / m_hSatVel;
+    return m_hMobility / pow(1. + pow(r, m_hBetaCanali), m_hBetaCanaliInv);
+  } else if (m_highFieldMobilityModel == HighFieldMobility::Reggiani) {
+    // M. A. Omar, L. Reggiani, Solid State Electronics 30 (1987), 693
+    const double r = m_hMobility * emag / m_hSatVel;
+    return m_hMobility / sqrt(1. + r * r);
   }
-  return true;
+  return m_hMobility;
 }
 
-bool MediumSilicon::ElectronImpactIonisationMassey(const double e,
-                                                   double& alpha) const {
+double MediumSilicon::HoleAlpha(const double emag) const {
 
-  // Reference:
-  // - D. J. Massey, J. P. R. David, and G. J. Rees,
-  //   IEEE Trans. Electron Devices 53 (2006), 2328 - 2334
-  constexpr double a = 4.43e5;
-  constexpr double c = 9.66e5;
-  constexpr double d = 4.99e2;
-  const double b = c + d * m_temperature;
-  if (e < Small) {
-    alpha = 0.;
-  } else {
-    alpha = a * exp(-b / e);
+  if (emag < Small) return 0.;
+
+  if (m_impactIonisationModel == ImpactIonisation::VanOverstraeten) {
+    // - R. van Overstraeten and H. de Man,
+    //   Solid State Electronics 13 (1970), 583
+    // - Sentaurus Device User Guide (2016)
+    if (emag < 4e5) {
+      return m_hImpactA0 * exp(-m_hImpactB0 / emag);
+    } else {
+      return m_hImpactA1 * exp(-m_hImpactB1 / emag);
+    }
+  } else if (m_impactIonisationModel == ImpactIonisation::Grant) {
+    // W. N. Grant, Solid State Electronics 16 (1973), 1189
+    if (emag < 5.3e5) {
+      return m_hImpactA0 * exp(-m_hImpactB0 / emag);
+    } else {
+      return m_hImpactA1 * exp(-m_hImpactB1 / emag);
+    } 
+  } else if (m_impactIonisationModel == ImpactIonisation::Massey) {
+    return m_hImpactA0 * exp(-m_hImpactB0 / emag);
+  } else if (m_impactIonisationModel == ImpactIonisation::Okuto) {
+    const double f = m_hImpactB0 / emag;
+    return m_hImpactA0 * emag * exp(-f * f);
   }
-  return true;
-}
-
-bool MediumSilicon::HoleMobilityMinimos(const double e, double& mu) const {
-  // Reference:
-  // - Minimos User's Guide (1999)
-
-  if (e < Small) {
-    mu = 0.;
-  } else {
-    mu = m_hMobility / (1. + m_hMobility * e / m_eSatVel);
-  }
-  return true;
-}
-
-bool MediumSilicon::HoleMobilityCanali(const double e, double& mu) const {
-  // Reference:
-  // - Sentaurus Device User Guide (2007)
-
-  if (e < Small) {
-    mu = 0.;
-  } else {
-    const double r = m_hMobility * e / m_hSatVel;
-    mu = m_hMobility / pow(1. + pow(r, m_hBetaCanali), m_hBetaCanaliInv);
-  }
-  return true;
-}
-
-bool MediumSilicon::HoleMobilityReggiani(const double e, double& mu) const {
-  // Reference:
-  // - M. A. Omar, L. Reggiani
-  //   Solid State Electronics 30 (1987), 693-697
-
-  if (e < Small) {
-    mu = 0.;
-  } else {
-    const double r = m_hMobility * e / m_hSatVel;
-    mu = m_hMobility / sqrt(1. + r * r);
-  }
-  return true;
-}
-
-bool MediumSilicon::HoleImpactIonisationVanOverstraetenDeMan(
-    const double e, double& alpha) const {
-  // References:
-  //  - R. van Overstraeten and H. de Man,
-  //    Solid State Electronics 13 (1970), 583-608
-  //  - Sentaurus Device User Guide (2016)
-
-  if (e < Small) {
-    alpha = 0.;
-  } else if (e < 4e5) {
-    alpha = m_hImpactA0 * exp(-m_hImpactB0 / e);
-  } else {
-    alpha = m_hImpactA1 * exp(-m_hImpactB1 / e);
-  }
-  return true;
-}
-
-bool MediumSilicon::HoleImpactIonisationGrant(const double e,
-                                              double& alpha) const {
-  // Reference:
-  //  - W. N. Grant, Solid State Electronics 16 (1973), 1189 - 1203
-
-  if (e < Small) {
-    alpha = 0.;
-  } else if (e < 5.3e5) {
-    alpha = m_hImpactA0 * exp(-m_hImpactB0 / e);
-  } else {
-    alpha = m_hImpactA1 * exp(-m_hImpactB1 / e);
-  }
-  return true;
-}
-
-bool MediumSilicon::HoleImpactIonisationMassey(const double e,
-                                               double& alpha) const {
-
-  // Reference:
-  // - D. J. Massey, J. P. R. David, and G. J. Rees,
-  //   IEEE Trans. Electron Devices 53 (2006), 2328 - 2334
-  constexpr double a = 1.13e6;
-  constexpr double c = 1.71e6;
-  constexpr double d = 1.09e3;
-  const double b = c + d * m_temperature;
-  if (e < Small) {
-    alpha = 0.;
-  } else {
-    alpha = a * exp(-b / e);
-  }
-  return true;
+  std::cerr << m_className << "::HoleAlpha: Unknown model. Program bug!\n";
+  return 0.;
 }
 
 bool MediumSilicon::LoadOpticalData(const std::string& filename) {
@@ -1763,8 +1573,7 @@ bool MediumSilicon::LoadOpticalData(const std::string& filename) {
   const std::string filepath = std::string(pPath) + "/Data/" + filename;
 
   // Open the file.
-  std::ifstream infile;
-  infile.open(filepath.c_str(), std::ios::in);
+  std::ifstream infile(filepath);
   // Make sure the file could actually be opened.
   if (!infile) {
     std::cerr << m_className << "::LoadOpticalData:\n"

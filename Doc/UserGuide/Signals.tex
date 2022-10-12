@@ -1,4 +1,4 @@
-Signals are calculated using the Shockley-Ramo theorem. 
+Signals are calculated using the Shockley-Ramo theorem \cite{Shockley1938,Ramo1939}. 
 The current \(i\left(t\right)\) induced by a particle with charge 
 \(q\) at a position \(\mathbf{r}\) moving at a velocity \(\mathbf{v}\)
 is given by
@@ -99,30 +99,29 @@ signalView.SetSensor(&sensor);
 signalView.PlotSignal(label);
 \end{lstlisting}
 
-The algorithms used for calculating the induced current are slightly different 
-for \texttt{DriftLineRKF}, \texttt{AvalancheMC}, and \texttt{AvalancheMicroscopic}.
-
-For drift lines calculated using the RKF method, 
-the times $t_j$, coordinates $\mathbf{r}_j$ and drift velocities $\mathbf{v}_j$
-at each point along the drift line are taken and the induced current 
-\begin{equation*}
-  i_{j} = -q \mathbf{E}_{w}\left(\mathbf{r}_{j}\right) \cdot \mathbf{v}_j
-\end{equation*}
-at these points is computed. In order to calculate the average current 
-in each time bin, the array of $\left(t_{j}, i_{j}\right)$ is interpolated 
-(linearly) and then integrated using Simpson's rule over $2n_\text{avg} + 1$ points. The parameter $n_\text{avg}$ defaults to 2 and can be set using
+All three transport classes (\texttt{DriftLineRKF}, \texttt{AvalancheMC}, \texttt{AvalancheMicroscopic}) offer the choice 
+between using the weighting potential or the weighting field for computing 
+the induced current. The method to be used can be selected using
 \begin{lstlisting}
-void DriftLineRKF::SetSignalAveragingOrder(const unsigned int navg);
+void DriftLineRKF::UseWeightingPotential(const bool on = true);
+void AvalancheMC::UseWeightingPotential(const bool on = true);
+void AvalancheMicroscopic::UseWeightingPotential(const bool on = true);
 \end{lstlisting} 
 
-For drift lines simulated using microscopic tracking 
-(\texttt{AvalancheMicroscopic}), the signal between subsequent points 
-along the drift path is assumed to be constant, and can be 
-calculated using either the weighting potential or the weighting field. 
-The method can be selected using 
-\begin{lstlisting}
-void AvalancheMicroscopic::UseWeightingPotential(const bool on = true);
-\end{lstlisting}
+The weighting potential method (which is the default) 
+should be used if one wants to ensure that 
+the integrated current is correct (equal to the collected charge).
+It takes $\phi_{w}$ at the start and end of each step $j \rightarrow j + 1$ along the drift path
+and calculates the average current $q\Delta\phi_{w}/\left(t_{j+1} - t_{j}\right)$. 
+For electron drift lines calculated using \texttt{DriftLineRKF}, 
+$q$ is weighted by the avalanche size at this drift line step.
+
+The implementations of the weighting field method are slightly different 
+for \texttt{DriftLineRKF}, \texttt{AvalancheMC}, and \texttt{AvalancheMicroscopic}.
+For drift lines calculated using \texttt{AvalancheMicroscopic}, the signal 
+is assumed to be constant between subsequent drift line points 
+and the average velocity 
+$\mathbf{v} = \left(\mathbf{x}_{j + 1} - \mathbf{x}_{j}\right) / \left(t_{j + 1} - t_{j}\right)$ along a drift line segment is used.
 By default, the weighting field is evaluated at the mid-point of a 
 drift line segment. 
 Using 
@@ -132,18 +131,21 @@ void AvalancheMicroscopic::EnableWeightingFieldIntegration(const bool on = true)
 one can request 6-point Gaussian integration of the weighting field 
 over a drift line segment.
 
-The weighting potential method takes $\phi_{w}$ 
-at the start and end of each step $j \rightarrow j + 1$ along the drift path
-and calculates the average current $q\Delta\phi_{w}/\left(t_{j+1} - t_{j}\right)$.
-
-For drift lines simulated using \texttt{AvalancheMC} one also has the choice 
-between using the weighting potential or the weighting field for computing 
-the induced current. The method to be used can be selected using
+For drift lines calculated using \texttt{DriftLineRKF} or \texttt{AvalancheMC},
+the times $t_j$, coordinates $\mathbf{r}_j$ and drift velocities $\mathbf{v}_j$
+at each point along the drift line are taken and the induced current 
+\begin{equation*}
+  i_{j} = -q \mathbf{E}_{w}\left(\mathbf{r}_{j}\right) \cdot \mathbf{v}_j
+\end{equation*}
+at these points is computed. In order to calculate the average current 
+in each time bin, the array of $\left(t_{j}, i_{j}\right)$ is interpolated 
+(linearly) and then integrated using Simpson's rule over $2n_\text{avg} + 1$ points. The parameter $n_\text{avg}$ defaults to 2 for \texttt{DriftLineRKF} 
+and 1 for \texttt{AvalancheMC} and can be set using
 \begin{lstlisting}
-void UseWeightingPotential(const bool on = true);
+void DriftLineRKF::SetSignalAveragingOrder(const unsigned int navg);
+void AvalancheMC::SetSignalAveragingOrder(const unsigned int navg);
 \end{lstlisting} 
-The weighting potential method should be used if one wants to ensure that 
-the integrated current is correct (equal to the collected charge).
+
 \section{Readout electronics}
 
 In order to model the signal-processing by the front-end electronics, the 
@@ -152,9 +154,9 @@ can be convoluted with a so-called ``transfer function'' (often also referred
 to as delta response function). 
 The transfer function to be applied can be set using
 \begin{lstlisting}
-void Sensor::SetTransferFunction(double (*f)(double t));
+void Sensor::SetTransferFunction(std::function<double(double)> f);
 \end{lstlisting}
-where \texttt{f} is a function provided by the user, or using
+where \texttt{f} is a function provided by the user which takes a \texttt{double} as an argument and returns a \texttt{double}, or using
 \begin{lstlisting}
 void Sensor::SetTransferFunction(const std::vector<double>& times,
                                  const std::vector<double>& values);

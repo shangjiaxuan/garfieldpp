@@ -1,3 +1,5 @@
+#include "Garfield/ComponentComsol.hh"
+
 #include <math.h>
 #include <stdlib.h>
 
@@ -6,7 +8,6 @@
 #include <map>
 #include <sstream>
 
-#include "Garfield/ComponentComsol.hh"
 #include "Garfield/KDTree.hh"
 
 namespace {
@@ -16,7 +17,7 @@ bool ends_with(std::string s, std::string t) {
   return s.size() >= t.size() && s.substr(s.size() - t.size(), t.size()) == t;
 }
 
-bool isComment(const std::string& line) {
+bool isComment(const std::string &line) {
   if (line.empty()) return false;
   if (line[0] == '%') return true;
   return false;
@@ -51,19 +52,21 @@ namespace Garfield {
 
 ComponentComsol::ComponentComsol() : ComponentFieldMap("Comsol") {}
 
-ComponentComsol::ComponentComsol(const std::string& mesh,
-                                 const std::string& mplist,
-                                 const std::string& field,
-                                 const std::string& unit)
+ComponentComsol::ComponentComsol(const std::string &mesh,
+                                 const std::string &mplist,
+                                 const std::string &field,
+                                 const std::string &unit)
     : ComponentComsol() {
   Initialise(mesh, mplist, field, unit);
 }
 
-bool ComponentComsol::Initialise(const std::string& mesh,
-                                 const std::string& mplist,
-                                 const std::string& field,
-                                 const std::string& unit) {
+bool ComponentComsol::Initialise(const std::string &mesh,
+                                 const std::string &mplist,
+                                 const std::string &field,
+                                 const std::string &unit) {
   Reset();
+
+  std::vector<int> nodeIndices;
 
   // Get the conversion factor to be applied to the coordinates.
   m_unit = ScalingFactor(unit);
@@ -74,9 +77,8 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   }
   // Open the materials file.
   m_materials.clear();
-  std::ifstream fmplist;
-  fmplist.open(mplist.c_str(), std::ios::in);
-  if (fmplist.fail()) {
+  std::ifstream fmplist(mplist);
+  if (!fmplist) {
     PrintCouldNotOpen("Initialise", mplist);
     return false;
   }
@@ -113,9 +115,8 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   if (!SetDefaultDriftMedium()) return false;
 
   m_nodes.clear();
-  std::ifstream fmesh;
-  fmesh.open(mesh.c_str(), std::ios::in);
-  if (fmesh.fail()) {
+  std::ifstream fmesh(mesh);
+  if (!fmesh) {
     PrintCouldNotOpen("Initialise", mesh);
     return false;
   }
@@ -131,7 +132,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   } while (!ends_with(line, "# number of mesh points") &&
            !ends_with(line, "# number of mesh vertices"));
   const int nNodes = readInt(line);
-
+  int nInRange = 0;
   std::cout << m_className << "::Initialise: " << nNodes << " nodes.\n";
   do {
     if (!std::getline(fmesh, line)) {
@@ -148,8 +149,16 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     newNode.x *= m_unit;
     newNode.y *= m_unit;
     newNode.z *= m_unit;
-    m_nodes.push_back(std::move(newNode));
+
+    if (m_range.set) {
+      m_nodesHolder.push_back(std::move(newNode));
+      if (CheckInRange(newNode.x, newNode.y, newNode.z)) nInRange++;
+    } else {
+      m_nodes.push_back(std::move(newNode));
+    }
   }
+
+  std::vector<Element> elementsHolder;
 
   do {
     if (!std::getline(fmesh, line)) {
@@ -180,7 +189,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
     for (int j = 0; j < 10; ++j) {
       fmesh >> newElement.emap[perm[j]];
     }
-    m_elements.push_back(std::move(newElement));
+    elementsHolder.push_back(std::move(newElement));
   }
 
   do {
@@ -191,7 +200,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
       return false;
     }
   } while (line.find("# Geometric entity indices") == std::string::npos);
-  for (auto& element : m_elements) {
+  for (auto &element : elementsHolder) {
     int domain;
     fmesh >> domain;
     element.matmap = domain2material.count(domain) ? domain2material[domain]
@@ -199,9 +208,42 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   }
   fmesh.close();
 
-  std::ifstream ffield;
-  ffield.open(field.c_str(), std::ios::in);
-  if (ffield.fail()) {
+  for (auto &takeElement : elementsHolder) {
+    if (ElementInRange(takeElement)) {
+      for (int j = 0; j < 10; j++) {
+        nodeIndices.push_back(takeElement.emap[j]);
+      }
+      m_elements.push_back(std::move(takeElement));
+    }
+  }
+
+  if (m_range.set) {
+    std::vector<int> m_nodeMap(nNodes, -1);
+    // Rearange nodeIndices and delete duplicates
+    sort(nodeIndices.begin(), nodeIndices.end());
+    nodeIndices.erase(std::unique(nodeIndices.begin(), nodeIndices.end()),
+                      nodeIndices.end());
+    // Go over nodeIndices and add the corresponding m_nodesHolder node to
+    // m_nodes
+    for (int &i : nodeIndices) {
+      m_nodes.push_back(m_nodesHolder[i]);
+      // Update m_nodeMap to get correct node idex.
+      m_nodeMap[i] = m_nodes.size() - 1;
+    }
+    // Go over m_elements and update the node idex using the map you just
+    // created
+    for (Element &takeElement : m_elements) {
+      for (int j = 0; j < 10; ++j) {
+        takeElement.emap[j] = m_nodeMap[takeElement.emap[j]];
+        if (takeElement.emap[j] == -1) {
+          return false;
+        }
+      }
+    }
+  }
+
+  std::ifstream ffield(field);
+  if (!ffield) {
     PrintCouldNotOpen("Initialise", field);
     return false;
   }
@@ -246,13 +288,15 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   std::cout << m_className << "::Initialise: Reading potentials.\n";
   PrintProgress(0.);
   // Build a k-d tree from the node coordinates.
-  std::vector<std::vector<double> > points;
-  for (const auto& node : m_nodes) {
+  std::vector<std::vector<double>> points;
+  for (const auto &node : m_nodes) {
     std::vector<double> point = {node.x, node.y, node.z};
     points.push_back(std::move(point));
   }
   KDTree kdtree(points);
-  std::vector<bool> used(nNodes, false);
+
+  const int usedSize = m_range.set ? m_nodes.size() : nNodes;
+  std::vector<bool> used(usedSize, false);
   for (int i = 0; i < nNodes; ++i) {
     double x, y, z, v;
     ffield >> x >> y >> z >> v;
@@ -276,6 +320,7 @@ bool ComponentComsol::Initialise(const std::string& mesh,
       ffield.close();
       return false;
     }
+    if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance) continue;
     const size_t k = res[0].idx;
     used[k] = true;
     m_nodes[k].v = v;
@@ -285,11 +330,12 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   PrintProgress(1.);
   ffield.close();
   auto nMissing = std::count(used.begin(), used.end(), false);
+  if (m_range.set) nMissing = nMissing - m_nodes.size() + nInRange;
   if (nMissing > 0) {
     std::cerr << std::endl
               << m_className << "::Initialise:\n"
               << "    Missing potentials for " << nMissing << " nodes.\n";
-    return false;
+    // return false;
   }
 
   m_ready = true;
@@ -298,458 +344,38 @@ bool ComponentComsol::Initialise(const std::string& mesh,
   return true;
 }
 
-bool ComponentComsol::SetWeightingField(const std::string& field,
-                                        const std::string& label) {
+bool ComponentComsol::SetWeightingPotential(const std::string &field,
+                                            const std::string &label) {
   if (!m_ready) {
-    std::cerr << m_className << "::SetWeightingField:\n"
+    std::cerr << m_className << "::SetWeightingPotential:\n"
               << "    No valid field map is present.\n"
               << "    Weighting fields cannot be added.\n";
     return false;
   }
-
-  // Open the voltage list.
-  std::ifstream ffield;
-  ffield.open(field.c_str(), std::ios::in);
-  if (ffield.fail()) {
-    PrintCouldNotOpen("SetWeightingField", field);
-    return false;
-  }
-
-  // Check if a weighting field with the same label already exists.
-  const size_t iw = GetOrCreateWeightingFieldIndex(label);
-  if (iw + 1 != m_wfields.size()) {
-    std::cout << m_className << "::SetWeightingField:\n"
-              << "    Replacing existing weighting field " << label << ".\n";
-  }
-  m_wfieldsOk[iw] = false;
-
-  // Build a k-d tree from the node coordinates.
-  std::vector<std::vector<double> > points;
-  for (const auto& node : m_nodes) {
-    std::vector<double> point = {node.x, node.y, node.z};
-    points.push_back(std::move(point));
-  }
-  KDTree kdtree(points);
-
-  const std::string hdr =
-      "% x                       y                        z                    "
-      "    V (V)";
-  std::string line;
-  do {
-    if (!std::getline(ffield, line)) {
-      std::cerr << m_className << "::SetWeightingField:\n"
-                << "    Error parsing " << field << ".\n";
-      ffield.close();
-      return false;
-    }
-  } while (line.find(hdr) == std::string::npos);
-  const int nNodes = m_nodes.size();
-  for (int i = 0; i < nNodes; ++i) {
-    double x, y, z, v;
-    ffield >> x >> y >> z >> v;
-    x *= m_unit;
-    y *= m_unit;
-    z *= m_unit;
-    // Find the closest mesh node.
-    const std::vector<double> pt = {x, y, z};
-    std::vector<KDTreeResult> res;
-    kdtree.n_nearest(pt, 1, res);
-    if (res.empty()) {
-      std::cerr << m_className << "::SetWeightingField:\n"
-                << "    Could not find a matching mesh node for point (" << x
-                << ", " << y << ", " << z << ")\n.";
-      ffield.close();
-      return false;
-    }
-    const size_t k = res[0].idx;
-    m_nodes[k].w[iw] = v;
-  }
-  ffield.close();
-  return true;
-}
-
-void ComponentComsol::ElectricField(const double x, const double y,
-                                    const double z, double& ex, double& ey,
-                                    double& ez, Medium*& m, int& status) {
-  double v = 0.;
-  ElectricField(x, y, z, ex, ey, ez, v, m, status);
-}
-
-void ComponentComsol::ElectricField(const double xin, const double yin,
-                                    const double zin, double& ex, double& ey,
-                                    double& ez, double& volt, Medium*& m,
-                                    int& status) {
-  // Copy the coordinates
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  // Initial values
-  ex = ey = ez = volt = 0.;
-  status = 0;
-  m = nullptr;
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) {
-    status = -10;
-    PrintNotReady("ElectricField");
-    return;
-  }
-
-  if (m_warning) PrintWarning("ElectricField");
-
-  // Find the element that contains this point
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) {
-    if (m_debug) {
-      std::cout << m_className << "::ElectricField:\n"
-                << "    Point (" << x << ", " << y << ", " << z
-                << " not in the mesh.\n";
-    }
-    status = -6;
-    return;
-  }
-
-  const Element& element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 10);
-  }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  const Node& n8 = m_nodes[element.emap[8]];
-  const Node& n9 = m_nodes[element.emap[9]];
-  // Tetrahedral field
-  volt = n0.v * t1 * (2 * t1 - 1) + n1.v * t2 * (2 * t2 - 1) +
-         n2.v * t3 * (2 * t3 - 1) + n3.v * t4 * (2 * t4 - 1) +
-         4 * n4.v * t1 * t2 + 4 * n5.v * t1 * t3 + 4 * n6.v * t1 * t4 +
-         4 * n7.v * t2 * t3 + 4 * n8.v * t2 * t4 + 4 * n9.v * t3 * t4;
-  ex = -(n0.v * (4 * t1 - 1) * jac[0][1] + n1.v * (4 * t2 - 1) * jac[1][1] +
-         n2.v * (4 * t3 - 1) * jac[2][1] + n3.v * (4 * t4 - 1) * jac[3][1] +
-         n4.v * (4 * t2 * jac[0][1] + 4 * t1 * jac[1][1]) +
-         n5.v * (4 * t3 * jac[0][1] + 4 * t1 * jac[2][1]) +
-         n6.v * (4 * t4 * jac[0][1] + 4 * t1 * jac[3][1]) +
-         n7.v * (4 * t3 * jac[1][1] + 4 * t2 * jac[2][1]) +
-         n8.v * (4 * t4 * jac[1][1] + 4 * t2 * jac[3][1]) +
-         n9.v * (4 * t4 * jac[2][1] + 4 * t3 * jac[3][1])) /
-       det;
-  ey = -(n0.v * (4 * t1 - 1) * jac[0][2] + n1.v * (4 * t2 - 1) * jac[1][2] +
-         n2.v * (4 * t3 - 1) * jac[2][2] + n3.v * (4 * t4 - 1) * jac[3][2] +
-         n4.v * (4 * t2 * jac[0][2] + 4 * t1 * jac[1][2]) +
-         n5.v * (4 * t3 * jac[0][2] + 4 * t1 * jac[2][2]) +
-         n6.v * (4 * t4 * jac[0][2] + 4 * t1 * jac[3][2]) +
-         n7.v * (4 * t3 * jac[1][2] + 4 * t2 * jac[2][2]) +
-         n8.v * (4 * t4 * jac[1][2] + 4 * t2 * jac[3][2]) +
-         n9.v * (4 * t4 * jac[2][2] + 4 * t3 * jac[3][2])) /
-       det;
-  ez = -(n0.v * (4 * t1 - 1) * jac[0][3] + n1.v * (4 * t2 - 1) * jac[1][3] +
-         n2.v * (4 * t3 - 1) * jac[2][3] + n3.v * (4 * t4 - 1) * jac[3][3] +
-         n4.v * (4 * t2 * jac[0][3] + 4 * t1 * jac[1][3]) +
-         n5.v * (4 * t3 * jac[0][3] + 4 * t1 * jac[2][3]) +
-         n6.v * (4 * t4 * jac[0][3] + 4 * t1 * jac[3][3]) +
-         n7.v * (4 * t3 * jac[1][3] + 4 * t2 * jac[2][3]) +
-         n8.v * (4 * t4 * jac[1][3] + 4 * t2 * jac[3][3]) +
-         n9.v * (4 * t4 * jac[2][3] + 4 * t3 * jac[3][3])) /
-       det;
-
-  // Transform field to global coordinates
-  UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  // Drift medium?
-  if (m_debug) {
-    std::cout << m_className << "::ElectricField:\n"
-              << "    Material " << element.matmap << ", drift flag "
-              << m_materials[element.matmap].driftmedium << "\n";
-  }
-  m = m_materials[element.matmap].medium;
-  status = -5;
-  if (m_materials[element.matmap].driftmedium) {
-    if (m && m->IsDriftable()) status = 0;
-  }
-}
-
-void ComponentComsol::WeightingField(const double xin, const double yin,
-                                     const double zin, double& wx, double& wy,
-                                     double& wz, const std::string& label) {
-  // Initial values
-  wx = wy = wz = 0;
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) return;
-
-  // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
-  // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return;
-  // Check if the weighting field is properly initialised.
-  if (!m_wfieldsOk[iw]) return;
-
-  // Copy the coordinates.
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  if (m_warning) PrintWarning("WeightingField");
-
-  // Find the element that contains this point.
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  // Check if the point is in the mesh.
-  if (imap < 0) return;
-
-  const Element& element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 10, iw);
-  }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  const Node& n8 = m_nodes[element.emap[8]];
-  const Node& n9 = m_nodes[element.emap[9]];
-  // Tetrahedral field
-  wx = -(n0.w[iw] * (4 * t1 - 1) * jac[0][1] +
-         n1.w[iw] * (4 * t2 - 1) * jac[1][1] +
-         n2.w[iw] * (4 * t3 - 1) * jac[2][1] +
-         n3.w[iw] * (4 * t4 - 1) * jac[3][1] +
-         n4.w[iw] * (4 * t2 * jac[0][1] + 4 * t1 * jac[1][1]) +
-         n5.w[iw] * (4 * t3 * jac[0][1] + 4 * t1 * jac[2][1]) +
-         n6.w[iw] * (4 * t4 * jac[0][1] + 4 * t1 * jac[3][1]) +
-         n7.w[iw] * (4 * t3 * jac[1][1] + 4 * t2 * jac[2][1]) +
-         n8.w[iw] * (4 * t4 * jac[1][1] + 4 * t2 * jac[3][1]) +
-         n9.w[iw] * (4 * t4 * jac[2][1] + 4 * t3 * jac[3][1])) /
-       det;
-
-  wy = -(n0.w[iw] * (4 * t1 - 1) * jac[0][2] +
-         n1.w[iw] * (4 * t2 - 1) * jac[1][2] +
-         n2.w[iw] * (4 * t3 - 1) * jac[2][2] +
-         n3.w[iw] * (4 * t4 - 1) * jac[3][2] +
-         n4.w[iw] * (4 * t2 * jac[0][2] + 4 * t1 * jac[1][2]) +
-         n5.w[iw] * (4 * t3 * jac[0][2] + 4 * t1 * jac[2][2]) +
-         n6.w[iw] * (4 * t4 * jac[0][2] + 4 * t1 * jac[3][2]) +
-         n7.w[iw] * (4 * t3 * jac[1][2] + 4 * t2 * jac[2][2]) +
-         n8.w[iw] * (4 * t4 * jac[1][2] + 4 * t2 * jac[3][2]) +
-         n9.w[iw] * (4 * t4 * jac[2][2] + 4 * t3 * jac[3][2])) /
-       det;
-
-  wz = -(n0.w[iw] * (4 * t1 - 1) * jac[0][3] +
-         n1.w[iw] * (4 * t2 - 1) * jac[1][3] +
-         n2.w[iw] * (4 * t3 - 1) * jac[2][3] +
-         n3.w[iw] * (4 * t4 - 1) * jac[3][3] +
-         n4.w[iw] * (4 * t2 * jac[0][3] + 4 * t1 * jac[1][3]) +
-         n5.w[iw] * (4 * t3 * jac[0][3] + 4 * t1 * jac[2][3]) +
-         n6.w[iw] * (4 * t4 * jac[0][3] + 4 * t1 * jac[3][3]) +
-         n7.w[iw] * (4 * t3 * jac[1][3] + 4 * t2 * jac[2][3]) +
-         n8.w[iw] * (4 * t4 * jac[1][3] + 4 * t2 * jac[3][3]) +
-         n9.w[iw] * (4 * t4 * jac[2][3] + 4 * t3 * jac[3][3])) /
-       det;
-
-  // Transform field to global coordinates
-  UnmapFields(wx, wy, wz, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-}
-
-double ComponentComsol::WeightingPotential(const double xin, const double yin,
-                                           const double zin,
-                                           const std::string& label) {
-  // Do not proceed if not properly initialised.
-  if (!m_ready) return 0.;
-
-  // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
-  // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return 0.;
-  // Check if the weighting field is properly initialised.
-  // if (!m_wfieldsOk[iw]) return 0.;
-
-  // Copy the coordinates.
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates.
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  if (m_warning) PrintWarning("WeightingPotential");
-
-  // Find the element that contains this point.
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) return 0.;
-
-  const Element& element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
-                 iw);
-  }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  const Node& n8 = m_nodes[element.emap[8]];
-  const Node& n9 = m_nodes[element.emap[9]];
-  // Tetrahedral field
-  return n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
-         n2.w[iw] * t3 * (2 * t3 - 1) + n3.w[iw] * t4 * (2 * t4 - 1) +
-         4 * n4.w[iw] * t1 * t2 + 4 * n5.w[iw] * t1 * t3 +
-         4 * n6.w[iw] * t1 * t4 + 4 * n7.w[iw] * t2 * t3 +
-         4 * n8.w[iw] * t2 * t4 + 4 * n9.w[iw] * t3 * t4;
-}
-
-Medium* ComponentComsol::GetMedium(const double xin, const double yin,
-                                   const double zin) {
-  // Copy the coordinates
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) {
-    PrintNotReady("GetMedium");
-    return nullptr;
-  }
-  if (m_warning) PrintWarning("GetMedium");
-
-  // Find the element that contains this point
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) {
-    if (m_debug) {
-      std::cout << m_className << "::GetMedium:\n"
-                << "    Point (" << x << ", " << y << ", " << z
-                << ") not in the mesh.\n";
-    }
-    return nullptr;
-  }
-  const Element& element = m_elements[imap];
-  if (element.matmap >= m_materials.size()) {
-    if (m_debug) {
-      std::cerr << m_className << "::GetMedium:\n"
-                << "    Point (" << x << ", " << y << ", " << z
-                << ") has out of range material number " << imap << ".\n";
-    }
-    return nullptr;
-  }
-
-  if (m_debug) {
-    PrintElement("GetMedium", x, y, z, t1, t2, t3, t4, element, 10);
-  }
-
-  return m_materials[element.matmap].medium;
-}
-
-double ComponentComsol::GetElementVolume(const unsigned int i) {
-  if (i >= m_elements.size()) return 0.;
-  const Element& element = m_elements[i];
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-
-  // Uses formula V = |a (dot) b x c|/6
-  // with a => "3", b => "1", c => "2" and origin "0"
-  const double vol =
-      fabs((n3.x - n0.x) *
-               ((n1.y - n0.y) * (n2.z - n0.z) - (n2.y - n0.y) * (n1.z - n0.z)) +
-           (n3.y - n0.y) *
-               ((n1.z - n0.z) * (n2.x - n0.x) - (n2.z - n0.z) * (n1.x - n0.x)) +
-           (n3.z - n0.z) * ((n1.x - n0.x) * (n2.y - n0.y) -
-                            (n3.x - n0.x) * (n1.y - n0.y))) /
-      6.;
-  return vol;
-}
-
-void ComponentComsol::GetAspectRatio(const unsigned int i, double& dmin,
-                                     double& dmax) {
-  if (i >= m_elements.size()) {
-    dmin = dmax = 0.;
-    return;
-  }
-
-  const Element& element = m_elements[i];
-  const int np = 4;
-  // Loop over all pairs of vertices.
-  for (int j = 0; j < np - 1; ++j) {
-    const Node& nj = m_nodes[element.emap[j]];
-    for (int k = j + 1; k < np; ++k) {
-      const Node& nk = m_nodes[element.emap[k]];
-      // Compute distance.
-      const double dx = nj.x - nk.x;
-      const double dy = nj.y - nk.y;
-      const double dz = nj.z - nk.z;
-      const double dist = sqrt(dx * dx + dy * dy + dz * dz);
-      if (k == 1) {
-        dmin = dmax = dist;
-      } else {
-        if (dist < dmin) dmin = dist;
-        if (dist > dmax) dmax = dist;
-      }
-    }
-  }
-}
-
-bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
-                                                   const std::string& label) {
-  if (!m_ready) {
-    std::cerr << m_className << "::SetDelayedWeightingField:\n"
-              << "    No valid field map is present.\n"
-              << "    Weighting fields cannot be added.\n";
-    return false;
-  }
-
-  if (!GetTimeInterval(field)) return false;
-
-  if (!m_timeset) {
-    std::cerr << m_className << "::SetDelayedWeightingField:\n"
-              << "    No valid times slices of potential set.\n"
-              << "    Please add the time slices.\n";
-    return false;
-  }
-
-  const int T = m_wdtimes.size();
 
   double x, y, z;
 
   // Open the voltage list.
-  std::ifstream ffield;
-  ffield.open(field.c_str(), std::ios::in);
+  std::ifstream ffield(field);
+  if (!ffield) {
+    PrintCouldNotOpen("SetWeightingPotential", field);
+    return false;
+  }
 
   // Check if a weighting field with the same label already exists.
   const size_t iw = GetOrCreateWeightingFieldIndex(label);
 
   if (iw + 1 != m_wfields.size()) {
-    std::cout << m_className << "::SetDelayedWeightingField:\n"
+    std::cout << m_className << "::SetWeightingPotential:\n"
               << "    Replacing existing weighting field " << label << ".\n";
   }
 
-  m_wfieldsOk[iw] = false;  //????
+  m_wfieldsOk[iw] = false;
 
   // Build a k-d tree from the node coordinates.
 
-  std::vector<std::vector<double> > points;
-  for (const auto& node : m_nodes) {
+  std::vector<std::vector<double>> points;
+  for (const auto &node : m_nodes) {
     std::vector<double> point = {node.x, node.y, node.z};
     points.push_back(std::move(point));
   }
@@ -757,13 +383,13 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
   KDTree kdtree(points);
 
   std::string line;
-  int Linecount = 1;
+  int nLines = 1;
   const int nNodes = m_nodes.size();
   const unsigned int nPrint =
       std::pow(10, static_cast<unsigned int>(
                        std::max(std::floor(std::log10(nNodes)) - 1, 1.)));
-  std::cout << m_className << "::SetDelayedWeightingField:\n"
-            << "    Reading weighting potentials.\n";
+  std::cout << m_className << "::SetWeightingPotential:\n"
+            << "    Reading weighting potentials for " << label << ".\n";
   PrintProgress(0.);
 
   while (std::getline(ffield, line)) {
@@ -774,120 +400,154 @@ bool ComponentComsol::SetDelayedWeightingPotential(const std::string& field,
 
     std::vector<double> pvect;
 
-    std::istringstream data;
-    data.str(line);
+    std::istringstream data(line);
     data >> x >> y >> z;
     x *= m_unit;
     y *= m_unit;
     z *= m_unit;
+    if (!CheckInRange(x, y, z)) continue;
     const std::vector<double> pt = {x, y, z};
     std::vector<KDTreeResult> res;
     kdtree.n_nearest(pt, 1, res);
-
+    if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance) {
+      continue;
+    }
     if (res.empty()) {
-      std::cerr << m_className << "::SetDelayedWeightingField:\n"
+      std::cerr << m_className << "::SetWeightingPotential:\n"
                 << "    Could not find a matching mesh node for point (" << x
                 << ", " << y << ", " << z << ")\n.";
       ffield.close();
       return false;
     }
 
-    double pholder = 0.;
-    double pholder0 = 0.;
-    for (int i = 0; i < T; i++) {
-      data >> pholder;
-      if (i == 0) pholder0 = pholder;
-      pvect.push_back(pholder - pholder0);
-    }
+    double p = 0.;
+    data >> p;
     const size_t k = res[0].idx;
-    m_nodes[k].dw[iw] = pvect;
-    m_nodes[k].w[iw] = pholder0;
+    m_nodes[k].w[iw] = p;
+    m_wfieldsOk[iw] = true;
 
-    if ((Linecount + 1) % nPrint == 0)
-      PrintProgress(double(Linecount + 1) / nNodes);
-    Linecount++;
+    if ((nLines + 1) % nPrint == 0) {
+      PrintProgress(double(nLines + 1) / nNodes);
+    }
+    nLines++;
   }
 
   PrintProgress(1.);
-  std::cout << std::endl
-            << m_className << "::SetDelayedWeightingField: Done.\n";
+  std::cout << std::endl << m_className << "::SetWeightingPotential: Done.\n";
   ffield.close();
   return true;
 }
 
-double ComponentComsol::DelayedWeightingPotential(const double xin,
-                                                  const double yin,
-                                                  const double zin,
-                                                  const double t,
-                                                  const std::string& label) {
-  if (m_wdtimes.empty()) return 0.;
-  // Assume no weighting field for times outside the range of available maps.
-  if (t < m_wdtimes.front() || t > m_wdtimes.back()) return 0.;
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) return 0.;
-  // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
-  // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return 0.;
-  // Check if the weighting field is properly initialised.
-
-  // Copy the coordinates.
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates.
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  if (m_warning) PrintWarning("WeightingPotential");
-
-  // Find the element that contains this point.
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) return 0.;
-  const Element& element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
-                 iw);
+bool ComponentComsol::SetDynamicWeightingPotential(const std::string &field,
+                                                   const std::string &label) {
+  if (!m_ready) {
+    std::cerr << m_className << "::SetDelayedWeightingPotential:\n"
+              << "    No valid field map is present.\n"
+              << "    Weighting fields cannot be added.\n";
+    return false;
   }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  const Node& n8 = m_nodes[element.emap[8]];
-  const Node& n9 = m_nodes[element.emap[9]];
-  // Tetrahedral field
 
-  const auto it1 = std::upper_bound(m_wdtimes.cbegin(), m_wdtimes.cend(), t);
-  const auto it0 = std::prev(it1);
+  if (!m_timeset && !GetTimeInterval(field)) return false;
 
-  const double dt = t - *it0;
-  const unsigned int i0 = it0 - m_wdtimes.cbegin();
-  double dp0 =
-      n0.dw[iw][i0] * t1 * (2 * t1 - 1) + n1.dw[iw][i0] * t2 * (2 * t2 - 1) +
-      n2.dw[iw][i0] * t3 * (2 * t3 - 1) + n3.dw[iw][i0] * t4 * (2 * t4 - 1) +
-      4 * n4.dw[iw][i0] * t1 * t2 + 4 * n5.dw[iw][i0] * t1 * t3 +
-      4 * n6.dw[iw][i0] * t1 * t4 + 4 * n7.dw[iw][i0] * t2 * t3 +
-      4 * n8.dw[iw][i0] * t2 * t4 + 4 * n9.dw[iw][i0] * t3 * t4;
+  if (!m_timeset) {
+    std::cerr << m_className << "::SetDelayedWeightingPotential:\n"
+              << "    No valid times slices of potential set.\n"
+              << "    Please add the time slices.\n";
+    return false;
+  }
 
-  const unsigned int i1 = it1 - m_wdtimes.cbegin();
+  const int T = m_wdtimes.size();
 
-  double dp1 =
-      n0.dw[iw][i1] * t1 * (2 * t1 - 1) + n1.dw[iw][i1] * t2 * (2 * t2 - 1) +
-      n2.dw[iw][i1] * t3 * (2 * t3 - 1) + n3.dw[iw][i1] * t4 * (2 * t4 - 1) +
-      4 * n4.dw[iw][i1] * t1 * t2 + 4 * n5.dw[iw][i1] * t1 * t3 +
-      4 * n6.dw[iw][i1] * t1 * t4 + 4 * n7.dw[iw][i1] * t2 * t3 +
-      4 * n8.dw[iw][i1] * t2 * t4 + 4 * n9.dw[iw][i1] * t3 * t4;
+  double x, y, z;
 
-  const double f1 = dt / (*it1 - *it0);
-  const double f0 = 1. - f1;
+  // Open the voltage list.
+  std::ifstream ffield(field);
+  if (!ffield) {
+    PrintCouldNotOpen("SetDelayedWeightingPotential", field);
+    return false;
+  }
 
-  return f0 * dp0 + f1 * dp1;
+  // Check if a weighting field with the same label already exists.
+  const size_t iw = GetOrCreateWeightingFieldIndex(label);
+
+  if (iw + 1 != m_wfields.size()) {
+    std::cout << m_className << "::SetDelayedWeightingPotential:\n"
+              << "    Replacing existing weighting field " << label << ".\n";
+  }
+
+  m_wfieldsOk[iw] = false;
+
+  // Build a k-d tree from the node coordinates.
+
+  std::vector<std::vector<double>> points;
+  for (const auto &node : m_nodes) {
+    std::vector<double> point = {node.x, node.y, node.z};
+    points.push_back(std::move(point));
+  }
+
+  KDTree kdtree(points);
+
+  std::string line;
+  int nLines = 1;
+  const int nNodes = m_nodes.size();
+  const unsigned int nPrint =
+      std::pow(10, static_cast<unsigned int>(
+                       std::max(std::floor(std::log10(nNodes)) - 1, 1.)));
+  std::cout << m_className << "::SetDelayedWeightingPotential:\n"
+            << "    Reading weighting potentials for " << label << ".\n";
+  PrintProgress(0.);
+
+  while (std::getline(ffield, line)) {
+    // Skip empty lines.
+    if (line.empty()) continue;
+    // Skip lines that are not comments.
+    if (isComment(line)) continue;
+
+    std::vector<double> pvect;
+
+    std::istringstream data(line);
+    data >> x >> y >> z;
+    x *= m_unit;
+    y *= m_unit;
+    z *= m_unit;
+    if (!CheckInRange(x, y, z)) continue;
+    const std::vector<double> pt = {x, y, z};
+    std::vector<KDTreeResult> res;
+    kdtree.n_nearest(pt, 1, res);
+    if (!CheckInRange(x, y, z) && res[0].dis > maxNodeDistance) {
+      continue;
+    }
+    if (res.empty()) {
+      std::cerr << m_className << "::SetDelayedWeightingPotential:\n"
+                << "    Could not find a matching mesh node for point (" << x
+                << ", " << y << ", " << z << ")\n.";
+      ffield.close();
+      return false;
+    }
+
+    double p = 0.;
+    double p0 = 0.;
+    for (int i = 0; i < T; i++) {
+      data >> p;
+      if (i == 0) p0 = p;
+      pvect.push_back(p - p0);
+    }
+    const size_t k = res[0].idx;
+    m_nodes[k].dw[iw] = pvect;
+    m_nodes[k].w[iw] = p0;
+    m_wfieldsOk[iw] = true;
+
+    if ((nLines + 1) % nPrint == 0) {
+      PrintProgress(double(nLines + 1) / nNodes);
+    }
+    nLines++;
+  }
+
+  PrintProgress(1.);
+  std::cout << std::endl
+            << m_className << "::SetDelayedWeightingPotential: Done.\n";
+  ffield.close();
+  return true;
 }
 
 void ComponentComsol::SetTimeInterval(const double mint, const double maxt,
@@ -912,14 +572,16 @@ void ComponentComsol::SetTimeInterval(const double mint, const double maxt,
             << mint << "," << maxt << "].\n";
 }
 
-bool ComponentComsol::GetTimeInterval(const std::string& field) {
-  if (!m_wdtimes.empty()) return false;
+bool ComponentComsol::GetTimeInterval(const std::string &field) {
+  if (!m_wdtimes.empty())
+    std::cout << std::endl
+              << m_className
+              << "::GetTimeInterval: Overwriting time interval of weighting "
+                 "potential.\n";
 
-  std::ifstream ffield;
-  ffield.open(field.c_str(), std::ios::in);
-
-  if (ffield.fail()) {
-    PrintCouldNotOpen("SetDelayedWeightingField", field);
+  std::ifstream ffield(field);
+  if (!ffield) {
+    PrintCouldNotOpen("GetTimeInterval", field);
     return false;
   }
 
@@ -928,7 +590,6 @@ bool ComponentComsol::GetTimeInterval(const std::string& field) {
   std::string line;
   // Find first occurrence of "geeks"
   size_t found = 0;
-
   bool searching = true;
   while (std::getline(ffield, line)) {
     // Skip empty lines.
@@ -938,9 +599,7 @@ bool ComponentComsol::GetTimeInterval(const std::string& field) {
 
     while (searching) {
       found = line.find(strtime, found + 1);
-
       searching = false;
-
       if (found != std::string::npos) {
         searching = true;
 

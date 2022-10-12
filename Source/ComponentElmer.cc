@@ -45,15 +45,14 @@ bool ComponentElmer::Initialise(const std::string& header,
   char line[size];
 
   // Open the header.
-  std::ifstream fheader;
-  fheader.open(header.c_str(), std::ios::in);
-  if (fheader.fail()) {
+  std::ifstream fheader(header);
+  if (!fheader) {
     PrintCouldNotOpen("Initialise", header);
     return false;
   }
 
   // Temporary variables for use in file reading
-  char* token = NULL;
+  char* token = nullptr;
   bool readerror = false;
   bool readstop = false;
   int il = 0;
@@ -62,7 +61,7 @@ bool ComponentElmer::Initialise(const std::string& header,
   fheader.getline(line, size, '\n');
   token = strtok(line, " ");
   const int nNodes = ReadInteger(token, 0, readerror);
-  token = strtok(NULL, " ");
+  token = strtok(nullptr, " ");
   const int nElements = ReadInteger(token, 0, readerror);
   std::cout << hdr << "\n    Read " << nNodes << " nodes and " << nElements
             << " elements from file " << header << ".\n";
@@ -76,9 +75,8 @@ bool ComponentElmer::Initialise(const std::string& header,
   fheader.close();
 
   // Open the nodes list.
-  std::ifstream fnodes;
-  fnodes.open(nlist.c_str(), std::ios::in);
-  if (fnodes.fail()) {
+  std::ifstream fnodes(nlist);
+  if (!fnodes) {
     PrintCouldNotOpen("Initialise", nlist);
     return false;
   }
@@ -86,8 +84,7 @@ bool ComponentElmer::Initialise(const std::string& header,
   // Check the value of the unit.
   double funit = ScalingFactor(unit);
   if (funit <= 0.) {
-    std::cerr << hdr << " Unknown length unit " << unit << ".\n";
-    ok = false;
+    std::cerr << hdr << " Unknown length unit " << unit << ". Will use cm.\n";
     funit = 1.0;
   }
   if (m_debug) std::cout << hdr << " Unit scaling factor = " << funit << ".\n";
@@ -99,14 +96,14 @@ bool ComponentElmer::Initialise(const std::string& header,
 
     // Ignore the first two characters.
     token = strtok(line, " ");
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
 
     // Get the node coordinates.
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
     double xnode = ReadDouble(token, -1, readerror);
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
     double ynode = ReadDouble(token, -1, readerror);
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
     double znode = ReadDouble(token, -1, readerror);
     if (readerror) {
       PrintErrorReadingFile(hdr, nlist, il);
@@ -115,21 +112,21 @@ bool ComponentElmer::Initialise(const std::string& header,
     }
 
     // Set up and create a new node.
-    Node newNode;
-    newNode.w.clear();
-    newNode.x = xnode * funit;
-    newNode.y = ynode * funit;
-    newNode.z = znode * funit;
-    m_nodes.push_back(std::move(newNode));
+    Node node;
+    node.w.clear();
+    node.x = xnode * funit;
+    node.y = ynode * funit;
+    node.z = znode * funit;
+    node.v = 0.;
+    m_nodes.push_back(std::move(node));
   }
 
   // Close the nodes file.
   fnodes.close();
 
   // Open the potential file.
-  std::ifstream fvolt;
-  fvolt.open(volt.c_str(), std::ios::in);
-  if (fvolt.fail()) {
+  std::ifstream fvolt(volt);
+  if (!fvolt) {
     PrintCouldNotOpen("Initialise", volt);
     return false;
   }
@@ -176,9 +173,8 @@ bool ComponentElmer::Initialise(const std::string& header,
   fvolt.close();
 
   // Open the materials file.
-  std::ifstream fmplist;
-  fmplist.open(mplist.c_str(), std::ios::in);
-  if (fmplist.fail()) {
+  std::ifstream fmplist(mplist);
+  if (!fmplist) {
     PrintCouldNotOpen("Initialise", mplist);
     return false;
   }
@@ -203,7 +199,7 @@ bool ComponentElmer::Initialise(const std::string& header,
     fmplist.getline(line, size, '\n');
     token = strtok(line, " ");
     ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
+    token = strtok(nullptr, " ");
     double dc = ReadDouble(token, -1.0, readerror);
     if (readerror) {
       PrintErrorReadingFile(hdr, mplist, il);
@@ -219,20 +215,16 @@ bool ComponentElmer::Initialise(const std::string& header,
   fmplist.close();
 
   // Find lowest epsilon, check for eps = 0, set default drift medium.
-  if (!SetDefaultDriftMedium()) ok = false;
+  if (!SetDefaultDriftMedium()) return false;
 
   // Open the elements file.
-  std::ifstream felems;
-  felems.open(elist.c_str(), std::ios::in);
-  if (felems.fail()) {
+  std::ifstream felems(elist);
+  if (!felems) {
     PrintCouldNotOpen("Initialise", elist);
     return false;
   }
 
   // Read the elements and their material indices.
-  m_elements.clear();
-  int highestnode = 0;
-
   for (il = 0; il < nElements; il++) {
     // Get a line
     felems.getline(line, size, '\n');
@@ -245,138 +237,103 @@ bool ComponentElmer::Initialise(const std::string& header,
     // If the order read below is compared to the shape functions used
     // eg. in ElectricField, the order is wrong, but note at the
     // end of this function the order of elements 5,6,7 will change to
-    // 7,5,6 when actually recorded in newElement.emap to correct for this
-    token = strtok(NULL, " ");
+    // 7,5,6 when actually recorded in element.emap to correct for this
+    token = strtok(nullptr, " ");
     int imat = ReadInteger(token, -1, readerror) - 1;
-    token = strtok(NULL, " ");
-    token = strtok(NULL, " ");
-    int in0 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in1 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in2 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in3 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in4 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in5 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in6 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in7 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in8 = ReadInteger(token, -1, readerror);
-    token = strtok(NULL, " ");
-    int in9 = ReadInteger(token, -1, readerror);
-
-    if (m_debug && il < 10) {
-      std::cout << "    Read nodes " << in0 << ", " << in1 << ", " << in2
-                << ", " << in3 << ", ... from element " << il + 1 << " of "
-                << nElements << " with mat " << imat << ".\n";
+    token = strtok(nullptr, " ");
+    std::vector<int> inode;
+    for (size_t k = 0; k < 10; ++k) {
+      token = strtok(nullptr, " ");
+      const int in = ReadInteger(token, -1, readerror);
+      if (!readerror) inode.push_back(in);
     }
 
-    // Check synchronisation.
-    if (readerror) {
+    if (inode.size() != 10) {
       PrintErrorReadingFile(hdr, elist, il);
+      std::cerr << "    Read " << inode.size() << " node indices for element"
+                 << il << " (expected 10).\n";
       felems.close();
       return false;
+    }
+
+    if (m_debug && il < 10) {
+      std::cout << "    Read nodes " << inode[0] << ", " << inode[1] 
+                << ", " << inode[2] << ", " << inode[3] 
+                << ", ... from element " << il + 1 << " of "
+                << nElements << " with material " << imat << ".\n";
     }
 
     // Check the material number and ensure that epsilon is non-negative.
     if (imat < 0 || imat > (int)nMaterials) {
       std::cerr << hdr << "\n    Out-of-range material number on file " << elist
-                << " (line " << il << ").\n";
-      std::cerr << "    Element: " << il << ", material: " << imat << "\n";
-      std::cerr << "    nodes: (" << in0 << ", " << in1 << ", " << in2 << ", "
-                << in3 << ", " << in4 << ", " << in5 << ", " << in6 << ", "
-                << in7 << ", " << in8 << ", " << in9 << ")\n";
+                << " (line " << il << ").\n"
+                << "    Element: " << il << ", material: " << imat << ".\n";
       ok = false;
+      break;
     }
     if (m_materials[imat].eps < 0) {
-      std::cerr << hdr << "\n    Element " << il << " in element list " << elist
-                << "\n    uses material " << imat
-                << " which has not been assigned a positive permittivity in "
-                << mplist << ".\n";
+      std::cerr << hdr << "\n    Element " << il << " in " << elist << "\n"
+                << "    uses material " << imat << " which does not have\n"
+                << "    a positive permittivity in " << mplist << ".\n";
       ok = false;
+      break;
     }
 
     // Check the node numbers.
-    if (in0 < 1 || in1 < 1 || in2 < 1 || in3 < 1 || in4 < 1 || in5 < 1 ||
-        in6 < 1 || in7 < 1 || in8 < 1 || in9 < 1) {
-      std::cerr << hdr << "\n    Found a node number < 1 on file " << elist
-                << " (line " << il << ").\n    Element: " << il
-                << ", material: " << imat << "\n    nodes: (" << in0 << ", "
-                << in1 << ", " << in2 << ", " << in3 << ", " << in4 << ", "
-                << in5 << ", " << in6 << ", " << in7 << ", " << in8 << ", "
-                << in9 << ")\n";
-      ok = false;
+    bool degenerate = false;
+    for (size_t k = 0; k < 10; ++k) {
+      if (inode[k] < 1) {
+        std::cerr << hdr << "\n    Found a node number < 1 on file " << elist
+                  << " (line " << il << ").\n    Element: " << il
+                  << ", material: " << imat << ".\n";
+        ok = false;
+      }
+      for (size_t kk = k + 1; kk < 10; ++kk) {
+        if (inode[k] == inode[kk]) degenerate = true;
+      } 
     }
-    if (in0 > highestnode) highestnode = in0;
-    if (in1 > highestnode) highestnode = in1;
-    if (in2 > highestnode) highestnode = in2;
-    if (in3 > highestnode) highestnode = in3;
-    if (in4 > highestnode) highestnode = in4;
-    if (in5 > highestnode) highestnode = in5;
-    if (in6 > highestnode) highestnode = in6;
-    if (in7 > highestnode) highestnode = in7;
-    if (in8 > highestnode) highestnode = in8;
-    if (in9 > highestnode) highestnode = in9;
-
     // These elements must not be degenerate.
-    if (in0 == in1 || in0 == in2 || in0 == in3 || in0 == in4 || in0 == in5 ||
-        in0 == in6 || in0 == in7 || in0 == in8 || in0 == in9 || in1 == in2 ||
-        in1 == in3 || in1 == in4 || in1 == in5 || in1 == in6 || in1 == in7 ||
-        in1 == in8 || in1 == in9 || in2 == in3 || in2 == in4 || in2 == in5 ||
-        in2 == in6 || in2 == in7 || in2 == in8 || in2 == in9 || in3 == in4 ||
-        in3 == in5 || in3 == in6 || in3 == in7 || in3 == in8 || in3 == in9 ||
-        in4 == in5 || in4 == in6 || in4 == in7 || in4 == in8 || in4 == in9 ||
-        in5 == in6 || in5 == in7 || in5 == in8 || in5 == in9 || in6 == in7 ||
-        in6 == in8 || in6 == in9 || in7 == in8 || in7 == in9 || in8 == in9) {
+    if (degenerate) {
       std::cerr << hdr << "\n    Element " << il << " of file " << elist
                 << " is degenerate,\n"
                 << "    no such elements are allowed in this type of map.\n";
       ok = false;
     }
-    Element newElement;
-    newElement.degenerate = false;
+    if (!ok) break;
+    Element element;
+    element.degenerate = false;
 
     // Store the material reference.
-    newElement.matmap = imat;
+    element.matmap = imat;
 
     // Node references
-    newElement.emap[0] = in0 - 1;
-    newElement.emap[1] = in1 - 1;
-    newElement.emap[2] = in2 - 1;
-    newElement.emap[3] = in3 - 1;
-    newElement.emap[4] = in4 - 1;
-    newElement.emap[7] = in5 - 1;
-    newElement.emap[5] = in6 - 1;
-    newElement.emap[6] = in7 - 1;
-    newElement.emap[8] = in8 - 1;
-    newElement.emap[9] = in9 - 1;
-    m_elements.push_back(std::move(newElement));
+    element.emap[0] = inode[0] - 1;
+    element.emap[1] = inode[1] - 1;
+    element.emap[2] = inode[2] - 1;
+    element.emap[3] = inode[3] - 1;
+    element.emap[4] = inode[4] - 1;
+    element.emap[7] = inode[5] - 1;
+    element.emap[5] = inode[6] - 1;
+    element.emap[6] = inode[7] - 1;
+    element.emap[8] = inode[8] - 1;
+    element.emap[9] = inode[9] - 1;
+    m_elements.push_back(std::move(element));
   }
 
   // Close the elements file.
   felems.close();
+  if (!ok) return false;
 
   // Set the ready flag.
-  if (ok) {
-    m_ready = true;
-  } else {
-    std::cerr << hdr << "\n    Field map could not be "
-              << "read and cannot be interpolated.\n";
-    return false;
-  }
-
+  m_ready = true;
   std::cout << hdr << " Finished.\n";
 
   Prepare();
   return true;
 }
 
-bool ComponentElmer::SetWeightingField(std::string wvolt, std::string label) {
+bool ComponentElmer::SetWeightingField(const std::string& wvolt, 
+                                       const std::string& label) {
   const std::string hdr = m_className + "::SetWeightingField:";
   if (!m_ready) {
     PrintNotReady("SetWeightingField");
@@ -385,9 +342,8 @@ bool ComponentElmer::SetWeightingField(std::string wvolt, std::string label) {
   }
 
   // Open the voltage list.
-  std::ifstream fwvolt;
-  fwvolt.open(wvolt.c_str(), std::ios::in);
-  if (fwvolt.fail()) {
+  std::ifstream fwvolt(wvolt);
+  if (!fwvolt) {
     PrintCouldNotOpen("SetWeightingField", wvolt);
     return false;
   }
@@ -403,7 +359,7 @@ bool ComponentElmer::SetWeightingField(std::string wvolt, std::string label) {
   // Temporary variables for use in file reading
   constexpr int size = 100;
   char line[size];
-  char* token = NULL;
+  char* token = nullptr;
   bool readerror = false;
   bool readstop = false;
   int il = 1;
@@ -452,352 +408,6 @@ bool ComponentElmer::SetWeightingField(std::string wvolt, std::string label) {
   // Set the ready flag.
   m_wfieldsOk[iw] = true;
   return true;
-}
-
-void ComponentElmer::ElectricField(const double x, const double y,
-                                   const double z, double& ex, double& ey,
-                                   double& ez, Medium*& m, int& status) {
-  double v = 0.;
-  ElectricField(x, y, z, ex, ey, ez, v, m, status);
-}
-
-void ComponentElmer::ElectricField(const double xin, const double yin,
-                                   const double zin, double& ex, double& ey,
-                                   double& ez, double& volt, Medium*& m,
-                                   int& status) {
-  // Copy the coordinates
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  // Initial values
-  ex = ey = ez = volt = 0.;
-  status = 0;
-  m = nullptr;
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) {
-    status = -10;
-    PrintNotReady("ElectricField");
-    return;
-  }
-
-  if (m_warning) PrintWarning("ElectricField");
-
-  // Find the element that contains this point
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) {
-    if (m_debug) {
-      std::cout << m_className << "::ElectricField:\n    Point (" << x << ", "
-                << y << ", " << z << ") is not in the mesh.\n";
-    }
-    status = -6;
-    return;
-  }
-
-  const Element& element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("ElectricField", x, y, z, t1, t2, t3, t4, element, 10);
-  }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  const Node& n8 = m_nodes[element.emap[8]];
-  const Node& n9 = m_nodes[element.emap[9]];
-  // Shorthands.
-  const double fourt1 = 4 * t1;
-  const double fourt2 = 4 * t2;
-  const double fourt3 = 4 * t3;
-  const double fourt4 = 4 * t4;
-  const double invdet = 1. / det;
-  // Tetrahedral field
-  volt = n0.v * t1 * (2 * t1 - 1) + n1.v * t2 * (2 * t2 - 1) +
-         n2.v * t3 * (2 * t3 - 1) + n3.v * t4 * (2 * t4 - 1) +
-         4 * n4.v * t1 * t2 + 4 * n5.v * t1 * t3 + 4 * n6.v * t1 * t4 +
-         4 * n7.v * t2 * t3 + 4 * n8.v * t2 * t4 + 4 * n9.v * t3 * t4;
-  ex = -(n0.v * (fourt1 - 1) * jac[0][1] + n1.v * (fourt2 - 1) * jac[1][1] +
-         n2.v * (fourt3 - 1) * jac[2][1] + n3.v * (fourt4 - 1) * jac[3][1] +
-         n4.v * (fourt2 * jac[0][1] + fourt1 * jac[1][1]) +
-         n5.v * (fourt3 * jac[0][1] + fourt1 * jac[2][1]) +
-         n6.v * (fourt4 * jac[0][1] + fourt1 * jac[3][1]) +
-         n7.v * (fourt3 * jac[1][1] + fourt2 * jac[2][1]) +
-         n8.v * (fourt4 * jac[1][1] + fourt2 * jac[3][1]) +
-         n9.v * (fourt4 * jac[2][1] + fourt3 * jac[3][1])) *
-       invdet;
-  ey = -(n0.v * (fourt1 - 1) * jac[0][2] + n1.v * (fourt2 - 1) * jac[1][2] +
-         n2.v * (fourt3 - 1) * jac[2][2] + n3.v * (fourt4 - 1) * jac[3][2] +
-         n4.v * (fourt2 * jac[0][2] + fourt1 * jac[1][2]) +
-         n5.v * (fourt3 * jac[0][2] + fourt1 * jac[2][2]) +
-         n6.v * (fourt4 * jac[0][2] + fourt1 * jac[3][2]) +
-         n7.v * (fourt3 * jac[1][2] + fourt2 * jac[2][2]) +
-         n8.v * (fourt4 * jac[1][2] + fourt2 * jac[3][2]) +
-         n9.v * (fourt4 * jac[2][2] + fourt3 * jac[3][2])) *
-       invdet;
-  ez = -(n0.v * (fourt1 - 1) * jac[0][3] + n1.v * (fourt2 - 1) * jac[1][3] +
-         n2.v * (fourt3 - 1) * jac[2][3] + n3.v * (fourt4 - 1) * jac[3][3] +
-         n4.v * (fourt2 * jac[0][3] + fourt1 * jac[1][3]) +
-         n5.v * (fourt3 * jac[0][3] + fourt1 * jac[2][3]) +
-         n6.v * (fourt4 * jac[0][3] + fourt1 * jac[3][3]) +
-         n7.v * (fourt3 * jac[1][3] + fourt2 * jac[2][3]) +
-         n8.v * (fourt4 * jac[1][3] + fourt2 * jac[3][3]) +
-         n9.v * (fourt4 * jac[2][3] + fourt3 * jac[3][3])) *
-       invdet;
-
-  // Transform field to global coordinates
-  UnmapFields(ex, ey, ez, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  // Drift medium?
-  const Material& mat = m_materials[element.matmap];
-  if (m_debug) {
-    std::cout << m_className << "::ElectricField:\n    Material "
-              << element.matmap << ", drift flag " << mat.driftmedium << ".\n";
-  }
-  m = mat.medium;
-  status = -5;
-  if (mat.driftmedium && m && m->IsDriftable()) status = 0;
-}
-
-void ComponentElmer::WeightingField(const double xin, const double yin,
-                                    const double zin, double& wx, double& wy,
-                                    double& wz, const std::string& label) {
-  // Initial values
-  wx = wy = wz = 0;
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) return;
-
-  // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
-  // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return;
-  // Check if the weighting field is properly initialised.
-  if (!m_wfieldsOk[iw]) return;
-
-  // Copy the coordinates.
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  if (m_warning) PrintWarning("WeightingField");
-
-  // Find the element that contains this point.
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  // Check if the point is in the mesh.
-  if (imap < 0) return;
-
-  const Element& element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("WeightingField", x, y, z, t1, t2, t3, t4, element, 10, iw);
-  }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  const Node& n8 = m_nodes[element.emap[8]];
-  const Node& n9 = m_nodes[element.emap[9]];
-  // Shorthands.
-  const double fourt1 = 4 * t1;
-  const double fourt2 = 4 * t2;
-  const double fourt3 = 4 * t3;
-  const double fourt4 = 4 * t4;
-  const double invdet = 1. / det;
-  // Tetrahedral field
-  wx = -(n0.w[iw] * (fourt1 - 1) * jac[0][1] +
-         n1.w[iw] * (fourt2 - 1) * jac[1][1] +
-         n2.w[iw] * (fourt3 - 1) * jac[2][1] +
-         n3.w[iw] * (fourt4 - 1) * jac[3][1] +
-         n4.w[iw] * (fourt2 * jac[0][1] + fourt1 * jac[1][1]) +
-         n5.w[iw] * (fourt3 * jac[0][1] + fourt1 * jac[2][1]) +
-         n6.w[iw] * (fourt4 * jac[0][1] + fourt1 * jac[3][1]) +
-         n7.w[iw] * (fourt3 * jac[1][1] + fourt2 * jac[2][1]) +
-         n8.w[iw] * (fourt4 * jac[1][1] + fourt2 * jac[3][1]) +
-         n9.w[iw] * (fourt4 * jac[2][1] + fourt3 * jac[3][1])) *
-       invdet;
-  wy = -(n0.w[iw] * (fourt1 - 1) * jac[0][2] +
-         n1.w[iw] * (fourt2 - 1) * jac[1][2] +
-         n2.w[iw] * (fourt3 - 1) * jac[2][2] +
-         n3.w[iw] * (fourt4 - 1) * jac[3][2] +
-         n4.w[iw] * (fourt2 * jac[0][2] + fourt1 * jac[1][2]) +
-         n5.w[iw] * (fourt3 * jac[0][2] + fourt1 * jac[2][2]) +
-         n6.w[iw] * (fourt4 * jac[0][2] + fourt1 * jac[3][2]) +
-         n7.w[iw] * (fourt3 * jac[1][2] + fourt2 * jac[2][2]) +
-         n8.w[iw] * (fourt4 * jac[1][2] + fourt2 * jac[3][2]) +
-         n9.w[iw] * (fourt4 * jac[2][2] + fourt3 * jac[3][2])) *
-       invdet;
-  wz = -(n0.w[iw] * (fourt1 - 1) * jac[0][3] +
-         n1.w[iw] * (fourt2 - 1) * jac[1][3] +
-         n2.w[iw] * (fourt3 - 1) * jac[2][3] +
-         n3.w[iw] * (fourt4 - 1) * jac[3][3] +
-         n4.w[iw] * (fourt2 * jac[0][3] + fourt1 * jac[1][3]) +
-         n5.w[iw] * (fourt3 * jac[0][3] + fourt1 * jac[2][3]) +
-         n6.w[iw] * (fourt4 * jac[0][3] + fourt1 * jac[3][3]) +
-         n7.w[iw] * (fourt3 * jac[1][3] + fourt2 * jac[2][3]) +
-         n8.w[iw] * (fourt4 * jac[1][3] + fourt2 * jac[3][3]) +
-         n9.w[iw] * (fourt4 * jac[2][3] + fourt3 * jac[3][3])) *
-       invdet;
-
-  // Transform field to global coordinates
-  UnmapFields(wx, wy, wz, x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-}
-
-double ComponentElmer::WeightingPotential(const double xin, const double yin,
-                                          const double zin,
-                                          const std::string& label) {
-  // Do not proceed if not properly initialised.
-  if (!m_ready) return 0.;
-
-  // Look for the label.
-  const size_t iw = GetWeightingFieldIndex(label);
-  // Do not proceed if the requested weighting field does not exist.
-  if (iw == m_wfields.size()) return 0.;
-  // Check if the weighting field is properly initialised.
-  if (!m_wfieldsOk[iw]) return 0.;
-
-  // Copy the coordinates.
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates.
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  if (m_warning) PrintWarning("WeightingPotential");
-
-  // Find the element that contains this point.
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) return 0.;
-
-  const Element& element = m_elements[imap];
-  if (m_debug) {
-    PrintElement("WeightingPotential", x, y, z, t1, t2, t3, t4, element, 10,
-                 iw);
-  }
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-  const Node& n4 = m_nodes[element.emap[4]];
-  const Node& n5 = m_nodes[element.emap[5]];
-  const Node& n6 = m_nodes[element.emap[6]];
-  const Node& n7 = m_nodes[element.emap[7]];
-  const Node& n8 = m_nodes[element.emap[8]];
-  const Node& n9 = m_nodes[element.emap[9]];
-  // Tetrahedral field
-  return n0.w[iw] * t1 * (2 * t1 - 1) + n1.w[iw] * t2 * (2 * t2 - 1) +
-         n2.w[iw] * t3 * (2 * t3 - 1) + n3.w[iw] * t4 * (2 * t4 - 1) +
-         4 * n4.w[iw] * t1 * t2 + 4 * n5.w[iw] * t1 * t3 +
-         4 * n6.w[iw] * t1 * t4 + 4 * n7.w[iw] * t2 * t3 +
-         4 * n8.w[iw] * t2 * t4 + 4 * n9.w[iw] * t3 * t4;
-}
-
-Medium* ComponentElmer::GetMedium(const double xin, const double yin,
-                                  const double zin) {
-  // Copy the coordinates
-  double x = xin, y = yin, z = zin;
-
-  // Map the coordinates onto field map coordinates
-  bool xmirr, ymirr, zmirr;
-  double rcoordinate, rotation;
-  MapCoordinates(x, y, z, xmirr, ymirr, zmirr, rcoordinate, rotation);
-
-  // Do not proceed if not properly initialised.
-  if (!m_ready) {
-    PrintNotReady("GetMedium");
-    return nullptr;
-  }
-  if (m_warning) PrintWarning("GetMedium");
-
-  // Find the element that contains this point
-  double t1, t2, t3, t4, jac[4][4], det;
-  const int imap = FindElement13(x, y, z, t1, t2, t3, t4, jac, det);
-  if (imap < 0) {
-    if (m_debug) {
-      std::cout << m_className << "::GetMedium:\n    Point (" << x << ", " << y
-                << ", " << z << ") is not in the mesh.\n";
-    }
-    return nullptr;
-  }
-  const Element& element = m_elements[imap];
-  if (element.matmap >= m_materials.size()) {
-    if (m_debug) {
-      std::cerr << m_className << "::GetMedium:\n    Point (" << x << ", " << y
-                << ", " << z << ") has out of range material number " << imap
-                << ".\n";
-    }
-    return nullptr;
-  }
-
-  if (m_debug) PrintElement("GetMedium", x, y, z, t1, t2, t3, t4, element, 10);
-
-  return m_materials[element.matmap].medium;
-}
-
-double ComponentElmer::GetElementVolume(const unsigned int i) {
-  if (i >= m_elements.size()) return 0.;
-  const Element& element = m_elements[i];
-  const Node& n0 = m_nodes[element.emap[0]];
-  const Node& n1 = m_nodes[element.emap[1]];
-  const Node& n2 = m_nodes[element.emap[2]];
-  const Node& n3 = m_nodes[element.emap[3]];
-
-  // Uses formula V = |a (dot) b x c|/6
-  // with a => "3", b => "1", c => "2" and origin "0"
-  const double vol =
-      fabs((n3.x - n0.x) *
-               ((n1.y - n0.y) * (n2.z - n0.z) - (n2.y - n0.y) * (n1.z - n0.z)) +
-           (n3.y - n0.y) *
-               ((n1.z - n0.z) * (n2.x - n0.x) - (n2.z - n0.z) * (n1.x - n0.x)) +
-           (n3.z - n0.z) * ((n1.x - n0.x) * (n2.y - n0.y) -
-                            (n3.x - n0.x) * (n1.y - n0.y))) /
-      6.;
-  return vol;
-}
-
-void ComponentElmer::GetAspectRatio(const unsigned int i, double& dmin,
-                                    double& dmax) {
-  if (i >= m_elements.size()) {
-    dmin = dmax = 0.;
-    return;
-  }
-
-  const Element& element = m_elements[i];
-  const int np = 4;
-  // Loop over all pairs of vertices.
-  for (int j = 0; j < np - 1; ++j) {
-    const Node& nj = m_nodes[element.emap[j]];
-    for (int k = j + 1; k < np; ++k) {
-      const Node& nk = m_nodes[element.emap[k]];
-      // Compute distance.
-      const double dx = nj.x - nk.x;
-      const double dy = nj.y - nk.y;
-      const double dz = nj.z - nk.z;
-      const double dist = sqrt(dx * dx + dy * dy + dz * dz);
-      if (k == 1) {
-        dmin = dmax = dist;
-      } else {
-        if (dist < dmin) dmin = dist;
-        if (dist > dmax) dmax = dist;
-      }
-    }
-  }
 }
 
 }  // namespace Garfield

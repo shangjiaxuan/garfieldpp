@@ -1,5 +1,3 @@
-// Copied and modified ComponentAnsys123.hh
-
 #ifndef G_COMPONENT_ELMER_H
 #define G_COMPONENT_ELMER_H
 
@@ -20,20 +18,6 @@ class ComponentElmer : public ComponentFieldMap {
   /// Destructor
   ~ComponentElmer() {}
 
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, Medium*& m, int& status) override;
-  void ElectricField(const double x, const double y, const double z, double& ex,
-                     double& ey, double& ez, double& v, Medium*& m,
-                     int& status) override;
-
-  void WeightingField(const double x, const double y, const double z,
-                      double& wx, double& wy, double& wz,
-                      const std::string& label) override;
-  double WeightingPotential(const double x, const double y, const double z,
-                            const std::string& label) override;
-
-  Medium* GetMedium(const double x, const double y, const double z) override;
-
   /** Import a field map from a set of files.
     * \param header name of the header file
                     (contains the number of elements and nodes).
@@ -50,15 +34,8 @@ class ComponentElmer : public ComponentFieldMap {
                   const std::string& volt = "out.result",
                   const std::string& unit = "cm");
   /// Import a list of voltages to be used as weighting field.
-  bool SetWeightingField(std::string prnsol, std::string label);
+  bool SetWeightingField(const std::string& prnsol, const std::string& label);
 
- protected:
-  // Verify periodicities
-  void UpdatePeriodicity() override { UpdatePeriodicityCommon(); }
-
-  double GetElementVolume(const unsigned int i) override;
-  void GetAspectRatio(const unsigned int i, double& dmin,
-                      double& dmax) override;
 };
 }
 #endif

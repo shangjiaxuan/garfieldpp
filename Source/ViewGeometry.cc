@@ -48,7 +48,7 @@ void ViewGeometry::Plot3d() {
     return;
   }
 
-  const unsigned int nSolids = m_geometry->GetNumberOfSolids();
+  const auto nSolids = m_geometry->GetNumberOfSolids();
   if (nSolids == 0) {
     std::cerr << m_className << "::Plot3d: Geometry is empty.\n";
     return;
@@ -61,8 +61,8 @@ void ViewGeometry::Plot3d() {
     std::cerr << m_className << "::Plot3d: Cannot retrieve bounding box.\n";
     return;
   }
-  auto canvas = GetCanvas();
-  canvas->cd();
+  auto pad = GetCanvas();
+  pad->cd();
   gGeoManager = nullptr;
   m_geoManager.reset(new TGeoManager("ViewGeometryGeoManager", ""));
   TGeoMaterial* matVacuum = new TGeoMaterial("Vacuum", 0., 0., 0.);
@@ -77,8 +77,8 @@ void ViewGeometry::Plot3d() {
   m_geoManager->SetTopVolume(world);
   m_volumes.push_back(world);
 
-  for (unsigned int i = 0; i < nSolids; ++i) {
-    Solid* solid = m_geometry->GetSolid(i);
+  for (size_t i = 0; i < nSolids; ++i) {
+    auto solid = m_geometry->GetSolid(i);
     if (!solid) {
       std::cerr << m_className << "::Plot3d:\n"
                 << "    Could not get solid " << i << " from geometry.\n";
@@ -188,7 +188,7 @@ void ViewGeometry::Plot3d() {
     m_geoManager->GetTopVolume()->AddNode(volume, 1, transform);
   }
   m_geoManager->CloseGeometry();
-  m_geoManager->GetTopNode()->Draw("ogl");
+  m_geoManager->GetTopNode()->Draw("gl");
 }
 
 void ViewGeometry::Plot2d() {
@@ -198,7 +198,7 @@ void ViewGeometry::Plot2d() {
     return;
   }
 
-  const unsigned int nSolids = m_geometry->GetNumberOfSolids();
+  const auto nSolids = m_geometry->GetNumberOfSolids();
   if (nSolids == 0) {
     std::cerr << m_className << "::Plot2d: Geometry is empty.\n";
     return;
@@ -229,12 +229,7 @@ void ViewGeometry::Plot2d() {
   canvas->cd();
   canvas->SetTitle("Geometry");
 
-  bool empty = false;
-  if (!gPad ||
-      (gPad->GetListOfPrimitives()->GetSize() == 0 && gPad->GetX1() == 0 &&
-       gPad->GetX2() == 1 && gPad->GetY1() == 0 && gPad->GetY2() == 1)) {
-    empty = true;
-  }
+  bool empty = !RangeSet(gPad);
   const double bm = canvas->GetBottomMargin();
   const double lm = canvas->GetLeftMargin();
   const double rm = canvas->GetRightMargin();
@@ -252,18 +247,18 @@ void ViewGeometry::Plot2d() {
               y1 + (y1 - y0) * (tm / (1. - tm - lm)));
   TPolyLine pl;
   pl.SetLineWidth(2);
-  for (unsigned int i = 0; i < nSolids; ++i) {
+  for (size_t i = 0; i < nSolids; ++i) {
     auto solid = m_geometry->GetSolid(i);
     if (!solid) continue;
     std::vector<Panel> panels;
     solid->Cut(m_proj[2][0], m_proj[2][1], m_proj[2][2],
                m_plane[0], m_plane[1], m_plane[2], panels);
     for (const auto& panel : panels) {
-      const unsigned int nv = panel.xv.size();
+      const auto nv = panel.xv.size();
       if (nv < 3) continue;
       std::vector<double> xpl;
       std::vector<double> ypl;
-      for (unsigned int j = 0; j < nv; ++j) {
+      for (size_t j = 0; j < nv; ++j) {
         double u, v;
         ToPlane(panel.xv[j], panel.yv[j], panel.zv[j], u, v);
         xpl.push_back(u);

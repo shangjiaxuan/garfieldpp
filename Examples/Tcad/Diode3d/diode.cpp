@@ -32,8 +32,7 @@ int main(int argc, char * argv[]) {
   ComponentTcad3d cmp;
   // Load the mesh (.grd file) and electric field profile (.dat).
   cmp.Initialise("diode_msh.grd", "diode_des.dat");
-
-  // Associate the TCAD regions with the silicon medium.
+  // Associate all regions in the field map with silicon.
   auto nRegions = cmp.GetNumberOfRegions();
   for (size_t i = 0; i < nRegions; ++i) {
     cmp.SetMedium(i, &si);

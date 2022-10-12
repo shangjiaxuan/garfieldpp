@@ -4,11 +4,11 @@
 // Note that Opt = 1 yields a forward rotation while -1 yields a -ve rotation.
 #define DEFINE_VGLOBAL
 
+#include "Vector.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "Vector.h"
 
 #ifdef __cplusplus
 namespace neBEM {
@@ -337,10 +337,8 @@ Point3D TranslatePoint3D(Point3D *A, Point3D *Origin, int Sense) {
 // which we know the direction cosines of the new coordinate system.
 // This option can be invoked by choosing 'local2global' defined in Vector.h
 Point3D RotatePoint3D(Point3D *A, DirnCosn3D *DC, int Sense) {
-
-  double TransformationMatrix[3][3] = {{0.0, 0.0, 0.0},
-                                       {0.0, 0.0, 0.0},
-                                       {0.0, 0.0, 0.0}};
+  double TransformationMatrix[3][3] = {
+      {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
   switch (Sense) {
     case 1:
       TransformationMatrix[0][0] = DC->XUnit.X;
@@ -485,5 +483,5 @@ Point3D ReflectPoint3DByMirrorAtOrigin(Point3D *p1, Vector3D *n) {
 }  // ReflectPoint3DByMirrorAtOrigin ends
 
 #ifdef __cplusplus
-} // namespace
+}  // namespace
 #endif

@@ -39,10 +39,10 @@ bool TrackElectron::NewTrack(const double x0, const double y0, const double z0,
   }
 
   // Get the medium at this location and check if it is "ionisable".
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(x0, y0, z0, medium)) {
-    std::cerr << m_className << "::NewTrack:\n";
-    std::cerr << "    No medium at initial position.\n";
+  Medium* medium = m_sensor->GetMedium(x0, y0, z0);
+  if (!medium) {
+    std::cerr << m_className << "::NewTrack:\n"
+              << "    No medium at initial position.\n";
     return false;
   }
   if (!medium->IsIonisable()) {
@@ -122,8 +122,8 @@ bool TrackElectron::GetCluster(double& xcls, double& ycls, double& zcls,
     return false;
   }
 
-  Medium* medium = nullptr;
-  if (!m_sensor->GetMedium(m_x, m_y, m_z, medium)) {
+  Medium* medium = m_sensor->GetMedium(m_x, m_y, m_z);
+  if (!medium) {
     m_ready = false;
     return false;
   }

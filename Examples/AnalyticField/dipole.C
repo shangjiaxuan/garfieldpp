@@ -19,8 +19,7 @@ int main(int argc, char * argv[]) {
   SetDefaultStyle();
 
   // Setup the gas.
-  MediumMagboltz gas;
-  gas.SetComposition("ar");
+  MediumMagboltz gas("ar");
 
   // Setup the cell layout.
   ComponentAnalyticField cmp;

@@ -48,6 +48,5 @@ int main(int argc, char * argv[]) {
   view.SetRangeA(0., HalfPi, false);
   view.PlotElectronVelocity('a');
 
-  app.Run(kTRUE);
-
+  app.Run();
 }
