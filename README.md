@@ -82,6 +82,10 @@ Currently only tested 64 bit with cmake + ifort
 need registering and EULA to download), using root from public release binary, and self-compiled 
 geant4 with Qt 5.15 and GDML (xerces-c installed with vcpkg).
 
+Since the library requires large memory resources, 64 bit compilation is required. Running GEM example uses 2.1GB on typical 
+machine:
+![GEM example](GEM-win64.PNG)
+
 ### Required dependencies:
 #### Root
 vs2022 binary available at https://root.cern/install/all_releases/, installer version sets environment variables. 
