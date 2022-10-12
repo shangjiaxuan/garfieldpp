@@ -133,6 +133,7 @@ int main(int argc, char * argv[]) {
     }
     // Loop over the primary electrons along the track.
     const std::size_t ne = electrons.size();
+    // omp 2.0 on windows only allow int type
     #pragma omp parallel for
     for (int k = 0; k < ne; ++k) {
       DriftLineRKF drift;

@@ -4,7 +4,9 @@
 
 #include <stdio.h>
 #include <time.h>
-//#include <unistd.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 #include "Isles.h"
 #include "NR.h"
