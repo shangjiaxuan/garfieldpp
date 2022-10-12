@@ -13,11 +13,13 @@ target_compile_definitions(${libname} PRIVATE BUILDING_MEGABOLTZ=1)
 # windows dll building need either __declspec(dllexport) or a .def file to specify symbols
 if(CMAKE_HOST_WIN32)
   target_link_options(${libname} PRIVATE /DEF:${CMAKE_CURRENT_SOURCE_DIR}/magboltz.def)
-  target_compile_options(${libname} PRIVATE "/nofpp")
 endif()
 
+if(CMAKE_Fortran_COMPILER_ID STREQUAL "Intel" OR CMAKE_Fortran_COMPILER_ID STREQUAL "IntelLLVM")
+# ifort will not compile with hard-coded cmake /fpp, thus need this
+  target_compile_options(${libname} PRIVATE "-nofpp")
+else()
 # assume only intel compilers do not use "-std=legacy"
-if(NOT (CMAKE_Fortran_COMPILER_ID STREQUAL "Intel" OR CMAKE_Fortran_COMPILER_ID STREQUAL "IntelLLVM"))
   target_compile_options(${libname} PRIVATE -std=legacy)
 endif()
 
