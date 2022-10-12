@@ -77,5 +77,19 @@ target_link_libraries(test Garfield)
 ```
 
 ## About Windows Build:
-Currently only tested with cmake+ifort. gfortran should use original one. Also, cmake by default adds /fpp to CMAKE_Fortran_FLAGS, 
-which will break build. One should remove that option from cmake cache or specify correct options.
+Currently only tested 64 bit with cmake + ifort 
+(from [`Intel oneAPI HPC Toolkit`](https://www.intel.com/content/www/us/en/developer/tools/oneapi/hpc-toolkit-download.html), 
+need registering and EULA to download), using root from public release binary, and self-compiled 
+geant4 with Qt 5.15 and GDML (xerces-c installed with vcpkg).
+
+### Required dependencies:
+#### Root
+vs2022 binary available at https://root.cern/install/all_releases/, installer version sets environment variables. 
+Tested with 6.26/06, should work with all versions built with vs2022.
+#### Geant4
+vs2019 binary available at https://geant4.web.cern.ch/support/download, binary compatible with vs2022.
+Tested with self-compiled 6.11.03 with Qt and GDML(xerces-c) using vs2022. 
+Qt5.15 binary in vs2019 is compatible with vs2022 compiler.
+#### gsl
+`vckpg install gsl`, and just use cmake with vcpkg. Currently you need to specify the gsl and gslblas library files manually. 
+Located at `<vcpkg-dir>\installed\<compiler-setting(x64-windows)>`
