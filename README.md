@@ -77,7 +77,7 @@ target_link_libraries(test Garfield)
 ```
 
 ## About Windows Build:
-Currently only tested 64 bit with cmake + ifort 
+Currently only tested 64 bit with cmake visual studio msvc + ifort 
 (from [`Intel oneAPI HPC Toolkit`](https://www.intel.com/content/www/us/en/developer/tools/oneapi/hpc-toolkit-download.html), 
 need registering and EULA to download), using root from public release binary, and self-compiled 
 geant4 with Qt 5.15 and GDML (xerces-c installed with vcpkg).
