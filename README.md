@@ -79,12 +79,23 @@ target_link_libraries(test Garfield)
 ## About Windows Build:
 Currently only tested 64 bit with cmake visual studio msvc + ifort 
 (from [`Intel oneAPI HPC Toolkit`](https://www.intel.com/content/www/us/en/developer/tools/oneapi/hpc-toolkit-download.html), 
-need registering and EULA to download), using root from public release binary, and self-compiled 
-geant4 with Qt 5.15 and GDML (xerces-c installed with vcpkg).
+need registering and EULA to download) and msvc + gfortran (mingw binaries), using root from public release binary, 
+and self-compiled geant4 with Qt 5.15 and GDML (xerces-c installed with vcpkg).
+
+The compiled Garfield++ library have root generated header paths that loads on start, thus source directory needs to be
+constant, and cannot make portable install binary. Dependency binaries can be found in the releases section (excluding Garfield.dll).
 
 Since the library requires large memory resources, 64 bit compilation is required. Running GEM example uses 2.1GB on typical 
 machine:
 ![GEM example](GEM-win64.PNG)
+
+The following environment variables need to be set to run (running without the shell scripts):
+```
+GARFIELD_INSTALL (Where to look for gas datasets)
+optional:
+    HEED_DATABASE (By default a location relative to GARFIELD_INSTALL)
+    G4XXXXDATA (The Geant4 data variables for datasets)
+```
 
 ### Required dependencies:
 #### Root

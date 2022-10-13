@@ -19,10 +19,24 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
                                                "RelWithDebInfo")
 endif()
 
+# do not require a fortran at top-level project, so this can build with visual studio + gfortran
 project(
   Garfield
-  LANGUAGES CXX Fortran
+  LANGUAGES CXX #Fortran
   VERSION 0.3.0)
+
+include(CheckLanguage)
+check_language(Fortran)
+
+if(MSVC AND (NOT CMAKE_Fortran_COMPILER))
+  set(GARFIELD_USE_SUBPROJ_MINGW ON)
+else()
+  set(GARFIELD_USE_SUBPROJ_MINGW OFF)
+endif()
+
+if(NOT GARFIELD_USE_SUBPROJ_MINGW)
+  enable_language(Fortran)
+endif()
 
 #--- Set default installation prefix ------------------------------------------
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -85,7 +99,23 @@ find_package(GSL REQUIRED)
 find_package(OpenMP)
 
 #--- Add Magboltz -------------------------------------------------------------
-add_subdirectory(Magboltz)
+include(CMakeAddFortranSubdirectory)
+
+cmake_add_fortran_subdirectory(
+  Magboltz
+  # cmake will fallback and create a new mingw project
+  # using these parameters on msvc instead of normal subdir behavior
+  PROJECT "Magboltz_mingw"
+  # need to propagate this variable to subproj, so the "if(x) proj" could work
+  CMAKE_COMMAND_LINE = -DGARFIELD_USE_SUBPROJ_MINGW=${GARFIELD_USE_SUBPROJ_MINGW}
+  ARCHIVE_DIR "Magboltz"
+  RUNTIME_DIR "Magboltz"
+  LIBRARIES "magboltz"
+  LINK_LIBRARIES "magboltz"
+  NO_EXTERNAL_INSTALL
+)
+
+add_library(Garfield::magboltz ALIAS magboltz)
 
 # Creating the main Garfield library
 add_library(Garfield SHARED "")
