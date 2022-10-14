@@ -29,13 +29,13 @@ extern "C" {
 // Magboltz COMMON blocks
 
 // Magnetic field
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double eovb;
   double wb;
   double btheta, bmag;
 } bfld_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   std::int64_t nGas;
   std::int64_t nStep;
   std::int64_t nAniso;
@@ -48,7 +48,7 @@ MEGABOLTZ_EXTERNAL_SYMBOL struct {
   std::int64_t ipen;
 } inpt_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double tmax;
   double small;
   double api;
@@ -59,7 +59,7 @@ MEGABOLTZ_EXTERNAL_SYMBOL struct {
   std::int64_t nmax;
 } setp_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double amgas[6];
   double vtmb[6];
   double tcfmx;
@@ -68,14 +68,14 @@ MEGABOLTZ_EXTERNAL_SYMBOL struct {
 } thrm_;
 
 // Physical constants
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double echarg;
   double emass;
   double amu;
   double pir2;
 } cnsts_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double eg[nEnergySteps];
   double eroot[nEnergySteps];
   double qt1[nEnergySteps];
@@ -84,9 +84,9 @@ MEGABOLTZ_EXTERNAL_SYMBOL struct {
   double qt4[nEnergySteps];
 } mix2_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct { double den[nEnergySteps]; } dens_;
+MAGBOLTZ_EXTERNAL_SYMBOL struct { double den[nEnergySteps]; } dens_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double time[300];
   std::int64_t icoll[30];
   double spec[nEnergySteps];
@@ -103,7 +103,7 @@ MEGABOLTZ_EXTERNAL_SYMBOL struct {
   std::int64_t icolnn[60];
 } outpt_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double time[300];
   std::int64_t icoll[5][nMaxComponents];
   double spec[nEnergySteps];
@@ -120,17 +120,17 @@ MEGABOLTZ_EXTERNAL_SYMBOL struct {
   std::int64_t icolnn[10][nMaxComponents];
 } outptt_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   char dscrpt[nMaxLevels][nCharDescr];
   char dscrptn[60][nCharDescr];
 } scrip_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   char dscrpt[nMaxLevelsPerComponent][nMaxComponents][nCharDescr];
   char dscrptn[10][nMaxComponents][nCharDescr];
 } script_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double cf[nMaxLevels][nEnergySteps];
   double ein[nMaxLevels];
   double tcf[nEnergySteps];
@@ -144,7 +144,7 @@ MEGABOLTZ_EXTERNAL_SYMBOL struct {
   double tcfmax[8];
 } large_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double cf[290][nEnergySteps][nMaxComponents];
   double ein[290][nMaxComponents];
   double tcf[nEnergySteps][nMaxComponents];
@@ -159,34 +159,34 @@ MEGABOLTZ_EXTERNAL_SYMBOL struct {
 } larget_;
 
 // Definition of the gas mixture
-MEGABOLTZ_EXTERNAL_SYMBOL struct { std::int64_t ngasn[6]; } gasn_;
+MAGBOLTZ_EXTERNAL_SYMBOL struct { std::int64_t ngasn[6]; } gasn_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double an1, an2, an3, an4, an5, an6, an;
   double frac[6];
 } ratio_;
 
 // Calculation results
 // Drift velocity
-MEGABOLTZ_EXTERNAL_SYMBOL struct { double wx, wy, wz; } vel_;
-MEGABOLTZ_EXTERNAL_SYMBOL struct { double dwx, dwy, dwz; } velerr_;
+MAGBOLTZ_EXTERNAL_SYMBOL struct { double wx, wy, wz; } vel_;
+MAGBOLTZ_EXTERNAL_SYMBOL struct { double dwx, dwy, dwz; } velerr_;
 
 // Diffusion
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double difxx, difyy, difzz;
   double difyz, difxy, difxz;
 } diflab_;
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double dxxer, dyyer, dzzer;
   double dyzer, dxyer, dxzer;
 } diferb_;
-MEGABOLTZ_EXTERNAL_SYMBOL struct { double difln, diftr; } difvel_;
-MEGABOLTZ_EXTERNAL_SYMBOL struct { double dfler, dfter; } diferl_;
+MAGBOLTZ_EXTERNAL_SYMBOL struct { double difln, diftr; } difvel_;
+MAGBOLTZ_EXTERNAL_SYMBOL struct { double dfler, dfter; } diferl_;
 
 // Townsend and attachment coefficient
-MEGABOLTZ_EXTERNAL_SYMBOL struct { double alpha, att; } ctowns_;
-MEGABOLTZ_EXTERNAL_SYMBOL struct { double alper, atter; } ctwner_;
-MEGABOLTZ_EXTERNAL_SYMBOL struct {
+MAGBOLTZ_EXTERNAL_SYMBOL struct { double alpha, att; } ctowns_;
+MAGBOLTZ_EXTERNAL_SYMBOL struct { double alper, atter; } ctwner_;
+MAGBOLTZ_EXTERNAL_SYMBOL struct {
   double ralpha, ralper;
   double tofene, tofener, tofwv, tofwver;
   double tofdl, tofdler, tofdt, tofdter;
@@ -194,7 +194,7 @@ MEGABOLTZ_EXTERNAL_SYMBOL struct {
   double rattof, ratofer;
 } tofout_;
 
-MEGABOLTZ_EXTERNAL_SYMBOL void gasmix_(std::int64_t* ngs, double* q, double* qin, std::int64_t* nin, double* e,
+MAGBOLTZ_EXTERNAL_SYMBOL void gasmix_(std::int64_t* ngs, double* q, double* qin, std::int64_t* nin, double* e,
              double* ei, char* name, double* virl, double* eb, double* peqel,
              double* peqin, double* penfra, std::int64_t* kel, std::int64_t* kin,
              double* qion, double* peqion, double* eion, std::int64_t* nion,
@@ -205,13 +205,13 @@ MEGABOLTZ_EXTERNAL_SYMBOL void gasmix_(std::int64_t* ngs, double* q, double* qin
              char scrptn[nMaxNullTerms][nCharDescr],
              short namelen, short scrpt_len, short scrptn_len);
 
-MEGABOLTZ_EXTERNAL_SYMBOL void colf_(double* freq, double* freel, double* freion, double* freatt,
+MAGBOLTZ_EXTERNAL_SYMBOL void colf_(double* freq, double* freel, double* freion, double* freatt,
            double* frein, std::int64_t *ntotal);
 
-MEGABOLTZ_EXTERNAL_SYMBOL void colft_(double* freq, double* freel, double* freion, double* freatt,
+MAGBOLTZ_EXTERNAL_SYMBOL void colft_(double* freq, double* freel, double* freion, double* freatt,
             double* frein, std::int64_t *ntotal);
 
-MEGABOLTZ_EXTERNAL_SYMBOL void magboltz_();
+MAGBOLTZ_EXTERNAL_SYMBOL void magboltz_();
 }
 }
 }
