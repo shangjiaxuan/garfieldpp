@@ -4,18 +4,18 @@
 if(GARFIELD_USE_SUBPROJ_MINGW)
   # need this in external project
   cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-  message(STATUS "building Megaboltz shared library as subproject")
+  message(STATUS "building magboltz shared library as subproject")
   project(Magboltz_mingw LANGUAGES Fortran)
 else()
   # added with direct add_subdirectory, variables inherited
   if(MSVC)
     # ifort automatically exported symbols will be in the form:
-    # MEGABOLTZ, instead of megaboltz_, and will not link from cpp code
+    # MAGBOLTZ, instead of magboltz_, and will not link from cpp code
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
     # need 3.13 to use target_link_options, or symbols will not be same even with CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS
     cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
   endif()
-  message(STATUS "building Megaboltz library as a library target in parent Garfield project")
+  message(STATUS "building magboltz library as a library target in parent Garfield project")
 endif()
 set(libname "magboltz")
 set(lib_fullver 11.9)

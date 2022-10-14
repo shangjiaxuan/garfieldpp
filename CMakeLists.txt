@@ -39,7 +39,7 @@ if(NOT CMAKE_Fortran_COMPILER)
     # CHECK_FAIL requires cmake 3.17
     #message(CHECK_FAIL "missing fortran compiler")
     message(STATUS "missing fortran compiler")
-    message(FATAL_ERROR "Cannot compile megaboltz without fortran compiler")
+    message(FATAL_ERROR "Cannot compile magboltz without fortran compiler")
   endif()
 else()
   set(GARFIELD_USE_SUBPROJ_MINGW OFF)
