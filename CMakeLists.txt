@@ -3,9 +3,7 @@
 # Version 3.9 is required by the ROOT Use file
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
-if(CMAKE_HOST_WIN32)
-  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # Setting a default build type to be release with debug information. 
 # Otherwise the default mode is debug.
@@ -26,16 +24,29 @@ project(
   VERSION 0.3.0)
 
 include(CheckLanguage)
+message(CHECK_START "Checking for fortran compiler")
 check_language(Fortran)
 
-if(MSVC AND (NOT CMAKE_Fortran_COMPILER))
-  set(GARFIELD_USE_SUBPROJ_MINGW ON)
+# this branching logic references CMakeAddFortranSubdirectory.cmake, logic stayed the same since first release with it
+# (2.8.8) up to current latest 3.24
+if(NOT CMAKE_Fortran_COMPILER)
+  if(MSVC)
+    set(GARFIELD_USE_SUBPROJ_MINGW ON)
+    message(STATUS "Msvc without fotran compiler in build system, will try with mingw-gfortran later.")
+    message(STATUS "Use MINGW_GFORTRAN variable to specify the compiler")
+    message(STATUS "Generated project will be used as external project, and will not by default regenerated when Garfield Regenerates.")
+  else()
+    # CHECK_FAIL requires cmake 3.17
+    #message(CHECK_FAIL "missing fortran compiler")
+    message(STATUS "missing fortran compiler")
+    message(FATAL_ERROR "Cannot compile megaboltz without fortran compiler")
+  endif()
 else()
   set(GARFIELD_USE_SUBPROJ_MINGW OFF)
-endif()
-
-if(NOT GARFIELD_USE_SUBPROJ_MINGW)
   enable_language(Fortran)
+  # CHECK_FAIL requires cmake 3.17
+  #message(CHECK_PASS "Found fortran compiler: ${CMAKE_Fortran_COMPILER}")
+  message(STATUS "Found fortran compiler: ${CMAKE_Fortran_COMPILER}")
 endif()
 
 #--- Set default installation prefix ------------------------------------------

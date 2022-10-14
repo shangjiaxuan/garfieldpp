@@ -1,17 +1,22 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-
 # required if building on msvc+gfortran, subproject uses mingw build system,
 # but when using addsubdir logic from cmake_add_fortran_subdirectory, library
 # will need extra work with new sub-project here
-include(CMakePrintHelpers)
-cmake_print_variables(GARFIELD_USE_SUBPROJ_MINGW)
 if(GARFIELD_USE_SUBPROJ_MINGW)
+  # need this in external project
+  cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+  message(STATUS "building Megaboltz shared library as subproject")
   project(Magboltz_mingw LANGUAGES Fortran)
+else()
+  # added with direct add_subdirectory, variables inherited
+  if(MSVC)
+    # ifort automatically exported symbols will be in the form:
+    # MEGABOLTZ, instead of megaboltz_, and will not link from cpp code
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
+    # need 3.13 to use target_link_options, or symbols will not be same even with CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS
+    cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
+  endif()
+  message(STATUS "building Megaboltz library as a library target in parent Garfield project")
 endif()
-# ifort automatically exported symbols will be in the form:
-# MEGABOLTZ, instead of megaboltz_, and will not link
-# gfortran will export symbols out of the box
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
 set(libname "magboltz")
 set(lib_fullver 11.9)
 set(lib_apiver 11)
@@ -21,11 +26,10 @@ message(STATUS "Creating a new library named ${libname} with API version ${lib_a
 add_library(${libname} SHARED "")
 target_sources(${libname} PRIVATE magboltz.f)
 target_compile_definitions(${libname} PRIVATE BUILDING_MEGABOLTZ=1)
-set_target_properties(${libname} PROPERTIES LINKER_LANGUAGE Fortran) 
 
 # Windows dll building need either __declspec(dllexport), a .def file, or CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS to specify symbols.
 # Automatically generated symbols does not use gnu style xxx_, but is in XXX
-if(DEFINED MSVC)
+if(MSVC)
   target_link_options(${libname} PRIVATE /DEF:${CMAKE_CURRENT_SOURCE_DIR}/magboltz.def)
 endif()
 
