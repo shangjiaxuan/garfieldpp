@@ -5,7 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#ifndef _WIN32
+// _WIN32 can also be defined in mingw and clang
+#ifndef _MSC_VER
 #include <unistd.h>
 #else
 #define stat _stat

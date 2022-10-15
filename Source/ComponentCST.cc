@@ -1,7 +1,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#ifdef _WIN32
+// _WIN32 can also be defined in mingw and clang
+#ifdef _MSC_VER
 #define stat _stat
 #endif
 #include <algorithm>
