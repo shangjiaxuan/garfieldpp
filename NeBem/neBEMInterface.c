@@ -15,7 +15,8 @@
 
 #include <stdio.h>
 #include <sys/stat.h>  // use of stat function
-#ifndef _WIN32
+// _WIN32 can also be defined in mingw and clang
+#ifndef _MSC_VER
 #include <unistd.h>
 #else
 #define sleep _sleep
