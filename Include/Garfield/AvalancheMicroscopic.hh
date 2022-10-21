@@ -14,7 +14,7 @@ namespace Garfield {
 
 /// Calculate electron drift lines and avalanches using microscopic tracking.
 
-class AvalancheMicroscopic {
+class GARFIELD_IMPORTEXPROT AvalancheMicroscopic {
  public:
   /// Constructor
   AvalancheMicroscopic();

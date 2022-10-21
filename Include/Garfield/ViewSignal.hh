@@ -16,7 +16,7 @@ class Sensor;
 
 /// Plot the signal computed by a sensor as a ROOT histogram.
 
-class ViewSignal : public ViewBase {
+class GARFIELD_IMPORTEXPROT ViewSignal : public ViewBase {
  public:
   /// Constructor
   ViewSignal();

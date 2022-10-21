@@ -9,7 +9,7 @@ namespace Garfield {
 
 /// Sphere.
 
-class SolidSphere : public Solid {
+class GARFIELD_IMPORTEXPROT SolidSphere : public Solid {
  public:
   /// Constructor from centre and outer radius.
   SolidSphere(const double cx, const double cy, const double cz,

@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Component for interpolating field maps stored in a regular mesh.
 
-class ComponentVoxel : public Component {
+class GARFIELD_IMPORTEXPROT ComponentVoxel : public Component {
  public:
   /// Constructor
   ComponentVoxel();

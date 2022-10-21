@@ -6,7 +6,7 @@ namespace Garfield {
 
 /// Component for importing and interpolating Comsol field maps.
 
-class ComponentComsol : public ComponentFieldMap {
+class GARFIELD_IMPORTEXPROT ComponentComsol : public ComponentFieldMap {
  public:
   /// Default constructor.
   ComponentComsol();

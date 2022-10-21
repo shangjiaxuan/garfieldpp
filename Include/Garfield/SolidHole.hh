@@ -9,7 +9,7 @@ namespace Garfield {
 
 /// Box with a cylindrical hole.
 
-class SolidHole : public Solid {
+class GARFIELD_IMPORTEXPROT SolidHole : public Solid {
  public:
   /// Constructor from centre, upper/lower radii, half-lengths of the box. 
   SolidHole(const double cx, const double cy, const double cz,

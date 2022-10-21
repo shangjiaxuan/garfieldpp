@@ -14,7 +14,7 @@ class Medium;
 
 /// Plot transport coefficients as function of electric and magnetic field.
 
-class ViewMedium : public ViewBase {
+class GARFIELD_IMPORTEXPROT ViewMedium : public ViewBase {
  public:
   /// Constructor.
   ViewMedium();

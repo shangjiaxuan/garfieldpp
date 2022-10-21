@@ -12,7 +12,7 @@ namespace Garfield {
 
 /// Base class for gas media.
 
-class MediumGas : public Medium {
+class GARFIELD_IMPORTEXPROT MediumGas : public Medium {
  public:
   /// Constructor
   MediumGas();

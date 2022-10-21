@@ -10,7 +10,7 @@ namespace Garfield {
 
 /// Ionization calculation based on MIP program (S. Biagi).
 
-class TrackElectron : public Track {
+class GARFIELD_IMPORTEXPROT TrackElectron : public Track {
  public:
   // Constructor
   TrackElectron();

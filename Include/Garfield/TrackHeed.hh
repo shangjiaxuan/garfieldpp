@@ -31,7 +31,7 @@ class Medium;
 
 /// Generate tracks using Heed++.
 
-class TrackHeed : public Track {
+class GARFIELD_IMPORTEXPROT TrackHeed : public Track {
  public:
   /// Constructor
   TrackHeed();

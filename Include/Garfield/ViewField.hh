@@ -12,7 +12,7 @@ class Component;
 
 /// Visualize the potential or electric field of a component or sensor.
 
-class ViewField : public ViewBase {
+class GARFIELD_IMPORTEXPROT ViewField : public ViewBase {
  public:
   /// Constructor.
   ViewField();

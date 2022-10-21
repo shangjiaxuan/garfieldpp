@@ -11,7 +11,7 @@ namespace Garfield {
 
 /// Component with constant electric field.
 
-class ComponentConstant : public Component {
+class GARFIELD_IMPORTEXPROT ComponentConstant : public Component {
  public:
   /// Constructor
   ComponentConstant();

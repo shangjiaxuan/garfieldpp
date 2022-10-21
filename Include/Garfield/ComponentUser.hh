@@ -9,7 +9,7 @@ namespace Garfield {
 
 /// Simple component with electric field given by a user function.
 
-class ComponentUser : public Component {
+class GARFIELD_IMPORTEXPROT ComponentUser : public Component {
  public:
   /// Constructor
   ComponentUser();

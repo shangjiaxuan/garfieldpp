@@ -9,7 +9,7 @@ namespace Garfield {
 
 /// Cylindrical tube.
 
-class SolidTube : public Solid {
+class GARFIELD_IMPORTEXPROT SolidTube : public Solid {
  public:
   /// Constructor from centre, outer radius, and half-length.
   SolidTube(const double cx, const double cy, const double cz, const double r,

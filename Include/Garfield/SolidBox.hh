@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Box.
 
-class SolidBox : public Solid {
+class GARFIELD_IMPORTEXPROT SolidBox : public Solid {
  public:
   /// Constructor from centre and half-widths.
   SolidBox(const double cx, const double cy, const double cz, const double lx,

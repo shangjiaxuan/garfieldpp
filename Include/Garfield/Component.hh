@@ -10,7 +10,7 @@ namespace Garfield {
 
 /// Abstract base class for components.
 
-class Component {
+class GARFIELD_IMPORTEXPROT Component {
  public:
   /// Default constructor.
   Component() = delete;

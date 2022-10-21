@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Extrusion.
 
-class SolidExtrusion : public Solid {
+class GARFIELD_IMPORTEXPROT SolidExtrusion : public Solid {
  public:
   /// Constructor from half-length and profile.
   SolidExtrusion(const double lz,

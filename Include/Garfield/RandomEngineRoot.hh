@@ -9,7 +9,7 @@ namespace Garfield {
 
 /// ROOT random number generator.
 
-class RandomEngineRoot : public RandomEngine {
+class GARFIELD_IMPORTEXPROT RandomEngineRoot : public RandomEngine {
  public:
   /// Constructor
   RandomEngineRoot();

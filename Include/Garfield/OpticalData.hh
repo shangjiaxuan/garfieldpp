@@ -4,11 +4,13 @@
 #include <string>
 #include <vector>
 
+#include "exports.h"
+
 namespace Garfield {
 
 /// Photoabsorption cross-sections for some gases.
 
-class OpticalData {
+class GARFIELD_IMPORTEXPROT OpticalData {
  public:
   /// Constructor
   OpticalData() = default;

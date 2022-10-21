@@ -4,11 +4,13 @@
 #include <string>
 #include <cmath>
 
+#include "exports.h"
+
 namespace Garfield {
 
 /// Class for signal processing
 
-class Shaper {
+class GARFIELD_IMPORTEXPROT Shaper {
  public:
   /// Default constructor.
   Shaper() = delete;

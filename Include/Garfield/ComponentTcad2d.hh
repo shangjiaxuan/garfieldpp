@@ -10,7 +10,7 @@ namespace Garfield {
 
 /// Interpolation in a two-dimensional field map created by Sentaurus Device.
 
-class ComponentTcad2d : public ComponentTcadBase<2> {
+class GARFIELD_IMPORTEXPROT ComponentTcad2d : public ComponentTcadBase<2> {
  public:
   /// Constructor
   ComponentTcad2d();

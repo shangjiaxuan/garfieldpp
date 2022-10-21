@@ -15,7 +15,7 @@ class GeometrySimple;
 
 /// Visualize a geometry defined using the "native" shapes.
 
-class ViewGeometry : public ViewBase {
+class GARFIELD_IMPORTEXPROT ViewGeometry : public ViewBase {
  public:
   /// Constructor.
   ViewGeometry();

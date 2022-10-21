@@ -14,8 +14,8 @@ namespace Garfield {
 
 /// Component for parallel-plate geometries.
 
-class ComponentParallelPlate : public Component {
-public:
+class GARFIELD_IMPORTEXPROT ComponentParallelPlate : public Component {
+ public:
   /// Constructor
   ComponentParallelPlate();
   /// Destructor

@@ -4,6 +4,8 @@
 #include <cmath>
 #include <string>
 
+#include "exports.h"
+
 namespace Garfield {
 
 class Sensor;
@@ -11,7 +13,7 @@ class ViewDrift;
 
 /// Abstract base class for track generation.
 
-class Track {
+class GARFIELD_IMPORTEXPROT Track {
  public:
   /// Constructor
   Track();

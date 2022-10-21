@@ -4,6 +4,8 @@
 #include <vector>
 #include <array>
 
+#include "exports.h"
+
 namespace Garfield {
 
 /// Surface panel.
@@ -25,7 +27,7 @@ struct Panel {
 
 /// Abstract base class for solids.
 
-class Solid {
+class GARFIELD_IMPORTEXPROT Solid {
  public:
   /// Default constructor.
   Solid() = delete;

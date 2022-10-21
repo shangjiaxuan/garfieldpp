@@ -1,11 +1,13 @@
 #ifndef G_RANDOM_ENGINE_H
 #define G_RANDOM_ENGINE_H
 
+#include "exports.h"
+
 namespace Garfield {
 
 /// Abstract base class for random number generators.
 
-class RandomEngine {
+class GARFIELD_IMPORTEXPROT RandomEngine {
  public:
   /// Constructor
   RandomEngine() = default;

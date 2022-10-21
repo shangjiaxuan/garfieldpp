@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Cadmium-Telluride.
 
-class MediumCdTe : public Medium {
+class GARFIELD_IMPORTEXPROT MediumCdTe : public Medium {
  public:
   /// Constructor
   MediumCdTe();

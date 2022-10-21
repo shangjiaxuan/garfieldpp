@@ -11,7 +11,7 @@ namespace Garfield {
 /// Interpolation in a field map created by Sentaurus Device.
 
 template<size_t N> 
-class ComponentTcadBase : public Component {
+class GARFIELD_IMPORTEXPROT ComponentTcadBase : public Component {
  public:
   /// Default constructor
   ComponentTcadBase() = delete;

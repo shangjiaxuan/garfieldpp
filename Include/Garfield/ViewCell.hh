@@ -15,7 +15,7 @@ class ComponentNeBem2d;
 
 /// Visualize the "cell" defined in an analytic-field component.
 
-class ViewCell : public ViewBase {
+class GARFIELD_IMPORTEXPROT ViewCell : public ViewBase {
  public:
   /// Constructor
   ViewCell();

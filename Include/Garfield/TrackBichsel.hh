@@ -14,7 +14,7 @@ namespace Garfield {
 ///   - H. Bichsel, Rev. Mod. Phys. 60 (1988), 663-699
 ///   - https://faculty.washington.edu/hbichsel/
 
-class TrackBichsel : public Track {
+class GARFIELD_IMPORTEXPROT TrackBichsel : public Track {
  public:
   /// Constructor
   TrackBichsel();

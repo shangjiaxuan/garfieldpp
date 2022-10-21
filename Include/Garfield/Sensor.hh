@@ -15,7 +15,7 @@ namespace Garfield {
 
 /// %Sensor
 
-class Sensor {
+class GARFIELD_IMPORTEXPROT Sensor {
  public:
   /// Constructor
   Sensor() = default;

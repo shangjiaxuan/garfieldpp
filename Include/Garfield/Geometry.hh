@@ -10,7 +10,7 @@ namespace Garfield {
 
 /// Abstract base class for geometry classes.
 
-class Geometry {
+class GARFIELD_IMPORTEXPROT Geometry {
  public:
   /// Default constructor.
   Geometry() = delete;

@@ -7,11 +7,13 @@
 #include "FundamentalConstants.hh"
 #include "GarfieldConstants.hh"
 
+#include "exports.h"
+
 namespace Garfield {
 
 /// Abstract base class for media.
 
-class Medium {
+class GARFIELD_IMPORTEXPROT Medium {
  public:
   /// Constructor
   Medium();

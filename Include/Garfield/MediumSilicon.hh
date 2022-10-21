@@ -10,7 +10,7 @@
 namespace Garfield {
 /// %Solid crystalline silicon
 
-class MediumSilicon : public Medium {
+class GARFIELD_IMPORTEXPROT MediumSilicon : public Medium {
  public:
   /// Constructor
   MediumSilicon();
