@@ -14,7 +14,7 @@ namespace Garfield {
 /// Calculate drift lines and avalanches based on macroscopic transport
 /// coefficients, using Monte Carlo integration.
 
-class AvalancheMC {
+class GARFIELD_IMPORTEXPROT AvalancheMC {
  public:
   /// Constructor
   AvalancheMC();

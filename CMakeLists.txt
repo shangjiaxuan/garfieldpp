@@ -288,6 +288,10 @@ set_source_files_properties(${nebem_sources} PROPERTIES LANGUAGE CXX)
 target_sources( Garfield PRIVATE ${nebem_sources})
 target_compile_definitions(Garfield PRIVATE BUILDING_GARFIELD=1)
 if(MSVC)
+  # disable warning 4251, and manually export medium and component classes.
+  # this warning is for stl members not being exported, and will require exact
+  # same cxx standard and runtime (and possibly template headers) as root already requires.
+  target_compile_options(Garfield PRIVATE /wd4251)
   target_compile_definitions(Garfield PRIVATE _USE_MATH_DEFINES=1 _CRT_SECURE_NO_DEPRECATE=1)
 endif()
 

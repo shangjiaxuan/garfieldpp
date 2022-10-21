@@ -10,7 +10,7 @@ namespace Garfield {
 
 /// "Native" geometry, using simple shapes.
 
-class GeometrySimple : public Geometry {
+class GARFIELD_IMPORTEXPROT GeometrySimple : public Geometry {
  public:
   /// Constructor
   GeometrySimple();

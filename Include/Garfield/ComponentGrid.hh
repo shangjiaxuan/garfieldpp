@@ -9,7 +9,7 @@ namespace Garfield {
 
 /// Component for interpolating field maps on a regular mesh.
 
-class ComponentGrid : public Component {
+class GARFIELD_IMPORTEXPROT ComponentGrid : public Component {
  public:
   /// Constructor
   ComponentGrid();

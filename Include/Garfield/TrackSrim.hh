@@ -8,7 +8,7 @@ namespace Garfield {
 /// Generate tracks based on SRIM energy loss, range and straggling tables.
 ///  - http://www.srim.org
 
-class TrackSrim : public Track {
+class GARFIELD_IMPORTEXPROT TrackSrim : public Track {
  public:
   /// Constructor
   TrackSrim();

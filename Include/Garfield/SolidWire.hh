@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Wire.
 
-class SolidWire : public Solid {
+class GARFIELD_IMPORTEXPROT SolidWire : public Solid {
  public:
   /// Constructor from centre, radius, and half-length.
   SolidWire(const double cx, const double cy, const double cz, const double r,

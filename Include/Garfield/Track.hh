@@ -11,7 +11,7 @@ class ViewDrift;
 
 /// Abstract base class for track generation.
 
-class Track {
+class GARFIELD_IMPORTEXPROT Track {
  public:
   /// Constructor
   Track();

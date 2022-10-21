@@ -10,7 +10,7 @@ class Component;
 
 /// Draw equal time contour lines.
 
-class ViewIsochrons : public ViewBase {
+class GARFIELD_IMPORTEXPROT ViewIsochrons : public ViewBase {
  public:
   /// Constructor.
   ViewIsochrons();

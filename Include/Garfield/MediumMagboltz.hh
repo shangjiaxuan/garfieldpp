@@ -12,7 +12,7 @@ namespace Garfield {
 /// Interface to %Magboltz (version 11).
 ///  - http://magboltz.web.cern.ch/magboltz/
 
-class MediumMagboltz : public MediumGas {
+class GARFIELD_IMPORTEXPROT MediumMagboltz : public MediumGas {
  public:
   /// Constructor
   MediumMagboltz();

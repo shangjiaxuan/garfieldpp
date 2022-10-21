@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Conducting medium.
 
-class MediumConductor : public Medium {
+class GARFIELD_IMPORTEXPROT MediumConductor : public Medium {
  public:
   /// Constructor
   MediumConductor() : Medium() {

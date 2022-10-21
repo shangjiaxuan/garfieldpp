@@ -13,7 +13,7 @@ namespace Garfield {
 
 /// Base class for components based on finite-element field maps.
 
-class ComponentFieldMap : public Component {
+class GARFIELD_IMPORTEXPROT ComponentFieldMap : public Component {
  public:
   /// Default constructor.
   ComponentFieldMap() = delete;

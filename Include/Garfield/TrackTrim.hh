@@ -11,7 +11,7 @@ namespace Garfield {
 /// Generate tracks based on TRIM output files.
 ///  - http://www.srim.org
 
-class TrackTrim : public Track {
+class GARFIELD_IMPORTEXPROT TrackTrim : public Track {
  public:
   /// Constructor
   TrackTrim();

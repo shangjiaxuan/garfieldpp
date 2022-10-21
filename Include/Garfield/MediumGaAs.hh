@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Gallium-Arsenide.
 
-class MediumGaAs : public Medium {
+class GARFIELD_IMPORTEXPROT MediumGaAs : public Medium {
  public:
   /// Constructor
   MediumGaAs();

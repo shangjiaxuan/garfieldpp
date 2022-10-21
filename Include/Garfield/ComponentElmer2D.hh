@@ -9,7 +9,7 @@ namespace Garfield {
 
 /// Component for importing field maps computed by Elmer.
 
-class ComponentElmer2D : public ComponentFieldMap {
+class GARFIELD_IMPORTEXPROT ComponentElmer2D : public ComponentFieldMap {
  public:
   /// Default constructor
   ComponentElmer2D();

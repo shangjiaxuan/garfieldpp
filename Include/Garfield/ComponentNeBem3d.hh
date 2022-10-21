@@ -9,7 +9,7 @@ namespace Garfield {
 
 /// Interface to neBEM.
 
-class ComponentNeBem3d : public Component {
+class GARFIELD_IMPORTEXPROT ComponentNeBem3d : public Component {
  public:
   /// Constructor
   ComponentNeBem3d();

@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Generate tracks based on a cluster density given by the user.
 
-class TrackSimple : public Track {
+class GARFIELD_IMPORTEXPROT TrackSimple : public Track {
  public:
   /// Constructor
   TrackSimple();

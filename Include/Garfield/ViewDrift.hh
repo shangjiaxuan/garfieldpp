@@ -15,7 +15,7 @@ namespace Garfield {
 
 /// Visualize drift lines and tracks.
 
-class ViewDrift : public ViewBase {
+class GARFIELD_IMPORTEXPROT ViewDrift : public ViewBase {
  public:
   /// Constructor.
   ViewDrift();

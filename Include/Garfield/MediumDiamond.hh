@@ -9,7 +9,7 @@ namespace Garfield {
 
 /// Diamond.
 
-class MediumDiamond : public Medium {
+class GARFIELD_IMPORTEXPROT MediumDiamond : public Medium {
  public:
   /// Constructor
   MediumDiamond();

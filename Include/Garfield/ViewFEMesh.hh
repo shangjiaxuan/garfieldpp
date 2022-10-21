@@ -18,7 +18,7 @@ namespace Garfield {
 
 /// Draw the mesh of a field-map component.
 
-class ViewFEMesh : public ViewBase {
+class GARFIELD_IMPORTEXPROT ViewFEMesh : public ViewBase {
  public:
   /// Constructor.
   ViewFEMesh();

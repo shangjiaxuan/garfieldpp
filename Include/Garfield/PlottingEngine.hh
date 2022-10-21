@@ -3,11 +3,13 @@
 
 #include <TStyle.h>
 
+#include "exports.h"
+
 namespace Garfield {
 
 /// Plotting style.
 
-class PlottingEngine {
+class GARFIELD_IMPORTEXPROT PlottingEngine {
  public:
   /// Default constructor.
   PlottingEngine();

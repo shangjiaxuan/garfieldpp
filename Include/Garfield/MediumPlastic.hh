@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Plastic medium.
 
-class MediumPlastic : public Medium {
+class GARFIELD_IMPORTEXPROT MediumPlastic : public Medium {
  public:
   // Constructor
   MediumPlastic() : Medium() {

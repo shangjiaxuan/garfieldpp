@@ -14,7 +14,7 @@ namespace Garfield {
 /// Calculate avalanches in a uniform electric field using avalanche
 /// statistics.
 
-class AvalancheGrid {
+class GARFIELD_IMPORTEXPROT AvalancheGrid {
  public:
   /// Constructor
   AvalancheGrid() {}

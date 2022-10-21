@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Gallium-Nitride.
 
-class MediumGaN : public Medium {
+class GARFIELD_IMPORTEXPROT MediumGaN : public Medium {
  public:
   /// Constructor
   MediumGaN();

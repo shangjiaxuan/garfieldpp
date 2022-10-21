@@ -12,7 +12,7 @@ namespace Garfield {
 /// Please find the tools to extract the field data from CST
 /// in the correct way here: http://www.desy.de/~zenker/garfieldpp.html
 
-class ComponentCST : public ComponentFieldMap {
+class GARFIELD_IMPORTEXPROT ComponentCST : public ComponentFieldMap {
  public:
   /// Constructor
   ComponentCST();

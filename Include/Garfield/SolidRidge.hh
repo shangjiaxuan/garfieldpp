@@ -7,7 +7,7 @@ namespace Garfield {
 
 /// Triangular prism (Toblerone bar).
 
-class SolidRidge : public Solid {
+class GARFIELD_IMPORTEXPROT SolidRidge : public Solid {
  public:
   /// Constructor from centre, half-lengths, height and x-offset. 
   SolidRidge(const double cx, const double cy, const double cz,

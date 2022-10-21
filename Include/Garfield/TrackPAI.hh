@@ -10,7 +10,7 @@ namespace Garfield {
 
 /// Energy loss calculation using the Photoabsorption-Ionisation Model.
 
-class TrackPAI : public Track {
+class GARFIELD_IMPORTEXPROT TrackPAI : public Track {
  public:
   // Constructor
   TrackPAI();

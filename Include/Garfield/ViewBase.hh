@@ -8,6 +8,8 @@
 #include <TPad.h>
 #include <TCanvas.h>
 
+#include "exports.h"
+
 namespace Garfield {
 
 class Sensor;
@@ -15,7 +17,7 @@ class Component;
 
 /// Base class for visualization classes.
 
-class ViewBase {
+class GARFIELD_IMPORTEXPROT ViewBase {
  public:
   /// Default constructor.
   ViewBase() = delete;
