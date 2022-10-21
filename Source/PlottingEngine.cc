@@ -6,7 +6,7 @@
 #include <TCanvas.h>
 #include <TStyle.h>
 
-#include "Garfield/PlottingEngine.hh"
+#include "Garfield/Plotting.hh"
 
 namespace Garfield {
 
