@@ -114,17 +114,17 @@ inline double RndmPolya(const double theta) {
 }
 
 /// Draw a random number from a Landau distribution.
-double RndmLandau();
+GARFIELD_EXTERNAL_SYMBOL double RndmLandau();
 /// Draw a random number from a Vavilov distribution.
-double RndmVavilov(const double rkappa, const double beta2);
+GARFIELD_EXTERNAL_SYMBOL double RndmVavilov(const double rkappa, const double beta2);
 
 /// Draw a random number from a Poisson distribution.
-int RndmPoisson(const double mean);
+GARFIELD_EXTERNAL_SYMBOL int RndmPoisson(const double mean);
 
 /// Draw a random energy needed to create a single electron in
 /// a material asymptotic work function W and Fano factor F,
 /// according to Igor Smirnov's phenomenological model.
-double RndmHeedWF(const double w, const double f);
+GARFIELD_EXTERNAL_SYMBOL double RndmHeedWF(const double w, const double f);
 
 /// Draw a random (isotropic) direction vector.
 inline void RndmDirection(double& dx, double& dy, double& dz,

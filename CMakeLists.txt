@@ -3,7 +3,9 @@
 # Version 3.9 is required by the ROOT Use file
 cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+# although this builds all binary dependent on it, this will not 
+# work with root cling interpreter, and not prefered.
+# set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # Setting a default build type to be release with debug information. 
 # Otherwise the default mode is debug.
